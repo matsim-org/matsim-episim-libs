@@ -446,8 +446,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                         person.getTracableContactPersons().clear();
                 }
 
-                 this.iteration = iteration;
-                // moved this up, why was it here? SM mar'20
+                this.iteration = iteration;
 
                 reporting.reporting( personMap, iteration );
 
