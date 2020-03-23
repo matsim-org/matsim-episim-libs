@@ -9,20 +9,13 @@ env:
   global:
     - MAVEN_OPTS="-Xmx6g"
   matrix:
-    - TEST=RunBerlinScenarioTest
-    - TEST=OpenBerlinIntermodalPtDrtRouterModeIdentifierTest
-    - TEST=RunDrtOpenBerlinScenarioTest
-    # - TEST=RunBerlinScenarioIT#test10pctUntilIteration1 # does not fit into travis.  kai, aug'18
-    # - TEST=RunBerlinScenarioIT#test1pctManyIterations # does probably not fit into travis (not tested).  kai, aug'18
-    - TEST=AbfallUtilsTest
-    - TEST=IntermodalTripFareCompensatorsTest
-    - TEST=IntermodalTripFareCompensatorPerTripTest
-    - TEST=OpenBerlinIntermodalPtDrtRouterAnalysisModeIdentifierTest
-    - TEST=RunDrtOpenBerlinScenarioWithPtRoutingModesTest
-    - TEST=RunDrtOpenBerlinScenarioWithDrtSpeedUpTest
-    - TEST=ChangeSingleTripModeAndRoutePlanRouterTest
-    - TEST=RandomSingleTripPlanRouterTest
-    - TEST=BerlinRaptorIntermodalAccessEgressTest
-    - TEST=RunBerlinScenarioSingleTripStrategiesTest
+    - TEST=RunEpisimTest
+
 script:
   - mvn -Dtest=${TEST} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+
+cache:
+  directories:
+  - $HOME/.m2
+
+
