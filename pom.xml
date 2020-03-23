@@ -51,30 +51,30 @@
             <version>${matsim.version}</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.github.matsim-scenarios</groupId>
-            <artifactId>matsim-berlin</artifactId>
-            <version>5.4</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>com.github.matsim-scenarios</groupId>-->
+<!--            <artifactId>matsim-berlin</artifactId>-->
+<!--            <version>5.4</version>-->
+<!--        </dependency>-->
 
-        <dependency>
-            <groupId>org.matsim.contrib</groupId>
-            <artifactId>common</artifactId>
-            <version>${matsim.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.matsim.contrib</groupId>-->
+<!--            <artifactId>common</artifactId>-->
+<!--            <version>${matsim.version}</version>-->
+<!--        </dependency>-->
 
-        <dependency>
-            <groupId>org.matsim.contrib</groupId>
-            <artifactId>analysis</artifactId>
-            <version>${matsim.version}</version>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.matsim.contrib</groupId>-->
+<!--            <artifactId>analysis</artifactId>-->
+<!--            <version>${matsim.version}</version>-->
+<!--        </dependency>-->
 
-        <dependency>
-            <groupId>org.matsim.contrib</groupId>
-            <artifactId>vsp</artifactId>
-            <version>${matsim.version}</version>
-            <scope>compile</scope>
-        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>org.matsim.contrib</groupId>-->
+<!--            <artifactId>vsp</artifactId>-->
+<!--            <version>${matsim.version}</version>-->
+<!--            <scope>compile</scope>-->
+<!--        </dependency>-->
 
         <!-- Include the JUnit testing library.  Not transitive. -->
         <dependency>
@@ -94,25 +94,25 @@
         </dependency>
 
 
-        <dependency>
-            <!-- This is the matsim "freight" contrib: -->
-            <groupId>org.matsim.contrib</groupId>
-            <artifactId>freight</artifactId>
-            <version>${matsim.version}</version>
+<!--        <dependency>-->
+<!--            &lt;!&ndash; This is the matsim "freight" contrib: &ndash;&gt;-->
+<!--            <groupId>org.matsim.contrib</groupId>-->
+<!--            <artifactId>freight</artifactId>-->
+<!--            <version>${matsim.version}</version>-->
 
-            <exclusions>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-api</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>slf4j-log4j12</artifactId>
-                </exclusion>
+<!--            <exclusions>-->
+<!--                <exclusion>-->
+<!--                    <groupId>org.slf4j</groupId>-->
+<!--                    <artifactId>slf4j-api</artifactId>-->
+<!--                </exclusion>-->
+<!--                <exclusion>-->
+<!--                    <groupId>org.slf4j</groupId>-->
+<!--                    <artifactId>slf4j-log4j12</artifactId>-->
+<!--                </exclusion>-->
 
-            </exclusions>
+<!--            </exclusions>-->
 
-        </dependency>
+<!--        </dependency>-->
     </dependencies>
 
     <build>
