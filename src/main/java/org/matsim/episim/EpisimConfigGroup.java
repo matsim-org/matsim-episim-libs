@@ -104,20 +104,24 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         public enum UsePt { yes, no }
         private UsePt usePt = UsePt.yes;
         @StringGetter("usePt")
+        @Deprecated // no longer needed (I think)
         public UsePt getUsePt(){
                 return this.usePt;
         }
         @StringSetter("usePt")
-        public void setUsePt( UsePt usePt ){
+        @Deprecated // no longer needed (I think)
+        public void setPutTracablePersonsInQuarantine( UsePt usePt ){
                 this.usePt = usePt;
         }
         // ---
         private double usePtDate = 0;
         @StringGetter("usePtDate")
+        @Deprecated // no longer needed (I think)
         public double getUsePtDate(){
                 return this.usePtDate;
         }
         @StringSetter("usePtDate")
+        @Deprecated // no longer needed (I think)
         public void setUsePtDate( double usePtDate ){
                 this.usePtDate = usePtDate;
         }
@@ -143,34 +147,37 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 //        }
         // alle anderen Bestandteile des "disease progression models" sind auch "in code"!  kai, mar'20
         // ---
+        public static final String INPUT_EVENTS_FILE="inputEventsFile";
         private String inputEventsFile = null;
-        @StringGetter("inputEventsFile")
+        @StringGetter(INPUT_EVENTS_FILE)
         public String getInputEventsFile(){
                 return this.inputEventsFile;
         }
-        @StringSetter("inputEventsFile")
+        @StringSetter(INPUT_EVENTS_FILE)
         public void setInputEventsFile( String inputEventsFile ){
                 this.inputEventsFile = inputEventsFile;
         }
         // ---
+        public static final String CALIBRATION_PARAMETER="calibrationParameter";
         private double calibrationParameter = 0.0000012;
-        @StringGetter("calibrationParameter")
+        @StringGetter(CALIBRATION_PARAMETER)
         public double getCalibrationParameter(){
                 return this.calibrationParameter;
         }
-        @StringSetter("calibrationParameter")
+        @StringSetter(CALIBRATION_PARAMETER)
         public void setCalibrationParameter( double calibrationParameter ){
                 this.calibrationParameter = calibrationParameter;
         }
         // ---
+        public static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE="pubTracablePersonsInQuarantine";
         public enum PutTracablePersonsInQuarantine { yes, no }
         private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
-        @StringGetter("putTracablePersonsInQuarantine")
+        @StringGetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
         public PutTracablePersonsInQuarantine getPutTracablePersonsInQuarantine(){
                 return this.putTracablePersonsInQuarantine;
         }
-        @StringSetter("putTracablePersonsInQuarantine")
-        public void setUsePt( PutTracablePersonsInQuarantine putTracablePersonsInQuarantine ){
+        @StringSetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
+        public void setPutTracablePersonsInQuarantine( PutTracablePersonsInQuarantine putTracablePersonsInQuarantine ){
                 this.putTracablePersonsInQuarantine = putTracablePersonsInQuarantine;
         }
         // ---
@@ -244,7 +251,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
                  * this is from iteration 0!
                  * @return
                  */
-                @StringGetter( CONTACT_INTENSITY )
+                @StringSetter( CONTACT_INTENSITY )
                 public InfectionParams setContactIntensity( double contactIntensity ){
                         this.contactIntensity = contactIntensity;
                         return this;
