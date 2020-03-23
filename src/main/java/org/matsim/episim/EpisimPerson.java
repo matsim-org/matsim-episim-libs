@@ -4,6 +4,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -16,8 +17,10 @@ class EpisimPerson{
         private int quarantineDate;
         private int currentPositionInTrajectory;
         private String lastFacilityId;
+        private String firstFacilityId;
         private Set<EpisimPerson> tracableContactPersons = new LinkedHashSet<>();
         private List<String> trajectory = new ArrayList<>();
+        private List<EpisimContainer<?>> currentContainers = new ArrayList<>();
         EpisimPerson( Id<Person> personId ) {
                 this.personId = personId;
         }
@@ -72,4 +75,22 @@ class EpisimPerson{
         void setCurrentPositionInTrajectory (int currentPositionInTrajectory) {
         	this.currentPositionInTrajectory = currentPositionInTrajectory;
         }
+        public List<EpisimContainer<?>> getCurrentContainers() {
+			return Collections.unmodifiableList(currentContainers);
+		}
+		public void addToCurrentContainers(EpisimContainer<?> container) {
+			this.currentContainers.add(container);
+			if (this.getCurrentContainers().size() > 1) {
+				throw new RuntimeException("Person in more than one container at once. Person=" +this.getPersonId().toString() + " is in: " + container.getContainerId().toString() + " and " + this.getCurrentContainers().get(0).getContainerId().toString());
+			}
+		}
+		public void removeFromCurrentContainers(EpisimContainer<?> container) {
+			this.currentContainers.remove(container);
+		}
+		String getFirstFacilityId() {
+			return firstFacilityId;
+		}
+		void setFirstFacilityId(String firstFacilityId) {
+			this.firstFacilityId = firstFacilityId;
+		}
 }
