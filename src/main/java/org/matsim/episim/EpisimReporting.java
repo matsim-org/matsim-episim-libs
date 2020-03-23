@@ -11,7 +11,7 @@ import java.io.IOException;
 import java.util.Map;
 
 class EpisimReporting{
-        enum InfectionsWriterFields{ time, nInfected, nInQuarantine, nRecovered, nSusceptible, nContagious, nInfectedButNotContagious,
+        enum InfectionsWriterFields{ time, nTotalInfected, nInQuarantine, nRecovered, nSusceptible, nContagious, nInfectedButNotContagious,
                 nInfectedCumulative, nSeriouslySick, nCritical }
 
         enum InfectionEventsWriterFields{ time, infector, infected, infectionType }
@@ -32,6 +32,9 @@ class EpisimReporting{
         }
 
         void reporting( Map<Id<Person>, EpisimPerson> personMap, int iteration ){
+        		if (iteration == 0) {
+        			return;
+        		}
                 long nSusceptible = 0;
                 long nInfectedButNotContagious = 0;
                 long nContagious = 0;
@@ -39,6 +42,7 @@ class EpisimReporting{
                 long nQuarantined = 0;
                 long nSeriouslySick = 0;
                 long nCritical = 0;
+                long nTotalInfected = 0;
                 for( EpisimPerson person : personMap.values() ){
                         switch( person.getDiseaseStatus() ) {
                                 case susceptible:
@@ -46,15 +50,19 @@ class EpisimReporting{
                                         break;
                                 case infectedButNotContagious:
                                         nInfectedButNotContagious++;
+                                        nTotalInfected++;
                                         break;
                                 case contagious:
                                         nContagious++;
+                                        nTotalInfected++;
                                         break;
                                 case seriouslySick:
                                         nSeriouslySick++;
+                                        nTotalInfected++;
                                         break;
                                 case critical:
                                         nCritical++;
+                                        nTotalInfected++;
                                         break;
                                 case recovered:
                                         nRecovered++;
@@ -75,10 +83,9 @@ class EpisimReporting{
 
                 log.warn("===============================" );
                 log.warn("Beginning day " + iteration );
-                log.warn("No of susceptible persons=" + nSusceptible );
-                log.warn( "No of infected but not contagious persons=" + nInfectedButNotContagious );
-                log.warn( "No of contagious persons=" + nContagious );
-                log.warn( "No of recovered persons=" + nRecovered );
+                log.warn("No of susceptible persons=" + nSusceptible + " / " + 100 * nSusceptible / (nSusceptible + nTotalInfected + nRecovered) + "%");
+                log.warn( "No of infected persons=" + nTotalInfected + " / " + 100 * nTotalInfected / (nSusceptible + nTotalInfected + nRecovered) + "%");
+                log.warn( "No of recovered persons=" + nRecovered + " / " + 100 * nRecovered / (nSusceptible + nTotalInfected + nRecovered) + "%");
                 log.warn( "---" );
                 log.warn( "No of persons in quarantaine=" + nQuarantined );
                 log.warn("===============================" );
@@ -91,8 +98,8 @@ class EpisimReporting{
                 array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString( nContagious );
                 array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString( nRecovered );
 
-                array[InfectionsWriterFields.nInfected.ordinal()] = Long.toString( (nInfectedButNotContagious + nContagious) ) ;
-                array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString( (nInfectedButNotContagious + nContagious + nRecovered) );
+                array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString( (nTotalInfected) ) ;
+                array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString( (nTotalInfected + nRecovered) );
 
                 array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString( nQuarantined );
 
