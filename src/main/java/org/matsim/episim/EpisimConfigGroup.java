@@ -185,8 +185,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
                 this.facilitiesHandling = facilitiesHandling;
         }
         public static class InfectionParams extends ReflectiveConfigGroup {
-                static final String SET_TYPE = "xyz";
-                private String containerName;
+                static final String SET_TYPE = "infectionParams";
 
                 public InfectionParams( final String containerName ) {
                         this();
@@ -196,43 +195,48 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
                 private InfectionParams() {
                         super(SET_TYPE);
                 }
-                //                @StringGetter( "activityType" )
+                // ---
+                public static final String ACTIVITY_TYPE="activityType";
+                private String containerName;
+                @StringGetter( ACTIVITY_TYPE )
                 public String getContainerName(){
                         return containerName;
                 }
-                //                @StringSetter( "activityType" )
-//                public void setContainerName( String actType ){
-//                        this.containerName = actType;
-//                }
+                @StringSetter( ACTIVITY_TYPE )
+                public void setContainerName( String actType ){
+                        this.containerName = actType;
+                }
                 // ---
+                public static final String SHUTDOWN_DAY="shutdownDay";
                 private long shutdownDay = Long.MAX_VALUE;
-                /** @noinspection WeakerAccess*/
+                @StringGetter( SHUTDOWN_DAY )
                 public long getShutdownDay(){
                         return shutdownDay;
                 }
-                /** @noinspection WeakerAccess
-                 * @return*/
+                @StringSetter( SHUTDOWN_DAY )
                 public InfectionParams setShutdownDay( long shutdownDay ){
                         this.shutdownDay = shutdownDay;
                         return this;
                 }
                 // ---
+                public static final String REMAINING_FRACTION="remainingFraction";
                 private double remainingFraction = 0.;
-                /** @noinspection WeakerAccess*/
+                @StringGetter( REMAINING_FRACTION )
                 public double getRemainingFraction(){
                         return remainingFraction;
                 }
-                /** @noinspection WeakerAccess
-                 * @return*/
+                @StringSetter( REMAINING_FRACTION )
                 public InfectionParams setRemainingFraction( double remainingFraction ){
                         this.remainingFraction = remainingFraction;
                         return this;
                 }
                 // ---
+                public static final String CONTACT_INTENSITY = "contactIntensity";
                 private double contactIntensity = 1.;
                 /**
                  * this is from iteration 0!
                  */
+                @StringGetter( CONTACT_INTENSITY )
                 public double getContactIntensity(){
                         return contactIntensity;
                 }
@@ -240,6 +244,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
                  * this is from iteration 0!
                  * @return
                  */
+                @StringGetter( CONTACT_INTENSITY )
                 public InfectionParams setContactIntensity( double contactIntensity ){
                         this.contactIntensity = contactIntensity;
                         return this;
@@ -256,6 +261,29 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
                                 throw new IllegalArgumentException(set.getName());
                 }
         }
+        @Override
+        public ConfigGroup createParameterSet( final String type ) {
+                switch ( type ) {
+                        case InfectionParams.SET_TYPE:
+                                return new InfectionParams();
+                        default:
+                                throw new IllegalArgumentException( type );
+                }
+        }
+
+        @Override
+        protected void checkParameterSet( final ConfigGroup module ) {
+                switch ( module.getName() ) {
+                        case InfectionParams.SET_TYPE:
+                                if ( !(module instanceof InfectionParams) ) {
+                                        throw new RuntimeException( "unexpected class for module "+module );
+                                }
+                                break;
+                        default:
+                                throw new IllegalArgumentException( module.getName() );
+                }
+        }
+
         public void addContainerParams( final InfectionParams params ) {
                 final InfectionParams previous = this.getContainerParams().get( params.getContainerName() );
 
