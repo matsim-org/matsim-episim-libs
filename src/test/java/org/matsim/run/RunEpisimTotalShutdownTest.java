@@ -52,12 +52,6 @@ public class RunEpisimTotalShutdownTest{
 
                 RunEpisim.runSimulation(config, 10);
 
-                String ORIGINAL = utils.getInputDirectory() + "/infectionEvents.txt";
-                String REVISED = utils.getOutputDirectory() + "/infectionEvents.txt";
-                final int result = RunEpisimBaseTest.compareWithDiffUtils( ORIGINAL, REVISED );
-
-                Assert.assertEquals( 0, result );
-
-                OutputDirectoryLogging.closeOutputDirLogging();
+                RunEpisimBaseTest.assertSimulationOutput(utils);
         }
 }
