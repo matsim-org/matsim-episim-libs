@@ -1,28 +1,16 @@
 package org.matsim.run;
 
-import com.github.difflib.algorithm.DiffException;
-import com.github.difflib.text.DiffRow;
-import com.github.difflib.text.DiffRowGenerator;
 import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.InfectionEventHandler;
 import org.matsim.testcases.MatsimTestUtils;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
 
 public class RunEpisimTotalShutdownTest{
         private static final Logger log = Logger.getLogger( RunEpisim.class );
@@ -62,25 +50,7 @@ public class RunEpisimTotalShutdownTest{
 
                 config.controler().setOutputDirectory( utils.getOutputDirectory() );
 
-                OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
-
-                EventsManager events = EventsUtils.createEventsManager();
-
-                events.addHandler( new InfectionEventHandler( config ) );
-
-                List<Event> allEvents = new ArrayList<>();
-                events.addHandler(new RunEpisim.ReplayHandler(allEvents) );
-
-                ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations" );
-                for ( int iteration=0 ; iteration<=10 ; iteration++ ){
-                        events.resetHandlers( iteration );
-                        if (iteration == 0)
-                                EventsUtils.readEvents( events, episimConfig.getInputEventsFile() );
-                        else
-                                allEvents.forEach(events::processEvent);
-                }
-
-
+                RunEpisim.runSimulation(config, 10);
 
                 String ORIGINAL = utils.getInputDirectory() + "/infectionEvents.txt";
                 String REVISED = utils.getOutputDirectory() + "/infectionEvents.txt";

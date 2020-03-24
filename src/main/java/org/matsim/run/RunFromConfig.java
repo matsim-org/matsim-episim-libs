@@ -21,26 +21,17 @@
 
 package org.matsim.run;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.InfectionEventHandler;
-import org.matsim.run.RunEpisim.ReplayHandler;
+
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
 * @author smueller
 */
-
 public class RunFromConfig {
 
 	public static void main(String[] args) throws IOException{
@@ -60,25 +51,8 @@ public class RunFromConfig {
 		ConfigUtils.applyCommandline( config, typedArgs ) ;
 		
         OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
-        
-        EventsManager events = EventsUtils.createEventsManager();
 
-        events.addHandler( new InfectionEventHandler( config ) );
-
-        List<Event> allEvents = new ArrayList<>();
-       
-        events.addHandler(new ReplayHandler(allEvents));
-
-        ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-        
-        for ( int iteration=0 ; iteration<=300 ; iteration++ ){
-                events.resetHandlers( iteration );
-                if (iteration == 0)
-                		EventsUtils.readEvents( events, episimConfig.getInputEventsFile() );
-                else
-                        allEvents.forEach(events::processEvent);
-        }
-
+        RunEpisim.runSimulation(config, 300);
 
 	}
 

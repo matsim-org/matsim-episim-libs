@@ -21,23 +21,15 @@
 
 package org.matsim.run;
 
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
-import org.matsim.run.RunEpisim.ReplayHandler;
-import org.matsim.episim.InfectionEventHandler;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
 * @author smueller
@@ -71,43 +63,12 @@ public class RunEpisimSnz {
         // home act:
         episimConfig.addContainerParams( new InfectionParams( "home" ) );
 
-        StringBuilder outdir = new StringBuilder( "output" );
-        for( InfectionParams infectionParams : episimConfig.getContainerParams().values() ){
-                outdir.append( "-" );
-                outdir.append( infectionParams.getContainerName() );
-                if ( infectionParams.getShutdownDay() < Long.MAX_VALUE ){
-                        outdir.append( infectionParams.getRemainingFraction() );
-                        outdir.append( "it" ).append( infectionParams.getShutdownDay() );
-                }
-                if ( infectionParams.getContactIntensity()!=1. ) {
-                        outdir.append( "ci" ).append( infectionParams.getContactIntensity() );
-                }
-        }
-        config.controler().setOutputDirectory( outdir.toString() );
+
+        RunEpisim.setOutputDirectoy(config);
 
         ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
 
-        OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
-
-        EventsManager events = EventsUtils.createEventsManager();
-
-        events.addHandler( new InfectionEventHandler( config ) );
-
-
-        List<Event> allEvents = new ArrayList<>();
-        events.addHandler(new ReplayHandler(allEvents));
-
-        ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-        for ( int iteration=0 ; iteration<=100 ; iteration++ ){
-                events.resetHandlers( iteration );
-                if (iteration == 0)
-                        EventsUtils.readEvents( events, episimConfig.getInputEventsFile() );
-                else
-                        allEvents.forEach(events::processEvent);
-        }
-
-        OutputDirectoryLogging.closeOutputDirLogging();
-	
+        RunEpisim.runSimulation(config, 100);
     }
 
 }

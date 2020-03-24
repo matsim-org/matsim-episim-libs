@@ -51,37 +51,57 @@ class RunEpisim {
                 // home act:
                 episimConfig.addContainerParams( new InfectionParams( "home" ) );
 
-                StringBuilder outdir = new StringBuilder( "output" );
-                for( InfectionParams infectionParams : episimConfig.getContainerParams().values() ){
-                        outdir.append( "-" );
-                        outdir.append( infectionParams.getContainerName() );
-                        if ( infectionParams.getShutdownDay() < Long.MAX_VALUE ){
-                                outdir.append( infectionParams.getRemainingFraction() );
-                                outdir.append( "it" ).append( infectionParams.getShutdownDay() );
-                        }
-                        if ( infectionParams.getContactIntensity()!=1. ) {
-                                outdir.append( "ci" ).append( infectionParams.getContactIntensity() );
-                        }
-                }
-                config.controler().setOutputDirectory( outdir.toString() );
+                setOutputDirectoy(config);
 
                 ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
 
-                OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
+                runSimulation(config, 100);
+
+        }
+
+        /**
+         * Creates an output directory, with a name based on current config.
+         */
+        public static void setOutputDirectoy(Config config) {
+                StringBuilder outdir = new StringBuilder("output");
+                EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+                for (InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+                        outdir.append("-");
+                        outdir.append(infectionParams.getContainerName());
+                        if (infectionParams.getShutdownDay() < Long.MAX_VALUE) {
+                                outdir.append(infectionParams.getRemainingFraction());
+                                outdir.append("it").append(infectionParams.getShutdownDay());
+                        }
+                        if (infectionParams.getContactIntensity() != 1.) {
+                                outdir.append("ci").append(infectionParams.getContactIntensity());
+                        }
+                }
+                config.controler().setOutputDirectory(outdir.toString());
+        }
+
+        /**
+         * Main loop that performs the iterations of the simulation.
+         * @param config fully initialized config file, {@link EpisimConfigGroup} needs to be present.
+         * @param iterations number of iterations
+         */
+        public static void runSimulation(Config config, int iterations) throws IOException {
 
                 EventsManager events = EventsUtils.createEventsManager();
-
-                events.addHandler( new InfectionEventHandler( config ) );
-
+                events.addHandler(new InfectionEventHandler(config));
 
                 List<Event> allEvents = new ArrayList<>();
                 events.addHandler(new ReplayHandler(allEvents));
 
+                EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+                OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
                 ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-                for ( int iteration=0 ; iteration<=100 ; iteration++ ){
-                        events.resetHandlers( iteration );
+
+                for (int iteration = 0; iteration <= iterations; iteration++) {
+                        events.resetHandlers(iteration);
                         if (iteration == 0)
-                                EventsUtils.readEvents( events, episimConfig.getInputEventsFile() );
+                                EventsUtils.readEvents(events, episimConfig.getInputEventsFile());
                         else
                                 allEvents.forEach(events::processEvent);
                 }
@@ -90,9 +110,10 @@ class RunEpisim {
 
         }
 
-
-        // TODO: quick and dirty to only read events one time
-        public static final class ReplayHandler implements BasicEventHandler {
+        /**
+         * Helper class that stores all events in a given array (only in iteration 0)
+         */
+        private static final class ReplayHandler implements BasicEventHandler {
                 private boolean collect = false;
 
                 public final List<Event> events;

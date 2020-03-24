@@ -3,7 +3,6 @@ package org.matsim.run;
 import com.github.difflib.DiffUtils;
 import com.github.difflib.UnifiedDiffUtils;
 import com.github.difflib.algorithm.DiffException;
-import com.github.difflib.patch.AbstractDelta;
 import com.github.difflib.patch.Patch;
 import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
@@ -11,22 +10,15 @@ import org.apache.log4j.Logger;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.core.events.EventsUtils;
-import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.InfectionEventHandler;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -83,23 +75,8 @@ public class RunEpisimBaseTest{
 
                 config.controler().setOutputDirectory( utils.getOutputDirectory() );
 
-                OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
+                RunEpisim.runSimulation(config, 10);
 
-                EventsManager events = EventsUtils.createEventsManager();
-
-                events.addHandler( new InfectionEventHandler( config ) );
-
-                List<Event> allEvents = new ArrayList<>();
-                events.addHandler(new RunEpisim.ReplayHandler(allEvents) );
-
-                ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations" );
-                for ( int iteration=0 ; iteration<=10 ; iteration++ ){
-                        events.resetHandlers( iteration );
-                        if (iteration == 0)
-                                EventsUtils.readEvents( events, episimConfig.getInputEventsFile() );
-                        else
-                                allEvents.forEach(events::processEvent);
-                }
                 {
                         String expected = utils.getInputDirectory() + "/infections.txt";
                         String actual = utils.getOutputDirectory() + "/infections.txt";
@@ -112,6 +89,7 @@ public class RunEpisimBaseTest{
                 }
                 OutputDirectoryLogging.closeOutputDirLogging();
         }
+
         static int compareWithDiffUtils( String ORIGINAL, String REVISED ) {
                 // yy one might presumably rather first test the checksum, and then do the detailed test only if there are differences.  kai, mar'20
 

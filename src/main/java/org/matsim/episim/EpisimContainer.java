@@ -9,7 +9,7 @@ import java.util.*;
 /**
  * Wrapper class for a specific location that keeps track of currently contained agents and entering times.
  *
- * @param <T> the type where the agent are located in, e.g {@link org.matsim.vehicles.Vehicle} or {@link org.matsim.facilities.Facility}.
+ * @param <T> the type where the agents are located in, e.g {@link org.matsim.vehicles.Vehicle} or {@link org.matsim.facilities.Facility}.
  */
 class EpisimContainer<T> {
     private final Id<T> containerId;

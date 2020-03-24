@@ -9,7 +9,9 @@ import org.matsim.core.utils.io.IOUtils;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Reporting and persisting of metrics, like number of infected people etc.
@@ -18,8 +20,8 @@ class EpisimReporting {
 
     private static final Logger log = Logger.getLogger(EpisimReporting.class);
     private static final Joiner separator = Joiner.on("\t");
+    private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 
-    private static int specificInfectionsCnt = 300;
     private final BufferedWriter infectionsWriter;
     private final BufferedWriter infectionEventsWriter;
 
@@ -40,7 +42,7 @@ class EpisimReporting {
             writer.newLine();
             writer.flush();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
     }
 
@@ -50,7 +52,7 @@ class EpisimReporting {
             writer.write(separator.join(enumClass.getEnumConstants()));
             writer.newLine();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new UncheckedIOException(e);
         }
         return writer;
     }
@@ -135,18 +137,17 @@ class EpisimReporting {
     }
 
     void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
-        if (specificInfectionsCnt-- > 0) {
+        if (specificInfectionsCnt.decrementAndGet() > 0) {
             log.warn("infection of personId=" + personWrapper.getPersonId() + " by person=" + infector.getPersonId() + " at/in " + infectionType);
         }
-        {
-            String[] array = new String[InfectionEventsWriterFields.values().length];
-            array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(now);
-            array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
-            array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
-            array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
 
-            write(array, infectionEventsWriter);
-        }
+        String[] array = new String[InfectionEventsWriterFields.values().length];
+        array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(now);
+        array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
+        array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
+        array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
+
+        write(array, infectionEventsWriter);
     }
 
     enum InfectionsWriterFields {

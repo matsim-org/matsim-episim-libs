@@ -1,6 +1,7 @@
 package org.matsim.episim;
 
 import com.google.inject.Inject;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
@@ -10,19 +11,26 @@ import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.facilities.Facility;
 import org.matsim.episim.EpisimConfigGroup.PutTracablePersonsInQuarantine;
+import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Random;
 
-public class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
+/**
+ *
+ */
+public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
         // Some notes:
 
         // * Especially if we repeat the same events file, then we do not have complete mixing.  So it may happen that only some subpopulations gets infected.
@@ -65,8 +73,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
         @Override public void handleEvent( ActivityEndEvent activityEndEvent ) {
                 double now = EpisimUtils.getCorrectedTime( activityEndEvent.getTime(), iteration );
 
-                //ignore drt and stage activities
-                if( activityEndEvent.getPersonId().toString().startsWith("drt" ) || activityEndEvent.getPersonId().toString().startsWith("rt" ) || TripStructureUtils.isStageActivityType( activityEndEvent.getActType() ) ) {
+                if (!shouldHandleActivityEvent(activityEndEvent, activityEndEvent.getActType())) {
                         return;
                 }
 
@@ -85,7 +92,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                 else {
                 	EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
                 	if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
-                		throw new RuntimeException("Something went wrong ...");
+                		throw new IllegalStateException("Something went wrong ...");
                 	}
                 	infectionDynamicsFacility( episimPerson, episimFacility, now, activityEndEvent.getActType() );
                 	episimFacility.removePerson(episimPerson.getPersonId());
@@ -100,8 +107,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
         @Override public void handleEvent( PersonEntersVehicleEvent entersVehicleEvent ) {
                 double now = EpisimUtils.getCorrectedTime( entersVehicleEvent.getTime(), iteration );
 
-                // ignore pt drivers and drt
-                if ( entersVehicleEvent.getPersonId().toString().startsWith("pt_pt" ) || entersVehicleEvent.getPersonId().toString().startsWith("pt_tr" ) || entersVehicleEvent.getPersonId().toString().startsWith("drt" ) || entersVehicleEvent.getPersonId().toString().startsWith("rt" )) {
+                if ( !shouldHandlePersonEvent(entersVehicleEvent) ) {
                         return;
                 }
 
@@ -124,8 +130,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
         @Override public void handleEvent( PersonLeavesVehicleEvent leavesVehicleEvent ) {
                 double now = EpisimUtils.getCorrectedTime( leavesVehicleEvent.getTime(), iteration );
 
-                // ignore pt drivers and drt
-                if ( leavesVehicleEvent.getPersonId().toString().startsWith("pt_pt" ) || leavesVehicleEvent.getPersonId().toString().startsWith("pt_tr" ) || leavesVehicleEvent.getPersonId().toString().startsWith("drt" ) || leavesVehicleEvent.getPersonId().toString().startsWith("rt" )){
+                if (!shouldHandlePersonEvent(leavesVehicleEvent) ){
                         return;
                 }
 
@@ -149,8 +154,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
         @Override public void handleEvent( ActivityStartEvent activityStartEvent ) {
                 double now = EpisimUtils.getCorrectedTime( activityStartEvent.getTime(), iteration );
 
-                //ignore drt and stage activities
-                if( activityStartEvent.getPersonId().toString().startsWith("drt" ) || activityStartEvent.getPersonId().toString().startsWith("rt" ) || TripStructureUtils.isStageActivityType( activityStartEvent.getActType() ) ) {
+                if (!shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType())) {
                         return;
                 }
 
@@ -172,6 +176,25 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
 
         }
 
+        /**
+         * Whether {@code event} should be handled.
+         * @param actType activity type
+         */
+        private boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
+                // ignore drt and stage activities
+                return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
+                        && !TripStructureUtils.isStageActivityType(actType);
+        }
+
+        /**
+         * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
+         */
+        private boolean shouldHandlePersonEvent(HasPersonId event) {
+                // ignore pt drivers and drt
+                String id = event.getPersonId().toString();
+                return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
+        }
+
         private Id<Facility> createEpisimFacilityId( HasFacilityId event ) {
                 if (episimConfig.getFacilitiesHandling()== EpisimConfigGroup.FacilitiesHandling.snz ) {
                         return Id.create( event.getFacilityId(), Facility.class );
@@ -183,10 +206,10 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                 ActivityEndEvent theEvent = (ActivityEndEvent) event;
                                 return Id.create( theEvent.getActType().split( "_" )[0] + "_" + theEvent.getLinkId().toString(), Facility.class );
                         } else {
-                                throw new RuntimeException( "unexpected event type=" + ((Event)event).getEventType() ) ;
+                                throw new IllegalStateException( "unexpected event type=" + ((Event)event).getEventType() ) ;
                         }
                 } else {
-                        throw new RuntimeException( Gbl.NOT_IMPLEMENTED );
+                        throw new NotImplementedException( Gbl.NOT_IMPLEMENTED );
                 }
 
         }
@@ -286,7 +309,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                         // persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
                         // start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
                         if ( containerEnterTimeOfPersonLeaving==null && containerEnterTimeOfOtherPerson==null ) {
-                                throw new RuntimeException( "should not happen" );
+                                throw new IllegalStateException( "should not happen" );
                                 // null should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
                                 // can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
                                 // container from the beginning.  ????  kai, mar'20
@@ -303,7 +326,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                             log.warn(containerEnterTimeOfPersonLeaving);
                             log.warn(containerEnterTimeOfOtherPerson);
                             log.warn(now);
-                        	throw new RuntimeException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and otherPerson=" + otherPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
+                        	throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and otherPerson=" + otherPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
                         }
 
                         double contactIntensity = -1 ;
@@ -366,7 +389,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                 reporting.reportInfection( personWrapper, infector, now, infectionType );
         }
         @Override public void reset( int iteration ){
-//        		this.iteration = iteration;
+
                 for ( EpisimPerson person : personMap.values()) {
                 	handleNoCircle(person);
                 	person.setCurrentPositionInTrajectory(0);
@@ -382,7 +405,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                         if ( person.daysSinceInfection(iteration) == 6 ){
                                                 final double nextDouble = rnd.nextDouble();
                                                 if( nextDouble < 0.2 ){
-                                                        // 20% recognize that they are sick and go into quarantaine:
+                                                        // 20% recognize that they are sick and go into quarantine:
 
                                                         person.setQuarantineDate( iteration );
                                                         // yyyy date needs to be qualified by status (or better, add iteration into quarantine status setter)
@@ -439,10 +462,8 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                 default:
                                         throw new IllegalStateException( "Unexpected value: " + person.getDiseaseStatus() );
                         }
-                        if (person.getQuarantineStatus() == QuarantineStatus.full ) {
-                                if (person.daysSinceQuarantine(iteration) >= 14) {
-                                        person.setQuarantineStatus( QuarantineStatus.no );
-                                }
+                        if (person.getQuarantineStatus() == QuarantineStatus.full && person.daysSinceQuarantine(iteration) >= 14 ) {
+                                person.setQuarantineStatus( QuarantineStatus.no );
                         }
                         person.getTraceableContactPersons().clear();
                 }
