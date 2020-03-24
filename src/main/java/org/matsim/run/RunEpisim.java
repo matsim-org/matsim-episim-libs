@@ -83,7 +83,7 @@ class RunEpisim {
         /**
          * Main loop that performs the iterations of the simulation.
          * @param config fully initialized config file, {@link EpisimConfigGroup} needs to be present.
-         * @param iterations number of iterations
+         * @param iterations ending iteration (inclusive)
          */
         public static void runSimulation(Config config, int iterations) throws IOException {
 

@@ -1,7 +1,5 @@
 package org.matsim.run;
 
-import org.apache.log4j.Logger;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.core.config.Config;
@@ -13,7 +11,7 @@ import org.matsim.testcases.MatsimTestUtils;
 import java.io.IOException;
 
 public class RunEpisimTotalShutdownTest{
-        private static final Logger log = Logger.getLogger( RunEpisim.class );
+
         @Rule public MatsimTestUtils utils = new MatsimTestUtils();
 
         @Test

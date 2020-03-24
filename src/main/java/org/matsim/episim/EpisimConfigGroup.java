@@ -17,38 +17,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         super(GROUPNAME);
     }
 
-    public enum UsePt {yes, no}
-
-    private UsePt usePt = UsePt.yes;
-
-    @StringGetter("usePt")
-    @Deprecated // no longer needed (I think)
-    public UsePt getUsePt() {
-        return this.usePt;
-    }
-
-    @StringSetter("usePt")
-    @Deprecated // no longer needed (I think)
-    public void setPutTracablePersonsInQuarantine(UsePt usePt) {
-        this.usePt = usePt;
-    }
-
-    // ---
-    private double usePtDate = 0;
-
-    @StringGetter("usePtDate")
-    @Deprecated // no longer needed (I think)
-    public double getUsePtDate() {
-        return this.usePtDate;
-    }
-
-    @StringSetter("usePtDate")
-    @Deprecated // no longer needed (I think)
-    public void setUsePtDate(double usePtDate) {
-        this.usePtDate = usePtDate;
-    }
-
-
     // alle anderen Bestandteile des "disease progression models" sind auch "in code"!  kai, mar'20
     // ---
     public static final String INPUT_EVENTS_FILE = "inputEventsFile";

@@ -42,9 +42,10 @@ class EpisimUtils{
         private static boolean actIsRelevant( Random rnd, String act, long iteration, EpisimConfigGroup episimConfig ){
                 boolean actRelevant = true;
                 for( InfectionParams infectionParams : episimConfig.getContainerParams().values() ){
-                        if ( act.contains( infectionParams.getContainerName() ) ) {
+                        if ( act.startsWith( infectionParams.getContainerName() ) ) {
                                 if ( infectionParams.getShutdownDay() <= iteration ) {
-                                        if ( rnd.nextDouble() >= infectionParams.getRemainingFraction() ) {
+                                        if (infectionParams.getRemainingFraction() == 0 ||
+                                                rnd.nextDouble() >= infectionParams.getRemainingFraction() ) {
                                                 actRelevant=false;
                                         }
                                 }
@@ -60,7 +61,10 @@ class EpisimUtils{
 
                 String nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 
-                return actIsRelevant( rnd, lastAct, iteration, episimConfig ) && actIsRelevant( rnd, nextAct, iteration, episimConfig );
+                // TODO: tr is a hardcoded activity for "pt"
+                return actIsRelevant(rnd, "tr", iteration, episimConfig) &&
+                        actIsRelevant( rnd, lastAct, iteration, episimConfig ) &&
+                        actIsRelevant( rnd, nextAct, iteration, episimConfig );
 
         }
 

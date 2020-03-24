@@ -111,11 +111,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         return;
                 }
 
-                // if pt is shut down nothing happens here
-                if (episimConfig.getUsePt() == EpisimConfigGroup.UsePt.no && episimConfig.getUsePtDate() <= iteration) {
-                		return;
-                }
-
                 // find the person:
                 EpisimPerson episimPerson = this.personMap.computeIfAbsent( entersVehicleEvent.getPersonId(), EpisimPerson::new );
 
@@ -134,18 +129,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         return;
                 }
 
-                // if pt is shut down nothing happens here
-                if (episimConfig.getUsePt() == EpisimConfigGroup.UsePt.no && episimConfig.getUsePtDate() <= iteration) {
-                		return;
-                }
                 // find vehicle:
                 EpisimVehicle episimVehicle = this.vehicleMap.get( leavesVehicleEvent.getVehicleId() );
-
 
                 EpisimPerson episimPerson = episimVehicle.getPerson( leavesVehicleEvent.getPersonId() );
 
                 infectionDynamicsVehicle( episimPerson, episimVehicle, now );
-
 
                 // remove person from vehicle:
                 episimVehicle.removePerson( episimPerson.getPersonId() );
@@ -172,7 +161,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
                 episimPerson.setLastFacilityId(episimFacilityId.toString());
 
-                handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType().toString());
+                handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
 
         }
 

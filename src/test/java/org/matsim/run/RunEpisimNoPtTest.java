@@ -9,7 +9,6 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.IOException;
-import java.util.logging.Logger;
 
 public class RunEpisimNoPtTest{
 
@@ -34,7 +33,7 @@ public class RunEpisimNoPtTest{
                 RunEpisimBaseTest.addBaseParams(episimConfig);
 
                 episimConfig.getOrAddContainerParams("tr")
-                        .setShutdownDay(0).setRemainingFraction(0.);
+                        .setShutdownDay(5).setRemainingFraction(0.);
 
                 config.controler().setOutputDirectory( utils.getOutputDirectory() );
 
