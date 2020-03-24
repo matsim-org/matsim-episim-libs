@@ -21,7 +21,7 @@ First you need to run the MATSim scenario you want to analyze and generate an ev
 
 > TODO
 
-#### Perform evaluation
+#### Perform analysis
 
 > TODO
 

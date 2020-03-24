@@ -23,13 +23,13 @@ class EpisimContainer<T> {
                 persons.put( person.getPersonId(), person );
                 personsAsList.add( person );
                 containerEnterTimes.put(  person.getPersonId(), now );
-                person.addToCurrentContainers(this);
+                person.setCurrentContainer(this);
         }
         /** @noinspection UnusedReturnValue*/
         EpisimPerson removePerson( Id<Person> personId ) {
                 containerEnterTimes.remove( personId );
                 EpisimPerson personWrapper = persons.remove( personId );
-                personWrapper.removeFromCurrentContainers(this);
+                personWrapper.removeCurrentContainer(this);
                 boolean wasRemoved = personsAsList.remove( personWrapper );
                 Gbl.assertIf( wasRemoved );
                 return personWrapper;

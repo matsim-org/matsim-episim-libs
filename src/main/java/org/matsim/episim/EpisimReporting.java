@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import com.google.common.base.Joiner;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
@@ -18,6 +19,7 @@ class EpisimReporting{
 
         private static final Logger log = Logger.getLogger( EpisimReporting.class );
         private static int specificInfectionsCnt = 300;
+        private static Joiner separator = Joiner.on("\t");
         private final BufferedWriter infectionsWriter;
         private final BufferedWriter infectionEventsWriter;
         EpisimReporting( Config config ){
@@ -87,7 +89,7 @@ class EpisimReporting{
                 log.warn( "No of infected persons=" + nTotalInfected + " / " + 100 * nTotalInfected / (nSusceptible + nTotalInfected + nRecovered) + "%");
                 log.warn( "No of recovered persons=" + nRecovered + " / " + 100 * nRecovered / (nSusceptible + nTotalInfected + nRecovered) + "%");
                 log.warn( "---" );
-                log.warn( "No of persons in quarantaine=" + nQuarantined );
+                log.warn( "No of persons in quarantine=" + nQuarantined );
                 log.warn("===============================" );
 
                 String[] array = new String[InfectionsWriterFields.values().length];
@@ -109,12 +111,8 @@ class EpisimReporting{
                 write( array, infectionsWriter );
         }
         private static void write( String[] array, BufferedWriter writer ){
-                StringBuilder line = new StringBuilder();
-                for( String str : array ){
-                        line.append( str ).append( "\t" );
-                }
                 try{
-                        writer.write( line.toString() );
+                        writer.write(separator.join(array));
                         writer.newLine();
                         writer.flush();
                 } catch( IOException e ){
@@ -137,12 +135,8 @@ class EpisimReporting{
         }
         private static BufferedWriter prepareWriter( String filename, Class<? extends Enum<?>> enumClass ){
                 BufferedWriter writer = IOUtils.getBufferedWriter( filename );
-                StringBuilder line = new StringBuilder();
-                for( Enum<?> enumConstant : enumClass.getEnumConstants() ){
-                        line.append( enumConstant.name() ).append( "\t" );
-                }
                 try{
-                        writer.write( line.toString() );
+                        writer.write(separator.join(enumClass.getEnumConstants()));
                         writer.newLine();
                 } catch( IOException e ){
                         throw new RuntimeException( e );

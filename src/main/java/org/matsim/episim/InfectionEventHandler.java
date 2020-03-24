@@ -83,7 +83,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                 	handleInitialInfections(episimPerson);
                 }
                 else {
-                	EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainers().get(0));
+                	EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
                 	if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
                 		throw new RuntimeException("Something went wrong ...");
                 	}
@@ -272,10 +272,10 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
 
                         // keep track of contacts:
                         if(infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
-                                if (!personLeavingContainer.getTracableContactPersons().contains(otherPerson)) {
+                                if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
                                         personLeavingContainer.addTracableContactPerson(otherPerson);
                                 }
-                                if (!otherPerson.getTracableContactPersons().contains(personLeavingContainer)) {
+                                if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) {
                                         otherPerson.addTracableContactPerson(personLeavingContainer);
                                 }
                         }
@@ -349,7 +349,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                 if (infector.getQuarantineStatus() != QuarantineStatus.no ) {
                         throw new RuntimeException("Infector is in quarantine.");
                 }
-                if (!personWrapper.getCurrentContainers().get(0).equals(infector.getCurrentContainers().get(0))) {
+                if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
             			throw new RuntimeException("Person and infector are not in same container!");
                 }
                 personWrapper.setDiseaseStatus( DiseaseStatus.infectedButNotContagious );
@@ -390,7 +390,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                                         // yyyy this should become "home"!  kai, mar'20
 
                                                         if( episimConfig.getPutTracablePersonsInQuarantine() == PutTracablePersonsInQuarantine.yes ){
-                                                                for( EpisimPerson pw : person.getTracableContactPersons() ){
+                                                                for( EpisimPerson pw : person.getTraceableContactPersons() ){
                                                                         if( pw.getQuarantineStatus() == QuarantineStatus.no ){
 
                                                                                 pw.setQuarantineStatus( QuarantineStatus.full );
@@ -443,7 +443,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                         person.setQuarantineStatus( QuarantineStatus.no );
                                 }
                         }
-                        person.getTracableContactPersons().clear();
+                        person.getTraceableContactPersons().clear();
                 }
 
                 this.iteration = iteration;
@@ -453,26 +453,26 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
         }
         private void handleNoCircle(EpisimPerson person) {
         	Id<Facility> firstFacilityId = Id.create(person.getFirstFacilityId(), Facility.class);
-			if (person.getCurrentContainers().size() != 0) {
-				Id<?> lastFacilityId = person.getCurrentContainers().get(0).getContainerId();
+			if (person.isInContainer()) {
+				Id<?> lastFacilityId = person.getCurrentContainer().getContainerId();
 				if (this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
 					EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-					infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400, person.getTrajectory().get(person.getTrajectory().size() - 1));
+					infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
 					lastFacility.removePerson(person.getPersonId());
 					EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-					firstFacility.addPerson(person, (iteration + 1) * 86400);
+					firstFacility.addPerson(person, (iteration + 1) * 86400d);
 				}
 				if (this.vehicleMap.containsKey(lastFacilityId)) {
 					EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
-					infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400);
+					infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
 					lastVehicle.removePerson(person.getPersonId());
 					EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-					firstFacility.addPerson(person, (iteration + 1) * 86400);
+					firstFacility.addPerson(person, (iteration + 1) * 86400d);
 				}
 			}
 			else {
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, (iteration + 1) * 86400);
+				firstFacility.addPerson(person, (iteration + 1) * 86400d);
 			}
 
 		}
