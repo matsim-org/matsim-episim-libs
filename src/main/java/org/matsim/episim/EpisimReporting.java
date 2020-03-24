@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.util.Map;
 
 class EpisimReporting{
-        enum InfectionsWriterFields{ time, nTotalInfected, nInQuarantine, nRecovered, nSusceptible, nContagious, nInfectedButNotContagious,
-                nInfectedCumulative, nSeriouslySick, nCritical }
+        enum InfectionsWriterFields{ time, day, nSusceptible, nInfectedButNotContagious, nContagious, nSeriouslySick, nCritical, nTotalInfected, nInfectedCumulative, 
+        	nRecovered, nInQuarantine }
 
         enum InfectionEventsWriterFields{ time, infector, infected, infectionType }
 
@@ -95,6 +95,7 @@ class EpisimReporting{
                 String[] array = new String[InfectionsWriterFields.values().length];
 
                 array[InfectionsWriterFields.time.ordinal()] = Double.toString( EpisimUtils.getCorrectedTime( 0.,iteration ) );
+                array[InfectionsWriterFields.day.ordinal()] = Double.toString( iteration);
                 array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString( nSusceptible );
                 array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString( nInfectedButNotContagious );
                 array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString( nContagious );
