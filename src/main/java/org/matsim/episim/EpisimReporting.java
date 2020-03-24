@@ -119,7 +119,7 @@ class EpisimReporting {
         String[] array = new String[InfectionsWriterFields.values().length];
 
         array[InfectionsWriterFields.time.ordinal()] = Double.toString(EpisimUtils.getCorrectedTime(0., iteration));
-        array[InfectionsWriterFields.day.ordinal()] = Double.toString(iteration);
+        array[InfectionsWriterFields.day.ordinal()] = Long.toString(iteration);
         array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(nSusceptible);
         array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(nInfectedButNotContagious);
         array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(nContagious);

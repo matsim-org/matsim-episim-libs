@@ -33,7 +33,7 @@ public class RunEpisimIntegrationTest {
     private EpisimConfigGroup episimConfig;
 
     @Parameterized.Parameters(name = "it{0}")
-    public static Iterable<?> parameters() {
+    public static Iterable<Integer> parameters() {
         return Arrays.asList(10, 100);
     }
 

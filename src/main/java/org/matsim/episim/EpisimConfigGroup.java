@@ -181,7 +181,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         switch (module.getName()) {
             case InfectionParams.SET_TYPE:
                 if (!(module instanceof InfectionParams)) {
-                    throw new RuntimeException("unexpected class for module " + module);
+                    throw new IllegalArgumentException("unexpected class for module " + module);
                 }
                 break;
             default:
@@ -200,7 +200,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
             final boolean removed = removeParameterSet(previous);
             if (!removed)
-                throw new RuntimeException("problem replacing params ");
+                throw new IllegalStateException("problem replacing params");
         }
 
         super.addParameterSet(params);

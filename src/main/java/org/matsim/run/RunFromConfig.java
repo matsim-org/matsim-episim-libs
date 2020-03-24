@@ -24,7 +24,6 @@ package org.matsim.run;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.episim.EpisimConfigGroup;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -39,15 +38,13 @@ public class RunFromConfig {
 		OutputDirectoryLogging.catchLogEntries();
 
 		if ( args.length==0 ) {
-			throw new RuntimeException("Need config file");
+			throw new IllegalArgumentException("Need config file");
 		}
 		
 		String[] typedArgs = Arrays.copyOfRange( args, 1, args.length );
 		
 		Config config = ConfigUtils.loadConfig( args[0] );
-		
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-		
+
 		ConfigUtils.applyCommandline( config, typedArgs ) ;
 		
         OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );

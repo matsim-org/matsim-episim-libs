@@ -43,7 +43,7 @@ public class RunParallel {
 
     private static final int MYTHREADS = 4;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) {
 
         ExecutorService executor = Executors.newFixedThreadPool(MYTHREADS);
         List<Long> pt = Arrays.asList(1000L, 10L, 20L, 30L);

@@ -325,7 +325,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                                 }
                         }
                         if ( contactIntensity < 0. ) {
-                                throw new RuntimeException( "contactIntensity for infectionType=" + infectionType + " is not defined.  There needs to be a " +
+                                throw new IllegalStateException( "contactIntensity for infectionType=" + infectionType + " is not defined.  There needs to be a " +
                                                                             "config entry for each infection type." );
                         }
 
