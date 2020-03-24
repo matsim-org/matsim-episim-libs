@@ -14,6 +14,9 @@ import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.InfectionEventHandler;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -60,9 +63,10 @@ class RunEpisim {
         }
 
         /**
-         * Creates an output directory, with a name based on current config.
+         * Creates an output directory, with a name based on current config and adapt the logging config.
+         * This method is not thread-safe unlike {@link #runSimulation(Config, int)}.
          */
-        public static void setOutputDirectory(Config config) {
+        public static void setOutputDirectory(Config config) throws IOException{
                 StringBuilder outdir = new StringBuilder("output");
                 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -78,6 +82,8 @@ class RunEpisim {
                         }
                 }
                 config.controler().setOutputDirectory(outdir.toString());
+                OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
+
         }
 
         /**
@@ -87,6 +93,10 @@ class RunEpisim {
          */
         public static void runSimulation(Config config, int iterations) throws IOException {
 
+                Path out = Paths.get(config.controler().getOutputDirectory());
+                if (!Files.exists(out))
+                        Files.createDirectories(out);
+
                 EventsManager events = EventsUtils.createEventsManager();
                 events.addHandler(new InfectionEventHandler(config));
 
@@ -95,7 +105,6 @@ class RunEpisim {
 
                 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-                OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
                 ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
                 for (int iteration = 0; iteration <= iterations; iteration++) {

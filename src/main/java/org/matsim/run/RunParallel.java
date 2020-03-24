@@ -115,7 +115,7 @@ public class RunParallel {
             // home act:
             episimConfig.addContainerParams(new InfectionParams("home"));
 
-            config.controler().setOutputDirectory(p + "-" + w + "-" + l + "-" + o);
+            config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o);
 
 //	        RunEpisim.setOutputDirectory(config);
 
@@ -124,7 +124,6 @@ public class RunParallel {
             try {
                 RunEpisim.runSimulation(config, 100);
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }

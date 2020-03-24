@@ -24,6 +24,11 @@ public class RunEpisimIntegrationTest {
 
     @Rule
     public MatsimTestUtils utils = new MatsimTestUtils();
+    /**
+     * Iterations
+     */
+    @Parameterized.Parameter
+    public int it;
     private Config config;
     private EpisimConfigGroup episimConfig;
 
@@ -32,14 +37,8 @@ public class RunEpisimIntegrationTest {
         return Arrays.asList(10, 100);
     }
 
-    /**
-     * Iterations
-     */
-    @Parameterized.Parameter
-    public int it;
-
     @Before
-    public void setup() {
+    public void setup() throws IOException {
         OutputDirectoryLogging.catchLogEntries();
 
         config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -53,6 +52,7 @@ public class RunEpisimIntegrationTest {
         episimConfig.setCalibrationParameter(2);
 
         config.controler().setOutputDirectory(utils.getOutputDirectory());
+        OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
         addBaseParams(episimConfig);
     }
