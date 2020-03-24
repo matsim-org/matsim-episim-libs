@@ -51,7 +51,7 @@ class RunEpisim {
                 // home act:
                 episimConfig.addContainerParams( new InfectionParams( "home" ) );
 
-                setOutputDirectoy(config);
+                setOutputDirectory(config);
 
                 ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
 
@@ -62,7 +62,7 @@ class RunEpisim {
         /**
          * Creates an output directory, with a name based on current config.
          */
-        public static void setOutputDirectoy(Config config) {
+        public static void setOutputDirectory(Config config) {
                 StringBuilder outdir = new StringBuilder("output");
                 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 

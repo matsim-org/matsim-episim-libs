@@ -1,7 +1,5 @@
 package org.matsim.run;
 
-import org.apache.log4j.Logger;
-import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.core.config.Config;
@@ -11,9 +9,10 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 public class RunEpisimNoPtTest{
-        private static final Logger log = Logger.getLogger( RunEpisim.class );
+
         @Rule public MatsimTestUtils utils = new MatsimTestUtils();
 
         @Test
@@ -32,22 +31,10 @@ public class RunEpisimNoPtTest{
 
                 episimConfig.setCalibrationParameter(2);
 
-                long closingIteration = 10;
-                // pt:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "tr" ).setShutdownDay( 10 ).setRemainingFraction( 0. ) );
-                // yyyyyy not sure if this works.  kai, mar'20
-                // regular out-of-home acts:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "work" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "leis" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "edu" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "shop" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "errands" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "business" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "other" ) );
-                // freight act:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "freight" ) );
-                // home act:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "home" ) );
+                RunEpisimBaseTest.addBaseParams(episimConfig);
+
+                episimConfig.getOrAddContainerParams("tr")
+                        .setShutdownDay(0).setRemainingFraction(0.);
 
                 config.controler().setOutputDirectory( utils.getOutputDirectory() );
 

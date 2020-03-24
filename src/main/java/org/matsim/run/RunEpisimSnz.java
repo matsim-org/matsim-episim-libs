@@ -64,7 +64,7 @@ public class RunEpisimSnz {
         episimConfig.addContainerParams( new InfectionParams( "home" ) );
 
 
-        RunEpisim.setOutputDirectoy(config);
+        RunEpisim.setOutputDirectory(config);
 
         ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
 

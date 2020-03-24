@@ -1,7 +1,6 @@
 package org.matsim.run;
 
 import com.google.common.collect.Lists;
-import org.apache.log4j.Logger;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.core.config.Config;
@@ -16,7 +15,7 @@ import java.io.IOException;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RunEpisimBaseTest{
-        private static final Logger log = Logger.getLogger( RunEpisim.class );
+
         @Rule public MatsimTestUtils utils = new MatsimTestUtils();
 
         @Test
@@ -35,20 +34,7 @@ public class RunEpisimBaseTest{
 
                 episimConfig.setCalibrationParameter(2);
 
-                // pt:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "tr" )) ;
-                // regular out-of-home acts:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "work" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "leis" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "edu" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "shop" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "errands" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "business" ) );
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "other" ) );
-                // freight act:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "freight" ) );
-                // home act:
-                episimConfig.addContainerParams( new EpisimConfigGroup.InfectionParams( "home" ) );
+                addBaseParams(episimConfig);
 
                 config.controler().setOutputDirectory( utils.getOutputDirectory() );
 
@@ -57,6 +43,26 @@ public class RunEpisimBaseTest{
                 assertSimulationOutput(utils);
 
                 OutputDirectoryLogging.closeOutputDirLogging();
+        }
+
+        /**
+         * Adds base infection parameters with default values. (Valid for OpenBerlin scenario)
+         */
+        static void addBaseParams(EpisimConfigGroup config) {
+                // pt:
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "tr" )) ;
+                // regular out-of-home acts:
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "work" ) );
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "leis" ) );
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "edu" ) );
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "shop" ) );
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "errands" ) );
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "business" ) );
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "other" ) );
+                // freight act:
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "freight" ) );
+                // home act:
+                config.addContainerParams( new EpisimConfigGroup.InfectionParams( "home" ) );
         }
 
         /**

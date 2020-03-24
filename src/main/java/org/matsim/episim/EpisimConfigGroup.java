@@ -221,6 +221,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         }
     }
 
+    /**
+     * Adds given params to the parameter set, replacing existing ones.
+     */
     public void addContainerParams(final InfectionParams params) {
         final InfectionParams previous = this.getContainerParams().get(params.getContainerName());
 
@@ -233,6 +236,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         }
 
         super.addParameterSet(params);
+    }
+
+    /**
+     * Returns a container from the parameter set if it exists or creates a new one.
+     */
+    public InfectionParams getOrAddContainerParams(final String containerName) {
+        InfectionParams params = this.getContainerParams().get(containerName);
+
+        if (params != null)
+            return params;
+
+        params = new InfectionParams(containerName);
+
+        super.addParameterSet(params);
+        return params;
     }
 
     public Map<String, InfectionParams> getContainerParams() {
