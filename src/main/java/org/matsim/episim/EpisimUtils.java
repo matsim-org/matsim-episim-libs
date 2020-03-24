@@ -1,22 +1,19 @@
 package org.matsim.episim;
 
-import org.apache.log4j.Logger;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 
 import java.util.Random;
 
 class EpisimUtils{
-        private static final Logger log = Logger.getLogger( EpisimUtils.class );
-        private static double lastNow = -1 ;
+
+        /**
+         * Calculates the time based on the current iteration.
+         * @param time time relative to start of day
+         */
         static double getCorrectedTime( double time, long iteration ) {
-                final double now = Math.min( time, 3600. * 24 ) + iteration * 24. * 3600;
-                if ( now < lastNow ) {
-                        throw new RuntimeException( "we are going backwards in time; something is wrong" );
-                }
-                lastNow = now;
-                return now;
+                return Math.min( time, 3600. * 24 ) + iteration * 24. * 3600;
         }
-        /** */
+
         private static boolean hasStatusRelevantForInfectionDynamics( EpisimPerson personWrapper ){
                 switch( personWrapper.getDiseaseStatus() ) {
                         case susceptible:
