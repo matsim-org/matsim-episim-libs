@@ -12,7 +12,8 @@ env:
     - TEST=RunEpisimIntegrationTest
 
 script:
-  - mvn -Dtest=${TEST} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
+  # Tests won't produce output immediately
+  - travis_wait 30 mvn -Dtest=${TEST} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
 cache:
   directories:
