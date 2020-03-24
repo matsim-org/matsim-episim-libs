@@ -11,7 +11,7 @@ import java.util.Set;
 /**
  * Persons current state in the simulation.
  */
-class EpisimPerson {
+final class EpisimPerson {
 
     private final Id<Person> personId;
     private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
@@ -33,14 +33,14 @@ class EpisimPerson {
     private InfectionEventHandler.QuarantineStatus quarantineStatus = InfectionEventHandler.QuarantineStatus.no;
 
     /**
-     * Iteration when this person got infected.
+     * Iteration when this person got infected. Negative if person was never infected.
      */
-    private int infectionDate;
+    private int infectionDate = -1;
 
     /**
-     * Iteration when this person got into quarantine.
+     * Iteration when this person got into quarantine. Negative if person was never quarantined.
      */
-    private int quarantineDate;
+    private int quarantineDate = -1;
     private int currentPositionInTrajectory;
 
     /**
@@ -80,6 +80,21 @@ class EpisimPerson {
 
     void setInfectionDate(int date) {
         this.infectionDate = date;
+    }
+
+    /**
+     * Days since infection (if any).
+     */
+    int daysSinceInfection(int currentIteration) {
+        if (infectionDate < 0) throw new IllegalStateException("Person was never infected");
+
+        return currentIteration - infectionDate;
+    }
+
+    int daysSinceQuarantine(int currentIteration) {
+        if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
+
+        return currentIteration - quarantineDate;
     }
 
     int getQuarantineDate() {

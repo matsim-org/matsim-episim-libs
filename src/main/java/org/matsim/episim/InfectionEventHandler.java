@@ -338,20 +338,21 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
         private void infectPerson( EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType ){
 
                 if (personWrapper.getDiseaseStatus() != DiseaseStatus.susceptible) {
-                        throw new RuntimeException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
+                        throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
                 }
                 if (infector.getDiseaseStatus() != DiseaseStatus.contagious) {
-                        throw new RuntimeException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
+                        throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
                 }
                 if (personWrapper.getQuarantineStatus() != QuarantineStatus.no ) {
-                        throw new RuntimeException("Person to be infected is in quarantine.");
+                        throw new IllegalStateException("Person to be infected is in quarantine.");
                 }
                 if (infector.getQuarantineStatus() != QuarantineStatus.no ) {
-                        throw new RuntimeException("Infector is in quarantine.");
+                        throw new IllegalStateException("Infector is in quarantine.");
                 }
                 if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
-            			throw new RuntimeException("Person and infector are not in same container!");
+            			throw new IllegalStateException("Person and infector are not in same container!");
                 }
+
                 personWrapper.setDiseaseStatus( DiseaseStatus.infectedButNotContagious );
                 if ( scenario!=null ){
                         final Person person = PopulationUtils.findPerson( personWrapper.getPersonId(), scenario );
@@ -373,12 +374,12 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                 case susceptible:
                                         break;
                                 case infectedButNotContagious:
-                                        if ( iteration - person.getInfectionDate() >= 4 ) {
+                                        if ( person.daysSinceInfection(iteration) >= 4 ) {
                                                 person.setDiseaseStatus( DiseaseStatus.contagious );
                                         }
                                         break;
                                 case contagious:
-                                        if (iteration - person.getInfectionDate() == 6 ){
+                                        if ( person.daysSinceInfection(iteration) == 6 ){
                                                 final double nextDouble = rnd.nextDouble();
                                                 if( nextDouble < 0.2 ){
                                                         // 20% recognize that they are sick and go into quarantaine:
@@ -405,7 +406,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                                         }
 
                                                 }
-                                        } else if ( iteration - person.getInfectionDate() == 10 ) {
+                                        } else if ( person.daysSinceInfection(iteration) == 10 ) {
                                                 if ( rnd.nextDouble() < 0.045 ){
                                                         // (4.5% get seriously sick.  This is taken from all infected persons, not just those the have shown
                                                         // symptoms before)
@@ -416,17 +417,17 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                         }
                                         break;
                                 case seriouslySick:
-                                        if ( iteration - person.getInfectionDate() == 11 ) {
+                                        if ( person.daysSinceInfection(iteration) == 11 ) {
                                                 if ( rnd.nextDouble() < 0.25 ){
                                                         // (25% of persons who are seriously sick transition to critical)
                                                         person.setDiseaseStatus( DiseaseStatus.critical );
                                                 }
-                                        } else if ( iteration - person.getInfectionDate() >= 23 ) {
+                                        } else if ( person.daysSinceInfection(iteration) >= 23 ) {
                                                 person.setDiseaseStatus( DiseaseStatus.recovered );
                                         }
                                         break;
                                 case critical:
-                                        if ( iteration - person.getInfectionDate() == 20 ) {
+                                        if (person.daysSinceInfection(iteration) == 20 ) {
                                                 // (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
                                                 // they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
                                                 // hospital beds.)
@@ -439,7 +440,7 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                         throw new IllegalStateException( "Unexpected value: " + person.getDiseaseStatus() );
                         }
                         if (person.getQuarantineStatus() == QuarantineStatus.full ) {
-                                if (iteration - person.getQuarantineDate() >= 14) {
+                                if (person.daysSinceQuarantine(iteration) >= 14) {
                                         person.setQuarantineStatus( QuarantineStatus.no );
                                 }
                         }
@@ -477,12 +478,12 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
 
 		}
 
-        static class EpisimVehicle extends EpisimContainer<Vehicle>{
+        static final class EpisimVehicle extends EpisimContainer<Vehicle>{
                 EpisimVehicle( Id<Vehicle> vehicleId ){
                         super( vehicleId );
                 }
         }
-        static class EpisimFacility extends EpisimContainer<Facility>{
+        static final class EpisimFacility extends EpisimContainer<Facility>{
                 EpisimFacility( Id<Facility> facilityId ){
                         super( facilityId );
                 }
