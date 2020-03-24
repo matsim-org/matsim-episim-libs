@@ -313,9 +313,9 @@ public class InfectionEventHandler implements ActivityEndEventHandler, PersonEnt
                                 }
                         }
                         if ( contactIntensity < 0. ) {
-                                log.warn( "infectionType=" + infectionType + "; contactIntensity=" + contactIntensity );
+                                throw new RuntimeException( "contactIntensity for infectionType=" + infectionType + " is not defined.  There needs to be a " +
+                                                                            "config entry for each infection type." );
                         }
-                        Gbl.assertIf( contactIntensity>=0. );
 
                         double infectionProba = 1 - Math.exp( -episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer );
                         // note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
