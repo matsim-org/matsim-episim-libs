@@ -48,7 +48,7 @@ public class CreateBatteryForCluster {
 		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_bashScript.sh"));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(workingDir + "_info.txt"));
 		
-		infoWriter.write("RunScript;Config;Output;PtClosingDate;WorkClosingDate;LeisureClosingDate;OtherExceptHomeClosingDate");
+		infoWriter.write("RunScript;Config;RunId;Output;PtClosingDate;WorkClosingDate;LeisureClosingDate;OtherExceptHomeClosingDate");
 		infoWriter.newLine();
 		 List<Long> pt = Arrays.asList(1000L, 10L, 20L, 30L);
 		 List<Long> work = Arrays.asList(1000L, 10L, 20L, 30L);
@@ -64,7 +64,8 @@ public class CreateBatteryForCluster {
 	                    	bashScriptWriter.write("qsub snz" + ii + ".sh");
 	                    	bashScriptWriter.newLine();
 	                    	String outputPath = "output/" + p + "-" + w + "-" + l + "-" + o;
-	                    	infoWriter.write(runScriptFileName +";" + configFileName + ";" + outputPath + ";" +  p + ";" + w + ";" + l + ";" + o);
+	                    	String runId = "snz" + ii;
+	                    	infoWriter.write(runScriptFileName +";" + configFileName + ";" + runId + ";" + outputPath + ";" +  p + ";" + w + ";" + l + ";" + o);
 	                    	infoWriter.newLine();
 	                    	ii++;
 	                    }
@@ -81,7 +82,7 @@ public class CreateBatteryForCluster {
 	
 	public static String createRunScript(int ii) throws IOException {
 		
-		BufferedReader reader = new BufferedReader(new FileReader(workingDir + "_snz0.sh"));
+		BufferedReader reader = new BufferedReader(new FileReader(workingDir + "__snz0.sh"));
 		
 		String runScriptFileName = "snz" + ii + ".sh";
 		
