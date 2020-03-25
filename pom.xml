@@ -51,6 +51,13 @@
             <version>${matsim.version}</version>
         </dependency>
 
+        <!-- Config file for policies -->
+        <dependency>
+            <groupId>com.typesafe</groupId>
+            <artifactId>config</artifactId>
+            <version>1.4.0</version>
+        </dependency>
+
 <!--        <dependency>-->
 <!--            <groupId>com.github.matsim-scenarios</groupId>-->
 <!--            <artifactId>matsim-berlin</artifactId>-->
