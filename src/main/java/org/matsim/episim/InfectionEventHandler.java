@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.log4j.Logger;
@@ -18,6 +19,7 @@ import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.EpisimConfigGroup.PutTracablePersonsInQuarantine;
+import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
@@ -28,7 +30,7 @@ import java.util.Map;
 import java.util.Random;
 
 /**
- *
+ * Main event handler of episim.
  */
 public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
         // Some notes:
@@ -50,24 +52,34 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
         @Inject private Scenario scenario;
 
-        private Map<Id<Person>, EpisimPerson> personMap = new LinkedHashMap<>();
-        private Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new LinkedHashMap<>();
-        private Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new LinkedHashMap<>();
+        private final Map<Id<Person>, EpisimPerson> personMap = new LinkedHashMap<>();
+        private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new LinkedHashMap<>();
+        private final Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new LinkedHashMap<>();
 
-        private int cnt = 10 ;
+        /**
+         * Holds the current restrictions in place for all the activities.
+         */
+        private final Map<String, ShutdownPolicy.Restriction> restrictions;
 
-        private EpisimConfigGroup episimConfig;
+        /**
+         * Policy that will be enforced at the end of each day.
+         */
+        private final ShutdownPolicy policy;
 
-        private int iteration=0;
+        private final EpisimConfigGroup episimConfig;
 
-        private Random rnd = new Random(1);
+        private final Random rnd = new Random(1);
+        private final EpisimReporting reporting ;
 
-        private EpisimReporting reporting ;
+        private int cnt = 10;
+        private int iteration = 0;
 
         @Inject
         public InfectionEventHandler( Config config ) {
-                this.reporting = new EpisimReporting( config );
                 this.episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+                this.policy = episimConfig.createPolicyInstance();
+                this.restrictions = episimConfig.createInitialRestrictions();
+                this.reporting = new EpisimReporting( config );
         }
 
         @Override public void handleEvent( ActivityEndEvent activityEndEvent ) {
@@ -240,7 +252,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         return;
                 }
 
-                if( !EpisimUtils.isRelevantForInfectionDynamics( personLeavingContainer, container, episimConfig, iteration, rnd ) ) {
+                if( !isRelevantForInfectionDynamics( personLeavingContainer, container ) ) {
                         return;
                 }
 
@@ -278,7 +290,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                                 continue;
                         }
 
-                        if( !EpisimUtils.isRelevantForInfectionDynamics( otherPerson, container, episimConfig, iteration, rnd ) ) {
+                        if( !isRelevantForInfectionDynamics( otherPerson, container ) ) {
                                 continue;
                         }
 
@@ -320,7 +332,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
                         double contactIntensity = -1 ;
                         for( EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values() ){
-                                if ( infectionType.contains( infectionParams.getContainerName() ) ) {
+                                if ( infectionParams.includesActivity(infectionType) ) {
                                         contactIntensity = infectionParams.getContactIntensity();
                                 }
                         }
@@ -459,7 +471,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
                 this.iteration = iteration;
 
-                reporting.reporting( personMap, iteration );
+                EpisimReporting.InfectionReport r = reporting.createReport(personMap, iteration);
+
+                reporting.reportRestrictions(restrictions, iteration);
+
+                policy.updateRestrictions(r, ImmutableMap.copyOf(restrictions));
+
+                reporting.reporting( r, iteration );
 
         }
         private void handleNoCircle(EpisimPerson person) {
@@ -487,6 +505,57 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			}
 
 		}
+
+        private boolean activityRelevantForInfectionDynamics(EpisimPerson person) {
+                String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+                return actIsRelevant(act);
+        }
+
+        private boolean actIsRelevant(String act) {
+                for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+                        if (infectionParams.includesActivity(act)) {
+                                ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
+                                // avoid use of rnd if outcome is known beforehand
+                                if (r.getRemainingFraction() == 1)
+                                        return true;
+                                if (r.getRemainingFraction() == 0)
+                                        return false;
+
+                                return rnd.nextDouble() < r.getRemainingFraction();
+                        }
+                }
+
+                throw new IllegalStateException(String.format("No restrictions known for activity %s. Please add prefix to one infection parameter.", act));
+        }
+
+        private boolean tripRelevantForInfectionDynamics(EpisimPerson person) {
+                String lastAct = "";
+                if (person.getCurrentPositionInTrajectory() != 0) {
+                        lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
+                }
+
+                String nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+
+                // TODO: tr is a hardcoded activity for "pt"
+                return actIsRelevant("tr") && actIsRelevant(lastAct) && actIsRelevant(nextAct);
+
+        }
+
+        private boolean isRelevantForInfectionDynamics(EpisimPerson personLeavingContainer, EpisimContainer<?> container) {
+                if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(personLeavingContainer)) {
+                        return false;
+                }
+                if (personLeavingContainer.getQuarantineStatus() == InfectionEventHandler.QuarantineStatus.full) {
+                        return false;
+                }
+                if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(personLeavingContainer)) {
+                        return true;
+                }
+                if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(personLeavingContainer)) {
+                        return true;
+                }
+                return false;
+        }
 
         static final class EpisimVehicle extends EpisimContainer<Vehicle>{
                 EpisimVehicle( Id<Vehicle> vehicleId ){

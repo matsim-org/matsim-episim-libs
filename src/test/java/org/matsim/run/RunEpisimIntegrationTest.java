@@ -11,6 +11,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
@@ -54,7 +55,7 @@ public class RunEpisimIntegrationTest {
         config.controler().setOutputDirectory(utils.getOutputDirectory());
         OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
-        addBaseParams(episimConfig);
+        RunEpisim.addDefaultParams(episimConfig);
     }
 
     @After
@@ -62,25 +63,6 @@ public class RunEpisimIntegrationTest {
         assertSimulationOutput();
     }
 
-    /**
-     * Adds base infection parameters with default values. (Valid for OpenBerlin scenario)
-     */
-    private void addBaseParams(EpisimConfigGroup config) {
-        // pt:
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("tr"));
-        // regular out-of-home acts:
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("work"));
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("leis"));
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("edu"));
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("shop"));
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("errands"));
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("business"));
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("other"));
-        // freight act:
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("freight"));
-        // home act:
-        config.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
-    }
 
     /**
      * Checks whether output of simulation matches expectation.
@@ -101,46 +83,36 @@ public class RunEpisimIntegrationTest {
     @Test
     public void testNoPt() throws IOException {
 
-        episimConfig.getOrAddContainerParams("tr")
-                .setShutdownDay(5).setRemainingFraction(0.);
+        episimConfig.setPolicyConfig(FixedPolicy.config()
+                .shutdown(5, "pt")
+                .build()
+        );
 
         RunEpisim.runSimulation(config, it);
     }
 
     @Test
     public void testPlausibleShutdown() throws IOException {
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1.));
-        // regular out-of-home acts:
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setShutdownDay(it).setRemainingFraction(0.2));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leis").setShutdownDay(it).setRemainingFraction(0.));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setShutdownDay(it).setRemainingFraction(0.));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shop").setShutdownDay(it).setRemainingFraction(0.3));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("errands").setShutdownDay(it).setRemainingFraction(0.3));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("business").setShutdownDay(it).setRemainingFraction(0.));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("other").setShutdownDay(it).setRemainingFraction(0.2));
-        // freight act:
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("freight").setShutdownDay(0).setRemainingFraction(0.0));
-        // home act:
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
+
+        episimConfig.setPolicyConfig(FixedPolicy.config()
+                .shutdown(0, "freight")
+                .shutdown(it, "leisure", "edu", "business")
+                .restrict(it, 0.2, "work", "other")
+                .restrict(it, 0.3, "shop", "errands")
+                .build()
+        );
 
         RunEpisim.runSimulation(config, it);
     }
 
     @Test
     public void testTotalShutdown() throws IOException {
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setShutdownDay(it).setRemainingFraction(0.));
-        // regular out-of-home acts:
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setShutdownDay(it).setRemainingFraction(0.0));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leis").setShutdownDay(it).setRemainingFraction(0.));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setShutdownDay(it).setRemainingFraction(0.));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shop").setShutdownDay(it).setRemainingFraction(0.0));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("errands").setShutdownDay(it).setRemainingFraction(0.0));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("business").setShutdownDay(it).setRemainingFraction(0.));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("other").setShutdownDay(it).setRemainingFraction(0.));
-        // freight act:
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("freight").setShutdownDay(0).setRemainingFraction(0.0));
-        // home act:
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
+
+        // there should be no infections after day 1
+        episimConfig.setPolicyConfig(FixedPolicy.config()
+                .shutdown(1, RunEpisim.DEFAULT_ACTIVITIES)
+                .build()
+        );
 
         RunEpisim.runSimulation(config, it);
     }

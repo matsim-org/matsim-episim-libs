@@ -27,6 +27,7 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
+import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -101,23 +102,21 @@ public class RunParallel {
 
             episimConfig.setCalibrationParameter(0.002);
 
-//	        int closingIteration = 10;
-            // pt:
-            episimConfig.addContainerParams(new InfectionParams("tr").setContactIntensity(10.).setShutdownDay(this.p));
-            // regular out-of-home acts:
-            episimConfig.addContainerParams(new InfectionParams("business").setShutdownDay(this.o).setRemainingFraction(0.));
-            episimConfig.addContainerParams(new InfectionParams("educ_higher").setShutdownDay(this.o).setRemainingFraction(0.));
-            episimConfig.addContainerParams(new InfectionParams("educ_secondary").setShutdownDay(this.o).setRemainingFraction(0.));
-            episimConfig.addContainerParams(new InfectionParams("errands").setShutdownDay(this.o).setRemainingFraction(0.));
-            episimConfig.addContainerParams(new InfectionParams("leisure").setShutdownDay(this.l).setRemainingFraction(0.));
-            episimConfig.addContainerParams(new InfectionParams("shopping").setShutdownDay(this.o).setRemainingFraction(0.));
-            episimConfig.addContainerParams(new InfectionParams("work").setShutdownDay(this.w).setRemainingFraction(0.));
-            // home act:
-            episimConfig.addContainerParams(new InfectionParams("home"));
+            RunEpisim.addDefaultParams(episimConfig);
+
+            episimConfig.getOrAddContainerParams("pt")
+                    .setContactIntensity(10.0);
+
+            episimConfig.setPolicyConfig(FixedPolicy.config()
+                    .shutdown(this.p, "pt")
+                    .shutdown(this.o, "business", "edu", "errands", "shopping")
+                    .shutdown(this.l, "leisure")
+                    .shutdown(this.w, "work")
+                    .build()
+            );
 
             config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o);
 
-//	        RunEpisim.setOutputDirectory(config);
 
 //	        ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
 

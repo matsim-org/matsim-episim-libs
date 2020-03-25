@@ -26,47 +26,43 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
+import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
 import java.util.Arrays;
 
 /**
-* @author smueller
-*/
+ * @author smueller
+ */
 
 public class RunEpisimSnz {
 
-	public static void main(String[] args) throws IOException {
-		
-		OutputDirectoryLogging.catchLogEntries();
+    public static void main(String[] args) throws IOException {
 
-        Config config = ConfigUtils.createConfig( new EpisimConfigGroup() );
-        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+        OutputDirectoryLogging.catchLogEntries();
 
-        episimConfig.setInputEventsFile( "../snzDrt220.0.events.reduced.xml.gz" );
-        episimConfig.setFacilitiesHandling( FacilitiesHandling.snz );
-        
+        Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+        episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
+        episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
+
         episimConfig.setCalibrationParameter(0.002);
 
         int closingIteration = 10;
-        // pt:
-        episimConfig.addContainerParams( new InfectionParams( "tr" ).setContactIntensity( 10. ).setShutdownDay(closingIteration) );
-        // regular out-of-home acts:
-        episimConfig.addContainerParams( new InfectionParams( "business" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        episimConfig.addContainerParams( new InfectionParams( "educ_higher" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        episimConfig.addContainerParams( new InfectionParams( "educ_secondary" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        episimConfig.addContainerParams( new InfectionParams( "errands" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        episimConfig.addContainerParams( new InfectionParams( "leisure" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        episimConfig.addContainerParams( new InfectionParams( "shopping" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        episimConfig.addContainerParams( new InfectionParams( "work" ).setShutdownDay( closingIteration ).setRemainingFraction( 0. ) );
-        // home act:
-        episimConfig.addContainerParams( new InfectionParams( "home" ) );
 
+        RunEpisim.addDefaultParams(episimConfig);
+
+        episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
+
+        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+                .shutdown(closingIteration, RunEpisim.DEFAULT_ACTIVITIES)
+                .build()
+        );
 
         RunEpisim.setOutputDirectory(config);
 
-        ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
+        ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 
         RunEpisim.runSimulation(config, 100);
     }
