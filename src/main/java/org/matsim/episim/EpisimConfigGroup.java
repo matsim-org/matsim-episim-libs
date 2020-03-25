@@ -1,26 +1,37 @@
 package org.matsim.episim;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Sets;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.apache.log4j.Logger;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ShutdownPolicy;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.io.File;
+import java.util.*;
 
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
+
+    private static final String INPUT_EVENTS_FILE = "inputEventsFile";
+    private static final String CALIBRATION_PARAMETER = "calibrationParameter";
+    private static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
+
     private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
     private static final String GROUPNAME = "episim";
+
+    private String inputEventsFile = null;
+    private double calibrationParameter = 0.0000012;
+    private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
+    private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
+    private Config policyConfig = ConfigFactory.empty();
+    private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 
     public EpisimConfigGroup() {
         super(GROUPNAME);
     }
-
-    // alle anderen Bestandteile des "disease progression models" sind auch "in code"!  kai, mar'20
-    // ---
-    public static final String INPUT_EVENTS_FILE = "inputEventsFile";
-    private String inputEventsFile = null;
 
     @StringGetter(INPUT_EVENTS_FILE)
     public String getInputEventsFile() {
@@ -32,10 +43,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         this.inputEventsFile = inputEventsFile;
     }
 
-    // ---
-    public static final String CALIBRATION_PARAMETER = "calibrationParameter";
-    private double calibrationParameter = 0.0000012;
-
     @StringGetter(CALIBRATION_PARAMETER)
     public double getCalibrationParameter() {
         return this.calibrationParameter;
@@ -45,13 +52,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     public void setCalibrationParameter(double calibrationParameter) {
         this.calibrationParameter = calibrationParameter;
     }
-
-    // ---
-    public static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
-
-    public enum PutTracablePersonsInQuarantine {yes, no}
-
-    private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
 
     @StringGetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
     public PutTracablePersonsInQuarantine getPutTracablePersonsInQuarantine() {
@@ -63,10 +63,78 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         this.putTracablePersonsInQuarantine = putTracablePersonsInQuarantine;
     }
 
-    // ---
-    public enum FacilitiesHandling {bln, snz}
+    @StringGetter("policyClass")
+    public String getPolicyClass() {
+        return policyClass.getName();
+    }
 
-    private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
+    @StringSetter("policyClass")
+    public void setPolicyClass(String policyClass) {
+        try {
+            this.policyClass = (Class<? extends ShutdownPolicy>) ClassLoader.getSystemClassLoader().loadClass(policyClass);
+        } catch (ClassNotFoundException e) {
+            log.error("Policy class not found", e);
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    @StringGetter("policyConfig")
+    public String getPolicyConfig() {
+        return policyConfig.origin().filename();
+    }
+
+    /**
+     * Set the policy config instance.
+     */
+    public void setPolicyConfig(Config policyConfig) {
+        this.policyConfig = policyConfig;
+    }
+
+    /**
+     * Sets policy config by loading it from a resource first.
+     *
+     * @param policyConfig resource of filename to policy
+     */
+    @StringSetter("policyConfig")
+    public void setPolicyConfig(String policyConfig) {
+        this.policyConfig = ConfigFactory.parseFileAnySyntax(new File(policyConfig));
+    }
+
+    /**
+     * Gets the actual policy configuration.
+     */
+    public Config getPolicy() {
+        return policyConfig;
+    }
+
+    /**
+     * Sets policy class and desired config.
+     */
+    public void setPolicy(Class<? extends ShutdownPolicy> policy, Config config) {
+        this.policyClass = policy;
+        this.policyConfig = config;
+    }
+
+    /**
+     * Create a configured instance of the desired policy.
+     */
+    public ShutdownPolicy createPolicyInstance() {
+        try {
+            return policyClass.getConstructor(Config.class).newInstance(policyConfig);
+        } catch (ReflectiveOperationException e) {
+            log.error("Could not create policy", e);
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /**
+     * Create restriction for each {@link InfectionParams}.
+     */
+    public Map<String, ShutdownPolicy.Restriction> createInitialRestrictions() {
+        Map<String, ShutdownPolicy.Restriction> r = new LinkedHashMap<>();
+        getContainerParams().forEach((s, p) -> r.put(s, ShutdownPolicy.Restriction.newInstance()));
+        return r;
+    }
 
     @StringGetter("facilitiesHandling")
     public FacilitiesHandling getFacilitiesHandling() {
@@ -76,82 +144,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     @StringSetter("facilitiesHandling")
     public void setFacilitiesHandling(FacilitiesHandling facilitiesHandling) {
         this.facilitiesHandling = facilitiesHandling;
-    }
-
-    public static class InfectionParams extends ReflectiveConfigGroup {
-        static final String SET_TYPE = "infectionParams";
-
-        public InfectionParams(final String containerName) {
-            this();
-            this.containerName = containerName;
-        }
-
-        private InfectionParams() {
-            super(SET_TYPE);
-        }
-
-        public static final String ACTIVITY_TYPE = "activityType";
-        private String containerName;
-
-        @StringGetter(ACTIVITY_TYPE)
-        public String getContainerName() {
-            return containerName;
-        }
-
-        @StringSetter(ACTIVITY_TYPE)
-        public void setContainerName(String actType) {
-            this.containerName = actType;
-        }
-
-        public static final String SHUTDOWN_DAY = "shutdownDay";
-        private long shutdownDay = Long.MAX_VALUE;
-
-        @StringGetter(SHUTDOWN_DAY)
-        public long getShutdownDay() {
-            return shutdownDay;
-        }
-
-        @StringSetter(SHUTDOWN_DAY)
-        public InfectionParams setShutdownDay(long shutdownDay) {
-            this.shutdownDay = shutdownDay;
-            return this;
-        }
-
-        // ---
-        public static final String REMAINING_FRACTION = "remainingFraction";
-        private double remainingFraction = 0.;
-
-        @StringGetter(REMAINING_FRACTION)
-        public double getRemainingFraction() {
-            return remainingFraction;
-        }
-
-        @StringSetter(REMAINING_FRACTION)
-        public InfectionParams setRemainingFraction(double remainingFraction) {
-            this.remainingFraction = remainingFraction;
-            return this;
-        }
-
-        // ---
-        public static final String CONTACT_INTENSITY = "contactIntensity";
-        private double contactIntensity = 1.;
-
-        /**
-         * this is from iteration 0!
-         */
-        @StringGetter(CONTACT_INTENSITY)
-        public double getContactIntensity() {
-            return contactIntensity;
-        }
-
-        /**
-         * this is from iteration 0!
-         **/
-        @StringSetter(CONTACT_INTENSITY)
-        public InfectionParams setContactIntensity(double contactIntensity) {
-            this.contactIntensity = contactIntensity;
-            return this;
-        }
     }
 
     @Override
@@ -233,6 +225,93 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
         }
 
         return Collections.unmodifiableMap(map);
+    }
+
+    public enum PutTracablePersonsInQuarantine {yes, no}
+
+    public enum FacilitiesHandling {bln, snz}
+
+    public static class InfectionParams extends ReflectiveConfigGroup {
+        public static final String ACTIVITY_TYPE = "activityType";
+        public static final String CONTACT_INTENSITY = "contactIntensity";
+        public static final String MAPPED_NAMES = "mappedNames";
+
+        static final String SET_TYPE = "infectionParams";
+        /**
+         * Name of the container as reference by {@link ShutdownPolicy}.
+         */
+        private String containerName;
+
+        /**
+         * Prefixes of activity names that will be associated with this container type.
+         */
+        private Set<String> mappedNames;
+        private double contactIntensity = 1.;
+
+        public InfectionParams(final String containerName) {
+            this();
+            this.containerName = containerName;
+            this.mappedNames = Sets.newHashSet(containerName);
+        }
+
+        public InfectionParams(final String containerName, String... mappedNames) {
+            this();
+            this.containerName = containerName;
+            this.mappedNames = Sets.newHashSet(mappedNames);
+        }
+
+        private InfectionParams() {
+            super(SET_TYPE);
+        }
+
+        @StringGetter(MAPPED_NAMES)
+        public String getMappedNames() {
+            return Joiner.on(",").join(mappedNames);
+        }
+
+        @StringSetter(MAPPED_NAMES)
+        public void setMappedNames(String mappedNames) {
+            this.mappedNames = Sets.newHashSet(mappedNames.split(","));
+        }
+
+        @StringGetter(ACTIVITY_TYPE)
+        public String getContainerName() {
+            return containerName;
+        }
+
+        @StringSetter(ACTIVITY_TYPE)
+        public void setContainerName(String actType) {
+            this.containerName = actType;
+        }
+
+        /**
+         * this is from iteration 0!
+         */
+        @StringGetter(CONTACT_INTENSITY)
+        public double getContactIntensity() {
+            return contactIntensity;
+        }
+
+        /**
+         * this is from iteration 0!
+         **/
+        @StringSetter(CONTACT_INTENSITY)
+        public InfectionParams setContactIntensity(double contactIntensity) {
+            this.contactIntensity = contactIntensity;
+            return this;
+        }
+
+        /**
+         * Check whether an activity belong to this container group.
+         */
+        public boolean includesActivity(String actType) {
+            for (String mapped : mappedNames)
+                if (actType.startsWith(mapped))
+                    return true;
+
+            return false;
+        }
+
     }
 
 }

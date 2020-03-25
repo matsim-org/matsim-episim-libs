@@ -1,29 +1,36 @@
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
-import org.apache.log4j.Logger;
+import com.typesafe.config.ConfigRenderOptions;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.episim.policy.ShutdownPolicy;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Reporting and persisting of metrics, like number of infected people etc.
  */
-class EpisimReporting {
+public final class EpisimReporting {
 
-    private static final Logger log = Logger.getLogger(EpisimReporting.class);
+    private static final Logger log = LogManager.getLogger(EpisimReporting.class);
     private static final Joiner separator = Joiner.on("\t");
     private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 
     private final BufferedWriter infectionsWriter;
     private final BufferedWriter infectionEventsWriter;
+    private final BufferedWriter restrictionWriter;
 
     EpisimReporting(Config config) {
         String base;
@@ -32,8 +39,21 @@ class EpisimReporting {
         } else {
             base = config.controler().getOutputDirectory() + "/";
         }
+
+        EpisimConfigGroup episimConfigGroup = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
         infectionsWriter = prepareWriter(base + "infections.txt", InfectionsWriterFields.class);
         infectionEventsWriter = prepareWriter(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
+        restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfigGroup.createInitialRestrictions());
+
+        try {
+            Files.writeString(Paths.get(base, "policy.conf"),
+                    episimConfigGroup.getPolicy().root().render(ConfigRenderOptions.defaults()
+                            .setOriginComments(false)
+                            .setJson(false)));
+        } catch (IOException e) {
+            log.error("Could not write policy config", e);
+        }
     }
 
     private static void write(String[] array, BufferedWriter writer) {
@@ -57,48 +77,56 @@ class EpisimReporting {
         return writer;
     }
 
-    void reporting(Map<Id<Person>, EpisimPerson> personMap, int iteration) {
-        if (iteration == 0) {
-            return;
+    private BufferedWriter prepareRestrictionWriter(String filename, Map<String, ShutdownPolicy.Restriction> r) {
+        BufferedWriter writer = IOUtils.getBufferedWriter(filename);
+        try {
+            writer.write(separator.join("day", "", r.keySet().toArray()));
+            writer.newLine();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-        long nSusceptible = 0;
-        long nInfectedButNotContagious = 0;
-        long nContagious = 0;
-        long nRecovered = 0;
-        long nQuarantined = 0;
-        long nSeriouslySick = 0;
-        long nCritical = 0;
-        long nTotalInfected = 0;
+        return writer;
+    }
+
+    /**
+     * Creates an infection report for the day.
+     */
+    InfectionReport createReport(Map<Id<Person>, EpisimPerson> personMap, int iteration) {
+
+        InfectionReport report = new InfectionReport();
+        report.time = EpisimUtils.getCorrectedTime(0., iteration);
+        report.day = iteration;
+
         for (EpisimPerson person : personMap.values()) {
             switch (person.getDiseaseStatus()) {
                 case susceptible:
-                    nSusceptible++;
+                    report.nSusceptible++;
                     break;
                 case infectedButNotContagious:
-                    nInfectedButNotContagious++;
-                    nTotalInfected++;
+                    report.nInfectedButNotContagious++;
+                    report.nTotalInfected++;
                     break;
                 case contagious:
-                    nContagious++;
-                    nTotalInfected++;
+                    report.nContagious++;
+                    report.nTotalInfected++;
                     break;
                 case seriouslySick:
-                    nSeriouslySick++;
-                    nTotalInfected++;
+                    report.nSeriouslySick++;
+                    report.nTotalInfected++;
                     break;
                 case critical:
-                    nCritical++;
-                    nTotalInfected++;
+                    report.nCritical++;
+                    report.nTotalInfected++;
                     break;
                 case recovered:
-                    nRecovered++;
+                    report.nRecovered++;
                     break;
                 default:
                     throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
             }
             switch (person.getQuarantineStatus()) {
                 case full:
-                    nQuarantined++;
+                    report.nInQuarantine++;
                     break;
                 case no:
                     break;
@@ -107,38 +135,49 @@ class EpisimReporting {
             }
         }
 
+        return report;
+    }
+
+    /**
+     * Writes the infection report to csv.
+     */
+    void reporting(InfectionReport r, int iteration) {
+        if (iteration == 0) {
+            return;
+        }
+
         log.warn("===============================");
         log.warn("Beginning day " + iteration);
-        log.warn("No of susceptible persons=" + nSusceptible + " / " + 100 * nSusceptible / (nSusceptible + nTotalInfected + nRecovered) + "%");
-        log.warn("No of infected persons=" + nTotalInfected + " / " + 100 * nTotalInfected / (nSusceptible + nTotalInfected + nRecovered) + "%");
-        log.warn("No of recovered persons=" + nRecovered + " / " + 100 * nRecovered / (nSusceptible + nTotalInfected + nRecovered) + "%");
+        log.warn("No of susceptible persons=" + r.nSusceptible + " / " + 100 * r.nSusceptible / r.nTotal() + "%");
+        log.warn("No of infected persons=" + r.nTotalInfected + " / " + 100 * r.nTotalInfected / r.nTotal() + "%");
+        log.warn("No of recovered persons=" + r.nRecovered + " / " + 100 * r.nRecovered / r.nTotal() + "%");
         log.warn("---");
-        log.warn("No of persons in quarantine=" + nQuarantined);
+        log.warn("No of persons in quarantine=" + r.nInQuarantine);
         log.warn("===============================");
 
         String[] array = new String[InfectionsWriterFields.values().length];
 
-        array[InfectionsWriterFields.time.ordinal()] = Double.toString(EpisimUtils.getCorrectedTime(0., iteration));
-        array[InfectionsWriterFields.day.ordinal()] = Long.toString(iteration);
-        array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(nSusceptible);
-        array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(nInfectedButNotContagious);
-        array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(nContagious);
-        array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(nRecovered);
+        array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);
+        array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);
+        array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);
+        array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);
+        array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);
+        array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);
 
-        array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((nTotalInfected));
-        array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((nTotalInfected + nRecovered));
+        array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
+        array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((r.nTotalInfected + r.nRecovered));
 
-        array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString(nQuarantined);
+        array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString(r.nInQuarantine);
 
-        array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(nSeriouslySick);
-        array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(nCritical);
+        array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);
+        array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
 
         write(array, infectionsWriter);
     }
 
     void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
         if (specificInfectionsCnt.decrementAndGet() > 0) {
-            log.warn("infection of personId=" + personWrapper.getPersonId() + " by person=" + infector.getPersonId() + " at/in " + infectionType);
+            log.warn("Infection of personId={} by person={} at/in {}", personWrapper.getPersonId(), infector.getPersonId(), infectionType);
         }
 
         String[] array = new String[InfectionEventsWriterFields.values().length];
@@ -150,10 +189,42 @@ class EpisimReporting {
         write(array, infectionEventsWriter);
     }
 
+    void reportRestrictions(Map<String, ShutdownPolicy.Restriction> restrictions, long iteration) {
+        try {
+            restrictionWriter.write(separator.join(iteration, "", restrictions.values().toArray()));
+            restrictionWriter.newLine();
+            restrictionWriter.flush();
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
     enum InfectionsWriterFields {
         time, day, nSusceptible, nInfectedButNotContagious, nContagious, nSeriouslySick, nCritical, nTotalInfected, nInfectedCumulative,
         nRecovered, nInQuarantine
     }
 
     enum InfectionEventsWriterFields {time, infector, infected, infectionType}
+
+    /**
+     * Detailed infection report for the end of a day.
+     * Although the fields are mutable, do not change them outside this class.
+     */
+    public static class InfectionReport {
+        public double time = 0;
+        public long day = 0;
+        public long nSusceptible = 0;
+        public long nInfectedButNotContagious = 0;
+        public long nContagious = 0;
+        public long nSeriouslySick = 0;
+        public long nCritical = 0;
+        public long nTotalInfected = 0;
+        public long nRecovered = 0;
+        public long nInQuarantine = 0;
+
+        public long nTotal() {
+            return nSusceptible + nTotalInfected + nRecovered;
+        }
+
+    }
 }
