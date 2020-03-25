@@ -19,17 +19,21 @@
  * *********************************************************************** */
 
 
-package org.matsim.episim;
+package org.matsim.run;
 
+import com.google.common.io.Resources;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.RunEpisim;
 
-import java.io.*;
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.List;
 
@@ -45,6 +49,11 @@ public class CreateBatteryForCluster {
 
         Files.createDirectories(Path.of(workingDir));
 
+        // Copy run script
+        Path runScript = Path.of(workingDir, "run.sh");
+        Files.copy(Resources.getResource("_run.sh").openStream(), runScript, StandardCopyOption.REPLACE_EXISTING);
+        runScript.toFile().setExecutable(true);
+
         BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_bashScript.sh"));
         BufferedWriter infoWriter = new BufferedWriter(new FileWriter(workingDir + "_info.txt"));
 
@@ -59,13 +68,12 @@ public class CreateBatteryForCluster {
             for (long w : work) {
                 for (long l : leisure) {
                     for (long o : otherExceptHome) {
-                        String runScriptFileName = createRunScript(ii);
+                        String runId = "snz" + ii;
                         String configFileName = createConfigFile(p, w, l, o, ii);
-                        bashScriptWriter.write("qsub snz" + ii + ".sh");
+                        bashScriptWriter.write("qsub -N " + runId +" run.sh");
                         bashScriptWriter.newLine();
                         String outputPath = "output/" + p + "-" + w + "-" + l + "-" + o;
-                        String runId = "snz" + ii;
-                        infoWriter.write(runScriptFileName +";" + configFileName + ";" + runId + ";" + outputPath + ";" +  p + ";" + w + ";" + l + ";" + o);
+                        infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" +  p + ";" + w + ";" + l + ";" + o);
                         infoWriter.newLine();
                         ii++;
                     }
@@ -77,37 +85,6 @@ public class CreateBatteryForCluster {
         infoWriter.close();
 
 
-    }
-
-    public static String createRunScript(int ii) throws IOException {
-
-        BufferedReader reader = new BufferedReader(new FileReader(workingDir + "__snz0.sh"));
-
-        String runScriptFileName = "snz" + ii + ".sh";
-
-        BufferedWriter writer = new BufferedWriter(new FileWriter(workingDir + runScriptFileName));
-
-        String line;
-
-        int lineNo = 0;
-
-        while ((line = reader.readLine()) != null) {
-            if (lineNo != 2) {
-                writer.write(line);
-            } else {
-                writer.write("#$ -N snz" + ii);
-            }
-            writer.newLine();
-            lineNo++;
-            if (ii == 1) {
-                System.out.println(line);
-            }
-        }
-        writer.close();
-
-        reader.close();
-
-        return runScriptFileName;
     }
 
     public static String createConfigFile(long p, long w, long l, long o, int ii) throws IOException {
@@ -133,20 +110,15 @@ public class CreateBatteryForCluster {
                 .build();
 
         String policyFileName = "policy" + ii + ".conf";
-        episimConfig.setPolicyConfig(policyFileName);
+        episimConfig.setOverwritePolicyLocation(policyFileName);
         Files.writeString(Path.of(workingDir + policyFileName), policyConf.root().render());
 
         config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o);
-
 
         String configFileName = "config_snz" + ii + ".xml";
         ConfigUtils.writeConfig(config, workingDir + configFileName);
 
         return configFileName;
-
-    }
-
-    public static void createBashScript(int ii) {
 
     }
 

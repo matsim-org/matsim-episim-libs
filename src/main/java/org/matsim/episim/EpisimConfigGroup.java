@@ -27,6 +27,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
     private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
     private Config policyConfig = ConfigFactory.empty();
+    private String overwritePolicyLocation = null;
     private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 
     public EpisimConfigGroup() {
@@ -80,6 +81,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
     @StringGetter("policyConfig")
     public String getPolicyConfig() {
+        if (overwritePolicyLocation != null)
+            return overwritePolicyLocation;
+
         return policyConfig.origin().filename();
     }
 
@@ -91,13 +95,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     }
 
     /**
-     * Sets policy config by loading it from a resource first.
+     * Sets policy config by loading it from a file first.
      *
      * @param policyConfig resource of filename to policy
      */
     @StringSetter("policyConfig")
     public void setPolicyConfig(String policyConfig) {
         this.policyConfig = ConfigFactory.parseFileAnySyntax(new File(policyConfig));
+    }
+
+    /**
+     * Overwrite the policy location, which will be returned by {@link #getPolicyConfig()}
+     */
+    public void setOverwritePolicyLocation(String overwritePolicyLocation) {
+        this.overwritePolicyLocation = overwritePolicyLocation;
     }
 
     /**
