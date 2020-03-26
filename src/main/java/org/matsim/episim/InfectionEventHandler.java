@@ -396,7 +396,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         @Override public void reset( int iteration ){
 
                 for ( EpisimPerson person : personMap.values()) {
-                	handleNoCircle(person);
+                	checkAndHandleEndOfNonCircularTrajectory(person);
                 	person.setCurrentPositionInTrajectory(0);
                 	progressionModel.updateState(person, iteration);
                 }
@@ -412,7 +412,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 reporting.reporting( r, iteration );
 
         }
-        private void handleNoCircle(EpisimPerson person) {
+        private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
         	Id<Facility> firstFacilityId = Id.create(person.getFirstFacilityId(), Facility.class);
 			if (person.isInContainer()) {
 				Id<?> lastFacilityId = person.getCurrentContainer().getContainerId();
@@ -435,7 +435,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, (iteration + 1) * 86400d);
 			}
-
 		}
 
         private boolean activityRelevantForInfectionDynamics(EpisimPerson person) {
