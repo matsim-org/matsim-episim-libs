@@ -106,7 +106,7 @@ public final class EpisimPerson {
         this.lastFacilityId = lastFacilityId;
     }
 
-    void addTracableContactPerson(EpisimPerson personWrapper) {
+    void addTraceableContactPerson(EpisimPerson personWrapper) {
         traceableContactPersons.add(personWrapper);
     }
 

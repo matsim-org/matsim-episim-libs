@@ -303,10 +303,10 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         // keep track of contacts:
                         if(infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
                                 if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
-                                        personLeavingContainer.addTracableContactPerson(otherPerson);
+                                        personLeavingContainer.addTraceableContactPerson(otherPerson);
                                 }
                                 if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) {
-                                        otherPerson.addTracableContactPerson(personLeavingContainer);
+                                        otherPerson.addTraceableContactPerson(personLeavingContainer);
                                 }
                         }
 
