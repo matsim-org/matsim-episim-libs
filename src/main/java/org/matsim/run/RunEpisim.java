@@ -43,14 +43,16 @@ public class RunEpisim {
 //                episimConfig.setSample(0.01);
         episimConfig.setCalibrationParameter(2);
 
-        long closingIteration = 10;
+        long closingIteration = 14;
 
         addDefaultParams(episimConfig);
 
         episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-                .shutdown(closingIteration, "leisure", "edu", "business")
-                .restrict(closingIteration, 0.2, "work", "other")
+                .shutdown(closingIteration, "leisure", "edu")
+                .restrict(closingIteration, 0.2, "work", "business", "other")
                 .restrict(closingIteration, 0.3, "shop", "errands")
+                .restrict(closingIteration, 0.5, "pt")
+                .open(closingIteration + 60, DEFAULT_ACTIVITIES)
                 .build()
         );
 
@@ -58,7 +60,7 @@ public class RunEpisim {
 
         ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 
-        runSimulation(config, 100);
+        runSimulation(config, 130);
 
     }
 

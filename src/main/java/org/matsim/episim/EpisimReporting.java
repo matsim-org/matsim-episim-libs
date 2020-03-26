@@ -47,7 +47,7 @@ public final class EpisimReporting {
         restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfigGroup.createInitialRestrictions());
 
         try {
-            Files.writeString(Paths.get(base, "policy.conf"),
+            Files.writeString(Paths.get(base + "policy.conf"),
                     episimConfigGroup.getPolicy().root().render(ConfigRenderOptions.defaults()
                             .setOriginComments(false)
                             .setJson(false)));

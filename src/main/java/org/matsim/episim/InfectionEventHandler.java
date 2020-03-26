@@ -436,7 +436,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                                                         // symptoms before)
                                                         person.setDiseaseStatus( DiseaseStatus.seriouslySick );
                                                 }
-                                        } else if ( iteration - person.getInfectionDate() >= 16 ) {
+                                        } else if ( person.daysSinceInfection(iteration) >= 16 ) {
                                                 person.setDiseaseStatus( DiseaseStatus.recovered );
                                         }
                                         break;
@@ -537,7 +537,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 String nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 
                 // TODO: tr is a hardcoded activity for "pt"
-                return actIsRelevant("tr") && actIsRelevant(lastAct) && actIsRelevant(nextAct);
+                // last activity is only considered if present
+                return actIsRelevant("tr") && actIsRelevant(nextAct) && (lastAct.isEmpty() || actIsRelevant(lastAct));
 
         }
 
