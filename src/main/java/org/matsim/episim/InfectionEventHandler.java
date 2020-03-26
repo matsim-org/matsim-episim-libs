@@ -18,7 +18,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.episim.EpisimConfigGroup.PutTracablePersonsInQuarantine;
+import org.matsim.episim.model.DefaultProgressionModel;
+import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
@@ -66,10 +67,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
          */
         private final ShutdownPolicy policy;
 
-        private final EpisimConfigGroup episimConfig;
+        /**
+         * Progress of the sickness at the end of the day.
+         */
+        private final ProgressionModel progressionModel;
 
+        private final EpisimConfigGroup episimConfig;
+        private final EpisimReporting reporting;
         private final Random rnd = new Random(1);
-        private final EpisimReporting reporting ;
 
         private int cnt = 10;
         private int iteration = 0;
@@ -80,6 +85,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 this.policy = episimConfig.createPolicyInstance();
                 this.restrictions = episimConfig.createInitialRestrictions();
                 this.reporting = new EpisimReporting( config );
+                this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
         }
 
         @Override public void handleEvent( ActivityEndEvent activityEndEvent ) {
@@ -228,7 +234,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         private void handleInitialInfections( EpisimPerson personWrapper ){
                 // initial infections:
                 if( cnt > 0 ){
-                        personWrapper.setDiseaseStatus( DiseaseStatus.infectedButNotContagious );
+                        personWrapper.setDiseaseStatus( EpisimPerson.DiseaseStatus.infectedButNotContagious );
                         personWrapper.setInfectionDate(iteration);
                         log.warn(" person " + personWrapper.getPersonId() +" has initial infection");
                         cnt--;
@@ -247,7 +253,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 infectionDynamicsGeneralized( personLeavingFacility, facility, now, actType );
         }
         private void infectionDynamicsGeneralized( EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, String infectionType ) {
-        		
+
                 if (iteration == 0) {
                         return;
                 }
@@ -347,126 +353,52 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         // no effect.  kai, mar'20
 
                         if ( rnd.nextDouble() < infectionProba ) {
-                                if ( personLeavingContainer.getDiseaseStatus()== DiseaseStatus.susceptible ) {
+                                if ( personLeavingContainer.getDiseaseStatus()== EpisimPerson.DiseaseStatus.susceptible ) {
                                         infectPerson( personLeavingContainer, otherPerson, now, infectionType );
                                         return;
                                 } else {
                                         infectPerson( otherPerson, personLeavingContainer, now, infectionType );
                                 }
                         }
-
                 }
-
         }
 
         private void infectPerson( EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType ){
 
-                if (personWrapper.getDiseaseStatus() != DiseaseStatus.susceptible) {
+                if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
                         throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
                 }
-                if (infector.getDiseaseStatus() != DiseaseStatus.contagious) {
+                if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious) {
                         throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
                 }
-                if (personWrapper.getQuarantineStatus() != QuarantineStatus.no ) {
+                if (personWrapper.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
                         throw new IllegalStateException("Person to be infected is in quarantine.");
                 }
-                if (infector.getQuarantineStatus() != QuarantineStatus.no ) {
+                if (infector.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
                         throw new IllegalStateException("Infector is in quarantine.");
                 }
                 if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
-            			throw new IllegalStateException("Person and infector are not in same container!");
+                        throw new IllegalStateException("Person and infector are not in same container!");
                 }
 
-                personWrapper.setDiseaseStatus( DiseaseStatus.infectedButNotContagious );
-                if ( scenario!=null ){
-                        final Person person = PopulationUtils.findPerson( personWrapper.getPersonId(), scenario );
-                        if( person != null ){
-                                person.getAttributes().putAttribute( AgentSnapshotInfo.marker, true );
+                personWrapper.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious);
+                if (scenario != null) {
+                        final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
+                        if (person != null) {
+                                person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
                         }
                 }
 
                 personWrapper.setInfectionDate(iteration);
 
-                reporting.reportInfection( personWrapper, infector, now, infectionType );
+                reporting.reportInfection(personWrapper, infector, now, infectionType);
         }
         @Override public void reset( int iteration ){
 
                 for ( EpisimPerson person : personMap.values()) {
                 	handleNoCircle(person);
                 	person.setCurrentPositionInTrajectory(0);
-                        switch ( person.getDiseaseStatus() ) {
-                                case susceptible:
-                                        break;
-                                case infectedButNotContagious:
-                                        if ( person.daysSinceInfection(iteration) >= 4 ) {
-                                                person.setDiseaseStatus( DiseaseStatus.contagious );
-                                        }
-                                        break;
-                                case contagious:
-                                        if ( person.daysSinceInfection(iteration) == 6 ){
-                                                final double nextDouble = rnd.nextDouble();
-                                                if( nextDouble < 0.2 ){
-                                                        // 20% recognize that they are sick and go into quarantine:
-
-                                                        person.setQuarantineDate( iteration );
-                                                        // yyyy date needs to be qualified by status (or better, add iteration into quarantine status setter)
-
-                                                        person.setQuarantineStatus( QuarantineStatus.full );
-                                                        // yyyy this should become "home"!  kai, mar'20
-
-                                                        if( episimConfig.getPutTracablePersonsInQuarantine() == PutTracablePersonsInQuarantine.yes ){
-                                                                for( EpisimPerson pw : person.getTraceableContactPersons() ){
-                                                                        if( pw.getQuarantineStatus() == QuarantineStatus.no ){
-
-                                                                                pw.setQuarantineStatus( QuarantineStatus.full );
-                                                                                // yyyy this should become "home"!  kai, mar'20
-
-                                                                                pw.setQuarantineDate( iteration );
-                                                                                // yyyy date needs to be qualified by status (or better, add iteration into
-                                                                                // quarantine status setter)
-
-                                                                        }
-                                                                }
-                                                        }
-
-                                                }
-                                        } else if ( person.daysSinceInfection(iteration) == 10 ) {
-                                                if ( rnd.nextDouble() < 0.045 ){
-                                                        // (4.5% get seriously sick.  This is taken from all infected persons, not just those the have shown
-                                                        // symptoms before)
-                                                        person.setDiseaseStatus( DiseaseStatus.seriouslySick );
-                                                }
-                                        } else if ( person.daysSinceInfection(iteration) >= 16 ) {
-                                                person.setDiseaseStatus( DiseaseStatus.recovered );
-                                        }
-                                        break;
-                                case seriouslySick:
-                                        if ( person.daysSinceInfection(iteration) == 11 ) {
-                                                if ( rnd.nextDouble() < 0.25 ){
-                                                        // (25% of persons who are seriously sick transition to critical)
-                                                        person.setDiseaseStatus( DiseaseStatus.critical );
-                                                }
-                                        } else if ( person.daysSinceInfection(iteration) >= 23 ) {
-                                                person.setDiseaseStatus( DiseaseStatus.recovered );
-                                        }
-                                        break;
-                                case critical:
-                                        if (person.daysSinceInfection(iteration) == 20 ) {
-                                                // (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
-                                                // they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
-                                                // hospital beds.)
-                                                person.setDiseaseStatus( DiseaseStatus.seriouslySick );
-                                        }
-                                        break;
-                                case recovered:
-                                        break;
-                                default:
-                                        throw new IllegalStateException( "Unexpected value: " + person.getDiseaseStatus() );
-                        }
-                        if (person.getQuarantineStatus() == QuarantineStatus.full && person.daysSinceQuarantine(iteration) >= 14 ) {
-                                person.setQuarantineStatus( QuarantineStatus.no );
-                        }
-                        person.getTraceableContactPersons().clear();
+                	progressionModel.updateState(person, iteration);
                 }
 
                 this.iteration = iteration;
@@ -546,7 +478,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(personLeavingContainer)) {
                         return false;
                 }
-                if (personLeavingContainer.getQuarantineStatus() == InfectionEventHandler.QuarantineStatus.full) {
+                if (personLeavingContainer.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
                         return false;
                 }
                 if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(personLeavingContainer)) {
@@ -568,7 +500,5 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         super( facilityId );
                 }
         }
-        enum DiseaseStatus{susceptible, infectedButNotContagious, contagious, seriouslySick, critical, recovered};
-        enum QuarantineStatus {full, atHome, no}
 }
 
