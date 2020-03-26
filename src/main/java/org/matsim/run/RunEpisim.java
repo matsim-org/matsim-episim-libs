@@ -40,7 +40,7 @@ public class RunEpisim {
         episimConfig.setInputEventsFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_wo_linkEnterLeave.xml.gz");
 //                episimConfig.setInputEventsFile( "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz" );
         episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
-//                episimConfig.setSample(0.01);
+        episimConfig.setSampleSize(0.01);
         episimConfig.setCalibrationParameter(2);
 
         long closingIteration = 14;

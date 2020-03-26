@@ -3,7 +3,7 @@ package org.matsim.episim.model;
 import org.matsim.episim.EpisimPerson;
 
 /**
- * The class models the {@link org.matsim.episim.EpisimPerson.DiseaseStatus} state transitions at the end of the day.
+ * This class models the {@link org.matsim.episim.EpisimPerson.DiseaseStatus} state transitions at the end of the day.
  * The model should also update the {@link org.matsim.episim.EpisimPerson.QuarantineStatus} of affected persons.
  */
 public interface ProgressionModel {

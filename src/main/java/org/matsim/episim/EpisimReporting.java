@@ -16,6 +16,9 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -32,6 +35,12 @@ public final class EpisimReporting {
     private final BufferedWriter infectionEventsWriter;
     private final BufferedWriter restrictionWriter;
 
+    /**
+     * Number format for logging output. Not static because not thread-safe.
+     */
+    private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
+    private final double sampleSize;
+
     EpisimReporting(Config config) {
         String base;
         if (config.controler().getRunId() != null) {
@@ -45,6 +54,7 @@ public final class EpisimReporting {
         infectionsWriter = prepareWriter(base + "infections.txt", InfectionsWriterFields.class);
         infectionEventsWriter = prepareWriter(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
         restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfigGroup.createInitialRestrictions());
+        sampleSize = episimConfigGroup.getSampleSize();
 
         try {
             Files.writeString(Paths.get(base + "policy.conf"),
@@ -135,6 +145,8 @@ public final class EpisimReporting {
             }
         }
 
+        report.scale(1 / sampleSize);
+
         return report;
     }
 
@@ -147,12 +159,13 @@ public final class EpisimReporting {
         }
 
         log.warn("===============================");
-        log.warn("Beginning day " + iteration);
-        log.warn("No of susceptible persons=" + r.nSusceptible + " / " + 100 * r.nSusceptible / r.nTotal() + "%");
-        log.warn("No of infected persons=" + r.nTotalInfected + " / " + 100 * r.nTotalInfected / r.nTotal() + "%");
-        log.warn("No of recovered persons=" + r.nRecovered + " / " + 100 * r.nRecovered / r.nTotal() + "%");
+        log.warn("Beginning day {}", iteration);
+        log.warn("No of susceptible persons={} / {}%", decimalFormat.format(r.nSusceptible), 100 * r.nSusceptible / r.nTotal());
+        log.warn("No of infected persons={} / {}%", decimalFormat.format(r.nTotalInfected), 100 * r.nTotalInfected / r.nTotal());
+        log.warn("No of recovered persons={} / {}%", decimalFormat.format(r.nRecovered), 100 * r.nRecovered / r.nTotal());
         log.warn("---");
-        log.warn("No of persons in quarantine=" + r.nInQuarantine);
+        log.warn("No of persons in quarantine={}", decimalFormat.format(r.nInQuarantine));
+        log.warn("100 persons={} agents", sampleSize * 100);
         log.warn("===============================");
 
         String[] array = new String[InfectionsWriterFields.values().length];
@@ -226,5 +239,15 @@ public final class EpisimReporting {
             return nSusceptible + nTotalInfected + nRecovered;
         }
 
+        public void scale(double factor) {
+            nSusceptible *= factor;
+            nInfectedButNotContagious *= factor;
+            nContagious *= factor;
+            nSeriouslySick *= factor;
+            nCritical *= factor;
+            nTotalInfected *= factor;
+            nRecovered *= factor;
+            nInQuarantine *= factor;
+        }
     }
 }

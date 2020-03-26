@@ -99,6 +99,7 @@ public class RunParallel {
             episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
             episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
+            episimConfig.setSampleSize(0.25);
             episimConfig.setCalibrationParameter(0.002);
 
             RunEpisim.addDefaultParams(episimConfig);
