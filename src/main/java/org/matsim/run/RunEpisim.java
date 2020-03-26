@@ -40,17 +40,19 @@ public class RunEpisim {
         episimConfig.setInputEventsFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_wo_linkEnterLeave.xml.gz");
 //                episimConfig.setInputEventsFile( "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz" );
         episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
-//                episimConfig.setSample(0.01);
+        episimConfig.setSampleSize(0.01);
         episimConfig.setCalibrationParameter(2);
 
-        long closingIteration = 10;
+        long closingIteration = 14;
 
         addDefaultParams(episimConfig);
 
         episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-                .shutdown(closingIteration, "leisure", "edu", "business")
-                .restrict(closingIteration, 0.2, "work", "other")
+                .shutdown(closingIteration, "leisure", "edu")
+                .restrict(closingIteration, 0.2, "work", "business", "other")
                 .restrict(closingIteration, 0.3, "shop", "errands")
+                .restrict(closingIteration, 0.5, "pt")
+                .open(closingIteration + 60, DEFAULT_ACTIVITIES)
                 .build()
         );
 
@@ -58,7 +60,7 @@ public class RunEpisim {
 
         ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 
-        runSimulation(config, 100);
+        runSimulation(config, 130);
 
     }
 

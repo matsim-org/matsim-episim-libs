@@ -18,12 +18,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     private static final String INPUT_EVENTS_FILE = "inputEventsFile";
     private static final String CALIBRATION_PARAMETER = "calibrationParameter";
     private static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
+    private static final String SAMPLE_SIZE = "sampleSize";
 
     private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
     private static final String GROUPNAME = "episim";
 
     private String inputEventsFile = null;
     private double calibrationParameter = 0.0000012;
+    private double sampleSize = 0.1;
     private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
     private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
     private Config policyConfig = ConfigFactory.empty();
@@ -62,6 +64,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
     public void setPutTracablePersonsInQuarantine(PutTracablePersonsInQuarantine putTracablePersonsInQuarantine) {
         this.putTracablePersonsInQuarantine = putTracablePersonsInQuarantine;
+    }
+
+    /**
+     * Sample size in relation to whole population, between (0, 1].
+     */
+    @StringGetter(SAMPLE_SIZE)
+    public double getSampleSize() {
+        return sampleSize;
+    }
+
+    @StringSetter(SAMPLE_SIZE)
+    public void setSampleSize(double sampleSize) {
+        this.sampleSize = sampleSize;
     }
 
     @StringGetter("policyClass")

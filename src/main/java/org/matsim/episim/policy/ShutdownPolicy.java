@@ -11,7 +11,7 @@ import org.matsim.episim.EpisimReporting;
 /**
  * Abstract base class for policies which are supposed to modify {@link Restriction}s at the end of each day.
  */
-abstract public class ShutdownPolicy {
+public abstract class ShutdownPolicy {
 
     private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);
 

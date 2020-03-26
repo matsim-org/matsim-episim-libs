@@ -11,43 +11,36 @@ import java.util.Set;
 /**
  * Persons current state in the simulation.
  */
-final class EpisimPerson {
+public final class EpisimPerson {
 
     private final Id<Person> personId;
     private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
     private final List<String> trajectory = new ArrayList<>();
-
     /**
      * The {@link EpisimContainer} the person is currently located in.
      */
     private EpisimContainer<?> currentContainer = null;
-
     /**
-     * Current {@link InfectionEventHandler.DiseaseStatus}.
+     * Current {@link DiseaseStatus}.
      */
-    private InfectionEventHandler.DiseaseStatus status = InfectionEventHandler.DiseaseStatus.susceptible;
-
+    private DiseaseStatus status = DiseaseStatus.susceptible;
     /**
-     * Current {@link InfectionEventHandler.QuarantineStatus}.
+     * Current {@link QuarantineStatus}.
      */
-    private InfectionEventHandler.QuarantineStatus quarantineStatus = InfectionEventHandler.QuarantineStatus.no;
-
+    private QuarantineStatus quarantineStatus = QuarantineStatus.no;
     /**
      * Iteration when this person got infected. Negative if person was never infected.
      */
     private int infectionDate = -1;
-
     /**
      * Iteration when this person got into quarantine. Negative if person was never quarantined.
      */
     private int quarantineDate = -1;
     private int currentPositionInTrajectory;
-
     /**
      * The last visited {@link org.matsim.facilities.ActivityFacility}.
      */
     private String lastFacilityId;
-
     private String firstFacilityId;
 
     EpisimPerson(Id<Person> personId) {
@@ -58,19 +51,19 @@ final class EpisimPerson {
         return personId;
     }
 
-    InfectionEventHandler.DiseaseStatus getDiseaseStatus() {
+    public DiseaseStatus getDiseaseStatus() {
         return status;
     }
 
-    void setDiseaseStatus(InfectionEventHandler.DiseaseStatus status) {
+    public void setDiseaseStatus(DiseaseStatus status) {
         this.status = status;
     }
 
-    InfectionEventHandler.QuarantineStatus getQuarantineStatus() {
+    public QuarantineStatus getQuarantineStatus() {
         return quarantineStatus;
     }
 
-    void setQuarantineStatus(InfectionEventHandler.QuarantineStatus quarantineStatus) {
+    public void setQuarantineStatus(QuarantineStatus quarantineStatus) {
         this.quarantineStatus = quarantineStatus;
     }
 
@@ -85,13 +78,13 @@ final class EpisimPerson {
     /**
      * Days since infection (if any).
      */
-    int daysSinceInfection(int currentIteration) {
+    public int daysSinceInfection(int currentIteration) {
         if (infectionDate < 0) throw new IllegalStateException("Person was never infected");
 
         return currentIteration - infectionDate;
     }
 
-    int daysSinceQuarantine(int currentIteration) {
+    public int daysSinceQuarantine(int currentIteration) {
         if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
 
         return currentIteration - quarantineDate;
@@ -101,7 +94,7 @@ final class EpisimPerson {
         return this.quarantineDate;
     }
 
-    void setQuarantineDate(int date) {
+    public void setQuarantineDate(int date) {
         this.quarantineDate = date;
     }
 
@@ -113,11 +106,11 @@ final class EpisimPerson {
         this.lastFacilityId = lastFacilityId;
     }
 
-    void addTracableContactPerson(EpisimPerson personWrapper) {
+    void addTraceableContactPerson(EpisimPerson personWrapper) {
         traceableContactPersons.add(personWrapper);
     }
 
-    Set<EpisimPerson> getTraceableContactPersons() {
+    public Set<EpisimPerson> getTraceableContactPersons() {
         return traceableContactPersons;
     }
 
@@ -175,4 +168,8 @@ final class EpisimPerson {
     void setFirstFacilityId(String firstFacilityId) {
         this.firstFacilityId = firstFacilityId;
     }
+
+    public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, seriouslySick, critical, recovered}
+
+    public enum QuarantineStatus {full, atHome, no}
 }

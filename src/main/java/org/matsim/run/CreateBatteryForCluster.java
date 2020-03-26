@@ -57,28 +57,31 @@ public class CreateBatteryForCluster {
         BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_bashScript.sh"));
         BufferedWriter infoWriter = new BufferedWriter(new FileWriter(workingDir + "_info.txt"));
 
-        infoWriter.write("RunScript;Config;RunId;Output;PtClosingDate;WorkClosingDate;LeisureClosingDate;OtherExceptHomeClosingDate");
+        infoWriter.write("RunScript;Config;RunId;Output;PtClosingDate;WorkClosingDate;LeisureClosingDate;OtherExceptHomeClosingDate;ReopenAfter");
         infoWriter.newLine();
+        List<Long> reopenAfter = Arrays.asList(1000L, 21L, 42L);
         List<Long> pt = Arrays.asList(1000L, 10L, 20L, 30L);
         List<Long> work = Arrays.asList(1000L, 10L, 20L, 30L);
         List<Long> leisure = Arrays.asList(1000L, 10L, 20L, 30L);
         List<Long> otherExceptHome = Arrays.asList(1000L, 10L, 20L, 30L);
         int ii = 1;
-        for (long p : pt) {
-            for (long w : work) {
-                for (long l : leisure) {
-                    for (long o : otherExceptHome) {
-                        String runId = "snz" + ii;
-                        String configFileName = createConfigFile(p, w, l, o, ii);
-                        bashScriptWriter.write("qsub -N " + runId +" run.sh");
-                        bashScriptWriter.newLine();
-                        String outputPath = "output/" + p + "-" + w + "-" + l + "-" + o;
-                        infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" +  p + ";" + w + ";" + l + ";" + o);
-                        infoWriter.newLine();
-                        ii++;
-                    }
-                }
-            }
+        for (long r : reopenAfter) {
+	        for (long p : pt) {
+	            for (long w : work) {
+	                for (long l : leisure) {
+	                    for (long o : otherExceptHome) {
+	                        String runId = "snz" + ii;
+	                        String configFileName = createConfigFile(p, w, l, o, r, ii);
+	                        bashScriptWriter.write("qsub -N " + runId +" run.sh");
+	                        bashScriptWriter.newLine();
+	                        String outputPath = "output/" + p + "-" + w + "-" + l + "-" + o + "-" + r;
+	                        infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" +  p + ";" + w + ";" + l + ";" + o + ";" + r);
+	                        infoWriter.newLine();
+	                        ii++;
+	                    }
+	                }
+	            }
+	        }
         }
 
         bashScriptWriter.close();
@@ -87,7 +90,7 @@ public class CreateBatteryForCluster {
 
     }
 
-    public static String createConfigFile(long p, long w, long l, long o, int ii) throws IOException {
+    public static String createConfigFile(long p, long w, long l, long o, long r, int ii) throws IOException {
 
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -95,6 +98,7 @@ public class CreateBatteryForCluster {
         episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
+        episimConfig.setSampleSize(0.25);
         episimConfig.setCalibrationParameter(0.000005);
 
         RunEpisim.addDefaultParams(episimConfig);
@@ -107,13 +111,17 @@ public class CreateBatteryForCluster {
                 .shutdown(o, "business", "edu", "errands", "shopping")
                 .shutdown(l, "leisure")
                 .shutdown(w, "work")
+                .open(p + r, "pt")
+                .open(o + r, "business", "edu", "errands", "shopping")
+                .open(l + r, "leisure")
+                .open(w + r, "work")
                 .build();
 
         String policyFileName = "policy" + ii + ".conf";
         episimConfig.setOverwritePolicyLocation(policyFileName);
         Files.writeString(Path.of(workingDir + policyFileName), policyConf.root().render());
 
-        config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o);
+        config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o + "-" + r);
 
         String configFileName = "config_snz" + ii + ".xml";
         ConfigUtils.writeConfig(config, workingDir + configFileName);

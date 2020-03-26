@@ -26,7 +26,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
@@ -100,6 +99,7 @@ public class RunParallel {
             episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
             episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
+            episimConfig.setSampleSize(0.25);
             episimConfig.setCalibrationParameter(0.002);
 
             RunEpisim.addDefaultParams(episimConfig);
@@ -116,9 +116,6 @@ public class RunParallel {
             );
 
             config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o);
-
-
-//	        ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
 
             try {
                 RunEpisim.runSimulation(config, 100);
