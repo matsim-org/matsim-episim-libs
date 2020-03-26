@@ -50,6 +50,7 @@ public class RunEpisimIntegrationTest {
         // still need to push.  is faster
 
         episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.bln);
+        episimConfig.setSampleSize(0.01);
         episimConfig.setCalibrationParameter(2);
 
         config.controler().setOutputDirectory(utils.getOutputDirectory());
