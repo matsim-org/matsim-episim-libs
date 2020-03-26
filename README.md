@@ -15,11 +15,20 @@ In order to perform a epidemic simulation multiple steps are necessary:
 
 First you need to run the MATSim scenario you want to analyze and generate an events file.
 
-> TODO
+> At the moment please use the provided files.
 
 #### Run epidemic simulation
 
-> TODO
+At the moment it is best to run the scenarios with your IDE from the `org.matsim.episim.run` package.
+
+You can also build the jar file, which will run the OpenBerlin scenario with a default configuration:
+
+    mvn package
+
+And run it with:
+
+    java -jar target/matsim-episim-1.0-SNAPSHOT-jar-with-dependencies.jar
+    
 
 #### Perform analysis
 

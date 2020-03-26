@@ -190,7 +190,7 @@
                     </descriptorRefs>
                     <archive>
                         <manifest>
-                            <mainClass>org.matsim.gui.RunBerlinScenarioGUI</mainClass>
+                            <mainClass>org.matsim.run.RunEpisim</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
