@@ -73,15 +73,7 @@ public class DefaultInfectionModel extends InfectionModel {
                 continue;
             }
 
-            // keep track of contacts:
-            if (infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
-                if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
-                    personLeavingContainer.addTraceableContactPerson(otherPerson);
-                }
-                if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) {
-                    otherPerson.addTraceableContactPerson(personLeavingContainer);
-                }
-            }
+            trackOtherPerson(personLeavingContainer, infectionType, otherPerson);
 
             Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
             Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(otherPerson.getPersonId());
@@ -132,6 +124,18 @@ public class DefaultInfectionModel extends InfectionModel {
                 } else {
                     infectPerson(otherPerson, personLeavingContainer, now, infectionType);
                 }
+            }
+        }
+    }
+
+    private void trackOtherPerson(EpisimPerson personLeavingContainer, String infectionType, EpisimPerson otherPerson) {
+        // keep track of contacts:
+        if (infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
+            if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
+                personLeavingContainer.addTraceableContactPerson(otherPerson);
+            }
+            if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) {
+                otherPerson.addTraceableContactPerson(personLeavingContainer);
             }
         }
     }
