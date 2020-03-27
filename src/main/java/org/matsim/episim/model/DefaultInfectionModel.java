@@ -46,10 +46,15 @@ public class DefaultInfectionModel extends InfectionModel {
 
         // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
         // shuffle, those are 10 different persons every day.
+        // as sample size is 25%, 10 persons means 3 agents here
+        int contactPersonsToFind = Math.max((int) (episimConfig.getSampleSize() * 10), 3);
+        for ( int ii = 0 ; ii< personsToInteractWith.size(); ii++ ) {
+            //as we now forbid infection for certain activity type pairs, we do need the separate counter. schlenther, march 27
 
-        // persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
-        int contactWith = Math.min(personsToInteractWith.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
-        for (int ii = 0; ii < contactWith; ii++) {
+            //if we have seen enough, break, no matter what
+            if(contactPersonsToFind <= 0){
+                break;
+            }
 
             // (this is "-1" because we can't interact with "self")
 
@@ -60,6 +65,8 @@ public class DefaultInfectionModel extends InfectionModel {
             //TODO the way we iterate here, chances exist that we do draw the same otherPerson twice, right? schlenther, march 27
             int idx = rnd.nextInt(personsToInteractWith.size());
             EpisimPerson otherPerson = personsToInteractWith.get(idx);
+
+            contactPersonsToFind --;
 
             // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
             // density in the transit container goes down.  kai, mar'20)
