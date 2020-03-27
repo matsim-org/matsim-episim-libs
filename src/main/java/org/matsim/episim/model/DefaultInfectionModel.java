@@ -46,8 +46,10 @@ public class DefaultInfectionModel extends InfectionModel {
 
         // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
         // shuffle, those are 10 different persons every day.
-        // as sample size is 25%, 10 persons means 3 agents here
-        for ( int ii = 0 ; ii< Math.min(personsToInteractWith.size(),3); ii++ ) {
+
+        // persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
+        int contactWith = Math.min(personsToInteractWith.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+        for (int ii = 0; ii < contactWith; ii++) {
 
             // (this is "-1" because we can't interact with "self")
 

@@ -239,7 +239,7 @@ public final class EpisimReporting {
             return nSusceptible + nTotalInfected + nRecovered;
         }
 
-        public void scale(double factor) {
+        void scale(double factor) {
             nSusceptible *= factor;
             nInfectedButNotContagious *= factor;
             nContagious *= factor;

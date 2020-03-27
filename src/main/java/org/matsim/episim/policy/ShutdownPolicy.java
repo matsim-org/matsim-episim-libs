@@ -81,7 +81,7 @@ public abstract class ShutdownPolicy {
      */
     static class ConfigBuilder {
 
-        protected Map<String, Map<String, Double>> params = new HashMap<>();
+        protected Map<String, Object> params = new HashMap<>();
 
         public Config build() {
             return ConfigFactory.parseMap(params);

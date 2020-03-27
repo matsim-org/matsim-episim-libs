@@ -120,13 +120,13 @@ public class RunEpisim {
         if (!Files.exists(out))
             Files.createDirectories(out);
 
+        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
         EventsManager events = EventsUtils.createEventsManager();
         events.addHandler(new InfectionEventHandler(config));
 
         List<Event> allEvents = new ArrayList<>();
         events.addHandler(new ReplayHandler(allEvents));
-
-        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
         ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
