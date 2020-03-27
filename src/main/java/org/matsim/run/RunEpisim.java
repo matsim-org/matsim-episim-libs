@@ -13,6 +13,7 @@ import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ICUDependentPolicy;
 
 import java.io.IOException;
 import java.nio.file.Files;

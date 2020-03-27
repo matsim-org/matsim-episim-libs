@@ -268,11 +268,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 EpisimReporting.InfectionReport r = reporting.createReport(personMap, iteration);
 
                 reporting.reporting( r, iteration );
-                reporting.reportRestrictions(restrictions, iteration);
 
                 ImmutableMap<String, ShutdownPolicy.Restriction> im = ImmutableMap.copyOf(this.restrictions);
                 policy.updateRestrictions(r, im);
                 infectionModel.setRestrictionsForIteration(iteration, im);
+                reporting.reportRestrictions(restrictions, iteration);
 
         }
         private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
