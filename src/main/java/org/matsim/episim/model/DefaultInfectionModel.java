@@ -17,21 +17,24 @@ public class DefaultInfectionModel extends InfectionModel {
 
     private static final Logger log = LogManager.getLogger(DefaultInfectionModel.class);
 
+    private enum InfectionSituation {Vehicle, Facility}
+
     public DefaultInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
         super(rnd, episimConfig, reporting);
     }
 
     @Override
     public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
-        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, vehicle.getContainerId().toString());
+//        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, vehicle.getContainerId().toString());
+        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, InfectionSituation.Vehicle);
     }
 
     @Override
     public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
-        infectionDynamicsGeneralized(personLeavingFacility, facility, now, actType);
+        infectionDynamicsGeneralized(personLeavingFacility, facility, now, InfectionSituation.Facility);
     }
 
-    private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, String infectionType) {
+    private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, InfectionSituation infectionSituation) {
 
         if (iteration == 0) {
             return;
@@ -66,6 +69,25 @@ public class DefaultInfectionModel extends InfectionModel {
             int idx = rnd.nextInt(container.getPersons().size());
             EpisimPerson otherPerson = container.getPersons().get(idx);
 
+            String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
+            String otherPersonsActivity = otherPerson.getTrajectory().get(otherPerson.getCurrentPositionInTrajectory());
+
+            String infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+
+            //forbid certain cross-activity infections, keep track of contacts
+            //we can not track contact persons in vehicles
+            if (infectionSituation.equals(InfectionSituation.Facility)){
+                //home can only interact with home or leisure
+                if (infectionType.contains("home") && ! infectionType.contains("leis")  && ! ( leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home")  )){
+                    continue;
+                } else if (infectionType.contains("edu") && ! infectionType.contains("work") && ! ( leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu") )){
+                    //edu can only interact with work or edu
+                    continue;
+                }
+
+                trackContactPerson(personLeavingContainer, otherPerson, leavingPersonsActivity);
+            }
+
             contactPersonsToFind --;
 
             // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
@@ -79,8 +101,6 @@ public class DefaultInfectionModel extends InfectionModel {
             if (!isRelevantForInfectionDynamics(otherPerson, container)) {
                 continue;
             }
-
-            trackContactPerson(personLeavingContainer, infectionType, otherPerson);
 
             Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
             Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(otherPerson.getPersonId());
@@ -108,16 +128,8 @@ public class DefaultInfectionModel extends InfectionModel {
                 throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and otherPerson=" + otherPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
             }
 
-            double contactIntensity = -1;
-            for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
-                if (infectionParams.includesActivity(infectionType)) {
-                    contactIntensity = infectionParams.getContactIntensity();
-                }
-            }
-            if (contactIntensity < 0.) {
-                throw new IllegalStateException("contactIntensity for infectionType=" + infectionType + " is not defined.  There needs to be a " +
-                        "config entry for each infection type.");
-            }
+            double contactIntensity = getContactIntensity(container, infectionSituation, leavingPersonsActivity, otherPersonsActivity);
+
 
             double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer);
             // note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
@@ -135,9 +147,46 @@ public class DefaultInfectionModel extends InfectionModel {
         }
     }
 
-    private void trackContactPerson(EpisimPerson personLeavingContainer, String infectionType, EpisimPerson otherPerson) {
-        // keep track of contacts:
-        if (infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
+    private double getContactIntensity(EpisimContainer<?> container, InfectionSituation infectionSituation, String leavingPersonsActivity, String otherPersonsActivity) {
+        //TODO maybe this can be cleaned up or summarized in some way
+        double contactIntensity = -1;
+        if(infectionSituation.equals(InfectionSituation.Vehicle)){
+            if(! (container instanceof InfectionEventHandler.EpisimVehicle) ){
+                throw new IllegalArgumentException();
+            }
+            String containerIdString = container.getContainerId().toString();
+
+            for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+                if(infectionParams.includesActivity(containerIdString)){
+                    contactIntensity = infectionParams.getContactIntensity();
+                }
+            }
+            if(contactIntensity < 0.){
+                throw new IllegalStateException("contactIntensity not defined for vehicle container=" + containerIdString + ".  There needs to be a config entry for each activity type.");
+            }
+        } else{
+            double contactIntensityLeavingPerson = -1;
+            double contactIntensityOtherPerson = -1;
+            for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+                if (infectionParams.includesActivity(leavingPersonsActivity)) {
+                    contactIntensityLeavingPerson = infectionParams.getContactIntensity();
+                }
+                if(infectionParams.includesActivity(otherPersonsActivity)){
+                    contactIntensityOtherPerson = infectionParams.getContactIntensity();
+                }
+            }
+            if (contactIntensityLeavingPerson < 0. || contactIntensityOtherPerson < 0.) {
+                throw new IllegalStateException("contactIntensity not defined either for activityType=" + contactIntensityLeavingPerson + " or for activityType= " + otherPersonsActivity
+                        + ".  There needs to be a config entry for each activity type.");
+            }
+
+            contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
+        }
+        return contactIntensity;
+    }
+
+    private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, String leavingPersonsActivity) {
+        if (leavingPersonsActivity.contains("home") || leavingPersonsActivity.contains("work") || (leavingPersonsActivity.contains("leisure") && rnd.nextDouble() < 0.8)) {
             if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
                 personLeavingContainer.addTraceableContactPerson(otherPerson);
             }
