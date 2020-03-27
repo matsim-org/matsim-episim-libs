@@ -25,9 +25,7 @@ public class FixedPolicy extends ShutdownPolicy {
 
     @Override
     public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
-
-        // The restrictions are for the next day
-        long day = report.day + 1;
+        long day = report.day;
 
         for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
             if (!config.hasPath(entry.getKey())) continue;

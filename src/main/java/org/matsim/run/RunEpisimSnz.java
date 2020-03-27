@@ -27,6 +27,7 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ICUDependentPolicy;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -56,7 +57,7 @@ public class RunEpisimSnz {
 
         episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
 
-        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+        episimConfig.setPolicy(ICUDependentPolicy.class, FixedPolicy.config()
                 .shutdown(closingIteration, RunEpisim.DEFAULT_ACTIVITIES)
                 .build()
         );
@@ -65,7 +66,7 @@ public class RunEpisimSnz {
 
         ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 
-        RunEpisim.runSimulation(config, 100);
+        RunEpisim.runSimulation(config, 150);
     }
 
 }

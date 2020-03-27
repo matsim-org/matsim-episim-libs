@@ -13,6 +13,7 @@ import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ICUDependentPolicy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -47,7 +48,7 @@ public class RunEpisim {
 
         addDefaultParams(episimConfig);
 
-        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+        episimConfig.setPolicy(ICUDependentPolicy.class, FixedPolicy.config()
                 .shutdown(closingIteration, "leisure", "edu")
                 .restrict(closingIteration, 0.2, "work", "business", "other")
                 .restrict(closingIteration, 0.3, "shop", "errands")
