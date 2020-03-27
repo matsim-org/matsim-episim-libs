@@ -44,14 +44,18 @@ import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 public class ConvertPersonAttributes {
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathToOriginalPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo.xml.gz";
-	private static final String pathToOriginalAttributes = workingDir + "optimizedPersonAttributes.xml.gz";
-	private static final String pathOutputPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo_withAttributes.xml.gz";
+//	private static final String pathToOriginalAttributes = workingDir + "optimizedPersonAttributes.xml.gz";
+	private static final String pathToOriginalAttributes = workingDir + "de_populationAttributes.xml.gz";
+//	private static final String pathOutputPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo_withAttributes.xml.gz";
+	private static final String pathOutputPopulation = workingDir + "de_population_fromPopulationAttributes.xml.gz";
 
 	public static void main(String[] args) {
 				
 		Population populationFromAttributes = buildPopulationFromAttributes(pathToOriginalAttributes);
 		
-		includeMissingAgentsIntoOrigPopulation(populationFromAttributes);
+		PopulationUtils.writePopulation(populationFromAttributes, pathOutputPopulation);
+		
+//		includeMissingAgentsIntoOrigPopulation(populationFromAttributes);
 		
 		Config config = ConfigUtils.createConfig();
 		
