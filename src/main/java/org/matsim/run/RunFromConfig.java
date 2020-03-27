@@ -49,7 +49,7 @@ public class RunFromConfig {
 		
         OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
 
-        RunEpisim.runSimulation(config, 300);
+        RunEpisim.runSimulation(config, 200);
 
 	}
 
