@@ -2,7 +2,6 @@ package org.matsim.episim.policy;
 
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
-import com.typesafe.config.ConfigFactory;
 import org.matsim.episim.EpisimReporting;
 
 import java.util.HashMap;
@@ -44,12 +43,7 @@ public class FixedPolicy extends ShutdownPolicy {
     /**
      * Build fixed config.
      */
-    public static final class ConfigBuilder {
-
-        private Map<String, Map<String, Double>> params = new HashMap<>();
-
-        private ConfigBuilder() {
-        }
+    public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
         /**
          * Restrict activities at specific point of time.
@@ -80,10 +74,6 @@ public class FixedPolicy extends ShutdownPolicy {
          */
         public ConfigBuilder open(long day, String... activities) {
             return this.restrict(day, 1d, activities);
-        }
-
-        public Config build() {
-            return ConfigFactory.parseMap(params);
         }
 
     }

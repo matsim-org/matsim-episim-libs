@@ -9,7 +9,7 @@ import org.matsim.episim.EpisimPerson;
 public interface ProgressionModel {
 
     /**
-     * Called at the end of the day to update the state of a persons.
+     * Called at the start of the day to update the state of a person.
      */
     void updateState(EpisimPerson person, int day);
 

@@ -47,7 +47,7 @@ public final class EpisimPerson {
         this.personId = personId;
     }
 
-    Id<Person> getPersonId() {
+    public Id<Person> getPersonId() {
         return personId;
     }
 
@@ -71,7 +71,10 @@ public final class EpisimPerson {
         return this.infectionDate;
     }
 
-    void setInfectionDate(int date) {
+    public void setInfectionDate(int date) {
+        if (this.infectionDate > -1)
+            throw new IllegalStateException("Infection date already set");
+
         this.infectionDate = date;
     }
 
@@ -106,7 +109,7 @@ public final class EpisimPerson {
         this.lastFacilityId = lastFacilityId;
     }
 
-    void addTraceableContactPerson(EpisimPerson personWrapper) {
+    public void addTraceableContactPerson(EpisimPerson personWrapper) {
         traceableContactPersons.add(personWrapper);
     }
 
@@ -118,11 +121,11 @@ public final class EpisimPerson {
         trajectory.add(trajectoryElement);
     }
 
-    List<String> getTrajectory() {
+    public List<String> getTrajectory() {
         return trajectory;
     }
 
-    int getCurrentPositionInTrajectory() {
+    public int getCurrentPositionInTrajectory() {
         return this.currentPositionInTrajectory;
     }
 

@@ -11,7 +11,7 @@ import java.util.*;
  *
  * @param <T> the type where the agents are located in, e.g {@link org.matsim.vehicles.Vehicle} or {@link org.matsim.facilities.Facility}.
  */
-class EpisimContainer<T> {
+public class EpisimContainer<T> {
     private final Id<T> containerId;
 
     /**
@@ -52,7 +52,7 @@ class EpisimContainer<T> {
         return personWrapper;
     }
 
-    Id<T> getContainerId() {
+    public Id<T> getContainerId() {
         return containerId;
     }
 
@@ -63,7 +63,7 @@ class EpisimContainer<T> {
         this.containerEnterTimes.clear();
     }
 
-    Double getContainerEnteringTime(Id<Person> personId) {
+    public Double getContainerEnteringTime(Id<Person> personId) {
         return containerEnterTimes.get(personId);
     }
 

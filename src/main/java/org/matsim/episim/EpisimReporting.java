@@ -188,7 +188,7 @@ public final class EpisimReporting {
         write(array, infectionsWriter);
     }
 
-    void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
+    public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
         if (specificInfectionsCnt.decrementAndGet() > 0) {
             log.warn("Infection of personId={} by person={} at/in {}", personWrapper.getPersonId(), infector.getPersonId(), infectionType);
         }

@@ -6,7 +6,7 @@ import org.matsim.episim.EpisimPerson;
 import java.util.Random;
 
 /**
- * Default progression model with deterministic state transitions at fixed days.
+ * Default progression model with deterministic (but random) state transitions at fixed days.
  */
 public class DefaultProgressionModel implements ProgressionModel {
 
