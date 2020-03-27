@@ -80,7 +80,7 @@ public class DefaultInfectionModel extends InfectionModel {
                 continue;
             }
 
-            trackOtherPerson(personLeavingContainer, infectionType, otherPerson);
+            trackContactPerson(personLeavingContainer, infectionType, otherPerson);
 
             Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
             Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(otherPerson.getPersonId());
@@ -135,7 +135,7 @@ public class DefaultInfectionModel extends InfectionModel {
         }
     }
 
-    private void trackOtherPerson(EpisimPerson personLeavingContainer, String infectionType, EpisimPerson otherPerson) {
+    private void trackContactPerson(EpisimPerson personLeavingContainer, String infectionType, EpisimPerson otherPerson) {
         // keep track of contacts:
         if (infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
             if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
