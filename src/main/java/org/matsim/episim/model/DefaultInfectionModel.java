@@ -41,13 +41,13 @@ public class DefaultInfectionModel extends InfectionModel {
             return;
         }
 
-        int contactPersons = 0;
-
         ArrayList<EpisimPerson> personsToInteractWith = new ArrayList<>(container.getPersons());
         personsToInteractWith.remove(personLeavingContainer);
 
-        for (int ii = 0; ii < personsToInteractWith.size(); ii++) {
-            // yy Shouldn't we be able to just count up to min( ...size(), 3 ) and get rid of the separate contactPersons counter?  kai, mar'20
+        // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
+        // shuffle, those are 10 different persons every day.
+        // as sample size is 25%, 10 persons means 3 agents here
+        for ( int ii = 0 ; ii< Math.min(personsToInteractWith.size(),3); ii++ ) {
 
             // (this is "-1" because we can't interact with "self")
 
@@ -55,17 +55,9 @@ public class DefaultInfectionModel extends InfectionModel {
             // already left the container were treated then.  In consequence, we have some "circle of persons around us" (yyyy which should
             //  depend on the density), and then a probability of infection in either direction.
 
-            // if we have seen enough, then break, no matter what:
-            if (contactPersons >= 3) {
-                break;
-            }
-            // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
-            // shuffle, those are 10 different persons every day.
-
+            //TODO the way we iterate here, chances exist that we do draw the same otherPerson twice, right? schlenther, march 27
             int idx = rnd.nextInt(container.getPersons().size());
             EpisimPerson otherPerson = container.getPersons().get(idx);
-
-            contactPersons++;
 
             // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
             // density in the transit container goes down.  kai, mar'20)
