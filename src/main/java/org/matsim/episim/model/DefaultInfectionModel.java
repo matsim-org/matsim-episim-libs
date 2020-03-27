@@ -63,8 +63,8 @@ public class DefaultInfectionModel extends InfectionModel {
             //  depend on the density), and then a probability of infection in either direction.
 
             //TODO the way we iterate here, chances exist that we do draw the same otherPerson twice, right? schlenther, march 27
-            int idx = rnd.nextInt(personsToInteractWith.size());
-            EpisimPerson otherPerson = personsToInteractWith.get(idx);
+            int idx = rnd.nextInt(container.getPersons().size());
+            EpisimPerson otherPerson = container.getPersons().get(idx);
 
             contactPersonsToFind --;
 
