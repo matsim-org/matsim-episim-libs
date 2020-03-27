@@ -149,6 +149,7 @@ public class DefaultInfectionModel extends InfectionModel {
     }
 
     private double getContactIntensity(EpisimContainer<?> container, InfectionSituation infectionSituation, String leavingPersonsActivity, String otherPersonsActivity) {
+        //TODO maybe this can be cleaned up or summarized in some way
         double contactIntensity = -1;
         if(infectionSituation.equals(InfectionSituation.Vehicle)){
             if(! (container instanceof InfectionEventHandler.EpisimVehicle) ){
