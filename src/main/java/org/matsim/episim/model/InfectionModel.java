@@ -84,17 +84,17 @@ public abstract class InfectionModel {
     /**
      * Checks whether a persons and container is relevant for the infection dynamics. This function also considers the restrictions in place.
      */
-    protected boolean isRelevantForInfectionDynamics(EpisimPerson personLeavingContainer, EpisimContainer<?> container) {
-        if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(personLeavingContainer)) {
+    protected boolean isRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container) {
+        if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(person)) {
             return false;
         }
-        if (personLeavingContainer.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+        if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
             return false;
         }
-        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(personLeavingContainer)) {
+        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
             return true;
         }
-        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(personLeavingContainer)) {
+        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person)) {
             return true;
         }
         return false;
