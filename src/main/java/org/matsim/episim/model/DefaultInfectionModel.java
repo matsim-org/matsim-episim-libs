@@ -47,16 +47,16 @@ public class DefaultInfectionModel extends InfectionModel {
         ArrayList<EpisimPerson> personsToInteractWith = new ArrayList<>(container.getPersons());
         personsToInteractWith.remove(personLeavingContainer);
 
+        int contactPersons = 0;
 
         // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
         // shuffle, those are 10 different persons every day.
         // as sample size is 25%, 10 persons means 3 agents here
-        int contactPersonsToFind = Math.max((int) (episimConfig.getSampleSize() * 10), 3);
         for ( int ii = 0 ; ii< personsToInteractWith.size(); ii++ ) {
             //as we now forbid infection for certain activity type pairs, we do need the separate counter. schlenther, march 27
 
             //if we have seen enough, break, no matter what
-            if(contactPersonsToFind <= 0){
+            if(contactPersons >= 3){
                 break;
             }
 
@@ -101,7 +101,7 @@ public class DefaultInfectionModel extends InfectionModel {
                 trackContactPerson(personLeavingContainer, otherPerson, leavingPersonsActivity);
             }
 
-            contactPersonsToFind --;
+            contactPersons ++;
 
             Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
             Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(otherPerson.getPersonId());
