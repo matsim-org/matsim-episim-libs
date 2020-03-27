@@ -2,10 +2,14 @@ package org.matsim.episim.policy;
 
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
+
+import java.util.HashMap;
+import java.util.Map;
 
 
 /**
@@ -23,7 +27,7 @@ public abstract class ShutdownPolicy {
     }
 
     /**
-     * Update the restrictions on the end of the day based on the report. The restrictions will be in effect the following day.
+     * Update the restrictions at the start of the day based on the report. The restrictions will be in effect the following day.
      * The map is immutable, use setters of {@link Restriction}.
      *
      * @param report       infections statistics of the day
@@ -71,4 +75,17 @@ public abstract class ShutdownPolicy {
 
     }
 
+
+    /**
+     * Helper base class for config builders.
+     */
+    static class ConfigBuilder {
+
+        protected Map<String, Map<String, Double>> params = new HashMap<>();
+
+        public Config build() {
+            return ConfigFactory.parseMap(params);
+        }
+
+    }
 }

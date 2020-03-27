@@ -1,6 +1,6 @@
 package org.matsim.episim;
 
-class EpisimUtils {
+public class EpisimUtils {
 
     /**
      * Calculates the time based on the current iteration.

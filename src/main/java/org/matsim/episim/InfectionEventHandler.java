@@ -18,14 +18,15 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.TripStructureUtils;
+import org.matsim.episim.model.DefaultInfectionModel;
 import org.matsim.episim.model.DefaultProgressionModel;
+import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.Facility;
 import org.matsim.vehicles.Vehicle;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Random;
@@ -72,6 +73,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
          */
         private final ProgressionModel progressionModel;
 
+        /**
+         * Models the process of persons infecting each other during activities.
+         */
+        private final InfectionModel infectionModel;
+
         private final EpisimConfigGroup episimConfig;
         private final EpisimReporting reporting;
         private final Random rnd = new Random(1);
@@ -86,6 +92,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 this.restrictions = episimConfig.createInitialRestrictions();
                 this.reporting = new EpisimReporting( config );
                 this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
+                this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting);
         }
 
         @Override public void handleEvent( ActivityEndEvent activityEndEvent ) {
@@ -103,7 +110,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 	if (episimPerson.getFirstFacilityId() == null) {
                 		episimFacility.addPerson(episimPerson, 0 );
                 	}
-                	infectionDynamicsFacility( episimPerson, episimFacility, now, activityEndEvent.getActType() );
+                	infectionModel.infectionDynamicsFacility( episimPerson, episimFacility, now, activityEndEvent.getActType() );
                 	episimFacility.removePerson(episimPerson.getPersonId());
                 	handleInitialInfections(episimPerson);
                 }
@@ -112,7 +119,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                 	if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
                 		throw new IllegalStateException("Something went wrong ...");
                 	}
-                	infectionDynamicsFacility( episimPerson, episimFacility, now, activityEndEvent.getActType() );
+                	infectionModel.infectionDynamicsFacility( episimPerson, episimFacility, now, activityEndEvent.getActType() );
                 	episimFacility.removePerson(episimPerson.getPersonId());
                 }
                 if (episimPerson.getCurrentPositionInTrajectory() == 0) {
@@ -152,7 +159,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
                 EpisimPerson episimPerson = episimVehicle.getPerson( leavesVehicleEvent.getPersonId() );
 
-                infectionDynamicsVehicle( episimPerson, episimVehicle, now );
+                infectionModel.infectionDynamicsVehicle( episimPerson, episimVehicle, now );
 
                 // remove person from vehicle:
                 episimVehicle.removePerson( episimPerson.getPersonId() );
@@ -246,153 +253,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
                         }
                 }
         }
-        private void infectionDynamicsVehicle( EpisimPerson personLeavingVehicle, EpisimVehicle vehicle, double now ){
-                infectionDynamicsGeneralized( personLeavingVehicle, vehicle, now, vehicle.getContainerId().toString() );
-        }
-        private void infectionDynamicsFacility( EpisimPerson personLeavingFacility, EpisimFacility facility, double now, String actType ) {
-                infectionDynamicsGeneralized( personLeavingFacility, facility, now, actType );
-        }
-        private void infectionDynamicsGeneralized( EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, String infectionType ) {
 
-                if (iteration == 0) {
-                        return;
-                }
 
-                if( !isRelevantForInfectionDynamics( personLeavingContainer, container ) ) {
-                        return;
-                }
-
-                int contactPersons = 0 ;
-
-                ArrayList<EpisimPerson> personsToInteractWith = new ArrayList<>( container.getPersons() );
-                personsToInteractWith.remove( personLeavingContainer );
-
-                for ( int ii = 0 ; ii<personsToInteractWith.size(); ii++ ) {
-                        // yy Shouldn't we be able to just count up to min( ...size(), 3 ) and get rid of the separate contactPersons counter?  kai, mar'20
-
-                        // (this is "-1" because we can't interact with "self")
-
-                        // we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
-                        // already left the container were treated then.  In consequence, we have some "circle of persons around us" (yyyy which should
-                        //  depend on the density), and then a probability of infection in either direction.
-
-                        // if we have seen enough, then break, no matter what:
-                        if (contactPersons >= 3) {
-                                break;
-                        }
-                        // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
-                        // shuffle, those are 10 different persons every day.
-
-                        int idx = rnd.nextInt( container.getPersons().size() );
-                        EpisimPerson otherPerson = container.getPersons().get( idx );
-
-                        contactPersons++;
-
-                        // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
-                        // density in the transit container goes down.  kai, mar'20)
-
-                        if ( personLeavingContainer.getDiseaseStatus()==otherPerson.getDiseaseStatus() ) {
-                                // (if they have the same status, then nothing can happen between them)
-                                continue;
-                        }
-
-                        if( !isRelevantForInfectionDynamics( otherPerson, container ) ) {
-                                continue;
-                        }
-
-                        // keep track of contacts:
-                        if(infectionType.contains("home") || infectionType.contains("work") || (infectionType.contains("leisure") && rnd.nextDouble() < 0.8)) {
-                                if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
-                                        personLeavingContainer.addTraceableContactPerson(otherPerson);
-                                }
-                                if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) {
-                                        otherPerson.addTraceableContactPerson(personLeavingContainer);
-                                }
-                        }
-
-                        Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime( personLeavingContainer.getPersonId() );
-                        Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime( otherPerson.getPersonId() );
-
-                        // persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
-                        // start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
-                        if ( containerEnterTimeOfPersonLeaving==null && containerEnterTimeOfOtherPerson==null ) {
-                                throw new IllegalStateException( "should not happen" );
-                                // null should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
-                                // can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
-                                // container from the beginning.  ????  kai, mar'20
-                        }
-                        if ( containerEnterTimeOfPersonLeaving==null ) {
-                                containerEnterTimeOfPersonLeaving = Double.NEGATIVE_INFINITY;
-                        }
-                        if ( containerEnterTimeOfOtherPerson==null ) {
-                                containerEnterTimeOfOtherPerson = Double.NEGATIVE_INFINITY;
-                        }
-
-                        double jointTimeInContainer = now - Math.max( containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson );
-                        if ( jointTimeInContainer  < 0 || jointTimeInContainer > 86400) {
-                            log.warn(containerEnterTimeOfPersonLeaving);
-                            log.warn(containerEnterTimeOfOtherPerson);
-                            log.warn(now);
-                        	throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and otherPerson=" + otherPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
-                        }
-
-                        double contactIntensity = -1 ;
-                        for( EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values() ){
-                                if ( infectionParams.includesActivity(infectionType) ) {
-                                        contactIntensity = infectionParams.getContactIntensity();
-                                }
-                        }
-                        if ( contactIntensity < 0. ) {
-                                throw new IllegalStateException( "contactIntensity for infectionType=" + infectionType + " is not defined.  There needs to be a " +
-                                                                            "config entry for each infection type." );
-                        }
-
-                        double infectionProba = 1 - Math.exp( -episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer );
-                        // note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
-                        // exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
-                        // no effect.  kai, mar'20
-
-                        if ( rnd.nextDouble() < infectionProba ) {
-                                if ( personLeavingContainer.getDiseaseStatus()== EpisimPerson.DiseaseStatus.susceptible ) {
-                                        infectPerson( personLeavingContainer, otherPerson, now, infectionType );
-                                        return;
-                                } else {
-                                        infectPerson( otherPerson, personLeavingContainer, now, infectionType );
-                                }
-                        }
-                }
-        }
-
-        private void infectPerson( EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType ){
-
-                if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
-                        throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
-                }
-                if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious) {
-                        throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
-                }
-                if (personWrapper.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
-                        throw new IllegalStateException("Person to be infected is in quarantine.");
-                }
-                if (infector.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
-                        throw new IllegalStateException("Infector is in quarantine.");
-                }
-                if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
-                        throw new IllegalStateException("Person and infector are not in same container!");
-                }
-
-                personWrapper.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious);
-                if (scenario != null) {
-                        final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
-                        if (person != null) {
-                                person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
-                        }
-                }
-
-                personWrapper.setInfectionDate(iteration);
-
-                reporting.reportInfection(personWrapper, infector, now, infectionType);
-        }
         @Override public void reset( int iteration ){
 
                 for ( EpisimPerson person : personMap.values()) {
@@ -405,11 +267,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
                 EpisimReporting.InfectionReport r = reporting.createReport(personMap, iteration);
 
+                reporting.reporting( r, iteration );
                 reporting.reportRestrictions(restrictions, iteration);
 
-                policy.updateRestrictions(r, ImmutableMap.copyOf(restrictions));
-
-                reporting.reporting( r, iteration );
+                ImmutableMap<String, ShutdownPolicy.Restriction> im = ImmutableMap.copyOf(this.restrictions);
+                policy.updateRestrictions(r, im);
+                infectionModel.setRestrictionsForIteration(iteration, im);
 
         }
         private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
@@ -418,14 +281,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				Id<?> lastFacilityId = person.getCurrentContainer().getContainerId();
 				if (this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
 					EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-					infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
+					infectionModel.infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
 					lastFacility.removePerson(person.getPersonId());
 					EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 					firstFacility.addPerson(person, (iteration + 1) * 86400d);
 				}
 				if (this.vehicleMap.containsKey(lastFacilityId)) {
 					EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
-					infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
+					infectionModel.infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
 					lastVehicle.removePerson(person.getPersonId());
 					EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 					firstFacility.addPerson(person, (iteration + 1) * 86400d);
@@ -437,64 +300,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			}
 		}
 
-        private boolean activityRelevantForInfectionDynamics(EpisimPerson person) {
-                String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
-                return actIsRelevant(act);
-        }
-
-        private boolean actIsRelevant(String act) {
-                for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
-                        if (infectionParams.includesActivity(act)) {
-                                ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
-                                // avoid use of rnd if outcome is known beforehand
-                                if (r.getRemainingFraction() == 1)
-                                        return true;
-                                if (r.getRemainingFraction() == 0)
-                                        return false;
-
-                                return rnd.nextDouble() < r.getRemainingFraction();
-                        }
-                }
-
-                throw new IllegalStateException(String.format("No restrictions known for activity %s. Please add prefix to one infection parameter.", act));
-        }
-
-        private boolean tripRelevantForInfectionDynamics(EpisimPerson person) {
-                String lastAct = "";
-                if (person.getCurrentPositionInTrajectory() != 0) {
-                        lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
-                }
-
-                String nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
-
-                // TODO: tr is a hardcoded activity for "pt"
-                // last activity is only considered if present
-                return actIsRelevant("tr") && actIsRelevant(nextAct) && (lastAct.isEmpty() || actIsRelevant(lastAct));
-
-        }
-
-        private boolean isRelevantForInfectionDynamics(EpisimPerson personLeavingContainer, EpisimContainer<?> container) {
-                if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(personLeavingContainer)) {
-                        return false;
-                }
-                if (personLeavingContainer.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
-                        return false;
-                }
-                if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(personLeavingContainer)) {
-                        return true;
-                }
-                if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(personLeavingContainer)) {
-                        return true;
-                }
-                return false;
-        }
-
-        static final class EpisimVehicle extends EpisimContainer<Vehicle>{
+        public static final class EpisimVehicle extends EpisimContainer<Vehicle>{
                 EpisimVehicle( Id<Vehicle> vehicleId ){
                         super( vehicleId );
                 }
         }
-        static final class EpisimFacility extends EpisimContainer<Facility>{
+        public static final class EpisimFacility extends EpisimContainer<Facility>{
                 EpisimFacility( Id<Facility> facilityId ){
                         super( facilityId );
                 }
