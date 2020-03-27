@@ -44,7 +44,7 @@ public class RunEpisimSnz {
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
+        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220.0.events.reduced.xml.gz");
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
         episimConfig.setSampleSize(0.25);
