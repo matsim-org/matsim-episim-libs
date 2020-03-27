@@ -13,6 +13,7 @@ import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ICUDependentPolicy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -120,13 +121,13 @@ public class RunEpisim {
         if (!Files.exists(out))
             Files.createDirectories(out);
 
+        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
         EventsManager events = EventsUtils.createEventsManager();
         events.addHandler(new InfectionEventHandler(config));
 
         List<Event> allEvents = new ArrayList<>();
         events.addHandler(new ReplayHandler(allEvents));
-
-        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
         ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 

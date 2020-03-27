@@ -25,9 +25,7 @@ public class FixedPolicy extends ShutdownPolicy {
 
     @Override
     public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
-
-        // The restrictions are for the next day
-        long day = report.day + 1;
+        long day = report.day;
 
         for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
             if (!config.hasPath(entry.getKey())) continue;
@@ -52,10 +50,11 @@ public class FixedPolicy extends ShutdownPolicy {
          * @param day        the day/iteration when it will be in effect
          * @param fraction   fraction of remaining allowed activity
          */
+        @SuppressWarnings("unchecked")
         public ConfigBuilder restrict(long day, double fraction, String... activities) {
 
             for (String act : activities) {
-                Map<String, Double> p = params.computeIfAbsent(act, m -> new HashMap<>());
+                Map<String, Double> p = (Map<String, Double>) params.computeIfAbsent(act, m -> new HashMap<>());
                 p.put(String.valueOf(day), fraction);
             }
 
