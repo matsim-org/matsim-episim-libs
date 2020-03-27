@@ -57,7 +57,7 @@ public class RunEpisimSnz {
 
         episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
 
-        episimConfig.setPolicy(ICUDependentPolicy.class, FixedPolicy.config()
+        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
                 .shutdown(closingIteration, RunEpisim.DEFAULT_ACTIVITIES)
                 .build()
         );

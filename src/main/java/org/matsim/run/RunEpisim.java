@@ -48,7 +48,7 @@ public class RunEpisim {
 
         addDefaultParams(episimConfig);
 
-        episimConfig.setPolicy(ICUDependentPolicy.class, FixedPolicy.config()
+        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
                 .shutdown(closingIteration, "leisure", "edu")
                 .restrict(closingIteration, 0.2, "work", "business", "other")
                 .restrict(closingIteration, 0.3, "shop", "errands")
