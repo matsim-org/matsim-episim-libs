@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimReporting;
 
 import java.util.Random;
 
@@ -93,5 +94,11 @@ public class DefaultProgressionModel implements ProgressionModel {
             person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no);
         }
         person.getTraceableContactPersons().clear();
+    }
+
+
+    @Override
+    public boolean canProgress(EpisimReporting.InfectionReport report) {
+        return report.nTotalInfected > 0 || report.nInQuarantine > 0;
     }
 }

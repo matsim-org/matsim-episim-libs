@@ -13,7 +13,6 @@ import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.ICUDependentPolicy;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -124,7 +123,9 @@ public class RunEpisim {
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
         EventsManager events = EventsUtils.createEventsManager();
-        events.addHandler(new InfectionEventHandler(config));
+
+        InfectionEventHandler eventHandler = new InfectionEventHandler(config);
+        events.addHandler(eventHandler);
 
         List<Event> allEvents = new ArrayList<>();
         events.addHandler(new ReplayHandler(allEvents));
@@ -133,6 +134,9 @@ public class RunEpisim {
 
         for (int iteration = 0; iteration <= iterations; iteration++) {
             events.resetHandlers(iteration);
+            if (eventHandler.isFinished())
+                break;
+
             if (iteration == 0)
                 EventsUtils.readEvents(events, episimConfig.getInputEventsFile());
             else
