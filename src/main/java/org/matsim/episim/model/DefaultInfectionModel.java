@@ -187,11 +187,13 @@ public class DefaultInfectionModel extends InfectionModel {
 
     private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, String leavingPersonsActivity) {
         if (leavingPersonsActivity.contains("home") || leavingPersonsActivity.contains("work") || (leavingPersonsActivity.contains("leisure") && rnd.nextDouble() < 0.8)) {
-            if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) {
-                personLeavingContainer.addTraceableContactPerson(otherPerson);
-            }
-            if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) {
-                otherPerson.addTraceableContactPerson(personLeavingContainer);
+            if(EpisimUtils.isPersonTraceable(personLeavingContainer) && EpisimUtils.isPersonTraceable(otherPerson)){
+                if (!personLeavingContainer.getTraceableContactPersons().contains(otherPerson)) { //if condition should not be necessary as it is a set
+                    personLeavingContainer.addTraceableContactPerson(otherPerson);
+                }
+                if (!otherPerson.getTraceableContactPersons().contains(personLeavingContainer)) { //if condition should not be necessary as it is a set
+                    otherPerson.addTraceableContactPerson(personLeavingContainer);
+                }
             }
         }
     }
