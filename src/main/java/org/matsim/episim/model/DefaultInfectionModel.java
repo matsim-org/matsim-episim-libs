@@ -86,11 +86,9 @@ public class DefaultInfectionModel extends InfectionModel {
             if (infectionSituation.equals(InfectionSituation.Facility)){
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && ! infectionType.contains("leis")  && ! ( leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home")  )){
-                    log.warn("avoiding cross activity infection for home. infectionType=" + infectionType);
                     continue;
                 } else if (infectionType.contains("edu") && ! infectionType.contains("work") && ! ( leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu") )){
                     //edu can only interact with work or edu
-                    log.warn("avoiding cross activity infection for edu. infectionType=" + infectionType);
                     continue;
                 }
 
