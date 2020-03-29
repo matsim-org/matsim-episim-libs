@@ -60,7 +60,7 @@ public final class EpisimPerson {
 
     public void setDiseaseStatus( double now, DiseaseStatus status ) {
         this.status = status;
-        eventsManager.processEvent( new EpisimPersonStatusChangeEvent( now, status, personId ) );
+        eventsManager.processEvent( new EpisimPersonStatusEvent( now, personId, status ) );
     }
 
     public QuarantineStatus getQuarantineStatus() {

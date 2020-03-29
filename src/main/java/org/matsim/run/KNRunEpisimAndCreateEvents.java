@@ -40,6 +40,8 @@ import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimPersonStatusEvent;
 import org.matsim.episim.InfectionEventHandler;
 
 import java.io.IOException;
@@ -97,17 +99,33 @@ public class KNRunEpisimAndCreateEvents{
             }
         } );
 
-        events.addHandler( new EventWriterXML( "events-with-coordinates.xml.gz" ) );
-
         List<Event> allEvents = new ArrayList<>();
         events.addHandler(new RunEpisim.ReplayHandler(allEvents) );
 
         ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "Just before starting iterations" );
 
-        for ( int iteration = 0 ; iteration <= 2 ; iteration++) {
+        for ( int iteration = 0 ; iteration <= 4 ; iteration++) {
+
+            // first reset (since this contains the progression status changes that are at the end of the day):
             events.resetHandlers(iteration);
+
+            // finish if done:
             if (eventHandler.isFinished())
                 break;
+
+            // add events handler for iteration 4 and report initial status:
+            if ( iteration==4 ) {
+                events.addHandler( new EventWriterXML( "events-with-coordinates.xml.gz" ) );
+
+                for( EpisimPerson person : eventHandler.getPersons() ){
+                    if ( person.getDiseaseStatus()!= EpisimPerson.DiseaseStatus.susceptible ){
+                        events.processEvent( new EpisimPersonStatusEvent( 0., person.getPersonId(), person.getDiseaseStatus() ) );
+                    }
+                }
+
+
+            }
+
 
             if (iteration == 0)
                 EventsUtils.readEvents(events, episimConfig.getInputEventsFile() );

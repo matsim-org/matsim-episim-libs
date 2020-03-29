@@ -29,9 +29,7 @@ import org.matsim.vehicles.Vehicle;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
 import javax.annotation.Nullable;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 /**
  * Main event handler of episim.
@@ -341,6 +339,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         EpisimFacility(Id<Facility> facilityId) {
             super(facilityId);
         }
+    }
+
+    public Collection<EpisimPerson> getPersons() {
+        // I have nothing against given out the map if someone needs it, but as long as nobody needs it, we can as well give out this partial view and thus
+        // keep implemention options open.  kai, mar'20
+        return Collections.unmodifiableCollection( personMap.values() );
     }
 }
 

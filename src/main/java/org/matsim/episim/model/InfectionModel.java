@@ -84,7 +84,8 @@ public abstract class InfectionModel {
 
         reporting.reportInfection(personWrapper, infector, now, infectionType);
 
-        eventsManager.processEvent( new EpisimPersonStatusChangeEvent(now, EpisimPerson.DiseaseStatus.infectedButNotContagious, personWrapper.getPersonId() ) );
+//        eventsManager.processEvent( new EpisimPersonStatusEvent(now, personWrapper.getPersonId(), EpisimPerson.DiseaseStatus.infectedButNotContagious ) );
+        // done in EpisimPerson!
     }
 
     /**

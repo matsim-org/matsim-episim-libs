@@ -7,14 +7,13 @@ import org.matsim.core.api.internal.HasPersonId;
 
 import java.util.Map;
 
-public class EpisimPersonStatusChangeEvent extends Event implements HasPersonId {
-        private static final String EVENT_TYPE = "episimPersonStatusChange";
+public class EpisimPersonStatusEvent extends Event implements HasPersonId {
+        private static final String EVENT_TYPE = "episimPersonStatus";
         private static final String DISEASE_STATUS = "diseaseStatus";
         private final EpisimPerson.DiseaseStatus diseaseStatus;
         private final Id<Person> personId;
 
-        public EpisimPersonStatusChangeEvent( double time, EpisimPerson.DiseaseStatus diseaseStatus,
-                                              Id<Person> personId ){
+        public EpisimPersonStatusEvent( double time, Id<Person> personId, EpisimPerson.DiseaseStatus diseaseStatus ){
                 super( time );
                 this.diseaseStatus = diseaseStatus;
                 this.personId = personId;
