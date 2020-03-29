@@ -7,10 +7,14 @@ import org.matsim.facilities.Facility;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 
 public class EpisimTestUtils {
 
     private static final AtomicLong ID = new AtomicLong(0);
+
+    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(EpisimPerson.DiseaseStatus.contagious);
+    public static Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
 
     /**
      * Creates test config with some default interactions.
@@ -22,9 +26,11 @@ public class EpisimTestUtils {
         episimConfig.setSampleSize(1);
         episimConfig.setCalibrationParameter(0.001);
 
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c0").setContactIntensity(0));
+        // No container name should be the prefix of another one
+        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c00").setContactIntensity(0));
+        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c0.1").setContactIntensity(0.1));
         episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c0.5").setContactIntensity(0.5));
-        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c1").setContactIntensity(1));
+        episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c1.0").setContactIntensity(1));
         episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c5").setContactIntensity(5));
         episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c10").setContactIntensity(10));
         episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home").setContactIntensity(10));
@@ -39,14 +45,9 @@ public class EpisimTestUtils {
     /**
      * Create facility with n persons in it.
      */
-    public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, EpisimPerson.DiseaseStatus status) {
+    public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, Consumer<EpisimPerson> init) {
         InfectionEventHandler.EpisimFacility container = createFacility();
-        for (int i = 0; i < n; i++) {
-            EpisimPerson p = createPerson(act, container);
-            p.setDiseaseStatus(status);
-        }
-
-        return container;
+        return addPersons(container, n, act, init);
     }
 
     /**
@@ -62,6 +63,19 @@ public class EpisimTestUtils {
         }
 
         return p;
+    }
+
+    /**
+     * Add persons to a facility.
+     */
+    public static InfectionEventHandler.EpisimFacility addPersons(InfectionEventHandler.EpisimFacility container, int n,
+                                                                  String act, Consumer<EpisimPerson> init) {
+        for (int i = 0; i < n; i++) {
+            EpisimPerson p = createPerson(act, container);
+            init.accept(p);
+        }
+
+        return container;
     }
 
 }
