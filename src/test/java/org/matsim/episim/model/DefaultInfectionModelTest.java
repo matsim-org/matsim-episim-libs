@@ -82,8 +82,8 @@ public class DefaultInfectionModelTest {
     @Test
     public void noCrossInfection() {
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
-                () -> EpisimTestUtils.createFacility(1, "c1", EpisimPerson.DiseaseStatus.contagious),
-                (f) -> EpisimTestUtils.createPerson("c10", f)
+                () -> EpisimTestUtils.createFacility(1, "home", EpisimPerson.DiseaseStatus.contagious),
+                (f) -> EpisimTestUtils.createPerson("c1", f)
         );
 
         assertThat(rate).isCloseTo(0, OFFSET);
