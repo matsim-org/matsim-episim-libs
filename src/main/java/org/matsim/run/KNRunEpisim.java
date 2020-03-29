@@ -34,10 +34,6 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
 
-/**
- * @author smueller
- */
-
 public class KNRunEpisim{
     private static final Logger log = Logger.getLogger( KNRunEpisim.class );
 

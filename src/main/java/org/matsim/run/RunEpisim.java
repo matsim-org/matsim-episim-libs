@@ -124,7 +124,7 @@ public class RunEpisim {
 
         EventsManager events = EventsUtils.createEventsManager();
 
-        InfectionEventHandler eventHandler = new InfectionEventHandler(config);
+        InfectionEventHandler eventHandler = new InfectionEventHandler(config, events );
         events.addHandler(eventHandler);
 
         List<Event> allEvents = new ArrayList<>();
@@ -150,7 +150,9 @@ public class RunEpisim {
     /**
      * Helper class that stores all events in a given array (only in iteration 0)
      */
-    private static final class ReplayHandler implements BasicEventHandler {
+    static final class ReplayHandler implements BasicEventHandler {
+        // yyyyyy I made this package-private, sorry.  Need to sort this out.  kai, mar'20
+
         public final List<Event> events;
         private boolean collect = false;
 

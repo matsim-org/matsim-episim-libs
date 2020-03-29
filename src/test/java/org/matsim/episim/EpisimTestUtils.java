@@ -1,8 +1,11 @@
 package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.Event;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.events.EventsUtils;
 import org.matsim.facilities.Facility;
 
 import javax.annotation.Nullable;
@@ -13,7 +16,7 @@ public class EpisimTestUtils {
 
     private static final AtomicLong ID = new AtomicLong(0);
 
-    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(EpisimPerson.DiseaseStatus.contagious);
+    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus( 0., EpisimPerson.DiseaseStatus.contagious );
     public static Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
 
     /**
@@ -53,7 +56,8 @@ public class EpisimTestUtils {
      * Create a person and add to container.
      */
     public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()));
+        final EventsManager dummyEventsManager = EventsUtils.createEventsManager();
+        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement() ), dummyEventsManager );
         p.getTrajectory().add(currentAct);
 
         if (container != null) {

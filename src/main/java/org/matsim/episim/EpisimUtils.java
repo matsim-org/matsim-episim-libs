@@ -7,7 +7,7 @@ public class EpisimUtils {
      *
      * @param time time relative to start of day
      */
-    static double getCorrectedTime(double time, long iteration) {
+    public static double getCorrectedTime( double time, long iteration ) {
         return Math.min(time, 3600. * 24) + iteration * 24. * 3600;
     }
 

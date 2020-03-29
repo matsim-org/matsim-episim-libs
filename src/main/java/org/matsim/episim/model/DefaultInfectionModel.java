@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.episim.*;
 
 import java.util.ArrayList;
@@ -17,8 +18,9 @@ public class DefaultInfectionModel extends InfectionModel {
 
     private static final Logger log = LogManager.getLogger(DefaultInfectionModel.class);
 
-    public DefaultInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
-        super(rnd, episimConfig, reporting);
+    public DefaultInfectionModel( Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting,
+                                  EventsManager eventsManager ) {
+        super(rnd, episimConfig, reporting, eventsManager );
     }
 
     @Override

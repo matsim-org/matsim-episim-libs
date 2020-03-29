@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -78,6 +79,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
     private final InfectionModel infectionModel;
 
     private final EpisimConfigGroup episimConfig;
+    private final EventsManager eventsManager;
     private final EpisimReporting reporting;
     private final Random rnd = new Random(1);
 
@@ -94,13 +96,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
     private EpisimReporting.InfectionReport report;
 
     @Inject
-    public InfectionEventHandler(Config config) {
+    public InfectionEventHandler( Config config, EventsManager eventsManager ) {
         this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+        this.eventsManager = eventsManager;
         this.policy = episimConfig.createPolicyInstance();
         this.restrictions = episimConfig.createInitialRestrictions();
         this.reporting = new EpisimReporting(config);
         this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
-        this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting);
+        this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting, eventsManager );
     }
 
     /**
@@ -125,7 +128,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
             return;
         }
 
-        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), EpisimPerson::new);
+        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), personId -> new EpisimPerson( personId, eventsManager ) );
         Id<Facility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
         if (iteration == 0) {
@@ -135,7 +138,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
             }
             infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
             episimFacility.removePerson(episimPerson.getPersonId());
-            handleInitialInfections(episimPerson);
+            handleInitialInfections( now, episimPerson );
         } else {
             EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
             if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
@@ -160,7 +163,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         }
 
         // find the person:
-        EpisimPerson episimPerson = this.personMap.computeIfAbsent(entersVehicleEvent.getPersonId(), EpisimPerson::new);
+        EpisimPerson episimPerson = this.personMap.computeIfAbsent(entersVehicleEvent.getPersonId(), personId -> new EpisimPerson( personId, eventsManager ) );
 
         // find the vehicle:
         EpisimVehicle episimVehicle = this.vehicleMap.computeIfAbsent(entersVehicleEvent.getVehicleId(), EpisimVehicle::new);
@@ -198,7 +201,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         }
 
         // find the person:
-        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityStartEvent.getPersonId(), EpisimPerson::new);
+        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityStartEvent.getPersonId(), personId -> new EpisimPerson( personId, eventsManager ) );
 
         // create pseudo facility id that includes the activity type:
         Id<Facility> episimFacilityId = createEpisimFacilityId(activityStartEvent);
@@ -266,10 +269,10 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         person.addToTrajectory(trajectoryElement);
     }
 
-    private void handleInitialInfections(EpisimPerson personWrapper) {
+    private void handleInitialInfections( double now, EpisimPerson personWrapper ) {
         // initial infections:
         if (cnt > 0) {
-            personWrapper.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious);
+            personWrapper.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.infectedButNotContagious );
             personWrapper.setInfectionDate(iteration);
             log.warn(" person " + personWrapper.getPersonId() + " has initial infection");
             cnt--;
