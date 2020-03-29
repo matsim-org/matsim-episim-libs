@@ -72,6 +72,10 @@ public class DefaultInfectionModel extends InfectionModel {
             int idx = rnd.nextInt(personsToInteractWith.size());
             EpisimPerson otherPerson = personsToInteractWith.get(idx);
 
+            if (!isRelevantForInfectionDynamics(otherPerson, container)) {
+                continue;
+            }
+
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = otherPerson.getTrajectory().get(otherPerson.getCurrentPositionInTrajectory());
 
@@ -82,9 +86,11 @@ public class DefaultInfectionModel extends InfectionModel {
             if (infectionSituation.equals(InfectionSituation.Facility)){
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && ! infectionType.contains("leis")  && ! ( leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home")  )){
+                    log.warn("avoiding cross activity infection for home. infectionType=" + infectionType);
                     continue;
                 } else if (infectionType.contains("edu") && ! infectionType.contains("work") && ! ( leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu") )){
                     //edu can only interact with work or edu
+                    log.warn("avoiding cross activity infection for edu. infectionType=" + infectionType);
                     continue;
                 }
 
@@ -98,10 +104,6 @@ public class DefaultInfectionModel extends InfectionModel {
 
             if (personLeavingContainer.getDiseaseStatus() == otherPerson.getDiseaseStatus()) {
                 // (if they have the same status, then nothing can happen between them)
-                continue;
-            }
-
-            if (!isRelevantForInfectionDynamics(otherPerson, container)) {
                 continue;
             }
 
