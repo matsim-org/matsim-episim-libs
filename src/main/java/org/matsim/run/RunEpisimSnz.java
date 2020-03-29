@@ -65,6 +65,7 @@ public class RunEpisimSnz {
         RunEpisim.setOutputDirectory(config);
 
         ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
+        // yyyyyy I would do this the other way around, i.e. apply cli params _before_ the output dir name is constructed.  ???
 
         RunEpisim.runSimulation(config, 150);
     }

@@ -23,7 +23,7 @@ public abstract class ShutdownPolicy {
 
     protected ShutdownPolicy(Config config) {
         this.config = config;
-        log.debug("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
+        log.info("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
     }
 
     /**
