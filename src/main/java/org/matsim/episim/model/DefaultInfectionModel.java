@@ -40,6 +40,9 @@ public class DefaultInfectionModel extends InfectionModel {
             return;
         }
 
+
+        //if we do this check here, that means we do not track ALL contact persons of an infected person.
+        //that is okay because either activity/leg is closed (does not really happen) or personLeavingContainer is not contagious yet so he/she does not track contact persons
         if (!isRelevantForInfectionDynamics(personLeavingContainer, container)) {
             return;
         }
@@ -69,12 +72,16 @@ public class DefaultInfectionModel extends InfectionModel {
             int idx = rnd.nextInt(personsToInteractWith.size());
             EpisimPerson otherPerson = personsToInteractWith.get(idx);
 
+            if (!isRelevantForInfectionDynamics(otherPerson, container)) {
+                continue;
+            }
+
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = otherPerson.getTrajectory().get(otherPerson.getCurrentPositionInTrajectory());
 
             String infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
 
-            //forbid certain cross-activity infections, keep track of contacts
+            //forbid certain cross-activity interactions, keep track of contacts
             //we can not track contact persons in vehicles
             if (infectionSituation.equals(InfectionSituation.Facility)){
                 //home can only interact with home or leisure
@@ -95,10 +102,6 @@ public class DefaultInfectionModel extends InfectionModel {
 
             if (personLeavingContainer.getDiseaseStatus() == otherPerson.getDiseaseStatus()) {
                 // (if they have the same status, then nothing can happen between them)
-                continue;
-            }
-
-            if (!isRelevantForInfectionDynamics(otherPerson, container)) {
                 continue;
             }
 
@@ -148,7 +151,7 @@ public class DefaultInfectionModel extends InfectionModel {
     }
 
     private double getContactIntensity(EpisimContainer<?> container, InfectionSituation infectionSituation, String leavingPersonsActivity, String otherPersonsActivity) {
-        //TODO maybe this can be cleaned up or summarized in some way
+        //maybe this can be cleaned up or summarized in some way
         double contactIntensity = -1;
         if(infectionSituation.equals(InfectionSituation.Vehicle)){
             if(! (container instanceof InfectionEventHandler.EpisimVehicle) ){

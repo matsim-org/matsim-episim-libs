@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimReporting;
 
 import java.util.Random;
 
@@ -42,7 +43,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
                         if (episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
                             for (EpisimPerson pw : person.getTraceableContactPersons()) {
-                                if (pw.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) {
+                                if (pw.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) { //what if tracked person has recovered
 
                                     pw.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
                                     // yyyy this should become "home"!  kai, mar'20
@@ -92,6 +93,12 @@ public class DefaultProgressionModel implements ProgressionModel {
         if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full && person.daysSinceQuarantine(day) >= 14) {
             person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no);
         }
-        person.getTraceableContactPersons().clear();
+        person.getTraceableContactPersons().clear(); //so we can only track contact persons over 1 day
+    }
+
+
+    @Override
+    public boolean canProgress(EpisimReporting.InfectionReport report) {
+        return report.nTotalInfected > 0 || report.nInQuarantine > 0;
     }
 }

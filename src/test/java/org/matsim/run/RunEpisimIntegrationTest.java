@@ -70,8 +70,10 @@ public class RunEpisimIntegrationTest {
      */
     private void assertSimulationOutput() {
         for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
-            assertThat(new File(utils.getOutputDirectory(), name))
-                    .hasSameTextualContentAs(new File(utils.getInputDirectory(), name));
+            File input = new File(utils.getInputDirectory(), name);
+            // events will be ignored if not existent
+            if (input.exists() || !name.equals("infectionEvents.txt"))
+                assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
         }
     }
 
