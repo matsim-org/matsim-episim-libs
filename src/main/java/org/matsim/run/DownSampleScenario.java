@@ -72,11 +72,6 @@ public class DownSampleScenario implements Callable<Integer> {
             return 2;
         }
 
-        if (!Files.exists(events)) {
-            log.error("Event file {} does not exists", events);
-            return 2;
-        }
-
         if (!Files.exists(output)) Files.createDirectories(output);
 
         log.info("Sampling with size {}", sampleSize);
@@ -87,6 +82,11 @@ public class DownSampleScenario implements Callable<Integer> {
         PopulationUtils.sampleDown(population, sampleSize);
 
         PopulationUtils.writePopulation(population, output.resolve("population" + sampleSize + ".xml.gz").toString());
+
+        if (!Files.exists(events)) {
+            log.error("Event file {} does not exists", events);
+            return 2;
+        }
 
         EventsManager manager = EventsUtils.createEventsManager();
 
