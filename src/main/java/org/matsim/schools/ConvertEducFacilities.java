@@ -26,12 +26,18 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.log4j.Logger;
+import org.jfree.util.Log;
 import org.locationtech.jts.geom.Point;
 import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.population.Person;
+import org.matsim.api.core.v01.population.Population;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.misc.StringUtils;
@@ -55,19 +61,78 @@ public class ConvertEducFacilities {
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathOfEduFacilities = workingDir + "educFacilities.txt";
 	private static final String outputFileDir = workingDir + "educFacilities_optimated.txt";
+	private static final String pathinputPopulation = workingDir
+			+ "population_fromPopulationAttributes_BerlinOnly.xml.gz";
+	private static final String pathOutputPopulation = workingDir
+			+ "population_fromPopulationAttributes_BerlinOnly_V2.xml.gz";
 
 	public static void main(String[] args) throws IOException {
 
 		Multimap<String, String[]> inputFile = ArrayListMultimap.create();
 		Multimap<String, String[]> outputFile = ArrayListMultimap.create();
-		HashMap<String, Coord> coordsOf = new HashMap<String, Coord>();
+		HashMap<String, Coord> coordsOfFacilities = new HashMap<String, Coord>();
 
 		log.info("Read inputfile...");
 		readFile(inputFile);
-		createPointsOfFacilities(coordsOf, inputFile);
-		findNearFacilitiesWithSameType(coordsOf, inputFile, outputFile);
+		createPointsOfFacilities(coordsOfFacilities, inputFile);
+		findNearFacilitiesWithSameType(coordsOfFacilities, inputFile, outputFile);
+		Population population = PopulationUtils.readPopulation(pathinputPopulation);
+		findEducFacilityForEachPerson(population, coordsOfFacilities, outputFile);
+	//	PopulationUtils.writePopulation(population, pathOutputPopulation);
 		writeOutputFile(outputFile);
 		log.info("Finished!");
+	}
+
+	private static void findEducFacilityForEachPerson(Population population, HashMap<String, Coord> coordsOfFacilities,
+			Multimap<String, String[]> outputFile) {
+
+		for (Person singlePerson : population.getPersons().values()) {
+			int age = (int) singlePerson.getAttributes().getAttribute("age");
+
+			if (0 <= age && age <= 1) {
+				// stay at home
+				// TODO
+			}
+			if (2 <= age && age <= 5) {
+				double homeX = (double) singlePerson.getAttributes().getAttribute("homeX");
+				double homeY = (double) singlePerson.getAttributes().getAttribute("homeY");
+				Coord coord = MGC.point2Coord(MGC.xy2Point(homeX, homeY));
+				String nearestFacilityId = findNearestFacility(coord, coordsOfFacilities, outputFile, 3);
+				// TODO
+
+			}
+			if (6 <= age && age <= 12) {
+				double homeX = (double) singlePerson.getAttributes().getAttribute("homeX");
+				double homeY = (double) singlePerson.getAttributes().getAttribute("homeY");
+				Coord coord = MGC.point2Coord(MGC.xy2Point(homeX, homeY));
+				String nearestFacilityId = findNearestFacility(coord, coordsOfFacilities, outputFile, 4);
+				// TODO
+			}
+			if (13 <= age && age <= 14) {
+				// in existing educ_facilities
+				// TODO
+			}
+		}
+	}
+
+	private static String findNearestFacility(Coord coord, HashMap<String, Coord> coordsOfFacilities,
+			Multimap<String, String[]> outputFile, int facilityType) {
+
+		HashMap<String, Double> facilityWithMinimalDistance = new HashMap<String, Double>();
+		for (String[] facilityId : outputFile.values()) {
+			facilityWithMinimalDistance.clear();
+			facilityWithMinimalDistance.put("noFacility", Double.MAX_VALUE);
+			if (Double.parseDouble(facilityId[facilityType]) > 0) {
+				Coord facilityCoord2 = coordsOfFacilities.get(facilityId[0]);
+				double distance = CoordUtils.calcProjectedEuclideanDistance(coord, facilityCoord2);
+				if (distance < facilityWithMinimalDistance.values().iterator().next()) {
+					facilityWithMinimalDistance.clear();
+					facilityWithMinimalDistance.put(facilityId[0], distance);
+				}
+			}
+		}
+
+		return facilityWithMinimalDistance.keySet().iterator().next();
 	}
 
 	private static void readFile(Multimap<String, String[]> inputFile) throws IOException {
@@ -113,33 +178,25 @@ public class ConvertEducFacilities {
 		}
 	}
 
-	private static void findNearFacilitiesWithSameType(HashMap<String, Coord> coordsOf,
+	private static void findNearFacilitiesWithSameType(HashMap<String, Coord> coordsOfFacilities,
 			Multimap<String, String[]> inputFile, Multimap<String, String[]> outputFile) {
 		List<String> facilitiesToConnect = new ArrayList<String>();
 		List<String> facilitiesNotToCheck = new ArrayList<String>();
 		int numberOfConections = 0;
 
 		log.info("Find near facilities and connect them...");
-		double sumKita = 0;
-		double sumPrimary = 0;
-		for (String[] facilityId : inputFile.values()) {
-			sumKita = sumKita + Double.parseDouble(facilityId[3]);
-			sumPrimary = sumPrimary + Double.parseDouble(facilityId[4]);
-		}
-		log.info("Amount of Kita square (input): " + sumKita);
-		log.info("Amount of primary school square (input): " + sumPrimary);
-		log.info("Amount facilities: " + inputFile.size());
+		log.info("Amount facilities (input): " + inputFile.size());
 
 		for (String[] typeFacility1 : inputFile.values()) {
 
 			String facilityId = typeFacility1[0];
 			if (facilitiesNotToCheck.contains(facilityId) == false) {
 				facilitiesNotToCheck.add(facilityId);
-				Coord facilityCoord = coordsOf.get(facilityId);
+				Coord facilityCoord = coordsOfFacilities.get(facilityId);
 				for (String[] typeFacility2 : inputFile.values()) {
 					String facilityId2 = typeFacility2[0];
 					if (facilitiesNotToCheck.contains(facilityId2) == false) {
-						Coord facilityCoord2 = coordsOf.get(facilityId2);
+						Coord facilityCoord2 = coordsOfFacilities.get(facilityId2);
 						double distance = CoordUtils.calcProjectedEuclideanDistance(facilityCoord, facilityCoord2);
 						if (distance < 100) {
 							if ((Double.parseDouble(typeFacility1[3]) > 0 && Double.parseDouble(typeFacility2[3]) > 0)
@@ -147,6 +204,7 @@ public class ConvertEducFacilities {
 											&& Double.parseDouble(typeFacility2[4]) > 0)) {
 								facilitiesToConnect.add(facilityId2);
 								facilitiesNotToCheck.add(facilityId2);
+								coordsOfFacilities.remove(facilityId2);
 								numberOfConections++;
 							}
 						}
@@ -178,17 +236,11 @@ public class ConvertEducFacilities {
 				facilitiesToConnect.clear();
 			}
 		}
-		sumKita = 0;
-		sumPrimary = 0;
-		for (String[] facilityId : outputFile.values()) {
-			sumKita = sumKita + Double.parseDouble(facilityId[3]);
-			sumPrimary = sumPrimary + Double.parseDouble(facilityId[4]);
-		}
-		log.info("Amount of Kita square (output): " + sumKita);
-		log.info("Amount of primary school square (output): " + sumPrimary);
+
 		log.info("Amount facilities: " + outputFile.size());
 		log.info("Amount of integrated facilities: " + numberOfConections);
 		log.info("Finished connecting facilities!");
+
 	}
 
 	private static void writeOutputFile(Multimap<String, String[]> outputFile) {
@@ -199,10 +251,10 @@ public class ConvertEducFacilities {
 		try {
 			writer = new FileWriter(file, true);
 			writer.write("id\tx\ty\teduc_kiga\teduc_primary\n");
-			for (String[] facilityId : outputFile.values())
+			for (String[] facilityId : outputFile.values()) {
 				writer.write(facilityId[0] + "\t" + facilityId[1] + "\t" + facilityId[2] + "\t"
 						+ Double.parseDouble(facilityId[3]) + "\t" + Double.parseDouble(facilityId[4]) + "\n");
-
+			}
 			writer.flush();
 			writer.close();
 		} catch (IOException e) {
