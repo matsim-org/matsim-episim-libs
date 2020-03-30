@@ -48,7 +48,7 @@ public class RunEpisim {
         episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
         episimConfig.setSampleSize(0.01);
         episimConfig.setCalibrationParameter(2);
-        episimConfig.setOutputEventsFolder("events");
+      //  episimConfig.setOutputEventsFolder("events");
 
         long closingIteration = 14;
 
