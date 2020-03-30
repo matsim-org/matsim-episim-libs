@@ -49,14 +49,8 @@ public final class ReplayHandler {
 
             if (e instanceof ActivityStartEvent) {
                 ActivityStartEvent ev = (ActivityStartEvent) e;
-                Coord coord = ev.getCoord();
-                if (coord == null && scenario != null) {
-                    Link link = scenario.getNetwork().getLinks().get(ev.getLinkId());
-                    coord = link.getToNode().getCoord();
-                }
-
                 e = new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-                        ev.getLinkId(), ev.getFacilityId(), ev.getActType(), coord);
+                        ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord());
 
             } else if (e instanceof ActivityEndEvent) {
                 ActivityEndEvent ev = (ActivityEndEvent) e;
@@ -84,6 +78,19 @@ public final class ReplayHandler {
     private final class EventReader implements BasicEventHandler {
         @Override
         public void handleEvent(Event event) {
+
+            // Add coordinate information if not present
+            if (event instanceof ActivityStartEvent) {
+                ActivityStartEvent e = (ActivityStartEvent) event;
+                Coord coord = e.getCoord();
+                if (coord == null && scenario != null && scenario.getNetwork().getLinks().containsKey(e.getLinkId())) {
+                    Link link = scenario.getNetwork().getLinks().get(e.getLinkId());
+                    coord = link.getToNode().getCoord();
+                }
+
+                event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType(), coord);
+            }
+
             events.add(event);
         }
     }

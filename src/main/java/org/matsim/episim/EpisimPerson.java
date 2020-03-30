@@ -3,6 +3,7 @@ package org.matsim.episim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.episim.events.EpisimPersonStatusEvent;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;

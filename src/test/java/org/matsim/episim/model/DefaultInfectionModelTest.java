@@ -168,7 +168,7 @@ public class DefaultInfectionModelTest {
     @Test
     public void noCrossInfection() {
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
-                () -> EpisimTestUtils.createFacility(1, "c1", EpisimTestUtils.CONTAGIOUS),
+                () -> EpisimTestUtils.createFacility(1, "c1.0", EpisimTestUtils.CONTAGIOUS),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
 

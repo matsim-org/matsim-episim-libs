@@ -1,26 +1,30 @@
 package org.matsim.run;
 
-import org.matsim.api.core.v01.events.Event;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.events.algorithms.EventWriter;
+import org.matsim.core.events.algorithms.EventWriterXML;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
+import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.ReplayHandler;
+import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 public class RunEpisim {
 
@@ -37,11 +41,14 @@ public class RunEpisim {
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_wo_linkEnterLeave.xml.gz");
-//                episimConfig.setInputEventsFile( "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz" );
+        config.network().setInputFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5-network.xml.gz");
+        //  episimConfig.setInputEventsFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_wo_linkEnterLeave.xml.gz");
+        episimConfig.setInputEventsFile("../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz");
+
         episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
         episimConfig.setSampleSize(0.01);
         episimConfig.setCalibrationParameter(2);
+        episimConfig.setOutputEventsFolder("events");
 
         long closingIteration = 14;
 
@@ -116,30 +123,65 @@ public class RunEpisim {
      */
     public static void runSimulation(Config config, int iterations) throws IOException {
 
+        config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
+
+        // save some time for not needed inputs
+        // only network might be relevant
+        config.plans().setInputFile(null);
+        config.facilities().setInputFile(null);
+        config.vehicles().setVehiclesFile(null);
+
+        Scenario scenario = ScenarioUtils.loadScenario(config);
+
         Path out = Paths.get(config.controler().getOutputDirectory());
         if (!Files.exists(out))
             Files.createDirectories(out);
 
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        EventsManager events = EventsUtils.createEventsManager();
+        Path eventPath = null;
+        if (episimConfig.getOutputEventsFolder() != null && !episimConfig.getOutputEventsFolder().isEmpty()) {
+            eventPath = out.resolve(episimConfig.getOutputEventsFolder());
+            if (!Files.exists(eventPath))
+                Files.createDirectories(eventPath);
+        }
 
-        InfectionEventHandler eventHandler = new InfectionEventHandler(config, events );
+        EventsManager events = EventsUtils.createEventsManager();
+        InfectionEventHandler eventHandler = new InfectionEventHandler(config, events);
         events.addHandler(eventHandler);
 
-        ReplayHandler replay = new ReplayHandler(episimConfig, null);
+        ReplayHandler replay = new ReplayHandler(episimConfig, scenario);
         ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
         for (int iteration = 0; iteration <= iterations; iteration++) {
+
+            EventWriter writer = null;
+            // Only write events if output was set
+            if (eventPath != null) {
+                writer = new EventWriterXML(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+                events.addHandler(writer);
+            }
+
             events.resetHandlers(iteration);
             if (eventHandler.isFinished())
                 break;
 
+            // report initial status:
+            if (iteration == 0) {
+                for (EpisimPerson person : eventHandler.getPersons()) {
+                    if (person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
+                        events.processEvent(new EpisimPersonStatusEvent(0., person.getPersonId(), person.getDiseaseStatus()));
+                    }
+                }
+            }
+
             replay.replayEvents(events, iteration);
+            if (writer != null) {
+                events.removeHandler(writer);
+                writer.closeFile();
+            }
         }
 
         OutputDirectoryLogging.closeOutputDirLogging();
-
     }
-
 }
