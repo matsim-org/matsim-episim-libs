@@ -50,6 +50,9 @@ public class DefaultInfectionModel extends InfectionModel {
         ArrayList<EpisimPerson> personsToInteractWith = new ArrayList<>(container.getPersons());
         personsToInteractWith.remove(personLeavingContainer);
 
+
+        ArrayList<EpisimPerson> contactPersons = new ArrayList<>();
+
         // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
         // shuffle, those are 10 different persons every day.
         // as sample size is 25%, 10 persons means 3 agents here
@@ -68,9 +71,12 @@ public class DefaultInfectionModel extends InfectionModel {
             // already left the container were treated then.  In consequence, we have some "circle of persons around us" (yyyy which should
             //  depend on the density), and then a probability of infection in either direction.
 
-            //TODO the way we iterate here, chances exist that we do draw the same otherPerson twice, right? schlenther, march 27
-            int idx = rnd.nextInt(personsToInteractWith.size());
-            EpisimPerson otherPerson = personsToInteractWith.get(idx);
+            EpisimPerson otherPerson;
+            do {
+                int idx = rnd.nextInt(personsToInteractWith.size());
+                otherPerson = personsToInteractWith.get(idx);
+            } while(contactPersons.contains(otherPerson));
+
 
             if (!isRelevantForInfectionDynamics(otherPerson, container)) {
                 continue;
