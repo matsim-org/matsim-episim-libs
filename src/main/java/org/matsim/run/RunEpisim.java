@@ -7,11 +7,11 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
-import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.InfectionEventHandler;
+import org.matsim.episim.ReplayHandler;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
@@ -127,9 +127,7 @@ public class RunEpisim {
         InfectionEventHandler eventHandler = new InfectionEventHandler(config, events );
         events.addHandler(eventHandler);
 
-        List<Event> allEvents = new ArrayList<>();
-        events.addHandler(new ReplayHandler(allEvents));
-
+        ReplayHandler replay = new ReplayHandler(episimConfig, null);
         ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
         for (int iteration = 0; iteration <= iterations; iteration++) {
@@ -137,38 +135,11 @@ public class RunEpisim {
             if (eventHandler.isFinished())
                 break;
 
-            if (iteration == 0)
-                EventsUtils.readEvents(events, episimConfig.getInputEventsFile());
-            else
-                allEvents.forEach(events::processEvent);
+            replay.replayEvents(events, iteration);
         }
 
         OutputDirectoryLogging.closeOutputDirLogging();
 
-    }
-
-    /**
-     * Helper class that stores all events in a given array (only in iteration 0)
-     */
-    static final class ReplayHandler implements BasicEventHandler {
-        // yyyyyy I made this package-private, sorry.  Need to sort this out.  kai, mar'20
-
-        public final List<Event> events;
-        private boolean collect = false;
-
-        public ReplayHandler(List<Event> events) {
-            this.events = events;
-        }
-
-        @Override
-        public void reset(int iteration) {
-            collect = iteration == 0;
-        }
-
-        @Override
-        public void handleEvent(Event event) {
-            if (collect) events.add(event);
-        }
     }
 
 }

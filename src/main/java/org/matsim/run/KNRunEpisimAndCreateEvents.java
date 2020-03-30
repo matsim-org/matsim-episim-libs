@@ -22,13 +22,7 @@
 package org.matsim.run;
 
 import org.apache.log4j.Logger;
-import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.ActivityStartEvent;
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
-import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.network.Node;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -38,18 +32,13 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimPersonStatusEvent;
-import org.matsim.episim.InfectionEventHandler;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 
 public class KNRunEpisimAndCreateEvents{
     private static final Logger log = Logger.getLogger( KNRunEpisimAndCreateEvents.class );
@@ -90,17 +79,9 @@ public class KNRunEpisimAndCreateEvents{
         InfectionEventHandler eventHandler = new InfectionEventHandler( config, events );
         events.addHandler(eventHandler);
 
-        events.addHandler( new ActivityStartEventHandler(){
-            @Override public void handleEvent( ActivityStartEvent event ){
-                Link link = scenario.getNetwork().getLinks().get( event.getLinkId() );
-                Node toNode = link.getToNode();
-                Coord coord = toNode.getCoord();
-                event.setCoord( coord );
-            }
-        } );
+        ReplayHandler replay = new ReplayHandler(episimConfig, scenario);
 
-        List<Event> allEvents = new ArrayList<>();
-        events.addHandler(new RunEpisim.ReplayHandler(allEvents) );
+        EventWriterXML writer = new EventWriterXML("events-with-coordinates.xml.gz");
 
         ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "Just before starting iterations" );
 
@@ -115,24 +96,19 @@ public class KNRunEpisimAndCreateEvents{
 
             // add events handler for iteration 4 and report initial status:
             if ( iteration==4 ) {
-                events.addHandler( new EventWriterXML( "events-with-coordinates.xml.gz" ) );
+                events.addHandler(writer);
 
                 for( EpisimPerson person : eventHandler.getPersons() ){
                     if ( person.getDiseaseStatus()!= EpisimPerson.DiseaseStatus.susceptible ){
                         events.processEvent( new EpisimPersonStatusEvent( 0., person.getPersonId(), person.getDiseaseStatus() ) );
                     }
                 }
-
-
             }
 
-
-            if (iteration == 0)
-                EventsUtils.readEvents(events, episimConfig.getInputEventsFile() );
-            else
-                allEvents.forEach(events::processEvent);
+            replay.replayEvents(events, iteration);
         }
 
+        writer.closeFile();
         OutputDirectoryLogging.closeOutputDirLogging();
 
     }

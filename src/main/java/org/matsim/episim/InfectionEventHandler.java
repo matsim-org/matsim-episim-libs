@@ -120,7 +120,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
     @Override
     public void handleEvent(ActivityEndEvent activityEndEvent) {
-        double now = EpisimUtils.getCorrectedTime(activityEndEvent.getTime(), iteration);
+        double now = activityEndEvent.getTime();
 
         if (!shouldHandleActivityEvent(activityEndEvent, activityEndEvent.getActType())) {
             return;
@@ -154,7 +154,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
     @Override
     public void handleEvent(PersonEntersVehicleEvent entersVehicleEvent) {
-        double now = EpisimUtils.getCorrectedTime(entersVehicleEvent.getTime(), iteration);
+        double now = entersVehicleEvent.getTime();
 
         if (!shouldHandlePersonEvent(entersVehicleEvent)) {
             return;
@@ -173,7 +173,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
     @Override
     public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
-        double now = EpisimUtils.getCorrectedTime(leavesVehicleEvent.getTime(), iteration);
+        double now = leavesVehicleEvent.getTime();
 
         if (!shouldHandlePersonEvent(leavesVehicleEvent)) {
             return;
@@ -192,7 +192,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
     @Override
     public void handleEvent(ActivityStartEvent activityStartEvent) {
-        double now = EpisimUtils.getCorrectedTime(activityStartEvent.getTime(), iteration);
+        double now = activityStartEvent.getTime();
 
         if (!shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType())) {
             return;
