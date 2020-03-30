@@ -14,17 +14,15 @@ public class EpisimUtils {
     public static boolean hasStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
         switch (personWrapper.getDiseaseStatus()) {
             case susceptible:
-                return true;
-            case infectedButNotContagious:
-                return false;
             case contagious:
                 return true;
-            case seriouslySick:
-                return false; // assume is in hospital
-            case critical:
-                return false; // assume is in hospital
+
+            case infectedButNotContagious:
             case recovered:
+            case seriouslySick: // assume is in hospital
+            case critical:
                 return false;
+
             default:
                 throw new IllegalStateException("Unexpected value: " + personWrapper.getDiseaseStatus());
         }

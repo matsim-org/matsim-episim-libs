@@ -58,6 +58,13 @@
             <version>1.4.0</version>
         </dependency>
 
+        <!-- Command line interface -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
 <!--        <dependency>-->
 <!--            <groupId>com.github.matsim-scenarios</groupId>-->
 <!--            <artifactId>matsim-berlin</artifactId>-->

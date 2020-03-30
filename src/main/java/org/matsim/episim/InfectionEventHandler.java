@@ -221,7 +221,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
      *
      * @param actType activity type
      */
-    private boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
+    public static boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
         // ignore drt and stage activities
         return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
                 && !TripStructureUtils.isStageActivityType(actType);
@@ -230,7 +230,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
     /**
      * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
      */
-    private boolean shouldHandlePersonEvent(HasPersonId event) {
+    public static boolean shouldHandlePersonEvent(HasPersonId event) {
         // ignore pt drivers and drt
         String id = event.getPersonId().toString();
         return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
