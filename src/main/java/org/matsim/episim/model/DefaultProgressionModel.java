@@ -3,6 +3,7 @@ package org.matsim.episim.model;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
+import org.matsim.episim.EpisimUtils;
 
 import java.util.Random;
 
@@ -21,12 +22,13 @@ public class DefaultProgressionModel implements ProgressionModel {
 
     @Override
     public void updateState(EpisimPerson person, int day) {
+        double now = EpisimUtils.getCorrectedTime( 24.*3600, day );
         switch (person.getDiseaseStatus()) {
             case susceptible:
                 break;
             case infectedButNotContagious:
                 if (person.daysSinceInfection(day) >= 4) {
-                    person.setDiseaseStatus(EpisimPerson.DiseaseStatus.contagious);
+                    person.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.contagious );
                 }
                 break;
             case contagious:
@@ -61,20 +63,20 @@ public class DefaultProgressionModel implements ProgressionModel {
                     if (rnd.nextDouble() < 0.045) {
                         // (4.5% get seriously sick.  This is taken from all infected persons, not just those the have shown
                         // symptoms before)
-                        person.setDiseaseStatus(EpisimPerson.DiseaseStatus.seriouslySick);
+                        person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
                     }
                 } else if (person.daysSinceInfection(day) >= 16) {
-                    person.setDiseaseStatus(EpisimPerson.DiseaseStatus.recovered);
+                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered );
                 }
                 break;
             case seriouslySick:
                 if (person.daysSinceInfection(day) == 11) {
                     if (rnd.nextDouble() < 0.25) {
                         // (25% of persons who are seriously sick transition to critical)
-                        person.setDiseaseStatus(EpisimPerson.DiseaseStatus.critical);
+                        person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.critical );
                     }
                 } else if (person.daysSinceInfection(day) >= 23) {
-                    person.setDiseaseStatus(EpisimPerson.DiseaseStatus.recovered);
+                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered );
                 }
                 break;
             case critical:
@@ -82,7 +84,7 @@ public class DefaultProgressionModel implements ProgressionModel {
                     // (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
                     // they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
                     // hospital beds.)
-                    person.setDiseaseStatus(EpisimPerson.DiseaseStatus.seriouslySick);
+                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
                 }
                 break;
             case recovered:

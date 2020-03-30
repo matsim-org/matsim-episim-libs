@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -19,13 +20,16 @@ public abstract class InfectionModel {
     protected final Random rnd;
     protected final EpisimConfigGroup episimConfig;
     private final EpisimReporting reporting;
+    private final EventsManager eventsManager;
     protected int iteration;
     private Map<String, ShutdownPolicy.Restriction> restrictions;
 
-    protected InfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+    protected InfectionModel( Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting,
+                              EventsManager eventsManager ) {
         this.rnd = rnd;
         this.episimConfig = episimConfig;
         this.reporting = reporting;
+        this.eventsManager = eventsManager;
     }
 
 
@@ -68,7 +72,7 @@ public abstract class InfectionModel {
             throw new IllegalStateException("Person and infector are not in same container!");
         }
 
-        personWrapper.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious);
+        personWrapper.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.infectedButNotContagious );
         if (scenario != null) {
             final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
             if (person != null) {
@@ -79,6 +83,9 @@ public abstract class InfectionModel {
         personWrapper.setInfectionDate(iteration);
 
         reporting.reportInfection(personWrapper, infector, now, infectionType);
+
+//        eventsManager.processEvent( new EpisimPersonStatusEvent(now, personWrapper.getPersonId(), EpisimPerson.DiseaseStatus.infectedButNotContagious ) );
+        // done in EpisimPerson!
     }
 
     /**

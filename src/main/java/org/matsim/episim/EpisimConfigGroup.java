@@ -16,6 +16,7 @@ import java.util.*;
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
     private static final String INPUT_EVENTS_FILE = "inputEventsFile";
+    private static final String OUTPUT_EVENTS_FOLDER = "outputEventsFolder";
     private static final String CALIBRATION_PARAMETER = "calibrationParameter";
     private static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
     private static final String SAMPLE_SIZE = "sampleSize";
@@ -24,6 +25,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     private static final String GROUPNAME = "episim";
 
     private String inputEventsFile = null;
+    private String outputEventsFolder = null;
     private double calibrationParameter = 0.0000012;
     private double sampleSize = 0.1;
     private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
@@ -44,6 +46,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
     @StringSetter(INPUT_EVENTS_FILE)
     public void setInputEventsFile(String inputEventsFile) {
         this.inputEventsFile = inputEventsFile;
+    }
+
+    /**
+     * Events will be written into subfolder of output (only if set)
+     */
+    @StringGetter(OUTPUT_EVENTS_FOLDER)
+    public String getOutputEventsFolder() {
+        return outputEventsFolder;
+    }
+
+    @StringSetter(OUTPUT_EVENTS_FOLDER)
+    public void setOutputEventsFolder(String outputEventsFolder) {
+        this.outputEventsFolder = outputEventsFolder;
     }
 
     @StringGetter(CALIBRATION_PARAMETER)

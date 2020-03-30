@@ -1,9 +1,11 @@
 package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.facilities.Facility;
+import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,9 +14,11 @@ import java.util.function.Consumer;
 public class EpisimTestUtils {
 
     private static final AtomicLong ID = new AtomicLong(0);
+    private static final EventsManager manager = Mockito.mock(EventsManager.class);
 
-    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(EpisimPerson.DiseaseStatus.contagious);
+    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
     public static Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
+
 
     /**
      * Creates test config with some default interactions.
@@ -53,7 +57,7 @@ public class EpisimTestUtils {
      * Create a person and add to container.
      */
     public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()));
+        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), manager);
         p.getTrajectory().add(currentAct);
 
         if (container != null) {

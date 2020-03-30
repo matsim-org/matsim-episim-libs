@@ -5,6 +5,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
 
@@ -29,8 +31,9 @@ public class DefaultInfectionModelTest {
     @Before
     public void setup() {
         EpisimReporting reporting = mock(EpisimReporting.class);
+        EventsManager dummyEventsManager = EventsUtils.createEventsManager();
         EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
-        model = new DefaultInfectionModel(new Random(1), config, reporting);
+        model = new DefaultInfectionModel(new Random(1), config, reporting, dummyEventsManager );
         restrictions = config.createInitialRestrictions();
         model.setRestrictionsForIteration(1, restrictions);
 
@@ -116,15 +119,16 @@ public class DefaultInfectionModelTest {
 
     @Test
     public void noInfection() {
+        double now = 0. ; // no idea
 
         double rate = sampleInfectionRate(Duration.ofHours(2), "c10",
-                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)),
+                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.infectedButNotContagious ) ),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
         assertThat(rate).isCloseTo(0, OFFSET);
 
         rate = sampleInfectionRate(Duration.ofHours(2), "c10",
-                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)),
+                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered ) ),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
         assertThat(rate).isCloseTo(0, OFFSET);
@@ -164,7 +168,7 @@ public class DefaultInfectionModelTest {
     @Test
     public void noCrossInfection() {
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
-                () -> EpisimTestUtils.createFacility(1, "c1", EpisimTestUtils.CONTAGIOUS),
+                () -> EpisimTestUtils.createFacility(1, "c1.0", EpisimTestUtils.CONTAGIOUS),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
 
