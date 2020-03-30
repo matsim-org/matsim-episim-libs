@@ -82,12 +82,10 @@ public abstract class InfectionModel {
     }
 
     /**
-     * Checks whether a persons and container is relevant for the infection dynamics. This function also considers the restrictions in place.
+     * Checks whether a person is quarantine and whether the current trip/activity is relevant for infectionDynamics. This function also considers the restrictions in place.
+     * TODO rename
      */
-    protected boolean isRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container) {
-        if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(person)) {
-            return false;
-        }
+    protected boolean isPersonActuallyOnTheGo(EpisimPerson person, EpisimContainer<?> container) {
         if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
             return false;
         }

@@ -52,4 +52,15 @@ public class EpisimUtils {
         }
 
     }
+
+    /**
+     * this method checks whether person1 and person2 have relevant disease status for infection dynamics. If not or if both have the same disease status, the return value is false.
+     * @param person1
+     * @param person2
+     * @return
+     */
+    public static boolean canPersonsInfectEachOther(EpisimPerson person1, EpisimPerson person2) {
+        if(person1.getDiseaseStatus() == person2.getDiseaseStatus()) return false;
+        return (hasStatusRelevantForInfectionDynamics(person1) && hasStatusRelevantForInfectionDynamics(person2));
+    }
 }

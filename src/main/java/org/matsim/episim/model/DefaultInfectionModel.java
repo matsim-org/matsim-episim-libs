@@ -40,30 +40,20 @@ public class DefaultInfectionModel extends InfectionModel {
             return;
         }
 
-
-        //if we do this check here, that means we do not track ALL contact persons of an infected person.
-        //that is okay because either activity/leg is closed (does not really happen) or personLeavingContainer is not contagious yet so he/she does not track contact persons
-        if (!isRelevantForInfectionDynamics(personLeavingContainer, container)) {
+        if (!isPersonActuallyOnTheGo(personLeavingContainer, container)) {
             return;
         }
 
-        ArrayList<EpisimPerson> personsToInteractWith = new ArrayList<>(container.getPersons());
-        personsToInteractWith.remove(personLeavingContainer);
-
+        ArrayList<EpisimPerson> otherPersonsInContainer = new ArrayList<>(container.getPersons());
+        otherPersonsInContainer.remove(personLeavingContainer);
 
         ArrayList<EpisimPerson> contactPersons = new ArrayList<>();
 
         // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
         // shuffle, those are 10 different persons every day.
         // as sample size is 25%, 10 persons means 3 agents here
-        int contactPersonsToFind = Math.max((int) (episimConfig.getSampleSize() * 10), 3);
-        for ( int ii = 0 ; ii< personsToInteractWith.size(); ii++ ) {
+        for ( int ii = 0 ; ii< Math.min( Math.max((int) (episimConfig.getSampleSize() * 10), 3) , otherPersonsInContainer.size()); ii++ ) {
             //as we now forbid infection for certain activity type pairs, we do need the separate counter. schlenther, march 27
-
-            //if we have seen enough, break, no matter what
-            if(contactPersonsToFind <= 0){
-                break;
-            }
 
             // (this is "-1" because we can't interact with "self")
 
@@ -71,20 +61,23 @@ public class DefaultInfectionModel extends InfectionModel {
             // already left the container were treated then.  In consequence, we have some "circle of persons around us" (yyyy which should
             //  depend on the density), and then a probability of infection in either direction.
 
-            EpisimPerson otherPerson;
+
+            //draw the contact person
+            EpisimPerson contactPerson;
             do {
-                int idx = rnd.nextInt(personsToInteractWith.size());
-                otherPerson = personsToInteractWith.get(idx);
-            } while(contactPersons.contains(otherPerson));
+                int idx = rnd.nextInt(otherPersonsInContainer.size());
+                contactPerson = otherPersonsInContainer.get(idx);
+            } while(contactPersons.contains(contactPerson));
+            // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
+            // density in the transit container goes down.  kai, mar'20)
+            contactPersons.add(contactPerson);
 
-
-            if (!isRelevantForInfectionDynamics(otherPerson, container)) {
+            if (!isPersonActuallyOnTheGo(contactPerson, container)) {
                 continue;
             }
 
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
-            String otherPersonsActivity = otherPerson.getTrajectory().get(otherPerson.getCurrentPositionInTrajectory());
-
+            String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
             String infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
 
             //forbid certain cross-activity interactions, keep track of contacts
@@ -98,21 +91,15 @@ public class DefaultInfectionModel extends InfectionModel {
                     continue;
                 }
 
-                trackContactPerson(personLeavingContainer, otherPerson, leavingPersonsActivity);
+                trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity);
             }
 
-            contactPersonsToFind --;
-
-            // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
-            // density in the transit container goes down.  kai, mar'20)
-
-            if (personLeavingContainer.getDiseaseStatus() == otherPerson.getDiseaseStatus()) {
-                // (if they have the same status, then nothing can happen between them)
+            if (! EpisimUtils.canPersonsInfectEachOther(personLeavingContainer, contactPerson) ) {
                 continue;
             }
 
             Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
-            Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(otherPerson.getPersonId());
+            Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
 
             // persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
             // start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
@@ -134,7 +121,7 @@ public class DefaultInfectionModel extends InfectionModel {
                 log.warn(containerEnterTimeOfPersonLeaving);
                 log.warn(containerEnterTimeOfOtherPerson);
                 log.warn(now);
-                throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and otherPerson=" + otherPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
+                throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
             }
 
             double contactIntensity = getContactIntensity(container, infectionSituation, leavingPersonsActivity, otherPersonsActivity);
@@ -147,10 +134,10 @@ public class DefaultInfectionModel extends InfectionModel {
 
             if (rnd.nextDouble() < infectionProba) {
                 if (personLeavingContainer.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
-                    infectPerson(personLeavingContainer, otherPerson, now, infectionType);
+                    infectPerson(personLeavingContainer, contactPerson, now, infectionType);
                     return;
                 } else {
-                    infectPerson(otherPerson, personLeavingContainer, now, infectionType);
+                    infectPerson(contactPerson, personLeavingContainer, now, infectionType);
                 }
             }
         }
