@@ -148,4 +148,21 @@ public abstract class InfectionModel {
         return actIsRelevant("tr") && actIsRelevant(nextAct) && (lastAct.isEmpty() || actIsRelevant(lastAct));
 
     }
+
+    protected boolean isRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container) {
+        if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(person)) {
+            return false;
+        }
+        if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+            return false;
+        }
+        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
+            return true;
+        }
+        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person)) {
+            return true;
+        }
+        return false;
+    }
+
 }

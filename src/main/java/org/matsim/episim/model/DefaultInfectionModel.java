@@ -41,7 +41,11 @@ public class DefaultInfectionModel extends InfectionModel {
             return;
         }
 
-        if (!isPersonPhysicallyOnTheMove(personLeavingContainer, container)) {
+//        if (!isPersonPhysicallyOnTheMove(personLeavingContainer, container)) {
+//            return;
+//        }
+
+        if (!isRelevantForInfectionDynamics(personLeavingContainer, container)) {
             return;
         }
 
@@ -74,7 +78,15 @@ public class DefaultInfectionModel extends InfectionModel {
             // density in the transit container goes down.  kai, mar'20)
             contactPersons.add(contactPerson);
 
-            if (!isPersonPhysicallyOnTheMove(contactPerson, container)) {
+//            if (!isPersonPhysicallyOnTheMove(contactPerson, container)) {
+//                continue;
+//            }
+
+            if (!isRelevantForInfectionDynamics(contactPerson, container)) {
+                continue;
+            }
+
+            if(personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus()){
                 continue;
             }
 
@@ -87,9 +99,11 @@ public class DefaultInfectionModel extends InfectionModel {
             if (infectionSituation.equals(InfectionSituation.Facility)){
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && ! infectionType.contains("leis")  && ! ( leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home")  )){
+//                    log.warn("skipping infection type " + infectionType);
                     continue;
                 } else if (infectionType.contains("edu") && ! infectionType.contains("work") && ! ( leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu") )){
                     //edu can only interact with work or edu
+//                    log.warn("skipping infection type " + infectionType);
                     continue;
                 }
 
