@@ -192,7 +192,7 @@ public class DefaultInfectionModelTest {
         // This test fails if the effectiveness of restrictions changes
         // Please check if it is intended and update the value below
         assertThat(rateRestricted / rate).as("Restriction effectiveness")
-                    .isCloseTo(0.5, Offset.offset(0.01));
+                    .isCloseTo(0.53, Offset.offset(0.01));
     }
 
     @Test
