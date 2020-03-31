@@ -53,7 +53,7 @@ public class DefaultInfectionModelTest {
 
         int infections = 0;
 
-        for (int i = 0; i < 250_000; i++) {
+        for (int i = 0; i < 20_000; i++) {
             InfectionEventHandler.EpisimFacility container = f.get();
             EpisimPerson person = p.apply(container);
             model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
@@ -61,7 +61,7 @@ public class DefaultInfectionModelTest {
                 infections++;
         }
 
-        return infections / 250_000d;
+        return infections / 20_000d;
     }
 
     /**
@@ -147,7 +147,7 @@ public class DefaultInfectionModelTest {
     }
 
     @Test
-    public void infectionRateGoesDownWithQuarantine() {
+    public void quarantineEffectiveness() {
 
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c0.1",
                 () -> EpisimTestUtils.createFacility(5, "c0.1", EpisimTestUtils.CONTAGIOUS),
@@ -160,8 +160,9 @@ public class DefaultInfectionModelTest {
                 (f) -> EpisimTestUtils.createPerson("c0.1", f)
         );
 
-        assertThat(rate).as("Infection rate")
-                .isGreaterThanOrEqualTo(rateWithQuarantined);
+        // Test case has very low effectiveness
+        assertThat(rateWithQuarantined / rate).as("Quarantine effectiveness")
+                .isCloseTo(0.998, Offset.offset(0.01));
 
     }
 
