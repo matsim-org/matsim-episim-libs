@@ -20,7 +20,6 @@ import java.util.List;
 /**
  * @author smueller
  */
-
 public class CreateBatteryForCluster {
     private static final String workingDir = "../epidemic/battery/";
 
@@ -30,8 +29,15 @@ public class CreateBatteryForCluster {
 
         // Copy run script
         Path runScript = Path.of(workingDir, "run.sh");
+        Path runSlurm = Path.of(workingDir, "runSlurm.sh");
+
+
         Files.copy(Resources.getResource("_run.sh").openStream(), runScript, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Resources.getResource("_runSlurm.sh").openStream(), runSlurm, StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Resources.getResource("jvm.options").openStream(), Path.of(workingDir), StandardCopyOption.REPLACE_EXISTING);
+
         runScript.toFile().setExecutable(true);
+        runSlurm.toFile().setExecutable(true);
 
         BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_bashScript.sh"));
         BufferedWriter slurmScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_slurmScript.sh"));
@@ -44,38 +50,39 @@ public class CreateBatteryForCluster {
         List<Double> remainingFractionShopping = Arrays.asList(1.0, 0.75, 0.5, 0.25, 0.);
         List<Double> remainingFractionLeisure = Arrays.asList(1.0, 0.75, 0.5, 0.25, 0.);
         List<Double> remainingFractionOther = Arrays.asList(1.0, 0.75, 0.5, 0.25, 0.);
-        
-        
+
+
 //        List<Long> work = Arrays.asList(1000L, 10L, 20L, 30L);
 //        List<Long> leisure = Arrays.asList(1000L, 10L, 20L, 30L);
 //        List<Long> otherExceptHome = Arrays.asList(1000L, 10L, 20L, 30L);
         int ii = 1;
         for (long r : reopenAfter) {
-	        for (double w : remainingFractionWork) {
-	            for (double s : remainingFractionShopping) {
-	                for (double l : remainingFractionLeisure) {
-	                    for (double o : remainingFractionOther) {
-	                        String runId = "sz" + ii;
-	                        String configFileName = createConfigFile(w, s, l, o, r, ii);
+            for (double w : remainingFractionWork) {
+                for (double s : remainingFractionShopping) {
+                    for (double l : remainingFractionLeisure) {
+                        for (double o : remainingFractionOther) {
+                            String runId = "sz" + ii;
+                            String configFileName = createConfigFile(w, s, l, o, r, ii);
 
-	                        bashScriptWriter.write("qsub -N " + runId +" run.sh");
-	                        bashScriptWriter.newLine();
+                            bashScriptWriter.write("qsub -N " + runId + " run.sh");
+                            bashScriptWriter.newLine();
 
-	                        slurmScriptWriter.write("sbatch --job-name=\"" + runId + "\"");
-	                        slurmScriptWriter.newLine();
+                            slurmScriptWriter.write("sbatch --job-name=\"" + runId + "\" runSlurm.sh");
+                            slurmScriptWriter.newLine();
 
-	                        String outputPath = "output/" + w + "-" + s + "-" + l + "-" + o + "-" + r;
-	                        infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" +  w + ";" + s + ";" + l + ";" + o + ";" + r);
-	                        infoWriter.newLine();
+                            String outputPath = "output/" + w + "-" + s + "-" + l + "-" + o + "-" + r;
+                            infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" + w + ";" + s + ";" + l + ";" + o + ";" + r);
+                            infoWriter.newLine();
 
-	                        ii++;
-	                    }
-	                }
-	            }
-	        }
+                            ii++;
+                        }
+                    }
+                }
+            }
         }
 
         bashScriptWriter.close();
+        slurmScriptWriter.close();
         infoWriter.close();
 
 

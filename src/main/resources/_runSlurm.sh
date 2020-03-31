@@ -1,5 +1,5 @@
-#!/bin/bash --login
-#SBATCH --time=01:00:00
+#!/bin/bash
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4096
@@ -14,18 +14,13 @@ echo "***"
 echo "classpath: $classpath"
 echo "***"
 
-# 12288 MB
-# java command
-java_command="java -Djava.awt.headless=true -Xmx12G -cp $classpath"
-
 # main
 main="org.matsim.run.RunFromConfig"
 
 # arguments
 arguments="config_$SLURM_JOB_NAME.xml --config:controler.runId $SLURM_JOB_NAME"
 
-# command
-command="$java_command $main $arguments"
+command="java -cp $classpath @jvm.options $main $arguments"
 
 echo ""
 echo "command is $command"
