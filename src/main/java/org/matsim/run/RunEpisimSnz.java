@@ -26,8 +26,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
+import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.ICUDependentPolicy;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -45,20 +45,20 @@ public class RunEpisimSnz {
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220.0.events.reduced.xml.gz");
+        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
         episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.002);
+        episimConfig.setCalibrationParameter(0.000005);
 
         int closingIteration = 10;
 
-        RunEpisim.addDefaultParams(episimConfig);
+        addParams(episimConfig);
 
         episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
 
         episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-                .shutdown(closingIteration, RunEpisim.DEFAULT_ACTIVITIES)
+                .shutdown(closingIteration, DEFAULT_ACTIVITIES)
                 .build()
         );
 
@@ -69,5 +69,27 @@ public class RunEpisimSnz {
 
         RunEpisim.runSimulation(config, 150);
     }
+    
+    public static void addParams(EpisimConfigGroup episimConfig) {
+    	
+    	episimConfig.addContainerParams(new InfectionParams("pt", "tr"));
+        // regular out-of-home acts:
+    	episimConfig.addContainerParams(new InfectionParams("work"));
+    	episimConfig.addContainerParams(new InfectionParams("leisure"));
+    	episimConfig.addContainerParams(new InfectionParams("educ_kiga"));
+    	episimConfig.addContainerParams(new InfectionParams("educ_primary"));
+    	episimConfig.addContainerParams(new InfectionParams("educ_secondary"));
+    	episimConfig.addContainerParams(new InfectionParams("educ_higher"));
+    	episimConfig.addContainerParams(new InfectionParams("shopping"));
+    	episimConfig.addContainerParams(new InfectionParams("errands"));
+        episimConfig.addContainerParams(new InfectionParams("business"));
+        
+        episimConfig.addContainerParams(new InfectionParams("home"));
+    	
+    }
+    
+    private static final String[] DEFAULT_ACTIVITIES = {
+            "pt", "work", "leisure", "educ_kiga","educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
+    };
 
 }
