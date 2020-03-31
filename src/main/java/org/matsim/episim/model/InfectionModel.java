@@ -89,11 +89,14 @@ public abstract class InfectionModel {
     }
 
     /**
-     * Checks whether a person is quarantine and whether the current trip/activity is relevant for infectionDynamics. This function also considers the restrictions in place.
+     * Checks whether a person is quarantine or in hospital and whether the current trip/activity is relevant for infectionDynamics. This function also considers the restrictions in place.
      * TODO rename
      */
-    protected boolean isPersonActuallyOnTheGo(EpisimPerson person, EpisimContainer<?> container) {
-        if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+    protected boolean isPersonPhysicallyOnTheMove(EpisimPerson person, EpisimContainer<?> container) {
+        if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
+            return false;
+        }
+        if(isPersonInHospital(person)){
             return false;
         }
         if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
@@ -104,6 +107,11 @@ public abstract class InfectionModel {
         }
         return false;
     }
+
+    private boolean isPersonInHospital(EpisimPerson person){
+        return (person.getDiseaseStatus().equals(EpisimPerson.DiseaseStatus.seriouslySick) || person.getDiseaseStatus().equals(EpisimPerson.DiseaseStatus.critical));
+    }
+
 
     private boolean activityRelevantForInfectionDynamics(EpisimPerson person) {
         String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
