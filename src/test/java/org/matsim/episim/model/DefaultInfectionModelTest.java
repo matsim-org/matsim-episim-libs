@@ -53,7 +53,7 @@ public class DefaultInfectionModelTest {
 
         int infections = 0;
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 250_000; i++) {
             InfectionEventHandler.EpisimFacility container = f.get();
             EpisimPerson person = p.apply(container);
             model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
@@ -61,7 +61,7 @@ public class DefaultInfectionModelTest {
                 infections++;
         }
 
-        return infections / 10000d;
+        return infections / 250_000d;
     }
 
     /**
@@ -75,7 +75,7 @@ public class DefaultInfectionModelTest {
 
         Random r = new Random(0);
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 20000; i++) {
             InfectionEventHandler.EpisimFacility container = f.get();
             List<EpisimPerson> allPersons = Lists.newArrayList(container.getPersons());
 
@@ -89,7 +89,7 @@ public class DefaultInfectionModelTest {
             rate += (double) allPersons.stream().filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious).count() / allPersons.size();
         }
 
-        return rate / 10000d;
+        return rate / 20000d;
     }
 
 
