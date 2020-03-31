@@ -49,9 +49,9 @@ public class RunEpisimSnz {
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
         episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.000005);
+        episimConfig.setCalibrationParameter(0.000003);
 
-        int closingIteration = 10;
+        int closingIteration = 1000;
 
         addParams(episimConfig);
 
