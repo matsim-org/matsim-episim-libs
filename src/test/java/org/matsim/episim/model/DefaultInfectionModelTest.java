@@ -203,10 +203,10 @@ public class DefaultInfectionModelTest {
 
         List<Pair<Integer, Double>> expectation = Lists.newArrayList(
                 // Number of persons & expected infection rate
-                Pair.of(1, 0.39),
-                Pair.of(3, 0.78),
-                Pair.of(6, 0.92),
-                Pair.of(10, 0.92),
+                Pair.of(1, 0.45),
+                Pair.of(3, 0.83),
+                Pair.of(6, 0.95),
+                Pair.of(10, 0.93),
                 Pair.of(50, 0.92)
         );
 
