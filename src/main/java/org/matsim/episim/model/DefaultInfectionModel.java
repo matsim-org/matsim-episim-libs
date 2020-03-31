@@ -66,9 +66,9 @@ public class DefaultInfectionModel extends InfectionModel {
 
             //draw the contact person
             EpisimPerson contactPerson;
-            int idx = rnd.nextInt(otherPersonsInContainer.size());
             ArrayList<EpisimPerson> possibleContactPersons = new ArrayList<>(otherPersonsInContainer);
             possibleContactPersons.removeAll(contactPersons);
+            int idx = rnd.nextInt(possibleContactPersons.size());
             contactPerson = possibleContactPersons.get(idx);
             // (we count "quarantine" as well since they essentially represent "holes", i.e. persons who are no longer there and thus the
             // density in the transit container goes down.  kai, mar'20)
