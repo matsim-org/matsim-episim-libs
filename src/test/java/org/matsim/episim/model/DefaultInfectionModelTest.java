@@ -147,7 +147,7 @@ public class DefaultInfectionModelTest {
     }
 
     @Test
-    public void sameInfectedInContainer() {
+    public void infectionRateGoesDownWithQuarantine() {
 
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c0.1",
                 () -> EpisimTestUtils.createFacility(5, "c0.1", EpisimTestUtils.CONTAGIOUS),
