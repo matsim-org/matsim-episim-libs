@@ -1,24 +1,3 @@
-/* *********************************************************************** *
- * project: org.matsim.*
- * EditRoutesTest.java
- *                                                                         *
- * *********************************************************************** *
- *                                                                         *
- * copyright       : (C) 2019 by the members listed in the COPYING,        *
- *                   LICENSE and WARRANTY file.                            *
- * email           : info at matsim dot org                                *
- *                                                                         *
- * *********************************************************************** *
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *   See also COPYING, LICENSE and WARRANTY file                           *
- *                                                                         *
- * *********************************************************************** */
-
-
 package org.matsim.run;
 
 import com.google.common.io.Resources;
@@ -55,6 +34,7 @@ public class CreateBatteryForCluster {
         runScript.toFile().setExecutable(true);
 
         BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_bashScript.sh"));
+        BufferedWriter slurmScriptWriter = new BufferedWriter(new FileWriter(workingDir + "_slurmScript.sh"));
         BufferedWriter infoWriter = new BufferedWriter(new FileWriter(workingDir + "_info.txt"));
 
         infoWriter.write("RunScript;Config;RunId;Output;remainingFractionWork;remainingFractionShopping;remainingFractionLeisure;remainingFractionOther;ReopenAfter");
@@ -77,11 +57,17 @@ public class CreateBatteryForCluster {
 	                    for (double o : remainingFractionOther) {
 	                        String runId = "sz" + ii;
 	                        String configFileName = createConfigFile(w, s, l, o, r, ii);
+
 	                        bashScriptWriter.write("qsub -N " + runId +" run.sh");
 	                        bashScriptWriter.newLine();
+
+	                        slurmScriptWriter.write("sbatch --job-name=\"" + runId + "\"");
+	                        slurmScriptWriter.newLine();
+
 	                        String outputPath = "output/" + w + "-" + s + "-" + l + "-" + o + "-" + r;
 	                        infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" +  w + ";" + s + ";" + l + ";" + o + ";" + r);
 	                        infoWriter.newLine();
+
 	                        ii++;
 	                    }
 	                }
