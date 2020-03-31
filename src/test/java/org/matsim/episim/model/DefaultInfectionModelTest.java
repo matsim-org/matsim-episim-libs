@@ -53,7 +53,7 @@ public class DefaultInfectionModelTest {
 
         int infections = 0;
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 250_000; i++) {
             InfectionEventHandler.EpisimFacility container = f.get();
             EpisimPerson person = p.apply(container);
             model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
@@ -61,7 +61,7 @@ public class DefaultInfectionModelTest {
                 infections++;
         }
 
-        return infections / 10000d;
+        return infections / 250_000d;
     }
 
     /**
@@ -75,7 +75,7 @@ public class DefaultInfectionModelTest {
 
         Random r = new Random(0);
 
-        for (int i = 0; i < 10000; i++) {
+        for (int i = 0; i < 20000; i++) {
             InfectionEventHandler.EpisimFacility container = f.get();
             List<EpisimPerson> allPersons = Lists.newArrayList(container.getPersons());
 
@@ -89,7 +89,7 @@ public class DefaultInfectionModelTest {
             rate += (double) allPersons.stream().filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious).count() / allPersons.size();
         }
 
-        return rate / 10000d;
+        return rate / 20000d;
     }
 
 
@@ -147,7 +147,7 @@ public class DefaultInfectionModelTest {
     }
 
     @Test
-    public void sameInfectedInContainer() {
+    public void infectionRateGoesDownWithQuarantine() {
 
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c0.1",
                 () -> EpisimTestUtils.createFacility(5, "c0.1", EpisimTestUtils.CONTAGIOUS),
@@ -168,7 +168,7 @@ public class DefaultInfectionModelTest {
     @Test
     public void noCrossInfection() {
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
-                () -> EpisimTestUtils.createFacility(1, "c1.0", EpisimTestUtils.CONTAGIOUS),
+                () -> EpisimTestUtils.createFacility(1, "home", EpisimTestUtils.CONTAGIOUS),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
 
@@ -192,7 +192,7 @@ public class DefaultInfectionModelTest {
         // This test fails if the effectiveness of restrictions changes
         // Please check if it is intended and update the value below
         assertThat(rateRestricted / rate).as("Restriction effectiveness")
-                    .isCloseTo(0.5, Offset.offset(0.01));
+                    .isCloseTo(0.53, Offset.offset(0.01));
     }
 
     @Test
@@ -203,10 +203,10 @@ public class DefaultInfectionModelTest {
 
         List<Pair<Integer, Double>> expectation = Lists.newArrayList(
                 // Number of persons & expected infection rate
-                Pair.of(1, 0.39),
-                Pair.of(3, 0.78),
-                Pair.of(6, 0.92),
-                Pair.of(10, 0.92),
+                Pair.of(1, 0.45),
+                Pair.of(3, 0.83),
+                Pair.of(6, 0.95),
+                Pair.of(10, 0.93),
                 Pair.of(50, 0.92)
         );
 
