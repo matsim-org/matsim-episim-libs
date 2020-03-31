@@ -5,11 +5,13 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
 
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.function.Function;
@@ -29,8 +31,9 @@ public class DefaultInfectionModelTest {
     @Before
     public void setup() {
         EpisimReporting reporting = mock(EpisimReporting.class);
+        EventsManager dummyEventsManager = EventsUtils.createEventsManager();
         EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
-        model = new DefaultInfectionModel(new Random(1), config, reporting);
+        model = new DefaultInfectionModel(new Random(1), config, reporting, dummyEventsManager );
         restrictions = config.createInitialRestrictions();
         model.setRestrictionsForIteration(1, restrictions);
 
@@ -61,6 +64,35 @@ public class DefaultInfectionModelTest {
         return infections / 10000d;
     }
 
+    /**
+     * Samples the total infection rate when all persons leave a container at the same time.
+     *
+     * @return infection rate of all persons in the container
+     */
+    private double sampleTotalInfectionRate(Duration jointTime, String actType, Supplier<InfectionEventHandler.EpisimFacility> f) {
+
+        double rate = 0;
+
+        Random r = new Random(0);
+
+        for (int i = 0; i < 10000; i++) {
+            InfectionEventHandler.EpisimFacility container = f.get();
+            List<EpisimPerson> allPersons = Lists.newArrayList(container.getPersons());
+
+            while (!container.getPersons().isEmpty()) {
+                EpisimPerson person = container.getPersons().get(r.nextInt(container.getPersons().size()));
+                model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
+                EpisimTestUtils.removePerson(container, person);
+            }
+
+            // Percentage of infected persons
+            rate += (double) allPersons.stream().filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious).count() / allPersons.size();
+        }
+
+        return rate / 10000d;
+    }
+
+
     @Test
     public void highContactRate() {
         double rate = sampleInfectionRate(Duration.ofMinutes(15), "c10",
@@ -87,15 +119,16 @@ public class DefaultInfectionModelTest {
 
     @Test
     public void noInfection() {
+        double now = 0. ; // no idea
 
         double rate = sampleInfectionRate(Duration.ofHours(2), "c10",
-                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)),
+                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.infectedButNotContagious ) ),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
         assertThat(rate).isCloseTo(0, OFFSET);
 
         rate = sampleInfectionRate(Duration.ofHours(2), "c10",
-                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)),
+                () -> EpisimTestUtils.createFacility(5, "c10", p -> p.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered ) ),
                 (f) -> EpisimTestUtils.createPerson("c10", f)
         );
         assertThat(rate).isCloseTo(0, OFFSET);
@@ -133,28 +166,6 @@ public class DefaultInfectionModelTest {
     }
 
     @Test
-    public void restrictions() {
-
-        String type = "c1.0";
-        double rate = sampleInfectionRate(Duration.ofMinutes(30), type,
-                () -> EpisimTestUtils.createFacility(6, type, EpisimTestUtils.CONTAGIOUS),
-                (f) -> EpisimTestUtils.createPerson(type, f)
-        );
-
-        restrictions.put(type, ShutdownPolicy.Restriction.newInstance(0.5));
-
-        double rateRestricted = sampleInfectionRate(Duration.ofMinutes(30), type,
-                () -> EpisimTestUtils.createFacility(6, type, EpisimTestUtils.CONTAGIOUS),
-                (f) -> EpisimTestUtils.createPerson(type, f)
-        );
-
-        // Assume reduction between 0.3 and 0.5
-        assertThat(rateRestricted)
-                .isGreaterThan(rate * 0.3)
-                .isLessThan(rate * 0.5);
-    }
-
-    @Test
     public void noCrossInfection() {
         double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
                 () -> EpisimTestUtils.createFacility(1, "home", EpisimTestUtils.CONTAGIOUS),
@@ -165,12 +176,32 @@ public class DefaultInfectionModelTest {
     }
 
     @Test
+    public void restrictionEffectiveness() {
+
+        String type = "c1.0";
+        double rate = sampleTotalInfectionRate(Duration.ofMinutes(30), type,
+                () -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> { })
+        );
+
+        restrictions.put(type, ShutdownPolicy.Restriction.newInstance(0.5));
+
+        double rateRestricted = sampleTotalInfectionRate(Duration.ofMinutes(30), type,
+                () -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> { })
+        );
+
+        // This test fails if the effectiveness of restrictions changes
+        // Please check if it is intended and update the value below
+        assertThat(rateRestricted / rate).as("Restriction effectiveness")
+                    .isCloseTo(0.5, Offset.offset(0.01));
+    }
+
+    @Test
     public void infectionRates() {
 
         // This test fails for changes in infection rates
         // Please check if they are intended and update the values below
 
-        ArrayList<Pair<Integer, Double>> expectation = Lists.newArrayList(
+        List<Pair<Integer, Double>> expectation = Lists.newArrayList(
                 // Number of persons & expected infection rate
                 Pair.of(1, 0.39),
                 Pair.of(3, 0.78),

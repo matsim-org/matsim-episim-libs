@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.episim.*;
 
 import java.util.ArrayList;
@@ -19,13 +20,13 @@ public class DefaultInfectionModel extends InfectionModel {
 
     private enum InfectionSituation {Vehicle, Facility}
 
-    public DefaultInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
-        super(rnd, episimConfig, reporting);
+    public DefaultInfectionModel( Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting,
+                                  EventsManager eventsManager ) {
+        super(rnd, episimConfig, reporting, eventsManager );
     }
 
     @Override
     public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
-//        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, vehicle.getContainerId().toString());
         infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, InfectionSituation.Vehicle);
     }
 
@@ -51,9 +52,10 @@ public class DefaultInfectionModel extends InfectionModel {
 
         // For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
         // shuffle, those are 10 different persons every day.
-        // as sample size is 25%, 10 persons means 3 agents here
-        for ( int ii = 0 ; ii< Math.min( Math.max((int) (episimConfig.getSampleSize() * 10), 3) , otherPersonsInContainer.size()); ii++ ) {
-            //as we now forbid infection for certain activity type pairs, we do need the separate counter. schlenther, march 27
+
+        // persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
+        int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+        for (int ii = 0; ii < contactWith; ii++) {
 
             // (this is "-1" because we can't interact with "self")
 

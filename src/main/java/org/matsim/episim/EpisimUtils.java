@@ -7,24 +7,22 @@ public class EpisimUtils {
      *
      * @param time time relative to start of day
      */
-    static double getCorrectedTime(double time, long iteration) {
+    public static double getCorrectedTime( double time, long iteration ) {
         return Math.min(time, 3600. * 24) + iteration * 24. * 3600;
     }
 
     public static boolean hasStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
         switch (personWrapper.getDiseaseStatus()) {
             case susceptible:
-                return true;
-            case infectedButNotContagious:
-                return false;
             case contagious:
                 return true;
-            case seriouslySick:
-                return false; // assume is in hospital
-            case critical:
-                return false; // assume is in hospital
+
+            case infectedButNotContagious:
             case recovered:
+            case seriouslySick: // assume is in hospital
+            case critical:
                 return false;
+
             default:
                 throw new IllegalStateException("Unexpected value: " + personWrapper.getDiseaseStatus());
         }
