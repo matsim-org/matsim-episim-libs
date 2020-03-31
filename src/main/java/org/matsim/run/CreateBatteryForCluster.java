@@ -111,6 +111,8 @@ public class CreateBatteryForCluster {
         		.setContactIntensity(10.0);
         episimConfig.getOrAddContainerParams("leisure")
         		.setContactIntensity(5.0);
+        episimConfig.getOrAddContainerParams("educ_kiga")
+				.setContactIntensity(10.0);
         episimConfig.getOrAddContainerParams("educ_primary")
 				.setContactIntensity(4.0);
         episimConfig.getOrAddContainerParams("educ_secondary")
@@ -124,15 +126,15 @@ public class CreateBatteryForCluster {
         }
 
         com.typesafe.config.Config policyConf = FixedPolicy.config()
-        		.restrict(25, 0.9, "leisure")
-        		.restrict(28, 0.1, "educ_primary", "educ_kiga")
-        		.restrict(28, 0., "educ_secondary", "educ_higher")
-                .restrict(30, factor * 0.2 , "business", "errands", "leisure")
-                .restrict(30, factor * 0.4, "work", "shopping")
-                .restrict(60, kiga, "educ_kiga")
-                .restrict(60, prima, "educ_primary")
-                .restrict(60, secon, "educ_secondary")
-                .restrict(60, higher, "educ_higher")
+        		.restrict(26, 0.9, "leisure")
+        		.restrict(26, 0.1, "educ_primary", "educ_kiga")
+        		.restrict(26, 0., "educ_secondary", "educ_higher")
+                .restrict(35, factor * 0.2, "business", "errands", "leisure")
+                .restrict(35, factor * 0.4, "work", "shopping")
+                .restrict(63, kiga, "educ_kiga")
+                .restrict(63, prima, "educ_primary")
+                .restrict(63, secon, "educ_secondary")
+                .restrict(63, higher, "educ_higher")
                 .build();
 
         String policyFileName = "policy" + ii + ".conf";
