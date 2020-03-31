@@ -137,6 +137,7 @@ public class DefaultInfectionModel extends InfectionModel {
             if (rnd.nextDouble() < infectionProba) {
                 if (personLeavingContainer.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
                     infectPerson(personLeavingContainer, contactPerson, now, infectionType);
+                    //TODO the fact that we return here creates a bug concerning tracking. we would need to draw the remaining number of contact persons before return. or have a separate boolean leavingPersonGotInfected
                     return;
                 } else {
                     infectPerson(contactPerson, personLeavingContainer, now, infectionType);
