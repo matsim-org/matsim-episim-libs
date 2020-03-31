@@ -2,6 +2,8 @@ package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.episim.events.EpisimPersonStatusEvent;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -14,6 +16,7 @@ import java.util.Set;
 public final class EpisimPerson {
 
     private final Id<Person> personId;
+    private final EventsManager eventsManager;
     private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
     private final List<String> trajectory = new ArrayList<>();
     /**
@@ -43,8 +46,9 @@ public final class EpisimPerson {
     private String lastFacilityId;
     private String firstFacilityId;
 
-    EpisimPerson(Id<Person> personId) {
+    EpisimPerson( Id<Person> personId, EventsManager eventsManager ) {
         this.personId = personId;
+        this.eventsManager = eventsManager;
     }
 
     public Id<Person> getPersonId() {
@@ -55,8 +59,9 @@ public final class EpisimPerson {
         return status;
     }
 
-    public void setDiseaseStatus(DiseaseStatus status) {
+    public void setDiseaseStatus( double now, DiseaseStatus status ) {
         this.status = status;
+        eventsManager.processEvent( new EpisimPersonStatusEvent( now, personId, status ) );
     }
 
     public QuarantineStatus getQuarantineStatus() {

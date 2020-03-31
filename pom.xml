@@ -58,6 +58,13 @@
             <version>1.4.0</version>
         </dependency>
 
+        <!-- Command line interface -->
+        <dependency>
+            <groupId>info.picocli</groupId>
+            <artifactId>picocli</artifactId>
+            <version>4.2.0</version>
+        </dependency>
+
 <!--        <dependency>-->
 <!--            <groupId>com.github.matsim-scenarios</groupId>-->
 <!--            <artifactId>matsim-berlin</artifactId>-->
@@ -124,6 +131,12 @@
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>3.15.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>3.3.3</version>
             <scope>test</scope>
         </dependency>
 

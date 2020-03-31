@@ -10,6 +10,7 @@ env:
     - MAVEN_OPTS="-Xmx6g"
   matrix:
     - TEST=RunEpisimIntegrationTest
+    - TEST=DefaultInfectionModelTest
 
 script:
   # Tests won't produce output immediately

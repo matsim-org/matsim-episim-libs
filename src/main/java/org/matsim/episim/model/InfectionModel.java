@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -19,13 +20,16 @@ public abstract class InfectionModel {
     protected final Random rnd;
     protected final EpisimConfigGroup episimConfig;
     private final EpisimReporting reporting;
+    private final EventsManager eventsManager;
     protected int iteration;
     private Map<String, ShutdownPolicy.Restriction> restrictions;
 
-    protected InfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+    protected InfectionModel( Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting,
+                              EventsManager eventsManager ) {
         this.rnd = rnd;
         this.episimConfig = episimConfig;
         this.reporting = reporting;
+        this.eventsManager = eventsManager;
     }
 
 
@@ -68,7 +72,7 @@ public abstract class InfectionModel {
             throw new IllegalStateException("Person and infector are not in same container!");
         }
 
-        personWrapper.setDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious);
+        personWrapper.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.infectedButNotContagious );
         if (scenario != null) {
             final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
             if (person != null) {
@@ -79,16 +83,20 @@ public abstract class InfectionModel {
         personWrapper.setInfectionDate(iteration);
 
         reporting.reportInfection(personWrapper, infector, now, infectionType);
+
+//        eventsManager.processEvent( new EpisimPersonStatusEvent(now, personWrapper.getPersonId(), EpisimPerson.DiseaseStatus.infectedButNotContagious ) );
+        // done in EpisimPerson!
     }
 
     /**
-     * Checks whether a persons and container is relevant for the infection dynamics. This function also considers the restrictions in place.
+     * Checks whether a person is quarantine or in hospital and whether the current trip/activity is relevant for infectionDynamics. This function also considers the restrictions in place.
+     * TODO rename
      */
-    protected boolean isRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container) {
-        if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(person)) {
+    protected boolean isPersonPhysicallyOnTheMove(EpisimPerson person, EpisimContainer<?> container) {
+        if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
             return false;
         }
-        if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+        if(isPersonInHospital(person)){
             return false;
         }
         if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
@@ -99,6 +107,11 @@ public abstract class InfectionModel {
         }
         return false;
     }
+
+    private boolean isPersonInHospital(EpisimPerson person){
+        return (person.getDiseaseStatus().equals(EpisimPerson.DiseaseStatus.seriouslySick) || person.getDiseaseStatus().equals(EpisimPerson.DiseaseStatus.critical));
+    }
+
 
     private boolean activityRelevantForInfectionDynamics(EpisimPerson person) {
         String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());

@@ -23,7 +23,7 @@ public abstract class ShutdownPolicy {
 
     protected ShutdownPolicy(Config config) {
         this.config = config;
-        log.debug("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
+        log.info("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
     }
 
     /**
@@ -45,11 +45,16 @@ public abstract class ShutdownPolicy {
          */
         private double remainingFraction = 1.;
 
-        private Restriction() {
+        private Restriction(double remainingFraction) {
+            this.remainingFraction = remainingFraction;
         }
 
         public static Restriction newInstance() {
-            return new Restriction();
+            return new Restriction(1d);
+        }
+
+        public static Restriction newInstance(double remainingFraction) {
+            return new Restriction(remainingFraction);
         }
 
         @Override
