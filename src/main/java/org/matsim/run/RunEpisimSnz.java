@@ -35,7 +35,6 @@ import java.util.Arrays;
 /**
  * @author smueller
  */
-
 public class RunEpisimSnz {
 
     public static void main(String[] args) throws IOException {
@@ -50,6 +49,7 @@ public class RunEpisimSnz {
 
         episimConfig.setSampleSize(0.25);
         episimConfig.setCalibrationParameter(0.000003);
+        episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
 
         int closingIteration = 1000;
 

@@ -98,6 +98,14 @@ public final class EpisimPerson {
         return currentIteration - quarantineDate;
     }
 
+    /**
+     * Whether the person can perform activities.
+     */
+    public boolean isMobil() {
+        return quarantineStatus != QuarantineStatus.full &&
+                status != DiseaseStatus.seriouslySick && status != EpisimPerson.DiseaseStatus.critical;
+    }
+
     int getQuarantineDate() {
         return this.quarantineDate;
     }

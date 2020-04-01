@@ -101,7 +101,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         this.restrictions = episimConfig.createInitialRestrictions();
         this.reporting = new EpisimReporting(config);
         this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
-        this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting, eventsManager );
+        this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting,
+                episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes );
     }
 
     /**

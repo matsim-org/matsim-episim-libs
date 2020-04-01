@@ -31,9 +31,8 @@ public class DefaultInfectionModelTest {
     @Before
     public void setup() {
         EpisimReporting reporting = mock(EpisimReporting.class);
-        EventsManager dummyEventsManager = EventsUtils.createEventsManager();
         EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
-        model = new DefaultInfectionModel(new Random(1), config, reporting, dummyEventsManager );
+        model = new DefaultInfectionModel(new Random(1), config, reporting, false );
         restrictions = config.createInitialRestrictions();
         model.setRestrictionsForIteration(1, restrictions);
 

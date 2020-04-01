@@ -7,7 +7,7 @@ public class EpisimUtils {
      *
      * @param time time relative to start of day
      */
-    public static double getCorrectedTime( double time, long iteration ) {
+    public static double getCorrectedTime(double time, long iteration) {
         return Math.min(time, 3600. * 24) + iteration * 24. * 3600;
     }
 
@@ -29,13 +29,11 @@ public class EpisimUtils {
     }
 
     /**
-     * this method checks whether person1 and person2 have relevant disease status for infection dynamics. If not or if both have the same disease status, the return value is false.
-     * @param person1
-     * @param person2
-     * @return
+     * This method checks whether person1 and person2 have relevant disease status for infection dynamics.
+     * If not or if both have the same disease status, the return value is false.
      */
     public static boolean canPersonsInfectEachOther(EpisimPerson person1, EpisimPerson person2) {
-        if(person1.getDiseaseStatus() == person2.getDiseaseStatus()) return false;
+        if (person1.getDiseaseStatus() == person2.getDiseaseStatus()) return false;
         return (hasStatusRelevantForInfectionDynamics(person1) && hasStatusRelevantForInfectionDynamics(person2));
     }
 }
