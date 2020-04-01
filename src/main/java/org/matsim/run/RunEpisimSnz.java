@@ -49,7 +49,7 @@ public class RunEpisimSnz {
 
         episimConfig.setSampleSize(0.25);
         episimConfig.setCalibrationParameter(0.000003);
-        episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+        //episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
 
         int closingIteration = 1000;
 

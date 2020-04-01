@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=02:00:00
+#SBATCH --time=01:30:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4096
@@ -26,9 +26,8 @@ command="java -cp $classpath @jvm.options $main $arguments"
 echo ""
 echo "command is $command"
 
-echo ""
-echo "using alternative java"
-module add java/11
+module load java/11.0.6
+
 java -version
 
 $command
