@@ -2,7 +2,6 @@ package org.matsim.episim.model;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -148,7 +147,7 @@ public abstract class InfectionModel {
                 person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
             return false;
 
-        if (!person.isMobil())
+        if (!person.isMobile())
             return false;
 
         if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {

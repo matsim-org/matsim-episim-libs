@@ -66,13 +66,18 @@ public class DefaultInfectionModel extends InfectionModel {
             EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
             // If tracking is not enabled, the loop can continue earlier
-            if (trackingEnabled && !personRelevantForTracking(contactPerson, container))
+            if (trackingEnabled && !personRelevantForTracking(contactPerson, container)){
                 continue;
-            else if (!trackingEnabled &&
+            } else if (!trackingEnabled &&
                     (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus() ||
-                            !personRelevantForInfectionDynamics(contactPerson, container)))
+                                     !personRelevantForInfectionDynamics(contactPerson, container))) {
                 continue;
+            }
+            // yyyy I don't like these separate if conditions for tracking vs without.  Too large danger that we get something wrong there.  kai, apr'20
 
+            // yyyyyy I do not understand why the execution path has to be different for with tracking vs. without tracking.  Could you please explain?
+            // (Maybe the logic is that one would note people for tracking even if they have the same disease status, since one would not know that.  Is that
+            // the reason?  kai, apr'20)
 
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
@@ -91,6 +96,9 @@ public class DefaultInfectionModel extends InfectionModel {
 
             //forbid certain cross-activity interactions, keep track of contacts
             if (infectionSituation == InfectionSituation.Facility) {
+                // yy somehow, this does not feel right to have all these additional data types.  If we have the container, then we have the situation, don't we?
+                // kai, apr'20
+
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
                     continue;

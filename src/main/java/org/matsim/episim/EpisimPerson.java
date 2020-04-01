@@ -77,6 +77,9 @@ public final class EpisimPerson {
     }
 
     public void setInfectionDate(int date) {
+        // yyyy should be part of status change. kai, apr'20
+
+
         if (this.infectionDate > -1)
             throw new IllegalStateException("Infection date already set");
 
@@ -93,6 +96,16 @@ public final class EpisimPerson {
     }
 
     public int daysSinceQuarantine(int currentIteration) {
+        // yyyy I would prefer to just take note of the dates of the status change, something like
+        // getDateOf( DiseaseStatus status )
+        // would be a much more stable API, since one would not need a separate method for each new status.  kai, apr'20
+
+        // yyyy would make sense to keep track of the exact time steps (not just the days).  How to approach that: seconds, just count up, or keep track of
+        //  days
+        // separately?  kai, apr'20
+
+        // yyyyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
+
         if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
 
         return currentIteration - quarantineDate;
@@ -101,7 +114,9 @@ public final class EpisimPerson {
     /**
      * Whether the person can perform activities.
      */
-    public boolean isMobil() {
+    public boolean isMobile() {
+        // yyyy EpisimPerson is a data class, but this is not just data.  IMO does not belong here.  kai, apr'20
+
         return quarantineStatus != QuarantineStatus.full &&
                 status != DiseaseStatus.seriouslySick && status != EpisimPerson.DiseaseStatus.critical;
     }
