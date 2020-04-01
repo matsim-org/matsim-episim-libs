@@ -27,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -149,7 +151,11 @@ public class CreateU14Population {
 		Population population = scenario.getPopulation();
 		
 		PopulationFactory pf = population.getFactory();
-		
+
+		List<EducFacility> kigasList = educList.stream().filter(e -> e.isEducKiga).collect(Collectors.toList());
+		List<EducFacility> primaryList = educList.stream().filter(e -> e.isEducPrimary).collect(Collectors.toList());
+		List<EducFacility> secondaryList = educList.stream().filter(e -> e.isEducSecondary).collect(Collectors.toList());
+
 		for (Person person : population.getPersons().values()) {
 			person.getAttributes().putAttribute("subpopulation", "berlin");
 			Plan plan = pf.createPlan();
@@ -174,23 +180,26 @@ public class CreateU14Population {
 			String eduActType = null;
 			boolean foundEducFacility = false;
 			double distance;
-			
+
+
+
+
 			do {
-				educFacility = educList.get(rnd.nextInt(educList.size()));
-				if (age > 1 && age <= 5 && educFacility.isEducKiga) {
-					foundEducFacility = true;
+				foundEducFacility = true;
+				if (age > 1 && age <= 5) {
+					educFacility = kigasList.get(rnd.nextInt(educList.size()));
 					eduActType = "educ_kiga";
 				}
-				if (age > 5 && age <= 12 && educFacility.isEducPrimary) {
-					foundEducFacility = true;
+				if (age > 5 && age <= 12) {
+					educFacility = primaryList.get(rnd.nextInt(educList.size()));
 					eduActType = "educ_primary";
 				}
-				
-				if (age > 12 && educFacility.isEducSecondary) {
-					foundEducFacility = true;
+
+				if (age > 12) {
+					educFacility = secondaryList.get(rnd.nextInt(educList.size()));
 					eduActType = "educ_secondary";
 				}
-				
+
 				// to do: make this better (Gravitationsmodell?)
 				distance = CoordUtils.calcEuclideanDistance(educFacility.getCoord(), homeCoord);
 				if (distance > 5000) {
@@ -198,7 +207,7 @@ public class CreateU14Population {
 				}
 				
 			}while(!foundEducFacility);
-		
+
 			Leg leg = pf.createLeg(getLegMode(distance));
 			plan.addLeg(leg);
 			
