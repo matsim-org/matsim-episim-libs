@@ -76,18 +76,26 @@ public class DefaultInfectionModel extends InfectionModel {
 
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
-            String infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+            String infectionType = null;
+            
+            if (infectionSituation == InfectionSituation.Facility) {
+            	infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+            }
+            else if (infectionSituation == InfectionSituation.Vehicle) {
+            	infectionType = "pt";
+            }
+            else {
+            	throw new RuntimeException("Infection situation is unknown");
+            }
+             
 
             //forbid certain cross-activity interactions, keep track of contacts
-            //we can not track contact persons in vehicles
-            if (trackingEnabled && infectionSituation.equals(InfectionSituation.Facility)) {
+            if (infectionSituation == InfectionSituation.Facility) {
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
-//                    log.warn("skipping infection type " + infectionType);
                     continue;
                 } else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu"))) {
                     //edu can only interact with work or edu
-//                    log.warn("skipping infection type " + infectionType);
                     continue;
                 }
 
