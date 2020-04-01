@@ -3,7 +3,8 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4096
-#SBATCH --output=logfile_%j.log
+#SBATCH --output=logfile_%A_%a.log
+#SBATCH --error=errorfile_%A_%a.log
 
 date
 hostname
@@ -18,7 +19,7 @@ echo "***"
 main="org.matsim.run.RunFromConfig"
 
 # arguments
-arguments="config_$SLURM_JOB_NAME.xml --config:controler.runId $SLURM_JOB_NAME"
+arguments="config_$SLURM_JOB_NAME$SLURM_ARRAY_TASK_ID.xml --config:controler.runId $SLURM_JOB_NAME$SLURM_ARRAY_TASK_ID"
 
 command="java -cp $classpath @jvm.options $main $arguments"
 
