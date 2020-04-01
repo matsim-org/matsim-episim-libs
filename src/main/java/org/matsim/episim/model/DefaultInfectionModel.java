@@ -38,6 +38,8 @@ public class DefaultInfectionModel extends InfectionModel {
     }
 
     private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, InfectionSituation infectionSituation) {
+        // yyyy Why is infectionSituaiton needed.  If we have the container, then we have the situation, don't we? kai, apr'20
+
 
         if (iteration == 0) {
             return;
@@ -96,9 +98,6 @@ public class DefaultInfectionModel extends InfectionModel {
 
             //forbid certain cross-activity interactions, keep track of contacts
             if (infectionSituation == InfectionSituation.Facility) {
-                // yy somehow, this does not feel right to have all these additional data types.  If we have the container, then we have the situation, don't we?
-                // kai, apr'20
-
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
                     continue;
