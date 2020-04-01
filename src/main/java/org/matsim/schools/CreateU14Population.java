@@ -181,11 +181,9 @@ public class CreateU14Population {
 			boolean foundEducFacility = false;
 			double distance;
 
-
-
-
 			do {
 				foundEducFacility = true;
+
 				if (age > 1 && age <= 5) {
 					educFacility = kigasList.get(rnd.nextInt(educList.size()));
 					eduActType = "educ_kiga";
@@ -222,7 +220,7 @@ public class CreateU14Population {
 			Activity homeAct2 = pf.createActivityFromCoord("home", homeCoord);
 			plan.addActivity(homeAct2);
 			homeAct2.setFacilityId(homeFacilityId);
-			homeAct2.setStartTime(14 * 3600);
+			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
 	
 		}
 		
