@@ -9,6 +9,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.scenario.ScenarioUtils;
 
 class KNEventsInfection{
 
@@ -60,7 +61,7 @@ class KNEventsInfection{
 
                 EventsManager events = EventsUtils.createEventsManager();
                 
-                events.addHandler( new InfectionEventHandler( config, events ) );
+                events.addHandler( new InfectionEventHandler( config, ScenarioUtils.createScenario(config), events  ) );
                 ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
                 for ( int iteration=0 ; iteration<=300 ; iteration++ ){
                         events.resetHandlers( iteration );
