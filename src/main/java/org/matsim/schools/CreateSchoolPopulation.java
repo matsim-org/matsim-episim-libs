@@ -28,21 +28,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Leg;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationFactory;
-import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 
@@ -68,31 +63,27 @@ public class CreateSchoolPopulation {
 	private static List<EducFacility> educList = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException {
-		run(inputPopulationFile, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
+
+		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
+
+		run(schoolPopulation, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
 	}
 
-	static void run(String schoolPopulationFile, Double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
+	static void run(Population schoolPopulation, double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
 		if(schoolPopSampleSize > 1.0 || schoolPopSampleSize < 0.){
 			throw new IllegalArgumentException("unvalid sample size for school population : " + schoolPopSampleSize);
 		}
 
-		Config config = ConfigUtils.createConfig();
-
-		config.plans().setInputFile(schoolPopulationFile);
-
-		Scenario scenario = ScenarioUtils.loadScenario(config);
-
 		readEducFacilites(schoolFacilitiesFile);
 
-		Population population = buildPlans(scenario);
+		buildSchoolPlans(schoolPopulation);
 
 		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
 
-		integrateIntoOriginalPopulation(population, originalPopulation, schoolPopSampleSize);
+		integrateIntoOriginalPopulation(schoolPopulation, originalPopulation, schoolPopSampleSize);
 
 		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
 	}
-
 
 	private static void integrateIntoOriginalPopulation(Population population, Population originalPopulation,
 			double sample) {
@@ -155,17 +146,15 @@ public class CreateSchoolPopulation {
 		
 	}
 
-	private static Population buildPlans(Scenario scenario) {
+	private static void buildSchoolPlans(Population schoolPopulation) {
 		
-		Population population = scenario.getPopulation();
-		
-		PopulationFactory pf = population.getFactory();
+		PopulationFactory pf = schoolPopulation.getFactory();
 
 		List<EducFacility> kigasList = educList.stream().filter(e -> e.isEducKiga).collect(Collectors.toList());
 		List<EducFacility> primaryList = educList.stream().filter(e -> e.isEducPrimary).collect(Collectors.toList());
 		List<EducFacility> secondaryList = educList.stream().filter(e -> e.isEducSecondary).collect(Collectors.toList());
 
-		for (Person person : population.getPersons().values()) {
+		for (Person person : schoolPopulation.getPersons().values()) {
 			person.getAttributes().putAttribute("subpopulation", "berlin");
 			Plan plan = pf.createPlan();
 			person.addPlan(plan);
@@ -240,9 +229,6 @@ public class CreateSchoolPopulation {
 			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
 	
 		}
-		
-		return population;
-		
 	}
 
 	private static String getLegMode(double distance) {
