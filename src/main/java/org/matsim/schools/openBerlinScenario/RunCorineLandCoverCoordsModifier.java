@@ -36,16 +36,17 @@ import java.util.*;
 
 public class RunCorineLandCoverCoordsModifier {
 
-	private static final double SAMPLE_SIZE = 0.1;
+	private static final double SAMPLE_SIZE = 0.01;
 
 	public static void main(String[] args) {
 	    String inputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
-		String inputPlansreadyForCorine = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_10pct.xml.gz";
-		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_CorineHomeActs.xml.gz";
+		String inputPlansreadyForCorine = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_1pct.xml.gz";
 		String corineLandCoverFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/corine_landcover/corine_lancover_berlin-brandenburg_GK4.shp";
 
-	    String zoneShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
-	    String zoneIdTag = "NR";
+		String zoneShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
+		String zoneIdTag = "NR";
+
+		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_CorineHomeActs_1pct.xml.gz";
 
 	    assignDummyHomeActsAndWritePlans(inputPlansFile, inputPlansreadyForCorine);
 
@@ -60,6 +61,7 @@ public class RunCorineLandCoverCoordsModifier {
 		CORINELandCoverCoordsModifier plansFilterForCORINELandCover = new CORINELandCoverCoordsModifier(inputPlansreadyForCorine, shapeFileToFeatureKey,
 	            corineLandCoverFile, simplifyGeom, combiningGeoms, sameHomeActivity, homeActivityPrefix);
 	    plansFilterForCORINELandCover.process();
+	    preparePlansForSchooPopulationCreation(plansFilterForCORINELandCover.getPopulation());
 	    plansFilterForCORINELandCover.writePlans(outputPlansFile);
     }
 
@@ -84,5 +86,17 @@ public class RunCorineLandCoverCoordsModifier {
 		plan.addActivity(act);
 
 		p.addPlan(plan);
+	}
+
+	private static void preparePlansForSchooPopulationCreation(Population population){
+		for (Person person : population.getPersons().values()) {
+			Activity act = (Activity) person.getSelectedPlan().getPlanElements().get(0);
+			if(! act.getType().startsWith("home")) throw new IllegalStateException("first act type is not home for person " + person);
+			if(act.getCoord() == null) throw new IllegalStateException("can not retrie coord info for home act of person " + person);
+			person.getAttributes().putAttribute("homeX", act.getCoord().getX());
+			person.getAttributes().putAttribute("homeY", act.getCoord().getY());
+			person.setSelectedPlan(null);
+			person.getPlans().clear();
+		}
 	}
 }
