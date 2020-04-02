@@ -47,8 +47,9 @@ import org.matsim.facilities.ActivityFacility;
 */
 
 public class CreateSchoolPopulation {
-	
-	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
+
+
+	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/Berlin/";
 	
 	private static final String inputPopulationFile = workingDir + "population_fromPopulationAttributes_BerlinOnly.xml.gz";
 	
@@ -69,7 +70,7 @@ public class CreateSchoolPopulation {
 		run(schoolPopulation, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
 	}
 
-	static void run(Population schoolPopulation, double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
+	public static void run(Population schoolPopulation, double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
 		if(schoolPopSampleSize > 1.0 || schoolPopSampleSize < 0.){
 			throw new IllegalArgumentException("unvalid sample size for school population : " + schoolPopSampleSize);
 		}
