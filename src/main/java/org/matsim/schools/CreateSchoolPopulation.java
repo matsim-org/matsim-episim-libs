@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.stream.Collectors;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Activity;
@@ -48,14 +49,15 @@ import org.matsim.facilities.ActivityFacility;
 
 public class CreateSchoolPopulation {
 
+	private static final Logger log = Logger.getLogger(CreateSchoolPopulation.class);
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/Berlin/";
 	
-	private static final String inputPopulationFile = workingDir + "population_fromPopulationAttributes_BerlinOnly.xml.gz";
+	private static final String inputPopulationFile = workingDir + "be_population_fromPopulationAttributes_BerlinOnly.xml.gz";
 	
-	private static final String originalPopulationFile = workingDir + "optimizedPopulation_withoutNetworkInfo.xml.gz";
+	private static final String originalPopulationFile = workingDir + "be_optimizedPopulation_withoutNetworkInfo.xml.gz";
 	
-	private static final String outputPopulationFile = workingDir + "population_fromPopulationAttributes_BerlinOnly_withPlans.xml.gz";
+	private static final String outputPopulationFile = workingDir + "be_population_fromPopulationAttributes_BerlinOnly_withPlans.xml.gz";
 
 	private static final double SCHOOL_POP_SAMPLE_SIZE = 0.25;
 
@@ -74,13 +76,15 @@ public class CreateSchoolPopulation {
 		if(schoolPopSampleSize > 1.0 || schoolPopSampleSize < 0.){
 			throw new IllegalArgumentException("unvalid sample size for school population : " + schoolPopSampleSize);
 		}
-
+		log.info("start reading school facilities");
 		readEducFacilites(schoolFacilitiesFile);
-
+		log.info("start building school plans");
 		buildSchoolPlans(schoolPopulation);
+
 
 		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
 
+		log.info("start integrating school population into original population");
 		integrateIntoOriginalPopulation(schoolPopulation, originalPopulation, schoolPopSampleSize);
 
 		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
@@ -89,15 +93,16 @@ public class CreateSchoolPopulation {
 	private static void integrateIntoOriginalPopulation(Population population, Population originalPopulation,
 			double sample) {
 		int ii = 0;
+
+		log.info("nr of persons in school population : " + population.getPersons().size());
 		for (Person person : population.getPersons().values()) {
 			if (rnd.nextDouble() < sample) {
 				originalPopulation.addPerson(person);
 				ii++;
 			}
 		}
-		System.out.println("added persons = " + ii);
-			
-		
+		log.info("integrated " + ii + " studendts into original population ");
+
 	}
 
 	private static void readEducFacilites(String educFacilitiesFile) throws IOException {
@@ -188,16 +193,16 @@ public class CreateSchoolPopulation {
 				foundEducFacility = true;
 
 				if (age > 1 && age <= 5) {
-					educFacility = kigasList.get(rnd.nextInt(educList.size()));
+					educFacility = kigasList.get(rnd.nextInt(kigasList.size()));
 					eduActType = "educ_kiga";
 				}
 				if (age > 5 && age <= 12) {
-					educFacility = primaryList.get(rnd.nextInt(educList.size()));
+					educFacility = primaryList.get(rnd.nextInt(primaryList.size()));
 					eduActType = "educ_primary";
 				}
 
 				if (age > 12) {
-					educFacility = secondaryList.get(rnd.nextInt(educList.size()));
+					educFacility = secondaryList.get(rnd.nextInt(secondaryList.size()));
 					eduActType = "educ_secondary";
 				}
 
