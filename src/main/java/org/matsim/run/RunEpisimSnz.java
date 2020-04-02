@@ -70,7 +70,7 @@ public class RunEpisimSnz {
         RunEpisim.runSimulation(config, 150);
     }
 
-	private static void setContactIntensities(EpisimConfigGroup episimConfig) {
+        static void setContactIntensities(EpisimConfigGroup episimConfig) {
 		episimConfig.getOrAddContainerParams("pt")
         	.setContactIntensity(10.0);
         episimConfig.getOrAddContainerParams("tr")
@@ -105,7 +105,7 @@ public class RunEpisimSnz {
     	
     }
     
-    private static final String[] DEFAULT_ACTIVITIES = {
+    static final String[] DEFAULT_ACTIVITIES = {
             "pt", "work", "leisure", "educ_kiga","educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
     };
 

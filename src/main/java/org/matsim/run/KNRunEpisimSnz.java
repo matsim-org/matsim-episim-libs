@@ -46,50 +46,24 @@ public class KNRunEpisimSnz{
 
         episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
-
         episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.000003);
-        //episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+        episimConfig.setCalibrationParameter(0.0000012);
 
-        int closingIteration = 1000;
+        config.controler().setOutputDirectory( "output-base-" + episimConfig.getCalibrationParameter() );
 
-        addParams(episimConfig);
+        RunEpisimSnz.addParams(episimConfig );
 
-        episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
+        RunEpisimSnz.setContactIntensities( episimConfig );
 
         episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-                .shutdown(closingIteration, DEFAULT_ACTIVITIES)
-                .build()
+                                                             .restrict( 36, 0.1, "educ_kiga", "educ_primary" )
+                                                             .restrict( 36, 0.0,  "educ_secondary", "educ_higher" )
+                                                             .restrict( 36, 0.9, "leisure" )
+                                                             .build()
         );
 
-        RunEpisim.setOutputDirectory(config);
-
-        ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
-        // yyyyyy I would do this the other way around, i.e. apply cli params _before_ the output dir name is constructed.  ???
 
         RunEpisim.runSimulation(config, 150);
     }
     
-    public static void addParams(EpisimConfigGroup episimConfig) {
-    	
-    	episimConfig.addContainerParams(new InfectionParams("pt", "tr"));
-        // regular out-of-home acts:
-    	episimConfig.addContainerParams(new InfectionParams("work"));
-    	episimConfig.addContainerParams(new InfectionParams("leisure"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_kiga"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_primary"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_secondary"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_higher"));
-    	episimConfig.addContainerParams(new InfectionParams("shopping"));
-    	episimConfig.addContainerParams(new InfectionParams("errands"));
-        episimConfig.addContainerParams(new InfectionParams("business"));
-        
-        episimConfig.addContainerParams(new InfectionParams("home"));
-    	
-    }
-    
-    private static final String[] DEFAULT_ACTIVITIES = {
-            "pt", "work", "leisure", "educ_kiga","educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
-    };
-
 }
