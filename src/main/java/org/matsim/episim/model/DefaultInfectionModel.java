@@ -29,15 +29,15 @@ public class DefaultInfectionModel extends InfectionModel {
 
     @Override
     public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
-        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, InfectionSituation.Vehicle);
+        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);
     }
 
     @Override
     public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
-        infectionDynamicsGeneralized(personLeavingFacility, facility, now, InfectionSituation.Facility);
+        infectionDynamicsGeneralized(personLeavingFacility, facility, now);
     }
 
-    private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, InfectionSituation infectionSituation) {
+    private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
         // yyyy Why is infectionSituaiton needed.  If we have the container, then we have the situation, don't we? kai, apr'20
 
 
@@ -89,21 +89,11 @@ public class DefaultInfectionModel extends InfectionModel {
 
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
-            String infectionType = null;
-            
-            if (infectionSituation == InfectionSituation.Facility) {
-            	infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
-            }
-            else if (infectionSituation == InfectionSituation.Vehicle) {
-            	infectionType = "pt";
-            }
-            else {
-            	throw new RuntimeException("Infection situation is unknown");
-            }
-             
+
+            String infectionType = getInfectionType(container, leavingPersonsActivity, otherPersonsActivity);
 
             //forbid certain cross-activity interactions, keep track of contacts
-            if (infectionSituation == InfectionSituation.Facility) {
+            if (container instanceof InfectionEventHandler.EpisimFacility) {
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
                     continue;
@@ -146,7 +136,7 @@ public class DefaultInfectionModel extends InfectionModel {
                 throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
             }
 
-            double contactIntensity = getContactIntensity(container, infectionSituation, leavingPersonsActivity, otherPersonsActivity);
+            double contactIntensity = getContactIntensity(container, leavingPersonsActivity, otherPersonsActivity);
 
 
             double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer);
@@ -166,13 +156,24 @@ public class DefaultInfectionModel extends InfectionModel {
         }
     }
 
-    private double getContactIntensity(EpisimContainer<?> container, InfectionSituation infectionSituation, String leavingPersonsActivity, String otherPersonsActivity) {
+    private String getInfectionType(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
+        String infectionType;
+        if (container instanceof InfectionEventHandler.EpisimFacility) {
+            infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+        }
+        else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+            infectionType = "pt";
+        }
+        else {
+            throw new RuntimeException("Infection situation is unknown");
+        }
+        return infectionType;
+    }
+
+    private double getContactIntensity(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
         //maybe this can be cleaned up or summarized in some way
         double contactIntensity = -1;
-        if (infectionSituation.equals(InfectionSituation.Vehicle)) {
-            if (!(container instanceof InfectionEventHandler.EpisimVehicle)) {
-                throw new IllegalArgumentException();
-            }
+        if (container instanceof InfectionEventHandler.EpisimVehicle) {
             String containerIdString = container.getContainerId().toString();
 
             for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
@@ -183,7 +184,7 @@ public class DefaultInfectionModel extends InfectionModel {
             if (contactIntensity < 0.) {
                 throw new IllegalStateException("contactIntensity not defined for vehicle container=" + containerIdString + ".  There needs to be a config entry for each activity type.");
             }
-        } else {
+        } else if (container instanceof InfectionEventHandler.EpisimFacility){
             double contactIntensityLeavingPerson = -1;
             double contactIntensityOtherPerson = -1;
             for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
@@ -200,6 +201,8 @@ public class DefaultInfectionModel extends InfectionModel {
             }
 
             contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
+        } else {
+            throw new IllegalArgumentException("do not know how to deal container " + container);
         }
         return contactIntensity;
     }
@@ -214,7 +217,5 @@ public class DefaultInfectionModel extends InfectionModel {
             }
         }
     }
-
-    private enum InfectionSituation {Vehicle, Facility}
 
 }
