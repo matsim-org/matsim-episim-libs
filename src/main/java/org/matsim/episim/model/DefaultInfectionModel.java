@@ -81,6 +81,11 @@ public class DefaultInfectionModel extends InfectionModel {
             // (Maybe the logic is that one would note people for tracking even if they have the same disease status, since one would not know that.  Is that
             // the reason?  kai, apr'20)
 
+            // Yes that is the reason. Consider persons in status infectedButNotContagious. In the end of the day, if they were the contact person of a person that
+            // got infected and tracked them, they will be put in quarantine and can not infect other people in the following days.
+            // If tracking is not enabled, we do not have to go into the for-loop for leaving persons with status infectedButNotContagious or do not have to perform
+            // tracking inside the loop for contact persons with status infectedButNotContagious
+
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
             String infectionType = null;
