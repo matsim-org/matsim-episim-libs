@@ -105,8 +105,9 @@ public class DefaultInfectionModel extends InfectionModel {
                     //edu can only interact with work or edu
                     continue;
                 }
-
-                trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity);
+                if(trackingEnabled){
+                    trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity);
+                }
             }
 
             if (!EpisimUtils.canPersonsInfectEachOther(personLeavingContainer, contactPerson)) {
