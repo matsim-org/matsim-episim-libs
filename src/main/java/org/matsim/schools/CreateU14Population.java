@@ -163,12 +163,16 @@ public class CreateU14Population {
 			double age = (int) person.getAttributes().getAttribute("age");
 			double homeX = (double) person.getAttributes().getAttribute("homeX");
 			double homeY = (double) person.getAttributes().getAttribute("homeY");
-			String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
-			Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
 			Coord homeCoord = CoordUtils.createCoord(homeX, homeY);
 			Activity homeAct1 = pf.createActivityFromCoord("home", homeCoord);
 			plan.addActivity(homeAct1);
-			homeAct1.setFacilityId(homeFacilityId);
+
+			if(person.getAttributes().getAttribute("homeId") != null){
+				String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
+				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
+				homeAct1.setFacilityId(homeFacilityId);
+			}
+
 			homeAct1.setStartTime(0);
 			homeAct1.setEndTime(6.5 * 3600 + rnd.nextInt(3600));
 			
@@ -219,7 +223,11 @@ public class CreateU14Population {
 			
 			Activity homeAct2 = pf.createActivityFromCoord("home", homeCoord);
 			plan.addActivity(homeAct2);
-			homeAct2.setFacilityId(homeFacilityId);
+
+			if(person.getAttributes().getAttribute("homeId") != null){
+				String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
+				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
+			}
 			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
 	
 		}
