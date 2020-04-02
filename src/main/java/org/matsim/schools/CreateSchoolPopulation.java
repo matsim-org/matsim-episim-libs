@@ -47,11 +47,11 @@ import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 
 /**
- * This class creates plans for the U14 population of snz scenario and integrates them into the existing O14 population
+ * This class creates plans for the school population of a scenario and integrates them into the existing adult population
 * @author smueller
 */
 
-public class CreateU14Population {
+public class CreateSchoolPopulation {
 	
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
 	
