@@ -4,6 +4,8 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.utils.objectattributes.attributable.Attributable;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -13,10 +15,11 @@ import java.util.Set;
 /**
  * Persons current state in the simulation.
  */
-public final class EpisimPerson {
+public final class EpisimPerson implements Attributable {
 
     private final Id<Person> personId;
     private final EventsManager eventsManager;
+    private final Attributes attributes;
     private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
     private final List<String> trajectory = new ArrayList<>();
     /**
@@ -46,8 +49,9 @@ public final class EpisimPerson {
     private String lastFacilityId;
     private String firstFacilityId;
 
-    EpisimPerson( Id<Person> personId, EventsManager eventsManager ) {
+    EpisimPerson(Id<Person> personId, Attributes attrs, EventsManager eventsManager) {
         this.personId = personId;
+        this.attributes = attrs;
         this.eventsManager = eventsManager;
     }
 
@@ -59,9 +63,9 @@ public final class EpisimPerson {
         return status;
     }
 
-    public void setDiseaseStatus( double now, DiseaseStatus status ) {
+    public void setDiseaseStatus(double now, DiseaseStatus status) {
         this.status = status;
-        eventsManager.processEvent( new EpisimPersonStatusEvent( now, personId, status ) );
+        eventsManager.processEvent(new EpisimPersonStatusEvent(now, personId, status));
     }
 
     public QuarantineStatus getQuarantineStatus() {
@@ -166,6 +170,11 @@ public final class EpisimPerson {
 
 
         this.currentContainer = container;
+    }
+
+    @Override
+    public Attributes getAttributes() {
+        return attributes;
     }
 
     /**

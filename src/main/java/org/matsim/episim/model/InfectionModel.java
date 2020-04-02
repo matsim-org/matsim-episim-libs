@@ -69,6 +69,8 @@ public abstract class InfectionModel {
         }
 
         personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+
+        // TODO: Currently not in use, is it still needed?
         if (scenario != null) {
             final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
             if (person != null) {

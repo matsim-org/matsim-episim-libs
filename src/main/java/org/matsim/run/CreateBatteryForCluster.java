@@ -83,9 +83,11 @@ public class CreateBatteryForCluster {
             }
         }
 
+        // Current script is configured to run with a stepsize of 96
         Files.write(workingDir.resolve("_slurmScript.sh"), Lists.newArrayList(
                 "#!/bin/bash\n",
-                String.format("sbatch --array=1:%d --job-name=sz runSlurm.sh", ii))
+                // Round up array size to be multiple of step size
+                String.format("sbatch --array=1-%d:96 --job-name=sz runSlurm.sh", (int) Math.ceil(ii / 96d) * 96))
         );
 
         bashScriptWriter.close();

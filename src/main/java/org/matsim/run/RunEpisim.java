@@ -147,7 +147,7 @@ public class RunEpisim {
         }
 
         EventsManager events = EventsUtils.createEventsManager();
-        InfectionEventHandler eventHandler = new InfectionEventHandler(config, events);
+        InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
         events.addHandler(eventHandler);
 
         ReplayHandler replay = new ReplayHandler(episimConfig, scenario);
