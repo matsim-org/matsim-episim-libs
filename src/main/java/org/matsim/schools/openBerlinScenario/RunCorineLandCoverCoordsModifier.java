@@ -25,6 +25,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.MatsimRandom;
+import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.io.PopulationReader;
 import org.matsim.core.population.io.PopulationWriter;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -40,7 +41,7 @@ public class RunCorineLandCoverCoordsModifier {
 	public static void main(String[] args) {
 	    String inputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
 		String inputPlansreadyForCorine = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_10pct.xml.gz";
-		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/500/plans_children_CorineHomeActs.xml.gz";
+		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_CorineHomeActs.xml.gz";
 		String corineLandCoverFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/corine_landcover/corine_lancover_berlin-brandenburg_GK4.shp";
 
 	    String zoneShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
@@ -66,22 +67,13 @@ public class RunCorineLandCoverCoordsModifier {
     private static void assignDummyHomeActsAndWritePlans(String inputPlans, String outputPlans){
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		new PopulationReader(scenario).readFile(inputPlans);
-		
-		samplePopulation(scenario.getPopulation());
+
+		PopulationUtils.sampleDown(scenario.getPopulation(), SAMPLE_SIZE);
 		
 		PopulationFactory pf = scenario.getPopulation().getFactory();
 		scenario.getPopulation().getPersons().values().forEach(p -> createPlanAndDummyHomeAct(p, pf));
 
 		new PopulationWriter(scenario.getPopulation()).write(outputPlans);
-	}
-
-	private static void samplePopulation(Population population) {
-		Random rnd = MatsimRandom.getLocalInstance();
-		List<Id<Person>> personsToDelete = new ArrayList<>();
-		for (Id<Person> person : population.getPersons().keySet()) {
-				if(rnd.nextDouble() > SAMPLE_SIZE) personsToDelete.add(person);
-		}
-		personsToDelete.forEach(p -> population.removePerson(p));
 	}
 
 	private static void createPlanAndDummyHomeAct(Person p, PopulationFactory pf){
