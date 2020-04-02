@@ -37,6 +37,8 @@ public class DefaultProgressionModel implements ProgressionModel {
                     if (nextDouble < 0.2) {
                         // 20% recognize that they are sick and go into quarantine:
 
+                        // Diamond Princess study: (only) 18% show no symptoms.
+
                         person.setQuarantineDate(day);
                         // yyyy date needs to be qualified by status (or better, add iteration into quarantine status setter)
 

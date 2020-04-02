@@ -35,7 +35,7 @@ public class RunFromConfig {
 
 	public static void main(String[] args) throws IOException{
        
-		OutputDirectoryLogging.catchLogEntries();
+//		OutputDirectoryLogging.catchLogEntries();
 
 		if ( args.length==0 ) {
 			throw new IllegalArgumentException("Need config file");
@@ -47,7 +47,7 @@ public class RunFromConfig {
 
 		ConfigUtils.applyCommandline( config, typedArgs ) ;
 		
-        OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
+//        OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
 
         RunEpisim.runSimulation(config, 200);
 

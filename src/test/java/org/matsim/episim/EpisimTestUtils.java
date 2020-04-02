@@ -5,6 +5,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.facilities.Facility;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -58,7 +59,7 @@ public class EpisimTestUtils {
      * Create a person and add to container.
      */
     public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), manager);
+        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()),new Attributes(), manager);
         p.getTrajectory().add(currentAct);
 
         if (container != null) {

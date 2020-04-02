@@ -29,15 +29,17 @@ public class DefaultInfectionModel extends InfectionModel {
 
     @Override
     public void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now) {
-        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now, InfectionSituation.Vehicle);
+        infectionDynamicsGeneralized(personLeavingVehicle, vehicle, now);
     }
 
     @Override
     public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
-        infectionDynamicsGeneralized(personLeavingFacility, facility, now, InfectionSituation.Facility);
+        infectionDynamicsGeneralized(personLeavingFacility, facility, now);
     }
 
-    private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now, InfectionSituation infectionSituation) {
+    private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
+        // yyyy Why is infectionSituaiton needed.  If we have the container, then we have the situation, don't we? kai, apr'20
+
 
         if (iteration == 0) {
             return;
@@ -66,32 +68,42 @@ public class DefaultInfectionModel extends InfectionModel {
             EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
             // If tracking is not enabled, the loop can continue earlier
-            if (trackingEnabled && !personRelevantForTracking(contactPerson, container))
+            if (trackingEnabled && !personRelevantForTracking(contactPerson, container)){
                 continue;
-            else if (!trackingEnabled &&
+            } else if (!trackingEnabled &&
                     (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus() ||
-                            !personRelevantForInfectionDynamics(contactPerson, container)))
+                                     !personRelevantForInfectionDynamics(contactPerson, container))) {
                 continue;
+            }
+            // yyyy I don't like these separate if conditions for tracking vs without.  Too large danger that we get something wrong there.  kai, apr'20
 
+            // yyyyyy I do not understand why the execution path has to be different for with tracking vs. without tracking.  Could you please explain?
+            // (Maybe the logic is that one would note people for tracking even if they have the same disease status, since one would not know that.  Is that
+            // the reason?  kai, apr'20)
+
+            // Yes that is the reason. If both are suceptible for example, one might get infected later. Or consider persons in status of infectedButNotContagious.
+            // In the end of the day, if they were the contact person of a person that got infected and tracked them,
+            // they will be put in quarantine and can not infect other people in the following days.
+            // If tracking is not enabled, we do not have to go into the for-loop for leaving persons with status infectedButNotContagious or do not have to perform
+            // tracking inside the loop for contact persons with status infectedButNotContagious
 
             String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
             String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
-            String infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+
+            String infectionType = getInfectionType(container, leavingPersonsActivity, otherPersonsActivity);
 
             //forbid certain cross-activity interactions, keep track of contacts
-            //we can not track contact persons in vehicles
-            if (trackingEnabled && infectionSituation.equals(InfectionSituation.Facility)) {
+            if (container instanceof InfectionEventHandler.EpisimFacility) {
                 //home can only interact with home or leisure
                 if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
-//                    log.warn("skipping infection type " + infectionType);
                     continue;
                 } else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu"))) {
                     //edu can only interact with work or edu
-//                    log.warn("skipping infection type " + infectionType);
                     continue;
                 }
-
-                trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity);
+                if(trackingEnabled){
+                    trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity);
+                }
             }
 
             if (!EpisimUtils.canPersonsInfectEachOther(personLeavingContainer, contactPerson)) {
@@ -124,7 +136,7 @@ public class DefaultInfectionModel extends InfectionModel {
                 throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
             }
 
-            double contactIntensity = getContactIntensity(container, infectionSituation, leavingPersonsActivity, otherPersonsActivity);
+            double contactIntensity = getContactIntensity(container, leavingPersonsActivity, otherPersonsActivity);
 
 
             double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer);
@@ -144,13 +156,24 @@ public class DefaultInfectionModel extends InfectionModel {
         }
     }
 
-    private double getContactIntensity(EpisimContainer<?> container, InfectionSituation infectionSituation, String leavingPersonsActivity, String otherPersonsActivity) {
+    private String getInfectionType(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
+        String infectionType;
+        if (container instanceof InfectionEventHandler.EpisimFacility) {
+            infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+        }
+        else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+            infectionType = "pt";
+        }
+        else {
+            throw new RuntimeException("Infection situation is unknown");
+        }
+        return infectionType;
+    }
+
+    private double getContactIntensity(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
         //maybe this can be cleaned up or summarized in some way
         double contactIntensity = -1;
-        if (infectionSituation.equals(InfectionSituation.Vehicle)) {
-            if (!(container instanceof InfectionEventHandler.EpisimVehicle)) {
-                throw new IllegalArgumentException();
-            }
+        if (container instanceof InfectionEventHandler.EpisimVehicle) {
             String containerIdString = container.getContainerId().toString();
 
             for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
@@ -161,7 +184,7 @@ public class DefaultInfectionModel extends InfectionModel {
             if (contactIntensity < 0.) {
                 throw new IllegalStateException("contactIntensity not defined for vehicle container=" + containerIdString + ".  There needs to be a config entry for each activity type.");
             }
-        } else {
+        } else if (container instanceof InfectionEventHandler.EpisimFacility){
             double contactIntensityLeavingPerson = -1;
             double contactIntensityOtherPerson = -1;
             for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
@@ -178,6 +201,8 @@ public class DefaultInfectionModel extends InfectionModel {
             }
 
             contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
+        } else {
+            throw new IllegalArgumentException("do not know how to deal container " + container);
         }
         return contactIntensity;
     }
@@ -192,7 +217,5 @@ public class DefaultInfectionModel extends InfectionModel {
             }
         }
     }
-
-    private enum InfectionSituation {Vehicle, Facility}
 
 }

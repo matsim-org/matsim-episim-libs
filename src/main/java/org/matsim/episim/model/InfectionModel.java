@@ -2,7 +2,6 @@ package org.matsim.episim.model;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -70,6 +69,8 @@ public abstract class InfectionModel {
         }
 
         personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+
+        // TODO: Currently not in use, is it still needed?
         if (scenario != null) {
             final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
             if (person != null) {
@@ -138,7 +139,8 @@ public abstract class InfectionModel {
     }
 
     /**
-     * Checks whether person is relevant for tracking (and also infection dynamics)
+     * Checks whether person is relevant for tracking (and also infection dynamics).
+     * Basically, a person is relevant for tracking if it is relevant for infection except that persons in status of {@code DiseaseStatus.infectedButNotContagious} are also considered.
      * @see #personRelevantForInfectionDynamics(EpisimPerson, EpisimContainer)
      */
     protected boolean personRelevantForTracking(EpisimPerson person, EpisimContainer<?> container) {
@@ -148,8 +150,9 @@ public abstract class InfectionModel {
                 person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
             return false;
 
-        if (!person.isMobil())
+        if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
             return false;
+        }
 
         if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
             return true;

@@ -48,14 +48,14 @@ public class RunEpisimSnz {
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
         episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.000003);
-        episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+        episimConfig.setCalibrationParameter(0.0000012);
+        //episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
 
         int closingIteration = 1000;
 
         addParams(episimConfig);
 
-        episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
+        setContactIntensities(episimConfig);
 
         episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
                 .shutdown(closingIteration, DEFAULT_ACTIVITIES)
@@ -69,6 +69,23 @@ public class RunEpisimSnz {
 
         RunEpisim.runSimulation(config, 150);
     }
+
+	private static void setContactIntensities(EpisimConfigGroup episimConfig) {
+		episimConfig.getOrAddContainerParams("pt")
+        	.setContactIntensity(10.0);
+        episimConfig.getOrAddContainerParams("tr")
+        	.setContactIntensity(10.0);
+        episimConfig.getOrAddContainerParams("leisure")
+        	.setContactIntensity(5.0);
+        episimConfig.getOrAddContainerParams("educ_kiga")
+	        .setContactIntensity(10.0);
+        episimConfig.getOrAddContainerParams("educ_primary")
+	        .setContactIntensity(4.0);
+        episimConfig.getOrAddContainerParams("educ_secondary")
+	        .setContactIntensity(2.0);
+        episimConfig.getOrAddContainerParams("home")
+	        .setContactIntensity(3.0);
+	}
     
     public static void addParams(EpisimConfigGroup episimConfig) {
     	
