@@ -44,11 +44,17 @@ public class KNRunEpisim{
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile( "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz" );
-        episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
-        episimConfig.setSampleSize(0.01);
-        episimConfig.setCalibrationParameter(0.00021);
+//        episimConfig.setInputEventsFile( "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz" );
+//        episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
+//        episimConfig.setSampleSize(0.01);
+//        episimConfig.setCalibrationParameter(0.00021);
 
+        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
+        episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
+        episimConfig.setSampleSize(0.25);
+        episimConfig.setCalibrationParameter(0.0000003);
+
+        config.controler().setOutputDirectory( "output-base-" + episimConfig.getCalibrationParameter() );
 
         RunEpisim.addDefaultParams(episimConfig);
 
@@ -56,40 +62,35 @@ public class KNRunEpisim{
 //                        "pt", "work", "leisure", "edu", "shop", "errands", "business", "other", "freight", "home"
 //        };
 
-        int closingIteration = 10; // intro of current regime
-        final com.typesafe.config.Config policyConfig = FixedPolicy.config()
-                                                            .restrict( 0, 0.0, "freight" )
-                                                            .restrict( closingIteration, 0.2, "pt" )
-                                                            .restrict( closingIteration, 0.2, "work" )
-                                                            .restrict( closingIteration, 0.1, "leisure" )
-                                                            .restrict( closingIteration, 0.0, "edu" )
-                                                            .restrict( closingIteration, 0.2, "shop" )
-                                                            .restrict( closingIteration, 0.2, "errands" )
-                                                            .restrict( closingIteration, 0.2, "business" )
-                                                            .restrict( closingIteration, 0.2, "other" )
-                                                            .build();
+//        int closingIteration = 10; // intro of current regime
+//        final com.typesafe.config.Config policyConfig = FixedPolicy.config()
+//                                                            .restrict( 0, 0.0, "freight" )
+//                                                            .restrict( closingIteration, 0.2, "pt" )
+//                                                            .restrict( closingIteration, 0.2, "work" )
+//                                                            .restrict( closingIteration, 0.1, "leisure" )
+//                                                            .restrict( closingIteration, 0.0, "edu" )
+//                                                            .restrict( closingIteration, 0.2, "shop" )
+//                                                            .restrict( closingIteration, 0.2, "errands" )
+//                                                            .restrict( closingIteration, 0.2, "business" )
+//                                                            .restrict( closingIteration, 0.2, "other" )
+//                                                            .build();
+//
+//        final String reduced = policyConfig.toString()
+//                                           .replace( "\"", "" )
+//                                           .replace( "Config(SimpleConfigObject(", "" )
+//                                           .replace( ")", "" )
+//                                           .replace(",","")
+//                                           .replace(":{","It")
+//                                           .replace("}}","")
+//                                           .replace("}","-")
+//                                           .replace("{","")
+//                        ;
+//        log.warn( reduced );
+//
+//        episimConfig.setPolicy(FixedPolicy.class, policyConfig );
+//        config.controler().setOutputDirectory( "output-" + reduced );
 
-        final String reduced = policyConfig.toString()
-                                           .replace( "\"", "" )
-                                           .replace( "Config(SimpleConfigObject(", "" )
-                                           .replace( ")", "" )
-                                           .replace(",","")
-                                           .replace(":{","It")
-                                           .replace("}}","")
-                                           .replace("}","-")
-                                           .replace("{","")
-                        ;
-        log.warn( reduced );
-
-        episimConfig.setPolicy(FixedPolicy.class, policyConfig );
-
-//        ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
-
-//        RunEpisim.setOutputDirectory(config);
-//        config.controler().setOutputDirectory( "output" + "-calib" + episimConfig.getCalibrationParameter() );
-        config.controler().setOutputDirectory( "output-" + reduced );
-
-        RunEpisim.runSimulation(config, 1000);
+        RunEpisim.runSimulation(config, 100);
     }
 
 }
