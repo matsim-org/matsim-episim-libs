@@ -111,16 +111,6 @@ public final class EpisimPerson {
         return currentIteration - quarantineDate;
     }
 
-    /**
-     * Whether the person can perform activities.
-     */
-    public boolean isMobile() {
-        // yyyy EpisimPerson is a data class, but this is not just data.  IMO does not belong here.  kai, apr'20
-
-        return quarantineStatus != QuarantineStatus.full &&
-                status != DiseaseStatus.seriouslySick && status != EpisimPerson.DiseaseStatus.critical;
-    }
-
     int getQuarantineDate() {
         return this.quarantineDate;
     }

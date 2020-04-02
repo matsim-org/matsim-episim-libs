@@ -137,7 +137,8 @@ public abstract class InfectionModel {
     }
 
     /**
-     * Checks whether person is relevant for tracking (and also infection dynamics)
+     * Checks whether person is relevant for tracking (and also infection dynamics).
+     * Basically, a person is relevant for tracking if it is relevant for infection except that persons in status of {@code DiseaseStatus.infectedButNotContagious} are also considered.
      * @see #personRelevantForInfectionDynamics(EpisimPerson, EpisimContainer)
      */
     protected boolean personRelevantForTracking(EpisimPerson person, EpisimContainer<?> container) {
@@ -147,8 +148,9 @@ public abstract class InfectionModel {
                 person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
             return false;
 
-        if (!person.isMobile())
+        if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
             return false;
+        }
 
         if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
             return true;
