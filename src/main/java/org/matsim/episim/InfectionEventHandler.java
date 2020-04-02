@@ -19,6 +19,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.TripStructureUtils;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.DefaultInfectionModel;
 import org.matsim.episim.model.DefaultProgressionModel;
 import org.matsim.episim.model.InfectionModel;
@@ -137,7 +138,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
             }
             infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
             episimFacility.removePerson(episimPerson.getPersonId());
-            handleInitialInfections( now, episimPerson );
+            // has moved to reset
+//            handleInitialInfections( now, episimPerson );
         } else {
             EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
             if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
@@ -268,33 +270,53 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         person.addToTrajectory(trajectoryElement);
     }
 
-    private void handleInitialInfections( double now, EpisimPerson personWrapper ) {
-        // initial infections:
-        if (cnt > 0) {
-            personWrapper.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.infectedButNotContagious );
-            personWrapper.setInfectionDate(iteration);
-            log.warn(" person " + personWrapper.getPersonId() + " has initial infection");
-            cnt--;
-            if (scenario != null) {
-                final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
-                if (person != null) {
-                    person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
-                }
-            }
-        }
+//    private void handleInitialInfections( double now, EpisimPerson personWrapper ) {
+//        // initial infections:
+//        if (cnt > 0) {
+//            personWrapper.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.infectedButNotContagious );
+//            personWrapper.setInfectionDate(iteration);
+//            log.warn(" person " + personWrapper.getPersonId() + " has initial infection");
+//            cnt--;
+//            if (scenario != null) {
+//                final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
+//                if (person != null) {
+//                    person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
+//                }
+//            }
+//        }
+//    }
+    
+    private void handleInitialInfections() {
+    	if (this.iteration != 1) {
+    		return;
+    	}
+    	Object[] personArray = this.personMap.values().toArray();
+    	do {
+    		EpisimPerson randomPerson = (EpisimPerson) personArray[rnd.nextInt(personArray.length)];
+    		if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
+    			randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+    			randomPerson.setInfectionDate(0);
+    			log.warn(" person " + randomPerson.getPersonId() + " has initial infection");
+    			cnt--;
+    		}
+    		
+    	}while( cnt>0 );
     }
 
 
     @Override
     public void reset(int iteration) {
-
-        for (EpisimPerson person : personMap.values()) {
+    	
+    	for (EpisimPerson person : personMap.values()) {
             checkAndHandleEndOfNonCircularTrajectory(person);
             person.setCurrentPositionInTrajectory(0);
             progressionModel.updateState(person, iteration);
         }
 
         this.iteration = iteration;
+        
+        handleInitialInfections();
+        
         this.report = reporting.createReport(personMap, iteration);
 
         reporting.reporting(report, iteration);
