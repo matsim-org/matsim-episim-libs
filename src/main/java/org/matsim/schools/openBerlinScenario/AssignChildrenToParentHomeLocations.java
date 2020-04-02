@@ -38,15 +38,16 @@ public class AssignChildrenToParentHomeLocations {
     private static final Logger log = Logger.getLogger(AssignChildrenToParentHomeLocations.class);
 
     private static final String emptyChildrenPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
-    private static final String openBerlinPopulationFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5.4-10pct.plans.xml.gz";
-    private static final String outputChildrenPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_assignedToParents.xml.gz";
+//    private static final String openBerlinPopulationFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5.4-10pct.plans.xml.gz";
+    private static final String openBerlinPopulationFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/input/berlin-v5.4-1pct.plans.xml.gz";
+    private static final String outputChildrenPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_assignedToParents_1pct.xml.gz";
 
 
     public static void main(String[] args) {
 
         Scenario childrenScenario = readPopulation(emptyChildrenPlansFile);
         Population children = childrenScenario.getPopulation();
-        PopulationUtils.sampleDown(children, 0.1);
+        PopulationUtils.sampleDown(children, 0.01);
         PopulationFactory childrenFactory = childrenScenario.getPopulation().getFactory();
         Population parents = readPopulation(openBerlinPopulationFile).getPopulation();
 
@@ -61,18 +62,17 @@ public class AssignChildrenToParentHomeLocations {
          0,6% 5 oder mehr Kinder unter 18
 
          */
-        double oneChildrenRatio = 0.555;
+        double oneChildRatio = 0.555;
         double twoChildrenRatio = 0.345;
-        double threeOrMoreChildrenRatio = 1 - oneChildrenRatio - twoChildrenRatio;
 
-        if(threeOrMoreChildrenRatio < 0 || threeOrMoreChildrenRatio > 1) throw new RuntimeException();
+        //ratio of three or more children is calculated later..
 
         Map<String, List<Person>> zone2Parents = mapParentsToHomeZone(parents);
         log.info("nr of zones in parents map = " + zone2Parents.size());
         Map<String, List<Person>> zone2Children = mapChildrenToHomeZone(children);
         log.info("nr of zones in children map = " + zone2Children.size());
 
-        assign(childrenFactory, oneChildrenRatio, twoChildrenRatio, zone2Parents, zone2Children);
+        assign(childrenFactory, oneChildRatio, twoChildrenRatio, zone2Parents, zone2Children);
 
         log.info("finished assigning...");
 
@@ -82,30 +82,35 @@ public class AssignChildrenToParentHomeLocations {
 
     }
 
-    private static void assign(PopulationFactory childrenFactory, double oneChildrenRatio, double twoChildrenRatio, Map<String, List<Person>> zone2Parents, Map<String, List<Person>> zone2Children) {
+    private static void assign(PopulationFactory childrenFactory, double oneChildRatio, double twoChildrenRatio, Map<String, List<Person>> zone2Parents, Map<String, List<Person>> zone2Children) {
+        double threeOrMoreChildrenRatio = 1 - oneChildRatio - twoChildrenRatio;
+        if(threeOrMoreChildrenRatio < 0 || threeOrMoreChildrenRatio > 1) throw new IllegalArgumentException();
+
         Random rnd = MatsimRandom.getLocalInstance();
 
         for (String zone : zone2Children.keySet()) {
             List<Person> childrenInZone = zone2Children.get(zone);
             List<Person> lonelyParentsInZone = zone2Parents.get(zone);
             int nrOfChildrenInZone = childrenInZone.size();
-            log.info("start assigning " + nrOfChildrenInZone + " children in zone " + zone + ". There are " + lonelyParentsInZone + " parents in this zone.");
+            log.info("start assigning " + nrOfChildrenInZone + " children in zone " + zone + ". There are " + lonelyParentsInZone.size() + " parents in this zone.");
 
-            long nrParentsWithOneChild = Math.round(nrOfChildrenInZone * oneChildrenRatio);
+
+            long nrParentsWithOneChild = Math.round(nrOfChildrenInZone / ( 1 + ( 2*twoChildrenRatio + 3*threeOrMoreChildrenRatio * oneChildRatio) / oneChildRatio) );
             long nrParentsWithTwoChildren = Math.round(nrOfChildrenInZone * twoChildrenRatio);
 
-
             Map<Person,List<Person>> parents2Children = new HashMap<>();
-            for(double ii = 0; ii <= nrParentsWithOneChild; ii ++){
+            for(int ii = 0; ii < nrParentsWithOneChild; ii ++){
                 Person fatherMother = lonelyParentsInZone.remove(rnd.nextInt(lonelyParentsInZone.size()));
-                parents2Children.put(fatherMother, Arrays.asList(childrenInZone.remove(0)));
+                List<Person> list = new ArrayList<>();
+                list.add(childrenInZone.remove(0));
+                parents2Children.put(fatherMother, list);
             }
 
             List<Person> parentsWith1Child = new ArrayList<>(parents2Children.keySet());
             List<Person> parentsWith2Children = new ArrayList<>();
 
 
-            for(double ii = 0; ii <= nrParentsWithTwoChildren; ii ++){
+            for(double ii = 0; ii < nrParentsWithTwoChildren; ii ++){
                 Person fatherMother = parentsWith1Child.remove(rnd.nextInt(parentsWith1Child.size()));
                 parents2Children.get(fatherMother).add(childrenInZone.remove(0));
                 parentsWith2Children.add(fatherMother);
@@ -118,8 +123,8 @@ public class AssignChildrenToParentHomeLocations {
 
             if(! childrenInZone.isEmpty()) throw new IllegalStateException();
 
-            log.info("nr of parents with 1 child : " + parentsWith1Child.size() + " = " + (parentsWith1Child.size()/nrOfChildrenInZone) + " %");
-            log.info("nr of parents with 2 children : " + parentsWith2Children.size() + " = " + (parentsWith2Children.size()/nrOfChildrenInZone) + " %");
+            log.info("nr of parents with 1 child : " + parentsWith1Child.size() + " = " + ((double) parentsWith1Child.size()/nrOfChildrenInZone * 100) + " %");
+            log.info("nr of parents with 2 children : " + parentsWith2Children.size() + " = " + ((double) parentsWith2Children.size()/nrOfChildrenInZone * 100) + " %");
 
             parents2Children.forEach((parent,listOfChildren) -> {
                 Activity act = (Activity) parent.getSelectedPlan().getPlanElements().get(0);
@@ -127,7 +132,9 @@ public class AssignChildrenToParentHomeLocations {
                     throw new IllegalStateException("first act of parent " + parent + " is not home!");
                 }
                 listOfChildren.forEach(child -> {
-                    addPlanWith1Activity(child, act, childrenFactory);
+                    child.getAttributes().putAttribute("homeX", act.getCoord().getX());
+                    child.getAttributes().putAttribute("homeY", act.getCoord().getX());
+//                    addPlanWith1Activity(child, act, childrenFactory);
                     child.getAttributes().putAttribute("parent", parent.getId());
                 });
             } );
@@ -144,18 +151,20 @@ public class AssignChildrenToParentHomeLocations {
     private static Map<String,List<Person>> mapParentsToHomeZone(Population parentsPopulation) {
         Map<String, List<Person>> zoneIdToPersons = new HashMap<>();
 
+        log.info("nrOf persons in parents population before subpopulation filter = " + parentsPopulation.getPersons().size());
         List<Person> nonPersons = parentsPopulation.getPersons().values().stream()
                 .filter(p -> p.getAttributes().getAttribute("subpopulation") != null )
                 .filter(p -> ! p.getAttributes().getAttribute("subpopulation").equals("person"))
                 .collect(Collectors.toList());
 
         nonPersons.forEach(p -> parentsPopulation.removePerson(p.getId()));
+        log.info("nrOf persons in parents population after subpopulation filter = " + parentsPopulation.getPersons().size());
 
         for (Person person : parentsPopulation.getPersons().values()) {
+
             Plan p = person.getSelectedPlan();
 
             if(p == null){
-                log.warn("why does person " + person + " not have a selected plan?");
                 if(person.getPlans().isEmpty()){
                    log.warn("person " + person + " has no plan at all!");
                    continue;
@@ -172,7 +181,9 @@ public class AssignChildrenToParentHomeLocations {
             if(zoneIdToPersons.containsKey(zoneIdStr)) {
                 zoneIdToPersons.get(zoneIdStr).add(person);
             } else {
-                zoneIdToPersons.put(zoneIdStr, Arrays.asList(person));
+                List<Person> list = new ArrayList<>();
+                list.add(person);
+                zoneIdToPersons.put(zoneIdStr, list);
             }
         }
         return zoneIdToPersons;
@@ -186,7 +197,9 @@ public class AssignChildrenToParentHomeLocations {
             if(zoneIdToPersons.containsKey(zoneIdStr)) {
                 zoneIdToPersons.get(zoneIdStr).add(person);
             } else {
-                zoneIdToPersons.put(zoneIdStr, Arrays.asList(person));
+                List<Person> list = new ArrayList<>();
+                list.add(person);
+                zoneIdToPersons.put(zoneIdStr, list);
             }
         }
         return zoneIdToPersons;
@@ -196,7 +209,7 @@ public class AssignChildrenToParentHomeLocations {
 
     private static Scenario readPopulation(String file){
         Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-        new PopulationReader(scenario).readFile(emptyChildrenPlansFile);
+        new PopulationReader(scenario).readFile(file);
         return scenario;
     }
 
