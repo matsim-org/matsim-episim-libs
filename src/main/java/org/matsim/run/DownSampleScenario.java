@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 import static picocli.CommandLine.*;
 
 @Command(
-        description = "DOwn sample complete scenario",
+        description = "Down sample scenario and extract information for episim.",
         mixinStandardHelpOptions = true
 )
 public class DownSampleScenario implements Callable<Integer> {

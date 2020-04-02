@@ -14,12 +14,18 @@ In order to perform a epidemic simulation multiple steps are necessary:
 #### Generate mobility traces events file
 
 First you need to run the MATSim scenario you want to analyze and generate an events file.
+> This step might be skipped if you use one of the provided event files. 
 
-> At the moment please use the provided files.
+Run `DownSampleScenario` to extract the necessary information for the epidemic simulation: 
+
+    DownSampleScenario 0.1 --population <Path to plans.xml> --events <Path to events.xml>
+
+This example will write a 10% sample into `output` that can be used in the subsequent steps.
 
 #### Run epidemic simulation
 
-At the moment it is best to run the scenarios with your IDE from the `org.matsim.episim.run` package.
+It is best to run the scenarios with your IDE from the `org.matsim.episim.run` package.
+Please edit `RunEpisim.class` and change it according to your configuration.
 
 You can also build the jar file, which will run the OpenBerlin scenario with a default configuration:
 
