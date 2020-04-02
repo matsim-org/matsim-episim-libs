@@ -46,7 +46,8 @@ public class RunCorineLandCoverCoordsModifier {
 		String zoneShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
 		String zoneIdTag = "NR";
 
-		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_CorineHomeActs_1pct.xml.gz";
+		String outputPlansFileWOPlans = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_corineCoords_WOPlans_1pct.xml.gz";
+		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_corineCoords_1pct.xml.gz";
 
 	    assignDummyHomeActsAndWritePlans(inputPlansFile, inputPlansreadyForCorine);
 
@@ -60,9 +61,13 @@ public class RunCorineLandCoverCoordsModifier {
 
 		CORINELandCoverCoordsModifier plansFilterForCORINELandCover = new CORINELandCoverCoordsModifier(inputPlansreadyForCorine, shapeFileToFeatureKey,
 	            corineLandCoverFile, simplifyGeom, combiningGeoms, sameHomeActivity, homeActivityPrefix);
-	    plansFilterForCORINELandCover.process();
-	    preparePlansForSchooPopulationCreation(plansFilterForCORINELandCover.getPopulation());
-	    plansFilterForCORINELandCover.writePlans(outputPlansFile);
+
+		plansFilterForCORINELandCover.process();
+		Population population = plansFilterForCORINELandCover.getPopulation();
+		PopulationWriter writer = new PopulationWriter(population);
+		writer.write(outputPlansFile);
+		preparePlansForSchooPopulationCreation(population);
+		writer.write(outputPlansFileWOPlans);
     }
 
 
