@@ -40,6 +40,7 @@ import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 
 /**
@@ -160,7 +161,9 @@ public class CreateSchoolPopulation {
 		List<EducFacility> primaryList = educList.stream().filter(e -> e.isEducPrimary).collect(Collectors.toList());
 		List<EducFacility> secondaryList = educList.stream().filter(e -> e.isEducSecondary).collect(Collectors.toList());
 
+		Counter counter = new Counter("building school plan nr ");
 		for (Person person : schoolPopulation.getPersons().values()) {
+			counter.incCounter();
 			person.getAttributes().putAttribute("subpopulation", "berlin");
 			Plan plan = pf.createPlan();
 			person.addPlan(plan);
