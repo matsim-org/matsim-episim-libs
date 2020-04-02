@@ -36,18 +36,18 @@ import java.util.*;
 
 public class RunCorineLandCoverCoordsModifier {
 
-	private static final double SAMPLE_SIZE = 0.01;
+	private static final double SAMPLE_SIZE = 0.1;
 
 	public static void main(String[] args) {
 	    String inputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
-		String inputPlansreadyForCorine = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_1pct.xml.gz";
+		String inputPlansreadyForCorine = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_10pct.xml.gz";
 		String corineLandCoverFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/corine_landcover/corine_lancover_berlin-brandenburg_GK4.shp";
 
 		String zoneShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
 		String zoneIdTag = "NR";
 
-		String outputPlansFileWOPlans = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_corineCoords_WOPlans_1pct.xml.gz";
-		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_corineCoords_1pct.xml.gz";
+		String outputPlansFileWOPlans = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_corineCoords_WOPlans_10pct.xml.gz";
+		String outputPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_corineCoords_10pct.xml.gz";
 
 	    assignDummyHomeActsAndWritePlans(inputPlansFile, inputPlansreadyForCorine);
 
