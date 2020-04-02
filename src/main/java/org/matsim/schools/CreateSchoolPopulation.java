@@ -60,16 +60,22 @@ public class CreateSchoolPopulation {
 	private static final String originalPopulationFile = workingDir + "optimizedPopulation_withoutNetworkInfo.xml.gz";
 	
 	private static final String outputPopulationFile = workingDir + "population_fromPopulationAttributes_BerlinOnly_withPlans.xml.gz";
-	
+
+	private static final double SCHOOL_POP_SAMPLE_SIZE = 0.25;
+
 	private final static Random rnd = new Random(1);
 	
 	private static List<EducFacility> educList = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException {
-		run(inputPopulationFile, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
+		run(inputPopulationFile, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
 	}
 
-	static void run(String schoolPopulationFile,  String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
+	static void run(String schoolPopulationFile, Double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
+		if(schoolPopSampleSize > 1.0 || schoolPopSampleSize < 0.){
+			throw new IllegalArgumentException("unvalid sample size for school population : " + schoolPopSampleSize);
+		}
+
 		Config config = ConfigUtils.createConfig();
 
 		config.plans().setInputFile(schoolPopulationFile);
@@ -82,7 +88,7 @@ public class CreateSchoolPopulation {
 
 		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
 
-		integrateIntoOriginalPopulation(population, originalPopulation, 0.25);
+		integrateIntoOriginalPopulation(population, originalPopulation, schoolPopSampleSize);
 
 		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
 	}
