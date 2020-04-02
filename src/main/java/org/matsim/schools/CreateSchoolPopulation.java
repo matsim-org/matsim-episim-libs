@@ -66,24 +66,27 @@ public class CreateSchoolPopulation {
 	private static List<EducFacility> educList = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException {
-		
-		Config config = ConfigUtils.createConfig();
-		
-		config.plans().setInputFile(inputPopulationFile);
-		
-		Scenario scenario = ScenarioUtils.loadScenario(config);
-		
-		readEducFacilites(workingDir + "educFacilities_optimated.txt");
-		
-		Population population = buildPlans(scenario);
-		
-		Population originalPopulation = PopulationUtils.readPopulation(originalPopulationFile);
-		
-		integrateIntoOriginalPopulation(population, originalPopulation, 0.25);
-		
-		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
-		
+		run(inputPopulationFile, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
 	}
+
+	static void run(String schoolPopulationFile,  String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
+		Config config = ConfigUtils.createConfig();
+
+		config.plans().setInputFile(schoolPopulationFile);
+
+		Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		readEducFacilites(schoolFacilitiesFile);
+
+		Population population = buildPlans(scenario);
+
+		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
+
+		integrateIntoOriginalPopulation(population, originalPopulation, 0.25);
+
+		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
+	}
+
 
 	private static void integrateIntoOriginalPopulation(Population population, Population originalPopulation,
 			double sample) {
