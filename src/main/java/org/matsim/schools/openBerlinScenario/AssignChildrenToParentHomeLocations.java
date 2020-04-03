@@ -53,7 +53,8 @@ public class AssignChildrenToParentHomeLocations {
 
         /*
          nach dem Statistischen Bundesamt (https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Haushalte-Familien/Publikationen/Downloads-Haushalte/haushalte-familien-2010300187004.html)
-         haben ist die Aufteilung der Haushalte mit Kindern unter 18 Jahren in den neuen Bundesländern einschl. Berlin wie folgt (Jahr 2018):
+         ist die Aufteilung der Haushalte mit Kindern unter 18 Jahren in den neuen Bundesländern einschl. Berlin wie folgt (Jahr 2018, siehe Tabelle 5_2_1 Zeile 35ff):
+
 
          55,5% 1 Kind unter 18
          34,5% 2 Kinder unter 18
