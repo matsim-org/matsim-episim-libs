@@ -43,6 +43,7 @@ import org.matsim.contrib.util.StraightLineKnnFinder;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 
@@ -73,18 +74,17 @@ public class CreateSchoolPopulation {
 
 		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
 
-		run(schoolPopulation, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", outputPopulationFile);
+		run(schoolPopulation, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", null,  outputPopulationFile);
 	}
 
-	public static void run(Population schoolPopulation, double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, String outputPopulationFile) throws IOException {
+	public static void run(Population schoolPopulation, double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
 		if(schoolPopSampleSize > 1.0 || schoolPopSampleSize < 0.){
 			throw new IllegalArgumentException("unvalid sample size for school population : " + schoolPopSampleSize);
 		}
 		log.info("start reading school facilities");
-		readEducFacilites(schoolFacilitiesFile);
+		readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
 		log.info("start building school plans");
 		buildSchoolPlans(schoolPopulation);
-
 
 		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
 
@@ -109,7 +109,7 @@ public class CreateSchoolPopulation {
 
 	}
 
-	private static void readEducFacilites(String educFacilitiesFile) throws IOException {
+	private static void readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
 		
 		BufferedReader reader = new BufferedReader(new FileReader(educFacilitiesFile));
 		
@@ -146,8 +146,14 @@ public class CreateSchoolPopulation {
 			if (!educSecondary.equals("0.0")) {
 				isEducSecondary = true;
 			}
-		
-			EducFacility educFacility = new EducFacility(id, x, y, isEducKiga, isEducPrimary, isEducSecondary);
+
+			Coord coord = CoordUtils.createCoord(x, y);
+
+			if(transformation != null){
+				coord = transformation.transform(coord);
+			}
+
+			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
 			
 			educList.add(educFacility);
 		}
@@ -195,32 +201,34 @@ public class CreateSchoolPopulation {
 			boolean foundEducFacility = false;
 			double distance;
 
+			List<EducFacility> listToSearchIn;
+			if (age > 1 && age <= 5) {
+				listToSearchIn = kigasList;
+				eduActType = "educ_kiga";
+			} else	if (age > 5 && age <= 12) {
+				listToSearchIn = primaryList;
+				eduActType = "educ_primary";
+			} else {
+				listToSearchIn = secondaryList;
+				eduActType = "educ_secondary";
+			}
 
 			int cnt = 0;
 			do {
 				cnt ++;
 				foundEducFacility = true;
 
-				if (age > 1 && age <= 5) {
-					educFacility = kigasList.get(rnd.nextInt(kigasList.size()));
-					eduActType = "educ_kiga";
-				}
-				if (age > 5 && age <= 12) {
-					educFacility = primaryList.get(rnd.nextInt(primaryList.size()));
-					eduActType = "educ_primary";
-				}
-
-				if (age > 12) {
-					educFacility = secondaryList.get(rnd.nextInt(secondaryList.size()));
-					eduActType = "educ_secondary";
-				}
+				educFacility = listToSearchIn.get(rnd.nextInt(listToSearchIn.size()));
 
 				// to do: make this better (Gravitationsmodell?)
 				distance = CoordUtils.calcEuclideanDistance(educFacility.getCoord(), homeCoord);
 				if (distance > 5000) {
 					foundEducFacility = false;
-					if (cnt > 1000) {
-						throw new RuntimeException("could not find facility for person " + person + "\t and homeCoord = " + homeCoord);
+					if (cnt > 10_000) {
+						log.warn("could not find facility for person " + person + "\t and homeCoord = " + homeCoord + ". happened for person #" + counter.getCounter());
+//						educFacility = drawRandomFacilityOutOfClosestX(homeCoord, listToSearchIn, 3);
+//						log.warn("closest distance to a facility = " + CoordUtils.calcEuclideanDistance(educFacility.getCoord(), homeCoord));
+						throw new RuntimeException();
 					}
 				}
 
@@ -233,8 +241,13 @@ public class CreateSchoolPopulation {
 			plan.addActivity(eduAct);
 			eduAct.setStartTime(8 * 3600);
 			eduAct.setEndTime(13 * 3600 + rnd.nextInt(4 * 3600));
-			eduAct.setFacilityId(educFacility.getId());
-			
+
+			//if person had info about facilities, we also want to use the info in the activie
+			//i.e. this is the differentiation between snz and berlin. might be improved later
+			if (person.getAttributes().getAttribute("homeId") != null){
+				eduAct.setFacilityId(educFacility.getId());
+			}
+
 			plan.addLeg(leg);
 			
 			Activity homeAct2 = pf.createActivityFromCoord("home", homeCoord);
@@ -252,6 +265,11 @@ public class CreateSchoolPopulation {
 	private static List<EducFacility> findClosestKFacilities(List<EducFacility> kigasList, Coord homeCoord, int k) {
 		return PartialSort.kSmallestElements(k, kigasList.stream(),
 				fac -> DistanceUtils.calculateSquaredDistance(homeCoord, fac.getCoord()));
+	}
+
+	private static EducFacility drawRandomFacilityOutOfClosestX(Coord homeCoord, List<EducFacility> list, int x){
+		List<EducFacility> closest = findClosestKFacilities(list, homeCoord, x);
+		return closest.get(rnd.nextInt(closest.size()));
 	}
 
 	private static String getLegMode(double distance) {
@@ -276,9 +294,9 @@ public class CreateSchoolPopulation {
 		private boolean isEducSecondary;
 		private double noOfPupils = 0;
 
-		EducFacility(Id<ActivityFacility> id, double x, double y, boolean isEducKiga, boolean isEducPrimary, boolean isEducSecondary) {
+		EducFacility(Id<ActivityFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary, boolean isEducSecondary) {
 			this.setId(id);
-			this.setCoord(CoordUtils.createCoord(x, y));
+			this.setCoord(coord);
 			this.setEducKiga(isEducKiga);
 			this.setEducPrimary(isEducPrimary);
 			this.setEducSecondary(isEducSecondary);
