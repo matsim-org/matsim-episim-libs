@@ -17,8 +17,8 @@ public class EpisimTestUtils {
     private static final AtomicLong ID = new AtomicLong(0);
     private static final EventsManager manager = Mockito.mock(EventsManager.class);
 
-    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
-    public static Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
+    public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
+    public static final Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
 
 
     /**

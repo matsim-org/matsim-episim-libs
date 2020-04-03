@@ -13,7 +13,7 @@ import java.util.Random;
  *    1 - e^(calibParam * contactIntensity * jointTimeInContainer)
  * </pre>
  */
-public class DefaultInfectionModel extends InfectionModel {
+public final class DefaultInfectionModel extends AbstractInfectionModel {
 
     private static final Logger log = LogManager.getLogger(DefaultInfectionModel.class);
 

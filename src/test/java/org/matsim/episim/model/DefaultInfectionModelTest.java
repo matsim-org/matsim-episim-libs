@@ -5,8 +5,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
-import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.ShutdownPolicy;
 

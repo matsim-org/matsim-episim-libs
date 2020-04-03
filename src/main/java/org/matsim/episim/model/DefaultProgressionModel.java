@@ -10,7 +10,7 @@ import java.util.Random;
 /**
  * Default progression model with deterministic (but random) state transitions at fixed days.
  */
-public class DefaultProgressionModel implements ProgressionModel {
+public final class DefaultProgressionModel implements ProgressionModel {
 
     private final Random rnd;
     private final EpisimConfigGroup episimConfig;
