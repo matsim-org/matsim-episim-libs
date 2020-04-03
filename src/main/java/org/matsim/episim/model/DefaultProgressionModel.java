@@ -22,71 +22,65 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
     @Override
     public void updateState(EpisimPerson person, int day) {
-        double now = EpisimUtils.getCorrectedTime( 24.*3600, day );
+        // Called at the beginning of iteration
+        double now = EpisimUtils.getCorrectedTime(0, day);
         switch (person.getDiseaseStatus()) {
             case susceptible:
                 break;
             case infectedButNotContagious:
-                if (person.daysSinceInfection(day) >= 4) {
-                    person.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.contagious );
+                if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 4) {
+                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.contagious);
                 }
                 break;
             case contagious:
-                if (person.daysSinceInfection(day) == 6) {
+                if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 6) {
                     final double nextDouble = rnd.nextDouble();
                     if (nextDouble < 0.2) {
                         // 20% recognize that they are sick and go into quarantine:
 
                         // Diamond Princess study: (only) 18% show no symptoms.
 
-                        person.setQuarantineDate(day);
-                        // yyyy date needs to be qualified by status (or better, add iteration into quarantine status setter)
-
-                        person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
+                        person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
                         // yyyy this should become "home"!  kai, mar'20
 
                         if (episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
                             for (EpisimPerson pw : person.getTraceableContactPersons()) {
                                 if (pw.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) { //what if tracked person has recovered
 
-                                    pw.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
+                                    pw.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
                                     // yyyy this should become "home"!  kai, mar'20
-
-                                    pw.setQuarantineDate(day);
-                                    // yyyy date needs to be qualified by status (or better, add iteration into
-                                    // quarantine status setter)
 
                                 }
                             }
                         }
 
                     }
-                } else if (person.daysSinceInfection(day) == 10) {
+                } else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 10) {
                     if (rnd.nextDouble() < 0.045) {
                         // (4.5% get seriously sick.  This is taken from all infected persons, not just those the have shown
                         // symptoms before)
-                        person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
+                        person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.seriouslySick);
                     }
-                } else if (person.daysSinceInfection(day) >= 16) {
-                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered );
+                } else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 16) {
+                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
                 }
                 break;
             case seriouslySick:
-                if (person.daysSinceInfection(day) == 11) {
+                if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 11) {
                     if (rnd.nextDouble() < 0.25) {
                         // (25% of persons who are seriously sick transition to critical)
-                        person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.critical );
+                        person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.critical);
                     }
-                } else if (person.daysSinceInfection(day) >= 23) {
-                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered );
+                } else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 23) {
+                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
                 }
                 break;
             case critical:
-                if (person.daysSinceInfection(day) == 20) {
+                if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 20) {
                     // (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
                     // they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
                     // hospital beds.)
-                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
+                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.seriouslySick);
                 }
                 break;
             case recovered:
@@ -95,7 +89,8 @@ public final class DefaultProgressionModel implements ProgressionModel {
                 throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
         }
         if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full && person.daysSinceQuarantine(day) >= 14) {
-            person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no);
+            // TODO overwrites previous quarantine date, but this is not used at the moment
+            person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
         }
         person.getTraceableContactPersons().clear(); //so we can only track contact persons over 1 day
     }

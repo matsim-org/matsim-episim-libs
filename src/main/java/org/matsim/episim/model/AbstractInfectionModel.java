@@ -70,8 +70,6 @@ public abstract class AbstractInfectionModel implements InfectionModel {
             }
         }
 
-        personWrapper.setInfectionDate(iteration);
-
         reporting.reportInfection(personWrapper, infector, now, infectionType);
     }
 

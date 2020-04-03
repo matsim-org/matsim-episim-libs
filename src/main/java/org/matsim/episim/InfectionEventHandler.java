@@ -310,7 +310,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
             EpisimPerson randomPerson = (EpisimPerson) personArray[rnd.nextInt(personArray.length)];
             if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
                 randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
-                randomPerson.setInfectionDate(0);
                 log.warn(" person " + randomPerson.getPersonId() + " has initial infection");
                 cnt--;
             }

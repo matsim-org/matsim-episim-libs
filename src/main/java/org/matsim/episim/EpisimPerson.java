@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import com.google.common.annotations.Beta;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -7,10 +8,7 @@ import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Persons current state in the simulation.
@@ -22,6 +20,12 @@ public final class EpisimPerson implements Attributable {
     private final Attributes attributes;
     private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
     private final List<String> trajectory = new ArrayList<>();
+
+    /**
+     * Stores first time of status changes to specific type.
+     */
+    private final EnumMap<DiseaseStatus, Double> statusChanges = new EnumMap<>(DiseaseStatus.class);
+
     /**
      * The {@link EpisimContainer} the person is currently located in.
      */
@@ -34,10 +38,7 @@ public final class EpisimPerson implements Attributable {
      * Current {@link QuarantineStatus}.
      */
     private QuarantineStatus quarantineStatus = QuarantineStatus.no;
-    /**
-     * Iteration when this person got infected. Negative if person was never infected.
-     */
-    private int infectionDate = -1;
+
     /**
      * Iteration when this person got into quarantine. Negative if person was never quarantined.
      */
@@ -65,6 +66,9 @@ public final class EpisimPerson implements Attributable {
 
     public void setDiseaseStatus(double now, DiseaseStatus status) {
         this.status = status;
+        if (!statusChanges.containsKey(status))
+            statusChanges.put(status, now);
+
         eventsManager.processEvent(new EpisimPersonStatusEvent(now, personId, status));
     }
 
@@ -72,55 +76,44 @@ public final class EpisimPerson implements Attributable {
         return quarantineStatus;
     }
 
-    public void setQuarantineStatus(QuarantineStatus quarantineStatus) {
+    public void setQuarantineStatus(QuarantineStatus quarantineStatus, int iteration) {
         this.quarantineStatus = quarantineStatus;
+        this.quarantineDate = iteration;
     }
 
-    int getInfectionDate() {
-        return this.infectionDate;
-    }
 
-    public void setInfectionDate(int date) {
-        // yyyy should be part of status change. kai, apr'20
+    /**
+     * Days elapsed since a certain status was set.
+     * This will always round the change as if it happened on the start of a day.
+     *
+     * @param status requested status
+     * @param currentDay current day (iteration)
+     * @throws IllegalStateException when the requested status was never set
+     */
+    public int daysSince(DiseaseStatus status, int currentDay) {
+        if (!statusChanges.containsKey(status)) throw new IllegalStateException("Person was never " + status);
 
+        double day = Math.floor(statusChanges.get(status) / 86400d);
 
-        if (this.infectionDate > -1)
-            throw new IllegalStateException("Infection date already set");
-
-        this.infectionDate = date;
+        return currentDay - (int) day;
     }
 
     /**
-     * Days since infection (if any).
+     * Days elapsed since person was put into quarantine.
+     * @param currentDay current day (iteration)
+     * @apiNote This is currently not used much and may change similar to {@link #daysSince(DiseaseStatus, int)}.
      */
-    public int daysSinceInfection(int currentIteration) {
-        if (infectionDate < 0) throw new IllegalStateException("Person was never infected");
-
-        return currentIteration - infectionDate;
-    }
-
-    public int daysSinceQuarantine(int currentIteration) {
-        // yyyy I would prefer to just take note of the dates of the status change, something like
-        // getDateOf( DiseaseStatus status )
-        // would be a much more stable API, since one would not need a separate method for each new status.  kai, apr'20
-
-        // yyyy would make sense to keep track of the exact time steps (not just the days).  How to approach that: seconds, just count up, or keep track of
-        //  days
-        // separately?  kai, apr'20
+    @Beta
+    public int daysSinceQuarantine(int currentDay) {
 
         // yyyyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
-
         if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
 
-        return currentIteration - quarantineDate;
+        return currentDay - quarantineDate;
     }
 
     int getQuarantineDate() {
         return this.quarantineDate;
-    }
-
-    public void setQuarantineDate(int date) {
-        this.quarantineDate = date;
     }
 
     String getLastFacilityId() {
