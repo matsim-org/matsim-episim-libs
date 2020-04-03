@@ -19,21 +19,11 @@
 
 package org.matsim.schools.openBerlinScenario;
 
-import com.sun.jdi.connect.Transport;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
-import org.matsim.core.population.io.PopulationReader;
 import org.matsim.core.population.io.PopulationWriter;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.geometry.CoordinateTransformation;
-import org.matsim.core.utils.geometry.transformations.GeotoolsTransformation;
-import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.schools.CreateSchoolPopulation;
-import org.matsim.schools.FilterPopulationForCertainArea;
-import org.osgeo.proj4j.CoordinateTransformFactory;
 import playground.vsp.corineLandcover.CORINELandCoverCoordsModifier;
 import playground.vsp.openberlinscenario.cemdap.output.CemdapOutput2MatsimPlansConverter;
 
