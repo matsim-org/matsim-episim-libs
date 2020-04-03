@@ -19,6 +19,7 @@
 
 package org.matsim.schools.openBerlinScenario;
 
+import com.sun.jdi.connect.Transport;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
@@ -27,7 +28,12 @@ import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.io.PopulationReader;
 import org.matsim.core.population.io.PopulationWriter;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
+import org.matsim.core.utils.geometry.transformations.GeotoolsTransformation;
+import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.schools.CreateSchoolPopulation;
+import org.matsim.schools.FilterPopulationForCertainArea;
+import org.osgeo.proj4j.CoordinateTransformFactory;
 import playground.vsp.corineLandcover.CORINELandCoverCoordsModifier;
 import playground.vsp.openberlinscenario.cemdap.output.CemdapOutput2MatsimPlansConverter;
 
@@ -38,26 +44,29 @@ import java.util.Map;
 
 public class CreateSchoolPopulationFromCorineLandCoverCoords {
 
-	private static final double SAMPLE_SIZE = 0.01;
+	private static final double SAMPLE_SIZE = 0.1;
 
 	private static final String INPUT_PLANS_FILE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
-	private static final String PLANS_RADY_FOR_CORINE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_1pct.xml.gz";
+	private static final String PLANS_RADY_FOR_CORINE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_10pct.xml.gz";
 	private static final String CORINE_LANDCOVER_FILE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/corine_landcover/corine_lancover_berlin-brandenburg_GK4.shp";
 
 	private static final String INPUT_PLANS_BERLIN_ADULTS_1PCT = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/input/berlin-v5.4-1pct.plans.xml.gz";
 	private static final String INPUT_PLANS_BERLIN_ADULTS_10PCT = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5.4-10pct.plans.xml.gz";
 
-	private static final String INPUT_SCHOOL_FACILITIES = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/be_educFacilities_optimated.txt";
+	private static final String INPUT_SCHOOL_FACILITIES = "../../svn/shared-svn/projects/episim/matsim-files/open_berlin/input/educFacilitiesAggregated_GK4.txt";
 	private static final String ZONE_SHP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
 	private static final String ZONE_ID_TAG = "NR";
 
-	private static final String OUTPUT_PLANS_ENTIRE_BLN = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_includingChildren_corineCoords_1pct.xml.gz";
-	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_corineCoords_1pct.xml.gz";
+	private static final String OUTPUT_PLANS_ENTIRE_BLN = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/berlin-v5.4-10pct-plans-includingChildren-corineCoords.xml.gz";
+	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_empty_corineCoords_10pct.xml.gz";
 
 	public static void main(String[] args) {
 
+		Population emptyChildren = PopulationUtils.readPopulation(INPUT_PLANS_FILE);
 
-	    assignDummyHomeActsAndWritePlans(INPUT_PLANS_FILE, PLANS_RADY_FOR_CORINE);
+		PopulationUtils.sampleDown(emptyChildren, SAMPLE_SIZE);
+
+	    assignDummyHomeActsAndWritePlans(emptyChildren, PLANS_RADY_FOR_CORINE);
 
 	    boolean simplifyGeom = false;
 	    boolean combiningGeoms = false;
@@ -73,13 +82,22 @@ public class CreateSchoolPopulationFromCorineLandCoverCoords {
 		plansFilterForCORINELandCover.process();
 		Population population = plansFilterForCORINELandCover.getPopulation();
 		PopulationWriter writer = new PopulationWriter(population);
-		preparePlansForSchooPopulationCreation(population);
+		preparePlansForSchoolPopulationCreation(population);
+
 		writer.write(OUTPUT_PLANS_SCHOOLPOP);
+
+//		Population population = PopulationUtils.readPopulation(OUTPUT_PLANS_SCHOOLPOP);
+
 
 		//now run CreateSchoolPopulation which will read facilities, assign schools and build plans and finally will merge the adult population with the school population
 		try {
 			//we already sampled so sample size is set to 1 in this step
-			CreateSchoolPopulation.run(population, 1, INPUT_PLANS_BERLIN_ADULTS_1PCT, INPUT_SCHOOL_FACILITIES, OUTPUT_PLANS_ENTIRE_BLN);
+			CreateSchoolPopulation.run(population,
+					1,
+					INPUT_PLANS_BERLIN_ADULTS_10PCT,
+					INPUT_SCHOOL_FACILITIES,
+					null,
+					OUTPUT_PLANS_ENTIRE_BLN);
 
 			//delete the file created in middle of the process - it is not needed any more
 			new File(PLANS_RADY_FOR_CORINE).delete();
@@ -87,20 +105,12 @@ public class CreateSchoolPopulationFromCorineLandCoverCoords {
 			e.printStackTrace();
 		}
 
-
 	}
 
-
-    private static void assignDummyHomeActsAndWritePlans(String inputPlans, String outputPlans){
-		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
-		new PopulationReader(scenario).readFile(inputPlans);
-
-		PopulationUtils.sampleDown(scenario.getPopulation(), SAMPLE_SIZE);
-		
-		PopulationFactory pf = scenario.getPopulation().getFactory();
-		scenario.getPopulation().getPersons().values().forEach(p -> createPlanAndDummyHomeAct(p, pf));
-
-		new PopulationWriter(scenario.getPopulation()).write(outputPlans);
+    private static void assignDummyHomeActsAndWritePlans(Population population, String outputPlans){
+		PopulationFactory pf = population.getFactory();
+		population.getPersons().values().forEach(p -> createPlanAndDummyHomeAct(p, pf));
+		new PopulationWriter(population).write(outputPlans);
 	}
 
 	private static void createPlanAndDummyHomeAct(Person p, PopulationFactory pf){
@@ -113,11 +123,11 @@ public class CreateSchoolPopulationFromCorineLandCoverCoords {
 		p.addPlan(plan);
 	}
 
-	private static void preparePlansForSchooPopulationCreation(Population population){
+	private static void preparePlansForSchoolPopulationCreation(Population population){
 		for (Person person : population.getPersons().values()) {
 			Activity act = (Activity) person.getSelectedPlan().getPlanElements().get(0);
 			if(! act.getType().startsWith("home")) throw new IllegalStateException("first act type is not home for person " + person);
-			if(act.getCoord() == null) throw new IllegalStateException("can not retrie coord info for home act of person " + person);
+			if(act.getCoord() == null) throw new IllegalStateException("can not retrieve coord info for home act of person " + person);
 			person.getAttributes().putAttribute("homeX", act.getCoord().getX());
 			person.getAttributes().putAttribute("homeY", act.getCoord().getY());
 			person.setSelectedPlan(null);
