@@ -167,9 +167,9 @@ public class CreateSchoolPopulation {
 		
 		PopulationFactory pf = schoolPopulation.getFactory();
 
-		List<EducFacility> kigasList = educList.stream().filter(e -> e.isEducKiga).collect(Collectors.toList());
-		List<EducFacility> primaryList = educList.stream().filter(e -> e.isEducPrimary).collect(Collectors.toList());
-		List<EducFacility> secondaryList = educList.stream().filter(e -> e.isEducSecondary).collect(Collectors.toList());
+		List<EducFacility> kigasList = educList.stream().filter(e -> e.isEducKiga()).collect(Collectors.toList());
+		List<EducFacility> primaryList = educList.stream().filter(e -> e.isEducPrimary()).collect(Collectors.toList());
+		List<EducFacility> secondaryList = educList.stream().filter(e -> e.isEducSecondary()).collect(Collectors.toList());
 
 		Counter counter = new Counter("building school plan nr ");
 		for (Person person : schoolPopulation.getPersons().values()) {
@@ -215,7 +215,7 @@ public class CreateSchoolPopulation {
 
 			//get a random facility within 5 km or just take the closest one
 			EducFacility facility = closest10Facilities.stream()
-					.filter(f -> DistanceUtils.calculateDistance(f.coord, homeCoord) < 5000)
+					.filter(f -> DistanceUtils.calculateDistance(f.getCoord(), homeCoord) < 5000)
 					.findAny()
 					.orElse(closest10Facilities.get(0));
 
@@ -268,55 +268,6 @@ public class CreateSchoolPopulation {
 		}
 		else {
 			return "ride";
-		}
-
-	}
-	
-	private static class EducFacility {
-		private Id<ActivityFacility> id;
-		private Coord coord;
-		private boolean isEducKiga;
-		private boolean isEducPrimary;
-		private boolean isEducSecondary;
-		private double noOfPupils = 0;
-
-		EducFacility(Id<ActivityFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary, boolean isEducSecondary) {
-			this.setId(id);
-			this.setCoord(coord);
-			this.setEducKiga(isEducKiga);
-			this.setEducPrimary(isEducPrimary);
-			this.setEducSecondary(isEducSecondary);
-		}
-		public Id<ActivityFacility> getId() {
-			return id;
-		}
-		public void setId(Id<ActivityFacility> id) {
-			this.id = id;
-		}
-		
-		public boolean isEducKiga() {
-			return isEducKiga;
-		}
-		public void setEducKiga(boolean isEducKiga) {
-			this.isEducKiga = isEducKiga;
-		}
-		public boolean isEducPrimary() {
-			return isEducPrimary;
-		}
-		public void setEducPrimary(boolean isEducPrimary) {
-			this.isEducPrimary = isEducPrimary;
-		}
-		public boolean isEducSecondary() {
-			return isEducSecondary;
-		}
-		public void setEducSecondary(boolean isEducSecondary) {
-			this.isEducSecondary = isEducSecondary;
-		}
-		public Coord getCoord() {
-			return coord;
-		}
-		public void setCoord(Coord coord) {
-			this.coord = coord;
 		}
 
 	}
