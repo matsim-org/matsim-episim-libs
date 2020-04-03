@@ -26,6 +26,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -196,10 +197,7 @@ public class CreateSchoolPopulation {
 				continue;
 			}
 			
-			EducFacility educFacility = null;
-			String eduActType = null;
-			boolean foundEducFacility = false;
-			double distance;
+			String eduActType;
 
 			List<EducFacility> listToSearchIn;
 			if (age > 1 && age <= 5) {
@@ -213,31 +211,24 @@ public class CreateSchoolPopulation {
 				eduActType = "educ_secondary";
 			}
 
-			int cnt = 0;
-			do {
-				cnt ++;
-				foundEducFacility = true;
+			List<EducFacility> closest10Facilities = findClosestKFacilities(listToSearchIn, homeCoord, 10);
 
-				educFacility = listToSearchIn.get(rnd.nextInt(listToSearchIn.size()));
+			//get a random facility within 5 km or just take the closest one
+			EducFacility facility = closest10Facilities.stream()
+					.filter(f -> DistanceUtils.calculateDistance(f.coord, homeCoord) < 5000)
+					.findAny()
+					.orElse(closest10Facilities.get(0));
 
-				// to do: make this better (Gravitationsmodell?)
-				distance = CoordUtils.calcEuclideanDistance(educFacility.getCoord(), homeCoord);
-				if (distance > 5000) {
-					foundEducFacility = false;
-					if (cnt > 10_000) {
-						log.warn("could not find facility for person " + person + "\t and homeCoord = " + homeCoord + ". happened for person #" + counter.getCounter());
-//						educFacility = drawRandomFacilityOutOfClosestX(homeCoord, listToSearchIn, 3);
-//						log.warn("closest distance to a facility = " + CoordUtils.calcEuclideanDistance(educFacility.getCoord(), homeCoord));
-						throw new RuntimeException();
-					}
-				}
+			//have to calc distance again :(
+			double distance = CoordUtils.calcEuclideanDistance(facility.getCoord(), homeCoord);
 
-			}while(!foundEducFacility);
+			if(distance > 5000)
+			log.warn("assigned a " + eduActType + " facility with distance " + distance + " to person " + person);
 
 			Leg leg = pf.createLeg(getLegMode(distance));
 			plan.addLeg(leg);
 			
-			Activity eduAct = pf.createActivityFromCoord(eduActType, educFacility.getCoord());
+			Activity eduAct = pf.createActivityFromCoord(eduActType, facility.getCoord());
 			plan.addActivity(eduAct);
 			eduAct.setStartTime(8 * 3600);
 			eduAct.setEndTime(13 * 3600 + rnd.nextInt(4 * 3600));
@@ -245,7 +236,7 @@ public class CreateSchoolPopulation {
 			//if person had info about facilities, we also want to use the info in the activie
 			//i.e. this is the differentiation between snz and berlin. might be improved later
 			if (person.getAttributes().getAttribute("homeId") != null){
-				eduAct.setFacilityId(educFacility.getId());
+				eduAct.setFacilityId(facility.getId());
 			}
 
 			plan.addLeg(leg);
@@ -265,11 +256,6 @@ public class CreateSchoolPopulation {
 	private static List<EducFacility> findClosestKFacilities(List<EducFacility> kigasList, Coord homeCoord, int k) {
 		return PartialSort.kSmallestElements(k, kigasList.stream(),
 				fac -> DistanceUtils.calculateSquaredDistance(homeCoord, fac.getCoord()));
-	}
-
-	private static EducFacility drawRandomFacilityOutOfClosestX(Coord homeCoord, List<EducFacility> list, int x){
-		List<EducFacility> closest = findClosestKFacilities(list, homeCoord, x);
-		return closest.get(rnd.nextInt(closest.size()));
 	}
 
 	private static String getLegMode(double distance) {
