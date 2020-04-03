@@ -38,6 +38,9 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.contrib.util.PartialSort;
+import org.matsim.contrib.util.StraightLineKnnFinder;
+import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.misc.Counter;
@@ -102,7 +105,7 @@ public class CreateSchoolPopulation {
 				ii++;
 			}
 		}
-		log.info("integrated " + ii + " studendts into original population ");
+		log.info("integrated " + ii + " students into original population ");
 
 	}
 
@@ -192,7 +195,10 @@ public class CreateSchoolPopulation {
 			boolean foundEducFacility = false;
 			double distance;
 
+
+			int cnt = 0;
 			do {
+				cnt ++;
 				foundEducFacility = true;
 
 				if (age > 1 && age <= 5) {
@@ -213,8 +219,11 @@ public class CreateSchoolPopulation {
 				distance = CoordUtils.calcEuclideanDistance(educFacility.getCoord(), homeCoord);
 				if (distance > 5000) {
 					foundEducFacility = false;
+					if (cnt > 1000) {
+						throw new RuntimeException("could not find facility for person " + person + "\t and homeCoord = " + homeCoord);
+					}
 				}
-				
+
 			}while(!foundEducFacility);
 
 			Leg leg = pf.createLeg(getLegMode(distance));
@@ -238,6 +247,11 @@ public class CreateSchoolPopulation {
 			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
 	
 		}
+	}
+
+	private static List<EducFacility> findClosestKFacilities(List<EducFacility> kigasList, Coord homeCoord, int k) {
+		return PartialSort.kSmallestElements(k, kigasList.stream(),
+				fac -> DistanceUtils.calculateSquaredDistance(homeCoord, fac.getCoord()));
 	}
 
 	private static String getLegMode(double distance) {
