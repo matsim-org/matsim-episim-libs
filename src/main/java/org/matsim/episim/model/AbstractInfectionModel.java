@@ -74,13 +74,18 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
         reporting.reportInfection(personWrapper, infector, now, infectionType);
     }
-
-    private boolean activityRelevantForInfectionDynamics(EpisimPerson person) {
-        String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
-        return actIsRelevant(act);
+    public Map<String, ShutdownPolicy.Restriction> getRestrictions(){
+        return restrictions;
     }
 
-    private boolean actIsRelevant(String act) {
+    private static boolean activityRelevantForInfectionDynamics( EpisimPerson person, EpisimConfigGroup episimConfig,
+                                                                 Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd ) {
+        String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+        return actIsRelevant(act, episimConfig, restrictions, rnd );
+    }
+
+    private static boolean actIsRelevant( String act, EpisimConfigGroup episimConfig,
+                                          Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd ) {
         for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
             if (infectionParams.includesActivity(act)) {
                 ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
@@ -97,7 +102,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
         throw new IllegalStateException(String.format("No restrictions known for activity %s. Please add prefix to one infection parameter.", act));
     }
 
-    private boolean tripRelevantForInfectionDynamics(EpisimPerson person) {
+    private static boolean tripRelevantForInfectionDynamics( EpisimPerson person, EpisimConfigGroup episimConfig,
+                                                             Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd ) {
         String lastAct = "";
         if (person.getCurrentPositionInTrajectory() != 0) {
             lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
@@ -107,24 +113,27 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
         // TODO: tr is a hardcoded activity for "pt"
         // last activity is only considered if present
-        return actIsRelevant("tr") && actIsRelevant(nextAct) && (lastAct.isEmpty() || actIsRelevant(lastAct));
+        return actIsRelevant("tr", episimConfig, restrictions, rnd ) && actIsRelevant(nextAct, episimConfig, restrictions,
+                        rnd ) && (lastAct.isEmpty() || actIsRelevant(lastAct, episimConfig,
+                        restrictions, rnd ));
 
     }
 
     /**
      * Checks whether a persons and container is relevant for the infection dynamics. This function also considers the restrictions in place.
      */
-    protected boolean personRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container) {
+    static boolean personRelevantForInfectionDynamics( EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
+                                                       Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd ) {
         if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(person)) {
             return false;
         }
         if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
             return false;
         }
-        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
+        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd )) {
             return true;
         }
-        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person)) {
+        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd )) {
             return true;
         }
         return false;
@@ -133,9 +142,11 @@ public abstract class AbstractInfectionModel implements InfectionModel {
     /**
      * Checks whether person is relevant for tracking (and also infection dynamics).
      * Basically, a person is relevant for tracking if it is relevant for infection except that persons in status of {@code DiseaseStatus.infectedButNotContagious} are also considered.
-     * @see #personRelevantForInfectionDynamics(EpisimPerson, EpisimContainer)
+     * @see #personRelevantForInfectionDynamics(EpisimPerson, EpisimContainer, EpisimConfigGroup, Map, Random)
+     * @noinspection BooleanMethodIsAlwaysInverted
      */
-    protected boolean personRelevantForTracking(EpisimPerson person, EpisimContainer<?> container) {
+    static boolean personRelevantForTracking( EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
+                                              Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd ) {
 
         // Infected but not contagious persons are considered additionally
         if (!EpisimUtils.hasStatusRelevantForInfectionDynamics(person) &&
@@ -146,10 +157,10 @@ public abstract class AbstractInfectionModel implements InfectionModel {
             return false;
         }
 
-        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person)) {
+        if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd )) {
             return true;
         }
-        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person)) {
+        if (container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd )) {
             return true;
         }
         return false;

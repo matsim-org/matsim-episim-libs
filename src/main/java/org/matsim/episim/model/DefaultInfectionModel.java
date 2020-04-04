@@ -45,9 +45,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
             return;
         }
 
-        if (trackingEnabled && !personRelevantForTracking(personLeavingContainer, container))
+        if (trackingEnabled && !personRelevantForTracking(personLeavingContainer, container, episimConfig, getRestrictions(), rnd ))
             return;
-        else if (!trackingEnabled && !personRelevantForInfectionDynamics(personLeavingContainer, container))
+        else if (!trackingEnabled && !personRelevantForInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd ))
             return;
 
         ArrayList<EpisimPerson> otherPersonsInContainer = new ArrayList<>(container.getPersons());
@@ -68,11 +68,11 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
             EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
             // If tracking is not enabled, the loop can continue earlier
-            if (trackingEnabled && !personRelevantForTracking(contactPerson, container)){
+            if (trackingEnabled && !personRelevantForTracking(contactPerson, container, episimConfig, getRestrictions(), rnd )){
                 continue;
             } else if (!trackingEnabled &&
                     (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus() ||
-                                     !personRelevantForInfectionDynamics(contactPerson, container))) {
+                                     !personRelevantForInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd ))) {
                 continue;
             }
             // yyyy I don't like these separate if conditions for tracking vs without.  Too large danger that we get something wrong there.  kai, apr'20
