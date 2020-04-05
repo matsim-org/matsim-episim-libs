@@ -90,9 +90,7 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 		//now run SchoolPopulationDestinationChoiceAndIntegration which will read facilities, assign schools and build plans and finally will merge the adult population with the school population
 		try {
-			//we already sampled so sample size is set to 1 in this step
 			SchoolPopulationDestinationChoiceAndIntegration.run(population,
-					1,
 					INPUT_PLANS_BERLIN_ADULTS_10PCT,
 					INPUT_SCHOOL_FACILITIES,
 					null,

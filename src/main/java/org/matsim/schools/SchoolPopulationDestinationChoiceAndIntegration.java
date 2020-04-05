@@ -57,13 +57,11 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/Berlin/";
 
-	private static final String inputPopulationFile = workingDir + "be_population_fromPopulationAttributes_BerlinOnly.xml.gz";
+	private static final String inputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
 
-	private static final String originalPopulationFile = workingDir + "be_optimizedPopulation_withoutNetworkInfo.xml.gz";
+	private static final String originalPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
 
-	private static final String outputPopulationFile = workingDir + "be_population_fromPopulationAttributes_BerlinOnly_withPlans.xml.gz";
-
-	private static final double SCHOOL_POP_SAMPLE_SIZE = 0.25;
+	private static final String outputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_snz_plans_25pct.xml.gz";
 
 	private final static Random rnd = new Random(1);
 
@@ -73,13 +71,10 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
 
-		run(schoolPopulation, SCHOOL_POP_SAMPLE_SIZE, originalPopulationFile, workingDir + "educFacilities_optimated.txt", null,  outputPopulationFile);
+		run(schoolPopulation, originalPopulationFile, workingDir + "educFacilities_optimated.txt", null,  outputPopulationFile);
 	}
 
-	public static void run(Population schoolPopulation, double schoolPopSampleSize, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
-		if(schoolPopSampleSize > 1.0 || schoolPopSampleSize < 0.){
-			throw new IllegalArgumentException("unvalid sample size for school population : " + schoolPopSampleSize);
-		}
+	public static void run(Population schoolPopulation, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
 		log.info("start reading school facilities");
 		readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
 		log.info("start building school plans");
@@ -88,24 +83,9 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
 
 		log.info("start integrating school population into original population");
-		integrateIntoOriginalPopulation(schoolPopulation, originalPopulation, schoolPopSampleSize);
+		schoolPopulation.getPersons().values().forEach(person -> originalPopulation.addPerson(person));
 
 		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
-	}
-
-	private static void integrateIntoOriginalPopulation(Population population, Population originalPopulation,
-			double sample) {
-		int ii = 0;
-
-		log.info("nr of persons in school population : " + population.getPersons().size());
-		for (Person person : population.getPersons().values()) {
-			if (rnd.nextDouble() < sample) {
-				originalPopulation.addPerson(person);
-				ii++;
-			}
-		}
-		log.info("integrated " + ii + " students into original population ");
-
 	}
 
 	private static void readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
