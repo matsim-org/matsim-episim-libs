@@ -26,7 +26,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Random;
 import java.util.stream.Collectors;
 
@@ -40,7 +39,6 @@ import org.matsim.api.core.v01.population.Plan;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.contrib.util.PartialSort;
-import org.matsim.contrib.util.StraightLineKnnFinder;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
@@ -50,25 +48,25 @@ import org.matsim.facilities.ActivityFacility;
 
 /**
  * This class creates plans for the school population of a scenario and integrates them into the existing adult population
-* @author smueller
+* @author smueller, tschlenther
 */
 
-public class CreateSchoolPopulation {
+public class SchoolPopulationDestinationChoiceAndIntegration {
 
-	private static final Logger log = Logger.getLogger(CreateSchoolPopulation.class);
+	private static final Logger log = Logger.getLogger(SchoolPopulationDestinationChoiceAndIntegration.class);
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/Berlin/";
-	
+
 	private static final String inputPopulationFile = workingDir + "be_population_fromPopulationAttributes_BerlinOnly.xml.gz";
-	
+
 	private static final String originalPopulationFile = workingDir + "be_optimizedPopulation_withoutNetworkInfo.xml.gz";
-	
+
 	private static final String outputPopulationFile = workingDir + "be_population_fromPopulationAttributes_BerlinOnly_withPlans.xml.gz";
 
 	private static final double SCHOOL_POP_SAMPLE_SIZE = 0.25;
 
 	private final static Random rnd = new Random(1);
-	
+
 	private static List<EducFacility> educList = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException {
@@ -111,37 +109,37 @@ public class CreateSchoolPopulation {
 	}
 
 	private static void readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
-		
+
 		BufferedReader reader = new BufferedReader(new FileReader(educFacilitiesFile));
-		
+
 		int ii = -1;
-		
+
 		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-			
+
 			ii++;
-			
+
 			if (ii == 0) {
 				continue;
 			}
-		    
+
 			String[] parts = line.split("\t");
-			
+
 			Id<ActivityFacility> id = Id.create(parts[0], ActivityFacility.class);
 			double x = Double.parseDouble(parts[1]);
 			double y = Double.parseDouble(parts[2]);
-			
+
 			String educKiga = parts[3];
 			boolean isEducKiga = false;
 			if (!educKiga.equals("0")) {
 				isEducKiga = true;
 			}
-			
+
 			String educPrimary = parts[4];
 			boolean isEducPrimary = false;
 			if (!educPrimary.equals("0.0")) {
 				isEducPrimary = true;
 			}
-			
+
 			String educSecondary = parts[5];
 			boolean isEducSecondary = false;
 			if (!educSecondary.equals("0.0")) {
@@ -155,16 +153,16 @@ public class CreateSchoolPopulation {
 			}
 
 			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
-			
+
 			educList.add(educFacility);
 		}
-		
+
 		reader.close();
-		
+
 	}
 
 	private static void buildSchoolPlans(Population schoolPopulation) {
-		
+
 		PopulationFactory pf = schoolPopulation.getFactory();
 
 		List<EducFacility> kigasList = educList.stream().filter(e -> e.isEducKiga()).collect(Collectors.toList());
@@ -192,11 +190,11 @@ public class CreateSchoolPopulation {
 
 			homeAct1.setStartTime(0);
 			homeAct1.setEndTime(6.5 * 3600 + rnd.nextInt(3600));
-			
+
 			if (age < 2) {
 				continue;
 			}
-			
+
 			String eduActType;
 
 			List<EducFacility> listToSearchIn;
@@ -227,7 +225,7 @@ public class CreateSchoolPopulation {
 
 			Leg leg = pf.createLeg(getLegMode(distance));
 			plan.addLeg(leg);
-			
+
 			Activity eduAct = pf.createActivityFromCoord(eduActType, facility.getCoord());
 			plan.addActivity(eduAct);
 			eduAct.setStartTime(8 * 3600);
@@ -240,7 +238,7 @@ public class CreateSchoolPopulation {
 			}
 
 			plan.addLeg(leg);
-			
+
 			Activity homeAct2 = pf.createActivityFromCoord("home", homeCoord);
 			plan.addActivity(homeAct2);
 
@@ -249,7 +247,7 @@ public class CreateSchoolPopulation {
 				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
 			}
 			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
-	
+
 		}
 	}
 
@@ -259,7 +257,7 @@ public class CreateSchoolPopulation {
 	}
 
 	private static String getLegMode(double distance) {
-				
+
 		if (distance < 1000) {
 			return "walk";
 		}

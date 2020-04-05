@@ -23,7 +23,7 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.io.PopulationWriter;
-import org.matsim.schools.CreateSchoolPopulation;
+import org.matsim.schools.SchoolPopulationDestinationChoiceAndIntegration;
 import playground.vsp.corineLandcover.CORINELandCoverCoordsModifier;
 import playground.vsp.openberlinscenario.cemdap.output.CemdapOutput2MatsimPlansConverter;
 
@@ -35,13 +35,13 @@ import java.util.Map;
 /**
  * 	(1) read in plans file for children, containing nothing but attributes holding inforamtion about age and municipality
  * 	(2) run CORINELandCoverCoordsModifier in order to perform location choice for the home activity
- * 	(3) run CreateSchoolPopulation in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
+ * 	(3) run SchoolPopulationDestinationChoiceAndIntegration in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
  *
  *	In between, some preparation processes for the steps need to be performed..
  *
  * @author tschlenther
  */
-public class CreateSchoolPopulationFromCorineLandCoverCoords {
+class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 	private static final double SAMPLE_SIZE = 0.1;
 
@@ -88,10 +88,10 @@ public class CreateSchoolPopulationFromCorineLandCoverCoords {
 //		Population population = PopulationUtils.readPopulation(OUTPUT_PLANS_SCHOOLPOP);
 
 
-		//now run CreateSchoolPopulation which will read facilities, assign schools and build plans and finally will merge the adult population with the school population
+		//now run SchoolPopulationDestinationChoiceAndIntegration which will read facilities, assign schools and build plans and finally will merge the adult population with the school population
 		try {
 			//we already sampled so sample size is set to 1 in this step
-			CreateSchoolPopulation.run(population,
+			SchoolPopulationDestinationChoiceAndIntegration.run(population,
 					1,
 					INPUT_PLANS_BERLIN_ADULTS_10PCT,
 					INPUT_SCHOOL_FACILITIES,
