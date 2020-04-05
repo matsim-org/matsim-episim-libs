@@ -54,7 +54,6 @@ public class RunEpisimIntegrationTest {
         episimConfig.setCalibrationParameter(2);
 
         config.controler().setOutputDirectory(utils.getOutputDirectory());
-        OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
         RunEpisim.addDefaultParams(episimConfig);
     }

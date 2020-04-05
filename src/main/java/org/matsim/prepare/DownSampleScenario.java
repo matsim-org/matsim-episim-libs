@@ -1,13 +1,8 @@
-package org.matsim.run;
+package org.matsim.prepare;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.events.*;
-import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
-import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
-import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
-import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
@@ -15,7 +10,6 @@ import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.gbl.MatsimRandom;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.episim.InfectionEventHandler;
 import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.FacilitiesWriter;
@@ -24,9 +18,6 @@ import picocli.CommandLine;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -90,7 +81,7 @@ public class DownSampleScenario implements Callable<Integer> {
 
         EventsManager manager = EventsUtils.createEventsManager();
 
-        FilterHandler handler = new FilterHandler(population);
+        FilterHandler handler = new FilterHandler(population, null);
         manager.addHandler(handler);
         EventsUtils.readEvents(manager, events.toString());
 
@@ -98,7 +89,7 @@ public class DownSampleScenario implements Callable<Integer> {
                 IOUtils.getOutputStream(IOUtils.getFileUrl(output.resolve("events" + sampleSize + ".xml.gz").toString()), false)
         );
 
-        log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.counter, handler.events.size() / handler.counter);
+        log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.getCounter(), handler.events.size() / handler.getCounter());
 
         handler.events.forEach(writer::handleEvent);
         writer.closeFile();
@@ -130,68 +121,4 @@ public class DownSampleScenario implements Callable<Integer> {
         return 0;
     }
 
-    /**
-     * Filters events needed for the {@link InfectionEventHandler}
-     */
-    private static class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
-
-        private final Population population;
-        private final List<Event> events = new ArrayList<>();
-        private final Set<Id<ActivityFacility>> facilities = new HashSet<>();
-        private int counter = 0;
-
-        public FilterHandler(Population population) {
-            this.population = population;
-        }
-
-        @Override
-        public void handleEvent(ActivityEndEvent activityEndEvent) {
-            counter++;
-
-            if (!InfectionEventHandler.shouldHandleActivityEvent(activityEndEvent, activityEndEvent.getActType()))
-                return;
-            if (!population.getPersons().containsKey(activityEndEvent.getPersonId()))
-                return;
-
-            facilities.add(activityEndEvent.getFacilityId());
-            events.add(activityEndEvent);
-        }
-
-        @Override
-        public void handleEvent(ActivityStartEvent activityStartEvent) {
-            counter++;
-
-            if (!InfectionEventHandler.shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType()))
-                return;
-            if (!population.getPersons().containsKey(activityStartEvent.getPersonId()))
-                return;
-
-            facilities.add(activityStartEvent.getFacilityId());
-            events.add(activityStartEvent);
-        }
-
-        @Override
-        public void handleEvent(PersonEntersVehicleEvent personEntersVehicleEvent) {
-            counter++;
-
-            if (!InfectionEventHandler.shouldHandlePersonEvent(personEntersVehicleEvent))
-                return;
-            if (!population.getPersons().containsKey(personEntersVehicleEvent.getPersonId()))
-                return;
-
-            events.add(personEntersVehicleEvent);
-        }
-
-        @Override
-        public void handleEvent(PersonLeavesVehicleEvent personLeavesVehicleEvent) {
-            counter++;
-
-            if (!InfectionEventHandler.shouldHandlePersonEvent(personLeavesVehicleEvent))
-                return;
-            if (!population.getPersons().containsKey(personLeavesVehicleEvent.getPersonId()))
-                return;
-
-            events.add(personLeavesVehicleEvent);
-        }
-    }
 }
