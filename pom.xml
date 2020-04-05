@@ -177,7 +177,7 @@
                     <forkMode>once</forkMode>
                     <!-- avoid out of memory errors: -->
                     <argLine>-Xmx6000m -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
-                    <parallel>all</parallel>
+                    <!-- <parallel>all</parallel> -->
                     <useUnlimitedThreads>true</useUnlimitedThreads>
                 </configuration>
             </plugin>
