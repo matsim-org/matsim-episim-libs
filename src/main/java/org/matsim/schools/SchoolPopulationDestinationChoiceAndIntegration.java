@@ -55,9 +55,9 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 	private static final Logger log = Logger.getLogger(SchoolPopulationDestinationChoiceAndIntegration.class);
 
-	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/Berlin/";
-
 	private static final String inputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
+
+	private static final String inputFacilitiesFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_educFacilities_optimated.txt";
 
 	private static final String originalPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
 
@@ -71,7 +71,7 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
 
-		run(schoolPopulation, originalPopulationFile, workingDir + "educFacilities_optimated.txt", null,  outputPopulationFile);
+		run(schoolPopulation, originalPopulationFile, inputFacilitiesFile, null,  outputPopulationFile);
 	}
 
 	public static void run(Population schoolPopulation, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
