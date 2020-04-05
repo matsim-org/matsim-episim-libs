@@ -25,6 +25,8 @@
 
         <!-- Needed to suppress warnings if needed -->
         <module name="SuppressWarningsHolder"/>
+        <module name="SuppressWithNearbyCommentFilter"/>
+        <module name="SuppressionCommentFilter"/>
 
         <!-- Block checks -->
         <module name="AvoidNestedBlocks">
@@ -127,7 +129,12 @@
             <property name="classMaximum" value="800"/>
             <property name="fileMaximum" value="1000"/>
         </module>
-        <module name="NPathComplexity"/>
+        <module name="CyclomaticComplexity">
+            <property name="max" value="20"/>
+        </module>
+        <module name="NPathComplexity">
+            <property name="max" value="300"/>
+        </module>
 
 
         <!-- Miscellaneous -->
@@ -183,8 +190,10 @@
         <!--
         <module name="NoWhitespaceAfter"/>
         <module name="NoWhitespaceBefore"/>
+        <module name="OperatorWrap"/>
         -->
         <module name="SingleSpaceSeparator"/>
+        <module name="TypecastParenPad"/>
 
 
     </module>
