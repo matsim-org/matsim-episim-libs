@@ -33,7 +33,13 @@ import org.matsim.core.scenario.ScenarioUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class AssignChildrenToParentHomeLocations {
+
+/**
+ * DO NOT USE! THIS CLASS IS UNFINISHED WORK!
+ *
+ * @author tschlenther
+ */
+class AssignChildrenToParentHomeLocations {
 
     private static final Logger log = Logger.getLogger(AssignChildrenToParentHomeLocations.class);
 

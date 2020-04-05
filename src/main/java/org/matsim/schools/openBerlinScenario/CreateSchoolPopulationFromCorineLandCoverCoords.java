@@ -32,6 +32,15 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 	(1) read in plans file for children, containing nothing but attributes holding inforamtion about age and municipality
+ * 	(2) run CORINELandCoverCoordsModifier in order to perform location choice for the home activity
+ * 	(3) run CreateSchoolPopulation in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
+ *
+ *	In between, some preparation processes for the steps need to be performed..
+ *
+ * @author tschlenther
+ */
 public class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 	private static final double SAMPLE_SIZE = 0.1;

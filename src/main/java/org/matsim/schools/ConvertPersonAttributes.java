@@ -38,7 +38,7 @@ import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 /**
  * Loads person attributes file and population file of snz scenario and adds persons to population if they only occur in attributes file.
  * Then copies all attributes from attributes file to population.
-* @author smueller
+* @author smueller, tschlenther
 */
 
 public class ConvertPersonAttributes {
@@ -50,23 +50,23 @@ public class ConvertPersonAttributes {
 	private static final String pathOutputPopulation = workingDir + "de_population_fromPopulationAttributes.xml.gz";
 
 	public static void main(String[] args) {
-				
+
 		Population populationFromAttributes = buildPopulationFromAttributes(pathToOriginalAttributes);
-		
+
 		PopulationUtils.writePopulation(populationFromAttributes, pathOutputPopulation);
-		
+
 //		includeMissingAgentsIntoOrigPopulation(populationFromAttributes);
-		
+
 		Config config = ConfigUtils.createConfig();
-		
+
 		config.plans().setInputPersonAttributeFile(pathToOriginalAttributes);
-		
+
 		config.plans().setInputFile(pathOutputPopulation);
-		
+
 		config.plans().setInsistingOnUsingDeprecatedPersonAttributeFile(true);
-		
+
 		Scenario scenario = ScenarioUtils.loadScenario(config);
-		
+
 		PopulationUtils.writePopulation(scenario.getPopulation(), pathOutputPopulation);
 	}
 
@@ -85,7 +85,7 @@ public class ConvertPersonAttributes {
 
 
 	private static Population buildPopulationFromAttributes(String attributesFile) {
-		
+
 		Config config = ConfigUtils.createConfig();
 		config.plans().setInputPersonAttributeFile(attributesFile);
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
@@ -104,9 +104,9 @@ public class ConvertPersonAttributes {
 				Person person = popFac.createPerson(personId);
 				population.addPerson(person);
 		}
-		
+
 		return population;
-		
+
 	}
 
 }
