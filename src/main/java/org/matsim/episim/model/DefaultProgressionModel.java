@@ -1,5 +1,7 @@
 package org.matsim.episim.model;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
@@ -12,7 +14,8 @@ import java.util.Random;
  */
 public final class DefaultProgressionModel implements ProgressionModel {
 
-    private final Random rnd;
+	private static final Logger log = LogManager.getLogger(ProgressionModel.class);
+	private final Random rnd;
     private final EpisimConfigGroup episimConfig;
 
     public DefaultProgressionModel(Random rnd, EpisimConfigGroup episimConfig) {
@@ -62,9 +65,8 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
                     }
                 } else if (person.daysSinceInfection(day) == 10) {
-                    if (rnd.nextDouble() < 0.045) {
-                        // (4.5% get seriously sick.  This is taken from all infected persons, not just those the have shown
-                        // symptoms before)
+                	double proba = getAgeDependantProbaOfTransitioningToSeriouslySick(person , now);
+                	if (rnd.nextDouble() < proba) {
                         person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
                     }
                 } else if (person.daysSinceInfection(day) >= 16) {
@@ -73,8 +75,8 @@ public final class DefaultProgressionModel implements ProgressionModel {
                 break;
             case seriouslySick:
                 if (person.daysSinceInfection(day) == 11) {
-                    if (rnd.nextDouble() < 0.25) {
-                        // (25% of persons who are seriously sick transition to critical)
+                    double proba = getAgeDependantProbaOfTransitioningToCritical(person, now);
+                	if (rnd.nextDouble() < proba) {
                         person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.critical );
                     }
                 } else if (person.daysSinceInfection(day) >= 23) {
@@ -101,7 +103,83 @@ public final class DefaultProgressionModel implements ProgressionModel {
     }
 
 
-    @Override
+    private double getAgeDependantProbaOfTransitioningToSeriouslySick(EpisimPerson person, double now) {
+		
+    	double proba = -1;
+    	
+    	if (person.getAttributes().getAsMap().containsKey("age")) {
+    		int age = (int) person.getAttributes().getAttribute("age");
+    		
+    		if (age < 20) {
+    			proba = 0.004;
+    		}
+    		else if (age < 45) {
+    			proba = 0.031;
+    		}
+    		else if (age < 55) {
+    			proba = 0.043;
+    		}
+    		else if (age < 65) {
+    			proba = 0.044;
+    		}
+    		else if (age < 75) {
+    			proba = 0.063;
+    		}
+    		else if (age < 85) {
+    			proba = 0.078;
+    		}
+    		else {
+    			proba = 0.089;
+    		}	
+			
+		}
+		else {
+//			log.warn("Person=" + person.getPersonId().toString() + " has no age. Transition to seriusly sick is not age dependent.");
+			proba = 0.045;
+		}
+    	
+    	return proba;	
+	}
+    
+    private double getAgeDependantProbaOfTransitioningToCritical(EpisimPerson person, double now) {
+		
+    	double proba = -1;
+    	
+    	if (person.getAttributes().getAsMap().containsKey("age")) {
+    		int age = (int) person.getAttributes().getAttribute("age");
+    		
+    		if (age < 20) {
+    			proba = 0.;
+    		}
+    		else if (age < 45) {
+    			proba = 0.182;
+    		}
+    		else if (age < 55) {
+    			proba = 0.328;
+    		}
+    		else if (age < 65) {
+    			proba = 0.323;
+    		}
+    		else if (age < 75) {
+    			proba = 0.384;
+    		}
+    		else if (age < 85) {
+    			proba = 0.479;
+    		}
+    		else {
+    			proba = 0.357;
+    		}	
+			
+		}
+		else {
+//			log.warn("Person=" + person.getPersonId().toString() + " has no age. Transition to critical is not age dependent.");
+			proba = 0.25;
+		}
+    	
+    	return proba;	
+	}
+
+	@Override
     public boolean canProgress(EpisimReporting.InfectionReport report) {
         return report.nTotalInfected > 0 || report.nInQuarantine > 0;
     }
