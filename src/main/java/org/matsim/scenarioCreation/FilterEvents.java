@@ -31,13 +31,15 @@ public class FilterEvents implements Callable<Integer> {
 
 	private static Logger log = LogManager.getLogger(FilterEvents.class);
 
-	@Parameters(paramLabel = "file", arity = "1", description = "Path to event file")
+	@Parameters(paramLabel = "file", arity = "1", description = "Path to event file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Deutschland/de_events.xml.gz")
+
 	private Path input;
 
-	@Option(names = "--ids", description = "Path to person ids to filter for.")
+	@Option(names = "--ids", description = "Path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Munich/mu_personIds.txt")
+
 	private Path personIds;
 
-	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFiltered.xml.gz")
+	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredMunich.xml.gz")
 	private Path output;
 
 	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file")

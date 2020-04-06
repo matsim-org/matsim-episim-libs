@@ -17,8 +17,10 @@
 
         <property name="severity" value="error"/>
 
+        <!-- This only fails if at least 4 spaces have been used somewhere -->
+        <!-- Generally, this allows to still use the "smart tabs" feature for certain code alignments -->
         <module name="RegexpSinglelineJava">
-            <property name="format" value="^\t* "/>
+            <property name="format" value="^\t* {4,}"/>
             <property name="message" value="Indent must use tab characters"/>
             <property name="ignoreComments" value="true"/>
         </module>
