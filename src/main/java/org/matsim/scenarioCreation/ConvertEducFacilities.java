@@ -50,6 +50,11 @@ import com.google.common.collect.Multimap;
  * facility.
  *
  * @author rewert
+ *
+ * TODO: delete?
+ * we have {@link FilterEducFacilitiesForCertainArea} now,
+ * which does the aggregation and
+ * {@link SchoolPopulationDestinationChoiceAndIntegration} which does destination choice for the population
  */
 
 public class ConvertEducFacilities {
