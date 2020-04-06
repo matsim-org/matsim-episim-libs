@@ -5,6 +5,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.facilities.Facility;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
@@ -16,9 +17,15 @@ public class EpisimTestUtils {
     private static final AtomicLong ID = new AtomicLong(0);
     private static final EventsManager manager = Mockito.mock(EventsManager.class);
 
-    public static Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
-    public static Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
+    public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
+    public static final Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
 
+	/**
+	 * Reset the person id counter.
+	 */
+	public static void resetIds() {
+    	ID.set(0);
+	}
 
     /**
      * Creates test config with some default interactions.
@@ -58,7 +65,7 @@ public class EpisimTestUtils {
      * Create a person and add to container.
      */
     public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), manager);
+        EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()),new Attributes(), manager);
         p.getTrajectory().add(currentAct);
 
         if (container != null) {

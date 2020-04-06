@@ -10,7 +10,7 @@ import java.util.Random;
 /**
  * Default progression model with deterministic (but random) state transitions at fixed days.
  */
-public class DefaultProgressionModel implements ProgressionModel {
+public final class DefaultProgressionModel implements ProgressionModel {
 
     private final Random rnd;
     private final EpisimConfigGroup episimConfig;
@@ -36,6 +36,8 @@ public class DefaultProgressionModel implements ProgressionModel {
                     final double nextDouble = rnd.nextDouble();
                     if (nextDouble < 0.2) {
                         // 20% recognize that they are sick and go into quarantine:
+
+                        // Diamond Princess study: (only) 18% show no symptoms.
 
                         person.setQuarantineDate(day);
                         // yyyy date needs to be qualified by status (or better, add iteration into quarantine status setter)

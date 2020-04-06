@@ -17,17 +17,13 @@ echo "***"
 echo "classpath: $classpath"
 echo "***"
 
-# java command
-java_command="java -Djava.awt.headless=true -Xmx12G -cp $classpath"
-
 # main
 main="org.matsim.run.RunFromConfig"
 
 # arguments
 arguments="config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
 
-# command
-command="$java_command $main $arguments"
+command="java -cp $classpath @jvm.options $main $arguments"
 
 echo ""
 echo "command is $command"

@@ -35,7 +35,6 @@ import java.util.Arrays;
 /**
  * @author smueller
  */
-
 public class RunEpisimSnz {
 
     public static void main(String[] args) throws IOException {
@@ -43,19 +42,21 @@ public class RunEpisimSnz {
         OutputDirectoryLogging.catchLogEntries();
 
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+        config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
+        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/original-data/snzDrt220a.0.events.reduced.xml.gz");
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
         episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.000005);
+        episimConfig.setCalibrationParameter(0.0000012);
+        //episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
 
-        int closingIteration = 10;
+        int closingIteration = 1000;
 
         addParams(episimConfig);
 
-        episimConfig.getOrAddContainerParams("pt").setContactIntensity(10.);
+        setContactIntensities(episimConfig);
 
         episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
                 .shutdown(closingIteration, DEFAULT_ACTIVITIES)
@@ -69,9 +70,26 @@ public class RunEpisimSnz {
 
         RunEpisim.runSimulation(config, 150);
     }
-    
+
+        static void setContactIntensities(EpisimConfigGroup episimConfig) {
+		episimConfig.getOrAddContainerParams("pt")
+        	.setContactIntensity(10.0);
+        episimConfig.getOrAddContainerParams("tr")
+        	.setContactIntensity(10.0);
+        episimConfig.getOrAddContainerParams("leisure")
+        	.setContactIntensity(5.0);
+        episimConfig.getOrAddContainerParams("educ_kiga")
+	        .setContactIntensity(10.0);
+        episimConfig.getOrAddContainerParams("educ_primary")
+	        .setContactIntensity(4.0);
+        episimConfig.getOrAddContainerParams("educ_secondary")
+	        .setContactIntensity(2.0);
+        episimConfig.getOrAddContainerParams("home")
+	        .setContactIntensity(3.0);
+	}
+
     public static void addParams(EpisimConfigGroup episimConfig) {
-    	
+
     	episimConfig.addContainerParams(new InfectionParams("pt", "tr"));
         // regular out-of-home acts:
     	episimConfig.addContainerParams(new InfectionParams("work"));
@@ -83,12 +101,12 @@ public class RunEpisimSnz {
     	episimConfig.addContainerParams(new InfectionParams("shopping"));
     	episimConfig.addContainerParams(new InfectionParams("errands"));
         episimConfig.addContainerParams(new InfectionParams("business"));
-        
+
         episimConfig.addContainerParams(new InfectionParams("home"));
-    	
+
     }
-    
-    private static final String[] DEFAULT_ACTIVITIES = {
+
+    static final String[] DEFAULT_ACTIVITIES = {
             "pt", "work", "leisure", "educ_kiga","educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
     };
 

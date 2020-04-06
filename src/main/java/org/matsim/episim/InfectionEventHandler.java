@@ -3,7 +3,8 @@ package org.matsim.episim;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.NotImplementedException;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.*;
@@ -17,18 +18,14 @@ import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
-import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.episim.model.DefaultInfectionModel;
-import org.matsim.episim.model.DefaultProgressionModel;
-import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.*;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.Facility;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
-import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 /**
@@ -50,7 +47,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
     //  additional events.  Those would need to be prepared for the "reduced" files.  kai, mar'20
 
 
-    private static final Logger log = Logger.getLogger(InfectionEventHandler.class);
+    private static final Logger log = LogManager.getLogger(InfectionEventHandler.class);
 
     private final Map<Id<Person>, EpisimPerson> personMap = new LinkedHashMap<>();
     private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new LinkedHashMap<>();
@@ -76,14 +73,15 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
      */
     private final InfectionModel infectionModel;
 
+    /**
+     * Scenario with population information.
+     */
+    private final Scenario scenario;
+
     private final EpisimConfigGroup episimConfig;
     private final EventsManager eventsManager;
     private final EpisimReporting reporting;
     private final Random rnd = new Random(1);
-
-    @Nullable
-    @Inject
-    private Scenario scenario;
 
     private int cnt = 10;
     private int iteration = 0;
@@ -94,14 +92,36 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
     private EpisimReporting.InfectionReport report;
 
     @Inject
-    public InfectionEventHandler( Config config, EventsManager eventsManager ) {
+    public InfectionEventHandler(Config config, Scenario scenario, EventsManager eventsManager) {
         this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+        this.scenario = scenario;
         this.eventsManager = eventsManager;
         this.policy = episimConfig.createPolicyInstance();
         this.restrictions = episimConfig.createInitialRestrictions();
         this.reporting = new EpisimReporting(config);
         this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
-        this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting, eventsManager );
+        this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting,
+                episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+    }
+
+    /**
+     * Whether {@code event} should be handled.
+     *
+     * @param actType activity type
+     */
+    public static boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
+        // ignore drt and stage activities
+        return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
+                && !TripStructureUtils.isStageActivityType(actType);
+    }
+
+    /**
+     * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
+     */
+    public static boolean shouldHandlePersonEvent(HasPersonId event) {
+        // ignore pt drivers and drt
+        String id = event.getPersonId().toString();
+        return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
     }
 
     /**
@@ -126,7 +146,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
             return;
         }
 
-        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), personId -> new EpisimPerson( personId, eventsManager ) );
+        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), this::createPerson);
         Id<Facility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
         if (iteration == 0) {
@@ -136,7 +156,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
             }
             infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
             episimFacility.removePerson(episimPerson.getPersonId());
-            handleInitialInfections( now, episimPerson );
+            // has moved to reset
+//            handleInitialInfections( now, episimPerson );
         } else {
             EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
             if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
@@ -161,7 +182,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         }
 
         // find the person:
-        EpisimPerson episimPerson = this.personMap.computeIfAbsent(entersVehicleEvent.getPersonId(), personId -> new EpisimPerson( personId, eventsManager ) );
+        EpisimPerson episimPerson = this.personMap.computeIfAbsent(entersVehicleEvent.getPersonId(), this::createPerson);
 
         // find the vehicle:
         EpisimVehicle episimVehicle = this.vehicleMap.computeIfAbsent(entersVehicleEvent.getVehicleId(), EpisimVehicle::new);
@@ -199,7 +220,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         }
 
         // find the person:
-        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityStartEvent.getPersonId(), personId -> new EpisimPerson( personId, eventsManager ) );
+        EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityStartEvent.getPersonId(), this::createPerson);
 
         // create pseudo facility id that includes the activity type:
         Id<Facility> episimFacilityId = createEpisimFacilityId(activityStartEvent);
@@ -217,23 +238,20 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
     }
 
     /**
-     * Whether {@code event} should be handled.
-     *
-     * @param actType activity type
+     * Create a new person and lookup attributes from scenario.
      */
-    public static boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
-        // ignore drt and stage activities
-        return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
-                && !TripStructureUtils.isStageActivityType(actType);
-    }
+    private EpisimPerson createPerson(Id<Person> id) {
 
-    /**
-     * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
-     */
-    public static boolean shouldHandlePersonEvent(HasPersonId event) {
-        // ignore pt drivers and drt
-        String id = event.getPersonId().toString();
-        return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
+        Person person = scenario.getPopulation().getPersons().get(id);
+        Attributes attrs;
+        if (person != null) {
+            attrs = person.getAttributes();
+        } else {
+            // TODO: should warn here, but would produce too many messages the moment
+            attrs = new Attributes();
+        }
+
+        return new EpisimPerson(id, attrs, eventsManager);
     }
 
     private Id<Facility> createEpisimFacilityId(HasFacilityId event) {
@@ -267,20 +285,37 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         person.addToTrajectory(trajectoryElement);
     }
 
-    private void handleInitialInfections( double now, EpisimPerson personWrapper ) {
-        // initial infections:
-        if (cnt > 0) {
-            personWrapper.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.infectedButNotContagious );
-            personWrapper.setInfectionDate(iteration);
-            log.warn(" person " + personWrapper.getPersonId() + " has initial infection");
-            cnt--;
-            if (scenario != null) {
-                final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
-                if (person != null) {
-                    person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
-                }
-            }
+//    private void handleInitialInfections( double now, EpisimPerson personWrapper ) {
+//        // initial infections:
+//        if (cnt > 0) {
+//            personWrapper.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.infectedButNotContagious );
+//            personWrapper.setInfectionDate(iteration);
+//            log.warn(" person " + personWrapper.getPersonId() + " has initial infection");
+//            cnt--;
+//            if (scenario != null) {
+//                final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
+//                if (person != null) {
+//                    person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
+//                }
+//            }
+//        }
+//    }
+
+    private void handleInitialInfections() {
+        if (this.iteration != 1) {
+            return;
         }
+        Object[] personArray = this.personMap.values().toArray();
+        do {
+            EpisimPerson randomPerson = (EpisimPerson) personArray[rnd.nextInt(personArray.length)];
+            if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
+                randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+                randomPerson.setInfectionDate(0);
+                log.warn(" person " + randomPerson.getPersonId() + " has initial infection");
+                cnt--;
+            }
+
+        } while (cnt > 0);
     }
 
 
@@ -294,6 +329,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         }
 
         this.iteration = iteration;
+
+        handleInitialInfections();
+
         this.report = reporting.createReport(personMap, iteration);
 
         reporting.reporting(report, iteration);
@@ -329,6 +367,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         }
     }
 
+    public Collection<EpisimPerson> getPersons() {
+        // I have nothing against given out the map if someone needs it, but as long as nobody needs it, we can as well give out this partial view and thus
+        // keep implemention options open.  kai, mar'20
+        return Collections.unmodifiableCollection(personMap.values());
+    }
+
     public static final class EpisimVehicle extends EpisimContainer<Vehicle> {
         EpisimVehicle(Id<Vehicle> vehicleId) {
             super(vehicleId);
@@ -339,12 +383,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
         EpisimFacility(Id<Facility> facilityId) {
             super(facilityId);
         }
-    }
-
-    public Collection<EpisimPerson> getPersons() {
-        // I have nothing against given out the map if someone needs it, but as long as nobody needs it, we can as well give out this partial view and thus
-        // keep implemention options open.  kai, mar'20
-        return Collections.unmodifiableCollection( personMap.values() );
     }
 }
 
