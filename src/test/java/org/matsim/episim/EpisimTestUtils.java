@@ -20,6 +20,12 @@ public class EpisimTestUtils {
     public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
     public static final Consumer<EpisimPerson> QUARANTINED = person -> person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full);
 
+	/**
+	 * Reset the person id counter.
+	 */
+	public static void resetIds() {
+    	ID.set(0);
+	}
 
     /**
      * Creates test config with some default interactions.
