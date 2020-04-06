@@ -22,12 +22,13 @@ package org.matsim.scenarioCreation;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Identifiable;
 import org.matsim.facilities.ActivityFacility;
 
 import java.util.HashSet;
 import java.util.Set;
 
-class EducFacility {
+class EducFacility implements Identifiable {
 	private Id<EducFacility> id;
 	private Coord coord;
 	private boolean isEducKiga;
@@ -45,10 +46,6 @@ class EducFacility {
 		this.setEducKiga(isEducKiga);
 		this.setEducPrimary(isEducPrimary);
 		this.setEducSecondary(isEducSecondary);
-	}
-
-	Id<EducFacility> getId() {
-		return id;
 	}
 
 	void setId(Id<EducFacility> id) {
@@ -91,5 +88,10 @@ class EducFacility {
 
 	boolean addContainedEducFacility(Id<EducFacility> educFacilityId){
 		return this.containedFacilities.add(educFacilityId);
+	}
+
+	@Override
+	public Id getId() {
+		return id;
 	}
 }
