@@ -14,6 +14,7 @@ import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.FacilitiesWriter;
 import org.matsim.facilities.MatsimFacilitiesReader;
+import org.matsim.scenarioCreation.FilterHandler;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
@@ -90,9 +91,9 @@ public class DownSampleScenario implements Callable<Integer> {
                 IOUtils.getOutputStream(IOUtils.getFileUrl(output.resolve("events" + sampleSize + ".xml.gz").toString()), false)
         );
 
-        log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.getCounter(), handler.events.size() / handler.getCounter());
+        log.info("Filtered {} out of {} events = {}%", handler.getEvents().size(), handler.getCounter(), handler.getEvents().size() / handler.getCounter());
 
-        handler.events.forEach(writer::handleEvent);
+        handler.getEvents().forEach(writer::handleEvent);
         writer.closeFile();
 
         if (!Files.exists(facilities)) {
@@ -109,7 +110,7 @@ public class DownSampleScenario implements Callable<Integer> {
         int n = facilities.getFacilities().size();
 
         Set<Id<ActivityFacility>> toRemove = facilities.getFacilities().keySet()
-                .stream().filter(k -> !handler.facilities.contains(k)).collect(Collectors.toSet());
+                .stream().filter(k -> !handler.getFacilities().contains(k)).collect(Collectors.toSet());
 
         toRemove.forEach(k -> facilities.getFacilities().remove(k));
 

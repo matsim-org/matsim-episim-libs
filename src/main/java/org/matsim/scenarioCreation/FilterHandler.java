@@ -1,4 +1,4 @@
-package org.matsim.prepare;
+package org.matsim.scenarioCreation;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.*;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  * Filters events needed for the {@link InfectionEventHandler}.
  * Either by population or personIds list.
  */
-class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
+public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
 
 	final Population population;
 	final Set<Id<Person>> personIds;
@@ -35,7 +35,7 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 
 	private int counter = 0;
 
-	FilterHandler(@Nullable Population population, @Nullable Set<String> personIds) {
+	public FilterHandler(@Nullable Population population, @Nullable Set<String> personIds) {
 		this.population = population;
 		this.personIds = personIds != null ? personIds.stream().map(Id::createPersonId).collect(Collectors.toSet()) : null;
 	}
@@ -100,5 +100,14 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 
 	public int getCounter() {
 		return counter;
+	}
+
+
+	public List<Event> getEvents() {
+		return events;
+	}
+
+	public Set<Id<ActivityFacility>> getFacilities() {
+		return facilities;
 	}
 }
