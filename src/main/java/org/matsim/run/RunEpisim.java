@@ -130,7 +130,7 @@ public class RunEpisim {
 
         // save some time for not needed inputs
         // only network might be relevant
-        config.plans().setInputFile(null);
+//        config.plans().setInputFile(null);
         config.facilities().setInputFile(null);
         config.vehicles().setVehiclesFile(null);
 
