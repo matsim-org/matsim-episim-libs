@@ -37,6 +37,7 @@ import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileReader;
+import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 import org.opengis.feature.simple.SimpleFeature;
 
@@ -152,7 +153,10 @@ public class FilterEducFacilitiesForCertainArea {
 		log.info("Find near facilities and connect them...");
 		log.info("Amount facilities (input): " + educListNewArea.size());
 
+		Counter counter = new Counter("aggregate status - dealing facility nr =  ");
+
 		for (EducFacility educFacility1 : educListNewArea) {
+			counter.incCounter();
 			boolean iskiga = educFacility1.isEducKiga();
 			boolean isPrimary = educFacility1.isEducPrimary();
 			boolean isSecondary = educFacility1.isEducSecondary();
