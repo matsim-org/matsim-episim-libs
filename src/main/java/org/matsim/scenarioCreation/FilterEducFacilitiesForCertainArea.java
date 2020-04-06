@@ -41,10 +41,9 @@ import org.matsim.facilities.ActivityFacility;
 import org.opengis.feature.simple.SimpleFeature;
 
 /**
- * This class filters all educFacilities for a certain area. If necessary a
- * coordinate transformation is possible. It is also possible to aggregate
- * facilities having a distance of less than 100 meters between each other, so
- * that they are used as one facility. The shapefile can have different geometries.
+ * This class filters all educational facilities for a certain area and transforms coordinates, if necessary.
+ * It is also possible to aggregate facilities having a distance of less than 100 meters between each other, so
+ * that they are used as one facility.
  *
  * @author rewert
  */
@@ -106,7 +105,7 @@ public class FilterEducFacilitiesForCertainArea {
 
 			String[] parts = line.split("\t");
 
-			Id<ActivityFacility> id = Id.create(parts[0], ActivityFacility.class);
+			Id<EducFacility> id = Id.create(parts[0], EducFacility.class);
 
 			double x = Double.parseDouble(parts[1]);
 			double y = Double.parseDouble(parts[2]);
@@ -158,12 +157,12 @@ public class FilterEducFacilitiesForCertainArea {
 			boolean isPrimary = educFacility1.isEducPrimary();
 			boolean isSecondary = educFacility1.isEducSecondary();
 			String facilityId = educFacility1.getId().toString();
-			if (facilitiesNotToCheck.contains(facilityId) == false) {
+			if ( ! facilitiesNotToCheck.contains(facilityId)) {
 				facilitiesNotToCheck.add(facilityId);
 				Coord facilityCoord = educFacility1.getCoord();
 				for (EducFacility educFacility2 : educListNewArea) {
 					String facilityId2 = educFacility2.getId().toString();
-					if (facilitiesNotToCheck.contains(facilityId2) == false) {
+					if ( ! facilitiesNotToCheck.contains(facilityId2)) {
 						Coord facilityCoord2 = educFacility2.getCoord();
 						double distance = CoordUtils.calcProjectedEuclideanDistance(facilityCoord, facilityCoord2);
 						if (distance < 100) {
@@ -177,15 +176,17 @@ public class FilterEducFacilitiesForCertainArea {
 								if (isSecondary || educFacility2.isEducSecondary())
 									isSecondary = true;
 								facilitiesNotToCheck.add(facilityId2);
+								educFacility1.addContainedEducFacility(educFacility2.getId());
 								numberOfConections++;
 							}
 						}
 					}
 				}
 
-				EducFacility educFacility = new EducFacility(educFacility1.getId(), CoordUtils.createCoord(educFacility1.getCoord().getX(),	educFacility1.getCoord().getY()),
-						iskiga, isPrimary, isSecondary);
-				educListNewAreaForOutput.add(educFacility);
+				educFacility1.setEducKiga(iskiga);
+				educFacility1.setEducPrimary(isPrimary);
+				educFacility1.setEducSecondary(isSecondary);
+				educListNewAreaForOutput.add(educFacility1);
 			}
 		}
 

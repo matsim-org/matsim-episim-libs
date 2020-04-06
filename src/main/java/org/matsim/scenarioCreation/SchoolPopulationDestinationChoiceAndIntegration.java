@@ -104,7 +104,7 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 			String[] parts = line.split("\t");
 
-			Id<ActivityFacility> id = Id.create(parts[0], ActivityFacility.class);
+			Id<EducFacility> id = Id.create(parts[0], EducFacility.class);
 			double x = Double.parseDouble(parts[1]);
 			double y = Double.parseDouble(parts[2]);
 

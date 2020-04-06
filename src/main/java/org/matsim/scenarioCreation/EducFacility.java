@@ -24,15 +24,21 @@ import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.facilities.ActivityFacility;
 
+import java.util.HashSet;
+import java.util.Set;
+
 class EducFacility {
-	private Id<ActivityFacility> id;
+	private Id<EducFacility> id;
 	private Coord coord;
 	private boolean isEducKiga;
 	private boolean isEducPrimary;
 	private boolean isEducSecondary;
 	private double noOfPupils = 0;
 
-	EducFacility(Id<ActivityFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary,
+	//contains id s of other EducFacilities which are deleted in the process of aggregation
+	private Set<Id<EducFacility>> containedFacilities = new HashSet<>();
+
+	EducFacility(Id<EducFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary,
 				 boolean isEducSecondary) {
 		this.setId(id);
 		this.setCoord(coord);
@@ -41,11 +47,11 @@ class EducFacility {
 		this.setEducSecondary(isEducSecondary);
 	}
 
-	Id<ActivityFacility> getId() {
+	Id<EducFacility> getId() {
 		return id;
 	}
 
-	void setId(Id<ActivityFacility> id) {
+	void setId(Id<EducFacility> id) {
 		this.id = id;
 	}
 
@@ -81,4 +87,9 @@ class EducFacility {
 		this.coord = coord;
 	}
 
+	Set<Id<EducFacility>> getContainedFacilities() {return containedFacilities;}
+
+	boolean addContainedEducFacility(Id<EducFacility> educFacilityId){
+		return this.containedFacilities.add(educFacilityId);
+	}
 }
