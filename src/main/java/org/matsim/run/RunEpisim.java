@@ -42,8 +42,11 @@ public class RunEpisim {
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
         config.network().setInputFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5-network.xml.gz");
-        //  episimConfig.setInputEventsFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_wo_linkEnterLeave.xml.gz");
-        episimConfig.setInputEventsFile("../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz");
+
+        String episimEvents_1pct = "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct-schools/output-berlin-v5.4-1pct-schools/berlin-v5.4-1pct-schools.output_events_for_episim.xml.gz";
+        String episimEvents_10pct = "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct-schools/output-berlin-v5.4-10pct-schools/berlin-v5.4-10pct-schools.output_events_for_episim.xml.gz";
+
+        episimConfig.setInputEventsFile(episimEvents_1pct);
 
         episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
         episimConfig.setSampleSize(0.01);
@@ -127,7 +130,7 @@ public class RunEpisim {
 
         // save some time for not needed inputs
         // only network might be relevant
-        config.plans().setInputFile(null);
+//        config.plans().setInputFile(null);
         config.facilities().setInputFile(null);
         config.vehicles().setVehiclesFile(null);
 

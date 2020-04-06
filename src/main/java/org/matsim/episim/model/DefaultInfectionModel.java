@@ -7,6 +7,8 @@ import org.matsim.episim.*;
 import java.util.ArrayList;
 import java.util.Random;
 
+import static org.matsim.episim.EpisimPerson.*;
+
 /**
  * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
  * <pre>
@@ -45,10 +47,14 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
             return;
         }
 
-        if (trackingEnabled && !personRelevantForTracking(personLeavingContainer, container))
+//        if (trackingEnabled && !personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd ))
+//            return;
+//        else if (!trackingEnabled && !personRelevantForInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd ))
+//            return;
+
+        if ( !personRelevantForTrackingOrInfectionDynamics( personLeavingContainer, container, episimConfig, getRestrictions(), rnd ) ) {
             return;
-        else if (!trackingEnabled && !personRelevantForInfectionDynamics(personLeavingContainer, container))
-            return;
+        }
 
         ArrayList<EpisimPerson> otherPersonsInContainer = new ArrayList<>(container.getPersons());
         otherPersonsInContainer.remove(personLeavingContainer);
@@ -68,13 +74,31 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
             EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
             // If tracking is not enabled, the loop can continue earlier
-            if (trackingEnabled && !personRelevantForTracking(contactPerson, container)){
-                continue;
-            } else if (!trackingEnabled &&
-                    (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus() ||
-                                     !personRelevantForInfectionDynamics(contactPerson, container))) {
+//            if (trackingEnabled && !personRelevantForTrackingOrInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd )){
+//                continue;
+//            } else if (!trackingEnabled &&
+//                    (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus() ||
+//                                     !personRelevantForTrackingOrInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd ))) {
+//                continue;
+//            }
+
+            if ( !personRelevantForTrackingOrInfectionDynamics( contactPerson, container, episimConfig, getRestrictions(), rnd ) ) {
                 continue;
             }
+
+            // we have thrown the random numbers, so we can bail out in some cases if we are not tracking:
+            if ( !trackingEnabled ) {
+                if ( personLeavingContainer.getDiseaseStatus()== DiseaseStatus.infectedButNotContagious ) {
+                    continue;
+                }
+                if ( contactPerson.getDiseaseStatus()== DiseaseStatus.infectedButNotContagious ) {
+                    continue;
+                }
+                if ( personLeavingContainer.getDiseaseStatus()==contactPerson.getDiseaseStatus() ) {
+                    continue;
+                }
+            }
+
             // yyyy I don't like these separate if conditions for tracking vs without.  Too large danger that we get something wrong there.  kai, apr'20
 
             // yyyyyy I do not understand why the execution path has to be different for with tracking vs. without tracking.  Could you please explain?
@@ -106,7 +130,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
                 }
             }
 
-            if (!EpisimUtils.canPersonsInfectEachOther(personLeavingContainer, contactPerson)) {
+            if (!AbstractInfectionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson )) {
                 continue;
             }
 
@@ -145,7 +169,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
             // no effect.  kai, mar'20
 
             if (rnd.nextDouble() < infectionProba) {
-                if (personLeavingContainer.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
+                if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
                     infectPerson(personLeavingContainer, contactPerson, now, infectionType);
                     //TODO the fact that we return here creates a bug concerning tracking. we would need to draw the remaining number of contact persons before return. or have a separate boolean leavingPersonGotInfected
                     return;
