@@ -48,12 +48,12 @@ import com.google.common.collect.Multimap;
  * 100m between each other, because the input data has information about every
  * building and one school can have different buildings, but we want them as one
  * facility.
- * 
+ *
  * @author rewert
  */
 
 public class ConvertEducFacilities {
-	static final Logger log = Logger.getLogger(AnalyzeU14Population.class);
+	static final Logger log = Logger.getLogger(ConvertEducFacilities.class);
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathOfEduFacilities = workingDir + "educFacilities.txt";

@@ -45,13 +45,13 @@ import org.opengis.feature.simple.SimpleFeature;
  * coordinate transformation is possible. It is also possible to aggregate
  * facilities having a distance of less than 100 meters between each other, so
  * that they are used as one facility. The shapefile can have different geometries.
- * 
+ *
  * @author rewert
  */
 
 public class FilterEducFacilitisForCertainArea {
 
-	static final Logger log = Logger.getLogger(AnalyzeU14Population.class);
+	static final Logger log = Logger.getLogger(FilterEducFacilitisForCertainArea.class);
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/";
 	private static final String pathOfEduFacilitiesGER = workingDir + "snz/Deutschland/de_facilities.education.xy";

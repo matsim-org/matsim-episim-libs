@@ -15,7 +15,7 @@ import com.google.common.collect.Multimap;
 
 public class findEducSecondaryFacilities {
 
-	static final Logger log = Logger.getLogger(AnalyzeU14Population.class);
+	static final Logger log = Logger.getLogger(findEducSecondaryFacilities.class);
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathOfUsedPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo.xml.gz";

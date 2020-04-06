@@ -38,7 +38,7 @@ import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 /**
  * Loads person attributes file and population file of snz scenario and adds persons to population if they only occur in attributes file.
  * Then copies all attributes from attributes file to population.
-* @author smueller, tschlenther
+* @author smueller
 */
 
 public class ConvertPersonAttributes {
