@@ -85,8 +85,8 @@ public class FilterEducFacilitiesForCertainArea {
 		}
 		if(! coordToTransform){
 			//transform back into UTM32N
-			TransformationFactory.getCoordinateTransformation(TransformationFactory.DHDN_GK4, "EPSG:25832");
-			educListNewAreaForOutput.forEach(educFacility -> educFacility.setCoord(transformation.transform(educFacility.getCoord())));
+			CoordinateTransformation transformationBack = TransformationFactory.getCoordinateTransformation(TransformationFactory.DHDN_GK4, "EPSG:25832");
+			educListNewAreaForOutput.forEach(educFacility -> educFacility.setCoord(transformationBack.transform(educFacility.getCoord())));
 		}
 
 		writeOutputFile();
