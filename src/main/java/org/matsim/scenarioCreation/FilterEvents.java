@@ -35,6 +35,9 @@ public class FilterEvents implements Callable<Integer> {
 	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFiltered.xml.gz")
 	private Path output;
 
+	@Option(names = "--facilities", description = "Path to aggregated facilities file")
+	private Path facilities;
+
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new FilterEvents()).execute(args));
@@ -64,6 +67,8 @@ public class FilterEvents implements Callable<Integer> {
 
 
 		EventsManager manager = EventsUtils.createEventsManager();
+
+
 
 		FilterHandler handler = new FilterHandler(null, filterIds);
 		manager.addHandler(handler);

@@ -83,7 +83,7 @@ public class DownSampleScenario implements Callable<Integer> {
 
         EventsManager manager = EventsUtils.createEventsManager();
 
-        FilterHandler handler = new FilterHandler(population, null);
+        FilterHandler handler = new FilterHandler(population, null, null);
         manager.addHandler(handler);
         EventsUtils.readEvents(manager, events.toString());
 
