@@ -203,20 +203,24 @@ public class FilterEducFacilitiesForCertainArea {
 		file = new File(outputEducFileDir);
 		try {
 			writer = new FileWriter(file, true);
-			writer.write("id\tx\ty\teduc_kiga\teduc_primary\teduc_secondary\n");
+			writer.write("id\tx\ty\teduc_kiga\teduc_primary\teduc_secondary\tmergedFacilityIds\n");
 			for (EducFacility educFacility : educListNewAreaForOutput) {
 				int isKiga = 0;
 				int isPrimary = 0;
 				int isSecondary = 0;
+				String mergedFacilites = "";
 				if (educFacility.isEducKiga())
 					isKiga = 1;
 				if (educFacility.isEducPrimary())
 					isPrimary = 1;
 				if (educFacility.isEducSecondary())
 					isSecondary = 1;
+				for(Id<EducFacility> otherFac : educFacility.getContainedFacilities()){
+					mergedFacilites += otherFac.toString() + ";";
+				}
 				writer.write(educFacility.getId() + "\t" + educFacility.getCoord().getX() + "\t"
 						+ educFacility.getCoord().getY() + "\t" + isKiga + "\t" + isPrimary + "\t" + isSecondary
-						+ "\n");
+						+ "\t" + mergedFacilites + "\n");
 			}
 			writer.flush();
 			writer.close();
