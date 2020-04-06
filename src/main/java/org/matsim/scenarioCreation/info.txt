@@ -1,5 +1,7 @@
 process to create a snz scenario
 
+(0.) extract adult id set from adult population - only necessary for Berlin scenario
+
 1. filter germany events by adult id set
 2. filter and aggregate germany facilities (by shape file, currenty done by vsp)
 3. change facilities in events such that only remaining facilities (see step 2) are visited
@@ -9,3 +11,4 @@ process to create a snz scenario
 6. simulate school population and create events
     needs
 7. merge events of school population simulation (step 7) and adults simulation (step 3)
+8. create episim input events (using DownSampleScenario.java)
