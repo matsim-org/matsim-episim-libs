@@ -49,9 +49,9 @@ import org.opengis.feature.simple.SimpleFeature;
  * @author rewert
  */
 
-public class FilterEducFacilitisForCertainArea {
+public class FilterEducFacilitiesForCertainArea {
 
-	static final Logger log = Logger.getLogger(FilterEducFacilitisForCertainArea.class);
+	static final Logger log = Logger.getLogger(FilterEducFacilitiesForCertainArea.class);
 
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/";
 	private static final String pathOfEduFacilitiesGER = workingDir + "snz/Deutschland/de_facilities.education.xy";

@@ -13,6 +13,11 @@ import org.matsim.core.population.PopulationUtils;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.Multimap;
 
+
+/**
+ *
+ * TODO: delete
+ */
 public class findEducSecondaryFacilities {
 
 	static final Logger log = Logger.getLogger(findEducSecondaryFacilities.class);

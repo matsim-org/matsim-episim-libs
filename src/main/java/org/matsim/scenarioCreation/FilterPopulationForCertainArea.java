@@ -40,6 +40,9 @@ import org.opengis.feature.simple.SimpleFeature;
 /**
  * Filters the population file of complete Germany only for the persons in Berlin.
 * @author rewert
+ *
+ *
+ * TODO : delete
 */
 public class FilterPopulationForCertainArea {
 
