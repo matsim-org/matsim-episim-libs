@@ -42,7 +42,7 @@ import java.util.stream.Collectors;
  *
  * 	input: 	(1) population containing school population for germany  (snz scenario u14 population)
  * 			(2) population containing adult population for use case (snz scenario o14 population for bln, munich, heinsberg)
- * 			(3) attribute name for the matching of households.
+ * 			(3) attribute name for the facility id representing the home facility
  * 			(4) sample size ratio (input children sample size / input adult sample size)
  * 	output:  population containing school population for use case in the same sample size as the adults are
  *
@@ -61,7 +61,7 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 	private static final double SAMPLE_SIZE_RATIO = 0.25d;
 
 	//name of the attribute in children population that is supposed to match facility id of parent
-	private static final String CHILDREN_HOME_FAC_ATTRIBUTE_NAME = "homeId";
+	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
 
 	public static void main(String[] args) {
@@ -75,17 +75,22 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		Set<Id<ActivityFacility>> allHomeActFacilities = new HashSet<>();
 
 		for (Person adult : adults.getPersons().values()) {
-			Set<Id<ActivityFacility>> personsHomeActFacilities = adult.getSelectedPlan().getPlanElements().stream()
-					.filter(e -> e instanceof Activity)
-					.filter(act -> ((Activity) act).getType().startsWith("home"))
-					.map(home -> ((Activity) home).getFacilityId())
-					.collect(Collectors.toSet());
+			Object homeAttribute = adult.getAttributes().getAttribute(HOME_FACILITY_ATTRIBUTE_NAME);
+			if(homeAttribute != null){
+				allHomeActFacilities.add(Id.create( (String) homeAttribute, ActivityFacility.class) );
+			} else {
+				Set<Id<ActivityFacility>> personsHomeActFacilities = adult.getSelectedPlan().getPlanElements().stream()
+						.filter(e -> e instanceof Activity)
+						.filter(act -> ((Activity) act).getType().startsWith("home"))
+						.map(home -> ((Activity) home).getFacilityId())
+						.collect(Collectors.toSet());
 
-			if (personsHomeActFacilities.size() != 1){
-				throw new IllegalStateException("person " + adult + " has invalid number of home facilities (" + personsHomeActFacilities.size() + ")");
+				if (personsHomeActFacilities.size() != 1){
+					throw new IllegalStateException("person " + adult + " has invalid number of home facilities (" + personsHomeActFacilities.size() + ")");
+				}
+				allHomeActFacilities.addAll(personsHomeActFacilities);
 			}
 
-			allHomeActFacilities.addAll(personsHomeActFacilities);
 		}
 
 		log.info("number of home facilities in adults file = " + allHomeActFacilities.size());
@@ -94,8 +99,8 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		List<Person> childrenToDelete = new ArrayList<>();
 		for (Person child : children.getPersons().values()) {
 
-			Object attribute = child.getAttributes().getAttribute(CHILDREN_HOME_FAC_ATTRIBUTE_NAME);
-			if(attribute == null) throw new IllegalStateException("child " + child + " has no attribute " + CHILDREN_HOME_FAC_ATTRIBUTE_NAME);
+			Object attribute = child.getAttributes().getAttribute(HOME_FACILITY_ATTRIBUTE_NAME);
+			if(attribute == null) throw new IllegalStateException("child " + child + " has no attribute " + HOME_FACILITY_ATTRIBUTE_NAME);
 
 			Id<ActivityFacility> facilityId = Id.create((String) attribute, ActivityFacility.class);
 			if(!allHomeActFacilities.contains(facilityId)){
