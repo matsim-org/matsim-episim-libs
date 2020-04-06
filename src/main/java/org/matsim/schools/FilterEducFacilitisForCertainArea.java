@@ -129,7 +129,7 @@ public class FilterEducFacilitisForCertainArea {
 				isEducSecondary = true;
 			}
 
-			EducFacility educFacility = new EducFacility(id, x, y, isEducKiga, isEducPrimary, isEducSecondary);
+			EducFacility educFacility = new EducFacility(id, CoordUtils.createCoord(x, y), isEducKiga, isEducPrimary, isEducSecondary);
 
 			if (coordToTransform == true)
 				educFacility.setCoord(coordTransformation(educFacility.getCoord()));
@@ -183,8 +183,8 @@ public class FilterEducFacilitisForCertainArea {
 					}
 				}
 
-				EducFacility educFacility = new EducFacility(educFacility1.getId(), educFacility1.getCoord().getX(),
-						educFacility1.getCoord().getY(), iskiga, isPrimary, isSecondary);
+				EducFacility educFacility = new EducFacility(educFacility1.getId(), CoordUtils.createCoord(educFacility1.getCoord().getX(),	educFacility1.getCoord().getY()),
+						iskiga, isPrimary, isSecondary);
 				educListNewAreaForOutput.add(educFacility);
 			}
 		}
@@ -207,11 +207,11 @@ public class FilterEducFacilitisForCertainArea {
 				int isKiga = 0;
 				int isPrimary = 0;
 				int isSecondary = 0;
-				if (educFacility.isEducKiga)
+				if (educFacility.isEducKiga())
 					isKiga = 1;
-				if (educFacility.isEducPrimary)
+				if (educFacility.isEducPrimary())
 					isPrimary = 1;
-				if (educFacility.isEducSecondary)
+				if (educFacility.isEducSecondary())
 					isSecondary = 1;
 				writer.write(educFacility.getId() + "\t" + educFacility.getCoord().getX() + "\t"
 						+ educFacility.getCoord().getY() + "\t" + isKiga + "\t" + isPrimary + "\t" + isSecondary
@@ -223,65 +223,6 @@ public class FilterEducFacilitisForCertainArea {
 			e.printStackTrace();
 		}
 		log.info("Wrote result file under " + outputEducFileDir);
-	}
-
-	private static class EducFacility {
-		private Id<ActivityFacility> id;
-		private Coord coord;
-		private boolean isEducKiga;
-		private boolean isEducPrimary;
-		private boolean isEducSecondary;
-		private double noOfPupils = 0;
-
-		EducFacility(Id<ActivityFacility> id, double x, double y, boolean isEducKiga, boolean isEducPrimary,
-				boolean isEducSecondary) {
-			this.setId(id);
-			this.setCoord(CoordUtils.createCoord(x, y));
-			this.setEducKiga(isEducKiga);
-			this.setEducPrimary(isEducPrimary);
-			this.setEducSecondary(isEducSecondary);
-		}
-
-		public Id<ActivityFacility> getId() {
-			return id;
-		}
-
-		public void setId(Id<ActivityFacility> id) {
-			this.id = id;
-		}
-
-		public boolean isEducKiga() {
-			return isEducKiga;
-		}
-
-		public void setEducKiga(boolean isEducKiga) {
-			this.isEducKiga = isEducKiga;
-		}
-
-		public boolean isEducPrimary() {
-			return isEducPrimary;
-		}
-
-		public void setEducPrimary(boolean isEducPrimary) {
-			this.isEducPrimary = isEducPrimary;
-		}
-
-		public boolean isEducSecondary() {
-			return isEducSecondary;
-		}
-
-		public void setEducSecondary(boolean isEducSecondary) {
-			this.isEducSecondary = isEducSecondary;
-		}
-
-		public Coord getCoord() {
-			return coord;
-		}
-
-		public void setCoord(Coord coord) {
-			this.coord = coord;
-		}
-
 	}
 
 }

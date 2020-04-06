@@ -16,6 +16,13 @@ script:
   # Tests won't produce output immediately
   - travis_wait 30 mvn -Dtest=${TEST} test --batch-mode -Dmatsim.preferLocalDtds=true -Dmaven.javadoc.skip -e
 
+# TODO: Add when everything was converted
+#jobs:
+#  include:
+#    - stage: checkstyle
+#      env: TEST=none
+#      script: mvn checkstyle:check
+
 cache:
   directories:
   - $HOME/.m2

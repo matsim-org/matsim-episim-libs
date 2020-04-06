@@ -42,9 +42,10 @@ public class RunEpisimSnz {
         OutputDirectoryLogging.catchLogEntries();
 
         Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+        config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
         EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/snzDrt220a.0.events.reduced.xml.gz");
+        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/original-data/snzDrt220a.0.events.reduced.xml.gz");
         episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
         episimConfig.setSampleSize(0.25);
@@ -86,9 +87,9 @@ public class RunEpisimSnz {
         episimConfig.getOrAddContainerParams("home")
 	        .setContactIntensity(3.0);
 	}
-    
+
     public static void addParams(EpisimConfigGroup episimConfig) {
-    	
+
     	episimConfig.addContainerParams(new InfectionParams("pt", "tr"));
         // regular out-of-home acts:
     	episimConfig.addContainerParams(new InfectionParams("work"));
@@ -100,11 +101,11 @@ public class RunEpisimSnz {
     	episimConfig.addContainerParams(new InfectionParams("shopping"));
     	episimConfig.addContainerParams(new InfectionParams("errands"));
         episimConfig.addContainerParams(new InfectionParams("business"));
-        
+
         episimConfig.addContainerParams(new InfectionParams("home"));
-    	
+
     }
-    
+
     static final String[] DEFAULT_ACTIVITIES = {
             "pt", "work", "leisure", "educ_kiga","educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
     };

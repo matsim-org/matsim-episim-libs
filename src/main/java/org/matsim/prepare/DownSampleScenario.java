@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import static picocli.CommandLine.*;
 
 @Command(
+		name = "downSample",
         description = "Down sample scenario and extract information for episim.",
         mixinStandardHelpOptions = true
 )
