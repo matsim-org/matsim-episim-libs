@@ -20,13 +20,82 @@
 
 package org.matsim.scenarioCreation;
 
+import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Identifiable;
+import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.facilities.ActivityFacility;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
+
+
+class EducFacilities {
+
+	private static Logger log = Logger.getLogger(EducFacilities.class);
+
+	static Set<EducFacility> readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
+		log.info("Start to read educFacilities file " + educFacilitiesFile);
+
+		Set<EducFacility> educFacilities = new HashSet<>();
+		BufferedReader reader = new BufferedReader(new FileReader(educFacilitiesFile));
+		int ii = -1;
+
+		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
+
+			ii++;
+
+			if (ii == 0) {
+				continue;
+			}
+
+			String[] parts = line.split("\t");
+
+			Id<EducFacility> id = Id.create(parts[0], EducFacility.class);
+			double x = Double.parseDouble(parts[1]);
+			double y = Double.parseDouble(parts[2]);
+
+			String educKiga = parts[3];
+			boolean isEducKiga = false;
+			if (!educKiga.equals("0")) {
+				isEducKiga = true;
+			}
+
+			String educPrimary = parts[4];
+			boolean isEducPrimary = false;
+			if (!educPrimary.equals("0.0")) {
+				isEducPrimary = true;
+			}
+
+			String educSecondary = parts[5];
+			boolean isEducSecondary = false;
+			if (!educSecondary.equals("0.0")) {
+				isEducSecondary = true;
+			}
+
+			Coord coord = CoordUtils.createCoord(x, y);
+
+			if(transformation != null){
+				coord = transformation.transform(coord);
+			}
+
+			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
+
+			educFacilities.add(educFacility);
+		}
+		reader.close();
+
+		log.info("Done with reading...");
+		log.info("number of EducFacilities = " + educFacilities.size());
+		return educFacilities;
+	}
+
+}
 
 class EducFacility implements Identifiable {
 	private Id<EducFacility> id;

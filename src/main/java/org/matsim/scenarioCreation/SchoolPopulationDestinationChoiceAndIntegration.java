@@ -76,7 +76,7 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 	public static void run(Population schoolPopulation, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
 		log.info("start reading school facilities");
-		readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
+		EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
 		log.info("start building school plans");
 		buildSchoolPlans(schoolPopulation);
 
@@ -86,59 +86,6 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 		schoolPopulation.getPersons().values().forEach(person -> originalPopulation.addPerson(person));
 
 		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
-	}
-
-	private static void readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
-
-		BufferedReader reader = new BufferedReader(new FileReader(educFacilitiesFile));
-
-		int ii = -1;
-
-		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-
-			ii++;
-
-			if (ii == 0) {
-				continue;
-			}
-
-			String[] parts = line.split("\t");
-
-			Id<EducFacility> id = Id.create(parts[0], EducFacility.class);
-			double x = Double.parseDouble(parts[1]);
-			double y = Double.parseDouble(parts[2]);
-
-			String educKiga = parts[3];
-			boolean isEducKiga = false;
-			if (!educKiga.equals("0")) {
-				isEducKiga = true;
-			}
-
-			String educPrimary = parts[4];
-			boolean isEducPrimary = false;
-			if (!educPrimary.equals("0.0")) {
-				isEducPrimary = true;
-			}
-
-			String educSecondary = parts[5];
-			boolean isEducSecondary = false;
-			if (!educSecondary.equals("0.0")) {
-				isEducSecondary = true;
-			}
-
-			Coord coord = CoordUtils.createCoord(x, y);
-
-			if(transformation != null){
-				coord = transformation.transform(coord);
-			}
-
-			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
-
-			educList.add(educFacility);
-		}
-
-		reader.close();
-
 	}
 
 	private static void buildSchoolPlans(Population schoolPopulation) {

@@ -34,6 +34,7 @@ import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileReader;
@@ -53,9 +54,9 @@ public class FilterEducFacilitiesForCertainArea {
 
 	static final Logger log = Logger.getLogger(FilterEducFacilitiesForCertainArea.class);
 
-	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/";
+	private static final String workingDir = "../../svn/shared-svn/projects/episim/matsim-files/";
 	private static final String pathOfEduFacilitiesGER = workingDir + "snz/Deutschland/de_facilities.education.xy";
-	private static final String ShapeFile = "../shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";;
+	private static final String ShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";;
 	private static final String outputEducFileDir = workingDir + "open_berlin/input/educFacilities.txt";
 	private static List<EducFacility> educList = new ArrayList<>();
 	private static List<EducFacility> educListNewArea = new ArrayList<>();
@@ -65,7 +66,13 @@ public class FilterEducFacilitiesForCertainArea {
 
 		boolean coordToTransform = true;
 		boolean aggregateFacilities = true;
-		readEducFacilityFile(coordToTransform);
+
+		CoordinateTransformation transformation = null;
+		if(coordToTransform){
+			TransformationFactory.getCoordinateTransformation("EPSG:25832", TransformationFactory.DHDN_GK4);
+		}
+
+		EducFacilities.readEducFacilites(pathOfEduFacilitiesGER, transformation);
 
 		Collection<SimpleFeature> shapefileCertainArea = ShapeFileReader.getAllFeatures(ShapeFile);
 
@@ -86,64 +93,6 @@ public class FilterEducFacilitiesForCertainArea {
 				educListNewArea.add(educFacility);
 		}
 
-	}
-
-	private static void readEducFacilityFile(boolean coordToTransform) throws IOException {
-
-		log.info("Read inputfile...");
-
-		BufferedReader reader = new BufferedReader(new FileReader(pathOfEduFacilitiesGER));
-
-		int ii = -1;
-
-		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-
-			ii++;
-
-			if (ii == 0) {
-				continue;
-			}
-
-			String[] parts = line.split("\t");
-
-			Id<EducFacility> id = Id.create(parts[0], EducFacility.class);
-
-			double x = Double.parseDouble(parts[1]);
-			double y = Double.parseDouble(parts[2]);
-
-			String educKiga = parts[7];
-			boolean isEducKiga = false;
-			if (!educKiga.equals("0.0")) {
-				isEducKiga = true;
-			}
-
-			String educPrimary = parts[8];
-			boolean isEducPrimary = false;
-			if (!educPrimary.equals("0.0")) {
-				isEducPrimary = true;
-			}
-
-			String educSecondary = parts[9];
-			boolean isEducSecondary = false;
-			if (!educSecondary.equals("0.0")) {
-				isEducSecondary = true;
-			}
-
-			EducFacility educFacility = new EducFacility(id, CoordUtils.createCoord(x, y), isEducKiga, isEducPrimary, isEducSecondary);
-
-			if (coordToTransform == true)
-				educFacility.setCoord(coordTransformation(educFacility.getCoord()));
-			educList.add(educFacility);
-		}
-		reader.close();
-		log.info("Read input-Facilities: " + educList.size());
-
-	}
-
-	private static Coord coordTransformation(Coord coord) {
-
-		return TransformationFactory.getCoordinateTransformation("EPSG:25832", TransformationFactory.DHDN_GK4)
-				.transform(coord);
 	}
 
 	private static void findNearFacilitiesWithSameType() {
