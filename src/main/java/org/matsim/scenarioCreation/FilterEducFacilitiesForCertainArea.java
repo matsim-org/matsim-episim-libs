@@ -56,32 +56,39 @@ public class FilterEducFacilitiesForCertainArea {
 
 	private static final String workingDir = "../../svn/shared-svn/projects/episim/matsim-files/";
 	private static final String pathOfEduFacilitiesGER = workingDir + "snz/Deutschland/de_facilities.education.xy";
-	private static final String ShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";;
-	private static final String outputEducFileDir = workingDir + "open_berlin/input/educFacilities.txt";
+	private static final String ShapeFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
+	private static final String outputEducFileDir = workingDir + "snz/Berlin/processed-data/be_snz_educationFacilities.txt";
 	private static List<EducFacility> educList = new ArrayList<>();
 	private static List<EducFacility> educListNewArea = new ArrayList<>();
 	private static List<EducFacility> educListNewAreaForOutput = new ArrayList<>();
 
 	public static void main(String[] args) throws IOException {
 
-		boolean coordToTransform = true;
+		//input shape is GK4, input facilities are in UTM32. This flag determines if the result will be in GK4 (true) or on in UTM32N
+		//TODO clarify
+		boolean coordToTransform = false;
 		boolean aggregateFacilities = true;
 
-		CoordinateTransformation transformation = null;
-		if(coordToTransform){
-			TransformationFactory.getCoordinateTransformation("EPSG:25832", TransformationFactory.DHDN_GK4);
-		}
+		CoordinateTransformation transformation = TransformationFactory.getCoordinateTransformation("EPSG:25832", TransformationFactory.DHDN_GK4);
 
-		EducFacilities.readEducFacilites(pathOfEduFacilitiesGER, transformation);
+		educList.addAll(EducFacilities.readEducFacilites(pathOfEduFacilitiesGER, transformation));
 
 		Collection<SimpleFeature> shapefileCertainArea = ShapeFileReader.getAllFeatures(ShapeFile);
 
 		educList.forEach((educFacility) -> filterEducFacilitiesForCertainArea(educFacility, shapefileCertainArea));
 		log.info("Found facilities in certain area: " + educListNewArea.size());
-		if (aggregateFacilities)
+		if (aggregateFacilities) {
 			findNearFacilitiesWithSameType();
-		else
+		}
+		else {
 			educListNewAreaForOutput.addAll(educListNewArea);
+		}
+		if(! coordToTransform){
+			//transform back into UTM32N
+			TransformationFactory.getCoordinateTransformation(TransformationFactory.DHDN_GK4, "EPSG:25832");
+			educListNewAreaForOutput.forEach(educFacility -> educFacility.setCoord(transformation.transform(educFacility.getCoord())));
+		}
+
 		writeOutputFile();
 	}
 
