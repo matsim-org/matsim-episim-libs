@@ -1,0 +1,11 @@
+process to create a snz scenario
+
+1. filter germany events by adult id set
+2. filter and aggregate germany facilities (by shape file, currenty done by vsp)
+3. change facilities in events such that only remaining facilities (see step 2) are visited
+4. filter germany school population (containing no plans) such that only children remain that have home id's which are also referenced by remaining adults
+    (looking up events file from step 3), then sample down to same sample size as adults
+5. build plans for school population
+6. simulate school population and create events
+    needs
+7. merge events of school population simulation (step 7) and adults simulation (step 3)
