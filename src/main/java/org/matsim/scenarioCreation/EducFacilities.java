@@ -86,6 +86,17 @@ class EducFacilities {
 
 			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
 
+			if(parts.length >= 7){
+				if(! parts[6].equals("")) {
+					String[] containedFacilities;
+					containedFacilities = parts[6].split(";");
+					for (String containedFacility : containedFacilities) {
+						educFacility.addContainedEducFacility(Id.create(containedFacility, EducFacility.class));
+					}
+				}
+
+			}
+
 			educFacilities.add(educFacility);
 		}
 		reader.close();
