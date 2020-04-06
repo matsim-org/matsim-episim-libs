@@ -60,6 +60,13 @@ public abstract class AbstractInfectionModel implements InfectionModel {
             throw new IllegalStateException("Person and infector are not in same container!");
         }
 
+		// TODO: during iteration persons can get infected after 24h
+		// this can lead to strange effects / ordering of events, because it is assumed one iteration is one day
+		// now is overwritten to be at the end of day
+		if (now >= EpisimUtils.getCorrectedTime(24 * 60 * 60, iteration)) {
+			now = EpisimUtils.getCorrectedTime( 24 * 60 * 60 - 1, iteration);
+		}
+
         personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
         // TODO: Currently not in use, is it still needed?

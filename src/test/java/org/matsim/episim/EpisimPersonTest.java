@@ -25,5 +25,10 @@ public class EpisimPersonTest {
         assertThat(p.daysSince(EpisimPerson.DiseaseStatus.critical, 4))
                 .isEqualTo(1);
 
+        now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, 4);
+        p.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
+        assertThat(p.daysSince(EpisimPerson.DiseaseStatus.recovered, 4))
+				.isEqualTo(0);
+
     }
 }

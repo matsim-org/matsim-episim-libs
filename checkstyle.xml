@@ -136,6 +136,7 @@
             <property name="fileMaximum" value="1000"/>
         </module>
         <module name="CyclomaticComplexity">
+            <property name="switchBlockAsSingleDecisionPoint" value="true"/>
             <property name="max" value="20"/>
         </module>
         <module name="NPathComplexity">
