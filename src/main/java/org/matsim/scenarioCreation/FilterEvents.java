@@ -40,7 +40,7 @@ public class FilterEvents implements Callable<Integer> {
 	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFiltered.xml.gz")
 	private Path output;
 
-	@Option(names = "--facilities", description = "Path to aggregated facilities file")
+	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file")
 	private Path facilities;
 
 
