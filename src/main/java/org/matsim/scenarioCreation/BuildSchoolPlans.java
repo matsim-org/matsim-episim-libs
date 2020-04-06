@@ -21,8 +21,6 @@
 
 package org.matsim.scenarioCreation;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,17 +49,15 @@ import org.matsim.facilities.ActivityFacility;
 * @author smueller, tschlenther
 */
 
-public class SchoolPopulationDestinationChoiceAndIntegration {
+public class BuildSchoolPlans {
 
-	private static final Logger log = Logger.getLogger(SchoolPopulationDestinationChoiceAndIntegration.class);
+	private static final Logger log = Logger.getLogger(BuildSchoolPlans.class);
 
 	private static final String inputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
 
 	private static final String inputFacilitiesFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_educFacilities_optimated.txt";
 
-	private static final String originalPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
-
-	private static final String outputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_snz_plans_25pct.xml.gz";
+	private static final String outputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_u14population_schoolPlans.xml.gz";
 
 	private final static Random rnd = new Random(1);
 
@@ -71,24 +67,18 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
 
-		run(schoolPopulation, originalPopulationFile, inputFacilitiesFile, null,  outputPopulationFile);
+		buildSchoolPlans(schoolPopulation, inputFacilitiesFile, null);
+		PopulationUtils.writePopulation(schoolPopulation, outputPopulationFile);
 	}
 
-	public static void run(Population schoolPopulation, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
+	public static void buildSchoolPlans(Population schoolPopulation, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer) throws IOException {
 		log.info("start reading school facilities");
-		EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
+		educList.addAll(EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer));
 		log.info("start building school plans");
-		buildSchoolPlans(schoolPopulation);
-
-		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
-
-		log.info("start integrating school population into original population");
-		schoolPopulation.getPersons().values().forEach(person -> originalPopulation.addPerson(person));
-
-		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
+		process(schoolPopulation);
 	}
 
-	private static void buildSchoolPlans(Population schoolPopulation) {
+	private static void process(Population schoolPopulation) {
 
 		PopulationFactory pf = schoolPopulation.getFactory();
 

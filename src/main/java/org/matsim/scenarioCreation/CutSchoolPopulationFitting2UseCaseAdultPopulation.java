@@ -46,7 +46,7 @@ import java.util.stream.Collectors;
  * 			(4) sample size ratio (input children sample size / input adult sample size)
  * 	output:  population containing school population for use case in the same sample size as the adults are
  *
- * 	Next step in the process would be to run {@code SchoolPopulationDestinationChoiceAndIntegration} which
+ * 	Next step in the process would be to run {@code BuildSchoolPlans} which
  * 	builds home-school-home plans for the children and integrates them into the adult population.
  *
  * 	@author tschlenther
