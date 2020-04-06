@@ -65,6 +65,12 @@
         <module name="IllegalType">
             <property name="ignoredMethodNames" value="getInstance"/>
         </module>
+        
+        <module name="IllegalType">
+            <property name="illegalClassNames" value="org.apache.log4j.Logger,org.slf4j.Logger"/>
+            <message key="illegal.type" value="Use new Logging API: org.apache.logging.log4j.Logger / LogManager"/>
+        </module>
+        
         <module name="MultipleVariableDeclarations"/>
         <module name="NestedForDepth">
             <!-- Very high because some code violates it -->
