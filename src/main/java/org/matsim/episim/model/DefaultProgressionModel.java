@@ -56,23 +56,22 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
                     }
                 } else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 10) {
-                    if (rnd.nextDouble() < 0.045) {
-                        // (4.5% get seriously sick.  This is taken from all infected persons, not just those the have shown
-                        // symptoms before)
-                        person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.seriouslySick);
+                	double proba = getAgeDependantProbaOfTransitioningToSeriouslySick(person , now);
+                	if (rnd.nextDouble() < proba) {
+                        person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
                     }
                 } else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 16) {
-                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
+                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered );
                 }
                 break;
             case seriouslySick:
                 if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 11) {
-                    if (rnd.nextDouble() < 0.25) {
-                        // (25% of persons who are seriously sick transition to critical)
-                        person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.critical);
+                    double proba = getAgeDependantProbaOfTransitioningToCritical(person, now);
+                	if (rnd.nextDouble() < proba) {
+                        person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.critical );
                     }
                 } else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 23) {
-                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
+                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.recovered );
                 }
                 break;
             case critical:
@@ -80,7 +79,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
                     // (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
                     // they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
                     // hospital beds.)
-                    person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.seriouslySick);
+                    person.setDiseaseStatus( now, EpisimPerson.DiseaseStatus.seriouslySick );
                 }
                 break;
             case recovered:
@@ -96,7 +95,83 @@ public final class DefaultProgressionModel implements ProgressionModel {
     }
 
 
-    @Override
+    private double getAgeDependantProbaOfTransitioningToSeriouslySick(EpisimPerson person, double now) {
+
+    	double proba = -1;
+
+    	if (person.getAttributes().getAsMap().containsKey("age")) {
+    		int age = (int) person.getAttributes().getAttribute("age");
+
+    		if (age < 20) {
+    			proba = 0.004;
+    		}
+    		else if (age < 45) {
+    			proba = 0.031;
+    		}
+    		else if (age < 55) {
+    			proba = 0.043;
+    		}
+    		else if (age < 65) {
+    			proba = 0.044;
+    		}
+    		else if (age < 75) {
+    			proba = 0.063;
+    		}
+    		else if (age < 85) {
+    			proba = 0.078;
+    		}
+    		else {
+    			proba = 0.089;
+    		}
+
+		}
+		else {
+//			log.warn("Person=" + person.getPersonId().toString() + " has no age. Transition to seriusly sick is not age dependent.");
+			proba = 0.045;
+		}
+
+    	return proba;
+	}
+
+    private double getAgeDependantProbaOfTransitioningToCritical(EpisimPerson person, double now) {
+
+    	double proba = -1;
+
+    	if (person.getAttributes().getAsMap().containsKey("age")) {
+    		int age = (int) person.getAttributes().getAttribute("age");
+
+    		if (age < 20) {
+    			proba = 0.;
+    		}
+    		else if (age < 45) {
+    			proba = 0.182;
+    		}
+    		else if (age < 55) {
+    			proba = 0.328;
+    		}
+    		else if (age < 65) {
+    			proba = 0.323;
+    		}
+    		else if (age < 75) {
+    			proba = 0.384;
+    		}
+    		else if (age < 85) {
+    			proba = 0.479;
+    		}
+    		else {
+    			proba = 0.357;
+    		}
+
+		}
+		else {
+//			log.warn("Person=" + person.getPersonId().toString() + " has no age. Transition to critical is not age dependent.");
+			proba = 0.25;
+		}
+
+    	return proba;
+	}
+
+	@Override
     public boolean canProgress(EpisimReporting.InfectionReport report) {
         return report.nTotalInfected > 0 || report.nInQuarantine > 0;
     }

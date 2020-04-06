@@ -6,6 +6,7 @@ import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
 import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.facilities.ActivityFacility;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Filters events needed for the {@link InfectionEventHandler}.
@@ -23,7 +25,7 @@ import java.util.Set;
 class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
 
 	final Population population;
-	final Set<String> personIds;
+	final Set<Id<Person>> personIds;
 	final List<Event> events = new ArrayList<>();
 
 	/**
@@ -35,7 +37,7 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 
 	FilterHandler(@Nullable Population population, @Nullable Set<String> personIds) {
 		this.population = population;
-		this.personIds = personIds;
+		this.personIds = personIds != null ? personIds.stream().map(Id::createPersonId).collect(Collectors.toSet()) : null;
 	}
 
 	@Override
@@ -46,7 +48,7 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 			return;
 		if (population != null && !population.getPersons().containsKey(activityEndEvent.getPersonId()))
 			return;
-		if (personIds != null && !personIds.contains(activityEndEvent.getPersonId().toString()))
+		if (personIds != null && !personIds.contains(activityEndEvent.getPersonId()))
 			return;
 
 		facilities.add(activityEndEvent.getFacilityId());
@@ -61,7 +63,7 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 			return;
 		if (population != null && !population.getPersons().containsKey(activityStartEvent.getPersonId()))
 			return;
-		if (personIds != null && !personIds.contains(activityStartEvent.getPersonId().toString()))
+		if (personIds != null && !personIds.contains(activityStartEvent.getPersonId()))
 			return;
 
 		facilities.add(activityStartEvent.getFacilityId());
@@ -76,7 +78,7 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 			return;
 		if (population != null && !population.getPersons().containsKey(personEntersVehicleEvent.getPersonId()))
 			return;
-		if (personIds != null && !personIds.contains(personEntersVehicleEvent.getPersonId().toString()))
+		if (personIds != null && !personIds.contains(personEntersVehicleEvent.getPersonId()))
 			return;
 
 		events.add(personEntersVehicleEvent);
@@ -90,7 +92,7 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 			return;
 		if (population != null && !population.getPersons().containsKey(personLeavesVehicleEvent.getPersonId()))
 			return;
-		if (personIds != null && !personIds.contains(personLeavesVehicleEvent.toString()))
+		if (personIds != null && !personIds.contains(personLeavesVehicleEvent.getPersonId()))
 			return;
 
 		events.add(personLeavesVehicleEvent);
