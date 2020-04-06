@@ -1,4 +1,4 @@
-package org.matsim.schools;
+package org.matsim.scenarioCreation;
 
 import java.io.File;
 import java.io.FileWriter;

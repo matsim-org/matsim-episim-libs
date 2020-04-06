@@ -19,7 +19,7 @@
  * *********************************************************************** */
 
 
-package org.matsim.schools;
+package org.matsim.scenarioCreation;
 
 import java.net.URL;
 

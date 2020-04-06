@@ -18,11 +18,10 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.schools;
+package org.matsim.scenarioCreation;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.facilities.ActivityFacility;
 
 class EducFacility {

@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.schools.openBerlinScenario;
+package org.matsim.scenarioCreation.openBerlinScenario;
 
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;

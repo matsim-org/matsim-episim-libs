@@ -17,13 +17,13 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.schools.openBerlinScenario;
+package org.matsim.scenarioCreation.openBerlinScenario;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.io.PopulationWriter;
-import org.matsim.schools.SchoolPopulationDestinationChoiceAndIntegration;
+import org.matsim.scenarioCreation.SchoolPopulationDestinationChoiceAndIntegration;
 import playground.vsp.corineLandcover.CORINELandCoverCoordsModifier;
 import playground.vsp.openberlinscenario.cemdap.output.CemdapOutput2MatsimPlansConverter;
 

@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.schools;
+package org.matsim.scenarioCreation;
 
 import java.io.BufferedReader;
 import java.io.File;
