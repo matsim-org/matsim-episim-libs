@@ -168,7 +168,7 @@ public class FilterEducFacilitiesForCertainArea {
 					isPrimary = 1;
 				if (educFacility.isEducSecondary())
 					isSecondary = 1;
-				for(Id<EducFacility> otherFac : educFacility.getContainedFacilities()){
+				for(Id<ActivityFacility> otherFac : educFacility.getContainedFacilities()){
 					mergedFacilites += otherFac.toString() + ";";
 				}
 				writer.write(educFacility.getId() + "\t" + educFacility.getCoord().getX() + "\t"

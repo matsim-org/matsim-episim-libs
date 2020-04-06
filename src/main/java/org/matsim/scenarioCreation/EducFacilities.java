@@ -23,7 +23,6 @@ package org.matsim.scenarioCreation;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.Identifiable;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.facilities.ActivityFacility;
@@ -56,7 +55,7 @@ class EducFacilities {
 
 			String[] parts = line.split("\t");
 
-			Id<EducFacility> id = Id.create(parts[0], EducFacility.class);
+			Id<ActivityFacility> id = Id.create(parts[0], ActivityFacility.class);
 			double x = Double.parseDouble(parts[1]);
 			double y = Double.parseDouble(parts[2]);
 
@@ -91,7 +90,7 @@ class EducFacilities {
 					String[] containedFacilities;
 					containedFacilities = parts[6].split(";");
 					for (String containedFacility : containedFacilities) {
-						educFacility.addContainedEducFacility(Id.create(containedFacility, EducFacility.class));
+						educFacility.addContainedEducFacility(Id.create(containedFacility, ActivityFacility.class));
 					}
 				}
 
@@ -108,8 +107,8 @@ class EducFacilities {
 
 }
 
-class EducFacility implements Identifiable {
-	private Id<EducFacility> id;
+class EducFacility {
+	private Id<ActivityFacility> id;
 	private Coord coord;
 	private boolean isEducKiga;
 	private boolean isEducPrimary;
@@ -117,9 +116,9 @@ class EducFacility implements Identifiable {
 	private double noOfPupils = 0;
 
 	//contains id s of other EducFacilities which are deleted in the process of aggregation
-	private Set<Id<EducFacility>> containedFacilities = new HashSet<>();
+	private Set<Id<ActivityFacility>> containedFacilities = new HashSet<>();
 
-	EducFacility(Id<EducFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary,
+	EducFacility(Id<ActivityFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary,
 				 boolean isEducSecondary) {
 		this.setId(id);
 		this.setCoord(coord);
@@ -128,7 +127,7 @@ class EducFacility implements Identifiable {
 		this.setEducSecondary(isEducSecondary);
 	}
 
-	void setId(Id<EducFacility> id) {
+	void setId(Id<ActivityFacility> id) {
 		this.id = id;
 	}
 
@@ -164,14 +163,13 @@ class EducFacility implements Identifiable {
 		this.coord = coord;
 	}
 
-	Set<Id<EducFacility>> getContainedFacilities() {return containedFacilities;}
+	Set<Id<ActivityFacility>> getContainedFacilities() {return containedFacilities;}
 
-	boolean addContainedEducFacility(Id<EducFacility> educFacilityId){
+	boolean addContainedEducFacility(Id<ActivityFacility> educFacilityId){
 		return this.containedFacilities.add(educFacilityId);
 	}
 
-	@Override
-	public Id getId() {
+	public Id<ActivityFacility> getId() {
 		return id;
 	}
 }
