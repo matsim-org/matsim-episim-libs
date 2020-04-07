@@ -126,7 +126,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		} else {
 //			log.warn("Person=" + person.getPersonId().toString() + " has no age. Transition to seriusly sick is not age dependent.");
-			proba = 0.045;
+			proba = 0.05625;
 		}
 
 		return proba;
