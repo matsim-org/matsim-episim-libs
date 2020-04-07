@@ -40,22 +40,20 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						// 80% show symptoms and go into quarantine
 						// Diamond Princess study: (only) 18% show no symptoms.
 						person.setDiseaseStatus(now, DiseaseStatus.showingSymptoms);
-						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
-						// yyyy this should become "home"!  kai, mar'20
+						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
 						if (episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
 							for (EpisimPerson pw : person.getTraceableContactPersons()) {
 								if (pw.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) { //what if tracked person has recovered
 
-									pw.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
-									// yyyy this should become "home"!  kai, mar'20
+									pw.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
 								}
 							}
 						}
 
 					}
-				} 
+				}
 				else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 16) {
 					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
 				}
@@ -90,14 +88,15 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				}
 				break;
 			case recovered:
+				// one day after recovering person is released from quarantine
+				if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+					person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
+
 				break;
 			default:
 				throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 		}
-		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full && person.daysSinceQuarantine(day) >= 14) {
-			// TODO overwrites previous quarantine date, but this is not used at the moment
-			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
-		}
+
 		person.getTraceableContactPersons().clear(); //so we can only track contact persons over 1 day
 	}
 
