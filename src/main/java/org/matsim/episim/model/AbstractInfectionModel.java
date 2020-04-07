@@ -99,8 +99,9 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			case susceptible:
 			case contagious:
 				return true;
-
+			
 			case infectedButNotContagious:
+			case showingSymptoms: //assume is at home
 			case recovered:
 			case seriouslySick: // assume is in hospital
 			case critical:
