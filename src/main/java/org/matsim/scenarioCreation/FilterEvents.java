@@ -50,6 +50,17 @@ public class FilterEvents implements Callable<Integer> {
 		System.exit(new CommandLine(new FilterEvents()).execute(args));
 	}
 
+	private static Map<Id<ActivityFacility>, Id<ActivityFacility>> readAndMapMergedFacilities(String path) throws IOException {
+		Set<EducFacility> remainingFacilities = EducFacilities.readEducFacilites(path, null);
+		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements = new HashMap<>();
+		for (EducFacility remainingFacility : remainingFacilities) {
+			for (Id<ActivityFacility> containedFacility : remainingFacility.getContainedFacilities()) {
+				facilityReplacements.put(containedFacility, remainingFacility.getId());
+			}
+		}
+		return facilityReplacements;
+	}
+
 	@Override
 	public Integer call() throws Exception {
 
@@ -76,7 +87,7 @@ public class FilterEvents implements Callable<Integer> {
 		EventsManager manager = EventsUtils.createEventsManager();
 
 		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityreplacements = null;
-		if(Files.exists(facilities)){
+		if (Files.exists(facilities)) {
 			facilityreplacements = readAndMapMergedFacilities(facilities.toString());
 		}
 
@@ -94,17 +105,6 @@ public class FilterEvents implements Callable<Integer> {
 		writer.closeFile();
 
 		return 0;
-	}
-
-	private static Map<Id<ActivityFacility>, Id<ActivityFacility>> readAndMapMergedFacilities(String path) throws IOException {
-		Set<EducFacility> remainingFacilities = EducFacilities.readEducFacilites(path, null);
-		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements = new HashMap<>();
-		for (EducFacility remainingFacility : remainingFacilities) {
-			for (Id<ActivityFacility> containedFacility : remainingFacility.getContainedFacilities()) {
-				facilityReplacements.put(containedFacility, remainingFacility.getId());
-			}
-		}
-		return facilityReplacements;
 	}
 
 }

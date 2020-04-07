@@ -9,15 +9,15 @@ import org.matsim.episim.EpisimReporting;
  */
 public interface ProgressionModel {
 
-    /**
-     * Called at the start of the day to update the state of a person.
-     */
-    void updateState(EpisimPerson person, int day);
+	/**
+	 * Called at the start of the day to update the state of a person.
+	 */
+	void updateState(EpisimPerson person, int day);
 
-    /**
-     * Checks whether any state transitions are possible. Otherwise the simulation will end.
-     */
-    boolean canProgress(EpisimReporting.InfectionReport report);
+	/**
+	 * Checks whether any state transitions are possible. Otherwise the simulation will end.
+	 */
+	boolean canProgress(EpisimReporting.InfectionReport report);
 
 
 }

@@ -21,21 +21,10 @@
 
 package org.matsim.scenarioCreation;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.stream.Collectors;
-
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.population.Activity;
-import org.matsim.api.core.v01.population.Leg;
-import org.matsim.api.core.v01.population.Person;
-import org.matsim.api.core.v01.population.Plan;
-import org.matsim.api.core.v01.population.Population;
-import org.matsim.api.core.v01.population.PopulationFactory;
+import org.matsim.api.core.v01.population.*;
 import org.matsim.contrib.util.PartialSort;
 import org.matsim.contrib.util.distance.DistanceUtils;
 import org.matsim.core.population.PopulationUtils;
@@ -44,10 +33,17 @@ import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.stream.Collectors;
+
 /**
  * This class creates plans for the school population of a scenario and integrates them into the existing adult population
-* @author smueller, tschlenther
-*/
+ *
+ * @author smueller, tschlenther
+ */
 
 public class BuildSchoolPlans {
 
@@ -99,7 +95,7 @@ public class BuildSchoolPlans {
 			Activity homeAct1 = pf.createActivityFromCoord("home", homeCoord);
 			plan.addActivity(homeAct1);
 
-			if(person.getAttributes().getAttribute("homeId") != null){
+			if (person.getAttributes().getAttribute("homeId") != null) {
 				String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
 				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
 				homeAct1.setFacilityId(homeFacilityId);
@@ -118,7 +114,7 @@ public class BuildSchoolPlans {
 			if (age > 1 && age <= 5) {
 				listToSearchIn = kigasList;
 				eduActType = "educ_kiga";
-			} else	if (age > 5 && age <= 12) {
+			} else if (age > 5 && age <= 12) {
 				listToSearchIn = primaryList;
 				eduActType = "educ_primary";
 			} else {
@@ -137,8 +133,8 @@ public class BuildSchoolPlans {
 			//have to calc distance again :(
 			double distance = CoordUtils.calcEuclideanDistance(facility.getCoord(), homeCoord);
 
-			if(distance > 5000)
-			log.warn("assigned a " + eduActType + " facility with distance " + distance + " to person " + person);
+			if (distance > 5000)
+				log.warn("assigned a " + eduActType + " facility with distance " + distance + " to person " + person);
 
 			Leg leg = pf.createLeg(getLegMode(distance));
 			plan.addLeg(leg);
@@ -150,7 +146,7 @@ public class BuildSchoolPlans {
 
 			//if person had info about facilities, we also want to use the info in the activie
 			//i.e. this is the differentiation between snz and berlin. might be improved later
-			if (person.getAttributes().getAttribute("homeId") != null){
+			if (person.getAttributes().getAttribute("homeId") != null) {
 				eduAct.setFacilityId(facility.getId());
 			}
 
@@ -159,7 +155,7 @@ public class BuildSchoolPlans {
 			Activity homeAct2 = pf.createActivityFromCoord("home", homeCoord);
 			plan.addActivity(homeAct2);
 
-			if(person.getAttributes().getAttribute("homeId") != null){
+			if (person.getAttributes().getAttribute("homeId") != null) {
 				String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
 				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
 			}
@@ -177,11 +173,9 @@ public class BuildSchoolPlans {
 
 		if (distance < 1000) {
 			return "walk";
-		}
-		else if(rnd.nextDouble() < 0.8) {
+		} else if (rnd.nextDouble() < 0.8) {
 			return "pt";
-		}
-		else {
+		} else {
 			return "ride";
 		}
 

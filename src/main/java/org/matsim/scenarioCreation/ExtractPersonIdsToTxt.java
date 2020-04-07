@@ -28,15 +28,13 @@ import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
 
 import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
  * This class writes all personIds from a population file into a .txt, one id per line.
  * In this project, we need this for the use case of Berlin-Snz (as a step 'backwards') in order to have a consistent scenarioCreation process over all use cases.
  * Furthermore, in the given Berlin population file, people use multiple educ_secondary facilities which we want to aggregate and merge.
- *
+ * <p>
  * The id list is later taken as the basis for events filtering.
  */
 public class ExtractPersonIdsToTxt {
@@ -44,7 +42,7 @@ public class ExtractPersonIdsToTxt {
 	private static final String INPUT_POPULATION = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
 	private static final String OUTPUT_ID_TXT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_idList.txt";
 
-	public static void main(String[] args)  {
+	public static void main(String[] args) {
 
 		Population population = PopulationUtils.readPopulation(INPUT_POPULATION);
 
@@ -52,17 +50,17 @@ public class ExtractPersonIdsToTxt {
 
 		boolean firstLine = true;
 
-			try {
-				for(Id<Person> id : population.getPersons().keySet()) {
-					if(!firstLine) writer.newLine();
-					firstLine = false;
-					writer.write(id.toString());
-				}
-				writer.flush();
-				writer.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+		try {
+			for (Id<Person> id : population.getPersons().keySet()) {
+				if (!firstLine) writer.newLine();
+				firstLine = false;
+				writer.write(id.toString());
 			}
+			writer.flush();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 }

@@ -21,8 +21,6 @@
 
 package org.matsim.scenarioCreation;
 
-import java.net.URL;
-
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
@@ -35,18 +33,21 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
 
+import java.net.URL;
+
 /**
  * Loads person attributes file and population file of snz scenario and adds persons to population if they only occur in attributes file.
  * Then copies all attributes from attributes file to population.
-* @author smueller
-*/
+ *
+ * @author smueller
+ */
 
 public class ConvertPersonAttributes {
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathToOriginalPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo.xml.gz";
-//	private static final String pathToOriginalAttributes = workingDir + "optimizedPersonAttributes.xml.gz";
+	//	private static final String pathToOriginalAttributes = workingDir + "optimizedPersonAttributes.xml.gz";
 	private static final String pathToOriginalAttributes = workingDir + "de_populationAttributes.xml.gz";
-//	private static final String pathOutputPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo_withAttributes.xml.gz";
+	//	private static final String pathOutputPopulation = workingDir + "optimizedPopulation_withoutNetworkInfo_withAttributes.xml.gz";
 	private static final String pathOutputPopulation = workingDir + "de_population_fromPopulationAttributes.xml.gz";
 
 	public static void main(String[] args) {
@@ -71,7 +72,6 @@ public class ConvertPersonAttributes {
 	}
 
 
-
 	private static void includeMissingAgentsIntoOrigPopulation(Population populationFromAttributes) {
 		Population population = PopulationUtils.readPopulation(pathToOriginalPopulation);
 		for (Person person : populationFromAttributes.getPersons().values()) {
@@ -81,7 +81,6 @@ public class ConvertPersonAttributes {
 		}
 		PopulationUtils.writePopulation(population, pathOutputPopulation);
 	}
-
 
 
 	private static Population buildPopulationFromAttributes(String attributesFile) {
@@ -99,10 +98,10 @@ public class ConvertPersonAttributes {
 
 		for (String s : attributesAsString) {
 
-				String[] line = s.split(";");
-				Id<Person> personId = Id.createPersonId(line[0].split("=")[1]);
-				Person person = popFac.createPerson(personId);
-				population.addPerson(person);
+			String[] line = s.split(";");
+			Id<Person> personId = Id.createPersonId(line[0].split("=")[1]);
+			Person person = popFac.createPerson(personId);
+			population.addPerson(person);
 		}
 
 		return population;

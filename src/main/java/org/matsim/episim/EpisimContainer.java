@@ -12,66 +12,66 @@ import java.util.*;
  * @param <T> the type where the agents are located in, e.g {@link org.matsim.vehicles.Vehicle} or {@link org.matsim.facilities.Facility}.
  */
 public class EpisimContainer<T> {
-    private final Id<T> containerId;
+	private final Id<T> containerId;
 
-    /**
-     * Persons currently in this container.
-     */
-    private Map<Id<Person>, EpisimPerson> persons = new LinkedHashMap<>();
+	/**
+	 * Persons currently in this container.
+	 */
+	private Map<Id<Person>, EpisimPerson> persons = new LinkedHashMap<>();
 
-    /**
-     * Person list needed to draw random persons within container.
-     */
-    private List<EpisimPerson> personsAsList = new ArrayList<>();
+	/**
+	 * Person list needed to draw random persons within container.
+	 */
+	private List<EpisimPerson> personsAsList = new ArrayList<>();
 
-    private Map<Id<Person>, Double> containerEnterTimes = new LinkedHashMap<>();
+	private Map<Id<Person>, Double> containerEnterTimes = new LinkedHashMap<>();
 
-    EpisimContainer(Id<T> containerId) {
-        this.containerId = containerId;
-    }
+	EpisimContainer(Id<T> containerId) {
+		this.containerId = containerId;
+	}
 
-    void addPerson(EpisimPerson person, double now) {
-        if (persons.containsKey(person.getPersonId()))
-            throw new IllegalStateException("Person already contained in this container.");
+	void addPerson(EpisimPerson person, double now) {
+		if (persons.containsKey(person.getPersonId()))
+			throw new IllegalStateException("Person already contained in this container.");
 
-        persons.put(person.getPersonId(), person);
-        personsAsList.add(person);
-        containerEnterTimes.put(person.getPersonId(), now);
-        person.setCurrentContainer(this);
-    }
+		persons.put(person.getPersonId(), person);
+		personsAsList.add(person);
+		containerEnterTimes.put(person.getPersonId(), now);
+		person.setCurrentContainer(this);
+	}
 
-    /**
-     * @noinspection UnusedReturnValue
-     */
-    EpisimPerson removePerson(Id<Person> personId) {
-        containerEnterTimes.remove(personId);
-        EpisimPerson personWrapper = persons.remove(personId);
-        personWrapper.removeCurrentContainer(this);
-        boolean wasRemoved = personsAsList.remove(personWrapper);
-        Gbl.assertIf(wasRemoved);
-        return personWrapper;
-    }
+	/**
+	 * @noinspection UnusedReturnValue
+	 */
+	EpisimPerson removePerson(Id<Person> personId) {
+		containerEnterTimes.remove(personId);
+		EpisimPerson personWrapper = persons.remove(personId);
+		personWrapper.removeCurrentContainer(this);
+		boolean wasRemoved = personsAsList.remove(personWrapper);
+		Gbl.assertIf(wasRemoved);
+		return personWrapper;
+	}
 
-    public Id<T> getContainerId() {
-        return containerId;
-    }
+	public Id<T> getContainerId() {
+		return containerId;
+	}
 
 
-    void clearPersons() {
-        this.persons.clear();
-        this.personsAsList.clear();
-        this.containerEnterTimes.clear();
-    }
+	void clearPersons() {
+		this.persons.clear();
+		this.personsAsList.clear();
+		this.containerEnterTimes.clear();
+	}
 
-    public Double getContainerEnteringTime(Id<Person> personId) {
-        return containerEnterTimes.get(personId);
-    }
+	public Double getContainerEnteringTime(Id<Person> personId) {
+		return containerEnterTimes.get(personId);
+	}
 
-    EpisimPerson getPerson(Id<Person> personId) {
-        return persons.get(personId);
-    }
+	EpisimPerson getPerson(Id<Person> personId) {
+		return persons.get(personId);
+	}
 
-    public List<EpisimPerson> getPersons() {
-        return Collections.unmodifiableList(personsAsList);
-    }
+	public List<EpisimPerson> getPersons() {
+		return Collections.unmodifiableList(personsAsList);
+	}
 }

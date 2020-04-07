@@ -39,30 +39,27 @@ import java.util.stream.Collectors;
  * This means, the output will contain all children living in facilities in which adults live.
  * It is assumed that the input children file can have a higher sample size than the adult file. To account for that, the resulting children population
  * is sampled down.
+ * <p>
+ * input: 	(1) population containing school population for germany  (snz scenario u14 population)
+ * (2) population containing adult population for use case (snz scenario o14 population for bln, munich, heinsberg)
+ * (3) attribute name for the facility id representing the home facility
+ * (4) sample size ratio (input children sample size / input adult sample size)
+ * output:  population containing school population for use case in the same sample size as the adults are
+ * <p>
+ * Next step in the process would be to run {@code BuildSchoolPlans} which
+ * builds home-school-home plans for the children and integrates them into the adult population.
  *
- * 	input: 	(1) population containing school population for germany  (snz scenario u14 population)
- * 			(2) population containing adult population for use case (snz scenario o14 population for bln, munich, heinsberg)
- * 			(3) attribute name for the facility id representing the home facility
- * 			(4) sample size ratio (input children sample size / input adult sample size)
- * 	output:  population containing school population for use case in the same sample size as the adults are
- *
- * 	Next step in the process would be to run {@code BuildSchoolPlans} which
- * 	builds home-school-home plans for the children and integrates them into the adult population.
- *
- * 	@author tschlenther
+ * @author tschlenther
  */
 class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
-	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
-
 	private static final String INPUT_SCHOOL_POPULATION_GER = "../../svn/shared-svn/projects/episim/matsim-files/snz/Deutschland/de_populationU14_fromPopulationAttributes.xml.gz";
 	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
-
 	private static final double SAMPLE_SIZE_RATIO = 0.25d;
-
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
+	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
 
 	public static void main(String[] args) {
 
@@ -76,8 +73,8 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 		for (Person adult : adults.getPersons().values()) {
 			Object homeAttribute = adult.getAttributes().getAttribute(HOME_FACILITY_ATTRIBUTE_NAME);
-			if(homeAttribute != null){
-				allHomeActFacilities.add(Id.create( (String) homeAttribute, ActivityFacility.class) );
+			if (homeAttribute != null) {
+				allHomeActFacilities.add(Id.create((String) homeAttribute, ActivityFacility.class));
 			} else {
 				Set<Id<ActivityFacility>> personsHomeActFacilities = adult.getSelectedPlan().getPlanElements().stream()
 						.filter(e -> e instanceof Activity)
@@ -85,7 +82,7 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 						.map(home -> ((Activity) home).getFacilityId())
 						.collect(Collectors.toSet());
 
-				if (personsHomeActFacilities.size() != 1){
+				if (personsHomeActFacilities.size() != 1) {
 					throw new IllegalStateException("person " + adult + " has invalid number of home facilities (" + personsHomeActFacilities.size() + ")");
 				}
 				allHomeActFacilities.addAll(personsHomeActFacilities);
@@ -100,10 +97,10 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		for (Person child : children.getPersons().values()) {
 
 			Object attribute = child.getAttributes().getAttribute(HOME_FACILITY_ATTRIBUTE_NAME);
-			if(attribute == null) throw new IllegalStateException("child " + child + " has no attribute " + HOME_FACILITY_ATTRIBUTE_NAME);
+			if (attribute == null) throw new IllegalStateException("child " + child + " has no attribute " + HOME_FACILITY_ATTRIBUTE_NAME);
 
 			Id<ActivityFacility> facilityId = Id.create((String) attribute, ActivityFacility.class);
-			if(!allHomeActFacilities.contains(facilityId)){
+			if (!allHomeActFacilities.contains(facilityId)) {
 				childrenToDelete.add(child);
 			}
 		}
@@ -119,7 +116,6 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		PopulationUtils.writePopulation(children, OUTPUT_SCHOOL_POPULATION_USECASE);
 
 	}
-
 
 
 }

@@ -21,42 +21,38 @@
 
 package org.matsim.run;
 
-import com.typesafe.config.ConfigValue;
 import org.apache.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Map;
 
-public class KNRunEpisim{
-    private static final Logger log = Logger.getLogger( KNRunEpisim.class );
+public class KNRunEpisim {
+	private static final Logger log = Logger.getLogger(KNRunEpisim.class);
 
-    public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException {
 
-        OutputDirectoryLogging.catchLogEntries();
+		OutputDirectoryLogging.catchLogEntries();
 
-        Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 //        episimConfig.setInputEventsFile( "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz" );
 //        episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
 //        episimConfig.setSampleSize(0.01);
 //        episimConfig.setCalibrationParameter(0.00021);
 
-        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
-        episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
-        episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.0000003);
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
+		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
+		episimConfig.setSampleSize(0.25);
+		episimConfig.setCalibrationParameter(0.0000003);
 
-        config.controler().setOutputDirectory( "output-base-" + episimConfig.getCalibrationParameter() );
+		config.controler().setOutputDirectory("output-base-" + episimConfig.getCalibrationParameter());
 
-        RunEpisim.addDefaultParams(episimConfig);
+		RunEpisim.addDefaultParams(episimConfig);
 
 //        public static final String[] DEFAULT_ACTIVITIES = {
 //                        "pt", "work", "leisure", "edu", "shop", "errands", "business", "other", "freight", "home"
@@ -90,7 +86,7 @@ public class KNRunEpisim{
 //        episimConfig.setPolicy(FixedPolicy.class, policyConfig );
 //        config.controler().setOutputDirectory( "output-" + reduced );
 
-        RunEpisim.runSimulation(config, 100);
-    }
+		RunEpisim.runSimulation(config, 100);
+	}
 
 }

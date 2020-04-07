@@ -79,14 +79,14 @@ class EducFacilities {
 
 			Coord coord = CoordUtils.createCoord(x, y);
 
-			if(transformation != null){
+			if (transformation != null) {
 				coord = transformation.transform(coord);
 			}
 
 			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
 
-			if(parts.length >= 7){
-				if(! parts[6].equals("")) {
+			if (parts.length >= 7) {
+				if (!parts[6].equals("")) {
 					String[] containedFacilities;
 					containedFacilities = parts[6].split(";");
 					for (String containedFacility : containedFacilities) {
@@ -127,10 +127,6 @@ class EducFacility {
 		this.setEducSecondary(isEducSecondary);
 	}
 
-	void setId(Id<ActivityFacility> id) {
-		this.id = id;
-	}
-
 	boolean isEducKiga() {
 		return isEducKiga;
 	}
@@ -163,13 +159,19 @@ class EducFacility {
 		this.coord = coord;
 	}
 
-	Set<Id<ActivityFacility>> getContainedFacilities() {return containedFacilities;}
+	Set<Id<ActivityFacility>> getContainedFacilities() {
+		return containedFacilities;
+	}
 
-	boolean addContainedEducFacility(Id<ActivityFacility> educFacilityId){
+	boolean addContainedEducFacility(Id<ActivityFacility> educFacilityId) {
 		return this.containedFacilities.add(educFacilityId);
 	}
 
 	public Id<ActivityFacility> getId() {
 		return id;
+	}
+
+	void setId(Id<ActivityFacility> id) {
+		this.id = id;
 	}
 }
