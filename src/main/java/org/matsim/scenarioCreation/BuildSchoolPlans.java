@@ -167,6 +167,7 @@ public class BuildSchoolPlans {
 			if (person.getAttributes().getAttribute("homeId") != null) {
 				String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
 				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
+				homeAct2.setFacilityId(homeFacilityId);
 			}
 			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
 
