@@ -83,7 +83,6 @@ public class FilterEvents implements Callable<Integer> {
 			}
 		}
 
-
 		EventsManager manager = EventsUtils.createEventsManager();
 
 		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityreplacements = null;

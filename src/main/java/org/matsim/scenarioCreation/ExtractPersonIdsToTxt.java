@@ -39,14 +39,22 @@ import java.io.IOException;
  */
 public class ExtractPersonIdsToTxt {
 
-	private static final String INPUT_POPULATION = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
-	private static final String OUTPUT_ID_TXT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_idList.txt";
+	private static final String DEFAULT_INPUT_POPULATION = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
+	private static final String DEFAULT_OUTPUT_ID_TXT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_idList.txt";
 
 	public static void main(String[] args) {
 
-		Population population = PopulationUtils.readPopulation(INPUT_POPULATION);
+		String input = DEFAULT_INPUT_POPULATION;
+		String output = DEFAULT_OUTPUT_ID_TXT;
 
-		BufferedWriter writer = IOUtils.getBufferedWriter(OUTPUT_ID_TXT);
+		if(args.length > 0){
+			input = args[0];
+			output = args[1];
+		}
+
+		Population population = PopulationUtils.readPopulation(input);
+
+		BufferedWriter writer = IOUtils.getBufferedWriter(output);
 
 		boolean firstLine = true;
 
