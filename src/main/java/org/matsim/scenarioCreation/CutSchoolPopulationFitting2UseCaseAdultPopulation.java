@@ -62,7 +62,7 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
-	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans.xml.gz";
+	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz";
 
 	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
 
