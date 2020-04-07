@@ -46,10 +46,10 @@ public class RunEpisimSnz {
 		OutputDirectoryLogging.catchLogEntries();
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-		config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
+		//config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/original-data/snzDrt220a.0.events.reduced.xml.gz");
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/snzDrt220.0.events.reduced.xml.gz");
 		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
@@ -68,11 +68,13 @@ public class RunEpisimSnz {
 		);
 
 		RunEpisim.setOutputDirectory(config);
-
 		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
-		// yyyyyy I would do this the other way around, i.e. apply cli params _before_ the output dir name is constructed.  ???
+		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		RunEpisim.runSimulation(config, 150);
+
+		OutputDirectoryLogging.closeOutputDirLogging();
+
 	}
 
 	static void setContactIntensities(EpisimConfigGroup episimConfig) {

@@ -5,6 +5,9 @@ import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.log4j.Logger;
+import org.magnos.trie.Trie;
+import org.magnos.trie.TrieMatch;
+import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
@@ -24,6 +27,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
+
+	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
 
 	private String inputEventsFile = null;
 	private String outputEventsFolder = null;
@@ -229,8 +234,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void addContainerParams(final InfectionParams params) {
 		final InfectionParams previous = this.getContainerParams().get(params.getContainerName());
 
+		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
+
 		if (previous != null) {
 			log.info("scoring parameters for activityType=" + previous.getContainerName() + " were just replaced.");
+
+			params.mappedNames.forEach(paramsTrie::remove);
 
 			final boolean removed = removeParameterSet(previous);
 			if (!removed)
@@ -282,11 +291,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public @NotNull
 	InfectionParams selectInfectionParams(String activity) {
 
-		for (EpisimConfigGroup.InfectionParams infectionParams : getInfectionParams()) {
-			if (infectionParams.includesActivity(activity)) {
-				return infectionParams;
-			}
-		}
+		InfectionParams params = paramsTrie.get(activity, TrieMatch.STARTS_WITH);
+		if (params != null)
+			return params;
 
 		throw new NoSuchElementException("No params known for activity %s. Please add prefix to one infection parameter.");
 	}
@@ -372,7 +379,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Check whether an activity belong to this container group.
 		 */
-		private boolean includesActivity(String actType) {
+		public boolean includesActivity(String actType) {
 			for (String mapped : mappedNames)
 				if (actType.startsWith(mapped))
 					return true;
