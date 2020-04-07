@@ -86,6 +86,18 @@ public class MergeEvents implements Callable<Integer>, Comparator<Event> {
 				return -1;
 			} else if (o1 instanceof PersonEntersVehicleEvent && o2 instanceof ActivityEndEvent) {
 				return 1;
+			} else if( o1 instanceof ActivityStartEvent && o2 instanceof ActivityEndEvent){
+				if ( ((ActivityStartEvent) o1).getActType().equals(((ActivityEndEvent) o2).getActType()) ){
+					return -1;
+				} else {
+					return 1;
+				}
+			} else if(o1 instanceof ActivityEndEvent && o2 instanceof ActivityStartEvent){
+				if ( ((ActivityEndEvent) o1).getActType().equals(((ActivityStartEvent) o2).getActType()) ){
+					return 1;
+				} else {
+					return -1;
+				}
 			}
 		}
 		return o1.getEventType().compareTo(o2.getEventType());
