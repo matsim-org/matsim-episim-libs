@@ -44,7 +44,9 @@ import java.util.stream.Collectors;
  * (2) population containing adult population for use case (snz scenario o14 population for bln, munich, heinsberg)
  * (3) attribute name for the facility id representing the home facility
  * (4) sample size ratio (input children sample size / input adult sample size)
- * output:  population containing school population for use case in the same sample size as the adults are
+ * output:
+ * (1) population containing school population for use case in the same sample size as the adults are, no plans but only attributes
+ * (2) population containing ALL persons with no plans in the target sample size
  * <p>
  * Next step in the process would be to run {@code BuildSchoolPlans} which
  * builds home-school-home plans for the children and integrates them into the adult population.
@@ -59,6 +61,8 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
+	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans.xml.gz";
+
 	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
 
 	public static void main(String[] args) {
@@ -113,8 +117,15 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		PopulationUtils.sampleDown(children, SAMPLE_SIZE_RATIO);
 		log.info("remaining number of children = " + children.getPersons().size());
 
+		log.info("writing school population containing only chilren with no plans...");
 		PopulationUtils.writePopulation(children, OUTPUT_SCHOOL_POPULATION_USECASE);
 
+		log.info("merge empty adult plans with empty children plans...");
+		//finally, merge adult population and school population and write out the result
+		children.getPersons().values().forEach(person -> adults.addPerson(person));
+
+		log.info("writing entire population with no plans...");
+		PopulationUtils.writePopulation(adults, OUTPUT_ENTIRE_POPULATION_USECASE);
 	}
 
 
