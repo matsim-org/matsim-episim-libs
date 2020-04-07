@@ -1,17 +1,22 @@
-package org.matsim.prepare;
+package org.matsim.scenarioCreation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.facilities.ActivityFacility;
 import picocli.CommandLine;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
@@ -36,6 +41,9 @@ public class FilterEvents implements Callable<Integer> {
 
 	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredMunich.xml.gz")
 	private Path output;
+
+	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file")
+	private Path facilities;
 
 
 	public static void main(String[] args) {
@@ -67,7 +75,12 @@ public class FilterEvents implements Callable<Integer> {
 
 		EventsManager manager = EventsUtils.createEventsManager();
 
-		FilterHandler handler = new FilterHandler(null, filterIds);
+		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityreplacements = null;
+		if(Files.exists(facilities)){
+			facilityreplacements = readAndMapMergedFacilities(facilities.toString());
+		}
+
+		FilterHandler handler = new FilterHandler(null, filterIds, facilityreplacements);
 		manager.addHandler(handler);
 		EventsUtils.readEvents(manager, input.toString());
 
@@ -81,6 +94,17 @@ public class FilterEvents implements Callable<Integer> {
 		writer.closeFile();
 
 		return 0;
+	}
+
+	private static Map<Id<ActivityFacility>, Id<ActivityFacility>> readAndMapMergedFacilities(String path) throws IOException {
+		Set<EducFacility> remainingFacilities = EducFacilities.readEducFacilites(path, null);
+		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements = new HashMap<>();
+		for (EducFacility remainingFacility : remainingFacilities) {
+			for (Id<ActivityFacility> containedFacility : remainingFacility.getContainedFacilities()) {
+				facilityReplacements.put(containedFacility, remainingFacility.getId());
+			}
+		}
+		return facilityReplacements;
 	}
 
 }

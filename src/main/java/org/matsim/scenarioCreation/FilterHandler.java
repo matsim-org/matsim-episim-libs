@@ -1,4 +1,4 @@
-package org.matsim.prepare;
+package org.matsim.scenarioCreation;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.*;
@@ -12,17 +12,14 @@ import org.matsim.episim.InfectionEventHandler;
 import org.matsim.facilities.ActivityFacility;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * Filters events needed for the {@link InfectionEventHandler}.
  * Either by population or personIds list.
  */
-class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
+public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
 
 	final Population population;
 	final Set<Id<Person>> personIds;
@@ -32,12 +29,14 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 	 * Facilities that have been visited by the filtered persons.
 	 */
 	final Set<Id<ActivityFacility>> facilities = new HashSet<>();
+	private final Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements;
 
 	private int counter = 0;
 
-	FilterHandler(@Nullable Population population, @Nullable Set<String> personIds) {
+	public FilterHandler(@Nullable Population population, @Nullable Set<String> personIds, @Nullable Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements) {
 		this.population = population;
 		this.personIds = personIds != null ? personIds.stream().map(Id::createPersonId).collect(Collectors.toSet()) : null;
+		this.facilityReplacements = facilityReplacements;
 	}
 
 	@Override
@@ -50,6 +49,15 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 			return;
 		if (personIds != null && !personIds.contains(activityEndEvent.getPersonId()))
 			return;
+
+		if(this.facilityReplacements != null && this.facilityReplacements.containsKey(activityEndEvent.getFacilityId())){
+			Id<ActivityFacility> replacingId = this.facilityReplacements.get(activityEndEvent.getFacilityId());
+			activityEndEvent = new ActivityEndEvent(activityEndEvent.getTime(),
+					activityEndEvent.getPersonId(),
+					activityEndEvent.getLinkId(),
+					replacingId,
+					activityEndEvent.getActType());
+		}
 
 		facilities.add(activityEndEvent.getFacilityId());
 		events.add(activityEndEvent);
@@ -65,6 +73,16 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 			return;
 		if (personIds != null && !personIds.contains(activityStartEvent.getPersonId()))
 			return;
+
+		if(this.facilityReplacements != null && this.facilityReplacements.containsKey(activityStartEvent.getFacilityId())){
+			Id<ActivityFacility> replacingId = this.facilityReplacements.get(activityStartEvent.getFacilityId());
+			activityStartEvent = new ActivityStartEvent(activityStartEvent.getTime(),
+					activityStartEvent.getPersonId(),
+					activityStartEvent.getLinkId(),
+					replacingId,
+					activityStartEvent.getActType(),
+					activityStartEvent.getCoord());
+		}
 
 		facilities.add(activityStartEvent.getFacilityId());
 		events.add(activityStartEvent);
@@ -100,5 +118,14 @@ class FilterHandler implements ActivityEndEventHandler, PersonEntersVehicleEvent
 
 	public int getCounter() {
 		return counter;
+	}
+
+
+	public List<Event> getEvents() {
+		return events;
+	}
+
+	public Set<Id<ActivityFacility>> getFacilities() {
+		return facilities;
 	}
 }

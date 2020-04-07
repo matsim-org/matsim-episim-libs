@@ -19,10 +19,8 @@
  * *********************************************************************** */
 
 
-package org.matsim.schools;
+package org.matsim.scenarioCreation;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,17 +49,15 @@ import org.matsim.facilities.ActivityFacility;
 * @author smueller, tschlenther
 */
 
-public class SchoolPopulationDestinationChoiceAndIntegration {
+public class BuildSchoolPlans {
 
-	private static final Logger log = Logger.getLogger(SchoolPopulationDestinationChoiceAndIntegration.class);
+	private static final Logger log = Logger.getLogger(BuildSchoolPlans.class);
 
 	private static final String inputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
 
 	private static final String inputFacilitiesFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_educFacilities_optimated.txt";
 
-	private static final String originalPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
-
-	private static final String outputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_snz_plans_25pct.xml.gz";
+	private static final String outputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_u14population_schoolPlans.xml.gz";
 
 	private final static Random rnd = new Random(1);
 
@@ -71,77 +67,18 @@ public class SchoolPopulationDestinationChoiceAndIntegration {
 
 		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
 
-		run(schoolPopulation, originalPopulationFile, inputFacilitiesFile, null,  outputPopulationFile);
+		buildSchoolPlans(schoolPopulation, inputFacilitiesFile, null);
+		PopulationUtils.writePopulation(schoolPopulation, outputPopulationFile);
 	}
 
-	public static void run(Population schoolPopulation, String adultPopulationFile, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer, String outputPopulationFile) throws IOException {
+	public static void buildSchoolPlans(Population schoolPopulation, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer) throws IOException {
 		log.info("start reading school facilities");
-		readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
+		educList.addAll(EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer));
 		log.info("start building school plans");
-		buildSchoolPlans(schoolPopulation);
-
-		Population originalPopulation = PopulationUtils.readPopulation(adultPopulationFile);
-
-		log.info("start integrating school population into original population");
-		schoolPopulation.getPersons().values().forEach(person -> originalPopulation.addPerson(person));
-
-		PopulationUtils.writePopulation(originalPopulation, outputPopulationFile);
+		process(schoolPopulation);
 	}
 
-	private static void readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
-
-		BufferedReader reader = new BufferedReader(new FileReader(educFacilitiesFile));
-
-		int ii = -1;
-
-		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
-
-			ii++;
-
-			if (ii == 0) {
-				continue;
-			}
-
-			String[] parts = line.split("\t");
-
-			Id<ActivityFacility> id = Id.create(parts[0], ActivityFacility.class);
-			double x = Double.parseDouble(parts[1]);
-			double y = Double.parseDouble(parts[2]);
-
-			String educKiga = parts[3];
-			boolean isEducKiga = false;
-			if (!educKiga.equals("0")) {
-				isEducKiga = true;
-			}
-
-			String educPrimary = parts[4];
-			boolean isEducPrimary = false;
-			if (!educPrimary.equals("0.0")) {
-				isEducPrimary = true;
-			}
-
-			String educSecondary = parts[5];
-			boolean isEducSecondary = false;
-			if (!educSecondary.equals("0.0")) {
-				isEducSecondary = true;
-			}
-
-			Coord coord = CoordUtils.createCoord(x, y);
-
-			if(transformation != null){
-				coord = transformation.transform(coord);
-			}
-
-			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
-
-			educList.add(educFacility);
-		}
-
-		reader.close();
-
-	}
-
-	private static void buildSchoolPlans(Population schoolPopulation) {
+	private static void process(Population schoolPopulation) {
 
 		PopulationFactory pf = schoolPopulation.getFactory();
 

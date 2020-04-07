@@ -17,13 +17,13 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.schools.openBerlinScenario;
+package org.matsim.scenarioCreation.openBerlinScenario;
 
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.population.io.PopulationWriter;
-import org.matsim.schools.SchoolPopulationDestinationChoiceAndIntegration;
+import org.matsim.scenarioCreation.BuildSchoolPlans;
 import playground.vsp.corineLandcover.CORINELandCoverCoordsModifier;
 import playground.vsp.openberlinscenario.cemdap.output.CemdapOutput2MatsimPlansConverter;
 
@@ -35,7 +35,7 @@ import java.util.Map;
 /**
  * 	(1) read in plans file for children, containing nothing but attributes holding inforamtion about age and municipality
  * 	(2) run CORINELandCoverCoordsModifier in order to perform location choice for the home activity
- * 	(3) run SchoolPopulationDestinationChoiceAndIntegration in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
+ * 	(3) run BuildSchoolPlans in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
  *
  *	In between, some preparation processes for the steps need to be performed..
  *
@@ -57,7 +57,7 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 	private static final String ZONE_ID_TAG = "NR";
 
 	private static final String OUTPUT_PLANS_ENTIRE_BLN = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/berlin-v5.4-10pct-plans-includingChildren-corineCoords.xml.gz";
-	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_empty_corineCoords_10pct.xml.gz";
+	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_corineCoords_10pct.xml.gz";
 
 	public static void main(String[] args) {
 
@@ -79,28 +79,33 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 	            CORINE_LANDCOVER_FILE, simplifyGeom, combiningGeoms, sameHomeActivity, homeActivityPrefix);
 
 		plansFilterForCORINELandCover.process();
-		Population population = plansFilterForCORINELandCover.getPopulation();
-		PopulationWriter writer = new PopulationWriter(population);
-		preparePlansForSchoolPopulationCreation(population);
+		Population schoolPopulation = plansFilterForCORINELandCover.getPopulation();
+		PopulationWriter writer = new PopulationWriter(schoolPopulation);
+		preparePopulationForBuildingSchoolPlans(schoolPopulation);
 
-		writer.write(OUTPUT_PLANS_SCHOOLPOP);
 
 //		Population population = PopulationUtils.readPopulation(OUTPUT_PLANS_SCHOOLPOP);
 
-
-		//now run SchoolPopulationDestinationChoiceAndIntegration which will read facilities, assign schools and build plans and finally will merge the adult population with the school population
+		//now run BuildSchoolPlans which will read facilities, assign schools and build plans
 		try {
-			SchoolPopulationDestinationChoiceAndIntegration.run(population,
-					INPUT_PLANS_BERLIN_ADULTS_10PCT,
+			BuildSchoolPlans.buildSchoolPlans(schoolPopulation,
 					INPUT_SCHOOL_FACILITIES,
-					null,
-					OUTPUT_PLANS_ENTIRE_BLN);
+					null);
 
 			//delete the file created in middle of the process - it is not needed any more
 			new File(PLANS_RADY_FOR_CORINE).delete();
+
+
+			writer.write(OUTPUT_PLANS_SCHOOLPOP);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		//finally, merge adult population and school population and write out the result
+		Population adultPopulation = PopulationUtils.readPopulation(INPUT_PLANS_BERLIN_ADULTS_10PCT);
+		schoolPopulation.getPersons().values().forEach(person -> adultPopulation.addPerson(person));
+
+		PopulationUtils.writePopulation(adultPopulation, OUTPUT_PLANS_ENTIRE_BLN);
 
 	}
 
@@ -120,7 +125,7 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 		p.addPlan(plan);
 	}
 
-	private static void preparePlansForSchoolPopulationCreation(Population population){
+	private static void preparePopulationForBuildingSchoolPlans(Population population){
 		for (Person person : population.getPersons().values()) {
 			Activity act = (Activity) person.getSelectedPlan().getPlanElements().get(0);
 			if(! act.getType().startsWith("home")) throw new IllegalStateException("first act type is not home for person " + person);
