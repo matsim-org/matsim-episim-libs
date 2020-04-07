@@ -35,14 +35,14 @@ public class FilterEvents implements Callable<Integer> {
 
 	private Path input;
 
-	@Option(names = "--ids", description = "Path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Munich/mu_personIds.txt")
+	@Option(names = "--ids", description = "Path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_adults_idList.txt")
 
 	private Path personIds;
 
-	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredMunich.xml.gz")
+	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredBerlin.xml.gz")
 	private Path output;
 
-	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file")
+	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_snz_educationFacilities.txt")
 	private Path facilities;
 
 
@@ -82,7 +82,6 @@ public class FilterEvents implements Callable<Integer> {
 					filterIds.add(line);
 			}
 		}
-
 
 		EventsManager manager = EventsUtils.createEventsManager();
 
