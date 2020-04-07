@@ -22,9 +22,8 @@ import java.util.List;
 
 
 /**
- * probably not needed any more...?!
- * <p>
- * tschlenther, 06 of april
+ * class reads in one population attributes file and one .txt file containing person id's, one per line. population attributes are filtered by the id set and the written out
+ * in plans file format.
  */
 public class FilterPersonsForCertainArea {
 
