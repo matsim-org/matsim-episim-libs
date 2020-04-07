@@ -123,9 +123,9 @@ public class FilterEducFacilitiesForCertainArea {
 						Coord facilityCoord2 = educFacility2.getCoord();
 						double distance = CoordUtils.calcProjectedEuclideanDistance(facilityCoord, facilityCoord2);
 						if (distance < 100) {
-							if (educFacility1.isEducKiga() == educFacility2.isEducKiga()
-									|| educFacility1.isEducPrimary() == educFacility2.isEducPrimary()
-									|| educFacility1.isEducSecondary() == educFacility2.isEducSecondary()) {
+							if (educFacility1.isEducKiga() && educFacility2.isEducKiga()
+									|| educFacility1.isEducPrimary() && educFacility2.isEducPrimary()
+									|| educFacility1.isEducSecondary() && educFacility2.isEducSecondary()) {
 								if (iskiga || educFacility2.isEducKiga())
 									iskiga = true;
 								if (isPrimary || educFacility2.isEducPrimary())
