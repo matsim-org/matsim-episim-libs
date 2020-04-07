@@ -4,6 +4,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.*;
 import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.utils.io.IOUtils;
@@ -57,13 +58,12 @@ public class MergeEvents implements Callable<Integer>, Comparator<Event> {
 				IOUtils.getOutputStream(IOUtils.getFileUrl(output.toString()), false)
 		);
 
-		log.info("Merged {} events", handler.events.size());
-
 		// Everything is sorted in-memory afterwards
 		// If this is has not sufficient performance it needs to be rewritten
 		handler.events.sort(this);
 		handler.events.forEach(writer::handleEvent);
 		writer.closeFile();
+		log.info("Merged {} events", handler.events.size());
 
 		return 0;
 
@@ -74,12 +74,20 @@ public class MergeEvents implements Callable<Integer>, Comparator<Event> {
 		int cmp = Double.compare(o1.getTime(), o2.getTime());
 		if (cmp != 0) return cmp;
 
-		// adhere to causality when time is equal
-		if (o1 instanceof PersonLeavesVehicleEvent && o2 instanceof ActivityStartEvent || o2 instanceof ActivityEndEvent && o1 instanceof PersonEntersVehicleEvent)
-			return -1;
-		else if (o1 instanceof ActivityEndEvent && o2 instanceof PersonEntersVehicleEvent || o2 instanceof PersonLeavesVehicleEvent && o1 instanceof ActivityStartEvent)
-			return 1;
+		if (o1 instanceof HasPersonId && o2 instanceof HasPersonId) {
+			int value = ((HasPersonId) o1).getPersonId().compareTo(((HasPersonId) o2).getPersonId());
+			if (value != 0) return value;
 
+			if (o1 instanceof PersonLeavesVehicleEvent && o2 instanceof ActivityStartEvent) {
+				return -1;
+			} else if (o1 instanceof ActivityStartEvent && o2 instanceof PersonLeavesVehicleEvent) {
+				return 1;
+			} else if (o1 instanceof ActivityEndEvent && o2 instanceof PersonEntersVehicleEvent) {
+				return -1;
+			} else if (o1 instanceof PersonEntersVehicleEvent && o2 instanceof ActivityEndEvent) {
+				return 1;
+			}
+		}
 		return o1.getEventType().compareTo(o2.getEventType());
 	}
 
