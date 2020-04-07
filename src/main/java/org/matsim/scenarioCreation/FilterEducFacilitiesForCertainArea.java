@@ -20,15 +20,6 @@
 
 package org.matsim.scenarioCreation;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-
 import org.apache.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
@@ -41,6 +32,13 @@ import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 import org.opengis.feature.simple.SimpleFeature;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * This class filters all educational facilities for a certain area and transforms coordinates, if necessary.
@@ -79,11 +77,10 @@ public class FilterEducFacilitiesForCertainArea {
 		log.info("Found facilities in certain area: " + educListNewArea.size());
 		if (aggregateFacilities) {
 			findNearFacilitiesWithSameType();
-		}
-		else {
+		} else {
 			educListNewAreaForOutput.addAll(educListNewArea);
 		}
-		if(! coordToTransform){
+		if (!coordToTransform) {
 			//transform back into UTM32N
 			CoordinateTransformation transformationBack = TransformationFactory.getCoordinateTransformation(TransformationFactory.DHDN_GK4, "EPSG:25832");
 			educListNewAreaForOutput.forEach(educFacility -> educFacility.setCoord(transformationBack.transform(educFacility.getCoord())));
@@ -93,7 +90,7 @@ public class FilterEducFacilitiesForCertainArea {
 	}
 
 	private static void filterEducFacilitiesForCertainArea(EducFacility educFacility,
-			Collection<SimpleFeature> shapefileCertainArea) {
+														   Collection<SimpleFeature> shapefileCertainArea) {
 		for (SimpleFeature singleFeature : shapefileCertainArea) {
 			Geometry geometryOfCertainArea = (Geometry) singleFeature.getDefaultGeometry();
 			if (geometryOfCertainArea.contains(MGC.coord2Point(educFacility.getCoord())))
@@ -117,12 +114,12 @@ public class FilterEducFacilitiesForCertainArea {
 			boolean isPrimary = educFacility1.isEducPrimary();
 			boolean isSecondary = educFacility1.isEducSecondary();
 			String facilityId = educFacility1.getId().toString();
-			if ( ! facilitiesNotToCheck.contains(facilityId)) {
+			if (!facilitiesNotToCheck.contains(facilityId)) {
 				facilitiesNotToCheck.add(facilityId);
 				Coord facilityCoord = educFacility1.getCoord();
 				for (EducFacility educFacility2 : educListNewArea) {
 					String facilityId2 = educFacility2.getId().toString();
-					if ( ! facilitiesNotToCheck.contains(facilityId2)) {
+					if (!facilitiesNotToCheck.contains(facilityId2)) {
 						Coord facilityCoord2 = educFacility2.getCoord();
 						double distance = CoordUtils.calcProjectedEuclideanDistance(facilityCoord, facilityCoord2);
 						if (distance < 100) {
@@ -175,7 +172,7 @@ public class FilterEducFacilitiesForCertainArea {
 					isPrimary = 1;
 				if (educFacility.isEducSecondary())
 					isSecondary = 1;
-				for(Id<ActivityFacility> otherFac : educFacility.getContainedFacilities()){
+				for (Id<ActivityFacility> otherFac : educFacility.getContainedFacilities()) {
 					mergedFacilites += otherFac.toString() + ";";
 				}
 				writer.write(educFacility.getId() + "\t" + educFacility.getCoord().getX() + "\t"

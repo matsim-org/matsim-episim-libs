@@ -50,7 +50,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 		if (personIds != null && !personIds.contains(activityEndEvent.getPersonId()))
 			return;
 
-		if(this.facilityReplacements != null && this.facilityReplacements.containsKey(activityEndEvent.getFacilityId())){
+		if (this.facilityReplacements != null && this.facilityReplacements.containsKey(activityEndEvent.getFacilityId())) {
 			Id<ActivityFacility> replacingId = this.facilityReplacements.get(activityEndEvent.getFacilityId());
 			activityEndEvent = new ActivityEndEvent(activityEndEvent.getTime(),
 					activityEndEvent.getPersonId(),
@@ -74,7 +74,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 		if (personIds != null && !personIds.contains(activityStartEvent.getPersonId()))
 			return;
 
-		if(this.facilityReplacements != null && this.facilityReplacements.containsKey(activityStartEvent.getFacilityId())){
+		if (this.facilityReplacements != null && this.facilityReplacements.containsKey(activityStartEvent.getFacilityId())) {
 			Id<ActivityFacility> replacingId = this.facilityReplacements.get(activityStartEvent.getFacilityId());
 			activityStartEvent = new ActivityStartEvent(activityStartEvent.getTime(),
 					activityStartEvent.getPersonId(),

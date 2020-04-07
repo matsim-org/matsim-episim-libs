@@ -20,79 +20,79 @@ import java.util.List;
  */
 public final class ReplayHandler {
 
-    private static final Logger log = LogManager.getLogger(ReplayHandler.class);
+	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
-    private final Scenario scenario;
-    private final List<Event> events = new ArrayList<>();
+	private final Scenario scenario;
+	private final List<Event> events = new ArrayList<>();
 
-    /**
-     * Constructor with optional scenario.
-     */
-    @Inject
-    public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
-        this.scenario = scenario;
+	/**
+	 * Constructor with optional scenario.
+	 */
+	@Inject
+	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
+		this.scenario = scenario;
 
-        EventsManager manager = EventsUtils.createEventsManager();
-        manager.addHandler(new EventReader());
-        EventsUtils.readEvents(manager, config.getInputEventsFile());
-        manager.finishProcessing();
+		EventsManager manager = EventsUtils.createEventsManager();
+		manager.addHandler(new EventReader());
+		EventsUtils.readEvents(manager, config.getInputEventsFile());
+		manager.finishProcessing();
 
-        log.info("Read in {} events, with time range {} - {}", events.size(), events.get(0).getTime(),
-                events.get(events.size() - 1).getTime());
-    }
+		log.info("Read in {} events, with time range {} - {}", events.size(), events.get(0).getTime(),
+				events.get(events.size() - 1).getTime());
+	}
 
-    /**
-     * Replays event add modifies attributes based on current iteration.
-     */
-    public void replayEvents(EventsManager manager, int iteration) {
-        for (Event e : events) {
+	/**
+	 * Replays event add modifies attributes based on current iteration.
+	 */
+	public void replayEvents(EventsManager manager, int iteration) {
+		for (Event e : events) {
 
-            if (e instanceof ActivityStartEvent) {
-                ActivityStartEvent ev = (ActivityStartEvent) e;
-                e = new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-                        ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord());
+			if (e instanceof ActivityStartEvent) {
+				ActivityStartEvent ev = (ActivityStartEvent) e;
+				e = new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
+						ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord());
 
-            } else if (e instanceof ActivityEndEvent) {
-                ActivityEndEvent ev = (ActivityEndEvent) e;
-                e = new ActivityEndEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-                        ev.getLinkId(), ev.getFacilityId(), ev.getActType());
+			} else if (e instanceof ActivityEndEvent) {
+				ActivityEndEvent ev = (ActivityEndEvent) e;
+				e = new ActivityEndEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
+						ev.getLinkId(), ev.getFacilityId(), ev.getActType());
 
-            } else if (e instanceof PersonEntersVehicleEvent) {
-                PersonEntersVehicleEvent ev = (PersonEntersVehicleEvent) e;
-                e = new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId());
+			} else if (e instanceof PersonEntersVehicleEvent) {
+				PersonEntersVehicleEvent ev = (PersonEntersVehicleEvent) e;
+				e = new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId());
 
-            } else if (e instanceof PersonLeavesVehicleEvent) {
-                PersonLeavesVehicleEvent ev = (PersonLeavesVehicleEvent) e;
-                e = new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId());
+			} else if (e instanceof PersonLeavesVehicleEvent) {
+				PersonLeavesVehicleEvent ev = (PersonLeavesVehicleEvent) e;
+				e = new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId());
 
-            }
+			}
 
 
-            manager.processEvent(e);
-        }
-    }
+			manager.processEvent(e);
+		}
+	}
 
-    /**
-     * Helper class to read events one time.
-     */
-    private final class EventReader implements BasicEventHandler {
-        @Override
-        public void handleEvent(Event event) {
+	/**
+	 * Helper class to read events one time.
+	 */
+	private final class EventReader implements BasicEventHandler {
+		@Override
+		public void handleEvent(Event event) {
 
-            // Add coordinate information if not present
-            if (event instanceof ActivityStartEvent) {
-                ActivityStartEvent e = (ActivityStartEvent) event;
-                Coord coord = e.getCoord();
-                if (coord == null && scenario != null && scenario.getNetwork().getLinks().containsKey(e.getLinkId())) {
-                    Link link = scenario.getNetwork().getLinks().get(e.getLinkId());
-                    coord = link.getToNode().getCoord();
-                }
+			// Add coordinate information if not present
+			if (event instanceof ActivityStartEvent) {
+				ActivityStartEvent e = (ActivityStartEvent) event;
+				Coord coord = e.getCoord();
+				if (coord == null && scenario != null && scenario.getNetwork().getLinks().containsKey(e.getLinkId())) {
+					Link link = scenario.getNetwork().getLinks().get(e.getLinkId());
+					coord = link.getToNode().getCoord();
+				}
 
-                event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType(), coord);
-            }
+				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType(), coord);
+			}
 
-            events.add(event);
-        }
-    }
+			events.add(event);
+		}
+	}
 
 }

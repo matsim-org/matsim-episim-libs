@@ -26,44 +26,42 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 /**
  * @author smueller
  */
-public class KNRunEpisimSnz{
+public class KNRunEpisimSnz {
 
-    public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException {
 
-        OutputDirectoryLogging.catchLogEntries();
+		OutputDirectoryLogging.catchLogEntries();
 
-        Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
-        episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
-        episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.0000012);
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/snzDrt220a.0.events.reduced.xml.gz");
+		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
+		episimConfig.setSampleSize(0.25);
+		episimConfig.setCalibrationParameter(0.0000012);
 
-        config.controler().setOutputDirectory( "output-base-" + episimConfig.getCalibrationParameter() );
+		config.controler().setOutputDirectory("output-base-" + episimConfig.getCalibrationParameter());
 
-        RunEpisimSnz.addParams(episimConfig );
+		RunEpisimSnz.addParams(episimConfig);
 
-        RunEpisimSnz.setContactIntensities( episimConfig );
+		RunEpisimSnz.setContactIntensities(episimConfig);
 
-        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-                                                             .restrict( 36, 0.1, "educ_kiga", "educ_primary" )
-                                                             .restrict( 36, 0.0,  "educ_secondary", "educ_higher" )
-                                                             .restrict( 36, 0.9, "leisure" )
-                                                             .build()
-        );
+		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+				.restrict(36, 0.1, "educ_kiga", "educ_primary")
+				.restrict(36, 0.0, "educ_secondary", "educ_higher")
+				.restrict(36, 0.9, "leisure")
+				.build()
+		);
 
 
-        RunEpisim.runSimulation(config, 150);
-    }
-    
+		RunEpisim.runSimulation(config, 150);
+	}
+
 }

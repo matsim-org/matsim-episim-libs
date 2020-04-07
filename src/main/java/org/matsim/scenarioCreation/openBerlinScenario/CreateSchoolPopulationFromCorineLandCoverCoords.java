@@ -33,11 +33,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 	(1) read in plans file for children, containing nothing but attributes holding inforamtion about age and municipality
- * 	(2) run CORINELandCoverCoordsModifier in order to perform location choice for the home activity
- * 	(3) run BuildSchoolPlans in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
- *
- *	In between, some preparation processes for the steps need to be performed..
+ * (1) read in plans file for children, containing nothing but attributes holding inforamtion about age and municipality
+ * (2) run CORINELandCoverCoordsModifier in order to perform location choice for the home activity
+ * (3) run BuildSchoolPlans in order to perform destination choice (school assignment) and create home-school-home plans and in order to integrate with adult population
+ * <p>
+ * In between, some preparation processes for the steps need to be performed..
  *
  * @author tschlenther
  */
@@ -65,18 +65,18 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 		PopulationUtils.sampleDown(emptyChildren, SAMPLE_SIZE);
 
-	    assignDummyHomeActsAndWritePlans(emptyChildren, PLANS_RADY_FOR_CORINE);
+		assignDummyHomeActsAndWritePlans(emptyChildren, PLANS_RADY_FOR_CORINE);
 
-	    boolean simplifyGeom = false;
-	    boolean combiningGeoms = false;
-	    boolean sameHomeActivity = true;
-	    String homeActivityPrefix = "home";
+		boolean simplifyGeom = false;
+		boolean combiningGeoms = false;
+		boolean sameHomeActivity = true;
+		String homeActivityPrefix = "home";
 
-	    Map<String, String> shapeFileToFeatureKey = new HashMap<>();
-	    shapeFileToFeatureKey.put(ZONE_SHP, ZONE_ID_TAG);
+		Map<String, String> shapeFileToFeatureKey = new HashMap<>();
+		shapeFileToFeatureKey.put(ZONE_SHP, ZONE_ID_TAG);
 
 		CORINELandCoverCoordsModifier plansFilterForCORINELandCover = new CORINELandCoverCoordsModifier(PLANS_RADY_FOR_CORINE, shapeFileToFeatureKey,
-	            CORINE_LANDCOVER_FILE, simplifyGeom, combiningGeoms, sameHomeActivity, homeActivityPrefix);
+				CORINE_LANDCOVER_FILE, simplifyGeom, combiningGeoms, sameHomeActivity, homeActivityPrefix);
 
 		plansFilterForCORINELandCover.process();
 		Population schoolPopulation = plansFilterForCORINELandCover.getPopulation();
@@ -109,13 +109,13 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 	}
 
-    private static void assignDummyHomeActsAndWritePlans(Population population, String outputPlans){
+	private static void assignDummyHomeActsAndWritePlans(Population population, String outputPlans) {
 		PopulationFactory pf = population.getFactory();
 		population.getPersons().values().forEach(p -> createPlanAndDummyHomeAct(p, pf));
 		new PopulationWriter(population).write(outputPlans);
 	}
 
-	private static void createPlanAndDummyHomeAct(Person p, PopulationFactory pf){
+	private static void createPlanAndDummyHomeAct(Person p, PopulationFactory pf) {
 		p.getPlans().clear();
 		Plan plan = pf.createPlan();
 		Activity act = pf.createActivityFromCoord("home_child", new Coord(-1, -1));
@@ -125,11 +125,11 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 		p.addPlan(plan);
 	}
 
-	private static void preparePopulationForBuildingSchoolPlans(Population population){
+	private static void preparePopulationForBuildingSchoolPlans(Population population) {
 		for (Person person : population.getPersons().values()) {
 			Activity act = (Activity) person.getSelectedPlan().getPlanElements().get(0);
-			if(! act.getType().startsWith("home")) throw new IllegalStateException("first act type is not home for person " + person);
-			if(act.getCoord() == null) throw new IllegalStateException("can not retrieve coord info for home act of person " + person);
+			if (!act.getType().startsWith("home")) throw new IllegalStateException("first act type is not home for person " + person);
+			if (act.getCoord() == null) throw new IllegalStateException("can not retrieve coord info for home act of person " + person);
 			person.getAttributes().putAttribute("homeX", act.getCoord().getX());
 			person.getAttributes().putAttribute("homeY", act.getCoord().getY());
 			person.setSelectedPlan(null);
