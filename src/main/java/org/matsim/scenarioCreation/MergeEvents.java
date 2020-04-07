@@ -18,7 +18,7 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(
 		name = "merge",
-		description = "Merge multiple event event files into one.",
+		description = "Merge multiple event files into one.",
 		mixinStandardHelpOptions = true
 )
 public class MergeEvents implements Callable<Integer>, Comparator<Event> {
