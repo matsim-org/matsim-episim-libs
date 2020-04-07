@@ -1,6 +1,7 @@
 process to create a snz scenario
 
 (0.) extract adult id set from adult population - only necessary for Berlin scenario
+    (class ExtractPersonIdsToTxt)
 
 1. filter and aggregate germany facilities (by shape file, currently done by vsp)
     (class FilterEducFacilitiesForCertainArea)
@@ -32,7 +33,7 @@ process to create a snz scenario
     (class FilterEvents)
 
 8. merge events of school population simulation (step 7) and adults simulation (step 2)
-    (TODO create events merging class)
+    (command MergeEvents)
 
 ???. create episim input events [TODO should not be necessary any more?]
     (using prepare.DownSampleScenario)
