@@ -6,17 +6,17 @@ import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 
-import java.util.Random;
+import java.util.SplittableRandom;
 
 /**
  * Default progression model with deterministic (but random) state transitions at fixed days.
  */
 public final class DefaultProgressionModel implements ProgressionModel {
 
-	private final Random rnd;
+	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
-	public DefaultProgressionModel(Random rnd, EpisimConfigGroup episimConfig) {
+	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 	}

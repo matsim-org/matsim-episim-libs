@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.episim.*;
 
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -24,7 +24,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 */
 	private final boolean trackingEnabled;
 
-	public DefaultInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, boolean trackingEnabled) {
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, boolean trackingEnabled) {
 		super(rnd, episimConfig, reporting);
 		this.trackingEnabled = trackingEnabled;
 	}

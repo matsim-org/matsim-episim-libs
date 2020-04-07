@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.SplittableRandom;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -34,7 +35,7 @@ public class DefaultInfectionModelTest {
 	public void setup() {
 		EpisimReporting reporting = mock(EpisimReporting.class);
 		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
-		model = new DefaultInfectionModel(new Random(1), config, reporting, false);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, reporting, false);
 		restrictions = config.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -54,7 +55,7 @@ public class DefaultInfectionModelTest {
 
 		int infections = 0;
 
-		for (int i = 0; i < 20_000; i++) {
+		for (int i = 0; i < 30_000; i++) {
 			InfectionEventHandler.EpisimFacility container = f.get();
 			EpisimPerson person = p.apply(container);
 			model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
@@ -62,7 +63,7 @@ public class DefaultInfectionModelTest {
 				infections++;
 		}
 
-		return infections / 20_000d;
+		return infections / 30_000d;
 	}
 
 	/**
@@ -214,14 +215,14 @@ public class DefaultInfectionModelTest {
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new Random(1), config, rNoTracking, false);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, false);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "c10", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new Random(1), config, rTracking, true);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, true);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "c10", container);

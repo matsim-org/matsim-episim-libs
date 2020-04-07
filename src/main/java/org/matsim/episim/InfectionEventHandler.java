@@ -84,7 +84,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final EpisimConfigGroup episimConfig;
 	private final EventsManager eventsManager;
 	private final EpisimReporting reporting;
-	private final Random rnd = new Random(1);
+	private final SplittableRandom rnd = new SplittableRandom(1);
 
 	private int cnt = 10;
 	private int iteration = 0;
