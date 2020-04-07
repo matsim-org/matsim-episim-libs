@@ -139,6 +139,8 @@ public final class EpisimReporting {
 					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 			}
 			switch (person.getQuarantineStatus()) {
+				// For now there is no separation in the report between full and home
+				case atHome:
 				case full:
 					report.nInQuarantine++;
 					break;
