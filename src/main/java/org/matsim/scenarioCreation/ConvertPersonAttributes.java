@@ -28,14 +28,14 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(
 		name = "convertPersonAttributes",
 		description = "Reads in one population attributes file and one optional .txt file containing person id's, one per line. " +
-				"Population attributes are filtered by the id set and the written out in plans file format.",
+				"Population attributes are filtered by the id set and then written out in plans file format.",
 		mixinStandardHelpOptions = true
 )
 public class ConvertPersonAttributes implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(ConvertPersonAttributes.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Deutschland/de_events.xml.gz")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file", defaultValue = "...")
 	private Path input;
 
 	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.")
@@ -57,7 +57,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		}
 
 		Set<String> personIds = null;
-		if (Files.exists(this.personIds)) {
+		if (this.personIds != null && Files.exists(this.personIds)) {
 			log.info("Filtering by person ids: {}", this.personIds);
 			personIds = CreationUtils.readIdFile(this.personIds);
 		}
