@@ -4,20 +4,35 @@ process to create a snz scenario
 
 1. filter and aggregate germany facilities (by shape file, currently done by vsp)
     (class FilterEducFacilitiesForCertainArea)
-2. filter germany events by adult id set
+
+2. filter germany events
+        a. by event type (only ActivityStart, ActivityEnd, PersonEntersVehicle, PersonLeavesvehicle will remain)
+        b. by adult id set
     AND
     change facilities in events such that only remaining facilities (see step 1) are visited
     (class FilterEvents)
-3. filter germany school population (containing no plans) such that only children remain that have home id's which are also referenced by remaining adults
-    (looking up events file from step 3), then sample down to same sample size as adults
+
+3. filter germany adult population attributes file by adult id set and convert it to plans file format (containing no plans but only attributes)
+    (class FilterPersonsForCertainArea)
+
+4. filter germany school population (containing no plans) such that only children remain that have home id's which are also referenced by remaining adults
+   then sample down to same sample size as adults
+   write out 2 files:
+        (1) only school population with no plans)
+        (2) merge from (1) and step (3)
     (class CutSchoolPopulationFitting2UseCaseAdultPopulation)
-4. build plans for school population
+
+5. build plans for school population
     (class BuildSchoolPlans)
-5. simulate school population and create events
+
+6. simulate school population and create events
     -> needs transit schedule and network file
-    (TODO create run class)
-6. merge events of school population simulation (step 5) and adults simulation (step 2)
+
+7. merge events of school population simulation (step 5) and adults simulation (step 2)
     (TODO create events merging class)
-7. create episim input events
+
+
+
+???. create episim input events
     (using prepare.DownSampleScenario)
     TODO migrate?

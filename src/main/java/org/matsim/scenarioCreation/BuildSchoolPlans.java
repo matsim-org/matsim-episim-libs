@@ -37,6 +37,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -49,17 +50,25 @@ public class BuildSchoolPlans {
 
 	private static final Logger log = Logger.getLogger(BuildSchoolPlans.class);
 
-	private static final String inputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
+	private static final String INPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
 
-	private static final String inputFacilitiesFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_educFacilities_optimated.txt";
+	private static final String INPUT_FACILITIES_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_educFacilities_optimated.txt";
 
-	private static final String outputPopulationFile = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_u14population_schoolPlans.xml.gz";
+	private static final String OUTPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_u14population_schoolPlans.xml.gz";
 
-	private final static Random rnd = new Random(1);
-
-	private static List<EducFacility> educList = new ArrayList<>();
+	private final static Random RND = new Random(1);
 
 	public static void main(String[] args) throws IOException {
+
+		String inputPopulationFile = INPUT_POPULATION_FILE_DEFAULT;
+		String inputFacilitiesFile = INPUT_FACILITIES_FILE_DEFAULT;
+		String outputPopulationFile = OUTPUT_POPULATION_FILE_DEFAULT;
+
+		if(args.length > 0){
+			inputPopulationFile = args[0];
+			inputFacilitiesFile = args[1];
+			outputPopulationFile = args[2];
+		}
 
 		Population schoolPopulation = PopulationUtils.readPopulation(inputPopulationFile);
 
@@ -69,18 +78,18 @@ public class BuildSchoolPlans {
 
 	public static void buildSchoolPlans(Population schoolPopulation, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer) throws IOException {
 		log.info("start reading school facilities");
-		educList.addAll(EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer));
+		Set<EducFacility> allFacilities = EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
 		log.info("start building school plans");
-		process(schoolPopulation);
+		process(schoolPopulation, allFacilities);
 	}
 
-	private static void process(Population schoolPopulation) {
+	private static void process(Population schoolPopulation, Set<EducFacility> allFacilities) {
 
 		PopulationFactory pf = schoolPopulation.getFactory();
 
-		List<EducFacility> kigasList = educList.stream().filter(e -> e.isEducKiga()).collect(Collectors.toList());
-		List<EducFacility> primaryList = educList.stream().filter(e -> e.isEducPrimary()).collect(Collectors.toList());
-		List<EducFacility> secondaryList = educList.stream().filter(e -> e.isEducSecondary()).collect(Collectors.toList());
+		Set<EducFacility> kigasList = allFacilities.stream().filter(e -> e.isEducKiga()).collect(Collectors.toSet());
+		Set<EducFacility> primaryList = allFacilities.stream().filter(e -> e.isEducPrimary()).collect(Collectors.toSet());
+		Set<EducFacility> secondaryList = allFacilities.stream().filter(e -> e.isEducSecondary()).collect(Collectors.toSet());
 
 		Counter counter = new Counter("building school plan nr ");
 		for (Person person : schoolPopulation.getPersons().values()) {
@@ -102,7 +111,7 @@ public class BuildSchoolPlans {
 			}
 
 			homeAct1.setStartTime(0);
-			homeAct1.setEndTime(6.5 * 3600 + rnd.nextInt(3600));
+			homeAct1.setEndTime(6.5 * 3600 + RND.nextInt(3600));
 
 			if (age < 2) {
 				continue;
@@ -110,19 +119,19 @@ public class BuildSchoolPlans {
 
 			String eduActType;
 
-			List<EducFacility> listToSearchIn;
+			Set<EducFacility> setToSearchIn;
 			if (age > 1 && age <= 5) {
-				listToSearchIn = kigasList;
+				setToSearchIn = kigasList;
 				eduActType = "educ_kiga";
 			} else if (age > 5 && age <= 12) {
-				listToSearchIn = primaryList;
+				setToSearchIn = primaryList;
 				eduActType = "educ_primary";
 			} else {
-				listToSearchIn = secondaryList;
+				setToSearchIn = secondaryList;
 				eduActType = "educ_secondary";
 			}
 
-			List<EducFacility> closest10Facilities = findClosestKFacilities(listToSearchIn, homeCoord, 10);
+			List<EducFacility> closest10Facilities = findClosestKFacilities(setToSearchIn, homeCoord, 10);
 
 			//get a random facility within 5 km or just take the closest one
 			EducFacility facility = closest10Facilities.stream()
@@ -142,7 +151,7 @@ public class BuildSchoolPlans {
 			Activity eduAct = pf.createActivityFromCoord(eduActType, facility.getCoord());
 			plan.addActivity(eduAct);
 			eduAct.setStartTime(8 * 3600);
-			eduAct.setEndTime(13 * 3600 + rnd.nextInt(4 * 3600));
+			eduAct.setEndTime(13 * 3600 + RND.nextInt(4 * 3600));
 
 			//if person had info about facilities, we also want to use the info in the activie
 			//i.e. this is the differentiation between snz and berlin. might be improved later
@@ -164,8 +173,8 @@ public class BuildSchoolPlans {
 		}
 	}
 
-	private static List<EducFacility> findClosestKFacilities(List<EducFacility> kigasList, Coord homeCoord, int k) {
-		return PartialSort.kSmallestElements(k, kigasList.stream(),
+	private static List<EducFacility> findClosestKFacilities(Set<EducFacility> facilitiesSet, Coord homeCoord, int k) {
+		return PartialSort.kSmallestElements(k, facilitiesSet.stream(),
 				fac -> DistanceUtils.calculateSquaredDistance(homeCoord, fac.getCoord()));
 	}
 
@@ -173,7 +182,7 @@ public class BuildSchoolPlans {
 
 		if (distance < 1000) {
 			return "walk";
-		} else if (rnd.nextDouble() < 0.8) {
+		} else if (RND.nextDouble() < 0.8) {
 			return "pt";
 		} else {
 			return "ride";
