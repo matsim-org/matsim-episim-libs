@@ -93,7 +93,7 @@ public class DownSampleScenario implements Callable<Integer> {
 
 		log.info("Filtered {} out of {} events = {}%", handler.getEvents().size(), handler.getCounter(), handler.getEvents().size() / handler.getCounter());
 
-		handler.getEvents().forEach(writer::handleEvent);
+		handler.getEvents().forEach( (time, eventsList) -> eventsList.forEach(writer::handleEvent));
 		writer.closeFile();
 
 		if (!Files.exists(facilities)) {

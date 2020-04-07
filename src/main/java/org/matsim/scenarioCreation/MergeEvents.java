@@ -12,8 +12,7 @@ import picocli.CommandLine;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -40,30 +39,33 @@ public class MergeEvents implements Callable<Integer>, Comparator<Event> {
 
 		if (!Files.exists(output.getParent())) Files.createDirectories(output.getParent());
 
-		EventsManager manager = EventsUtils.createEventsManager();
-		FilterHandler handler = new FilterHandler(null, null, null);
-		manager.addHandler(handler);
-
+		Map<Double, List<Event>> allEvents = new TreeMap<>(Comparator.comparingDouble(Double::doubleValue));
 
 		for (Path path : input) {
 			if (!Files.exists(path)) {
-				log.error("Input file {} does not exists", input);
+				log.error("Input file {} does not exist ", input);
 				return 2;
 			}
+			EventsManager manager = EventsUtils.createEventsManager();
+			FilterHandler handler = new FilterHandler(null, null, null);
+			manager.addHandler(handler);
 
 			EventsUtils.readEvents(manager, path.toString());
+
+			handler.events.forEach( (timeStamp,eventsList) -> allEvents.computeIfAbsent(timeStamp, time -> new ArrayList<Event>()).addAll(eventsList));
 		}
 
 		EventWriterXML writer = new EventWriterXML(
 				IOUtils.getOutputStream(IOUtils.getFileUrl(output.toString()), false)
 		);
 
-		// Everything is sorted in-memory afterwards
-		// If this is has not sufficient performance it needs to be rewritten
-		handler.events.sort(this);
-		handler.events.forEach(writer::handleEvent);
+		//		 Everything is sorted in-memory afterwards
+		//		 If this is has not sufficient performance it needs to be rewritten
+//		handler.events.sort(this);
+
+		allEvents.forEach( (timeStamp, eventsList) -> eventsList.forEach(writer::handleEvent));
 		writer.closeFile();
-		log.info("Merged {} events", handler.events.size());
+//		log.info("Merged {} events", handler.events.size());
 
 		return 0;
 
