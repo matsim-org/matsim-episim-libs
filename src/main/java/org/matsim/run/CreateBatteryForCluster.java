@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 
 @CommandLine.Command(
 		name = "createBattery",
-		description = "Create batch script for execution on computing cluster.",
+		description = "Create batch scripts for execution on computing cluster.",
 		mixinStandardHelpOptions = true
 )
 public class CreateBatteryForCluster<T> implements Callable<Integer> {
@@ -31,6 +31,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--output", defaultValue = "../epidemic/battery")
 	private Path output;
+
+	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
+	private Path batchOutput;
 
 	@CommandLine.Option(names = "--name", defaultValue = "sz")
 	private String runName;
@@ -51,25 +54,15 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		Files.createDirectories(output);
 
-		// Copy run script
-		Path runScript = output.resolve("run.sh");
-		Path runSlurm = output.resolve("runSlurm.sh");
-
-
-		Files.copy(Resources.getResource("_run.sh").openStream(), runScript, StandardCopyOption.REPLACE_EXISTING);
-		Files.copy(Resources.getResource("_runSlurm.sh").openStream(), runSlurm, StandardCopyOption.REPLACE_EXISTING);
-		Files.copy(Resources.getResource("jvm.options").openStream(), output.resolve("jvm.options"), StandardCopyOption.REPLACE_EXISTING);
-
-		runScript.toFile().setExecutable(true);
-		runSlurm.toFile().setExecutable(true);
+		// Copy all resources
+		for (String name : Lists.newArrayList("run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+			Files.copy(Resources.getResource(name).openStream(), output.resolve(name), StandardCopyOption.REPLACE_EXISTING);
+		}
 
 		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(output.resolve("_bashScript.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(output.resolve("_info.txt").toFile()));
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
-
-
-		log.info("Preparing {} runs for {} ({})", prepare.runs.size(), runName, setup.getSimpleName());
 
 
 		List<String> header = Lists.newArrayList("RunScript", "Config", "RunId", "Output");
@@ -84,7 +77,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
-			String outputPath = "output/" + Joiner.on("-").join(run.params);
+			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
 			run.config.controler().setOutputDirectory(outputPath);
 
 			prepare.setup.write(output, run.config);
@@ -105,8 +98,18 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Files.write(output.resolve("_slurmScript.sh"), Lists.newArrayList(
 				"#!/bin/bash\n",
 				// Round up array size to be multiple of step size
-				String.format("sbatch --array=1-%d:96 --job-name=sz runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 96d) * 96))
+				String.format("sbatch --array=1-%d:96 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 96d) * 96, runName))
 		);
+
+		// Assume 96 * 2 tasks per node
+		Files.write(output.resolve("_paralellScript.sh"), Lists.newArrayList(
+				"#!/bin/bash\n",
+				"export EPISIM_SETUP=" + setup.toString(),
+				"export EPISIM_PARAMS=" + params.toString(),
+				"export EPISIM_OUTPUT=" + batchOutput.toString(),
+				"",
+				String.format("sbatch --array=1-%d --job-name=%s runParallel.sh", (int) Math.ceil(prepare.runs.size() / 192d), runName)
+		));
 
 		bashScriptWriter.close();
 		infoWriter.close();

@@ -198,7 +198,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			String containerIdString = container.getContainerId().toString();
 
-			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {
 				if (infectionParams.includesActivity(containerIdString)) {
 					contactIntensity = infectionParams.getContactIntensity();
 				}
@@ -209,7 +209,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
 			double contactIntensityLeavingPerson = -1;
 			double contactIntensityOtherPerson = -1;
-			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {
 				if (infectionParams.includesActivity(leavingPersonsActivity)) {
 					contactIntensityLeavingPerson = infectionParams.getContactIntensity();
 				}

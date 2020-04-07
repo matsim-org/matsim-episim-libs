@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -76,6 +77,11 @@ public interface BatchRun<T> {
 	Config prepareConfig(int id, T params);
 
 	void write(Path directory, Config config) throws IOException;
+
+
+	default String getOutputName(PreparedRun.Run run) {
+		return Joiner.on("-").join(run.params);
+	}
 
 	@Target(ElementType.FIELD)
 	@Retention(RetentionPolicy.RUNTIME)

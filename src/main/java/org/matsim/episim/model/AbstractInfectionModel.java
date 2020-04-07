@@ -37,7 +37,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
 	private static boolean actIsRelevant(String act, EpisimConfigGroup episimConfig,
 										 Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd) {
-		for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+		for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {
 			if (infectionParams.includesActivity(act)) {
 				ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
 				// avoid use of rnd if outcome is known beforehand

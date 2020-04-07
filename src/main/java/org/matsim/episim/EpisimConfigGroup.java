@@ -254,7 +254,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return params;
 	}
 
-	public Map<String, InfectionParams> getContainerParams() {
+	/**
+	 * Get a copy of container params. Don't use this heavily, it is slow because a new map is created every time.
+	 */
+	Map<String, InfectionParams> getContainerParams() {
 		@SuppressWarnings("unchecked") final Collection<InfectionParams> parameters = (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 		final Map<String, InfectionParams> map = new LinkedHashMap<>();
 
@@ -266,6 +269,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		return Collections.unmodifiableMap(map);
+	}
+
+	/**
+	 * Get all configured infection params.
+	 */
+	@SuppressWarnings("unchecked")
+	public Collection<InfectionParams> getInfectionParams() {
+		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 	}
 
 	public enum PutTracablePersonsInQuarantine {yes, no}

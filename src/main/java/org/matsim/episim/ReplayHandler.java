@@ -44,31 +44,37 @@ public final class ReplayHandler {
 	/**
 	 * Replays event add modifies attributes based on current iteration.
 	 */
-	public void replayEvents(EventsManager manager, int iteration) {
-		for (Event e : events) {
+	public void replayEvents(final EventsManager manager, final int iteration) {
+		for (final Event e : events) {
 
 			if (e instanceof ActivityStartEvent) {
 				ActivityStartEvent ev = (ActivityStartEvent) e;
-				e = new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-						ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord());
+				manager.processEvent(
+						new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
+								ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord())
+				);
 
 			} else if (e instanceof ActivityEndEvent) {
 				ActivityEndEvent ev = (ActivityEndEvent) e;
-				e = new ActivityEndEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-						ev.getLinkId(), ev.getFacilityId(), ev.getActType());
+				manager.processEvent(
+						new ActivityEndEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
+								ev.getLinkId(), ev.getFacilityId(), ev.getActType())
+				);
 
 			} else if (e instanceof PersonEntersVehicleEvent) {
 				PersonEntersVehicleEvent ev = (PersonEntersVehicleEvent) e;
-				e = new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId());
+				manager.processEvent(
+						new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
+				);
 
 			} else if (e instanceof PersonLeavesVehicleEvent) {
 				PersonLeavesVehicleEvent ev = (PersonLeavesVehicleEvent) e;
-				e = new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId());
+				manager.processEvent(
+						new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
+				);
 
-			}
-
-
-			manager.processEvent(e);
+			} else
+				manager.processEvent(e);
 		}
 	}
 

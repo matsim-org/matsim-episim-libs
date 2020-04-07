@@ -189,8 +189,13 @@ public final class EpisimReporting {
 	}
 
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
-		if (specificInfectionsCnt.decrementAndGet() > 0) {
+
+		int cnt = specificInfectionsCnt.getOpaque();
+		// This counter is used by many threads, for better performance we use very weak memory guarantees here
+		// race-conditions will occur, but the state will be eventually where we want it (threads stop logging)
+		if (cnt > 0) {
 			log.warn("Infection of personId={} by person={} at/in {}", personWrapper.getPersonId(), infector.getPersonId(), infectionType);
+			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];

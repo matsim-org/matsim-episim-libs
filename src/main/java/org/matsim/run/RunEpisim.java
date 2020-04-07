@@ -20,6 +20,7 @@ import org.matsim.episim.ReplayHandler;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.policy.FixedPolicy;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,8 +71,11 @@ public class RunEpisim {
 
 		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 
+		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
+
 		runSimulation(config, 130);
 
+		OutputDirectoryLogging.closeOutputDirLogging();
 	}
 
 	/**
@@ -98,23 +102,18 @@ public class RunEpisim {
 	 * Creates an output directory, with a name based on current config and adapt the logging config.
 	 * This method is not thread-safe unlike {@link #runSimulation(Config, int)}.
 	 */
-	public static void setOutputDirectory(Config config) throws IOException {
+	public static void setOutputDirectory(Config config) {
 		StringBuilder outdir = new StringBuilder("output");
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		for (InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
+		for (InfectionParams infectionParams : episimConfig.getInfectionParams()) {
 			outdir.append("-");
 			outdir.append(infectionParams.getContainerName());
-//                        if (infectionParams.getShutdownDay() < Long.MAX_VALUE) {
-//                                outdir.append(infectionParams.getRemainingFraction());
-			//                               outdir.append("it").append(infectionParams.getShutdownDay());
-			//                       }
 			if (infectionParams.getContactIntensity() != 1.) {
 				outdir.append("ci").append(infectionParams.getContactIntensity());
 			}
 		}
 		config.controler().setOutputDirectory(outdir.toString());
-		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 	}
 
@@ -149,12 +148,22 @@ public class RunEpisim {
 				Files.createDirectories(eventPath);
 		}
 
-		EventsManager events = EventsUtils.createEventsManager();
-		InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
-		events.addHandler(eventHandler);
-
 		ReplayHandler replay = new ReplayHandler(episimConfig, scenario);
+
+		simulationLoop(config, scenario, replay, iterations, eventPath);
+
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
+	}
+
+	/**
+	 * Performs the simulation loop.
+	 */
+	static void simulationLoop(final Config config, final Scenario scenario,
+							   final ReplayHandler replay, final int iterations, @Nullable final Path eventPath) {
+
+		final EventsManager events = EventsUtils.createEventsManager();
+		final InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
+		events.addHandler(eventHandler);
 
 		for (int iteration = 0; iteration <= iterations; iteration++) {
 
@@ -185,6 +194,6 @@ public class RunEpisim {
 			}
 		}
 
-		OutputDirectoryLogging.closeOutputDirLogging();
 	}
+
 }
