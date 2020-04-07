@@ -10,6 +10,7 @@ import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
 
+import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.*;
 
@@ -250,7 +251,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		params = new InfectionParams(containerName);
 
-		super.addParameterSet(params);
+		addParameterSet(params);
 		return params;
 	}
 
@@ -272,9 +273,24 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Get all configured infection params.
+	 * Lookup which infection param is relevant for an activity. Throws exception when none was found.
+	 *
+	 * @param activity full activity identifier (including id etc.)
+	 * @return matched infection param
+	 * @throws NoSuchElementException when no param could be matched
 	 */
-	@SuppressWarnings("unchecked")
+	public @NotNull
+	InfectionParams selectInfectionParams(String activity) {
+
+		for (EpisimConfigGroup.InfectionParams infectionParams : getInfectionParams()) {
+			if (infectionParams.includesActivity(activity)) {
+				return infectionParams;
+			}
+		}
+
+		throw new NoSuchElementException("No params known for activity %s. Please add prefix to one infection parameter.");
+	}
+
 	public Collection<InfectionParams> getInfectionParams() {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 	}
@@ -283,7 +299,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	public enum FacilitiesHandling {bln, snz}
 
-	public static class InfectionParams extends ReflectiveConfigGroup {
+	public static final class InfectionParams extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
 		public static final String MAPPED_NAMES = "mappedNames";
@@ -356,7 +372,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Check whether an activity belong to this container group.
 		 */
-		public boolean includesActivity(String actType) {
+		private boolean includesActivity(String actType) {
 			for (String mapped : mappedNames)
 				if (actType.startsWith(mapped))
 					return true;

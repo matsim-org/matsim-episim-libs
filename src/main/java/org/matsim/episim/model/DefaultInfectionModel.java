@@ -197,32 +197,15 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		double contactIntensity = -1;
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			String containerIdString = container.getContainerId().toString();
+			contactIntensity = episimConfig.selectInfectionParams(containerIdString).getContactIntensity();
 
-			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {
-				if (infectionParams.includesActivity(containerIdString)) {
-					contactIntensity = infectionParams.getContactIntensity();
-				}
-			}
-			if (contactIntensity < 0.) {
-				throw new IllegalStateException("contactIntensity not defined for vehicle container=" + containerIdString + ".  There needs to be a config entry for each activity type.");
-			}
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
-			double contactIntensityLeavingPerson = -1;
-			double contactIntensityOtherPerson = -1;
-			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {
-				if (infectionParams.includesActivity(leavingPersonsActivity)) {
-					contactIntensityLeavingPerson = infectionParams.getContactIntensity();
-				}
-				if (infectionParams.includesActivity(otherPersonsActivity)) {
-					contactIntensityOtherPerson = infectionParams.getContactIntensity();
-				}
-			}
-			if (contactIntensityLeavingPerson < 0. || contactIntensityOtherPerson < 0.) {
-				throw new IllegalStateException("contactIntensity not defined either for activityType=" + contactIntensityLeavingPerson + " or for activityType= " + otherPersonsActivity
-						+ ".  There needs to be a config entry for each activity type.");
-			}
+
+			double contactIntensityLeavingPerson = episimConfig.selectInfectionParams(leavingPersonsActivity).getContactIntensity();
+			double contactIntensityOtherPerson = episimConfig.selectInfectionParams(otherPersonsActivity).getContactIntensity();
 
 			contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
+
 		} else {
 			throw new IllegalArgumentException("do not know how to deal container " + container);
 		}

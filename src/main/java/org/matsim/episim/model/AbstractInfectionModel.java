@@ -19,8 +19,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	protected final Scenario scenario = null;
 	protected final Random rnd;
 	protected final EpisimConfigGroup episimConfig;
-	protected int iteration;
 	private final EpisimReporting reporting;
+	protected int iteration;
 	private Map<String, ShutdownPolicy.Restriction> restrictions;
 
 	AbstractInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
@@ -37,20 +37,17 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
 	private static boolean actIsRelevant(String act, EpisimConfigGroup episimConfig,
 										 Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd) {
-		for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getInfectionParams()) {
-			if (infectionParams.includesActivity(act)) {
-				ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
-				// avoid use of rnd if outcome is known beforehand
-				if (r.getRemainingFraction() == 1)
-					return true;
-				if (r.getRemainingFraction() == 0)
-					return false;
 
-				return rnd.nextDouble() < r.getRemainingFraction();
-			}
-		}
+		EpisimConfigGroup.InfectionParams infectionParams = episimConfig.selectInfectionParams(act);
+		ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
+		// avoid use of rnd if outcome is known beforehand
+		if (r.getRemainingFraction() == 1)
+			return true;
+		if (r.getRemainingFraction() == 0)
+			return false;
 
-		throw new IllegalStateException(String.format("No restrictions known for activity %s. Please add prefix to one infection parameter.", act));
+		return rnd.nextDouble() < r.getRemainingFraction();
+
 	}
 
 	private static boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
