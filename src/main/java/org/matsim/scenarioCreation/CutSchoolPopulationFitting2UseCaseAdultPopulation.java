@@ -21,20 +21,31 @@
 package org.matsim.scenarioCreation;
 
 import org.apache.log4j.Logger;
+import org.locationtech.jts.geom.Geometry;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Activity;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.population.PopulationUtils;
+import org.matsim.core.utils.geometry.CoordUtils;
+import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.gis.ShapeFileReader;
+import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
+import org.opengis.feature.simple.SimpleFeature;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
+ * TODO update this javadoc...
+ *
+ *
+ * <p><b>This documentation is deprecated!! Needs an update (shape file filtering....)</b></p>
+ *
+ *
+ *
  * This class aims to cut a school population down to an area of interest by looking up the corresponding adult population and matching the id of the home facility.
  * This means, the output will contain all children living in facilities in which adults live.
  * It is assumed that the input children file can have a higher sample size than the adult file. To account for that, the resulting children population
@@ -58,7 +69,8 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 	private static final String INPUT_SCHOOL_POPULATION_GER = "../../svn/shared-svn/projects/episim/matsim-files/snz/Deutschland/de_populationU14_fromPopulationAttributes.xml.gz";
 	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_plans_adults_25pct.xml.gz";
-	private static final double SAMPLE_SIZE_RATIO = 0.25d;
+	private static final String INPUT_SHAPE_USECASE = "";
+	private static final double SAMPLE_SIZE_FOR_CHILDREN_IN_SHAPE = 0.25d;
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
@@ -69,21 +81,21 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 	public static void main(String[] args) {
 
 
-		String inputChildren = INPUT_ADULT_POPULATION_USECASE;
+		String inputChildren = INPUT_SCHOOL_POPULATION_GER;
 		String inputAdults = INPUT_ADULT_POPULATION_USECASE;
-		double sampleRatio = SAMPLE_SIZE_RATIO;
+		String inputShape = INPUT_SHAPE_USECASE;
+		double sampleRatio = SAMPLE_SIZE_FOR_CHILDREN_IN_SHAPE;
 		String outputChildren = OUTPUT_SCHOOL_POPULATION_USECASE;
 		String outputPopulation = OUTPUT_ENTIRE_POPULATION_USECASE;
 
 		if(args.length > 0){
 			inputChildren = args[0];
 			inputAdults = args[1];
-			sampleRatio = Double.valueOf(args[2]);
-			outputChildren = args[3];
-			outputPopulation = args[4];
+			inputShape = args[2];
+			sampleRatio = Double.valueOf(args[3]);
+			outputChildren = args[4];
+			outputPopulation = args[5];
 		}
-
-		log.info("will adopt children population to adult population file : " + inputAdults);
 
 		Population children = PopulationUtils.readPopulation(inputChildren);
 		Population adults = PopulationUtils.readPopulation(inputAdults);
@@ -114,8 +126,31 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 		log.info("number of home facilities in adults file = " + allHomeActFacilities.size());
 
+		int nrOfChildrenInsideShape = 0;
+		Collection<SimpleFeature> shapefile = ShapeFileReader.getAllFeatures(inputShape);
 
-		List<Person> childrenToDelete = new ArrayList<>();
+		log.info("checking how many children have a home inside of shape...");
+		Set<Id<Person>> childsNotInShape = new HashSet<>();
+		Counter counter = new Counter("checking home coord of child ");
+		for (Person child : children.getPersons().values()) {
+			counter.incCounter();
+			boolean childInShape = isChildsHomeInShape(shapefile, child);
+			if(childInShape){
+				nrOfChildrenInsideShape++;
+			} else {
+				childsNotInShape.add(child.getId());
+			}
+		}
+
+		log.info("nr of children that have their home within the scope of the shape = " + nrOfChildrenInsideShape);
+
+		double childrenToBeCreated = Math.floor(nrOfChildrenInsideShape * sampleRatio);
+
+		log.info("that means that " + childrenToBeCreated + " children will have to be contained in the result...");
+
+		childsNotInShape.forEach(child -> children.removePerson(child));
+
+		List<Person> childrenToDeleteForBeingHomeAlone = new ArrayList<>();
 		for (Person child : children.getPersons().values()) {
 
 			Object attribute = child.getAttributes().getAttribute(HOME_FACILITY_ATTRIBUTE_NAME);
@@ -123,19 +158,29 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 			Id<ActivityFacility> facilityId = Id.create((String) attribute, ActivityFacility.class);
 			if (!allHomeActFacilities.contains(facilityId)) {
-				childrenToDelete.add(child);
+				childrenToDeleteForBeingHomeAlone.add(child);
 			}
 		}
 
-		log.info("removing " + childrenToDelete.size() + " children because their home facility is not contained in adults home facilities...");
-		childrenToDelete.forEach(c -> children.removePerson(c.getId()));
-		log.info("remaining number of children = " + children.getPersons().size());
+
+		log.info("removing " + childrenToDeleteForBeingHomeAlone.size() + " children because their home facility is not contained in adults home facilities...");
+		childrenToDeleteForBeingHomeAlone.forEach(c -> children.removePerson(c.getId()));
+		int nrOfChildrenFullFillingConditions = children.getPersons().size();
+		log.info("remaining number of children = " + nrOfChildrenFullFillingConditions);
+
+		if(nrOfChildrenFullFillingConditions < childrenToBeCreated){
+			throw new RuntimeException("can not create a " + sampleRatio + " sample of children because there arent enough children inside the shape having a homeId that an adult also has..\n" +
+					"nrOfChildrenFullFillingConditions=" + nrOfChildrenFullFillingConditions +
+					"\nchildrentToBeCreated=" + childrenToBeCreated);
+		}
+
+		sampleRatio = childrenToBeCreated/nrOfChildrenFullFillingConditions;
 
 		log.info("scaling down children...");
 		PopulationUtils.sampleDown(children, sampleRatio);
 		log.info("remaining number of children = " + children.getPersons().size());
 
-		log.info("writing school population containing only chilren with no plans...");
+		log.info("writing school population containing only children with no plans...");
 		PopulationUtils.writePopulation(children, outputChildren);
 
 		log.info("merge empty adult plans with empty children plans...");
@@ -144,6 +189,20 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 		log.info("writing entire population with no plans...");
 		PopulationUtils.writePopulation(adults, outputPopulation);
+	}
+
+	private static boolean isChildsHomeInShape(Collection<SimpleFeature> shapefile, Person child) {
+		double homeX = (double) child.getAttributes().getAttribute("homeX");
+		double homeY = (double) child.getAttributes().getAttribute("homeY");
+		Coord homeCoord = CoordUtils.createCoord(homeX, homeY);
+		boolean childInShape = false;
+		for (SimpleFeature singleFeature : shapefile) {
+			Geometry geometryOfCertainArea = (Geometry) singleFeature.getDefaultGeometry();
+			if (geometryOfCertainArea.contains(MGC.coord2Point(homeCoord)))
+				childInShape = true;
+					break;
+		}
+		return childInShape;
 	}
 
 
