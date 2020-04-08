@@ -193,7 +193,7 @@ public final class EpisimPerson implements Attributable {
 		this.firstFacilityId = firstFacilityId;
 	}
 
-	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, seriouslySick, critical, recovered}
+	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms, seriouslySick, critical, recovered}
 
 	public enum QuarantineStatus {full, atHome, no}
 }

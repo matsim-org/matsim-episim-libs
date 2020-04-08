@@ -84,7 +84,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final EpisimConfigGroup episimConfig;
 	private final EventsManager eventsManager;
 	private final EpisimReporting reporting;
-	private final Random rnd = new Random(1);
+	private final SplittableRandom rnd;
 
 	private int cnt = 10;
 	private int iteration = 0;
@@ -102,6 +102,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = new EpisimReporting(config);
+		this.rnd = new SplittableRandom(config.global().getRandomSeed());
 		this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
 		this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting,
 				episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);

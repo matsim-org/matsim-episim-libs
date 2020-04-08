@@ -72,6 +72,11 @@
             <property name="illegalClassNames" value="org.apache.log4j.Logger,org.slf4j.Logger"/>
             <message key="illegal.type" value="Use new Logging API: org.apache.logging.log4j.Logger / LogManager"/>
         </module>
+
+        <module name="IllegalType">
+            <property name="illegalClassNames" value="java.util.Random"/>
+            <message key="illegal.type" value="Use java.util.SplittableRandom for better performance and randomness"/>
+        </module>
         
         <module name="MultipleVariableDeclarations"/>
         <module name="NestedForDepth">
