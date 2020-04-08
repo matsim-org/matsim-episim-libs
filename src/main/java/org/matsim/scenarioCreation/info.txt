@@ -14,7 +14,7 @@ process to create a snz scenario
     (class FilterEvents)
 
 3. filter germany adult population attributes file by adult id for use case set and convert it to plans file format (containing no plans but only attributes)
-    (class FilterPersonsForCertainArea)
+    (class ConvertPersonAttributes)
 
 4. filter germany school population (containing no plans) such that only children remain that have home id's which are also referenced by remaining adults
    then sample down to same sample size as adults
@@ -35,6 +35,6 @@ process to create a snz scenario
 8. merge events of school population simulation (step 7) and adults simulation (step 2)
     (command MergeEvents)
 
-???. create episim input events [TODO should not be necessary any more?]
+???. create episim input events [TODO should not be necessary any more? but keep for outside users..]
     (using prepare.DownSampleScenario)
     TODO migrate?
