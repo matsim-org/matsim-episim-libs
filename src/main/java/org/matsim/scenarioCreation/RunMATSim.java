@@ -12,8 +12,6 @@ import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 
 /**
- * Creates events for the U14 population.
- * Todo: merge them into adult events file, then reduce to act start / end and person enters / leaves vehicle events
  * @author smueller
  */
 public class RunMATSim {
