@@ -3,7 +3,7 @@ process to create a snz scenario
 (0.) extract adult id set from adult population - only necessary for Berlin scenario
     (class ExtractPersonIdsToTxt)
 
-1. filter and aggregate germany facilities (by shape file, currently done by vsp)
+1. filter and aggregate educational facilities of entire germany to use case area (by shape file, currently done by vsp)
     (class FilterEducFacilitiesForCertainArea)
 
 2. filter germany events
