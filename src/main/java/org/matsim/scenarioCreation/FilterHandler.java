@@ -23,7 +23,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 
 	final Population population;
 	final Set<Id<Person>> personIds;
-	final List<Event> events = new ArrayList<>();
+	final Map<Double,List<Event>> events = new TreeMap<>(Comparator.comparingDouble(Double::doubleValue));
 
 	/**
 	 * Facilities that have been visited by the filtered persons.
@@ -60,7 +60,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 		}
 
 		facilities.add(activityEndEvent.getFacilityId());
-		events.add(activityEndEvent);
+		events.computeIfAbsent(activityEndEvent.getTime(), time -> new ArrayList<>()).add(activityEndEvent);
 	}
 
 	@Override
@@ -85,7 +85,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 		}
 
 		facilities.add(activityStartEvent.getFacilityId());
-		events.add(activityStartEvent);
+		events.computeIfAbsent(activityStartEvent.getTime(), time -> new ArrayList<>()).add(activityStartEvent);
 	}
 
 	@Override
@@ -99,7 +99,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 		if (personIds != null && !personIds.contains(personEntersVehicleEvent.getPersonId()))
 			return;
 
-		events.add(personEntersVehicleEvent);
+		events.computeIfAbsent(personEntersVehicleEvent.getTime(), time -> new ArrayList<>()).add(personEntersVehicleEvent);
 	}
 
 	@Override
@@ -113,7 +113,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 		if (personIds != null && !personIds.contains(personLeavesVehicleEvent.getPersonId()))
 			return;
 
-		events.add(personLeavesVehicleEvent);
+		events.computeIfAbsent(personLeavesVehicleEvent.getTime(), time -> new ArrayList<>()).add(personLeavesVehicleEvent);
 	}
 
 	public int getCounter() {
@@ -121,7 +121,7 @@ public class FilterHandler implements ActivityEndEventHandler, PersonEntersVehic
 	}
 
 
-	public List<Event> getEvents() {
+	public Map<Double, List<Event>> getEvents() {
 		return events;
 	}
 

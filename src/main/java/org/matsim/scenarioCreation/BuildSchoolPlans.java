@@ -52,9 +52,9 @@ public class BuildSchoolPlans {
 
 	private static final String INPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
 
-	private static final String INPUT_FACILITIES_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_educFacilities_optimated.txt";
+	private static final String INPUT_FACILITIES_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_snz_educationFacilities.txt";
 
-	private static final String OUTPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/scenario-input/be_u14population_schoolPlans.xml.gz";
+	private static final String OUTPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_schoolPlans.xml.gz";
 
 	private final static Random RND = new Random(1);
 
@@ -167,6 +167,7 @@ public class BuildSchoolPlans {
 			if (person.getAttributes().getAttribute("homeId") != null) {
 				String facilityIdString = (String) person.getAttributes().getAttribute("homeId");
 				Id<ActivityFacility> homeFacilityId = Id.create(facilityIdString, ActivityFacility.class);
+				homeAct2.setFacilityId(homeFacilityId);
 			}
 			homeAct2.setStartTime(14 * 3600); //this does not necessarily correspond to end time of eduAct.. not too bad?
 

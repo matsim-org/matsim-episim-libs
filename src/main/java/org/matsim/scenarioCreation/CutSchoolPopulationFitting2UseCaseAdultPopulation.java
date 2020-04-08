@@ -57,16 +57,17 @@ import java.util.stream.Collectors;
 class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 	private static final String INPUT_SCHOOL_POPULATION_GER = "../../svn/shared-svn/projects/episim/matsim-files/snz/Deutschland/de_populationU14_fromPopulationAttributes.xml.gz";
-	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
+	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_plans_adults_25pct.xml.gz";
 	private static final double SAMPLE_SIZE_RATIO = 0.25d;
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
-	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans.xml.gz";
+	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz";
 
 	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
 
 	public static void main(String[] args) {
+
 
 		String inputChildren = INPUT_ADULT_POPULATION_USECASE;
 		String inputAdults = INPUT_ADULT_POPULATION_USECASE;
@@ -82,8 +83,10 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 			outputPopulation = args[4];
 		}
 
-		Population children = PopulationUtils.readPopulation(INPUT_SCHOOL_POPULATION_GER);
-		Population adults = PopulationUtils.readPopulation(INPUT_ADULT_POPULATION_USECASE);
+		log.info("will adopt children population to adult population file : " + inputAdults);
+
+		Population children = PopulationUtils.readPopulation(inputChildren);
+		Population adults = PopulationUtils.readPopulation(inputAdults);
 
 		log.info("nr of children in input file = " + children.getPersons().size());
 		log.info("nr of adults in input file = " + adults.getPersons().size());
@@ -129,18 +132,18 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		log.info("remaining number of children = " + children.getPersons().size());
 
 		log.info("scaling down children...");
-		PopulationUtils.sampleDown(children, SAMPLE_SIZE_RATIO);
+		PopulationUtils.sampleDown(children, sampleRatio);
 		log.info("remaining number of children = " + children.getPersons().size());
 
 		log.info("writing school population containing only chilren with no plans...");
-		PopulationUtils.writePopulation(children, OUTPUT_SCHOOL_POPULATION_USECASE);
+		PopulationUtils.writePopulation(children, outputChildren);
 
 		log.info("merge empty adult plans with empty children plans...");
 		//finally, merge adult population and school population and write out the result
 		children.getPersons().values().forEach(person -> adults.addPerson(person));
 
 		log.info("writing entire population with no plans...");
-		PopulationUtils.writePopulation(adults, OUTPUT_ENTIRE_POPULATION_USECASE);
+		PopulationUtils.writePopulation(adults, outputPopulation);
 	}
 
 
