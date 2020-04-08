@@ -10,12 +10,10 @@ import org.matsim.core.utils.io.IOUtils;
 import org.matsim.facilities.ActivityFacility;
 import picocli.CommandLine;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -32,17 +30,15 @@ public class FilterEvents implements Callable<Integer> {
 	private static Logger log = LogManager.getLogger(FilterEvents.class);
 
 	@Parameters(paramLabel = "file", arity = "1", description = "Path to event file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Deutschland/de_events.xml.gz")
-
 	private Path input;
 
-	@Option(names = "--ids", description = "Path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Munich/mu_personIds.txt")
-
+	@Option(names = "--ids", description = "Path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_adults_idList.txt")
 	private Path personIds;
 
-	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredMunich.xml.gz")
+	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredBerlin.xml.gz")
 	private Path output;
 
-	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file")
+	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_snz_educationFacilities.txt")
 	private Path facilities;
 
 
@@ -74,13 +70,7 @@ public class FilterEvents implements Callable<Integer> {
 		Set<String> filterIds = null;
 		if (Files.exists(personIds)) {
 			log.info("Filtering by person events {}", personIds);
-			filterIds = new HashSet<>();
-
-			try (BufferedReader reader = IOUtils.getBufferedReader(IOUtils.getFileUrl(personIds.toString()))) {
-				String line;
-				while ((line = reader.readLine()) != null)
-					filterIds.add(line);
-			}
+			filterIds = CreationUtils.readIdFile(personIds);
 		}
 
 		EventsManager manager = EventsUtils.createEventsManager();
@@ -100,7 +90,7 @@ public class FilterEvents implements Callable<Integer> {
 
 		log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.getCounter(), handler.events.size() / handler.getCounter());
 
-		handler.events.forEach(writer::handleEvent);
+		handler.events.forEach((time, eventsList) -> eventsList.forEach(writer::handleEvent));
 		writer.closeFile();
 
 		return 0;

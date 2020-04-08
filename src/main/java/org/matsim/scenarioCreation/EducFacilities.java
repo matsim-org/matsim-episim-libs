@@ -44,36 +44,66 @@ class EducFacilities {
 		Set<EducFacility> educFacilities = new HashSet<>();
 		BufferedReader reader = new BufferedReader(new FileReader(educFacilitiesFile));
 		int ii = -1;
-
+		int positionKiga = Integer.MAX_VALUE;
+		int positionPrimary = Integer.MAX_VALUE;
+		int positionSecondary = Integer.MAX_VALUE;
+		int positionMergedFacilities = Integer.MAX_VALUE;
+		int positionId = Integer.MAX_VALUE;
+		int positionX = Integer.MAX_VALUE;
+		int positionY = Integer.MAX_VALUE;
+		
 		for (String line = reader.readLine(); line != null; line = reader.readLine()) {
 
 			ii++;
-
+			
+			
+			String[] parts = line.split("\t");
+			
 			if (ii == 0) {
+				
+				int count = 0;
+				
+				while(count<parts.length) {
+					if(parts[count].equals("id"))
+						positionId = count;
+					if(parts[count].equals("x"))
+						positionX = count;
+					if(parts[count].equals("y"))
+						positionY = count;
+					if(parts[count].equals("educ_kiga"))	
+						positionKiga = count;
+					if(parts[count].equals("educ_primary"))	
+						positionPrimary = count;
+					if(parts[count].equals("educ_secondary"))	
+						positionSecondary = count;
+					if(parts[count].equals("mergedFacilityIds"))
+						positionMergedFacilities = count;
+					count++;
+				}
 				continue;
 			}
 
-			String[] parts = line.split("\t");
+			
 
-			Id<ActivityFacility> id = Id.create(parts[0], ActivityFacility.class);
-			double x = Double.parseDouble(parts[1]);
-			double y = Double.parseDouble(parts[2]);
+			Id<ActivityFacility> id = Id.create(parts[positionId], ActivityFacility.class);
+			double x = Double.parseDouble(parts[positionX]);
+			double y = Double.parseDouble(parts[positionY]);
 
-			String educKiga = parts[3];
+			String educKiga = parts[positionKiga];
 			boolean isEducKiga = false;
-			if (!educKiga.equals("0")) {
+			if (!(educKiga.equals("0.0") || educKiga.equals("0"))) {
 				isEducKiga = true;
 			}
 
-			String educPrimary = parts[4];
+			String educPrimary = parts[positionPrimary];
 			boolean isEducPrimary = false;
-			if (!educPrimary.equals("0.0")) {
+			if (!(educPrimary.equals("0.0") || educPrimary.equals("0"))) {
 				isEducPrimary = true;
 			}
 
-			String educSecondary = parts[5];
+			String educSecondary = parts[positionSecondary];
 			boolean isEducSecondary = false;
-			if (!educSecondary.equals("0.0")) {
+			if (!(educSecondary.equals("0.0") || educSecondary.equals("0"))) {
 				isEducSecondary = true;
 			}
 
@@ -82,21 +112,21 @@ class EducFacilities {
 			if (transformation != null) {
 				coord = transformation.transform(coord);
 			}
+			if(isEducKiga || isEducPrimary || isEducSecondary) {
+				EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
 
-			EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
-
-			if (parts.length >= 7) {
-				if (!parts[6].equals("")) {
-					String[] containedFacilities;
-					containedFacilities = parts[6].split(";");
-					for (String containedFacility : containedFacilities) {
-						educFacility.addContainedEducFacility(Id.create(containedFacility, ActivityFacility.class));
+					if (positionMergedFacilities<Integer.MAX_VALUE && positionMergedFacilities < parts.length) {
+						String[] containedFacilities;
+						containedFacilities = parts[positionMergedFacilities].split(";");
+						for (String containedFacility : containedFacilities) {
+							educFacility.addContainedEducFacility(Id.create(containedFacility, ActivityFacility.class));
+						}
 					}
-				}
+					
+				educFacilities.add(educFacility);
+			}			
 
-			}
-
-			educFacilities.add(educFacility);
+			
 		}
 		reader.close();
 

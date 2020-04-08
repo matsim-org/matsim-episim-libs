@@ -46,7 +46,7 @@ public class RunEpisimSnz {
 		OutputDirectoryLogging.catchLogEntries();
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-		//config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
+//		config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/snzDrt220.0.events.reduced.xml.gz");
