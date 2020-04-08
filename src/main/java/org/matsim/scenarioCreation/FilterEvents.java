@@ -88,7 +88,7 @@ public class FilterEvents implements Callable<Integer> {
 				IOUtils.getOutputStream(IOUtils.getFileUrl(output.toString()), false)
 		);
 
-		log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.getCounter(), handler.events.size() / handler.getCounter());
+//		log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.getCounter(), handler.events.size() / handler.getCounter());
 
 		handler.events.forEach((time, eventsList) -> eventsList.forEach(writer::handleEvent));
 		writer.closeFile();

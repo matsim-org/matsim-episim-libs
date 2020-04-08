@@ -14,6 +14,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.utils.objectattributes.ObjectAttributes;
 import org.matsim.utils.objectattributes.ObjectAttributesXmlReader;
+import org.matsim.utils.objectattributes.ObjectAttributesXmlWriter;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
@@ -35,7 +36,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(ConvertPersonAttributes.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file", defaultValue = "...")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file")
 	private Path input;
 
 	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.")
@@ -62,16 +63,26 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 			personIds = CreationUtils.readIdFile(this.personIds);
 		}
 
-		Population populationFromAttributes = buildPopulationFromAttributes(input, personIds);
+		FilteredObjectAttributes attributes = readAndFilterAttributes(input, personIds);
+		Population populationFromAttributes = buildPopulationFromAttributes(attributes, personIds);
 
 		PopulationUtils.writePopulation(populationFromAttributes, output.toString());
+
+		String attributesFileForConversion = input.toString();
+		if(personIds != null){
+			String outputPath = output.toAbsolutePath().toString();
+			attributesFileForConversion = outputPath.substring(0, outputPath.lastIndexOf('\\')) + "/filtered_" + input.getFileName() ;
+			new ObjectAttributesXmlWriter(attributes).writeFile(attributesFileForConversion);
+		}
+
 
 //			includeMissingAgentsIntoOrigPopulation(populationFromAttributes);
 
 		Config config = ConfigUtils.createConfig();
 
 		// load and write population one time for internal conversion
-		config.plans().setInputPersonAttributeFile(input.toString());
+		config.plans().setInputPersonAttributeFile(attributesFileForConversion);
+
 		config.plans().setInputFile(output.toString());
 
 		config.plans().setInsistingOnUsingDeprecatedPersonAttributeFile(true);
@@ -82,15 +93,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		return 0;
 	}
 
-	private Population buildPopulationFromAttributes(Path attributesFile, Set<String> personIds) {
-
-		Config config = ConfigUtils.createConfig();
-		config.plans().setInputPersonAttributeFile(attributesFile.toString());
-
-		String personAttributes = config.plans().getInputPersonAttributeFile();
-		FilteredObjectAttributes attributes = new FilteredObjectAttributes(personIds);
-		ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(attributes);
-		reader.parse(IOUtils.getInputStream(IOUtils.getFileUrl(personAttributes)));
+	private Population buildPopulationFromAttributes(FilteredObjectAttributes attributes, Set<String> personIds) {
 
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Population population = scenario.getPopulation();
@@ -103,6 +106,16 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		}
 
 		return population;
+	}
+
+	private FilteredObjectAttributes readAndFilterAttributes(Path attributesFile, Set<String> personIds) {
+		Config config = ConfigUtils.createConfig();
+		config.plans().setInputPersonAttributeFile(attributesFile.toString());
+		String personAttributes = config.plans().getInputPersonAttributeFile();
+		FilteredObjectAttributes attributes = new FilteredObjectAttributes(personIds);
+		ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(attributes);
+		reader.parse(IOUtils.getInputStream(IOUtils.getFileUrl(personAttributes)));
+		return attributes;
 	}
 
 	/**
