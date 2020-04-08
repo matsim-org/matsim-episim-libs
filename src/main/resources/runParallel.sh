@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=01:40:00
+#SBATCH --time=01:30:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-socket=48
+#SBATCH --ntasks-per-socket=24
 
 date
 hostname
@@ -28,22 +28,22 @@ export SLURM_CPU_BIND=none
 let nNuma=$(numactl --hardware | grep -oE 'available: [0-9]+' | grep -oE '[0-9]+')
 
 # Total number of available worker processes
-let totalWorker=${$SLURM_ARRAY_TASK_COUNT:-1} * nNuma
+let totalWorker=$(( ${SLURM_ARRAY_TASK_COUNT:-1} * nNuma ))
 # Worker offset starting at 0
-let offset=${SLURM_ARRAY_TASK_ID:-1} - 1
+let offset=$(( (${SLURM_ARRAY_TASK_ID:-1} - 1) * nNuma ))
 
 echo "totalWorker $totalWorker offset $offset (numa: $nNuma)"
+echo "setup=$EPISIM_SETUP, params=$EPISIM_PARAMS"
 
-for sId in $(seq 0 $nNuma - 1); do
+let numaIndex=$((nNuma - 1))
+for sId in $(seq 0 $numaIndex); do
 
   # Needs to be unique among all processes
   let workerId=offset+sId
-  arguments="$input --config:controler.runId ${SLURM_JOB_NAME}${nID} -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector
-      --threads $SLURM_NTASKS_PER_SOCKET --total-worker $totalWorker --worker-index $workerId"
-
-  command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
+  arguments="--threads $SLURM_NTASKS_PER_SOCKET --total-worker $totalWorker --worker-index $workerId"
+  command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx60G -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector $main $arguments"
   echo ""
   echo "command on socket $sId is $command"
-  numactl --cpunodebind=$sId --membind=$sId $command &
+  numactl --cpunodebind=$sId --membind=$sId -- $command &
 done
 wait

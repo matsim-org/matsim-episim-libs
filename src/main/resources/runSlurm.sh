@@ -45,7 +45,7 @@ for cid in $(seq 0 $NTpn); do
 # arguments
    input="config_${SLURM_JOB_NAME}${nID}.xml"
    arguments="$input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
-   command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
+   command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
    echo ""
    echo "command is $command"
    test -f $input && taskset -c $cid $command &

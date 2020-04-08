@@ -2,8 +2,5 @@
 -server
 -Djava.awt.headless=true
 
-# Heap size
--Xmx4G
-
 -XX:+UseParallelGC
-#-XX:+AlwaysPreTouch
+-XX:+AlwaysPreTouch

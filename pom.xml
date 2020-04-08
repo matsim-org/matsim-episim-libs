@@ -71,7 +71,7 @@
             <artifactId>disruptor</artifactId>
             <version>3.4.2</version>
         </dependency>
-
+        <!-- Prefix tree for activity matching -->
         <dependency>
             <groupId>com.github.ClickerMonkey</groupId>
             <artifactId>TrieHard</artifactId>

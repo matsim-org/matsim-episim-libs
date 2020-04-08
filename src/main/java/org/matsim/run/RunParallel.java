@@ -62,6 +62,20 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.SchoolClosure$Params}")
 	private Class<T> params;
 
+	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
+	private int threads;
+
+	@CommandLine.Option(names = "--total-worker", defaultValue = "1", description = "Total number of worker processes available for this run." +
+			"The tasks will be split evenly between all processes using the index.")
+	private int totalWorker;
+
+	@CommandLine.Option(names = "--worker-index", defaultValue = "0", description = "Index of this worker process")
+	private int workerIndex;
+
+	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
+	private int maxJobs;
+
+
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new RunParallel()).execute(args));
@@ -70,9 +84,7 @@ public class RunParallel<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		// TODO: determine tasks and stepping
-
-		ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+		ExecutorService executor = Executors.newFixedThreadPool(threads);
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
@@ -86,14 +98,18 @@ public class RunParallel<T> implements Callable<Integer> {
 		Scenario scenario = ScenarioUtils.loadScenario(baseConfig);
 		ReplayHandler replay = new ReplayHandler(episimBase, scenario);
 
+		int i = 0;
 		for (PreparedRun.Run run : prepare.runs) {
+			if (i++ % totalWorker != workerIndex)
+				continue;
+
+			if (maxJobs > 0 && i >= maxJobs) break;
+
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
 			if (!episimBase.getInputEventsFile().equals(episimConfig.getInputEventsFile())) {
 				log.error("Input files differs for run {}", run.id);
 				return 1;
 			}
-
-			// TODO: skip here if should not be executed
 
 			String outputPath = output + "/" + prepare.setup.getOutputName(run);
 			Path out = Paths.get(outputPath);
@@ -102,6 +118,8 @@ public class RunParallel<T> implements Callable<Integer> {
 
 			futures.add(CompletableFuture.runAsync(new Task(scenario, run.config, replay), executor));
 		}
+
+		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
 
 		// Wait for all futures to complete
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
@@ -126,7 +144,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		@Override
 		public void run() {
-			RunEpisim.simulationLoop(config, scenario, replay, 1000, null);
+			RunEpisim.simulationLoop(config, scenario, replay, 200, null);
 			log.info("Task finished: {}", config.controler().getOutputDirectory());
 		}
 	}

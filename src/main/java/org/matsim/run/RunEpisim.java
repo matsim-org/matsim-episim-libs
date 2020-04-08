@@ -120,10 +120,10 @@ public class RunEpisim {
 	/**
 	 * Main loop that performs the iterations of the simulation.
 	 *
-	 * @param config     fully initialized config file, {@link EpisimConfigGroup} needs to be present.
-	 * @param iterations ending iteration (inclusive)
+	 * @param config        fully initialized config file, {@link EpisimConfigGroup} needs to be present.
+	 * @param maxIterations maximum number of iterations (inclusive)
 	 */
-	public static void runSimulation(Config config, int iterations) throws IOException {
+	public static void runSimulation(Config config, int maxIterations) throws IOException {
 
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
@@ -150,7 +150,7 @@ public class RunEpisim {
 
 		ReplayHandler replay = new ReplayHandler(episimConfig, scenario);
 
-		simulationLoop(config, scenario, replay, iterations, eventPath);
+		simulationLoop(config, scenario, replay, maxIterations, eventPath);
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 	}
@@ -159,13 +159,13 @@ public class RunEpisim {
 	 * Performs the simulation loop.
 	 */
 	static void simulationLoop(final Config config, final Scenario scenario,
-							   final ReplayHandler replay, final int iterations, @Nullable final Path eventPath) {
+							   final ReplayHandler replay, final int maxIterations, @Nullable final Path eventPath) {
 
 		final EventsManager events = EventsUtils.createEventsManager();
 		final InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
 		events.addHandler(eventHandler);
 
-		for (int iteration = 0; iteration <= iterations; iteration++) {
+		for (int iteration = 0; iteration <= maxIterations; iteration++) {
 
 			EventWriter writer = null;
 			// Only write events if output was set

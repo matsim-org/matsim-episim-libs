@@ -23,7 +23,7 @@ main="org.matsim.run.RunFromConfig"
 # arguments
 arguments="config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
 
-command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
+command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
 
 echo ""
 echo "command is $command"

@@ -80,7 +80,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
 			run.config.controler().setOutputDirectory(outputPath);
 
-			prepare.setup.write(output, run.config);
+			prepare.setup.writeAuxiliaryFiles(output, run.config);
 			ConfigUtils.writeConfig(run.config, output.resolve(configFileName).toString());
 
 			bashScriptWriter.write("qsub -N " + runId + " run.sh");
@@ -95,20 +95,20 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		}
 
 		// Current script is configured to run with a stepsize of 96
-		Files.write(output.resolve("slurmScript.sh"), Lists.newArrayList(
+		Files.write(output.resolve("_slurmScript.sh"), Lists.newArrayList(
 				"#!/bin/bash\n",
 				// Round up array size to be multiple of step size
 				String.format("sbatch --array=1-%d:96 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 96d) * 96, runName))
 		);
 
-		// Assume 96 * 2 tasks per node
-		Files.write(output.resolve("parallelScript.sh"), Lists.newArrayList(
+		Files.write(output.resolve("_parallelScript.sh"), Lists.newArrayList(
 				"#!/bin/bash\n",
-				"export EPISIM_SETUP=" + setup.toString(),
-				"export EPISIM_PARAMS=" + params.toString(),
-				"export EPISIM_OUTPUT=" + batchOutput.toString(),
+				// Dollar signs must be escaped
+				"export EPISIM_SETUP='" + setup.getName() + "'",
+				"export EPISIM_PARAMS='" + params.getName() + "'",
+				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("sbatch --array=1-%d --job-name=%s runParallel.sh", (int) Math.ceil(prepare.runs.size() / 192d), runName)
+				String.format("sbatch --export=ALL --array=1-%d --job-name=%s runParallel.sh", (int) Math.ceil(prepare.runs.size() / 96d), runName)
 		));
 
 		bashScriptWriter.close();

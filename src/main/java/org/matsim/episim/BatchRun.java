@@ -19,8 +19,22 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 
+/**
+ * Interface for defining the setup procedure of a batch run and the corresponding parameter class.
+ * The batch runner will create the cross-product of all possible parameters configuration and prepare
+ * the config for each.
+ *
+ * @param <T> Class holding the available parameters.
+ */
 public interface BatchRun<T> {
 
+	/**
+	 * Loads the defined parameters and executes the {@link #prepareConfig(int, Object)} procedure.
+	 *
+	 * @param clazz setup class
+	 * @param paramClazz class holding the parameters
+	 * @param <T> params type
+	 */
 	static <T> PreparedRun prepare(Class<? extends BatchRun<T>> clazz, Class<T> paramClazz) {
 
 		Logger log = LogManager.getLogger(BatchRun.class);
@@ -70,25 +84,47 @@ public interface BatchRun<T> {
 			}
 		}
 
+		log.info("Prepared {} runs for {} with params {}", runs.size(), clazz.getSimpleName(), paramClazz.getName());
 
 		return new PreparedRun(setup, fields.stream().map(Field::getName).collect(Collectors.toList()), runs);
 	}
 
+	/**
+	 * Prepare a config using the given parameters.
+	 * @param id task id
+	 * @param params parameters to use
+	 * @return initialized config
+	 */
 	Config prepareConfig(int id, T params);
 
-	void write(Path directory, Config config) throws IOException;
+	/**
+	 * Write additionally needed files to {@code directory}, if any are needed.
+	 * Don't write the config!
+	 */
+	default void writeAuxiliaryFiles(Path directory, Config config) throws IOException {}
 
-
+	/**
+	 * Desired output name.
+	 */
 	default String getOutputName(PreparedRun.Run run) {
 		return Joiner.on("-").join(run.params);
 	}
 
+	/**
+	 * This declares a field as parameter for a batch run.
+	 */
 	@Target(ElementType.FIELD)
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface Parameter {
+		/**
+		 * All values this parameter should attain.
+		 */
 		double[] value();
 	}
 
+	/**
+	 * See {@link Parameter}
+	 */
 	@Target(ElementType.FIELD)
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface StringParameter {

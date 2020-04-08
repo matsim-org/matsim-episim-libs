@@ -65,7 +65,7 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 	}
 
 	@Override
-	public void write(Path directory, Config config) throws IOException {
+	public void writeAuxiliaryFiles(Path directory, Config config) throws IOException {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		Files.writeString(directory.resolve(episimConfig.getPolicyConfig()), episimConfig.getPolicy().root().render());
 	}
