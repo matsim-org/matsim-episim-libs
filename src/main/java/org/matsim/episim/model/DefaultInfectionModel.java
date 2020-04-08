@@ -5,7 +5,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.episim.*;
 
 import java.util.ArrayList;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -24,7 +24,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 */
 	private final boolean trackingEnabled;
 
-	public DefaultInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, boolean trackingEnabled) {
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, boolean trackingEnabled) {
 		super(rnd, episimConfig, reporting);
 		this.trackingEnabled = trackingEnabled;
 	}
@@ -40,17 +40,11 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
-		// yyyy Why is infectionSituaiton needed.  If we have the container, then we have the situation, don't we? kai, apr'20
-
 
 		if (iteration == 0) {
 			return;
 		}
 
-//        if (trackingEnabled && !personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd ))
-//            return;
-//        else if (!trackingEnabled && !personRelevantForInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd ))
-//            return;
 
 		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd)) {
 			return;
@@ -73,14 +67,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 			// Draw the contact person and remove it -> we don't want to draw it multiple times
 			EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
-			// If tracking is not enabled, the loop can continue earlier
-//            if (trackingEnabled && !personRelevantForTrackingOrInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd )){
-//                continue;
-//            } else if (!trackingEnabled &&
-//                    (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus() ||
-//                                     !personRelevantForTrackingOrInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd ))) {
-//                continue;
-//            }
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd)) {
 				continue;
@@ -98,18 +84,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 			}
-
-			// yyyy I don't like these separate if conditions for tracking vs without.  Too large danger that we get something wrong there.  kai, apr'20
-
-			// yyyyyy I do not understand why the execution path has to be different for with tracking vs. without tracking.  Could you please explain?
-			// (Maybe the logic is that one would note people for tracking even if they have the same disease status, since one would not know that.  Is that
-			// the reason?  kai, apr'20)
-
-			// Yes that is the reason. If both are suceptible for example, one might get infected later. Or consider persons in status of infectedButNotContagious.
-			// In the end of the day, if they were the contact person of a person that got infected and tracked them,
-			// they will be put in quarantine and can not infect other people in the following days.
-			// If tracking is not enabled, we do not have to go into the for-loop for leaving persons with status infectedButNotContagious or do not have to perform
-			// tracking inside the loop for contact persons with status infectedButNotContagious
 
 			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
 			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
@@ -161,7 +135,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 			}
 
 			double contactIntensity = getContactIntensity(container, leavingPersonsActivity, otherPersonsActivity);
-
 
 			double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer);
 			// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,

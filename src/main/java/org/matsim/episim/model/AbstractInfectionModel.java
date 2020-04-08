@@ -8,7 +8,7 @@ import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
 import java.util.Map;
-import java.util.Random;
+import java.util.SplittableRandom;
 
 
 /**
@@ -17,26 +17,31 @@ import java.util.Random;
 public abstract class AbstractInfectionModel implements InfectionModel {
 
 	protected final Scenario scenario = null;
-	protected final Random rnd;
+	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
 	protected int iteration;
 	private Map<String, ShutdownPolicy.Restriction> restrictions;
 
-	AbstractInfectionModel(Random rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+	AbstractInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.reporting = reporting;
 	}
 
 	private static boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-																Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd) {
+																Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
 		String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+
+		// Check if person is home quarantined
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && !act.startsWith("home"))
+			return false;
+
 		return actIsRelevant(act, episimConfig, restrictions, rnd);
 	}
 
 	private static boolean actIsRelevant(String act, EpisimConfigGroup episimConfig,
-										 Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd) {
+										 Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
 
 		EpisimConfigGroup.InfectionParams infectionParams = episimConfig.selectInfectionParams(act);
 		ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
@@ -51,7 +56,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	}
 
 	private static boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-															Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd) {
+															Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
 		String lastAct = "";
 		if (person.getCurrentPositionInTrajectory() != 0) {
 			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
@@ -74,7 +79,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 * @noinspection BooleanMethodIsAlwaysInverted
 	 */
 	static boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
-																Map<String, ShutdownPolicy.Restriction> restrictions, Random rnd) {
+																Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
 
 		// Infected but not contagious persons are considered additionally
 		if (!hasDiseaseStatusRelevantForInfectionDynamics(person) &&
@@ -98,6 +103,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 				return true;
 
 			case infectedButNotContagious:
+			case showingSymptoms: //assume is at home
 			case recovered:
 			case seriouslySick: // assume is in hospital
 			case critical:
@@ -137,11 +143,11 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious) {
 			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
 		}
-		if (personWrapper.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
-			throw new IllegalStateException("Person to be infected is in quarantine.");
+		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+			throw new IllegalStateException("Person to be infected is in full quarantine.");
 		}
-		if (infector.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no) {
-			throw new IllegalStateException("Infector is in quarantine.");
+		if (infector.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+			throw new IllegalStateException("Infector is in ful quarantine.");
 		}
 		if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
 			throw new IllegalStateException("Person and infector are not in same container!");

@@ -120,6 +120,10 @@ public final class EpisimReporting {
 					report.nContagious++;
 					report.nTotalInfected++;
 					break;
+				case showingSymptoms:
+					report.nShowingSymptoms++;
+					report.nTotalInfected++;
+					break;
 				case seriouslySick:
 					report.nSeriouslySick++;
 					report.nTotalInfected++;
@@ -135,6 +139,8 @@ public final class EpisimReporting {
 					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 			}
 			switch (person.getQuarantineStatus()) {
+				// For now there is no separation in the report between full and home
+				case atHome:
 				case full:
 					report.nInQuarantine++;
 					break;
@@ -175,6 +181,7 @@ public final class EpisimReporting {
 		array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);
 		array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);
 		array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);
+		array[InfectionsWriterFields.nShowingSymptoms.ordinal()] = Long.toString(r.nShowingSymptoms);
 		array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);
 
 		array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
@@ -218,7 +225,7 @@ public final class EpisimReporting {
 	}
 
 	enum InfectionsWriterFields {
-		time, day, nSusceptible, nInfectedButNotContagious, nContagious, nSeriouslySick, nCritical, nTotalInfected, nInfectedCumulative,
+		time, day, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected, nInfectedCumulative,
 		nRecovered, nInQuarantine
 	}
 
@@ -234,6 +241,7 @@ public final class EpisimReporting {
 		public long nSusceptible = 0;
 		public long nInfectedButNotContagious = 0;
 		public long nContagious = 0;
+		public long nShowingSymptoms = 0;
 		public long nSeriouslySick = 0;
 		public long nCritical = 0;
 		public long nTotalInfected = 0;
@@ -248,6 +256,7 @@ public final class EpisimReporting {
 			nSusceptible *= factor;
 			nInfectedButNotContagious *= factor;
 			nContagious *= factor;
+			nShowingSymptoms *= factor;
 			nSeriouslySick *= factor;
 			nCritical *= factor;
 			nTotalInfected *= factor;
