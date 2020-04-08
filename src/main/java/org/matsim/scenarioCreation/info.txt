@@ -28,6 +28,7 @@ process to create a snz scenario
 
 6. simulate school population and create events
     -> needs transit schedule and network file and vehicles file
+    (RunMATSim)
 
 7. filter output events from step 6 analogous to step 2
     (class FilterEvents)
