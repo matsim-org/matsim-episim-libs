@@ -14,9 +14,7 @@ import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SplittableRandom;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -25,7 +23,8 @@ import java.util.concurrent.TimeUnit;
 public class BenchmarkPrefixMatch {
 
 	private List<EpisimConfigGroup.InfectionParams> params;
-	private Trie<String, EpisimConfigGroup.InfectionParams> trie ;
+	private Map<String, EpisimConfigGroup.InfectionParams> paramsMap;
+	private Trie<String, EpisimConfigGroup.InfectionParams> trie;
 	private PatriciaTrie<EpisimConfigGroup.InfectionParams> pTrie;
 
 	private List<String> activities;
@@ -49,11 +48,13 @@ public class BenchmarkPrefixMatch {
 		trie = Tries.forStrings();
 		pTrie = new PatriciaTrie<>();
 		params = new ArrayList<>();
+		paramsMap = new HashMap<>();
 		activities = new ArrayList<>();
 
 		for (String act : RunEpisim.DEFAULT_ACTIVITIES) {
 			EpisimConfigGroup.InfectionParams param = config.getOrAddContainerParams(act);
 			params.add(param);
+			paramsMap.put(act, param);
 			trie.put(act, param);
 			pTrie.put(act, param);
 		}
@@ -96,4 +97,13 @@ public class BenchmarkPrefixMatch {
 		}
 	}
 
+	@Benchmark
+	public void substring(Blackhole bh) {
+		for (String act : activities) {
+			String prefix = act.substring(0, act.indexOf("_"));
+			EpisimConfigGroup.InfectionParams param = paramsMap.get(prefix);
+			if (param == null) throw new NoSuchElementException("Error");
+			bh.consume(param);
+		}
+	}
 }
