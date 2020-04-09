@@ -25,6 +25,8 @@ clean:
 battery:
 	rsync -rvPc battery $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)
 
+deploy-jar: $(JAR)
+	scp $(JAR) $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)/battery/$(RUN)
 
 # TODO: these can be removed if we get the input files directly or the creation process is simplyfied
 

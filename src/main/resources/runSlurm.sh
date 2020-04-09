@@ -17,7 +17,7 @@ hostname
 
 cd $SLURM_SUBMIT_DIR
 
-classpath="matsim-episim-1.0-SNAPSHOT-jar-with-dependencies.jar"
+classpath="matsim-episim-1.0-SNAPSHOT.jar"
 
 echo "***"
 echo "classpath: $classpath"
@@ -43,7 +43,7 @@ echo "NTpn $NTpn  offset $offset"
 for cid in $(seq 0 $NTpn); do
    let nID=offset+cid		# [0,...] requires array stepsize of NTpn (number of tasks to be run per node)
 # arguments
-   input="config_${SLURM_JOB_NAME}${nID}.xml"
+   input="input/config_${SLURM_JOB_NAME}${nID}.xml"
    arguments="$input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
    command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
    echo ""

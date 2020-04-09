@@ -24,6 +24,7 @@ public class BenchmarkPrefixMatch {
 
 	private List<EpisimConfigGroup.InfectionParams> params;
 	private Map<String, EpisimConfigGroup.InfectionParams> paramsMap;
+	private Map<String, EpisimConfigGroup.InfectionParams> activityMap;
 	private Trie<String, EpisimConfigGroup.InfectionParams> trie;
 	private PatriciaTrie<EpisimConfigGroup.InfectionParams> pTrie;
 
@@ -49,6 +50,7 @@ public class BenchmarkPrefixMatch {
 		pTrie = new PatriciaTrie<>();
 		params = new ArrayList<>();
 		paramsMap = new HashMap<>();
+		activityMap = new IdentityHashMap<>();
 		activities = new ArrayList<>();
 
 		for (String act : RunEpisim.DEFAULT_ACTIVITIES) {
@@ -63,9 +65,9 @@ public class BenchmarkPrefixMatch {
 
 		for (int i = 0; i < 10_000; i++) {
 			int idx = rnd.nextInt(RunEpisim.DEFAULT_ACTIVITIES.length);
-			activities.add(
-					RunEpisim.DEFAULT_ACTIVITIES[idx] + "_" + i
-			);
+			String act = RunEpisim.DEFAULT_ACTIVITIES[idx] + "_" + i;
+			activities.add(act);
+			activityMap.put(act, config.getOrAddContainerParams(RunEpisim.DEFAULT_ACTIVITIES[idx]));
 		}
 	}
 
@@ -104,6 +106,13 @@ public class BenchmarkPrefixMatch {
 			EpisimConfigGroup.InfectionParams param = paramsMap.get(prefix);
 			if (param == null) throw new NoSuchElementException("Error");
 			bh.consume(param);
+		}
+	}
+
+	@Benchmark
+	public void preprocessed(Blackhole bh) {
+		for (String act : activities) {
+			bh.consume(activityMap.get(act));
 		}
 	}
 }

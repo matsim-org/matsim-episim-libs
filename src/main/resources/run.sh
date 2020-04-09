@@ -11,7 +11,7 @@
 date
 hostname
 
-classpath="matsim-episim-1.0-SNAPSHOT-jar-with-dependencies.jar"
+classpath="matsim-episim-1.0-SNAPSHOT.jar"
 
 echo "***"
 echo "classpath: $classpath"
@@ -21,7 +21,7 @@ echo "***"
 main="org.matsim.run.RunFromConfig"
 
 # arguments
-arguments="config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
+arguments="input/config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
 
 command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
 

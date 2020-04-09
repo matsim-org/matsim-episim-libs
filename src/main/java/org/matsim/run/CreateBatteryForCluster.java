@@ -3,6 +3,7 @@ package org.matsim.run;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
@@ -29,7 +30,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
 
-	@CommandLine.Option(names = "--output", defaultValue = "../epidemic/battery")
+	@CommandLine.Option(names = "--output", defaultValue = "battery")
 	private Path output;
 
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
@@ -52,15 +53,18 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Files.createDirectories(output);
+		Path dir = output.resolve(runName);
+		Path input = dir.resolve("input");
+
+		Files.createDirectories(input);
 
 		// Copy all resources
 		for (String name : Lists.newArrayList("run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
-			Files.copy(Resources.getResource(name).openStream(), output.resolve(name), StandardCopyOption.REPLACE_EXISTING);
+			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
-		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(output.resolve("_bashScript.sh").toFile()));
-		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(output.resolve("_info.txt").toFile()));
+		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
+		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
@@ -80,8 +84,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
 			run.config.controler().setOutputDirectory(outputPath);
 
-			prepare.setup.writeAuxiliaryFiles(output, run.config);
-			ConfigUtils.writeConfig(run.config, output.resolve(configFileName).toString());
+			prepare.setup.writeAuxiliaryFiles(input, run.config);
+			ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
 
 			bashScriptWriter.write("qsub -N " + runId + " run.sh");
 			bashScriptWriter.newLine();
@@ -94,14 +98,15 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		}
 
+
 		// Current script is configured to run with a stepsize of 96
-		Files.write(output.resolve("_slurmScript.sh"), Lists.newArrayList(
+		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n",
 				// Round up array size to be multiple of step size
-				String.format("sbatch --array=1-%d:96 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 96d) * 96, runName))
-		);
+				String.format("sbatch --array=1-%d:96 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 96d) * 96, runName)
+		), "\n");
 
-		Files.write(output.resolve("_parallelScript.sh"), Lists.newArrayList(
+		FileUtils.writeLines(dir.resolve("start_parallel_slurm.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n",
 				// Dollar signs must be escaped
 				"export EPISIM_SETUP='" + setup.getName() + "'",
@@ -109,7 +114,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
 				String.format("sbatch --export=ALL --array=1-%d --job-name=%s runParallel.sh", (int) Math.ceil(prepare.runs.size() / 96d), runName)
-		));
+		), "\n");
 
 		bashScriptWriter.close();
 		infoWriter.close();

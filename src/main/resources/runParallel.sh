@@ -8,7 +8,7 @@ hostname
 
 cd $SLURM_SUBMIT_DIR
 
-classpath="matsim-episim-1.0-SNAPSHOT-jar-with-dependencies.jar"
+classpath="matsim-episim-1.0-SNAPSHOT.jar"
 
 echo "***"
 echo "classpath: $classpath"
