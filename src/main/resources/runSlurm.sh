@@ -34,9 +34,9 @@ export SLURM_CPU_BIND=none
 
 let NTpn=--SLURM_NTASKS_PER_NODE	# all physical cores
 #let NTpn=--SLURM_CPUS_ON_NODE		# all logical HT cores
-let offset=SLURM_ARRAY_TASK_ID
+let offset=$(( ${SLURM_ARRAY_TASK_ID:-1} + ${EXTRA_OFFSET:-0} ))
 
-echo "NTpn $NTpn  offset $offset"
+echo "NTpn $NTpn  offset $offset including extra offset ${EXTRA_OFFSET}"
 
 for cid in $(seq 0 $NTpn); do
    let nID=offset+cid		# [0,...] requires array stepsize of NTpn (number of tasks to be run per node)

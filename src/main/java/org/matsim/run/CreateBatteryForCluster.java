@@ -100,11 +100,26 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 
 		// Current script is configured to run with a stepsize of 84
-		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), Lists.newArrayList(
-				"#!/bin/bash\n",
-				// Round up array size to be multiple of step size
-				String.format("sbatch --array=1-%d:84 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 84d) * 84, runName)
-		), "\n");
+		int STEP_SIZE = 84;
+		// Round up array size to be multiple of step size
+		int OFFSET_STEP = (1000 / STEP_SIZE) * STEP_SIZE;
+
+
+		// Split task into multiple below 1000
+		// this is due to a limitation of maximum job array size
+		List<String> lines = Lists.newArrayList("#!/bin/bash\n");
+		for (int offset = 0; offset < prepare.runs.size(); offset += OFFSET_STEP) {
+
+			// round array end down according to run size, but must also be multiple of step size
+			int arrayEnd = (int) Math.ceil((double) Math.min(offset + OFFSET_STEP, prepare.runs.size() - offset) / STEP_SIZE) * STEP_SIZE;
+
+			lines.add(
+					String.format("sbatch --export=EXTRA_OFFSET=%d --array=1-%d:%d --job-name=%s runSlurm.sh",
+							offset, arrayEnd, STEP_SIZE, runName)
+			);
+		}
+
+		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
 
 		FileUtils.writeLines(dir.resolve("start_parallel_slurm.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n",
