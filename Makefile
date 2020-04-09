@@ -13,8 +13,7 @@ sc = java -cp $(JAR) org.matsim.run.ScenarioCreation
 .PHONY: all clean battery $(ALL)
 
 # Default target
-all: $(ALL)
-
+all: $(JAR) $(ALL)
 
 $(JAR):
 	mvn package -DskipTests
@@ -27,6 +26,7 @@ battery:
 	rsync -rvPc battery $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)
 
 
+# TODO: these can be removed if we get the input files directly or the creation process is simplyfied
 
 # Includes all the scenarios with local variables
 # https://stackoverflow.com/questions/32904790/can-i-have-local-variables-in-included-makefiles
