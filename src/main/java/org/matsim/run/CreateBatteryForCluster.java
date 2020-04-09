@@ -114,8 +114,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			int arrayEnd = (int) Math.ceil((double) Math.min(offset + OFFSET_STEP, prepare.runs.size() - offset) / STEP_SIZE) * STEP_SIZE;
 
 			lines.add(
-					String.format("sbatch --export=EXTRA_OFFSET=%d --array=1-%d:%d --job-name=%s runSlurm.sh",
-							offset, arrayEnd, STEP_SIZE, runName)
+					String.format("sbatch --export=EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
+							offset, arrayEnd, STEP_SIZE, STEP_SIZE, runName)
 			);
 		}
 

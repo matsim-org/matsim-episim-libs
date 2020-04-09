@@ -5,6 +5,7 @@
 #SBATCH --mem-per-cpu=4096
 
 # This job should only be run with --array given via command line
+# NTASKS_PER_NODE may be overwritten by command line argument
 
 #tst for HT stepsize 192:  #SBATCH --array=1-384:192
 #tst #SBATCH --array=1-384:192
