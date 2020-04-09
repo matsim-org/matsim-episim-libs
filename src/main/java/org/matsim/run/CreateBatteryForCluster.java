@@ -99,11 +99,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		}
 
 
-		// Current script is configured to run with a stepsize of 96
+		// Current script is configured to run with a stepsize of 84
 		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n",
 				// Round up array size to be multiple of step size
-				String.format("sbatch --array=1-%d:96 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 96d) * 96, runName)
+				String.format("sbatch --array=1-%d:84 --job-name=%s runSlurm.sh", (int) Math.ceil(prepare.runs.size() / 84d) * 84, runName)
 		), "\n");
 
 		FileUtils.writeLines(dir.resolve("start_parallel_slurm.sh").toFile(), Lists.newArrayList(

@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=01:40:00
+#SBATCH --time=01:30:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=96
+#SBATCH --ntasks-per-node=84
 #SBATCH --mem-per-cpu=4096
 
 # This job should only be run with --array given via command line
@@ -9,8 +9,6 @@
 #tst for HT stepsize 192:  #SBATCH --array=1-384:192
 #tst #SBATCH --array=1-384:192
 
-#tst #SBATCH --output=logfile_%A_%a.log
-#tst #SBATCH --error=errorfile_%A_%a.log
 
 date
 hostname
