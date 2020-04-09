@@ -189,27 +189,24 @@
             </plugin>
 
             <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <archive>
-                        <manifest>
-                            <mainClass>org.matsim.run.RunEpisim</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.2</version>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
                         <phase>package</phase>
-                        <!--Run as part of the package phase. -->
-                        <!--So you can either only run assembly:assembly, or package, where the-->
-                        <!--latter may run additional stuff or not.-->
                         <goals>
-                            <goal>single</goal>
+                            <goal>shade</goal>
                         </goals>
+                        <configuration>
+                            <outputFile>${project.basedir}/${project.build.finalName}.jar</outputFile>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>org.matsim.run.RunEpisim</mainClass>
+                                </transformer>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                            </transformers>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -256,8 +253,7 @@
             <id>release</id>
             <build>
 
-                <!-- TODO: appassembler or shade plugin if we want a release -->
-                <defaultGoal>assembly:assembly</defaultGoal>
+                <defaultGoal>shade:shade</defaultGoal>
                 <!--the above line is the reason why mvn -Prelease works without defining a goal.-->
 
                 <pluginManagement>

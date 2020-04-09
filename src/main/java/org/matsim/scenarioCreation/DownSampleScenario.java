@@ -1,4 +1,4 @@
-package org.matsim.prepare;
+package org.matsim.scenarioCreation;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,7 +14,6 @@ import org.matsim.facilities.ActivityFacilitiesImpl;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.facilities.FacilitiesWriter;
 import org.matsim.facilities.MatsimFacilitiesReader;
-import org.matsim.scenarioCreation.FilterHandler;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
