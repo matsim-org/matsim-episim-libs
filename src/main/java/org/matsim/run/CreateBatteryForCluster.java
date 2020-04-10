@@ -43,38 +43,35 @@ public class CreateBatteryForCluster {
 		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir.resolve("_bashScript.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(workingDir.resolve("_info.txt").toFile()));
 
-		infoWriter.write("RunScript;Config;RunId;Output;remainingFractionKiga;remainingFractionPrimary;remainingFractionSecondary;remainingFractionHigher;remainingFractionLeisure;remainingFractionWork;remainingFractionShopping;remainingFractionErrandsBusiness");
+		infoWriter.write("RunScript;Config;RunId;Output;offset;remainingFractionKiga;remainingFractionPrimary;remainingFractionSecondary;remainingFractionLeisure;remainingFractionWork;remainingFractionShoppingErrandsBusiness");
 		infoWriter.newLine();
-
+		
+		List<Integer> offset = Arrays.asList(-5, 5);
 		List<Double> remainingFractionKiga = Arrays.asList(1.0, 0.5, 0.1);
 		List<Double> remainingFractionPrima = Arrays.asList(1.0, 0.5, 0.1);
 		List<Double> remainingFractionSecon = Arrays.asList(1.0, 0.5, 0.);
-		List<Double> remainingFractionHigher = Arrays.asList(1.0, 0.5, 0.);
-		List<Double> remainingFractionLeisure = Arrays.asList(0.4, 0.2);
-		List<Double> remainingFractionWork = Arrays.asList(0.4, 0.2);
-		List<Double> remainingFractionShopping = Arrays.asList(0.4, 0.2);
-		List<Double> remainingFractionBusinessErrands = Arrays.asList(0.4, 0.2);
+		List<Double> remainingFractionLeisure = Arrays.asList(0.4, 0.2, 0.);
+		List<Double> remainingFractionWork = Arrays.asList(0.8, 0.6, 0.4);
+		List<Double> remainingFractionShoppingBusinessErrands = Arrays.asList(0.4, 0.2);
 
 		int ii = 1;
-		for (double kiga : remainingFractionKiga) {
-			for (double prima : remainingFractionPrima) {
-				for (double secon : remainingFractionSecon) {
-					for (double higher : remainingFractionHigher) {
+		for (int off : offset) {
+			for (double kiga : remainingFractionKiga) {
+				for (double prima : remainingFractionPrima) {
+					for (double secon : remainingFractionSecon) {
 						for (double leisure : remainingFractionLeisure) {
 							for (double work : remainingFractionWork) {
-								for (double shopping : remainingFractionShopping) {
-									for (double errands : remainingFractionBusinessErrands) {
-										String runId = "sz" + ii;
-										String configFileName = createConfigFile(kiga, prima, secon, higher, leisure, work, shopping, errands, ii);
+								for (double shBuEr : remainingFractionShoppingBusinessErrands) {
+									String runId = "sz" + ii;
+									String configFileName = createConfigFile(off, kiga, prima, secon, leisure, work, shBuEr, ii);
 
-										bashScriptWriter.write("qsub -N " + runId + " run.sh");
-										bashScriptWriter.newLine();
+									bashScriptWriter.write("qsub -N " + runId + " run.sh");
+									bashScriptWriter.newLine();
 
-										String outputPath = "output/" + kiga + "-" + prima + "-" + secon + "-" + higher + "-" + leisure + "-" + work + "-" + shopping + "-" + errands;
-										infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" + kiga + ";" + prima + ";" + secon + ";" + higher + ";" + leisure + ";" + work + ";" + shopping + ";" + errands);
-										infoWriter.newLine();
-										ii++;
-									}
+									String outputPath = "output/" + off +"-" + kiga + "-" + prima + "-" + secon + "-" + leisure + "-" + work + "-" + shBuEr;
+									infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" + off + ";" + kiga + ";" + prima + ";" + secon + ";" + leisure + ";" + work + ";" + shBuEr);
+									infoWriter.newLine();
+									ii++;
 								}
 							}
 						}
@@ -95,16 +92,16 @@ public class CreateBatteryForCluster {
 
 	}
 
-	public static String createConfigFile(double kiga, double prima, double secon, double higher, double leisure, double work, double shopping, double errands, int ii) throws IOException {
+	public static String createConfigFile(int offset, double kiga, double prima, double secon, double leisure, double work, double shBuEr, int ii) throws IOException {
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../snzDrt220a.0.events.reduced.xml.gz");
+		episimConfig.setInputEventsFile("../be_snz_episim_events.xml.gz");
 		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.0000015);
+		episimConfig.setCalibrationParameter(0.000002);
 
 		RunEpisimSnz.addParams(episimConfig);
 
@@ -124,24 +121,22 @@ public class CreateBatteryForCluster {
 				.setContactIntensity(3.0);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				.restrict(26, 0.9, "leisure")
-				.restrict(26, 0.1, "educ_primary", "educ_kiga")
-				.restrict(26, 0., "educ_secondary", "educ_higher")
-				.restrict(35, leisure, "leisure")
-				.restrict(35, work, "work")
-				.restrict(35, shopping, "shopping")
-				.restrict(35, errands, "errands", "business")
-				.restrict(63, kiga, "educ_kiga")
-				.restrict(63, prima, "educ_primary")
-				.restrict(63, secon, "educ_secondary")
-				.restrict(63, higher, "educ_higher")
+				.restrict(26 + offset, 0.9, "leisure")
+				.restrict(26 + offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(26 + offset, 0., "educ_secondary", "educ_higher")
+				.restrict(35 + offset, leisure, "leisure")
+				.restrict(35 + offset, work, "work")
+				.restrict(35 + offset, shBuEr, "shopping", "errands", "business")
+				.restrict(63 + offset, kiga, "educ_kiga")
+				.restrict(63 + offset, prima, "educ_primary")
+				.restrict(63 + offset, secon, "educ_secondary")
 				.build();
 
 		String policyFileName = "policy" + ii + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		Files.writeString(workingDir.resolve(policyFileName), policyConf.root().render());
 
-		config.controler().setOutputDirectory("output/" + kiga + "-" + prima + "-" + secon + "-" + higher + "-" + leisure + "-" + work + "-" + shopping + "-" + errands);
+		config.controler().setOutputDirectory("output/" + offset + "-" + kiga + "-" + prima + "-" + secon + "-" + leisure + "-" + work + "-" + shBuEr);
 
 		String configFileName = "config_sz" + ii + ".xml";
 		ConfigUtils.writeConfig(config, workingDir.resolve(configFileName).toString());
