@@ -4,8 +4,6 @@ import com.google.common.base.Joiner;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
@@ -18,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Collection;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -101,13 +100,13 @@ public final class EpisimReporting {
 	/**
 	 * Creates an infection report for the day.
 	 */
-	InfectionReport createReport(Map<Id<Person>, EpisimPerson> personMap, int iteration) {
+	InfectionReport createReport(Collection<EpisimPerson> persons, int iteration) {
 
 		InfectionReport report = new InfectionReport();
 		report.time = EpisimUtils.getCorrectedTime(0., iteration);
 		report.day = iteration;
 
-		for (EpisimPerson person : personMap.values()) {
+		for (EpisimPerson person : persons) {
 			switch (person.getDiseaseStatus()) {
 				case susceptible:
 					report.nSusceptible++;

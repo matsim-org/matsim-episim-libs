@@ -52,9 +52,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private static final Logger log = LogManager.getLogger(InfectionEventHandler.class);
 
-	private final Map<Id<Person>, EpisimPerson> personMap = new LinkedHashMap<>();
-	private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new LinkedHashMap<>();
-	private final Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new LinkedHashMap<>();
+	private final IdMap<Person, EpisimPerson> personMap = new IdMap<>();
+	private final IdMap<Vehicle, EpisimVehicle> vehicleMap = new IdMap<>();
+	private final IdMap<Facility, EpisimFacility> pseudoFacilityMap = new IdMap<>();
 
 	/**
 	 * Holds the current restrictions in place for all the activities.
@@ -335,7 +335,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		handleInitialInfections();
 
-		this.report = reporting.createReport(personMap, iteration);
+		this.report = reporting.createReport(personMap.values(), iteration);
 
 		reporting.reporting(report, iteration);
 
@@ -349,16 +349,18 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
 		Id<Facility> firstFacilityId = Id.create(person.getFirstFacilityId(), Facility.class);
 		if (person.isInContainer()) {
-			Id<?> lastFacilityId = person.getCurrentContainer().getContainerId();
-			if (this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
-				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
+			EpisimContainer<?> container = person.getCurrentContainer();
+			Id<?> lastFacilityId = container.getContainerId();
+
+			// unsafe casting here because container is only returning a wildcard type as id
+			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey((Id<Facility>) lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
+				EpisimFacility lastFacility = this.pseudoFacilityMap.get((Id<Facility>) lastFacilityId);
 				infectionModel.infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
 				lastFacility.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, (iteration + 1) * 86400d);
-			}
-			if (this.vehicleMap.containsKey(lastFacilityId)) {
-				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
+			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey((Id<Vehicle>) lastFacilityId)) {
+				EpisimVehicle lastVehicle = this.vehicleMap.get((Id<Vehicle>) lastFacilityId);
 				infectionModel.infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
 				lastVehicle.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
