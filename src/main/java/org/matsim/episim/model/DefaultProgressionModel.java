@@ -107,25 +107,29 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
+			
+			if (age < 0 || age > 120) {
+				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
+			}
 
 			if (age < 10) {
-				proba = 0.05 / 100;
+				proba = 0.06 / 100;
 			} else if (age < 20) {
-				proba = 0.15 / 100;
+				proba = 0.19 / 100;
 			} else if (age < 30) {
-				proba = 0.58 / 100;
+				proba = 0.77 / 100;
 			} else if (age < 40) {
-				proba = 1.56 / 100;
+				proba = 2.06 / 100;
 			} else if (age < 50) {
-				proba = 2.39 / 100;
+				proba = 3.16 / 100;
 			} else if (age < 60) {
-				proba = 4.97 / 100;
+				proba = 6.57 / 100;
 			} else if (age < 70) {
-				proba = 8.08 / 100;
+				proba = 10.69 / 100;
 			} else if (age < 80) {
-				proba = 11.83 / 100;
+				proba = 15.65 / 100;
 			} else {
-				proba = 13.3 / 100;
+				proba = 17.58 / 100;
 			}
 
 		} else {
@@ -142,6 +146,10 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
+			
+			if (age < 0 || age > 120) {
+				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
+			}
 
 			if (age < 40) {
 				proba = 5. / 100;
