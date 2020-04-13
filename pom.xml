@@ -39,6 +39,17 @@
             <id>ojo-snapshots</id>
             <url>http://oss.jfrog.org/libs-snapshot</url>
         </repository>
+        
+        <!-- The following ones seem to be needed for some OSM stuff. /sh -->
+		<repository>
+            <id>topobyte</id>
+            <url>https://mvn.topobyte.de</url>
+        </repository>
+
+        <repository>
+            <id>slimjars</id>
+            <url>http://mvn.slimjars.com</url>
+        </repository>
 
     </repositories>
 
