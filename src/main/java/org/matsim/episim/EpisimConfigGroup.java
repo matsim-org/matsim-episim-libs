@@ -5,11 +5,15 @@ import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.log4j.Logger;
+import org.magnos.trie.Trie;
+import org.magnos.trie.TrieMatch;
+import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
 
+import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.*;
 
@@ -23,6 +27,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
+
+	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
 
 	private String inputEventsFile = null;
 	private String outputEventsFolder = null;
@@ -228,8 +234,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void addContainerParams(final InfectionParams params) {
 		final InfectionParams previous = this.getContainerParams().get(params.getContainerName());
 
+		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
+
 		if (previous != null) {
 			log.info("scoring parameters for activityType=" + previous.getContainerName() + " were just replaced.");
+
+			params.mappedNames.forEach(paramsTrie::remove);
 
 			final boolean removed = removeParameterSet(previous);
 			if (!removed)
@@ -250,11 +260,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		params = new InfectionParams(containerName);
 
-		super.addParameterSet(params);
+		addParameterSet(params);
 		return params;
 	}
 
-	public Map<String, InfectionParams> getContainerParams() {
+	/**
+	 * Get a copy of container params. Don't use this heavily, it is slow because a new map is created every time.
+	 */
+	Map<String, InfectionParams> getContainerParams() {
 		@SuppressWarnings("unchecked") final Collection<InfectionParams> parameters = (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 		final Map<String, InfectionParams> map = new LinkedHashMap<>();
 
@@ -268,11 +281,32 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return Collections.unmodifiableMap(map);
 	}
 
+	/**
+	 * Lookup which infection param is relevant for an activity. Throws exception when none was found.
+	 *
+	 * @param activity full activity identifier (including id etc.)
+	 * @return matched infection param
+	 * @throws NoSuchElementException when no param could be matched
+	 */
+	public @NotNull
+	InfectionParams selectInfectionParams(String activity) {
+
+		InfectionParams params = paramsTrie.get(activity, TrieMatch.STARTS_WITH);
+		if (params != null)
+			return params;
+
+		throw new NoSuchElementException("No params known for activity %s. Please add prefix to one infection parameter.");
+	}
+
+	public Collection<InfectionParams> getInfectionParams() {
+		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
+	}
+
 	public enum PutTracablePersonsInQuarantine {yes, no}
 
 	public enum FacilitiesHandling {bln, snz}
 
-	public static class InfectionParams extends ReflectiveConfigGroup {
+	public static final class InfectionParams extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
 		public static final String MAPPED_NAMES = "mappedNames";

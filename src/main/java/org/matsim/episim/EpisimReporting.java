@@ -4,8 +4,6 @@ import com.google.common.base.Joiner;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
@@ -18,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -102,19 +101,18 @@ public final class EpisimReporting {
 	/**
 	 * Creates infections reports for the day. Grouped by district, but always containing a "total" entry.
 	 */
-	Map<String, InfectionReport> createReports(Map<Id<Person>, EpisimPerson> personMap, int iteration) {
+	Map<String, InfectionReport> createReports(Collection<EpisimPerson> persons, int iteration) {
 
 		Map<String, InfectionReport> reports = new LinkedHashMap<>();
 		InfectionReport report = new InfectionReport("total", EpisimUtils.getCorrectedTime(0., iteration), iteration);
 		reports.put("total", report);
 
-		for (EpisimPerson person : personMap.values()) {
+		for (EpisimPerson person : persons) {
 			String districtName = (String) person.getAttributes().getAttribute("district");
 
 			// Also aggregate by district
 			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
 					: districtName, name -> new InfectionReport(name, report.time, report.day));
-
 			switch (person.getDiseaseStatus()) {
 				case susceptible:
 					report.nSusceptible++;
@@ -223,8 +221,13 @@ public final class EpisimReporting {
 	}
 
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
-		if (specificInfectionsCnt.decrementAndGet() > 0) {
+
+		int cnt = specificInfectionsCnt.getOpaque();
+		// This counter is used by many threads, for better performance we use very weak memory guarantees here
+		// race-conditions will occur, but the state will be eventually where we want it (threads stop logging)
+		if (cnt > 0) {
 			log.warn("Infection of personId={} by person={} at/in {}", personWrapper.getPersonId(), infector.getPersonId(), infectionType);
+			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];

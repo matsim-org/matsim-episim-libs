@@ -1,150 +1,139 @@
 package org.matsim.run;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
-import org.matsim.core.config.Config;
+import org.apache.commons.io.FileUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.BatchRun;
+import org.matsim.episim.PreparedRun;
+import picocli.CommandLine;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 
-/**
- * @author smueller
- */
-public class CreateBatteryForCluster {
-	private static final Path workingDir = Path.of("../epidemic/battery/");
+@CommandLine.Command(
+		name = "createBattery",
+		description = "Create batch scripts for execution on computing cluster.",
+		mixinStandardHelpOptions = true
+)
+public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
-	public static void main(String[] args) throws IOException {
+	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
 
-		Files.createDirectories(workingDir);
+	@CommandLine.Option(names = "--output", defaultValue = "battery")
+	private Path output;
 
-		// Copy run script
-		Path runScript = workingDir.resolve("run.sh");
-		Path runSlurm = workingDir.resolve("runSlurm.sh");
+	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
+	private Path batchOutput;
 
+	@CommandLine.Option(names = "--name", defaultValue = "sz")
+	private String runName;
 
-		Files.copy(Resources.getResource("_run.sh").openStream(), runScript, StandardCopyOption.REPLACE_EXISTING);
-		Files.copy(Resources.getResource("_runSlurm.sh").openStream(), runSlurm, StandardCopyOption.REPLACE_EXISTING);
-		Files.copy(Resources.getResource("jvm.options").openStream(), workingDir.resolve("jvm.options"), StandardCopyOption.REPLACE_EXISTING);
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
+	private Class<? extends BatchRun<T>> setup;
 
-		runScript.toFile().setExecutable(true);
-		runSlurm.toFile().setExecutable(true);
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SchoolClosure$Params")
+	private Class<T> params;
 
-		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(workingDir.resolve("_bashScript.sh").toFile()));
-		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(workingDir.resolve("_info.txt").toFile()));
+	@SuppressWarnings("rawtypes")
+	public static void main(String[] args) {
+		System.exit(new CommandLine(new CreateBatteryForCluster()).execute(args));
+	}
 
-		infoWriter.write("RunScript;Config;RunId;Output;offset;remainingFractionKiga;remainingFractionPrimary;remainingFractionSecondary;remainingFractionLeisure;remainingFractionWork;remainingFractionShoppingErrandsBusiness");
-		infoWriter.newLine();
-		
-		List<Integer> offset = Arrays.asList(-5, 5);
-		List<Double> remainingFractionKiga = Arrays.asList(1.0, 0.5, 0.1);
-		List<Double> remainingFractionPrima = Arrays.asList(1.0, 0.5, 0.1);
-		List<Double> remainingFractionSecon = Arrays.asList(1.0, 0.5, 0.);
-		List<Double> remainingFractionLeisure = Arrays.asList(0.4, 0.2, 0.);
-		List<Double> remainingFractionWork = Arrays.asList(0.8, 0.6, 0.4);
-		List<Double> remainingFractionShoppingBusinessErrands = Arrays.asList(0.4, 0.2);
+	@Override
+	public Integer call() throws Exception {
 
-		int ii = 1;
-		for (int off : offset) {
-			for (double kiga : remainingFractionKiga) {
-				for (double prima : remainingFractionPrima) {
-					for (double secon : remainingFractionSecon) {
-						for (double leisure : remainingFractionLeisure) {
-							for (double work : remainingFractionWork) {
-								for (double shBuEr : remainingFractionShoppingBusinessErrands) {
-									String runId = "sz" + ii;
-									String configFileName = createConfigFile(off, kiga, prima, secon, leisure, work, shBuEr, ii);
+		Path dir = output.resolve(runName);
+		Path input = dir.resolve("input");
 
-									bashScriptWriter.write("qsub -N " + runId + " run.sh");
-									bashScriptWriter.newLine();
+		Files.createDirectories(input);
 
-									String outputPath = "output/" + off +"-" + kiga + "-" + prima + "-" + secon + "-" + leisure + "-" + work + "-" + shBuEr;
-									infoWriter.write("run.sh;" + configFileName + ";" + runId + ";" + outputPath + ";" + off + ";" + kiga + ";" + prima + ";" + secon + ";" + leisure + ";" + work + ";" + shBuEr);
-									infoWriter.newLine();
-									ii++;
-								}
-							}
-						}
-					}
-				}
-			}
+		// Copy all resources
+		for (String name : Lists.newArrayList("run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
-		// Current script is configured to run with a stepsize of 96
-		Files.write(workingDir.resolve("_slurmScript.sh"), Lists.newArrayList(
+		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
+		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
+
+		PreparedRun prepare = BatchRun.prepare(setup, params);
+
+
+		List<String> header = Lists.newArrayList("RunScript", "Config", "RunId", "Output");
+		header.addAll(prepare.parameter);
+
+		infoWriter.write(Joiner.on(";").join(header));
+		infoWriter.newLine();
+
+
+		for (PreparedRun.Run run : prepare.runs) {
+
+			String runId = runName + run.id;
+			String configFileName = "config_" + runName + run.id + ".xml";
+
+			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
+			run.config.controler().setOutputDirectory(outputPath);
+
+			prepare.setup.writeAuxiliaryFiles(input, run.config);
+			ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
+
+			bashScriptWriter.write("qsub -N " + runId + " run.sh");
+			bashScriptWriter.newLine();
+
+			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
+			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
+
+			infoWriter.write(Joiner.on(";").join(line));
+			infoWriter.newLine();
+
+		}
+
+
+		// Current script is configured to run with a stepsize of 84
+		int STEP_SIZE = 84;
+		// Round up array size to be multiple of step size
+		int OFFSET_STEP = (1000 / STEP_SIZE) * STEP_SIZE;
+
+
+		// Split task into multiple below 1000
+		// this is due to a limitation of maximum job array size
+		List<String> lines = Lists.newArrayList("#!/bin/bash\n");
+		for (int offset = 0; offset < prepare.runs.size(); offset += OFFSET_STEP) {
+
+			// round array end down according to run size, but must also be multiple of step size
+			int arrayEnd = (int) Math.ceil((double) Math.min(offset + OFFSET_STEP, prepare.runs.size() - offset) / STEP_SIZE) * STEP_SIZE;
+
+			lines.add(
+					String.format("sbatch --export=EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
+							offset, arrayEnd, STEP_SIZE, STEP_SIZE, runName)
+			);
+		}
+
+		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
+
+		FileUtils.writeLines(dir.resolve("start_parallel_slurm.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n",
-				// Round up array size to be multiple of step size
-				String.format("sbatch --array=1-%d:96 --job-name=sz runSlurm.sh", (int) Math.ceil(ii / 96d) * 96))
-		);
+				// Dollar signs must be escaped
+				"export EPISIM_SETUP='" + setup.getName() + "'",
+				"export EPISIM_PARAMS='" + params.getName() + "'",
+				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
+				"",
+				String.format("sbatch --export=ALL --array=1-%d --job-name=%s runParallel.sh", (int) Math.ceil(prepare.runs.size() / 96d), runName)
+		), "\n");
 
 		bashScriptWriter.close();
 		infoWriter.close();
 
+		return 0;
 	}
-
-	public static String createConfigFile(int offset, double kiga, double prima, double secon, double leisure, double work, double shBuEr, int ii) throws IOException {
-
-		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		episimConfig.setInputEventsFile("../he_snz_episim_events.xml.gz");
-		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
-
-		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000002);
-
-		RunEpisimSnz.addParams(episimConfig);
-
-		episimConfig.getOrAddContainerParams("pt")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("tr")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("leisure")
-				.setContactIntensity(5.0);
-		episimConfig.getOrAddContainerParams("educ_kiga")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("educ_primary")
-				.setContactIntensity(4.0);
-		episimConfig.getOrAddContainerParams("educ_secondary")
-				.setContactIntensity(2.0);
-		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(3.0);
-
-		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				.restrict(13 + offset, 0.9, "leisure")
-				.restrict(13 + offset, 0.1, "educ_primary", "educ_kiga")
-				.restrict(13 + offset, 0., "educ_secondary", "educ_higher")
-				.restrict(13 + offset, leisure, "leisure")
-				.restrict(13 + offset, work, "work")
-				.restrict(13 + offset, shBuEr, "shopping", "errands", "business")
-				.restrict(65 + offset, kiga, "educ_kiga")
-				.restrict(65 + offset, prima, "educ_primary")
-				.restrict(65 + offset, secon, "educ_secondary")
-				.build();
-
-		String policyFileName = "policy" + ii + ".conf";
-		episimConfig.setOverwritePolicyLocation(policyFileName);
-		Files.writeString(workingDir.resolve(policyFileName), policyConf.root().render());
-
-		config.controler().setOutputDirectory("output/" + offset + "-" + kiga + "-" + prima + "-" + secon + "-" + leisure + "-" + work + "-" + shBuEr);
-		
-		config.plans().setInputFile("../he_entirePopulation_noPlans.xml.gz");
-
-		String configFileName = "config_sz" + ii + ".xml";
-		ConfigUtils.writeConfig(config, workingDir.resolve(configFileName).toString());
-
-		return configFileName;
-
-	}
-
 }

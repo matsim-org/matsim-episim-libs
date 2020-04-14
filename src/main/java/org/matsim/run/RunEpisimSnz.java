@@ -84,9 +84,11 @@ public class RunEpisimSnz {
 		config.controler().setOutputDirectory("./output-belin-reopenSchoolsAndKiga" + -a);
 
 		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
-		// yyyyyy I would do this the other way around, i.e. apply cli params _before_ the output dir name is constructed.  ???
+		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		RunEpisim.runSimulation(config, 150);
+
+		OutputDirectoryLogging.closeOutputDirLogging();
 	}
 
 	static void setContactIntensities(EpisimConfigGroup episimConfig) {

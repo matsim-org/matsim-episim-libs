@@ -1,10 +1,11 @@
 package org.matsim.episim.model;
 
+import com.google.common.collect.Lists;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.*;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -50,7 +51,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 			return;
 		}
 
-		ArrayList<EpisimPerson> otherPersonsInContainer = new ArrayList<>(container.getPersons());
+		List<EpisimPerson> otherPersonsInContainer = Lists.newArrayList(container.getPersons());
 		otherPersonsInContainer.remove(personLeavingContainer);
 
 		// For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
@@ -108,22 +109,16 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				continue;
 			}
 
-			Double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
-			Double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
+			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
+			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
 			// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
-			if (containerEnterTimeOfPersonLeaving == null && containerEnterTimeOfOtherPerson == null) {
+			if (containerEnterTimeOfPersonLeaving < 0 && containerEnterTimeOfOtherPerson < 0) {
 				throw new IllegalStateException("should not happen");
-				// null should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
+				// should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
 				// can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
 				// container from the beginning.  ????  kai, mar'20
-			}
-			if (containerEnterTimeOfPersonLeaving == null) {
-				containerEnterTimeOfPersonLeaving = Double.NEGATIVE_INFINITY;
-			}
-			if (containerEnterTimeOfOtherPerson == null) {
-				containerEnterTimeOfOtherPerson = Double.NEGATIVE_INFINITY;
 			}
 
 			double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
@@ -170,32 +165,15 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		double contactIntensity = -1;
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			String containerIdString = container.getContainerId().toString();
+			contactIntensity = episimConfig.selectInfectionParams(containerIdString).getContactIntensity();
 
-			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
-				if (infectionParams.includesActivity(containerIdString)) {
-					contactIntensity = infectionParams.getContactIntensity();
-				}
-			}
-			if (contactIntensity < 0.) {
-				throw new IllegalStateException("contactIntensity not defined for vehicle container=" + containerIdString + ".  There needs to be a config entry for each activity type.");
-			}
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
-			double contactIntensityLeavingPerson = -1;
-			double contactIntensityOtherPerson = -1;
-			for (EpisimConfigGroup.InfectionParams infectionParams : episimConfig.getContainerParams().values()) {
-				if (infectionParams.includesActivity(leavingPersonsActivity)) {
-					contactIntensityLeavingPerson = infectionParams.getContactIntensity();
-				}
-				if (infectionParams.includesActivity(otherPersonsActivity)) {
-					contactIntensityOtherPerson = infectionParams.getContactIntensity();
-				}
-			}
-			if (contactIntensityLeavingPerson < 0. || contactIntensityOtherPerson < 0.) {
-				throw new IllegalStateException("contactIntensity not defined either for activityType=" + contactIntensityLeavingPerson + " or for activityType= " + otherPersonsActivity
-						+ ".  There needs to be a config entry for each activity type.");
-			}
+
+			double contactIntensityLeavingPerson = episimConfig.selectInfectionParams(leavingPersonsActivity).getContactIntensity();
+			double contactIntensityOtherPerson = episimConfig.selectInfectionParams(otherPersonsActivity).getContactIntensity();
 
 			contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
+
 		} else {
 			throw new IllegalArgumentException("do not know how to deal container " + container);
 		}

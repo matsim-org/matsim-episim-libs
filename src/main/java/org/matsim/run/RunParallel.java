@@ -21,107 +21,132 @@
 
 package org.matsim.run;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.controler.OutputDirectoryLogging;
+import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.PreparedRun;
+import org.matsim.episim.ReplayHandler;
+import picocli.CommandLine;
 
-import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-/**
- * @author smueller
- */
-public class RunParallel {
+@CommandLine.Command(
+		name = "RunParallel",
+		description = "Run batch scenario in parallel in one process.",
+		showDefaultValues = true,
+		mixinStandardHelpOptions = true
+)
+public class RunParallel<T> implements Callable<Integer> {
 
-	private static final int MYTHREADS = 4;
+	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
 
+	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
+	private Path output;
+
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.SchoolClosure}")
+	private Class<? extends BatchRun<T>> setup;
+
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.SchoolClosure$Params}")
+	private Class<T> params;
+
+	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
+	private int threads;
+
+	@CommandLine.Option(names = "--total-worker", defaultValue = "1", description = "Total number of worker processes available for this run." +
+			"The tasks will be split evenly between all processes using the index.")
+	private int totalWorker;
+
+	@CommandLine.Option(names = "--worker-index", defaultValue = "0", description = "Index of this worker process")
+	private int workerIndex;
+
+	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
+	private int maxJobs;
+
+
+	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
+		System.exit(new CommandLine(new RunParallel()).execute(args));
+	}
 
-		ExecutorService executor = Executors.newFixedThreadPool(MYTHREADS);
-		List<Long> pt = Arrays.asList(1000L, 10L, 20L, 30L);
-		List<Long> work = Arrays.asList(1000L, 10L, 20L, 30L);
-		List<Long> leisure = Arrays.asList(1000L, 10L, 20L, 30L);
+	@Override
+	public Integer call() throws Exception {
 
-		List<Long> otherExceptHome = Arrays.asList(1000L, 10L, 20L, 30L);
+		ExecutorService executor = Executors.newFixedThreadPool(threads);
 
+		PreparedRun prepare = BatchRun.prepare(setup, params);
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-		for (long p : pt) {
-			for (long w : work) {
-				for (long l : leisure) {
-					for (long o : otherExceptHome) {
-						futures.add(
-								CompletableFuture.runAsync(new MyRunnable(p, w, l, o), executor)
-						);
-					}
-				}
+		log.info("Reading base scenario...");
+
+		// All config need to have the same base config (population, events, etc..)
+		Config baseConfig = prepare.runs.get(0).config;
+		EpisimConfigGroup episimBase = ConfigUtils.addOrGetModule(baseConfig, EpisimConfigGroup.class);
+
+		Scenario scenario = ScenarioUtils.loadScenario(baseConfig);
+		ReplayHandler replay = new ReplayHandler(episimBase, scenario);
+
+		int i = 0;
+		for (PreparedRun.Run run : prepare.runs) {
+			if (i++ % totalWorker != workerIndex)
+				continue;
+
+			if (maxJobs > 0 && i >= maxJobs) break;
+
+			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
+			if (!episimBase.getInputEventsFile().equals(episimConfig.getInputEventsFile())) {
+				log.error("Input files differs for run {}", run.id);
+				return 1;
 			}
+
+			String outputPath = output + "/" + prepare.setup.getOutputName(run);
+			Path out = Paths.get(outputPath);
+			if (!Files.exists(out)) Files.createDirectories(out);
+			run.config.controler().setOutputDirectory(outputPath);
+
+			futures.add(CompletableFuture.runAsync(new Task(scenario, run.config, replay), executor));
 		}
+
+		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
 
 		// Wait for all futures to complete
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
-		System.out.println("\nFinished all threads");
-
+		log.info("Finished all tasks");
 		executor.shutdown();
+
+		return 0;
 	}
 
-	public static class MyRunnable implements Runnable {
-		private final long p;
-		private final long w;
-		private final long l;
-		private final long o;
+	private static class Task implements Runnable {
 
-		MyRunnable(long p, long w, long l, long o) {
-			this.p = p;
-			this.w = w;
-			this.l = l;
-			this.o = o;
+		private final Scenario scenario;
+		private final Config config;
+		private final ReplayHandler replay;
 
+		private Task(Scenario scenario, Config config, ReplayHandler replay) {
+			this.scenario = scenario;
+			this.config = config;
+			this.replay = replay;
 		}
 
 		@Override
 		public void run() {
-
-			OutputDirectoryLogging.catchLogEntries();
-
-			Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-			episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
-			episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
-
-			episimConfig.setSampleSize(0.25);
-			episimConfig.setCalibrationParameter(0.002);
-
-			RunEpisim.addDefaultParams(episimConfig);
-
-			episimConfig.getOrAddContainerParams("pt")
-					.setContactIntensity(10.0);
-
-			episimConfig.setPolicyConfig(FixedPolicy.config()
-					.shutdown(this.p, "pt")
-					.shutdown(this.o, "business", "edu", "errands", "shopping")
-					.shutdown(this.l, "leisure")
-					.shutdown(this.w, "work")
-					.build()
-			);
-
-			config.controler().setOutputDirectory("output/" + p + "-" + w + "-" + l + "-" + o);
-
-			try {
-				RunEpisim.runSimulation(config, 100);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+			RunEpisim.simulationLoop(config, scenario, replay, 200, null);
+			log.info("Task finished: {}", config.controler().getOutputDirectory());
 		}
 	}
+
 }
