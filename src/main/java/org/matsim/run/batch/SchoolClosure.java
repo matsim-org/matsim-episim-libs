@@ -54,7 +54,7 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 				.restrict(65 + params.offset, params.remainingFractionSecon, "educ_secondary")
 				.build();
 
-		String policyFileName = "policy" + id + ".conf";
+		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
 

@@ -137,7 +137,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	@StringSetter("policyConfig")
 	public void setPolicyConfig(String policyConfig) {
-		this.policyConfig = ConfigFactory.parseFileAnySyntax(new File(policyConfig));
+		File file = new File(policyConfig);
+		if (!policyConfig.equals("null") && !file.exists())
+			throw new IllegalArgumentException("Policy config does not exist: " + policyConfig);
+		this.policyConfig = ConfigFactory.parseFileAnySyntax(file);
 	}
 
 	/**
