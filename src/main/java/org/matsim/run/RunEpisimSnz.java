@@ -49,11 +49,14 @@ public class RunEpisimSnz {
 //		config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/snzDrt220.0.events.reduced.xml.gz");
+//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
+//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
+
 		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.0000012);
+		episimConfig.setCalibrationParameter(0.000002);
 		//episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
 
 		int closingIteration = 1000;
@@ -61,20 +64,31 @@ public class RunEpisimSnz {
 		addParams(episimConfig);
 
 		setContactIntensities(episimConfig);
-
+		int a = -5;
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-				.shutdown(closingIteration, DEFAULT_ACTIVITIES)
+				.restrict(26-a, 0.9, "leisure")
+				.restrict(26-a, 0.1, "educ_primary", "educ_kiga")
+				.restrict(26-a, 0., "educ_secondary", "educ_higher")
+				.restrict(35-a, 0.2, "leisure")
+				.restrict(35-a, 0.6, "work")
+				.restrict(35-a, 0.4, "shopping")
+				.restrict(35-a, 0.4, "errands", "business")
+				.restrict(63-a, 1, "educ_kiga")
+				.restrict(63-a, 1, "educ_primary")
+				.restrict(63-a, 1, "educ_secondary")
+				.restrict(63-a, 0, "educ_higher")
 				.build()
 		);
 
-		RunEpisim.setOutputDirectory(config);
+//		RunEpisim.setOutputDirectory(config);
+		config.controler().setOutputDirectory("./output-belin-reopenSchoolsAndKiga" + -a);
+
 		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		RunEpisim.runSimulation(config, 150);
 
 		OutputDirectoryLogging.closeOutputDirLogging();
-
 	}
 
 	static void setContactIntensities(EpisimConfigGroup episimConfig) {

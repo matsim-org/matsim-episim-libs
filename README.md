@@ -9,36 +9,31 @@ This repository contains an epidemic simulation based on MATSim, provided by the
 
 ### How to use Episim
 
-In order to perform a epidemic simulation multiple steps are necessary:
-
-#### Generate mobility traces events file
-
-First you need to run the MATSim scenario you want to analyze and generate an events file.
-> This step might be skipped if you use one of the provided event files. 
-
-Run `DownSampleScenario` to extract the necessary information for the epidemic simulation: 
-
-    DownSampleScenario 0.1 --population <Path to plans.xml> --events <Path to events.xml>
-
-This example will write a 10% sample into `output` that can be used in the subsequent steps.
-
-#### Run epidemic simulation
+In order perform an epidemic simulation you first need an MATSim events file.
+To get started you can also use a provided event file from the [OpenBerlin Scenario](https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct-schools/output-berlin-v5.4-1pct-schools/berlin-v5.4-1pct-schools.output_events_for_episim.xml.gz).
 
 It is best to run the scenarios with your IDE from the `org.matsim.episim.run` package.
 Please edit `RunEpisim.class` and change it according to your configuration.
 
-You can also build the jar file, which will run the OpenBerlin scenario with a default configuration:
+You can also build the jar file, which will run the scenario with a default configuration:
 
     mvn package
 
 And run it with:
 
-    java -jar target/matsim-episim-1.0-SNAPSHOT-jar-with-dependencies.jar
+    java -jar matsim-episim-1.0-SNAPSHOT.jar
     
 
-#### Perform analysis
+### Generating mobility traces events file
 
-> TODO
+If you have a MATSim scenario you can also create your own event file to be used for an epidemic simulation.
+All that is needed is the population and the event file of one iteration.
+
+Run `DownSampleScenario` to extract the necessary information: 
+
+    DownSampleScenario 0.1 --population <Path to plans.xml> --events <Path to events.xml>
+
+This example will write a 10% sample into `output` that can be used in the subsequent steps.
 
 ### Licenses
 

@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 
 /**
  * Interface for defining the setup procedure of a batch run and the corresponding parameter class.
@@ -45,6 +46,11 @@ public interface BatchRun<T> {
 			Parameter param = field.getAnnotation(Parameter.class);
 			if (param != null) {
 				allParams.add(DoubleStream.of(param.value()).boxed().collect(Collectors.toList()));
+				fields.add(field);
+			}
+			IntParameter intParam = field.getAnnotation(IntParameter.class);
+			if (intParam != null) {
+				allParams.add(IntStream.of(intParam.value()).boxed().collect(Collectors.toList()));
 				fields.add(field);
 			}
 			StringParameter stringParam = field.getAnnotation(StringParameter.class);
@@ -120,6 +126,15 @@ public interface BatchRun<T> {
 		 * All values this parameter should attain.
 		 */
 		double[] value();
+	}
+
+	/**
+	 * See {@link Parameter}
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface IntParameter {
+		int[] value();
 	}
 
 	/**

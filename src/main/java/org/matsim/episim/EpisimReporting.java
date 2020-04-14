@@ -17,6 +17,7 @@ import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -98,41 +99,58 @@ public final class EpisimReporting {
 	}
 
 	/**
-	 * Creates an infection report for the day.
+	 * Creates infections reports for the day. Grouped by district, but always containing a "total" entry.
 	 */
-	InfectionReport createReport(Collection<EpisimPerson> persons, int iteration) {
+	Map<String, InfectionReport> createReports(Collection<EpisimPerson> persons, int iteration) {
 
-		InfectionReport report = new InfectionReport();
-		report.time = EpisimUtils.getCorrectedTime(0., iteration);
-		report.day = iteration;
+		Map<String, InfectionReport> reports = new LinkedHashMap<>();
+		InfectionReport report = new InfectionReport("total", EpisimUtils.getCorrectedTime(0., iteration), iteration);
+		reports.put("total", report);
 
 		for (EpisimPerson person : persons) {
+			String districtName = (String) person.getAttributes().getAttribute("district");
+
+			// Also aggregate by district
+			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
+					: districtName, name -> new InfectionReport(name, report.time, report.day));
 			switch (person.getDiseaseStatus()) {
 				case susceptible:
 					report.nSusceptible++;
+					district.nSusceptible++;
 					break;
 				case infectedButNotContagious:
 					report.nInfectedButNotContagious++;
+					district.nInfectedButNotContagious++;
 					report.nTotalInfected++;
+					district.nTotalInfected++;
 					break;
 				case contagious:
 					report.nContagious++;
+					district.nContagious++;
 					report.nTotalInfected++;
+					district.nTotalInfected++;
 					break;
 				case showingSymptoms:
 					report.nShowingSymptoms++;
+					district.nShowingSymptoms++;
 					report.nTotalInfected++;
+					district.nTotalInfected++;
 					break;
 				case seriouslySick:
 					report.nSeriouslySick++;
+					district.nSeriouslySick++;
 					report.nTotalInfected++;
+					district.nTotalInfected++;
 					break;
 				case critical:
 					report.nCritical++;
+					district.nCritical++;
 					report.nTotalInfected++;
+					district.nTotalInfected++;
 					break;
 				case recovered:
 					report.nRecovered++;
+					district.nRecovered++;
 					break;
 				default:
 					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
@@ -142,6 +160,7 @@ public final class EpisimReporting {
 				case atHome:
 				case full:
 					report.nInQuarantine++;
+					district.nInQuarantine++;
 					break;
 				case no:
 					break;
@@ -150,48 +169,55 @@ public final class EpisimReporting {
 			}
 		}
 
-		report.scale(1 / sampleSize);
+		reports.forEach((k, v) -> v.scale(1 / sampleSize));
 
-		return report;
+
+		return reports;
 	}
 
 	/**
 	 * Writes the infection report to csv.
 	 */
-	void reporting(InfectionReport r, int iteration) {
+	void reporting(Map<String, InfectionReport> reports, int iteration) {
 		if (iteration == 0) {
 			return;
 		}
+		InfectionReport t = reports.get("total");
 
 		log.warn("===============================");
 		log.warn("Beginning day {}", iteration);
-		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(r.nSusceptible), 100 * r.nSusceptible / r.nTotal());
-		log.warn("No of infected persons={} / {}%", decimalFormat.format(r.nTotalInfected), 100 * r.nTotalInfected / r.nTotal());
-		log.warn("No of recovered persons={} / {}%", decimalFormat.format(r.nRecovered), 100 * r.nRecovered / r.nTotal());
+		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
+		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
+		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
 		log.warn("---");
-		log.warn("No of persons in quarantine={}", decimalFormat.format(r.nInQuarantine));
+		log.warn("No of persons in quarantine={}", decimalFormat.format(t.nInQuarantine));
 		log.warn("100 persons={} agents", sampleSize * 100);
 		log.warn("===============================");
 
-		String[] array = new String[InfectionsWriterFields.values().length];
+		// Write all reports for each district
+		for (InfectionReport r : reports.values()) {
+			if (r.name.equals("total")) continue;
 
-		array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);
-		array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);
-		array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);
-		array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);
-		array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);
-		array[InfectionsWriterFields.nShowingSymptoms.ordinal()] = Long.toString(r.nShowingSymptoms);
-		array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);
+			String[] array = new String[InfectionsWriterFields.values().length];
+			array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);
+			array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);
+			array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);
+			array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);
+			array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);
+			array[InfectionsWriterFields.nShowingSymptoms.ordinal()] = Long.toString(r.nShowingSymptoms);
+			array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);
 
-		array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
-		array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((r.nTotalInfected + r.nRecovered));
+			array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
+			array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((r.nTotalInfected + r.nRecovered));
 
-		array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString(r.nInQuarantine);
+			array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString(r.nInQuarantine);
 
-		array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);
-		array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
+			array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);
+			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
+			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
-		write(array, infectionsWriter);
+			write(array, infectionsWriter);
+		}
 	}
 
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
@@ -225,7 +251,7 @@ public final class EpisimReporting {
 
 	enum InfectionsWriterFields {
 		time, day, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected, nInfectedCumulative,
-		nRecovered, nInQuarantine
+		nRecovered, nInQuarantine, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType}
@@ -235,8 +261,10 @@ public final class EpisimReporting {
 	 * Although the fields are mutable, do not change them outside this class.
 	 */
 	public static class InfectionReport {
-		public double time = 0;
-		public long day = 0;
+
+		public final String name;
+		public final double time;
+		public final long day;
 		public long nSusceptible = 0;
 		public long nInfectedButNotContagious = 0;
 		public long nContagious = 0;
@@ -246,6 +274,12 @@ public final class EpisimReporting {
 		public long nTotalInfected = 0;
 		public long nRecovered = 0;
 		public long nInQuarantine = 0;
+
+		public InfectionReport(String name, double time, long day) {
+			this.name = name;
+			this.time = time;
+			this.day = day;
+		}
 
 		public long nTotal() {
 			return nSusceptible + nTotalInfected + nRecovered;

@@ -107,21 +107,29 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
+			
+			if (age < 0 || age > 120) {
+				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
+			}
 
-			if (age < 20) {
-				proba = 0.005;
-			} else if (age < 45) {
-				proba = 0.039;
-			} else if (age < 55) {
-				proba = 0.054;
-			} else if (age < 65) {
-				proba = 0.056;
-			} else if (age < 75) {
-				proba = 0.079;
-			} else if (age < 85) {
-				proba = 0.098;
+			if (age < 10) {
+				proba = 0.06 / 100;
+			} else if (age < 20) {
+				proba = 0.19 / 100;
+			} else if (age < 30) {
+				proba = 0.77 / 100;
+			} else if (age < 40) {
+				proba = 2.06 / 100;
+			} else if (age < 50) {
+				proba = 3.16 / 100;
+			} else if (age < 60) {
+				proba = 6.57 / 100;
+			} else if (age < 70) {
+				proba = 10.69 / 100;
+			} else if (age < 80) {
+				proba = 15.65 / 100;
 			} else {
-				proba = 0.112;
+				proba = 17.58 / 100;
 			}
 
 		} else {
@@ -138,21 +146,23 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
+			
+			if (age < 0 || age > 120) {
+				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
+			}
 
-			if (age < 20) {
-				proba = 0.;
-			} else if (age < 45) {
-				proba = 0.182;
-			} else if (age < 55) {
-				proba = 0.328;
-			} else if (age < 65) {
-				proba = 0.323;
-			} else if (age < 75) {
-				proba = 0.384;
-			} else if (age < 85) {
-				proba = 0.479;
+			if (age < 40) {
+				proba = 5. / 100;
+			} else if (age < 50) {
+				proba = 6.3 / 100;
+			} else if (age < 60) {
+				proba = 12.2 / 100;
+			} else if (age < 70) {
+				proba = 27.4 / 100;
+			} else if (age < 80) {
+				proba = 43.2 / 100;
 			} else {
-				proba = 0.357;
+				proba = 70.9 / 100;
 			}
 
 		} else {
