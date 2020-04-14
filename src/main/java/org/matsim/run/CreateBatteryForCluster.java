@@ -97,7 +97,7 @@ public class CreateBatteryForCluster {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../be_snz_episim_events.xml.gz");
+		episimConfig.setInputEventsFile("../he_snz_episim_events.xml.gz");
 		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
@@ -121,15 +121,15 @@ public class CreateBatteryForCluster {
 				.setContactIntensity(3.0);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				.restrict(26 + offset, 0.9, "leisure")
-				.restrict(26 + offset, 0.1, "educ_primary", "educ_kiga")
-				.restrict(26 + offset, 0., "educ_secondary", "educ_higher")
-				.restrict(35 + offset, leisure, "leisure")
-				.restrict(35 + offset, work, "work")
-				.restrict(35 + offset, shBuEr, "shopping", "errands", "business")
-				.restrict(63 + offset, kiga, "educ_kiga")
-				.restrict(63 + offset, prima, "educ_primary")
-				.restrict(63 + offset, secon, "educ_secondary")
+				.restrict(13 + offset, 0.9, "leisure")
+				.restrict(13 + offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(13 + offset, 0., "educ_secondary", "educ_higher")
+				.restrict(13 + offset, leisure, "leisure")
+				.restrict(13 + offset, work, "work")
+				.restrict(13 + offset, shBuEr, "shopping", "errands", "business")
+				.restrict(65 + offset, kiga, "educ_kiga")
+				.restrict(65 + offset, prima, "educ_primary")
+				.restrict(65 + offset, secon, "educ_secondary")
 				.build();
 
 		String policyFileName = "policy" + ii + ".conf";
@@ -137,6 +137,8 @@ public class CreateBatteryForCluster {
 		Files.writeString(workingDir.resolve(policyFileName), policyConf.root().render());
 
 		config.controler().setOutputDirectory("output/" + offset + "-" + kiga + "-" + prima + "-" + secon + "-" + leisure + "-" + work + "-" + shBuEr);
+		
+		config.plans().setInputFile("../he_entirePopulation_noPlans.xml.gz");
 
 		String configFileName = "config_sz" + ii + ".xml";
 		ConfigUtils.writeConfig(config, workingDir.resolve(configFileName).toString());
