@@ -6,6 +6,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.IdMap;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.*;
 import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
@@ -52,9 +53,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private static final Logger log = LogManager.getLogger(InfectionEventHandler.class);
 
-	private final IdMap<Person, EpisimPerson> personMap = new IdMap<>();
-	private final IdMap<Vehicle, EpisimVehicle> vehicleMap = new IdMap<>();
-	private final IdMap<Facility, EpisimFacility> pseudoFacilityMap = new IdMap<>();
+	private final IdMap<Person, EpisimPerson> personMap = new IdMap<>(Person.class);
+	private final IdMap<Vehicle, EpisimVehicle> vehicleMap = new IdMap<>(Vehicle.class);
+	private final IdMap<Facility, EpisimFacility> pseudoFacilityMap = new IdMap<>(Facility.class);
 
 	/**
 	 * Holds the current restrictions in place for all the activities.
