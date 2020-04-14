@@ -51,41 +51,41 @@ class AssignChildrenToParentHomeLocations {
 
 	public static void main(String[] args) {
 
-		Scenario childrenScenario = readPopulation(emptyChildrenPlansFile);
-		Population children = childrenScenario.getPopulation();
-		PopulationUtils.sampleDown(children, 0.01);
-		PopulationFactory childrenFactory = childrenScenario.getPopulation().getFactory();
-		Population parents = readPopulation(openBerlinPopulationFile).getPopulation();
-
-		/*
-		nach dem Statistischen Bundesamt (https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Haushalte-Familien/Publikationen/Downloads-Haushalte/haushalte-familien-2010300187004.html)
-		ist die Aufteilung der Haushalte mit Kindern unter 18 Jahren in den neuen Bundesländern einschl. Berlin wie folgt (Jahr 2018, siehe Tabelle 5_2_1 Zeile 35ff):
-
-
-		55,5% 1 Kind unter 18
-		34,5% 2 Kinder unter 18
-		7,7%  3 Kinder unter 18
-		1,7%  4 Kinder unter 18
-		0,6% 5 oder mehr Kinder unter 18
-
- 		*/
-		double oneChildRatio = 0.555;
-		double twoChildrenRatio = 0.345;
-
-		//ratio of three or more children is calculated later..
-
-		Map<String, List<Person>> zone2Parents = mapParentsToHomeZone(parents);
-		log.info("nr of zones in parents map = " + zone2Parents.size());
-		Map<String, List<Person>> zone2Children = mapChildrenToHomeZone(children);
-		log.info("nr of zones in children map = " + zone2Children.size());
-
-		assign(childrenFactory, oneChildRatio, twoChildrenRatio, zone2Parents, zone2Children);
-
-		log.info("finished assigning...");
-
-		log.info("write output");
-
-		new PopulationWriter(children).write(outputChildrenPlansFile);
+//		Scenario childrenScenario = readPopulation(emptyChildrenPlansFile);
+//		Population children = childrenScenario.getPopulation();
+//		PopulationUtils.sampleDown(children, 0.01);
+//		PopulationFactory childrenFactory = childrenScenario.getPopulation().getFactory();
+//		Population parents = readPopulation(openBerlinPopulationFile).getPopulation();
+//
+//		/*
+//		nach dem Statistischen Bundesamt (https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Haushalte-Familien/Publikationen/Downloads-Haushalte/haushalte-familien-2010300187004.html)
+//		ist die Aufteilung der Haushalte mit Kindern unter 18 Jahren in den neuen Bundesländern einschl. Berlin wie folgt (Jahr 2018, siehe Tabelle 5_2_1 Zeile 35ff):
+//
+//
+//		55,5% 1 Kind unter 18
+//		34,5% 2 Kinder unter 18
+//		7,7%  3 Kinder unter 18
+//		1,7%  4 Kinder unter 18
+//		0,6% 5 oder mehr Kinder unter 18
+//
+// 		*/
+//		double oneChildRatio = 0.555;
+//		double twoChildrenRatio = 0.345;
+//
+//		//ratio of three or more children is calculated later..
+//
+//		Map<String, List<Person>> zone2Parents = mapParentsToHomeZone(parents);
+//		log.info("nr of zones in parents map = " + zone2Parents.size());
+//		Map<String, List<Person>> zone2Children = mapChildrenToHomeZone(children);
+//		log.info("nr of zones in children map = " + zone2Children.size());
+//
+//		assign(childrenFactory, oneChildRatio, twoChildrenRatio, zone2Parents, zone2Children);
+//
+//		log.info("finished assigning...");
+//
+//		log.info("write output");
+//
+//		new PopulationWriter(children).write(outputChildrenPlansFile);
 
 	}
 
