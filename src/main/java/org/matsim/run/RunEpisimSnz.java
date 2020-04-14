@@ -46,12 +46,18 @@ public class RunEpisimSnz {
 		OutputDirectoryLogging.catchLogEntries();
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-//		config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
+		
+//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz");
+//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
+//		config.plans().setInputFile("./output/filteredPopulation.xml.gz");
+		
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
 //		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
+//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
+//		episimConfig.setInputEventsFile("/Users/sebastianmuller/Documents/episim-original-data/20200410_CH2019.25pct.run1.output_events.reducedForEpisim.xml.gz");
 
 		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
@@ -64,24 +70,24 @@ public class RunEpisimSnz {
 		addParams(episimConfig);
 
 		setContactIntensities(episimConfig);
-		int a = -5;
+//		int a = -5;
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-				.restrict(26-a, 0.9, "leisure")
-				.restrict(26-a, 0.1, "educ_primary", "educ_kiga")
-				.restrict(26-a, 0., "educ_secondary", "educ_higher")
-				.restrict(35-a, 0.2, "leisure")
-				.restrict(35-a, 0.6, "work")
-				.restrict(35-a, 0.4, "shopping")
-				.restrict(35-a, 0.4, "errands", "business")
-				.restrict(63-a, 1, "educ_kiga")
-				.restrict(63-a, 1, "educ_primary")
-				.restrict(63-a, 1, "educ_secondary")
-				.restrict(63-a, 0, "educ_higher")
+//				.restrict(26-a, 0.9, "leisure")
+//				.restrict(26-a, 0.1, "educ_primary", "educ_kiga")
+//				.restrict(26-a, 0., "educ_secondary", "educ_higher")
+//				.restrict(35-a, 0.2, "leisure")
+//				.restrict(35-a, 0.6, "work")
+//				.restrict(35-a, 0.4, "shopping")
+//				.restrict(35-a, 0.4, "errands", "business")
+//				.restrict(63-a, 1, "educ_kiga")
+//				.restrict(63-a, 1, "educ_primary")
+//				.restrict(63-a, 1, "educ_secondary")
+//				.restrict(63-a, 0, "educ_higher")
 				.build()
 		);
 
 //		RunEpisim.setOutputDirectory(config);
-		config.controler().setOutputDirectory("./output-belin-reopenSchoolsAndKiga" + -a);
+		config.controler().setOutputDirectory("./output-he-base");
 
 		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
