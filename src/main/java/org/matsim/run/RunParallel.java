@@ -144,7 +144,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		@Override
 		public void run() {
-			RunEpisim.simulationLoop(config, scenario, replay, 200, null);
+			// TODO: guice RunEpisim.simulationLoop(config, scenario, replay, 200, null);
 			log.info("Task finished: {}", config.controler().getOutputDirectory());
 		}
 	}

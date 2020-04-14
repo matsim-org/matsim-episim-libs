@@ -1,5 +1,6 @@
 package org.matsim.episim.model;
 
+import com.google.inject.Inject;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -16,6 +17,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
+	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
@@ -107,7 +109,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
-			
+
 			if (age < 0 || age > 120) {
 				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
 			}
@@ -146,7 +148,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
-			
+
 			if (age < 0 || age > 120) {
 				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
 			}

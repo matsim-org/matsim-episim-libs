@@ -52,7 +52,7 @@ public class KNRunEpisim {
 
 		config.controler().setOutputDirectory("output-base-" + episimConfig.getCalibrationParameter());
 
-		RunEpisim.addDefaultParams(episimConfig);
+		// TODO: guice RunEpisim.addDefaultParams(episimConfig);
 
 //        public static final String[] DEFAULT_ACTIVITIES = {
 //                        "pt", "work", "leisure", "edu", "shop", "errands", "business", "other", "freight", "home"
@@ -86,7 +86,7 @@ public class KNRunEpisim {
 //        episimConfig.setPolicy(FixedPolicy.class, policyConfig );
 //        config.controler().setOutputDirectory( "output-" + reduced );
 
-		RunEpisim.runSimulation(config, 100);
+	//	RunEpisim.runSimulation(config, 100);
 	}
 
 }

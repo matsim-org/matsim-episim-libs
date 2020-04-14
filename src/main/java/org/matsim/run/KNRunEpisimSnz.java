@@ -61,7 +61,7 @@ public class KNRunEpisimSnz {
 		);
 
 
-		RunEpisim.runSimulation(config, 150);
+		// TODO: guice RunEpisim.runSimulation(config, 150);
 	}
 
 }

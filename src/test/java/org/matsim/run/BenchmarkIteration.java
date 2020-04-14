@@ -60,8 +60,8 @@ public class BenchmarkIteration {
 		replay = new ReplayHandler(episimConfig, scenario);
 		events = EventsUtils.createEventsManager();
 
-		InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
-		events.addHandler(eventHandler);
+// TODO		InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
+		//events.addHandler(eventHandler);
 
 	}
 

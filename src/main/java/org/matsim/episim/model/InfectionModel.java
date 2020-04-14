@@ -1,5 +1,6 @@
 package org.matsim.episim.model;
 
+import com.google.inject.ImplementedBy;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -9,6 +10,7 @@ import java.util.Map;
 /**
  * This class models the infection dynamics of persons staying in the same place for a certain time.
  */
+@ImplementedBy(DefaultInfectionModel.class)
 public interface InfectionModel {
 
 	/**

@@ -86,7 +86,7 @@ public class RunEpisimSnz {
 		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
 		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
-		RunEpisim.runSimulation(config, 150);
+		// TODO: guice RunEpisim.runSimulation(config, 150);
 
 		OutputDirectoryLogging.closeOutputDirLogging();
 	}

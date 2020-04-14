@@ -1,6 +1,7 @@
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
+import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

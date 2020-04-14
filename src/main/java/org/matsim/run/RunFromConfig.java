@@ -44,7 +44,7 @@ public class RunFromConfig {
 
 		ConfigUtils.applyCommandline(config, typedArgs);
 
-		RunEpisim.runSimulation(config, 500);
+	// TODO: guice	RunEpisim.runSimulation(config, 500);
 	}
 
 }

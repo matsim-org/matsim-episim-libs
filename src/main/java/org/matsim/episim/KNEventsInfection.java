@@ -60,7 +60,7 @@ class KNEventsInfection {
 
 		EventsManager events = EventsUtils.createEventsManager();
 
-		events.addHandler(new InfectionEventHandler(config, ScenarioUtils.createScenario(config), events));
+		// TODO: guice events.addHandler(new InfectionEventHandler(config, ScenarioUtils.createScenario(config), events));
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 		for (int iteration = 0; iteration <= 300; iteration++) {
 			events.resetHandlers(iteration);
