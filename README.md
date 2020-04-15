@@ -12,16 +12,16 @@ This repository contains an epidemic simulation based on MATSim, provided by the
 In order perform an epidemic simulation you first need an MATSim events file.
 To get started you can also use a provided event file from the [OpenBerlin Scenario](https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct-schools/output-berlin-v5.4-1pct-schools/berlin-v5.4-1pct-schools.output_events_for_episim.xml.gz).
 
-It is best to run the scenarios with your IDE from the `org.matsim.episim.run` package.
-Please edit `RunEpisim.class` and change it according to your configuration.
+It is best to run the scenarios with your IDE from the `org.matsim.run` package.
+In `org.matsim.run.modules` you can find example scenarios that you may adapt or use to create your own configuration. 
 
-You can also build the jar file, which will run the scenario with a default configuration:
+To run them you can create a standalone jar file with:
 
     mvn package
 
-And run it with:
+and run it with (where `OpenBerlinScenario` is the name of the scenario you want to run):
 
-    java -jar matsim-episim-1.0-SNAPSHOT.jar
+    java -jar matsim-episim-1.0-SNAPSHOT.jar --modules OpenBerlinScenario
     
 
 ### Generating mobility traces events file
@@ -31,7 +31,8 @@ All that is needed is the population and the event file of one iteration.
 
 Run `DownSampleScenario` to extract the necessary information: 
 
-    DownSampleScenario 0.1 --population <Path to plans.xml> --events <Path to events.xml>
+    java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation downSample 0.1 \
+        --population <Path to plans.xml> --events <Path to events.xml>
 
 This example will write a 10% sample into `output` that can be used in the subsequent steps.
 
