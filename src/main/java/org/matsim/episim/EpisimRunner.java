@@ -5,6 +5,7 @@ import com.google.inject.Provider;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.events.algorithms.EventWriter;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
@@ -21,15 +22,15 @@ import java.nio.file.Paths;
 public class EpisimRunner {
 
 	private final Config config;
-	private final InfectionEventHandler handler;
 	private final EventsManager manager;
+	private final Provider<InfectionEventHandler> handlerProvider;
 	private final Provider<ReplayHandler> replayProvider;
 
 	@Inject
-	public EpisimRunner(Config config, InfectionEventHandler handler,
-						EventsManager manager, Provider<ReplayHandler> replay) {
+	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider,
+						Provider<ReplayHandler> replay) {
 		this.config = config;
-		this.handler = handler;
+		this.handlerProvider = handlerProvider;
 		this.manager = manager;
 		this.replayProvider = replay;
 	}
@@ -54,6 +55,8 @@ public class EpisimRunner {
 				Files.createDirectories(eventPath);
 		}
 
+		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
+
 		simulationLoop(maxIterations, eventPath);
 	}
 
@@ -62,39 +65,55 @@ public class EpisimRunner {
 	 */
 	void simulationLoop(final int maxIterations, @Nullable final Path eventPath) {
 
+		// Construct these dependencies at late as possible, so all other configs etc have been fully configured
 		final ReplayHandler replay = replayProvider.get();
+		final InfectionEventHandler handler = handlerProvider.get();
 
 		manager.addHandler(handler);
 
 		for (int iteration = 0; iteration <= maxIterations; iteration++) {
 
-			EventWriter writer = null;
-			// Only write events if output was set
-			if (eventPath != null) {
-				writer = new EventWriterXML(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
-				manager.addHandler(writer);
-			}
+			if (!doStep(replay, handler, eventPath, iteration))
+				return;
 
-			manager.resetHandlers(iteration);
-			if (handler.isFinished())
-				break;
+		}
 
-			// report initial status:
-			if (iteration == 0) {
-				for (EpisimPerson person : handler.getPersons()) {
-					if (person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
-						manager.processEvent(new EpisimPersonStatusEvent(0., person.getPersonId(), person.getDiseaseStatus()));
-					}
+	}
+
+	/**
+	 * Perform one iteration of simulation.
+	 */
+	boolean doStep(final ReplayHandler replay, InfectionEventHandler handler, @Nullable final Path eventPath, int iteration) {
+
+		EventWriter writer = null;
+		// Only write events if output was set
+		if (eventPath != null) {
+			writer = new EventWriterXML(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+			manager.addHandler(writer);
+		}
+
+		manager.resetHandlers(iteration);
+		if (handler.isFinished())
+			return false;
+
+		// report initial status:
+		if (iteration == 0) {
+			for (EpisimPerson person : handler.getPersons()) {
+				if (person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
+					manager.processEvent(new EpisimPersonStatusEvent(0., person.getPersonId(), person.getDiseaseStatus()));
 				}
-			}
-
-			replay.replayEvents(manager, iteration);
-			if (writer != null) {
-				manager.removeHandler(writer);
-				writer.closeFile();
 			}
 		}
 
+		// Process all events
+		replay.replayEvents(manager, iteration);
+
+		if (writer != null) {
+			manager.removeHandler(writer);
+			writer.closeFile();
+		}
+
+		return true;
 	}
 
 }

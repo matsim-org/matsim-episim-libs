@@ -5,7 +5,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.RunEpisimSnz;
+import org.matsim.run.modules.SnzScenario;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,22 +25,8 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000002);
 
-		RunEpisimSnz.addParams(episimConfig);
-
-		episimConfig.getOrAddContainerParams("pt")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("tr")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("leisure")
-				.setContactIntensity(5.0);
-		episimConfig.getOrAddContainerParams("educ_kiga")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("educ_primary")
-				.setContactIntensity(4.0);
-		episimConfig.getOrAddContainerParams("educ_secondary")
-				.setContactIntensity(2.0);
-		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(3.0);
+		SnzScenario.addParams(episimConfig);
+		SnzScenario.setContactIntensities(episimConfig);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
 				.restrict(13 + params.offset, 0.9, "leisure")

@@ -22,6 +22,7 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public Scenario scenario(Config config) {
 
+		// guice will use no args constructor by default, we check if this config was initialized
 		if (config.getModules().size() == 0)
 			throw new IllegalArgumentException("Please provide a config module or binding.");
 
