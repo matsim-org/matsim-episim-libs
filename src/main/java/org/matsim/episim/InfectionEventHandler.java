@@ -88,7 +88,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 
-	private int cnt = 10;
+	private int cnt;
 	private int iteration = 0;
 
 	/**
@@ -108,6 +108,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.rnd = rnd;
 		this.progressionModel = progressionModel;
 		this.infectionModel = infectionModel;
+		this.cnt = episimConfig.getInitialInfections();
 	}
 
 	/**
@@ -299,10 +300,10 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 				log.warn(" person " + randomPerson.getPersonId() + " has initial infection");
-				cnt--;
+				this.cnt--;
 			}
 
-		} while (cnt > 0);
+		} while (this.cnt > 0);
 	}
 
 
