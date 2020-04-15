@@ -1,9 +1,13 @@
 # MATSim Episim
-![Berlin MATSim network and agents)](scenarios/berlin-v5.5-10pct/visualization-berlin.png "Berlin MATSim network and agents")
 
-### About this project
+[![Build Status](https://travis-ci.org/matsim-org/matsim-episim.svg?branch=master)](https://travis-ci.org/matsim-org/matsim-episim)
+![license](https://img.shields.io/github/license/matsim-org/matsim-episim.svg)
+![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
+
 
 This repository contains an epidemic simulation based on MATSim, provided by the [Transport Systems Planning and Transport Telematics group](https://www.vsp.tu-berlin.de) of [Technische Universität Berlin](http://www.tu-berlin.de).
+
+Dissemination of some scenarios and results produced with the methods in this repository can be found at https://matsim-vsp.github.io/covid-sim/.
 
 <a rel="TU Berlin" href="https://www.vsp.tu-berlin.de"><img src="https://svn.vsp.tu-berlin.de/repos/public-svn/ueber_uns/logo/TUB_Logo.png" width="15%" height="15%"/></a>
 
