@@ -161,8 +161,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			}
 			infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
 			episimFacility.removePerson(episimPerson.getPersonId());
-			// has moved to reset
-//            handleInitialInfections( now, episimPerson );
 		} else {
 			EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
 			if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
@@ -289,22 +287,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 		person.addToTrajectory(trajectoryElement);
 	}
-
-//    private void handleInitialInfections( double now, EpisimPerson personWrapper ) {
-//        // initial infections:
-//        if (cnt > 0) {
-//            personWrapper.setDiseaseStatus( now , EpisimPerson.DiseaseStatus.infectedButNotContagious );
-//            personWrapper.setInfectionDate(iteration);
-//            log.warn(" person " + personWrapper.getPersonId() + " has initial infection");
-//            cnt--;
-//            if (scenario != null) {
-//                final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
-//                if (person != null) {
-//                    person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
-//                }
-//            }
-//        }
-//    }
 
 	private void handleInitialInfections() {
 		if (this.iteration != 1) {
