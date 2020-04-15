@@ -45,6 +45,11 @@ public abstract class ShutdownPolicy {
 		 */
 		private double remainingFraction = 1.;
 
+		/**
+		 * Exposure during this activity.
+		 */
+		private double exposure = 1.;
+
 		private Restriction(double remainingFraction) {
 			this.remainingFraction = remainingFraction;
 		}
@@ -68,6 +73,14 @@ public abstract class ShutdownPolicy {
 
 		void setRemainingFraction(double remainingFraction) {
 			this.remainingFraction = remainingFraction;
+		}
+
+		public double getExposure() {
+			return exposure;
+		}
+
+		public void setExposure(double exposure) {
+			this.exposure = exposure;
 		}
 
 		void fullShutdown() {

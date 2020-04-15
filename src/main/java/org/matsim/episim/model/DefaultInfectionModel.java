@@ -1,6 +1,7 @@
 package org.matsim.episim.model;
 
 import com.google.common.collect.Lists;
+import org.apache.commons.lang3.tuple.Pair;
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -136,9 +137,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 			}
 
-			double contactIntensity = getContactIntensity(container, leavingPersonsActivity, otherPersonsActivity);
+			Pair<Double, Double> ciAndExposure = getContactIntensityAndExposure(container, leavingPersonsActivity, otherPersonsActivity);
 
-			double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer);
+			double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * ciAndExposure.getLeft() * jointTimeInContainer * ciAndExposure.getRight());
 			// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
 			// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 			// no effect.  kai, mar'20
@@ -167,24 +168,30 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		return infectionType;
 	}
 
-	private double getContactIntensity(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
-		//maybe this can be cleaned up or summarized in some way
-		double contactIntensity = -1;
+	private Pair<Double, Double> getContactIntensityAndExposure(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			String containerIdString = container.getContainerId().toString();
-			contactIntensity = episimConfig.selectInfectionParams(containerIdString).getContactIntensity();
+
+			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(containerIdString);
+			return Pair.of(
+					params.getContactIntensity(),
+					getRestrictions().get(params.getContainerName()).getExposure()
+			);
 
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
 
-			double contactIntensityLeavingPerson = episimConfig.selectInfectionParams(leavingPersonsActivity).getContactIntensity();
-			double contactIntensityOtherPerson = episimConfig.selectInfectionParams(otherPersonsActivity).getContactIntensity();
+			EpisimConfigGroup.InfectionParams leavingParams = episimConfig.selectInfectionParams(leavingPersonsActivity);
+			EpisimConfigGroup.InfectionParams otherParams = episimConfig.selectInfectionParams(otherPersonsActivity);
 
-			contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
+			return Pair.of(
+					Math.max(leavingParams.getContactIntensity(), otherParams.getContactIntensity()),
+					Math.max(getRestrictions().get(leavingParams.getContainerName()).getExposure(),
+							getRestrictions().get(otherParams.getContainerName()).getExposure())
+			);
 
 		} else {
 			throw new IllegalArgumentException("do not know how to deal container " + container);
 		}
-		return contactIntensity;
 	}
 
 	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, String leavingPersonsActivity) {
