@@ -33,7 +33,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private String inputEventsFile = null;
 	private String outputEventsFolder = null;
-	private double calibrationParameter = 0.0000012;
+	
+	// this is current default for 25% scenarios
+	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
 	private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
