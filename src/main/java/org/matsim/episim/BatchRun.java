@@ -129,7 +129,7 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * See {@link Parameter}
+	 * See {@link Parameter}.
 	 */
 	@Target(ElementType.FIELD)
 	@Retention(RetentionPolicy.RUNTIME)
@@ -138,7 +138,7 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * See {@link Parameter}
+	 * See {@link Parameter}.
 	 */
 	@Target(ElementType.FIELD)
 	@Retention(RetentionPolicy.RUNTIME)

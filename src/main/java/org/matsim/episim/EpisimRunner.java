@@ -65,7 +65,7 @@ public class EpisimRunner {
 	 */
 	void simulationLoop(final int maxIterations, @Nullable final Path eventPath) {
 
-		// Construct these dependencies at late as possible, so all other configs etc have been fully configured
+		// Construct these dependencies as late as possible, so all other configs etc have been fully configured
 		final ReplayHandler replay = replayProvider.get();
 		final InfectionEventHandler handler = handlerProvider.get();
 
@@ -82,6 +82,8 @@ public class EpisimRunner {
 
 	/**
 	 * Perform one iteration of simulation.
+	 *
+	 * @return false, when the simulation should end
 	 */
 	boolean doStep(final ReplayHandler replay, InfectionEventHandler handler, @Nullable final Path eventPath, int iteration) {
 

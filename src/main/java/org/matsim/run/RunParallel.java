@@ -152,7 +152,7 @@ public class RunParallel<T> implements Callable<Integer> {
 		}
 	}
 
-	private static class Task implements Runnable {
+	private static final class Task implements Runnable {
 
 		private final ParallelModule module;
 
