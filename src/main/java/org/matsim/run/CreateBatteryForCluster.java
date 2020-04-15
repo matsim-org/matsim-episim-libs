@@ -36,8 +36,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--name", defaultValue = "sz")
+	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
+
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "84")
+	private int stepSize;
 
 	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
 	private Class<? extends BatchRun<T>> setup;
@@ -84,7 +87,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
 			run.config.controler().setOutputDirectory(outputPath);
 
-			prepare.setup.writeAuxiliaryFiles(input, run.config);
+			prepare.setup.writeAuxiliaryFiles(dir, run.config);
 			ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
 
 			bashScriptWriter.write("qsub -N " + runId + " run.sh");
@@ -99,10 +102,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		}
 
 
-		// Current script is configured to run with a stepsize of 84
-		int STEP_SIZE = 84;
 		// Round up array size to be multiple of step size
-		int OFFSET_STEP = (1000 / STEP_SIZE) * STEP_SIZE;
+		int OFFSET_STEP = (1000 / stepSize) * stepSize;
 
 
 		// Split task into multiple below 1000
@@ -111,11 +112,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		for (int offset = 0; offset < prepare.runs.size(); offset += OFFSET_STEP) {
 
 			// round array end down according to run size, but must also be multiple of step size
-			int arrayEnd = (int) Math.ceil((double) Math.min(offset + OFFSET_STEP, prepare.runs.size() - offset) / STEP_SIZE) * STEP_SIZE;
+			int arrayEnd = (int) Math.ceil((double) Math.min(offset + OFFSET_STEP, prepare.runs.size() - offset) / stepSize) * stepSize;
 
 			lines.add(
 					String.format("sbatch --export=EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
-							offset, arrayEnd, STEP_SIZE, STEP_SIZE, runName)
+							offset, arrayEnd, stepSize, stepSize, runName)
 			);
 		}
 

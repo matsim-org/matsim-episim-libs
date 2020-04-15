@@ -37,12 +37,13 @@
             <url>https://jitpack.io</url>
         </repository>
 
-        <repository>
-            <!-- Geotools is not on Maven central -->
-            <id>osgeo</id>
-            <name>Geotools repository</name>
-            <url>http://download.osgeo.org/webdav/geotools</url>
-        </repository>
+      	<repository>
+	    <id>osgeo</id>
+	    <name>OSGeo Release Repository</name>
+	    <url>https://repo.osgeo.org/repository/release/</url>
+	    <snapshots><enabled>false</enabled></snapshots>
+	    <releases><enabled>true</enabled></releases>
+	</repository>
 
         <repository>
             <!-- Required for MATSim snaphots -->
@@ -51,7 +52,7 @@
         </repository>
         
         <!-- The following ones seem to be needed for some OSM stuff. /sh -->
-		<repository>
+	<repository>
             <id>topobyte</id>
             <url>https://mvn.topobyte.de</url>
         </repository>
