@@ -11,18 +11,18 @@ import java.util.Map;
  */
 public interface InfectionModel {
 
-    /**
-     * This method is called when a persons leave a vehicle at {@code now}.
-     */
-    void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now);
+	/**
+	 * This method is called when a persons leave a vehicle at {@code now}.
+	 */
+	void infectionDynamicsVehicle(EpisimPerson personLeavingVehicle, InfectionEventHandler.EpisimVehicle vehicle, double now);
 
-    /**
-     * This method is called when a persons leaves a facility at {@code now.}
-     */
-    void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType);
+	/**
+	 * This method is called when a persons leaves a facility at {@code now.}
+	 */
+	void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType);
 
-    /**
-     * Set the current iteration and restrictions in place.
-     */
-    void setRestrictionsForIteration(int iteration, Map<String, ShutdownPolicy.Restriction> restrictions);
+	/**
+	 * Set the current iteration and restrictions in place.
+	 */
+	void setRestrictionsForIteration(int iteration, Map<String, ShutdownPolicy.Restriction> restrictions);
 }

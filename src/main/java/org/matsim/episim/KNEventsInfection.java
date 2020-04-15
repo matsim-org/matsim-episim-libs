@@ -1,8 +1,5 @@
 package org.matsim.episim;
 
-import java.io.IOException;
-import java.util.Arrays;
-
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -11,10 +8,13 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 
-class KNEventsInfection{
+import java.io.IOException;
+import java.util.Arrays;
 
-        public static void main( String[] args ) throws IOException{
-                OutputDirectoryLogging.catchLogEntries();
+class KNEventsInfection {
+
+	public static void main(String[] args) throws IOException {
+		OutputDirectoryLogging.catchLogEntries();
 
 
 //                boolean hasCommandLineArgs = true ;
@@ -30,18 +30,17 @@ class KNEventsInfection{
 //                if ( hasCommandLineArgs ) {
 //                        throw new RuntimeException( "cannot deal with command line args for time being." );
 //                }
-                Config config = ConfigUtils.createConfig( new EpisimConfigGroup() );
-                EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-                episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
+		episimConfig.setInputEventsFile("../snzDrt220.0.events.reduced.xml.gz");
 //                episimConfig.setSample(0.25);
 
-                config.controler().setRunId("runId");
+		config.controler().setRunId("runId");
 
-                ConfigUtils.applyCommandline( config, Arrays.copyOfRange( args, 0, args.length ) ) ;
-                
-                
-                
+		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
+
+
 //        	String filename;
 //                switch( episimConfig.getCase() ) {
 //                        case berlin1pct:
@@ -57,18 +56,18 @@ class KNEventsInfection{
 //                                throw new IllegalStateException( "Unexpected value: " + episimConfig.getCase() );
 //                }
 
-                OutputDirectoryLogging.initLoggingWithOutputDirectory( config.controler().getOutputDirectory() );
+		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
-                EventsManager events = EventsUtils.createEventsManager();
-                
-                events.addHandler( new InfectionEventHandler( config, ScenarioUtils.createScenario(config), events  ) );
-                ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-                for ( int iteration=0 ; iteration<=300 ; iteration++ ){
-                        events.resetHandlers( iteration );
-                        EventsUtils.readEvents( events, episimConfig.getInputEventsFile() );
-                }
+		EventsManager events = EventsUtils.createEventsManager();
 
-                OutputDirectoryLogging.closeOutputDirLogging();
-        }
+		events.addHandler(new InfectionEventHandler(config, ScenarioUtils.createScenario(config), events));
+		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
+		for (int iteration = 0; iteration <= 300; iteration++) {
+			events.resetHandlers(iteration);
+			EventsUtils.readEvents(events, episimConfig.getInputEventsFile());
+		}
+
+		OutputDirectoryLogging.closeOutputDirLogging();
+	}
 
 }

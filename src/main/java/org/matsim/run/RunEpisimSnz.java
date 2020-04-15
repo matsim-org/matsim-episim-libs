@@ -37,77 +37,99 @@ import java.util.Arrays;
  */
 public class RunEpisimSnz {
 
-    public static void main(String[] args) throws IOException {
+	static final String[] DEFAULT_ACTIVITIES = {
+			"pt", "work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
+	};
 
-        OutputDirectoryLogging.catchLogEntries();
+	public static void main(String[] args) throws IOException {
 
-        Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-        config.plans().setInputFile("../berlin_pop_populationAttributes.xml.gz");
-        EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		OutputDirectoryLogging.catchLogEntries();
 
-        episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/original-data/snzDrt220a.0.events.reduced.xml.gz");
-        episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
+		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+		
+//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz");
+//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
+//		config.plans().setInputFile("./output/filteredPopulation.xml.gz");
+		
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-        episimConfig.setSampleSize(0.25);
-        episimConfig.setCalibrationParameter(0.0000012);
-        //episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
+//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
+//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
+//		episimConfig.setInputEventsFile("/Users/sebastianmuller/Documents/episim-original-data/20200410_CH2019.25pct.run1.output_events.reducedForEpisim.xml.gz");
 
-        int closingIteration = 1000;
+		episimConfig.setFacilitiesHandling(FacilitiesHandling.snz);
 
-        addParams(episimConfig);
+		episimConfig.setSampleSize(0.25);
+		episimConfig.setCalibrationParameter(0.000002);
+		//episimConfig.setPutTracablePersonsInQuarantine(EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
 
-        setContactIntensities(episimConfig);
+		int closingIteration = 1000;
 
-        episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-                .shutdown(closingIteration, DEFAULT_ACTIVITIES)
-                .build()
-        );
+		addParams(episimConfig);
 
-        RunEpisim.setOutputDirectory(config);
+		setContactIntensities(episimConfig);
+//		int a = -5;
+		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+//				.restrict(26-a, 0.9, "leisure")
+//				.restrict(26-a, 0.1, "educ_primary", "educ_kiga")
+//				.restrict(26-a, 0., "educ_secondary", "educ_higher")
+//				.restrict(35-a, 0.2, "leisure")
+//				.restrict(35-a, 0.6, "work")
+//				.restrict(35-a, 0.4, "shopping")
+//				.restrict(35-a, 0.4, "errands", "business")
+//				.restrict(63-a, 1, "educ_kiga")
+//				.restrict(63-a, 1, "educ_primary")
+//				.restrict(63-a, 1, "educ_secondary")
+//				.restrict(63-a, 0, "educ_higher")
+				.build()
+		);
 
-        ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
-        // yyyyyy I would do this the other way around, i.e. apply cli params _before_ the output dir name is constructed.  ???
+//		RunEpisim.setOutputDirectory(config);
+		config.controler().setOutputDirectory("./output-he-base");
 
-        RunEpisim.runSimulation(config, 150);
-    }
+		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
+		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
-        static void setContactIntensities(EpisimConfigGroup episimConfig) {
-		episimConfig.getOrAddContainerParams("pt")
-        	.setContactIntensity(10.0);
-        episimConfig.getOrAddContainerParams("tr")
-        	.setContactIntensity(10.0);
-        episimConfig.getOrAddContainerParams("leisure")
-        	.setContactIntensity(5.0);
-        episimConfig.getOrAddContainerParams("educ_kiga")
-	        .setContactIntensity(10.0);
-        episimConfig.getOrAddContainerParams("educ_primary")
-	        .setContactIntensity(4.0);
-        episimConfig.getOrAddContainerParams("educ_secondary")
-	        .setContactIntensity(2.0);
-        episimConfig.getOrAddContainerParams("home")
-	        .setContactIntensity(3.0);
+		RunEpisim.runSimulation(config, 150);
+
+		OutputDirectoryLogging.closeOutputDirLogging();
 	}
 
-    public static void addParams(EpisimConfigGroup episimConfig) {
+	static void setContactIntensities(EpisimConfigGroup episimConfig) {
+		episimConfig.getOrAddContainerParams("pt")
+				.setContactIntensity(10.0);
+		episimConfig.getOrAddContainerParams("tr")
+				.setContactIntensity(10.0);
+		episimConfig.getOrAddContainerParams("leisure")
+				.setContactIntensity(5.0);
+		episimConfig.getOrAddContainerParams("educ_kiga")
+				.setContactIntensity(10.0);
+		episimConfig.getOrAddContainerParams("educ_primary")
+				.setContactIntensity(4.0);
+		episimConfig.getOrAddContainerParams("educ_secondary")
+				.setContactIntensity(2.0);
+		episimConfig.getOrAddContainerParams("home")
+				.setContactIntensity(3.0);
+	}
 
-    	episimConfig.addContainerParams(new InfectionParams("pt", "tr"));
-        // regular out-of-home acts:
-    	episimConfig.addContainerParams(new InfectionParams("work"));
-    	episimConfig.addContainerParams(new InfectionParams("leisure"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_kiga"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_primary"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_secondary"));
-    	episimConfig.addContainerParams(new InfectionParams("educ_higher"));
-    	episimConfig.addContainerParams(new InfectionParams("shopping"));
-    	episimConfig.addContainerParams(new InfectionParams("errands"));
-        episimConfig.addContainerParams(new InfectionParams("business"));
+	public static void addParams(EpisimConfigGroup episimConfig) {
 
-        episimConfig.addContainerParams(new InfectionParams("home"));
+		episimConfig.addContainerParams(new InfectionParams("pt", "tr"));
+		// regular out-of-home acts:
+		episimConfig.addContainerParams(new InfectionParams("work"));
+		episimConfig.addContainerParams(new InfectionParams("leisure"));
+		episimConfig.addContainerParams(new InfectionParams("educ_kiga"));
+		episimConfig.addContainerParams(new InfectionParams("educ_primary"));
+		episimConfig.addContainerParams(new InfectionParams("educ_secondary"));
+		episimConfig.addContainerParams(new InfectionParams("educ_higher"));
+		episimConfig.addContainerParams(new InfectionParams("shopping"));
+		episimConfig.addContainerParams(new InfectionParams("errands"));
+		episimConfig.addContainerParams(new InfectionParams("business"));
 
-    }
+		episimConfig.addContainerParams(new InfectionParams("home"));
 
-    static final String[] DEFAULT_ACTIVITIES = {
-            "pt", "work", "leisure", "educ_kiga","educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business", "home"
-    };
+	}
 
 }

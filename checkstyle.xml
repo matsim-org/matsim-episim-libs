@@ -17,8 +17,10 @@
 
         <property name="severity" value="error"/>
 
+        <!-- This only fails if at least 4 spaces have been used somewhere -->
+        <!-- Generally, this allows to still use the "smart tabs" feature for certain code alignments -->
         <module name="RegexpSinglelineJava">
-            <property name="format" value="^\t* "/>
+            <property name="format" value="^\t* {4,}"/>
             <property name="message" value="Indent must use tab characters"/>
             <property name="ignoreComments" value="true"/>
         </module>
@@ -69,6 +71,11 @@
         <module name="IllegalType">
             <property name="illegalClassNames" value="org.apache.log4j.Logger,org.slf4j.Logger"/>
             <message key="illegal.type" value="Use new Logging API: org.apache.logging.log4j.Logger / LogManager"/>
+        </module>
+
+        <module name="IllegalType">
+            <property name="illegalClassNames" value="java.util.Random"/>
+            <message key="illegal.type" value="Use java.util.SplittableRandom for better performance and randomness"/>
         </module>
         
         <module name="MultipleVariableDeclarations"/>
@@ -136,6 +143,7 @@
             <property name="fileMaximum" value="1000"/>
         </module>
         <module name="CyclomaticComplexity">
+            <property name="switchBlockAsSingleDecisionPoint" value="true"/>
             <property name="max" value="20"/>
         </module>
         <module name="NPathComplexity">
