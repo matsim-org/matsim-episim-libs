@@ -197,7 +197,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Map<String, Restriction> createInitialRestrictions() {
 		Map<String, Restriction> r = new LinkedHashMap<>();
-		getContainerParams().forEach((s, p) -> r.put(s, Restriction.newInstance()));
+		getContainerParams().forEach((s, p) -> r.put(s, Restriction.none()));
 		return r;
 	}
 

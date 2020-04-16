@@ -260,7 +260,7 @@ public class DefaultInfectionModelTest {
 				})
 		);
 
-		restrictions.put(type, Restriction.newInstance(0.5));
+		restrictions.put(type, Restriction.of(0.5));
 
 		double rateRestricted = sampleTotalInfectionRate(20_000, Duration.ofMinutes(30), type,
 				() -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> {
