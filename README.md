@@ -1,5 +1,5 @@
 # MATSim Episim
-![Berlin MATSim network and agents)](scenarios/berlin-v5.5-10pct/visualization-berlin.png "Berlin MATSim network and agents")
+![Berlin MATSim network and agents](scenarios/berlin-v5.5-10pct/visualization-berlin.png "Berlin MATSim network and agents")
 
 ### About this project
 
