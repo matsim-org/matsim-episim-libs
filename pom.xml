@@ -9,7 +9,7 @@
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
     <organization>
-        <name>MATSim-Org</name>
+        <name>matsim-org</name>
         <url>https://matsim.org</url>
     </organization>
     <inceptionYear>2020</inceptionYear>
@@ -264,6 +264,9 @@
                 <version>2.0.0</version>
                 <configuration>
                     <licenseName>agpl_v3</licenseName>
+                    <includes>
+                        <include>**/*.java</include>
+                    </includes>
                 </configuration>
                 <executions>
 <!--                    <execution>
