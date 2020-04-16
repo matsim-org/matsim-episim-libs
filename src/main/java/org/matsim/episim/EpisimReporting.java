@@ -7,7 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -87,7 +87,7 @@ public final class EpisimReporting {
 		return writer;
 	}
 
-	private BufferedWriter prepareRestrictionWriter(String filename, Map<String, ShutdownPolicy.Restriction> r) {
+	private BufferedWriter prepareRestrictionWriter(String filename, Map<String, Restriction> r) {
 		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
 		try {
 			writer.write(separator.join("day", "", r.keySet().toArray()));
@@ -239,7 +239,7 @@ public final class EpisimReporting {
 		write(array, infectionEventsWriter);
 	}
 
-	void reportRestrictions(Map<String, ShutdownPolicy.Restriction> restrictions, long iteration) {
+	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
 		try {
 			restrictionWriter.write(separator.join(iteration, "", restrictions.values().toArray()));
 			restrictionWriter.newLine();

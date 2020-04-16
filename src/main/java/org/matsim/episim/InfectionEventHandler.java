@@ -23,6 +23,7 @@ import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.Facility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -61,7 +62,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	/**
 	 * Holds the current restrictions in place for all the activities.
 	 */
-	private final Map<String, ShutdownPolicy.Restriction> restrictions;
+	private final Map<String, Restriction> restrictions;
 
 	/**
 	 * Policy that will be enforced at the end of each day.
@@ -325,7 +326,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		reporting.reporting(reports, iteration);
 
-		ImmutableMap<String, ShutdownPolicy.Restriction> im = ImmutableMap.copyOf(this.restrictions);
+		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
 		infectionModel.setRestrictionsForIteration(iteration, im);
 		reporting.reportRestrictions(restrictions, iteration);

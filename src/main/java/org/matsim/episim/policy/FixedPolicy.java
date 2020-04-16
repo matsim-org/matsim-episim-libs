@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.typesafe.config.Config;
 import org.matsim.episim.EpisimReporting;
+import org.matsim.episim.model.FaceMask;
 
 import java.util.HashMap;
 import java.util.List;
@@ -56,12 +57,14 @@ public class FixedPolicy extends ShutdownPolicy {
 		 * @param day        the day/iteration when it will be in effect
 		 * @param fraction   fraction of remaining allowed activity
 		 * @param exposure   exposure parameter for this activity
+		 * @param mask       mask required to wear
 		 * @param activities activities to restrict
 		 */
 		@SuppressWarnings("unchecked")
-		public ConfigBuilder restrict(long day, double fraction, double exposure, String... activities) {
+		public ConfigBuilder restrict(long day, double fraction, double exposure, FaceMask mask, String... activities) {
 
 			for (String act : activities) {
+				// TODO: store differently, add mask
 				Map<String, List<Double>> p = (Map<String, List<Double>>) params.computeIfAbsent(act, m -> new HashMap<>());
 				p.put(String.valueOf(day), Lists.newArrayList(fraction, exposure));
 			}
@@ -70,24 +73,24 @@ public class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * Same as {@link #restrict(long, double, double, String...)} with exposure of 1.
+		 * Same as {@link #restrict(long, double, double, FaceMask, String...)} with default values.
 		 */
 		public ConfigBuilder restrict(long day, double fraction, String... activities) {
-			return restrict(day, fraction, 1d, activities);
+			return restrict(day, fraction, 1d, FaceMask.NONE, activities);
 		}
 
 		/**
 		 * Shutdown activities completely after certain day.
 		 */
 		public ConfigBuilder shutdown(long day, String... activities) {
-			return this.restrict(day, 0d, 1d, activities);
+			return this.restrict(day, 0d, 1d, FaceMask.NONE, activities);
 		}
 
 		/**
 		 * Open activities freely after certain day.
 		 */
 		public ConfigBuilder open(long day, String... activities) {
-			return this.restrict(day, 1d, 1d, activities);
+			return this.restrict(day, 1d, 1d, FaceMask.NONE, activities);
 		}
 
 	}

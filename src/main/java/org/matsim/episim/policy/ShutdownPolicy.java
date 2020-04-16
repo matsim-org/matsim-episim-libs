@@ -35,64 +35,6 @@ public abstract class ShutdownPolicy {
 	 */
 	public abstract void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions);
 
-	/**
-	 * Represent the current restrictions on an activity type.
-	 */
-	public static final class Restriction {
-
-		/**
-		 * Percentage of activities still performed.
-		 */
-		private double remainingFraction = 1.;
-
-		/**
-		 * Exposure during this activity.
-		 */
-		private double exposure = 1.;
-
-		private Restriction(double remainingFraction) {
-			this.remainingFraction = remainingFraction;
-		}
-
-		public static Restriction newInstance() {
-			return new Restriction(1d);
-		}
-
-		public static Restriction newInstance(double remainingFraction) {
-			return new Restriction(remainingFraction);
-		}
-
-		@Override
-		public String toString() {
-			return String.valueOf(remainingFraction);
-		}
-
-		public double getRemainingFraction() {
-			return remainingFraction;
-		}
-
-		void setRemainingFraction(double remainingFraction) {
-			this.remainingFraction = remainingFraction;
-		}
-
-		public double getExposure() {
-			return exposure;
-		}
-
-		public void setExposure(double exposure) {
-			this.exposure = exposure;
-		}
-
-		void fullShutdown() {
-			remainingFraction = 0d;
-		}
-
-		void open() {
-			remainingFraction = 1d;
-		}
-
-	}
-
 
 	/**
 	 * Helper base class for config builders.

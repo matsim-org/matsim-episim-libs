@@ -7,7 +7,7 @@ import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
 import org.matsim.episim.*;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -28,7 +28,7 @@ public class DefaultInfectionModelTest {
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
 	private DefaultInfectionModel model;
-	private Map<String, ShutdownPolicy.Restriction> restrictions;
+	private Map<String, Restriction> restrictions;
 
 
 	@Before
@@ -260,7 +260,7 @@ public class DefaultInfectionModelTest {
 				})
 		);
 
-		restrictions.put(type, ShutdownPolicy.Restriction.newInstance(0.5));
+		restrictions.put(type, Restriction.newInstance(0.5));
 
 		double rateRestricted = sampleTotalInfectionRate(20_000, Duration.ofMinutes(30), type,
 				() -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> {
