@@ -10,6 +10,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
+import org.matsim.run.modules.OpenBerlinScenario;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
@@ -31,10 +32,9 @@ public class RunEpisim implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RunEpisim.class);
 
-	@CommandLine.Option(names = "--modules", arity = "1..*", description = "List of modules to load. " +
-			"Use the short name from org.matsim.run.modules.* or the fully qualified classname.",
-			defaultValue = "OpenBerlinScenario")
-	private List<String> moduleNames;
+	@CommandLine.Option(names = "--modules", arity = "0..*", description = "List of modules to load. " +
+			"Use the short name from org.matsim.run.modules.* or the fully qualified classname.")
+	private List<String> moduleNames = new ArrayList<>();
 
 	@CommandLine.Option(names = "--config", description = "Optional Path to config file to load.")
 	private Path config;
@@ -76,6 +76,11 @@ public class RunEpisim implements Callable<Integer> {
 			modules.add(new ConfigHolder());
 		}
 
+		if (modules.size() == 1) {
+			log.info("Using default OpenBerlinScenario");
+			modules.add(new OpenBerlinScenario());
+		}
+
 		log.info("Starting with modules: {}", modules);
 
 		Injector injector = Guice.createInjector(modules);
@@ -91,7 +96,8 @@ public class RunEpisim implements Callable<Integer> {
 
 		Config config = injector.getInstance(Config.class);
 
-		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(remainder, 0, remainder.length));
+		if (remainder != null)
+			ConfigUtils.applyCommandline(config, Arrays.copyOfRange(remainder, 0, remainder.length));
 
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
