@@ -10,10 +10,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.model.DefaultInfectionModel;
-import org.matsim.episim.model.DefaultProgressionModel;
-import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.model.*;
 
 import java.util.SplittableRandom;
 
@@ -33,6 +30,7 @@ public class EpisimModule extends AbstractModule {
 
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(DefaultProgressionModel.class).in(Singleton.class);
+		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(EpisimRunner.class).in(Singleton.class);
 		bind(ReplayHandler.class).in(Singleton.class);
 		bind(InfectionEventHandler.class).in(Singleton.class);
