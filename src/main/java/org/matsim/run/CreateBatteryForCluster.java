@@ -39,7 +39,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "84")
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "82")
 	private int stepSize;
 
 	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
