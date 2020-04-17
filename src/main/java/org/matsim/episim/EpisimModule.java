@@ -10,6 +10,10 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.episim.model.DefaultInfectionModel;
+import org.matsim.episim.model.DefaultProgressionModel;
+import org.matsim.episim.model.InfectionModel;
+import org.matsim.episim.model.ProgressionModel;
 
 import java.util.SplittableRandom;
 
@@ -17,6 +21,22 @@ import java.util.SplittableRandom;
  * Provides the default bindings needed for Episim.
  */
 public class EpisimModule extends AbstractModule {
+
+
+	@Override
+	protected void configure() {
+
+		binder().requireExplicitBindings();
+
+		// TODO: reporting can not be bound eager, because output path is not constructed yet
+		// probably reporting should create directory if needed, instead
+
+		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
+		bind(ProgressionModel.class).to(DefaultProgressionModel.class).in(Singleton.class);
+		bind(EpisimRunner.class).in(Singleton.class);
+		bind(ReplayHandler.class).in(Singleton.class);
+		bind(InfectionEventHandler.class).in(Singleton.class);
+	}
 
 	@Provides
 	@Singleton

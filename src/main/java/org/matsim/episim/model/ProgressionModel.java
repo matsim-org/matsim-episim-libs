@@ -1,6 +1,5 @@
 package org.matsim.episim.model;
 
-import com.google.inject.ImplementedBy;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 
@@ -8,7 +7,6 @@ import org.matsim.episim.EpisimReporting;
  * This class models the {@link org.matsim.episim.EpisimPerson.DiseaseStatus} state transitions at the end of the day.
  * The model should also update the {@link org.matsim.episim.EpisimPerson.QuarantineStatus} of affected persons.
  */
-@ImplementedBy(DefaultProgressionModel.class)
 public interface ProgressionModel {
 
 	/**
