@@ -101,7 +101,7 @@ public class RunEpisim implements Callable<Integer> {
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(500);
+		runner.run(200);
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
