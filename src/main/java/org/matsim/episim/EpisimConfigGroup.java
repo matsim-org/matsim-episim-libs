@@ -22,6 +22,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
 	private static final String OUTPUT_EVENTS_FOLDER = "outputEventsFolder";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
+	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
@@ -32,8 +33,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private String inputEventsFile = null;
 	private String outputEventsFolder = null;
-	private double calibrationParameter = 0.0000012;
+	
+	// this is current default for 25% scenarios
+	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
+	private int initialInfections = 10;
 	private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -75,6 +79,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(CALIBRATION_PARAMETER)
 	public void setCalibrationParameter(double calibrationParameter) {
 		this.calibrationParameter = calibrationParameter;
+	}
+	
+	@StringGetter(INITIAL_INFECTIONS)
+	public int getInitialInfections() {
+		return this.initialInfections;
+	}
+
+	@StringSetter(INITIAL_INFECTIONS)
+	public void setInitialInfections(int initialInfections) {
+		this.initialInfections = initialInfections;
 	}
 
 	@StringGetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
