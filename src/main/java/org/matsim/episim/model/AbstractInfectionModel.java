@@ -66,9 +66,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
 		// TODO: tr is a hardcoded activity for "pt"
 		// last activity is only considered if present
-		return actIsRelevant("tr", episimConfig, restrictions, rnd) && actIsRelevant(nextAct, episimConfig, restrictions,
-				rnd) && (lastAct.isEmpty() || actIsRelevant(lastAct, episimConfig,
-				restrictions, rnd));
+		return actIsRelevant("tr", episimConfig, restrictions, rnd) && actIsRelevant(nextAct, episimConfig, restrictions, rnd)
+				&& (lastAct.isEmpty() || actIsRelevant(lastAct, episimConfig, restrictions, rnd));
 
 	}
 
