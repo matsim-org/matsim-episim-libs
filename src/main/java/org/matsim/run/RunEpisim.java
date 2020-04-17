@@ -1,8 +1,8 @@
 package org.matsim.run;
 
-import com.google.common.collect.Lists;
-import com.google.inject.*;
 import com.google.inject.Module;
+import com.google.inject.*;
+import com.google.inject.util.Modules;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -33,7 +33,7 @@ public class RunEpisim implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(RunEpisim.class);
 
 	@CommandLine.Option(names = "--modules", arity = "0..*", description = "List of modules to load. " +
-			"Use the short name from org.matsim.run.modules.* or the fully qualified classname.")
+			"Use the short name from org.matsim.run.modules.* or the fully qualified classname.", defaultValue = "${env:EPISIM_MODULES}")
 	private List<String> moduleNames = new ArrayList<>();
 
 	@CommandLine.Option(names = "--config", description = "Optional Path to config file to load.")
@@ -57,10 +57,9 @@ public class RunEpisim implements Callable<Integer> {
 
 		OutputDirectoryLogging.catchLogEntries();
 
-		List<Module> modules = Lists.newArrayList(new EpisimModule());
-
+		List<Module> modules;
 		try {
-			modules.addAll(resolveModules(moduleNames));
+			modules = new ArrayList<>(resolveModules(moduleNames));
 		} catch (ReflectiveOperationException e) {
 			log.error("Could not resolve modules", e);
 			return 1;
@@ -76,14 +75,14 @@ public class RunEpisim implements Callable<Integer> {
 			modules.add(new ConfigHolder());
 		}
 
-		if (modules.size() == 1) {
+		if (modules.isEmpty()) {
 			log.info("Using default OpenBerlinScenario");
 			modules.add(new OpenBerlinScenario());
 		}
 
 		log.info("Starting with modules: {}", modules);
 
-		Injector injector = Guice.createInjector(modules);
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(modules));
 
 		StringBuilder bindings = new StringBuilder();
 
