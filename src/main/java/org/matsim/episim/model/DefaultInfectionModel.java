@@ -1,6 +1,7 @@
 package org.matsim.episim.model;
 
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.*;
@@ -24,6 +25,12 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 * Flag to enable tracking, which is considerably slower.
 	 */
 	private final boolean trackingEnabled;
+
+	@Inject
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+		this(rnd, episimConfig, reporting,
+				episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+	}
 
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, boolean trackingEnabled) {
 		super(rnd, episimConfig, reporting);

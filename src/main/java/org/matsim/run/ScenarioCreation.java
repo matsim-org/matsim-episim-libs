@@ -8,8 +8,8 @@ import picocli.AutoComplete;
 import picocli.CommandLine;
 
 @CommandLine.Command(
-		name = "ScenarioCreation",
-		description = "Scenario creation tool for EpiSim offering various subcommands.",
+		name = "scenarioCreation",
+		description = "Scenario creation tool for Episim offering various subcommands.",
 		mixinStandardHelpOptions = true,
 		usageHelpWidth = 120,
 		subcommands = {CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,

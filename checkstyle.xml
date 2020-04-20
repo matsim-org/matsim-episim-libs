@@ -77,6 +77,11 @@
             <property name="illegalClassNames" value="java.util.Random"/>
             <message key="illegal.type" value="Use java.util.SplittableRandom for better performance and randomness"/>
         </module>
+
+        <module name="IllegalType">
+            <property name="illegalClassNames" value="com.google.inject.Singleton"/>
+            <message key="illegal.type" value="Use javax.inject.Singleton"/>
+        </module>
         
         <module name="MultipleVariableDeclarations"/>
         <module name="NestedForDepth">
@@ -126,12 +131,13 @@
         <module name="MissingJavadocMethod">
             <property name="scope" value="protected"/>
             <property name="allowMissingPropertyJavadoc" value="true"/>
+            <property name="allowedAnnotations" value="Override,Inject,Provides"/>
             <!-- Relaxed check on common names -->
             <property name="ignoreMethodNamesRegex" value="^(is|get|set|remove|add|new|create|main).*$"/>
         </module>
         <module name="MissingJavadocType">
             <property name="scope" value="public"/>
-            <property name="skipAnnotations" value="Generated,Command"/>
+            <property name="skipAnnotations" value="Generated,Command,CommandLine"/>
         </module>
         <module name="NonEmptyAtclauseDescription"/>
 
@@ -145,9 +151,6 @@
         <module name="CyclomaticComplexity">
             <property name="switchBlockAsSingleDecisionPoint" value="true"/>
             <property name="max" value="20"/>
-        </module>
-        <module name="NPathComplexity">
-            <property name="max" value="300"/>
         </module>
 
 

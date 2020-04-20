@@ -23,7 +23,7 @@ echo "classpath: $classpath"
 echo "***"
 
 # main
-main="org.matsim.run.RunFromConfig"
+main="org.matsim.run.RunEpisim"
 
 module load java/11.0.6
 java -version
@@ -46,8 +46,8 @@ for cid in $(seq 0 $NTpn); do
    let nID=offset+cid		# [0,...] requires array stepsize of NTpn (number of tasks to be run per node)
 # arguments
    input="input/config_${SLURM_JOB_NAME}${nID}.xml"
-   arguments="$input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
-   command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
+   arguments="--config $input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
+   command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
    echo ""
    echo "command is $command"
    test -f $input && taskset -c $cid $command &

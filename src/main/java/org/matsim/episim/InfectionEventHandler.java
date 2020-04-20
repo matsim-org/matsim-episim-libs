@@ -21,8 +21,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.model.DefaultInfectionModel;
-import org.matsim.episim.model.DefaultProgressionModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -30,7 +28,10 @@ import org.matsim.facilities.Facility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.SplittableRandom;
 
 /**
  * Main event handler of episim.
@@ -96,17 +97,17 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, EventsManager eventsManager) {
+	public InfectionEventHandler(Config config, Scenario scenario, EventsManager eventsManager, ProgressionModel progressionModel,
+								 EpisimReporting reporting, InfectionModel infectionModel, SplittableRandom rnd) {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.scenario = scenario;
 		this.eventsManager = eventsManager;
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
-		this.reporting = new EpisimReporting(config);
-		this.rnd = new SplittableRandom(config.global().getRandomSeed());
-		this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
-		this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting,
-				episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+		this.reporting = reporting;
+		this.rnd = rnd;
+		this.progressionModel = progressionModel;
+		this.infectionModel = infectionModel;
 		this.cnt = episimConfig.getInitialInfections();
 	}
 

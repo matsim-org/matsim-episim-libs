@@ -21,18 +21,20 @@
 
 package org.matsim.run;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
+import com.google.inject.Injector;
+import com.google.inject.util.Modules;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.PreparedRun;
-import org.matsim.episim.ReplayHandler;
+import org.matsim.episim.*;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,7 +46,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @CommandLine.Command(
-		name = "RunParallel",
+		name = "runParallel",
 		description = "Run batch scenario in parallel in one process.",
 		showDefaultValues = true,
 		mixinStandardHelpOptions = true
@@ -116,7 +118,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			if (!Files.exists(out)) Files.createDirectories(out);
 			run.config.controler().setOutputDirectory(outputPath);
 
-			futures.add(CompletableFuture.runAsync(new Task(scenario, run.config, replay), executor));
+			futures.add(CompletableFuture.runAsync(new Task(new ParallelModule(scenario, run.config, replay)), executor));
 		}
 
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
@@ -130,22 +132,48 @@ public class RunParallel<T> implements Callable<Integer> {
 		return 0;
 	}
 
-	private static class Task implements Runnable {
+	private static final class ParallelModule extends AbstractModule {
 
 		private final Scenario scenario;
 		private final Config config;
 		private final ReplayHandler replay;
 
-		private Task(Scenario scenario, Config config, ReplayHandler replay) {
+		private ParallelModule(Scenario scenario, Config config, ReplayHandler replay) {
 			this.scenario = scenario;
 			this.config = config;
 			this.replay = replay;
 		}
 
 		@Override
+		protected void configure() {
+			bind(Scenario.class).toInstance(scenario);
+			bind(Config.class).toInstance(config);
+			bind(ReplayHandler.class).toInstance(replay);
+		}
+	}
+
+	private static final class Task implements Runnable {
+
+		private final ParallelModule module;
+
+		private Task(ParallelModule module) {
+			this.module = module;
+		}
+
+		@Override
 		public void run() {
-			RunEpisim.simulationLoop(config, scenario, replay, 200, null);
-			log.info("Task finished: {}", config.controler().getOutputDirectory());
+
+			// overwrite the scenario definition
+			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(module));
+			EpisimRunner runner = injector.getInstance(EpisimRunner.class);
+
+			try {
+				runner.run(500);
+			} catch (IOException e) {
+				log.error("Error running simulation", e);
+			}
+
+			log.info("Task finished: {}", module.config.controler().getOutputDirectory());
 		}
 	}
 

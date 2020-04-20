@@ -18,10 +18,10 @@ echo "classpath: $classpath"
 echo "***"
 
 # main
-main="org.matsim.run.RunFromConfig"
+main="org.matsim.run.RunEpisim"
 
 # arguments
-arguments="input/config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
+arguments="--config input/config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
 
 command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
 

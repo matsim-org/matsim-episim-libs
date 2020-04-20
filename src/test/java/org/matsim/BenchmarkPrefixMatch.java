@@ -6,6 +6,7 @@ import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.run.RunEpisim;
+import org.matsim.run.modules.OpenBerlinScenario;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
 import org.openjdk.jmh.runner.Runner;
@@ -53,7 +54,7 @@ public class BenchmarkPrefixMatch {
 		activityMap = new IdentityHashMap<>();
 		activities = new ArrayList<>();
 
-		for (String act : RunEpisim.DEFAULT_ACTIVITIES) {
+		for (String act : OpenBerlinScenario.DEFAULT_ACTIVITIES) {
 			EpisimConfigGroup.InfectionParams param = config.getOrAddContainerParams(act);
 			params.add(param);
 			paramsMap.put(act, param);
@@ -64,10 +65,10 @@ public class BenchmarkPrefixMatch {
 		SplittableRandom rnd = new SplittableRandom(1);
 
 		for (int i = 0; i < 10_000; i++) {
-			int idx = rnd.nextInt(RunEpisim.DEFAULT_ACTIVITIES.length);
-			String act = RunEpisim.DEFAULT_ACTIVITIES[idx] + "_" + i;
+			int idx = rnd.nextInt(OpenBerlinScenario.DEFAULT_ACTIVITIES.length);
+			String act = OpenBerlinScenario.DEFAULT_ACTIVITIES[idx] + "_" + i;
 			activities.add(act);
-			activityMap.put(act, config.getOrAddContainerParams(RunEpisim.DEFAULT_ACTIVITIES[idx]));
+			activityMap.put(act, config.getOrAddContainerParams(OpenBerlinScenario.DEFAULT_ACTIVITIES[idx]));
 		}
 	}
 
