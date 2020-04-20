@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=01:30:00
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-socket=24
+#SBATCH --ntasks-per-socket=20
 
 date
 hostname
@@ -41,7 +41,7 @@ for sId in $(seq 0 $numaIndex); do
   # Needs to be unique among all processes
   let workerId=offset+sId
   arguments="--threads $SLURM_NTASKS_PER_SOCKET --total-worker $totalWorker --worker-index $workerId"
-  command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx60G -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector $main $arguments"
+  command="java -cp $classpath $JAVA_OPTS @jvm.options -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector $main $arguments"
   echo ""
   echo "command on socket $sId is $command"
   numactl --cpunodebind=$sId --membind=$sId -- $command &

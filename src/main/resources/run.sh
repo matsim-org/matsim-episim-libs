@@ -1,4 +1,4 @@
-#!/bin/bash --login
+#!/bin/bash
 #$ -l h_rt=86400
 #$ -o ./logfile_$JOB_NAME.log
 #$ -j y
@@ -23,7 +23,7 @@ main="org.matsim.run.RunEpisim"
 # arguments
 arguments="--config input/config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
 
-command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
+command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
 
 echo ""
 echo "command is $command"

@@ -23,12 +23,25 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(
 		name = "episim",
-		description = "Run epidemic simulations for MATSim",
+		headerHeading = RunEpisim.HEADER,
+		header = RunEpisim.COLOR + "\t:: Episim ::|@%n",
+		description = {"", "Run epidemic simulations for MATSim."},
+		footer = "@|cyan If you would like to contribute or report an issue please go to https://github.com/matsim-org/matsim-episim.|@",
+		optionListHeading = "%n@|bold,underline Options:|@%n",
+		commandListHeading = "%n@|bold,underline Commands:|@%n",
+		footerHeading = "\n",
 		usageHelpWidth = 120,
-		mixinStandardHelpOptions = true,
+		usageHelpAutoWidth = true, showDefaultValues = true, mixinStandardHelpOptions = true, abbreviateSynopsis = true,
 		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class, ScenarioCreation.class}
 )
 public class RunEpisim implements Callable<Integer> {
+
+	public static final String COLOR = "@|bold,fg(81) ";
+	public static final String HEADER = COLOR +
+			"  __  __   _ _____ ___ _       \n" +
+			" |  \\/  | /_\\_   _/ __(_)_ __  \n" +
+			" | |\\/| |/ _ \\| | \\__ \\ | '  \\ \n" +
+			" |_|  |_/_/ \\_\\_| |___/_|_|_|_|\n|@";
 
 	private static final Logger log = LogManager.getLogger(RunEpisim.class);
 
