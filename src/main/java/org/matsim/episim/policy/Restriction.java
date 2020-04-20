@@ -40,6 +40,10 @@ public final class Restriction {
 		return new Restriction(remainingFraction, 1d, FaceMask.NONE);
 	}
 
+	public static Restriction of(double remainingFraction, FaceMask mask) {
+		return new Restriction(remainingFraction, 1d, mask);
+	}
+
 	public static Restriction of(double remainingFraction, double exposure, FaceMask mask) {
 		return new Restriction(remainingFraction, exposure, mask);
 	}
@@ -87,6 +91,7 @@ public final class Restriction {
 
 	void open() {
 		remainingFraction = 1d;
+		requireMask = FaceMask.NONE;
 	}
 
 	Map<String, Object> asMap() {
