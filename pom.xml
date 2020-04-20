@@ -37,22 +37,26 @@
             <url>https://jitpack.io</url>
         </repository>
 
-      	<repository>
-	    <id>osgeo</id>
-	    <name>OSGeo Release Repository</name>
-	    <url>https://repo.osgeo.org/repository/release/</url>
-	    <snapshots><enabled>false</enabled></snapshots>
-	    <releases><enabled>true</enabled></releases>
-	</repository>
+        <repository>
+            <id>osgeo</id>
+            <name>OSGeo Release Repository</name>
+            <url>https://repo.osgeo.org/repository/release/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
 
         <repository>
             <!-- Required for MATSim snaphots -->
             <id>ojo-snapshots</id>
             <url>http://oss.jfrog.org/libs-snapshot</url>
         </repository>
-        
+
         <!-- The following ones seem to be needed for some OSM stuff. /sh -->
-	<repository>
+        <repository>
             <id>topobyte</id>
             <url>https://mvn.topobyte.de</url>
         </repository>
@@ -226,7 +230,7 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.matsim.run.RunEpisim</mainClass>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                             <filters>
                                 <!-- Avoid signature checking -->
@@ -263,19 +267,21 @@
                 <artifactId>license-maven-plugin</artifactId>
                 <version>2.0.0</version>
                 <configuration>
+                    <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
+                    <emptyLineAfterHeader>false</emptyLineAfterHeader>
                     <licenseName>agpl_v3</licenseName>
-                    <includes>
-                        <include>**/*.java</include>
-                    </includes>
+                    <roots>
+                        <root>src/main/java</root>
+                    </roots>
                 </configuration>
                 <executions>
-<!--                    <execution>
-                        <id>first</id>
+                    <execution>
+                        <id>update-license-header</id>
                         <goals>
                             <goal>update-file-header</goal>
                         </goals>
                         <phase>process-sources</phase>
-                    </execution> -->
+                    </execution>
                 </executions>
             </plugin>
 
