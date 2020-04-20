@@ -49,7 +49,10 @@ for cid in $(seq 0 $NTpn); do
    arguments="--config $input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
    command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
    echo ""
-   echo "command is $command"
+   echo "command $cid is $command"
+   # Debug memory information
+   free -h
    test -f $input && taskset -c $cid $command &
+   sleep 1
 done
 wait

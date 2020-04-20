@@ -42,7 +42,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "82")
 	private int stepSize;
 
-	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xmx4G")
+	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
 	private String jvmOpts;
 
 	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
