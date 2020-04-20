@@ -262,31 +262,9 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>2.0.0</version>
-                <configuration>
-                    <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
-                    <emptyLineAfterHeader>false</emptyLineAfterHeader>
-                    <licenseName>agpl_v3</licenseName>
-                    <roots>
-                        <root>src/main/java</root>
-                    </roots>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>update-license-header</id>
-                        <goals>
-                            <goal>update-file-header</goal>
-                        </goals>
-                        <phase>process-sources</phase>
-                    </execution>
-                </executions>
-            </plugin>
 
+            <!-- Only executed by default on "release" profile -->
             <plugin>
-                <!-- Only executed by default on "release" profile -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.1.1</version>
@@ -305,21 +283,25 @@
                     <linkXRef>false</linkXRef>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>2.0.0</version>
+                <configuration>
+                    <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
+                    <emptyLineAfterHeader>false</emptyLineAfterHeader>
+                    <licenseName>agpl_v3</licenseName>
+                    <roots>
+                        <root>src/main/java</root>
+                    </roots>
+                </configuration>
+            </plugin>
 
             <!-- Generate autocompletion scripts -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>1.6.0</version>
-                <executions>
-                    <execution>
-                        <id>generate-autocompletion-script</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>exec</goal>
-                        </goals>
-                    </execution>
-                </executions>
                 <configuration>
                     <executable>java</executable>
                     <arguments>
@@ -333,6 +315,15 @@
                         <argument>org.matsim.run.RunEpisim</argument>
                     </arguments>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-autocompletion-script</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
         </plugins>
@@ -359,6 +350,20 @@
                                     <goals>
                                         <goal>check</goal>
                                     </goals>
+                                </execution>
+                            </executions>
+                        </plugin>
+
+                        <plugin>
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>license-maven-plugin</artifactId>
+                            <executions>
+                                <execution>
+                                    <id>update-license-header</id>
+                                    <goals>
+                                        <goal>update-file-header</goal>
+                                    </goals>
+                                    <phase>process-sources</phase>
                                 </execution>
                             </executions>
                         </plugin>
