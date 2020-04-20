@@ -3,8 +3,10 @@ package org.matsim.run;
 import com.google.inject.Module;
 import com.google.inject.*;
 import com.google.inject.util.Modules;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
@@ -52,6 +54,9 @@ public class RunEpisim implements Callable<Integer> {
 	@CommandLine.Option(names = "--config", description = "Optional Path to config file to load.")
 	private Path config;
 
+	@CommandLine.Option(names = {"-v", "--verbose"}, description = "Enable additional logging from MATSim core", defaultValue = "false")
+	private boolean verbose;
+
 	@CommandLine.Option(names = "--log", description = "Enable logging to output directory.", defaultValue = "false")
 	private boolean logToOutput;
 
@@ -69,6 +74,12 @@ public class RunEpisim implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		OutputDirectoryLogging.catchLogEntries();
+
+		if (!verbose) {
+			Configurator.setLevel("org.matsim.core.config", Level.WARN);
+			Configurator.setLevel("org.matsim.core.controler", Level.WARN);
+			Configurator.setLevel("org.matsim.core.events", Level.WARN);
+		}
 
 		List<Module> modules;
 		try {
