@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=01:30:00
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=84
+#SBATCH --ntasks-per-node=82
 #SBATCH --mem-per-cpu=4096
 
 # This job should only be run with --array given via command line
@@ -27,6 +27,9 @@ main="org.matsim.run.RunFromConfig"
 
 module load java/11.0.6
 java -version
+
+# First wait to avoid file inconsistency due to syncing
+sleep 30
 
 #
 # Start & pin multiple processes on different physical cores of a node

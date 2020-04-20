@@ -2,5 +2,6 @@
 -server
 -Djava.awt.headless=true
 
+-XX:GCTimeLimit=35
 -XX:+UseParallelGC
 -XX:+AlwaysPreTouch
