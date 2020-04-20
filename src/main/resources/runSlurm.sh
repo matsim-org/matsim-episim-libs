@@ -45,9 +45,9 @@ echo "NTpn $NTpn  offset $offset including extra offset ${EXTRA_OFFSET}"
 for cid in $(seq 0 $NTpn); do
    let nID=offset+cid		# [0,...] requires array stepsize of NTpn (number of tasks to be run per node)
 # arguments
-   input="--config input/config_${SLURM_JOB_NAME}${nID}.xml"
-   arguments="$input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
-   command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
+   input="input/config_${SLURM_JOB_NAME}${nID}.xml"
+   arguments="--config $input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
+   command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
    echo ""
    echo "command is $command"
    test -f $input && taskset -c $cid $command &
