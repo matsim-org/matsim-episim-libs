@@ -44,10 +44,10 @@ import java.util.Map;
  */
 class CreateSchoolPopulationFromCorineLandCoverCoords {
 
-	private static final double SAMPLE_SIZE = 0.01;
+	private static final double SAMPLE_SIZE = 0.1;
 
 	private static final String INPUT_PLANS_FILE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
-	private static final String PLANS_RADY_FOR_CORINE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_1pct.xml.gz";
+	private static final String PLANS_RADY_FOR_CORINE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children_readyForCorine_10pct.xml.gz";
 	private static final String CORINE_LANDCOVER_FILE = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/corine_landcover/corine_lancover_berlin-brandenburg_GK4.shp";
 
 	private static final String INPUT_PLANS_BERLIN_ADULTS_1PCT = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/input/berlin-v5.4-1pct.plans.xml.gz";
@@ -57,12 +57,12 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 	private static final String ZONE_SHP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/input/shapefiles/2016/gemeinden_Planungsraum_GK4.shp";
 	private static final String ZONE_ID_TAG = "NR";
 
-	private static final String OUTPUT_PLANS_ENTIRE_BLN = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/berlin-v5.4-1pct-plans-includingChildren-corineCoords.xml.gz";
-	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_corineCoords_1pct.xml.gz";
+	private static final String OUTPUT_PLANS_ENTIRE_BLN = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/berlin-v5.4-10pct-plans-includingChildren-corineCoords.xml.gz";
+	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_corineCoords_10pct.xml.gz";
 
 	public static void main(String[] args) {
 
-		String adultPopulationPath = INPUT_PLANS_BERLIN_ADULTS_1PCT;
+		String adultPopulationPath = INPUT_PLANS_BERLIN_ADULTS_10PCT;
 
 		Population emptyChildren = PopulationUtils.readPopulation(INPUT_PLANS_FILE);
 
