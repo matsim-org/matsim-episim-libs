@@ -220,8 +220,8 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		// no effect.  kai, mar'20
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * exposure
-				* maskModel.getWornMask(infector, act2, r.get(act2.getContainerName())).shedding
-				* maskModel.getWornMask(target, act1, r.get(act1.getContainerName())).intake
+				* maskModel.getWornMask(infector, act2, iteration, r.get(act2.getContainerName())).shedding
+				* maskModel.getWornMask(target, act1, iteration, r.get(act1.getContainerName())).intake
 		);
 	}
 

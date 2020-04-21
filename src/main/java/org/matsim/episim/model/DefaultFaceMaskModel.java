@@ -10,7 +10,7 @@ import org.matsim.episim.policy.Restriction;
 public class DefaultFaceMaskModel implements FaceMaskModel {
 
 	@Override
-	public FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, Restriction restriction) {
+	public FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, int currentDay, Restriction restriction) {
 		return restriction.getRequireMask();
 	}
 }

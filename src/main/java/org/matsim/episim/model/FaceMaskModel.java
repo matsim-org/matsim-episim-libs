@@ -9,6 +9,6 @@ import org.matsim.episim.policy.Restriction;
  */
 public interface FaceMaskModel {
 
-	FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, Restriction restriction);
+	FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, int currentDay, Restriction restriction);
 
 }
