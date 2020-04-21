@@ -8,26 +8,25 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.matsim.episim;
 
-import com.google.common.base.Joiner;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.reporting.EpisimWriter;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -48,12 +47,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public final class EpisimReporting {
 
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
-	private static final Joiner separator = Joiner.on("\t");
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 
-	private final BufferedWriter infectionsWriter;
-	private final BufferedWriter infectionEventsWriter;
-	private final BufferedWriter restrictionWriter;
+	private final EpisimWriter writer;
+
+	private final BufferedWriter infectionReport;
+	private final BufferedWriter infectionEvents;
+	private final BufferedWriter restrictionReport;
 
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
@@ -61,19 +61,27 @@ public final class EpisimReporting {
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
 
-	EpisimReporting(Config config) {
-		String base;
-		if (config.controler().getRunId() != null) {
-			base = config.controler().getOutputDirectory() + "/" + config.controler().getRunId() + ".";
-		} else {
-			base = config.controler().getOutputDirectory() + "/";
+	EpisimReporting(Config config, EpisimWriter writer) {
+		String base = config.controler().getOutputDirectory();
+
+		if (!Files.exists(Paths.get(base))) {
+			try {
+				Files.createDirectories(Paths.get(base));
+			} catch (IOException e) {
+				log.error("Could not create output directory", e);
+				throw new UncheckedIOException(e);
+			}
 		}
 
 		EpisimConfigGroup episimConfigGroup = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		infectionsWriter = prepareWriter(base + "infections.txt", InfectionsWriterFields.class);
-		infectionEventsWriter = prepareWriter(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
-		restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfigGroup.createInitialRestrictions());
+		this.writer = writer;
+
+		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
+		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
+		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
+				"day", "", episimConfigGroup.createInitialRestrictions().keySet().toArray());
+
 		sampleSize = episimConfigGroup.getSampleSize();
 
 		try {
@@ -84,38 +92,6 @@ public final class EpisimReporting {
 		} catch (IOException e) {
 			log.error("Could not write policy config", e);
 		}
-	}
-
-	private static void write(String[] array, BufferedWriter writer) {
-		try {
-			writer.write(separator.join(array));
-			writer.newLine();
-			writer.flush();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-	}
-
-	private static BufferedWriter prepareWriter(String filename, Class<? extends Enum<?>> enumClass) {
-		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
-		try {
-			writer.write(separator.join(enumClass.getEnumConstants()));
-			writer.newLine();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-		return writer;
-	}
-
-	private BufferedWriter prepareRestrictionWriter(String filename, Map<String, Restriction> r) {
-		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
-		try {
-			writer.write(separator.join("day", "", r.keySet().toArray()));
-			writer.newLine();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-		return writer;
 	}
 
 	/**
@@ -236,7 +212,7 @@ public final class EpisimReporting {
 			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
-			write(array, infectionsWriter);
+			writer.append(infectionReport, array);
 		}
 	}
 
@@ -256,17 +232,12 @@ public final class EpisimReporting {
 		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
 		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
 
-		write(array, infectionEventsWriter);
+		writer.append(infectionEvents, array);
 	}
 
 	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
-		try {
-			restrictionWriter.write(separator.join(iteration, "", restrictions.values().toArray()));
-			restrictionWriter.newLine();
-			restrictionWriter.flush();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
+		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, "", restrictions.values().toArray()));
+		writer.append(restrictionReport, "\n");
 	}
 
 	enum InfectionsWriterFields {
