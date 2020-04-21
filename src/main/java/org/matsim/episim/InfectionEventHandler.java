@@ -1,6 +1,27 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
@@ -21,16 +42,16 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.model.DefaultInfectionModel;
-import org.matsim.episim.model.DefaultProgressionModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.Facility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Main event handler of episim.
@@ -53,14 +74,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private static final Logger log = LogManager.getLogger(InfectionEventHandler.class);
 
-	private final IdMap<Person, EpisimPerson> personMap = new IdMap<>(Person.class);
-	private final IdMap<Vehicle, EpisimVehicle> vehicleMap = new IdMap<>(Vehicle.class);
-	private final IdMap<Facility, EpisimFacility> pseudoFacilityMap = new IdMap<>(Facility.class);
+	private final Map<Id<Person>, EpisimPerson> personMap = new IdMap<>(Person.class);
+	private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new IdMap<>(Vehicle.class);
+	private final Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new IdMap<>(Facility.class);
 
 	/**
 	 * Holds the current restrictions in place for all the activities.
 	 */
-	private final Map<String, ShutdownPolicy.Restriction> restrictions;
+	private final Map<String, Restriction> restrictions;
 
 	/**
 	 * Policy that will be enforced at the end of each day.
@@ -87,7 +108,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 
-	private int cnt = 10;
 	private int iteration = 0;
 
 	/**
@@ -96,17 +116,17 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, EventsManager eventsManager) {
+	public InfectionEventHandler(Config config, Scenario scenario, EventsManager eventsManager, ProgressionModel progressionModel,
+								 EpisimReporting reporting, InfectionModel infectionModel, SplittableRandom rnd) {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.scenario = scenario;
 		this.eventsManager = eventsManager;
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
-		this.reporting = new EpisimReporting(config);
-		this.rnd = new SplittableRandom(config.global().getRandomSeed());
-		this.progressionModel = new DefaultProgressionModel(rnd, episimConfig);
-		this.infectionModel = new DefaultInfectionModel(rnd, episimConfig, reporting,
-				episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+		this.reporting = reporting;
+		this.rnd = rnd;
+		this.progressionModel = progressionModel;
+		this.infectionModel = infectionModel;
 	}
 
 	/**
@@ -292,12 +312,24 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (this.iteration != 1) {
 			return;
 		}
-		Object[] personArray = this.personMap.values().toArray();
+
+		String district = episimConfig.getInitialInfectionDistrict();
+
+		List<EpisimPerson> candidates = this.personMap.values().stream()
+				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
+				.collect(Collectors.toList());
+
+		if (candidates.size() < episimConfig.getInitialInfections()) {
+			log.warn("Not enough persons match the initial infection requirement, using whole population...");
+			candidates = Lists.newArrayList(this.personMap.values());
+		}
+
+		int cnt = episimConfig.getInitialInfections();
 		do {
-			EpisimPerson randomPerson = (EpisimPerson) personArray[rnd.nextInt(personArray.length)];
+			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
-				log.warn(" person " + randomPerson.getPersonId() + " has initial infection");
+				log.warn("Person {} has initial infection", randomPerson.getPersonId());
 				cnt--;
 			}
 
@@ -323,7 +355,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		reporting.reporting(reports, iteration);
 
-		ImmutableMap<String, ShutdownPolicy.Restriction> im = ImmutableMap.copyOf(this.restrictions);
+		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
 		infectionModel.setRestrictionsForIteration(iteration, im);
 		reporting.reportRestrictions(restrictions, iteration);
@@ -337,14 +369,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			Id<?> lastFacilityId = container.getContainerId();
 
 			// unsafe casting here because container is only returning a wildcard type as id
-			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey((Id<Facility>) lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
-				EpisimFacility lastFacility = this.pseudoFacilityMap.get((Id<Facility>) lastFacilityId);
+			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
+				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
 				infectionModel.infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
 				lastFacility.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, (iteration + 1) * 86400d);
-			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey((Id<Vehicle>) lastFacilityId)) {
-				EpisimVehicle lastVehicle = this.vehicleMap.get((Id<Vehicle>) lastFacilityId);
+			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
+				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
 				infectionModel.infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
 				lastVehicle.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);

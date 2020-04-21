@@ -1,3 +1,23 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
@@ -7,7 +27,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -87,7 +107,7 @@ public final class EpisimReporting {
 		return writer;
 	}
 
-	private BufferedWriter prepareRestrictionWriter(String filename, Map<String, ShutdownPolicy.Restriction> r) {
+	private BufferedWriter prepareRestrictionWriter(String filename, Map<String, Restriction> r) {
 		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
 		try {
 			writer.write(separator.join("day", "", r.keySet().toArray()));
@@ -239,7 +259,7 @@ public final class EpisimReporting {
 		write(array, infectionEventsWriter);
 	}
 
-	void reportRestrictions(Map<String, ShutdownPolicy.Restriction> restrictions, long iteration) {
+	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
 		try {
 			restrictionWriter.write(separator.join(iteration, "", restrictions.values().toArray()));
 			restrictionWriter.newLine();

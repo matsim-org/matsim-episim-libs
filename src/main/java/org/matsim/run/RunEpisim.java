@@ -1,199 +1,177 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.run;
 
-import org.matsim.api.core.v01.Scenario;
-import org.matsim.core.api.experimental.events.EventsManager;
+import com.google.inject.Module;
+import com.google.inject.*;
+import com.google.inject.util.Modules;
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
-import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.core.events.EventsUtils;
-import org.matsim.core.events.algorithms.EventWriter;
-import org.matsim.core.events.algorithms.EventWriterXML;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimConfigGroup.FacilitiesHandling;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.InfectionEventHandler;
-import org.matsim.episim.ReplayHandler;
-import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.EpisimModule;
+import org.matsim.episim.EpisimRunner;
+import org.matsim.run.modules.OpenBerlinScenario;
+import picocli.CommandLine;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 
-public class RunEpisim {
+@CommandLine.Command(
+		name = "episim",
+		headerHeading = RunEpisim.HEADER,
+		header = RunEpisim.COLOR + "\t:: Episim ::|@%n",
+		description = {"", "Run epidemic simulations for MATSim."},
+		footer = "@|cyan If you would like to contribute or report an issue please go to https://github.com/matsim-org/matsim-episim.|@",
+		optionListHeading = "%n@|bold,underline Options:|@%n",
+		commandListHeading = "%n@|bold,underline Commands:|@%n",
+		footerHeading = "\n",
+		usageHelpWidth = 120,
+		usageHelpAutoWidth = true, showDefaultValues = true, mixinStandardHelpOptions = true, abbreviateSynopsis = true,
+		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class, ScenarioCreation.class}
+)
+public class RunEpisim implements Callable<Integer> {
 
-	/**
-	 * Activity names of the default params from {@link #addDefaultParams(EpisimConfigGroup)}
-	 */
-	public static final String[] DEFAULT_ACTIVITIES = {
-			"pt", "work", "leisure", "edu", "shop", "errands", "business", "other", "freight", "home"
-	};
+	public static final String COLOR = "@|bold,fg(81) ";
+	public static final String HEADER = COLOR +
+			"  __  __   _ _____ ___ _       \n" +
+			" |  \\/  | /_\\_   _/ __(_)_ __  \n" +
+			" | |\\/| |/ _ \\| | \\__ \\ | '  \\ \n" +
+			" |_|  |_/_/ \\_\\_| |___/_|_|_|_|\n|@";
 
-	public static void main(String[] args) throws IOException {
+	private static final Logger log = LogManager.getLogger(RunEpisim.class);
+
+	@CommandLine.Option(names = "--modules", arity = "0..*", description = "List of modules to load. " +
+			"Use the short name from org.matsim.run.modules.* or the fully qualified classname.", defaultValue = "${env:EPISIM_MODULES}")
+	private List<String> moduleNames = new ArrayList<>();
+
+	@CommandLine.Option(names = "--config", description = "Optional Path to config file to load.")
+	private Path config;
+
+	@CommandLine.Option(names = {"-v", "--verbose"}, description = "Enable additional logging from MATSim core", defaultValue = "false")
+	private boolean verbose;
+
+	@CommandLine.Option(names = "--log", description = "Enable logging to output directory.", defaultValue = "false")
+	private boolean logToOutput;
+
+	@CommandLine.Parameters(hidden = true)
+	private String[] remainder;
+
+	public static void main(String[] args) {
+		new CommandLine(new RunEpisim())
+				.setStopAtUnmatched(false)
+				.setUnmatchedOptionsArePositionalParams(true)
+				.execute(args);
+	}
+
+	@Override
+	public Integer call() throws Exception {
+
 		OutputDirectoryLogging.catchLogEntries();
 
-		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		config.network().setInputFile("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5-network.xml.gz");
-
-		String episimEvents_1pct = "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct-schools/output-berlin-v5.4-1pct-schools/berlin-v5.4-1pct-schools.output_events_for_episim.xml.gz";
-		String episimEvents_10pct = "../public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct-schools/output-berlin-v5.4-10pct-schools/berlin-v5.4-10pct-schools.output_events_for_episim.xml.gz";
-
-		episimConfig.setInputEventsFile(episimEvents_1pct);
-
-		episimConfig.setFacilitiesHandling(FacilitiesHandling.bln);
-		episimConfig.setSampleSize(0.01);
-		episimConfig.setCalibrationParameter(2);
-		//  episimConfig.setOutputEventsFolder("events");
-
-		long closingIteration = 14;
-
-		addDefaultParams(episimConfig);
-
-		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-				.shutdown(closingIteration, "leisure", "edu")
-				.restrict(closingIteration, 0.2, "work", "business", "other")
-				.restrict(closingIteration, 0.3, "shop", "errands")
-				.restrict(closingIteration, 0.5, "pt")
-				.open(closingIteration + 60, DEFAULT_ACTIVITIES)
-				.build()
-		);
-
-		setOutputDirectory(config);
-
-		ConfigUtils.applyCommandline(config, Arrays.copyOfRange(args, 0, args.length));
-
-		OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
-
-		runSimulation(config, 130);
-
-		OutputDirectoryLogging.closeOutputDirLogging();
-	}
-
-	/**
-	 * Adds default parameters that should be valid for most scenarios.
-	 */
-	public static void addDefaultParams(EpisimConfigGroup config) {
-		// pt
-		config.addContainerParams(new InfectionParams("pt", "tr"));
-		// regular out-of-home acts:
-		config.addContainerParams(new InfectionParams("work"));
-		config.addContainerParams(new InfectionParams("leisure", "leis"));
-		config.addContainerParams(new InfectionParams("edu"));
-		config.addContainerParams(new InfectionParams("shop"));
-		config.addContainerParams(new InfectionParams("errands"));
-		config.addContainerParams(new InfectionParams("business"));
-		config.addContainerParams(new InfectionParams("other"));
-		// freight act:
-		config.addContainerParams(new InfectionParams("freight"));
-		// home act:
-		config.addContainerParams(new InfectionParams("home"));
-	}
-
-	/**
-	 * Creates an output directory, with a name based on current config and adapt the logging config.
-	 * This method is not thread-safe unlike {@link #runSimulation(Config, int)}.
-	 */
-	public static void setOutputDirectory(Config config) {
-		StringBuilder outdir = new StringBuilder("output");
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		for (InfectionParams infectionParams : episimConfig.getInfectionParams()) {
-			outdir.append("-");
-			outdir.append(infectionParams.getContainerName());
-			if (infectionParams.getContactIntensity() != 1.) {
-				outdir.append("ci").append(infectionParams.getContactIntensity());
-			}
-		}
-		config.controler().setOutputDirectory(outdir.toString());
-
-	}
-
-	/**
-	 * Main loop that performs the iterations of the simulation.
-	 *
-	 * @param config        fully initialized config file, {@link EpisimConfigGroup} needs to be present.
-	 * @param maxIterations maximum number of iterations (inclusive)
-	 */
-	public static void runSimulation(Config config, int maxIterations) throws IOException {
-
-		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
-
-		// save some time for not needed inputs
-		// only network might be relevant
-//        config.plans().setInputFile(null);
-		config.facilities().setInputFile(null);
-		config.vehicles().setVehiclesFile(null);
-
-		Scenario scenario = ScenarioUtils.loadScenario(config);
-
-		Path out = Paths.get(config.controler().getOutputDirectory());
-		if (!Files.exists(out))
-			Files.createDirectories(out);
-
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		Path eventPath = null;
-		if (episimConfig.getOutputEventsFolder() != null && !episimConfig.getOutputEventsFolder().isEmpty()) {
-			eventPath = out.resolve(episimConfig.getOutputEventsFolder());
-			if (!Files.exists(eventPath))
-				Files.createDirectories(eventPath);
+		if (!verbose) {
+			Configurator.setLevel("org.matsim.core.config", Level.WARN);
+			Configurator.setLevel("org.matsim.core.controler", Level.WARN);
+			Configurator.setLevel("org.matsim.core.events", Level.WARN);
 		}
 
-		ReplayHandler replay = new ReplayHandler(episimConfig, scenario);
-
-		simulationLoop(config, scenario, replay, maxIterations, eventPath);
-
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-	}
-
-	/**
-	 * Performs the simulation loop.
-	 */
-	static void simulationLoop(final Config config, final Scenario scenario,
-							   final ReplayHandler replay, final int maxIterations, @Nullable final Path eventPath) {
-
-		final EventsManager events = EventsUtils.createEventsManager();
-		final InfectionEventHandler eventHandler = new InfectionEventHandler(config, scenario, events);
-		events.addHandler(eventHandler);
-
-		for (int iteration = 0; iteration <= maxIterations; iteration++) {
-
-			EventWriter writer = null;
-			// Only write events if output was set
-			if (eventPath != null) {
-				writer = new EventWriterXML(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
-				events.addHandler(writer);
-			}
-
-			events.resetHandlers(iteration);
-			if (eventHandler.isFinished())
-				break;
-
-			// report initial status:
-			if (iteration == 0) {
-				for (EpisimPerson person : eventHandler.getPersons()) {
-					if (person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
-						events.processEvent(new EpisimPersonStatusEvent(0., person.getPersonId(), person.getDiseaseStatus()));
-					}
-				}
-			}
-
-			replay.replayEvents(events, iteration);
-			if (writer != null) {
-				events.removeHandler(writer);
-				writer.closeFile();
-			}
+		List<Module> modules;
+		try {
+			modules = new ArrayList<>(resolveModules(moduleNames));
+		} catch (ReflectiveOperationException e) {
+			log.error("Could not resolve modules", e);
+			return 1;
 		}
 
+		if (config != null) {
+			if (!Files.exists(config)) {
+				log.error("Config file {} does not exists.", config);
+				return 1;
+			}
+
+			// Bind module only providing the config
+			modules.add(new ConfigHolder());
+		}
+
+		if (modules.isEmpty()) {
+			log.info("Using default OpenBerlinScenario");
+			modules.add(new OpenBerlinScenario());
+		}
+
+		log.info("Starting with modules: {}", modules);
+
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(modules));
+
+		StringBuilder bindings = new StringBuilder();
+
+		for (Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
+			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ")
+					.append(e.getValue().getProvider()).append(" }");
+		}
+
+		log.info("Defined Bindings: {}", bindings.toString());
+
+		Config config = injector.getInstance(Config.class);
+
+		if (remainder != null)
+			ConfigUtils.applyCommandline(config, Arrays.copyOfRange(remainder, 0, remainder.length));
+
+		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
+
+		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
+		runner.run(200);
+
+		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
+
+		return 0;
+	}
+
+	private List<Module> resolveModules(List<String> modules) throws ReflectiveOperationException {
+		List<Module> result = new ArrayList<>();
+
+		for (String name : modules) {
+			// Build module path
+			if (!name.contains(".")) name = "org.matsim.run.modules." + name;
+
+			Class<?> clazz = ClassLoader.getSystemClassLoader().loadClass(name);
+			Module module = (Module) clazz.getDeclaredConstructor().newInstance();
+			result.add(module);
+		}
+
+		return result;
+	}
+
+	private class ConfigHolder extends AbstractModule {
+		@Override
+		protected void configure() {
+			bind(Config.class).toInstance(ConfigUtils.loadConfig(config.toString()));
+		}
 	}
 
 }

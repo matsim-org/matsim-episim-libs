@@ -1,3 +1,23 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.run;
 
 import com.google.common.base.Joiner;
@@ -39,8 +59,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "84")
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "82")
 	private int stepSize;
+
+	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
+	private String jvmOpts;
 
 	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
 	private Class<? extends BatchRun<T>> setup;
@@ -103,33 +126,45 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 
 		// Round up array size to be multiple of step size
-		int OFFSET_STEP = (1000 / stepSize) * stepSize;
+		int step = (1000 / stepSize) * stepSize;
 
+		String jvmOpts = "export JAVA_OPTS='" + this.jvmOpts + "'\n";
 
 		// Split task into multiple below 1000
 		// this is due to a limitation of maximum job array size
-		List<String> lines = Lists.newArrayList("#!/bin/bash\n");
-		for (int offset = 0; offset < prepare.runs.size(); offset += OFFSET_STEP) {
+		List<String> lines = Lists.newArrayList("#!/bin/bash\n", jvmOpts);
+		for (int offset = 0; offset < prepare.runs.size(); offset += step) {
 
 			// round array end down according to run size, but must also be multiple of step size
-			int arrayEnd = (int) Math.ceil((double) Math.min(offset + OFFSET_STEP, prepare.runs.size() - offset) / stepSize) * stepSize;
+			int arrayEnd = (int) Math.ceil((double) Math.min(offset + step, prepare.runs.size() - offset) / stepSize) * stepSize;
 
 			lines.add(
-					String.format("sbatch --export=EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
+					String.format("sbatch --export=JAVA_OPTS,EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
 							offset, arrayEnd, stepSize, stepSize, runName)
 			);
 		}
 
 		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
 
+		// Target system has 4 numa nodes
+		int perSocket = (stepSize / 4);
+
 		FileUtils.writeLines(dir.resolve("start_parallel_slurm.sh").toFile(), Lists.newArrayList(
-				"#!/bin/bash\n",
+				"#!/bin/bash\n", jvmOpts,
 				// Dollar signs must be escaped
 				"export EPISIM_SETUP='" + setup.getName() + "'",
 				"export EPISIM_PARAMS='" + params.getName() + "'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("sbatch --export=ALL --array=1-%d --job-name=%s runParallel.sh", (int) Math.ceil(prepare.runs.size() / 96d), runName)
+				String.format("sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh",
+						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName)
+		), "\n");
+
+		FileUtils.writeLines(dir.resolve("test.sh").toFile(), Lists.newArrayList(
+				"#!/bin/bash\n", jvmOpts,
+				"export JOB_NAME=" + runName + 1,
+				"",
+				"./run.sh"
 		), "\n");
 
 		bashScriptWriter.close();

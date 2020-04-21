@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --time=01:30:00
+#SBATCH --time=02:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=84
+#SBATCH --ntasks-per-node=82
 #SBATCH --mem-per-cpu=4096
 
 # This job should only be run with --array given via command line
@@ -23,10 +23,13 @@ echo "classpath: $classpath"
 echo "***"
 
 # main
-main="org.matsim.run.RunFromConfig"
+main="org.matsim.run.RunEpisim"
 
 module load java/11.0.6
 java -version
+
+# First wait to avoid file inconsistency due to syncing
+sleep 30
 
 #
 # Start & pin multiple processes on different physical cores of a node
@@ -43,10 +46,13 @@ for cid in $(seq 0 $NTpn); do
    let nID=offset+cid		# [0,...] requires array stepsize of NTpn (number of tasks to be run per node)
 # arguments
    input="input/config_${SLURM_JOB_NAME}${nID}.xml"
-   arguments="$input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
-   command="java -cp $classpath $JAVA_OPTS @jvm.options -Xmx4G $main $arguments"
+   arguments="--config $input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
+   command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
    echo ""
-   echo "command is $command"
+   echo "command $cid is $command"
+   # Debug memory information
+   free -h
    test -f $input && taskset -c $cid $command &
+   sleep 1
 done
 wait

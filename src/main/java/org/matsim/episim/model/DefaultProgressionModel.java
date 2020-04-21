@@ -1,5 +1,26 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.episim.model;
 
+import com.google.inject.Inject;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -16,6 +37,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
+	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
@@ -42,7 +64,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						person.setDiseaseStatus(now, DiseaseStatus.showingSymptoms);
 						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
-						if (episimConfig.getPutTracablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
+						if (episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
 							for (EpisimPerson pw : person.getTraceableContactPersons()) {
 								if (pw.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) { //what if tracked person has recovered
 
@@ -107,7 +129,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
-			
+
 			if (age < 0 || age > 120) {
 				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
 			}
@@ -146,7 +168,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (person.getAttributes().getAsMap().containsKey("age")) {
 			int age = (int) person.getAttributes().getAttribute("age");
-			
+
 			if (age < 0 || age > 120) {
 				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
 			}

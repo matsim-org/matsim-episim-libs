@@ -1,3 +1,23 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.run.batch;
 
 import org.matsim.core.config.Config;
@@ -5,7 +25,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.RunEpisimSnz;
+import org.matsim.run.modules.SnzScenario;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -19,46 +39,34 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../he_snz_episim_events.xml.gz");
+		episimConfig.setInputEventsFile("../be_snz_episim_events.xml.gz");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000002);
-
-		RunEpisimSnz.addParams(episimConfig);
-
-		episimConfig.getOrAddContainerParams("pt")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("tr")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("leisure")
-				.setContactIntensity(5.0);
-		episimConfig.getOrAddContainerParams("educ_kiga")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("educ_primary")
-				.setContactIntensity(4.0);
-		episimConfig.getOrAddContainerParams("educ_secondary")
-				.setContactIntensity(2.0);
-		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(3.0);
+		episimConfig.setInitialInfections(5);
+		
+		SnzScenario.addParams(episimConfig);
+		SnzScenario.setContactIntensities(episimConfig);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				.restrict(13 + params.offset, 0.9, "leisure")
-				.restrict(13 + params.offset, 0.1, "educ_primary", "educ_kiga")
-				.restrict(13 + params.offset, 0., "educ_secondary", "educ_higher")
-				.restrict(13 + params.offset, params.remainingFractionLeisure, "leisure")
-				.restrict(13 + params.offset, params.remainingFractionWork, "work")
-				.restrict(13 + params.offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
-				.restrict(65 + params.offset, params.remainingFractionKiga, "educ_kiga")
-				.restrict(65 + params.offset, params.remainingFractionPrima, "educ_primary")
-				.restrict(65 + params.offset, params.remainingFractionSecon, "educ_secondary")
+				.restrict(23 + params.offset, params.remainingFractionLeisure1, "leisure")
+				.restrict(23 + params.offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(23 + params.offset, 0., "educ_secondary", "educ_higher")
+				.restrict(32 + params.offset, params.remainingFractionLeisure2, "leisure")
+				.restrict(32 + params.offset, params.remainingFractionWork, "work")
+				.restrict(32 + params.offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
+				.restrict(60 + params.offset, params.remainingFractionKiga, "educ_kiga")
+				.restrict(60 + params.offset, params.remainingFractionPrima, "educ_primary")
+				.restrict(60 + params.offset, params.remainingFractionSecon, "educ_secondary")
 				.build();
 
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
 
-		config.plans().setInputFile("../he_entirePopulation_noPlans.xml.gz");
+
+		config.plans().setInputFile("../be_entirePopulation_noPlans_withDistrict.xml.gz");
 
 		return config;
 	}
@@ -71,22 +79,25 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 	public static final class Params {
 
-		@IntParameter({-5, 5})
+		@IntParameter({-6, -3, 0})
 		int offset;
 
-		@Parameter({1.0, 0.5, 0.1})
+		@Parameter({0.5, 0.1})
 		double remainingFractionKiga;
 
-		@Parameter({1.0, 0.5, 0.1})
+		@Parameter({0.5, 0.1})
 		double remainingFractionPrima;
 
-		@Parameter({1.0, 0.5, 0.})
+		@Parameter({0.5, 0.})
 		double remainingFractionSecon;
+		
+		@Parameter({0.8, 0.6, 0.4, 0.2})
+		double remainingFractionLeisure1;
 
-		@Parameter({0.4, 0.2, 0})
-		double remainingFractionLeisure;
+		@Parameter({0.2, 0})
+		double remainingFractionLeisure2;
 
-		@Parameter({0.8, 0.4, 0.2})
+		@Parameter({0.8, 0.6, 0.4})
 		double remainingFractionWork;
 
 		@Parameter({0.4, 0.2})

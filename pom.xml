@@ -9,7 +9,7 @@
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
     <organization>
-        <name>MATSim-Org</name>
+        <name>matsim-org</name>
         <url>https://matsim.org</url>
     </organization>
     <inceptionYear>2020</inceptionYear>
@@ -37,22 +37,26 @@
             <url>https://jitpack.io</url>
         </repository>
 
-      	<repository>
-	    <id>osgeo</id>
-	    <name>OSGeo Release Repository</name>
-	    <url>https://repo.osgeo.org/repository/release/</url>
-	    <snapshots><enabled>false</enabled></snapshots>
-	    <releases><enabled>true</enabled></releases>
-	</repository>
+        <repository>
+            <id>osgeo</id>
+            <name>OSGeo Release Repository</name>
+            <url>https://repo.osgeo.org/repository/release/</url>
+            <snapshots>
+                <enabled>false</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </repository>
 
         <repository>
             <!-- Required for MATSim snaphots -->
             <id>ojo-snapshots</id>
             <url>http://oss.jfrog.org/libs-snapshot</url>
         </repository>
-        
+
         <!-- The following ones seem to be needed for some OSM stuff. /sh -->
-	<repository>
+        <repository>
             <id>topobyte</id>
             <url>https://mvn.topobyte.de</url>
         </repository>
@@ -226,7 +230,7 @@
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                     <mainClass>org.matsim.run.RunEpisim</mainClass>
                                 </transformer>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
                             <filters>
                                 <!-- Avoid signature checking -->
@@ -258,26 +262,9 @@
                 </executions>
             </plugin>
 
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>license-maven-plugin</artifactId>
-                <version>2.0.0</version>
-                <configuration>
-                    <licenseName>agpl_v3</licenseName>
-                </configuration>
-                <executions>
-<!--                    <execution>
-                        <id>first</id>
-                        <goals>
-                            <goal>update-file-header</goal>
-                        </goals>
-                        <phase>process-sources</phase>
-                    </execution> -->
-                </executions>
-            </plugin>
 
+            <!-- Only executed by default on "release" profile -->
             <plugin>
-                <!-- Only executed by default on "release" profile -->
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.1.1</version>
@@ -296,6 +283,49 @@
                     <linkXRef>false</linkXRef>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>2.0.0</version>
+                <configuration>
+                    <addJavaLicenseAfterPackage>false</addJavaLicenseAfterPackage>
+                    <emptyLineAfterHeader>false</emptyLineAfterHeader>
+                    <licenseName>agpl_v3</licenseName>
+                    <roots>
+                        <root>src/main/java</root>
+                    </roots>
+                </configuration>
+            </plugin>
+
+            <!-- Generate autocompletion scripts -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <executable>java</executable>
+                    <arguments>
+                        <argument>-Dpicocli.autocomplete.systemExitOnError</argument>
+                        <argument>-cp</argument>
+                        <classpath/>
+                        <argument>picocli.AutoComplete</argument>
+                        <argument>--force</argument><!-- overwrite if exists -->
+                        <argument>--completionScript</argument>
+                        <argument>${project.build.directory}/episim_auto_completion.bash</argument>
+                        <argument>org.matsim.run.RunEpisim</argument>
+                    </arguments>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>generate-autocompletion-script</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
 
@@ -320,6 +350,20 @@
                                     <goals>
                                         <goal>check</goal>
                                     </goals>
+                                </execution>
+                            </executions>
+                        </plugin>
+
+                        <plugin>
+                            <groupId>org.codehaus.mojo</groupId>
+                            <artifactId>license-maven-plugin</artifactId>
+                            <executions>
+                                <execution>
+                                    <id>update-license-header</id>
+                                    <goals>
+                                        <goal>update-file-header</goal>
+                                    </goals>
+                                    <phase>process-sources</phase>
                                 </execution>
                             </executions>
                         </plugin>

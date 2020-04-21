@@ -1,11 +1,34 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.episim.model;
 
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.*;
+import org.matsim.episim.policy.Restriction;
 
 import java.util.List;
+import java.util.Map;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -13,7 +36,7 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 /**
  * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
  * <pre>
- *    1 - e^(calibParam * contactIntensity * jointTimeInContainer)
+ *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * exposure)
  * </pre>
  */
 public final class DefaultInfectionModel extends AbstractInfectionModel {
@@ -25,8 +48,20 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 */
 	private final boolean trackingEnabled;
 
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, boolean trackingEnabled) {
+	/**
+	 * Face mask model, which decides which masks the persons are wearing.
+	 */
+	private final FaceMaskModel maskModel;
+
+	@Inject
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
+		this(rnd, episimConfig, reporting,
+				maskModel, episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+	}
+
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, boolean trackingEnabled) {
 		super(rnd, episimConfig, reporting);
+		this.maskModel = maskModel;
 		this.trackingEnabled = trackingEnabled;
 	}
 
@@ -129,24 +164,67 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 			}
 
-			double contactIntensity = getContactIntensity(container, leavingPersonsActivity, otherPersonsActivity);
+			// activity params of the leaving and contact person
+			EpisimConfigGroup.InfectionParams leavingParams;
+			EpisimConfigGroup.InfectionParams contactParams;
 
-			double infectionProba = 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer);
-			// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
-			// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
-			// no effect.  kai, mar'20
+			// in vehicle activity params are always the same
+			if (container instanceof InfectionEventHandler.EpisimVehicle) {
+				leavingParams = episimConfig.selectInfectionParams(container.getContainerId().toString());
+				contactParams = leavingParams;
 
-			if (rnd.nextDouble() < infectionProba) {
-				if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
+			} else if (container instanceof InfectionEventHandler.EpisimFacility) {
+				leavingParams = episimConfig.selectInfectionParams(leavingPersonsActivity);
+				contactParams = episimConfig.selectInfectionParams(otherPersonsActivity);
+			} else
+				throw new IllegalStateException("Don't know how to deal with container " + container);
+
+			// need to differentiate which person might be the infector
+			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
+
+				double prob = calcInfectionProbability(personLeavingContainer, contactPerson, leavingParams, contactParams, jointTimeInContainer);
+
+				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType);
-					//TODO the fact that we return here creates a bug concerning tracking. we would need to draw the remaining number of contact persons before return. or have a separate boolean leavingPersonGotInfected
-					return;
-				} else {
+
+			} else {
+				double prob = calcInfectionProbability(contactPerson, personLeavingContainer, contactParams, leavingParams, jointTimeInContainer);
+
+				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType);
-				}
 			}
 		}
 	}
+
+	/**
+	 * Calculates the probability that person {@code infector} infects {@code target}.
+	 *
+	 * @param target               The potentially infected person
+	 * @param infector             The infectious person
+	 * @param act1                 Activity of target
+	 * @param act2                 Activity of infector
+	 * @param jointTimeInContainer joint time doing these activity in seconds
+	 * @return probability between 0 and 1
+	 */
+	protected double calcInfectionProbability(EpisimPerson target, EpisimPerson infector,
+											  EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+											  double jointTimeInContainer) {
+
+		Map<String, Restriction> r = getRestrictions();
+
+		double exposure = Math.max(r.get(act1.getContainerName()).getExposure(), r.get(act2.getContainerName()).getExposure());
+		double contactIntensity = Math.max(act1.getContactIntensity(), act2.getContactIntensity());
+
+		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
+		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
+		// no effect.  kai, mar'20
+
+		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * exposure
+				* maskModel.getWornMask(infector, act2, r.get(act2.getContainerName())).shedding
+				* maskModel.getWornMask(target, act1, r.get(act1.getContainerName())).intake
+		);
+	}
+
 
 	private String getInfectionType(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
 		String infectionType;
@@ -158,26 +236,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 			throw new RuntimeException("Infection situation is unknown");
 		}
 		return infectionType;
-	}
-
-	private double getContactIntensity(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
-		//maybe this can be cleaned up or summarized in some way
-		double contactIntensity = -1;
-		if (container instanceof InfectionEventHandler.EpisimVehicle) {
-			String containerIdString = container.getContainerId().toString();
-			contactIntensity = episimConfig.selectInfectionParams(containerIdString).getContactIntensity();
-
-		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
-
-			double contactIntensityLeavingPerson = episimConfig.selectInfectionParams(leavingPersonsActivity).getContactIntensity();
-			double contactIntensityOtherPerson = episimConfig.selectInfectionParams(otherPersonsActivity).getContactIntensity();
-
-			contactIntensity = Math.max(contactIntensityLeavingPerson, contactIntensityOtherPerson);
-
-		} else {
-			throw new IllegalArgumentException("do not know how to deal container " + container);
-		}
-		return contactIntensity;
 	}
 
 	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, String leavingPersonsActivity) {
