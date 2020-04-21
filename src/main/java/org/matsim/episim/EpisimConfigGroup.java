@@ -1,3 +1,23 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
@@ -24,7 +44,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String OUTPUT_EVENTS_FOLDER = "outputEventsFolder";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
-	private static final String PUT_TRACABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
+	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
+	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
 	private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
@@ -39,6 +60,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
+	/**
+	 * If not null, filter persons for initial infection by district.
+	 */
+	private String initialInfectionDistrict = null;
 	private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -92,13 +117,23 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.initialInfections = initialInfections;
 	}
 
-	@StringGetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
-	public PutTracablePersonsInQuarantine getPutTracablePersonsInQuarantine() {
+	@StringGetter(INITIAL_INFECTION_DISTRICT)
+	public String getInitialInfectionDistrict() {
+		return initialInfectionDistrict;
+	}
+
+	@StringSetter(INITIAL_INFECTION_DISTRICT)
+	public void setInitialInfectionDistrict(String initialInfectionDistrict) {
+		this.initialInfectionDistrict = initialInfectionDistrict;
+	}
+
+	@StringGetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
+	public PutTracablePersonsInQuarantine getPutTraceablePersonsInQuarantine() {
 		return this.putTracablePersonsInQuarantine;
 	}
 
-	@StringSetter(PUT_TRACABLE_PERSONS_IN_QUARANTINE)
-	public void setPutTracablePersonsInQuarantine(PutTracablePersonsInQuarantine putTracablePersonsInQuarantine) {
+	@StringSetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
+	public void setPutTraceablePersonsInQuarantine(PutTracablePersonsInQuarantine putTracablePersonsInQuarantine) {
 		this.putTracablePersonsInQuarantine = putTracablePersonsInQuarantine;
 	}
 

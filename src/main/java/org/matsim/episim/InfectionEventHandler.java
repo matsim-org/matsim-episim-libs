@@ -1,6 +1,27 @@
+/*-
+ * #%L
+ * MATSim Episim
+ * %%
+ * Copyright (C) 2020 matsim-org
+ * %%
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ * #L%
+ */
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
@@ -29,10 +50,8 @@ import org.matsim.facilities.Facility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.SplittableRandom;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Main event handler of episim.
@@ -89,7 +108,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 
-	private int cnt;
 	private int iteration = 0;
 
 	/**
@@ -109,7 +127,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.rnd = rnd;
 		this.progressionModel = progressionModel;
 		this.infectionModel = infectionModel;
-		this.cnt = episimConfig.getInitialInfections();
 	}
 
 	/**
@@ -295,16 +312,28 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (this.iteration != 1) {
 			return;
 		}
-		Object[] personArray = this.personMap.values().toArray();
+
+		String district = episimConfig.getInitialInfectionDistrict();
+
+		List<EpisimPerson> candidates = this.personMap.values().stream()
+				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
+				.collect(Collectors.toList());
+
+		if (candidates.size() < episimConfig.getInitialInfections()) {
+			log.warn("Not enough persons match the initial infection requirement, using whole population...");
+			candidates = Lists.newArrayList(this.personMap.values());
+		}
+
+		int cnt = episimConfig.getInitialInfections();
 		do {
-			EpisimPerson randomPerson = (EpisimPerson) personArray[rnd.nextInt(personArray.length)];
+			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
-				log.warn(" person " + randomPerson.getPersonId() + " has initial infection");
-				this.cnt--;
+				log.warn("Person {} has initial infection", randomPerson.getPersonId());
+				cnt--;
 			}
 
-		} while (this.cnt > 0);
+		} while (cnt > 0);
 	}
 
 
