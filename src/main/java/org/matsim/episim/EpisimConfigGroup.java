@@ -31,6 +31,7 @@ import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.validation.constraints.NotNull;
@@ -229,9 +230,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Create restriction for each {@link InfectionParams}.
 	 */
-	public Map<String, ShutdownPolicy.Restriction> createInitialRestrictions() {
-		Map<String, ShutdownPolicy.Restriction> r = new LinkedHashMap<>();
-		getContainerParams().forEach((s, p) -> r.put(s, ShutdownPolicy.Restriction.newInstance()));
+	public Map<String, Restriction> createInitialRestrictions() {
+		Map<String, Restriction> r = new LinkedHashMap<>();
+		getContainerParams().forEach((s, p) -> r.put(s, Restriction.none()));
 		return r;
 	}
 

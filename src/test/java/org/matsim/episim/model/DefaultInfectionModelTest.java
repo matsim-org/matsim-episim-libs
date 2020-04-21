@@ -7,7 +7,7 @@ import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
 import org.matsim.episim.*;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -28,14 +28,14 @@ public class DefaultInfectionModelTest {
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
 	private DefaultInfectionModel model;
-	private Map<String, ShutdownPolicy.Restriction> restrictions;
+	private Map<String, Restriction> restrictions;
 
 
 	@Before
 	public void setup() {
 		EpisimReporting reporting = mock(EpisimReporting.class);
 		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, reporting, false);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, reporting, new DefaultFaceMaskModel(), false);
 		restrictions = config.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -215,14 +215,14 @@ public class DefaultInfectionModelTest {
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, false);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, new DefaultFaceMaskModel(), false);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "c10", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, true);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, new DefaultFaceMaskModel(), true);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "c10", container);
@@ -260,7 +260,7 @@ public class DefaultInfectionModelTest {
 				})
 		);
 
-		restrictions.put(type, ShutdownPolicy.Restriction.newInstance(0.5));
+		restrictions.put(type, Restriction.of(0.5));
 
 		double rateRestricted = sampleTotalInfectionRate(20_000, Duration.ofMinutes(30), type,
 				() -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> {

@@ -24,7 +24,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
 import java.util.Map;
@@ -41,7 +41,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	protected final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
 	protected int iteration;
-	private Map<String, ShutdownPolicy.Restriction> restrictions;
+	private Map<String, Restriction> restrictions;
 
 	AbstractInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
 		this.rnd = rnd;
@@ -50,7 +50,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	}
 
 	private static boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-																Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
+																Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 
 		// Check if person is home quarantined
@@ -61,10 +61,10 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	}
 
 	private static boolean actIsRelevant(String act, EpisimConfigGroup episimConfig,
-										 Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
+										 Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
 		EpisimConfigGroup.InfectionParams infectionParams = episimConfig.selectInfectionParams(act);
-		ShutdownPolicy.Restriction r = restrictions.get(infectionParams.getContainerName());
+		Restriction r = restrictions.get(infectionParams.getContainerName());
 		// avoid use of rnd if outcome is known beforehand
 		if (r.getRemainingFraction() == 1)
 			return true;
@@ -76,7 +76,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	}
 
 	private static boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-															Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
+															Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		String lastAct = "";
 		if (person.getCurrentPositionInTrajectory() != 0) {
 			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
@@ -86,9 +86,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
 		// TODO: tr is a hardcoded activity for "pt"
 		// last activity is only considered if present
-		return actIsRelevant("tr", episimConfig, restrictions, rnd) && actIsRelevant(nextAct, episimConfig, restrictions,
-				rnd) && (lastAct.isEmpty() || actIsRelevant(lastAct, episimConfig,
-				restrictions, rnd));
+		return actIsRelevant("tr", episimConfig, restrictions, rnd) && actIsRelevant(nextAct, episimConfig, restrictions, rnd)
+				&& (lastAct.isEmpty() || actIsRelevant(lastAct, episimConfig, restrictions, rnd));
 
 	}
 
@@ -99,7 +98,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 * @noinspection BooleanMethodIsAlwaysInverted
 	 */
 	static boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
-																Map<String, ShutdownPolicy.Restriction> restrictions, SplittableRandom rnd) {
+																Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
 		// Infected but not contagious persons are considered additionally
 		if (!hasDiseaseStatusRelevantForInfectionDynamics(person) &&
@@ -147,7 +146,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 * Set the iteration number and restrictions that are in place.
 	 */
 	@Override
-	public final void setRestrictionsForIteration(int iteration, Map<String, ShutdownPolicy.Restriction> restrictions) {
+	public final void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
 		this.iteration = iteration;
 		this.restrictions = restrictions;
 	}
@@ -194,7 +193,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		reporting.reportInfection(personWrapper, infector, now, infectionType);
 	}
 
-	public Map<String, ShutdownPolicy.Restriction> getRestrictions() {
+	public Map<String, Restriction> getRestrictions() {
 		return restrictions;
 	}
 }

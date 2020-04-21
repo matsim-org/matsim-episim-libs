@@ -52,9 +52,14 @@ public class FixedPolicy extends ShutdownPolicy {
 
 			Config subConfig = this.config.getConfig(entry.getKey());
 			String key = String.valueOf(day);
-			if (subConfig.hasPath(key))
-				entry.getValue().setRemainingFraction(subConfig.getDouble(key));
+			if (subConfig.hasPath(key)) {
 
+				Restriction r = Restriction.fromConfig(subConfig.getConfig(key));
+
+				entry.getValue().setRemainingFraction(r.getRemainingFraction());
+				entry.getValue().setExposure(r.getExposure());
+				entry.getValue().setRequireMask(r.getRequireMask());
+			}
 		}
 	}
 
@@ -66,33 +71,40 @@ public class FixedPolicy extends ShutdownPolicy {
 		/**
 		 * Restrict activities at specific point of time.
 		 *
-		 * @param activities activities to restrict
-		 * @param day        the day/iteration when it will be in effect
-		 * @param fraction   fraction of remaining allowed activity
+		 * @param day         the day/iteration when it will be in effect
+		 * @param restriction restriction to apply
+		 * @param activities  activities to restrict
 		 */
 		@SuppressWarnings("unchecked")
-		public ConfigBuilder restrict(long day, double fraction, String... activities) {
+		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
 
 			for (String act : activities) {
-				Map<String, Double> p = (Map<String, Double>) params.computeIfAbsent(act, m -> new HashMap<>());
-				p.put(String.valueOf(day), fraction);
+				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
+				p.put(String.valueOf(day), restriction.asMap());
 			}
 
 			return this;
 		}
 
 		/**
+		 * Same as {@link #restrict(long, Restriction, String...)}  with default values.
+		 */
+		public ConfigBuilder restrict(long day, double fraction, String... activities) {
+			return restrict(day, Restriction.of(fraction), activities);
+		}
+
+		/**
 		 * Shutdown activities completely after certain day.
 		 */
 		public ConfigBuilder shutdown(long day, String... activities) {
-			return this.restrict(day, 0d, activities);
+			return this.restrict(day, Restriction.of(0), activities);
 		}
 
 		/**
 		 * Open activities freely after certain day.
 		 */
 		public ConfigBuilder open(long day, String... activities) {
-			return this.restrict(day, 1d, activities);
+			return this.restrict(day, Restriction.none(), activities);
 		}
 
 	}

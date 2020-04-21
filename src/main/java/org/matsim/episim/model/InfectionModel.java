@@ -22,7 +22,7 @@ package org.matsim.episim.model;
 
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
 
@@ -44,5 +44,5 @@ public interface InfectionModel {
 	/**
 	 * Set the current iteration and restrictions in place.
 	 */
-	void setRestrictionsForIteration(int iteration, Map<String, ShutdownPolicy.Restriction> restrictions);
+	void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions);
 }

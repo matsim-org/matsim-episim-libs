@@ -39,32 +39,34 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../he_snz_episim_events.xml.gz");
+		episimConfig.setInputEventsFile("../be_snz_episim_events.xml.gz");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000002);
-
+		episimConfig.setInitialInfections(5);
+		
 		SnzScenario.addParams(episimConfig);
 		SnzScenario.setContactIntensities(episimConfig);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				.restrict(13 + params.offset, 0.9, "leisure")
-				.restrict(13 + params.offset, 0.1, "educ_primary", "educ_kiga")
-				.restrict(13 + params.offset, 0., "educ_secondary", "educ_higher")
-				.restrict(13 + params.offset, params.remainingFractionLeisure, "leisure")
-				.restrict(13 + params.offset, params.remainingFractionWork, "work")
-				.restrict(13 + params.offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
-				.restrict(65 + params.offset, params.remainingFractionKiga, "educ_kiga")
-				.restrict(65 + params.offset, params.remainingFractionPrima, "educ_primary")
-				.restrict(65 + params.offset, params.remainingFractionSecon, "educ_secondary")
+				.restrict(23 + params.offset, params.remainingFractionLeisure1, "leisure")
+				.restrict(23 + params.offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(23 + params.offset, 0., "educ_secondary", "educ_higher")
+				.restrict(32 + params.offset, params.remainingFractionLeisure2, "leisure")
+				.restrict(32 + params.offset, params.remainingFractionWork, "work")
+				.restrict(32 + params.offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
+				.restrict(60 + params.offset, params.remainingFractionKiga, "educ_kiga")
+				.restrict(60 + params.offset, params.remainingFractionPrima, "educ_primary")
+				.restrict(60 + params.offset, params.remainingFractionSecon, "educ_secondary")
 				.build();
 
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
 
-		config.plans().setInputFile("../he_entirePopulation_noPlans.xml.gz");
+
+		config.plans().setInputFile("../be_entirePopulation_noPlans_withDistrict.xml.gz");
 
 		return config;
 	}
@@ -77,22 +79,25 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 	public static final class Params {
 
-		@IntParameter({-5, 5})
+		@IntParameter({-6, -3, 0})
 		int offset;
 
-		@Parameter({1.0, 0.5, 0.1})
+		@Parameter({0.5, 0.1})
 		double remainingFractionKiga;
 
-		@Parameter({1.0, 0.5, 0.1})
+		@Parameter({0.5, 0.1})
 		double remainingFractionPrima;
 
-		@Parameter({1.0, 0.5, 0.})
+		@Parameter({0.5, 0.})
 		double remainingFractionSecon;
+		
+		@Parameter({0.8, 0.6, 0.4, 0.2})
+		double remainingFractionLeisure1;
 
-		@Parameter({0.4, 0.2, 0})
-		double remainingFractionLeisure;
+		@Parameter({0.2, 0})
+		double remainingFractionLeisure2;
 
-		@Parameter({0.8, 0.4, 0.2})
+		@Parameter({0.8, 0.6, 0.4})
 		double remainingFractionWork;
 
 		@Parameter({0.4, 0.2})
