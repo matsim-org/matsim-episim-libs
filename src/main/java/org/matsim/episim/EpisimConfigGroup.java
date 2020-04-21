@@ -348,7 +348,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		if (params != null)
 			return params;
 
-		throw new NoSuchElementException("No params known for activity %s. Please add prefix to one infection parameter.");
+		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity)); 
+		
 	}
 
 	public Collection<InfectionParams> getInfectionParams() {
