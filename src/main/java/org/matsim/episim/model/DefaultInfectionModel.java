@@ -75,6 +75,12 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		infectionDynamicsGeneralized(personLeavingFacility, facility, now);
 	}
 
+	@Override
+	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
+		super.setRestrictionsForIteration(iteration, restrictions);
+		maskModel.setIteration(iteration);
+	}
+
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
 
 		if (iteration == 0) {

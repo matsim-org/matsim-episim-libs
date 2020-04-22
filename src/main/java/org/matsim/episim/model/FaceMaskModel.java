@@ -9,6 +9,14 @@ import org.matsim.episim.policy.Restriction;
  */
 public interface FaceMaskModel {
 
+	/**
+	 * Called at start of iteration.
+	 */
+	void setIteration(int iteration);
+
+	/**
+	 * Return the mask a person is wearing for specific activity.
+	 */
 	FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, int currentDay, Restriction restriction);
 
 }

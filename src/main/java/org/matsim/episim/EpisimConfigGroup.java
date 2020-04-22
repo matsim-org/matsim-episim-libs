@@ -46,6 +46,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
+	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
 	private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
@@ -60,6 +61,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
+	private double maskCompliance = 1d;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
@@ -125,6 +127,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(INITIAL_INFECTION_DISTRICT)
 	public void setInitialInfectionDistrict(String initialInfectionDistrict) {
 		this.initialInfectionDistrict = initialInfectionDistrict;
+	}
+
+	@StringGetter(MASK_COMPLIANCE)
+	public double getMaskCompliance() {
+		return maskCompliance;
+	}
+
+	@StringSetter(MASK_COMPLIANCE)
+	public void setMaskCompliance(double maskCompliance) {
+		this.maskCompliance = maskCompliance;
 	}
 
 	@StringGetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
@@ -348,8 +360,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		if (params != null)
 			return params;
 
-		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity)); 
-		
+		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity));
 	}
 
 	public Collection<InfectionParams> getInfectionParams() {
