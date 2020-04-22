@@ -34,6 +34,7 @@ import java.util.SplittableRandom;
  */
 public final class DefaultProgressionModel implements ProgressionModel {
 
+	private final double DAY = 24. * 3600;
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
@@ -51,12 +52,25 @@ public final class DefaultProgressionModel implements ProgressionModel {
 			case susceptible:
 				break;
 			case infectedButNotContagious:
-				if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 4) {
-					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.contagious);
+				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 4) {
+					person.setDiseaseStatus(now, DiseaseStatus.contagious);
 				}
 				break;
 			case contagious:
-				if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 6) {
+
+				if (episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
+					// 10% chance of getting randomly tested and detected each day
+					if (rnd.nextDouble() < 0.1) {
+						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+
+						for (EpisimPerson pw : person.getTraceableContactPersons(now - person.daysSince(DiseaseStatus.contagious, day) * DAY)) {
+							quarantinePerson(pw, day);
+						}
+					}
+				}
+
+
+				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 6) {
 					final double nextDouble = rnd.nextDouble();
 					if (nextDouble < 0.8) {
 						// 80% show symptoms and go into quarantine
@@ -65,48 +79,44 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
 						if (episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
-							for (EpisimPerson pw : person.getTraceableContactPersons()) {
-								if (pw.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) { //what if tracked person has recovered
-
-									pw.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-
-								}
+							for (EpisimPerson pw : person.getTraceableContactPersons(now - person.daysSince(DiseaseStatus.contagious, day) * DAY)) {
+								quarantinePerson(pw, day);
 							}
 						}
 
 					}
-				}
-				else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 16) {
+
+				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
 					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
 				}
 				break;
 			case showingSymptoms:
-				if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 10) {
+				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 10) {
 					double proba = getAgeDependantProbaOfTransitioningToSeriouslySick(person, now);
 					if (rnd.nextDouble() < proba) {
-						person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.seriouslySick);
+						person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
 					}
-				}
-				else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 16) {
-					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
+
+				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
+					person.setDiseaseStatus(now, DiseaseStatus.recovered);
 				}
 				break;
 			case seriouslySick:
-				if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 11) {
+				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 11) {
 					double proba = getAgeDependantProbaOfTransitioningToCritical(person, now);
 					if (rnd.nextDouble() < proba) {
-						person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.critical);
+						person.setDiseaseStatus(now, DiseaseStatus.critical);
 					}
-				} else if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 23) {
-					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
+				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 23) {
+					person.setDiseaseStatus(now, DiseaseStatus.recovered);
 				}
 				break;
 			case critical:
-				if (person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) == 20) {
+				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 20) {
 					// (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
 					// they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
 					// hospital beds.)
-					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.seriouslySick);
+					person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
 				}
 				break;
 			case recovered:
@@ -119,7 +129,14 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 		}
 
-		person.getTraceableContactPersons().clear(); //so we can only track contact persons over 1 day
+		// clear tracing older than 7 days
+		person.clearTraceableContractPersons(now - 7 * DAY);
+	}
+
+	private void quarantinePerson(EpisimPerson p, int day) {
+		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
+			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+		}
 	}
 
 

@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -29,6 +30,7 @@ import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Persons current state in the simulation.
@@ -38,7 +40,7 @@ public final class EpisimPerson implements Attributable {
 	private final Id<Person> personId;
 	private final EventsManager eventsManager;
 	private final Attributes attributes;
-	private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
+	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<String> trajectory = new ArrayList<>();
 
 	/**
@@ -145,12 +147,25 @@ public final class EpisimPerson implements Attributable {
 		this.lastFacilityId = lastFacilityId;
 	}
 
-	public void addTraceableContactPerson(EpisimPerson personWrapper) {
-		traceableContactPersons.add(personWrapper);
+	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
+		// Always use the latest tracking date
+		traceableContactPersons.put(personWrapper, now);
 	}
 
-	public Set<EpisimPerson> getTraceableContactPersons() {
-		return traceableContactPersons;
+	/**
+	 * Get all traced contacts that happened after certain time.
+	 */
+	public Set<EpisimPerson> getTraceableContactPersons(double after) {
+		return traceableContactPersons.keySet()
+				.stream().filter(k -> traceableContactPersons.get(k) >= after)
+				.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Remove old contact tracing data before a certain date.
+	 */
+	public void clearTraceableContractPersons(double before) {
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
 	}
 
 	void addToTrajectory(String trajectoryElement) {
