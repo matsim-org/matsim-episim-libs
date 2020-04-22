@@ -22,6 +22,7 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -40,6 +41,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -56,9 +58,9 @@ public interface BatchRun<T> {
 	/**
 	 * Loads the defined parameters and executes the {@link #prepareConfig(int, Object)} procedure.
 	 *
-	 * @param clazz setup class
+	 * @param clazz      setup class
 	 * @param paramClazz class holding the parameters
-	 * @param <T> params type
+	 * @param <T>        params type
 	 */
 	static <T> PreparedRun prepare(Class<? extends BatchRun<T>> clazz, Class<T> paramClazz) {
 
@@ -140,11 +142,19 @@ public interface BatchRun<T> {
 
 	/**
 	 * Prepare a config using the given parameters.
-	 * @param id task id
+	 *
+	 * @param id     task id
 	 * @param params parameters to use
 	 * @return initialized config
 	 */
 	Config prepareConfig(int id, T params);
+
+	/**
+	 * Map days to measures for the metadata template.
+	 */
+	default Map<Integer, List<String>> getMeasures() {
+		return Maps.newHashMap();
+	}
 
 	/**
 	 * Write additionally needed files to {@code directory}, if any are needed.

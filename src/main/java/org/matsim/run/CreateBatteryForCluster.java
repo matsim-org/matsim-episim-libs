@@ -24,15 +24,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
-import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.parser.YamlLogEventParser;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.PreparedRun;
@@ -43,6 +42,8 @@ import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -66,6 +67,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v7")
+	private String runVersion;
+
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "82")
 	private int stepSize;
 
@@ -86,7 +90,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Path dir = output.resolve(runName);
+		Path dir = output.resolve(runVersion + "-" + StringUtils.uncapitalize(runName));
 		Path input = dir.resolve("input");
 
 		Files.createDirectories(input);
@@ -109,11 +113,21 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		infoWriter.write(Joiner.on(";").join(header));
 		infoWriter.newLine();
 
-		ObjectMapper mapper = new ObjectMapper(new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER))
+		ObjectMapper mapper = new ObjectMapper(new YAMLFactory()
+				.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES))
 				.registerModule(new JavaTimeModule())
 				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-		mapper.writeValue(yamlWriter, prepare.getMetadata());
+		LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
+
+		metadata.put("city", StringUtils.capitalize(runName));
+		metadata.put("readme", runVersion + "-notes.md");
+		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
+		metadata.put("info", runVersion + "-info-" + runName + ".txt");
+		metadata.put("timestamp", LocalDate.now());
+
+		metadata.putAll(prepare.getMetadata());
+		mapper.writeValue(yamlWriter, metadata);
 
 		for (PreparedRun.Run run : prepare.runs) {
 

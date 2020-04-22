@@ -22,10 +22,7 @@ package org.matsim.episim;
 
 import org.matsim.core.config.Config;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Class holding the result of {@link BatchRun#prepare(Class, Class)} with all information of the run.
@@ -67,15 +64,36 @@ public final class PreparedRun {
 
 		Map<String, Object> data = new LinkedHashMap<>();
 
-		data.put("start", setup.startDay());
+		data.put("dayZero", setup.startDay());
 
-		Map<String, List<Object>> parameter = new HashMap<>();
+		int index = parameter.indexOf("offset");
+		if (index > -1)
+			data.put("offset", parameterValues.get(index));
 
-		for (int i = 0; i < this.parameter.size(); i++) {
-			parameter.put(this.parameter.get(i), this.parameterValues.get(i));
+		List<Object> opts = new ArrayList<>();
+
+		for (Map.Entry<Integer, List<String>> day : setup.getMeasures().entrySet()) {
+
+			Map<String, Object> byDay = new LinkedHashMap<>();
+
+
+			byDay.put("day", day.getKey());
+			byDay.put("heading", "<Please providing heading>");
+			byDay.put("subheading", "<Please provide subheading>");
+
+			List<Map<String, Object>> measures = new ArrayList<>();
+			for (String m : day.getValue()) {
+				measures.add(
+						Map.of("measure", m, "title", "<Please provide a title>")
+				);
+			}
+
+			byDay.put("measures", measures);
+
+			opts.add(byDay);
 		}
 
-		data.put("parameter", parameter);
+		data.put("optionGroups", opts);
 
 		return data;
 	}
