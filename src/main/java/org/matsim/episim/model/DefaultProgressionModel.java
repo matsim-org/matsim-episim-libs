@@ -52,7 +52,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 			case susceptible:
 
 				// A healthy quarantined person is dismissed from quarantine after some time
-				if (person.daysSinceQuarantine(day) > 14) {
+				if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.daysSinceQuarantine(day) > 14) {
 					person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 				}
 
