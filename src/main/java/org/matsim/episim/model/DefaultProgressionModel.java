@@ -50,6 +50,12 @@ public final class DefaultProgressionModel implements ProgressionModel {
 		double now = EpisimUtils.getCorrectedTime(0, day);
 		switch (person.getDiseaseStatus()) {
 			case susceptible:
+
+				// A healthy quarantined person is dismissed from quarantine after some time
+				if (person.daysSinceQuarantine(day) > 14) {
+					person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
+				}
+
 				break;
 			case infectedButNotContagious:
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 4) {
@@ -68,7 +74,6 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						}
 					}
 				}
-
 
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 6) {
 					final double nextDouble = rnd.nextDouble();
@@ -134,6 +139,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
+
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 		}

@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -27,16 +27,15 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzScenario;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
 public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 	@Override
-	public Config prepareConfig(int id, SchoolClosure.Params params) {
+	public Config baseCase(int id) {
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+		config.plans().setInputFile("../be_entirePopulation_noPlans_withDistrict.xml.gz");
+
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setInputEventsFile("../be_snz_episim_events.xml.gz");
@@ -45,9 +44,18 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000002);
 		episimConfig.setInitialInfections(5);
-		
+
 		SnzScenario.addParams(episimConfig);
 		SnzScenario.setContactIntensities(episimConfig);
+
+		return config;
+	}
+
+	@Override
+	public Config prepareConfig(int id, SchoolClosure.Params params) {
+
+		Config config = baseCase(id);
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
 				.restrict(23 + params.offset, params.remainingFractionLeisure1, "leisure")
@@ -65,16 +73,7 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
 
-
-		config.plans().setInputFile("../be_entirePopulation_noPlans_withDistrict.xml.gz");
-
 		return config;
-	}
-
-	@Override
-	public void writeAuxiliaryFiles(Path directory, Config config) throws IOException {
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		Files.writeString(directory.resolve(episimConfig.getPolicyConfig()), episimConfig.getPolicy().root().render());
 	}
 
 	public static final class Params {
@@ -90,7 +89,7 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 		@Parameter({0.5, 0.})
 		double remainingFractionSecon;
-		
+
 		@Parameter({0.8, 0.6, 0.4, 0.2})
 		double remainingFractionLeisure1;
 

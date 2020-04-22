@@ -8,24 +8,31 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.matsim.run;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.apache.commons.io.FileUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.parser.YamlLogEventParser;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.PreparedRun;
@@ -91,6 +98,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
+		BufferedWriter yamlWriter = new BufferedWriter(new FileWriter(dir.resolve("metadata.yaml").toFile()));
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
@@ -101,6 +109,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		infoWriter.write(Joiner.on(";").join(header));
 		infoWriter.newLine();
 
+		ObjectMapper mapper = new ObjectMapper(new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER))
+				.registerModule(new JavaTimeModule())
+				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+		mapper.writeValue(yamlWriter, prepare.getMetadata());
 
 		for (PreparedRun.Run run : prepare.runs) {
 
@@ -119,11 +132,12 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
 			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
 
-			infoWriter.write(Joiner.on(";").join(line));
-			infoWriter.newLine();
-
+			// base case is not contained in the info file
+			if (run.id > 0) {
+				infoWriter.write(Joiner.on(";").join(line));
+				infoWriter.newLine();
+			}
 		}
-
 
 		// Round up array size to be multiple of step size
 		int step = (1000 / stepSize) * stepSize;
