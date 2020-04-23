@@ -35,11 +35,12 @@ public class DefaultFaceMaskModel implements FaceMaskModel {
 	public FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, int currentDay, Restriction restriction) {
 
 		if (episimConfig.getMaskCompliance() == 1d) return restriction.getRequireMask();
+		if (episimConfig.getMaskCompliance() == 0d || restriction.getRequireMask() == FaceMask.NONE) return FaceMask.NONE;
 
 		int key = person.getPersonId().index();
 
 		if (!personWearsMask.containsKey(key)) {
-			personWearsMask.put(key, episimConfig.getMaskCompliance() < rnd.nextDouble());
+			personWearsMask.put(key, rnd.nextDouble() < episimConfig.getMaskCompliance());
 		}
 
 		return personWearsMask.get(key) ? restriction.getRequireMask() : FaceMask.NONE;
