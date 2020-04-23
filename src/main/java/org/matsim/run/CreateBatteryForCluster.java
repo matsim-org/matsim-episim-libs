@@ -70,7 +70,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v7")
 	private String runVersion;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "82")
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "75")
 	private int stepSize;
 
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
