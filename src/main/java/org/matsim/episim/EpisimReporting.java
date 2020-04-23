@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -21,9 +21,12 @@
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.collections.api.tuple.primitive.DoubleIntPair;
+import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
@@ -36,10 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -54,12 +54,19 @@ public final class EpisimReporting {
 	private final BufferedWriter infectionsWriter;
 	private final BufferedWriter infectionEventsWriter;
 	private final BufferedWriter restrictionWriter;
+	private final BufferedWriter timeUseWriter;
+
+	/**
+	 * Time use per activity, -> average, sample size
+	 */
+	private final Map<String, DoubleIntPair> timeUse = new HashMap<>();
 
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+	private final EpisimConfigGroup episimConfig;
 
 	EpisimReporting(Config config) {
 		String base;
@@ -69,16 +76,17 @@ public final class EpisimReporting {
 			base = config.controler().getOutputDirectory() + "/";
 		}
 
-		EpisimConfigGroup episimConfigGroup = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		infectionsWriter = prepareWriter(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEventsWriter = prepareWriter(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
-		restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfigGroup.createInitialRestrictions());
-		sampleSize = episimConfigGroup.getSampleSize();
+		restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfig.createInitialRestrictions());
+		timeUseWriter = prepareRestrictionWriter(base + "timeUse.txt", episimConfig.createInitialRestrictions());
+		sampleSize = episimConfig.getSampleSize();
 
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
-					episimConfigGroup.getPolicy().root().render(ConfigRenderOptions.defaults()
+					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
 							.setOriginComments(false)
 							.setJson(false)));
 		} catch (IOException e) {
@@ -260,13 +268,47 @@ public final class EpisimReporting {
 	}
 
 	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
+		if (iteration == 0) return;
+
 		try {
 			restrictionWriter.write(separator.join(iteration, "", restrictions.values().toArray()));
 			restrictionWriter.newLine();
 			restrictionWriter.flush();
+
+
+			// TODO: also reports time use, needs to be refactored later
+			List<String> order = Lists.newArrayList(restrictions.keySet());
+			Object[] array = new String[order.size()];
+			Arrays.fill(array, "");
+
+			// report minutes
+			timeUse.forEach((k, v) -> array[order.indexOf(k)] = String.valueOf(v.getOne() / 60));
+
+			timeUseWriter.write(separator.join(iteration, "", array));
+			timeUseWriter.newLine();
+			timeUseWriter.flush();
+
+			timeUse.clear();
+
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
+	}
+
+	void reportTimeSpent(String container, double timeSpent) {
+
+		String act = episimConfig.selectInfectionParams(container).getContainerName();
+
+		if (!timeUse.containsKey(act)) {
+			timeUse.put(act, PrimitiveTuples.pair(0d, 0));
+		}
+
+		DoubleIntPair current = timeUse.get(act);
+
+		// compute incremental average
+		// NewAverage = OldAverage + (NewValue - OldAverage) / NewSampleCount;
+		double newAverage = current.getOne() + (timeSpent - current.getOne()) / (current.getTwo() + 1);
+		timeUse.put(act, PrimitiveTuples.pair(newAverage, current.getTwo() + 1));
 	}
 
 	enum InfectionsWriterFields {

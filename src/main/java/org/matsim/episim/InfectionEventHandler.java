@@ -176,24 +176,28 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), this::createPerson);
 		Id<Facility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
+		EpisimFacility episimFacility;
 		if (iteration == 0) {
-			EpisimFacility episimFacility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
+			episimFacility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
 			if (episimPerson.getFirstFacilityId() == null) {
 				episimFacility.addPerson(episimPerson, 0);
 			}
-			infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
-			episimFacility.removePerson(episimPerson.getPersonId());
 		} else {
-			EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
+			episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
 			if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
 				throw new IllegalStateException("Something went wrong ...");
 			}
-			infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
-			episimFacility.removePerson(episimPerson.getPersonId());
 		}
+
+		infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
+		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
+		reporting.reportTimeSpent(activityEndEvent.getActType(), timeSpent);
+
+		episimFacility.removePerson(episimPerson.getPersonId());
 		if (episimPerson.getCurrentPositionInTrajectory() == 0) {
 			episimPerson.setFirstFacilityId(episimFacilityId.toString());
 		}
+
 		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
 
 	}
@@ -231,6 +235,10 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = episimVehicle.getPerson(leavesVehicleEvent.getPersonId());
 
 		infectionModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
+
+		double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
+
+		reporting.reportTimeSpent("tr", timeSpent);
 
 		// remove person from vehicle:
 		episimVehicle.removePerson(episimPerson.getPersonId());
