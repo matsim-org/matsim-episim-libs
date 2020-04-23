@@ -34,7 +34,7 @@ import java.util.SplittableRandom;
  */
 public final class DefaultProgressionModel implements ProgressionModel {
 
-	private final double DAY = 24. * 3600;
+	private static final double DAY = 24. * 3600;
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
@@ -142,6 +142,19 @@ public final class DefaultProgressionModel implements ProgressionModel {
 
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+
+			String homeId = (String) p.getAttributes().getAttribute("homeId");
+
+			// put every member of household into quarantine
+			if (homeId != null)
+				for (EpisimPerson other : p.getTraceableContactPersons(0)) {
+
+					String otherHome = (String) other.getAttributes().getAttribute("homeId");
+					if (homeId.equals(otherHome) && other.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no
+							&& other.getDiseaseStatus() != DiseaseStatus.recovered)
+
+						p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+				}
 		}
 	}
 

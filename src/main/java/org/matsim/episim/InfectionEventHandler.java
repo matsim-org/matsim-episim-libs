@@ -191,7 +191,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
-		reporting.reportTimeSpent(activityEndEvent.getActType(), timeSpent);
+		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 
 		episimFacility.removePerson(episimPerson.getPersonId());
 		if (episimPerson.getCurrentPositionInTrajectory() == 0) {
@@ -238,7 +238,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
 
-		reporting.reportTimeSpent("tr", timeSpent);
+		// This type depends on the params defined in the scenario
+		episimPerson.addSpentTime("pt", timeSpent);
 
 		// remove person from vehicle:
 		episimVehicle.removePerson(episimPerson.getPersonId());
@@ -398,6 +399,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration);
+		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);

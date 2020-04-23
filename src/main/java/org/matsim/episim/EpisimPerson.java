@@ -49,6 +49,11 @@ public final class EpisimPerson implements Attributable {
 	private final EnumMap<DiseaseStatus, Double> statusChanges = new EnumMap<>(DiseaseStatus.class);
 
 	/**
+	 * Total spent time during activities.
+	 */
+	private final ObjectDoubleHashMap<String> spentTime = new ObjectDoubleHashMap<>();
+
+	/**
 	 * The {@link EpisimContainer} the person is currently located in.
 	 */
 	private EpisimContainer<?> currentContainer = null;
@@ -226,6 +231,20 @@ public final class EpisimPerson implements Attributable {
 
 	void setFirstFacilityId(String firstFacilityId) {
 		this.firstFacilityId = firstFacilityId;
+	}
+
+	/**
+	 * Add amount of time to spent time for an activity.
+	 */
+	public void addSpentTime(String actType, double timeSpent) {
+		spentTime.addToValue(actType, timeSpent);
+	}
+
+	/**
+	 * Spent time of this person.
+	 */
+	public ObjectDoubleHashMap<String> getSpentTime() {
+		return spentTime;
 	}
 
 	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms, seriouslySick, critical, recovered}

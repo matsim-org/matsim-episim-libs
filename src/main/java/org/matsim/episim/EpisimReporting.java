@@ -25,8 +25,7 @@ import com.google.common.collect.Lists;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.collections.api.tuple.primitive.DoubleIntPair;
-import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.io.IOUtils;
@@ -55,11 +54,6 @@ public final class EpisimReporting {
 	private final BufferedWriter infectionEventsWriter;
 	private final BufferedWriter restrictionWriter;
 	private final BufferedWriter timeUseWriter;
-
-	/**
-	 * Time use per activity, -> average, sample size
-	 */
-	private final Map<String, DoubleIntPair> timeUse = new HashMap<>();
 
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
@@ -275,40 +269,44 @@ public final class EpisimReporting {
 			restrictionWriter.newLine();
 			restrictionWriter.flush();
 
-
-			// TODO: also reports time use, needs to be refactored later
-			List<String> order = Lists.newArrayList(restrictions.keySet());
-			Object[] array = new String[order.size()];
-			Arrays.fill(array, "");
-
-			// report minutes
-			timeUse.forEach((k, v) -> array[order.indexOf(k)] = String.valueOf(v.getOne() / 60));
-
-			timeUseWriter.write(separator.join(iteration, "", array));
-			timeUseWriter.newLine();
-			timeUseWriter.flush();
-
-			timeUse.clear();
-
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
 	}
 
-	void reportTimeSpent(String container, double timeSpent) {
+	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration) {
 
-		String act = episimConfig.selectInfectionParams(container).getContainerName();
+		if (iteration == 0) return;
 
-		if (!timeUse.containsKey(act)) {
-			timeUse.put(act, PrimitiveTuples.pair(0d, 0));
+		ObjectDoubleHashMap<String> timeUse = new ObjectDoubleHashMap<>();
+
+		int i = 1;
+		for (EpisimPerson person : persons) {
+
+			// computing incremental avg.
+			// Average += (NewValue - Average) / NewSampleCount;
+			for (String act : activities) {
+				timeUse.addToValue(act, (person.getSpentTime().get(act) - timeUse.get(act)) / i);
+			}
+
+			person.getSpentTime().clear();
+			i++;
 		}
 
-		DoubleIntPair current = timeUse.get(act);
+		List<String> order = Lists.newArrayList(activities);
+		Object[] array = new String[order.size()];
+		Arrays.fill(array, "");
 
-		// compute incremental average
-		// NewAverage = OldAverage + (NewValue - OldAverage) / NewSampleCount;
-		double newAverage = current.getOne() + (timeSpent - current.getOne()) / (current.getTwo() + 1);
-		timeUse.put(act, PrimitiveTuples.pair(newAverage, current.getTwo() + 1));
+		// report minutes
+		timeUse.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
+
+		try {
+			timeUseWriter.write(separator.join(iteration, "", array));
+			timeUseWriter.newLine();
+			timeUseWriter.flush();
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 
 	enum InfectionsWriterFields {
