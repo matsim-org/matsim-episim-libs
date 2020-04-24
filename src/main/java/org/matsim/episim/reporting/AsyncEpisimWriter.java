@@ -10,7 +10,7 @@ import java.io.BufferedWriter;
 import java.io.Writer;
 
 /**
- * Overwrites the default episim write to do all IO in an extra thread.
+ * Overwrites the default episim writer to do all IO in an extra thread.
  */
 public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler<AsyncEpisimWriter.LogEvent>,
 		EventTranslatorTwoArg<AsyncEpisimWriter.LogEvent, Writer, String[]> {
