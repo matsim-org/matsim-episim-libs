@@ -135,15 +135,16 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
-				//home can only interact with home or leisure
-				if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
+				//home can only interact with home, leisure or work
+				if (infectionType.contains("home") && !infectionType.contains("leis") && !infectionType.contains("work")
+						&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
 					continue;
-				} else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu"))) {
+				} else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
 					//edu can only interact with work or edu
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity, now);
+					trackContactPerson(personLeavingContainer, contactPerson, now);
 				}
 			}
 
@@ -249,11 +250,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		return infectionType;
 	}
 
-	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, String leavingPersonsActivity, double now) {
-		if (leavingPersonsActivity.contains("home") || leavingPersonsActivity.contains("work") || (leavingPersonsActivity.contains("leisure") && rnd.nextDouble() < 0.8)) {
-			personLeavingContainer.addTraceableContactPerson(otherPerson, now);
-			otherPerson.addTraceableContactPerson(personLeavingContainer, now);
-		}
+	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {
+		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
+		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
 	}
 
 }
