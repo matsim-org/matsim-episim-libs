@@ -24,6 +24,8 @@ process to create a snz scenario
         (2) merge from (1) and step (3)
     (class CutSchoolPopulationFitting2UseCaseAdultPopulation)
 
+    //TODO description of the step assigning districts is missing....
+
 5. build plans for school population, (take step 4 (1) as input)
 
      !!! might be that you have to tune age classes for schools !!! (e.g. primary school in Berlin = 6 - 12 but primary school in Munich = 6 - 10)

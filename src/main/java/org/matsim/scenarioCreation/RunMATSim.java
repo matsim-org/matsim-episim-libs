@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -36,7 +36,7 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
  */
 public class RunMATSim {
 
-	private static final String INPUT_SCHOOL_PLANS =  "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_schoolPlans.xml.gz";
+	private static final String INPUT_SCHOOL_PLANS =  "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_u14population_schoolPlans.xml.gz";
 
 
 	public static void main(String[] args) {
@@ -61,11 +61,11 @@ public class RunMATSim {
 		config.qsim().setStartTime(0);
 		config.qsim().setEndTime(36. * 3600);
 
-		config.network().setInputFile("../shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedNetwork.xml.gz");
+		config.network().setInputFile("../../svn/shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedNetwork.xml.gz");
 
 		config.transit().setUseTransit(true);
-		config.transit().setTransitScheduleFile("../shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedSchedule.xml.gz");
-		config.transit().setVehiclesFile("../shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedVehicles.xml.gz");
+		config.transit().setTransitScheduleFile("../../svn/shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedSchedule.xml.gz");
+		config.transit().setVehiclesFile("../../svn/shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedVehicles.xml.gz");
 		config.transitRouter().setMaxBeelineWalkConnectionDistance(300);
 
 		config.plans().setInputFile(plansFile);

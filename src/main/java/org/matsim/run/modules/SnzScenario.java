@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -34,7 +34,7 @@ public class SnzScenario extends AbstractModule {
 	public static final String[] DEFAULT_ACTIVITIES = {
 			"pt", "work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business"
 	};
-	
+
 	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
 		episimConfig.getOrAddContainerParams("pt")
 				.setContactIntensity(10.0);
@@ -97,7 +97,7 @@ public class SnzScenario extends AbstractModule {
 
 		setContactIntensities(episimConfig);
 		int offset = 0;
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
 				.restrict(20 + offset, 0.95, "work")
 				.restrict(22 + offset, 0.9, "work")
@@ -145,7 +145,7 @@ public class SnzScenario extends AbstractModule {
 				.restrict(23 + offset, 0., "educ_secondary", "educ_higher")
 				.build()
 		);
-	
+
 		config.controler().setOutputDirectory("./output-belin-" + offset);
 
 		return config;
