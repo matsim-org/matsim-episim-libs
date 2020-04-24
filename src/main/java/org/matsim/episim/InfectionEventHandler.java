@@ -410,32 +410,41 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
 		Id<Facility> firstFacilityId = Id.create(person.getFirstFacilityId(), Facility.class);
+
+		// now is the next day
+		double now = (iteration + 1) * 86400d;
+
 		if (person.isInContainer()) {
 			EpisimContainer<?> container = person.getCurrentContainer();
 			Id<?> lastFacilityId = container.getContainerId();
 
 			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
 				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-				infectionModel.infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
+				String actType = person.getTrajectory().get(person.getTrajectory().size() - 1);
+
+				infectionModel.infectionDynamicsFacility(person, lastFacility, now, actType);
+				person.addSpentTime(actType, now - lastFacility.getContainerEnteringTime(person.getPersonId()));
+
+
 				lastFacility.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, (iteration + 1) * 86400d);
+				firstFacility.addPerson(person, now);
 			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
 				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
-				infectionModel.infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
+				infectionModel.infectionDynamicsVehicle(person, lastVehicle, now);
+				person.addSpentTime("pt", now - lastVehicle.getContainerEnteringTime(person.getPersonId()));
+
 				lastVehicle.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, (iteration + 1) * 86400d);
+				firstFacility.addPerson(person, now);
 			}
 		} else {
 			EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-			firstFacility.addPerson(person, (iteration + 1) * 86400d);
+			firstFacility.addPerson(person, now);
 		}
 	}
 
 	public Collection<EpisimPerson> getPersons() {
-		// I have nothing against given out the map if someone needs it, but as long as nobody needs it, we can as well give out this partial view and thus
-		// keep implemention options open.  kai, mar'20
 		return Collections.unmodifiableCollection(personMap.values());
 	}
 
