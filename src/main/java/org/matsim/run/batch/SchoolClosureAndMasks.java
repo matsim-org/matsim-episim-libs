@@ -69,11 +69,12 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 				.restrict(32 + params.offset, 0., "leisure")
 				.restrict(32 + params.offset, 0.6, "work")
 				.restrict(32 + params.offset, 0.4, "shopping", "errands", "business")
+				.restrict(67 + params.offset, Restriction.of(1, FaceMask.CLOTH), params.maskHome)
 				.restrict(67 + params.offset, Restriction.of(params.remainingFractionLeisure, FaceMask.CLOTH), "leisure")
 				.restrict(67 + params.offset, Restriction.of(params.remainingFractionWork, FaceMask.CLOTH), "work")
 				.restrict(67 + params.offset, Restriction.of(params.remainingFractionShoppingBusinessErrands, FaceMask.CLOTH), "shopping", "errands", "business")
 				.restrict(67 + params.offset, Restriction.of(0.1, FaceMask.CLOTH), "educ_primary", "educ_kiga")
-				.restrict(67 + params.offset, Restriction.of(1, FaceMask.CLOTH), "pt")
+				.restrict(67 + params.offset, Restriction.of(1, FaceMask.CLOTH), "pt", "tr")
 				.restrict(74 + params.offset, Restriction.of(params.remainingFractionKiga, FaceMask.CLOTH), "educ_kiga")
 				.restrict(74 + params.offset, Restriction.of(params.remainingFractionPrima, FaceMask.CLOTH), "educ_primary")
 				.build();
@@ -101,6 +102,9 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 		
 		@Parameter({0., 0.5, 0.9, 1.})
 		double maskCompliance;
+		
+		@StringParameter({"noHome", "home"})
+		String maskHome;
 
 		@Parameter({0.5, 0.1})
 		double remainingFractionKiga;
