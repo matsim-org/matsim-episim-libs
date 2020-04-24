@@ -8,22 +8,28 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.matsim.run;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
@@ -36,6 +42,8 @@ import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -59,7 +67,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "82")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v7")
+	private String runVersion;
+
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "75")
 	private int stepSize;
 
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
@@ -79,7 +90,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Path dir = output.resolve(runName);
+		Path dir = output.resolve(runVersion + "-" + StringUtils.uncapitalize(runName));
 		Path input = dir.resolve("input");
 
 		Files.createDirectories(input);
@@ -91,6 +102,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
+		BufferedWriter yamlWriter = new BufferedWriter(new FileWriter(dir.resolve("metadata.yaml").toFile()));
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
@@ -101,6 +113,21 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		infoWriter.write(Joiner.on(";").join(header));
 		infoWriter.newLine();
 
+		ObjectMapper mapper = new ObjectMapper(new YAMLFactory()
+				.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES))
+				.registerModule(new JavaTimeModule())
+				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+		LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
+
+		metadata.put("city", StringUtils.capitalize(runName));
+		metadata.put("readme", runVersion + "-notes.md");
+		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
+		metadata.put("info", runVersion + "-info-" + runName + ".txt");
+		metadata.put("timestamp", LocalDate.now());
+
+		metadata.putAll(prepare.getMetadata());
+		mapper.writeValue(yamlWriter, metadata);
 
 		for (PreparedRun.Run run : prepare.runs) {
 
@@ -119,11 +146,12 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
 			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
 
-			infoWriter.write(Joiner.on(";").join(line));
-			infoWriter.newLine();
-
+			// base case is not contained in the info file
+			if (run.id > 0) {
+				infoWriter.write(Joiner.on(";").join(line));
+				infoWriter.newLine();
+			}
 		}
-
 
 		// Round up array size to be multiple of step size
 		int step = (1000 / stepSize) * stepSize;

@@ -24,13 +24,15 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzScenario;
 
 import java.util.List;
 import java.util.Map;
 
-public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
+public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMasks.Params> {
 
 	@Override
 	public Config baseCase(int id) {
@@ -55,27 +57,32 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 	}
 
 	@Override
-	public Config prepareConfig(int id, SchoolClosure.Params params) {
+	public Config prepareConfig(int id, SchoolClosureAndMasks.Params params) {
 
 		Config config = baseCase(id);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
+		
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				.restrict(23 + params.offset, params.remainingFractionLeisure1, "leisure")
+				.restrict(23 + params.offset, 0.6, "leisure")
 				.restrict(23 + params.offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(23 + params.offset, 0., "educ_secondary", "educ_higher")
-				.restrict(32 + params.offset, params.remainingFractionLeisure2, "leisure")
-				.restrict(32 + params.offset, params.remainingFractionWork, "work")
-				.restrict(32 + params.offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
-				.restrict(60 + params.offset, params.remainingFractionKiga, "educ_kiga")
-				.restrict(60 + params.offset, params.remainingFractionPrima, "educ_primary")
-				.restrict(60 + params.offset, params.remainingFractionSecon, "educ_secondary")
+				.restrict(32 + params.offset, 0., "leisure")
+				.restrict(32 + params.offset, 0.6, "work")
+				.restrict(32 + params.offset, 0.4, "shopping", "errands", "business")
+				.restrict(67 + params.offset, Restriction.of(1, FaceMask.CLOTH), params.maskHome)
+				.restrict(67 + params.offset, Restriction.of(params.remainingFractionLeisure, FaceMask.CLOTH), "leisure")
+				.restrict(67 + params.offset, Restriction.of(params.remainingFractionWork, FaceMask.CLOTH), "work")
+				.restrict(67 + params.offset, Restriction.of(params.remainingFractionShoppingBusinessErrands, FaceMask.CLOTH), "shopping", "errands", "business")
+				.restrict(67 + params.offset, Restriction.of(0.1, FaceMask.CLOTH), "educ_primary", "educ_kiga")
+				.restrict(67 + params.offset, Restriction.of(1, FaceMask.CLOTH), "pt", "tr")
+				.restrict(74 + params.offset, Restriction.of(params.remainingFractionKiga, FaceMask.CLOTH), "educ_kiga")
+				.restrict(74 + params.offset, Restriction.of(params.remainingFractionPrima, FaceMask.CLOTH), "educ_primary")
 				.build();
 
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
-
+		episimConfig.setMaskCompliance(params.maskCompliance);
 		return config;
 	}
 
@@ -90,8 +97,14 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 	public static final class Params {
 
-		@IntParameter({-6, -3, 0})
+		@IntParameter({3, 0, 6})
 		int offset;
+		
+		@Parameter({0., 0.5, 0.9, 1.})
+		double maskCompliance;
+		
+		@StringParameter({"noHome", "home"})
+		String maskHome;
 
 		@Parameter({0.5, 0.1})
 		double remainingFractionKiga;
@@ -99,19 +112,13 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		@Parameter({0.5, 0.1})
 		double remainingFractionPrima;
 
-		@Parameter({0.5, 0.})
-		double remainingFractionSecon;
+		@Parameter({0.2, 0.})
+		double remainingFractionLeisure;
 
-		@Parameter({0.8, 0.6, 0.4, 0.2})
-		double remainingFractionLeisure1;
-
-		@Parameter({0.2, 0})
-		double remainingFractionLeisure2;
-
-		@Parameter({0.8, 0.6, 0.4})
+		@Parameter({0.8, 0.6})
 		double remainingFractionWork;
 
-		@Parameter({0.4, 0.2})
+		@Parameter({0.6, 0.4})
 		double remainingFractionShoppingBusinessErrands;
 
 	}

@@ -20,9 +20,11 @@
  */
 package org.matsim.episim;
 
+import com.google.common.collect.Lists;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.policy.Restriction;
@@ -35,10 +37,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -54,12 +53,14 @@ public final class EpisimReporting {
 	private final BufferedWriter infectionReport;
 	private final BufferedWriter infectionEvents;
 	private final BufferedWriter restrictionReport;
+	private final BufferedWriter timeUse;
 
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+	private final EpisimConfigGroup episimConfig;
 
 	EpisimReporting(Config config, EpisimWriter writer) {
 		String base = config.controler().getOutputDirectory();
@@ -73,20 +74,22 @@ public final class EpisimReporting {
 			}
 		}
 
-		EpisimConfigGroup episimConfigGroup = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		this.writer = writer;
 
 		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
-				"day", "", episimConfigGroup.createInitialRestrictions().keySet().toArray());
+				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
+				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
 
-		sampleSize = episimConfigGroup.getSampleSize();
+		sampleSize = episimConfig.getSampleSize();
 
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
-					episimConfigGroup.getPolicy().root().render(ConfigRenderOptions.defaults()
+					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
 							.setOriginComments(false)
 							.setJson(false)));
 		} catch (IOException e) {
@@ -236,8 +239,39 @@ public final class EpisimReporting {
 	}
 
 	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
+		if (iteration == 0) return;
 		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, "", restrictions.values().toArray()));
 		writer.append(restrictionReport, "\n");
+	}
+
+	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration) {
+
+		if (iteration == 0) return;
+
+		ObjectDoubleHashMap<String> avg = new ObjectDoubleHashMap<>();
+
+		int i = 1;
+		for (EpisimPerson person : persons) {
+
+			// computing incremental avg.
+			// Average += (NewValue - Average) / NewSampleCount;
+			for (String act : activities) {
+				avg.addToValue(act, (person.getSpentTime().get(act) - avg.get(act)) / i);
+			}
+
+			person.getSpentTime().clear();
+			i++;
+		}
+
+		List<String> order = Lists.newArrayList(activities);
+		Object[] array = new String[order.size()];
+		Arrays.fill(array, "");
+
+		// report minutes
+		avg.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
+
+		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array) );
+		writer.append(timeUse, "\n");
 	}
 
 	enum InfectionsWriterFields {

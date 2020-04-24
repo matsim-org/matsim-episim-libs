@@ -76,7 +76,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private final Map<Id<Person>, EpisimPerson> personMap = new IdMap<>(Person.class);
 	private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new IdMap<>(Vehicle.class);
-	private final Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new IdMap<>(Facility.class);
+	private final Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new IdMap<>(Facility.class,
+			// the number of facility ids is not known beforehand, so we use this as initial estimate
+			(int) (Id.getNumberOfIds(Vehicle.class) * 1.3));
 
 	/**
 	 * Holds the current restrictions in place for all the activities.
@@ -174,24 +176,28 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), this::createPerson);
 		Id<Facility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
+		EpisimFacility episimFacility;
 		if (iteration == 0) {
-			EpisimFacility episimFacility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
+			episimFacility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
 			if (episimPerson.getFirstFacilityId() == null) {
 				episimFacility.addPerson(episimPerson, 0);
 			}
-			infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
-			episimFacility.removePerson(episimPerson.getPersonId());
 		} else {
-			EpisimFacility episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
+			episimFacility = ((EpisimFacility) episimPerson.getCurrentContainer());
 			if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
 				throw new IllegalStateException("Something went wrong ...");
 			}
-			infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
-			episimFacility.removePerson(episimPerson.getPersonId());
 		}
+
+		infectionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
+		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
+		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
+
+		episimFacility.removePerson(episimPerson.getPersonId());
 		if (episimPerson.getCurrentPositionInTrajectory() == 0) {
 			episimPerson.setFirstFacilityId(episimFacilityId.toString());
 		}
+
 		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
 
 	}
@@ -229,6 +235,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = episimVehicle.getPerson(leavesVehicleEvent.getPersonId());
 
 		infectionModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
+
+		double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
+
+		// This type depends on the params defined in the scenario
+		episimPerson.addSpentTime("pt", timeSpent);
 
 		// remove person from vehicle:
 		episimVehicle.removePerson(episimPerson.getPersonId());
@@ -309,10 +320,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	}
 
 	private void handleInitialInfections() {
-		if (this.iteration != 1) {
-			return;
-		}
-
 		String district = episimConfig.getInitialInfectionDistrict();
 
 		List<EpisimPerson> candidates = this.personMap.values().stream()
@@ -336,6 +343,41 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		} while (cnt > 0);
 	}
 
+	/**
+	 * Insert agents that appear in the population, but not in the event file, into their home container.
+	 */
+	private void insertStationaryAgents() {
+
+		int inserted = 0;
+		int skipped = 0;
+		for (Person p : scenario.getPopulation().getPersons().values()) {
+
+			if (!personMap.containsKey(p.getId())) {
+				String homeId = (String) p.getAttributes().getAttribute("homeId");
+
+				if (homeId != null) {
+
+					Id<Facility> facilityId = Id.create(homeId, Facility.class);
+					EpisimFacility facility = pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
+					EpisimPerson episimPerson = personMap.computeIfAbsent(p.getId(), this::createPerson);
+
+					episimPerson.setFirstFacilityId(facilityId.toString());
+					episimPerson.setLastFacilityId(facilityId.toString());
+					episimPerson.addToTrajectory("home");
+
+					facility.addPerson(episimPerson, 0);
+
+					inserted++;
+				} else
+					skipped++;
+			}
+		}
+
+		if (skipped > 0)
+			log.warn("Ignored {} stationary agents, because of missing home ids", skipped);
+
+		log.info("Inserted {} stationary agents, total = {}", inserted, personMap.size());
+	}
 
 	@Override
 	public void reset(int iteration) {
@@ -348,12 +390,16 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		this.iteration = iteration;
 
-		handleInitialInfections();
+		if (iteration == 1) {
+			handleInitialInfections();
+			insertStationaryAgents();
+		}
 
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration);
+		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
@@ -364,33 +410,41 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
 		Id<Facility> firstFacilityId = Id.create(person.getFirstFacilityId(), Facility.class);
+
+		// now is the next day
+		double now = (iteration + 1) * 86400d;
+
 		if (person.isInContainer()) {
 			EpisimContainer<?> container = person.getCurrentContainer();
 			Id<?> lastFacilityId = container.getContainerId();
 
-			// unsafe casting here because container is only returning a wildcard type as id
 			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
 				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-				infectionModel.infectionDynamicsFacility(person, lastFacility, (iteration + 1) * 86400d, person.getTrajectory().get(person.getTrajectory().size() - 1));
+				String actType = person.getTrajectory().get(person.getTrajectory().size() - 1);
+
+				infectionModel.infectionDynamicsFacility(person, lastFacility, now, actType);
+				person.addSpentTime(actType, now - lastFacility.getContainerEnteringTime(person.getPersonId()));
+
+
 				lastFacility.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, (iteration + 1) * 86400d);
+				firstFacility.addPerson(person, now);
 			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
 				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
-				infectionModel.infectionDynamicsVehicle(person, lastVehicle, (iteration + 1) * 86400d);
+				infectionModel.infectionDynamicsVehicle(person, lastVehicle, now);
+				person.addSpentTime("pt", now - lastVehicle.getContainerEnteringTime(person.getPersonId()));
+
 				lastVehicle.removePerson(person.getPersonId());
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, (iteration + 1) * 86400d);
+				firstFacility.addPerson(person, now);
 			}
 		} else {
 			EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-			firstFacility.addPerson(person, (iteration + 1) * 86400d);
+			firstFacility.addPerson(person, now);
 		}
 	}
 
 	public Collection<EpisimPerson> getPersons() {
-		// I have nothing against given out the map if someone needs it, but as long as nobody needs it, we can as well give out this partial view and thus
-		// keep implemention options open.  kai, mar'20
 		return Collections.unmodifiableCollection(personMap.values());
 	}
 

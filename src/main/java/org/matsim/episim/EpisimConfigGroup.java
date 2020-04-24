@@ -45,7 +45,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
-	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTracablePersonsInQuarantine";
+	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
+	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
+	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
 	private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
@@ -60,11 +62,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
+	private double maskCompliance = 1d;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
 	private String initialInfectionDistrict = null;
-	private PutTracablePersonsInQuarantine putTracablePersonsInQuarantine = PutTracablePersonsInQuarantine.no;
+	/**
+	 * Day after which tracing starts and puts persons into quarantine.
+	 */
+	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;
+	/**
+	 * How many days the tracing works back.
+	 */
+	private int tracingDayDistance = 4;
+
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
@@ -127,14 +138,34 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.initialInfectionDistrict = initialInfectionDistrict;
 	}
 
+	@StringGetter(MASK_COMPLIANCE)
+	public double getMaskCompliance() {
+		return maskCompliance;
+	}
+
+	@StringSetter(MASK_COMPLIANCE)
+	public void setMaskCompliance(double maskCompliance) {
+		this.maskCompliance = maskCompliance;
+	}
+
 	@StringGetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
-	public PutTracablePersonsInQuarantine getPutTraceablePersonsInQuarantine() {
-		return this.putTracablePersonsInQuarantine;
+	public int getPutTraceablePersonsInQuarantineAfterDay() {
+		return putTraceablePersonsInQuarantineAfterDay;
 	}
 
 	@StringSetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
-	public void setPutTraceablePersonsInQuarantine(PutTracablePersonsInQuarantine putTracablePersonsInQuarantine) {
-		this.putTracablePersonsInQuarantine = putTracablePersonsInQuarantine;
+	public void setPutTraceablePersonsInQuarantineAfterDay(int putTraceablePersonsInQuarantineAfterDay) {
+		this.putTraceablePersonsInQuarantineAfterDay = putTraceablePersonsInQuarantineAfterDay;
+	}
+
+	@StringGetter(TRACING_DAYS_DISTANCE)
+	public int getTracingDayDistance() {
+		return tracingDayDistance;
+	}
+
+	@StringSetter(TRACING_DAYS_DISTANCE)
+	public void setTracingDayDistance(int tracingDayDistance) {
+		this.tracingDayDistance = tracingDayDistance;
 	}
 
 	/**
@@ -348,15 +379,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		if (params != null)
 			return params;
 
-		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity)); 
-		
+		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity));
 	}
 
 	public Collection<InfectionParams> getInfectionParams() {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 	}
-
-	public enum PutTracablePersonsInQuarantine {yes, no}
 
 	public enum FacilitiesHandling {bln, snz}
 
