@@ -46,15 +46,13 @@ public class EpisimModule extends AbstractModule {
 
 		binder().requireExplicitBindings();
 
-		// TODO: reporting can not be bound eager, because output path is not constructed yet
-		// probably reporting should create directory if needed, instead
-
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(DefaultProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(EpisimRunner.class).in(Singleton.class);
 		bind(ReplayHandler.class).in(Singleton.class);
 		bind(InfectionEventHandler.class).in(Singleton.class);
+		bind(EpisimReporting.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -82,11 +80,11 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	public EpisimReporting episimReporting(Config config) {
+	public EpisimWriter episimWriter(Config config) {
 
 		// TODO: differentiate when async writer is needed
 
-		return new EpisimReporting(config, new EpisimWriter());
+		return new EpisimWriter();
 	}
 
 	@Provides

@@ -21,12 +21,16 @@
 package org.matsim.episim;
 
 import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
+import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.events.handler.BasicEventHandler;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.EpisimWriter;
 
@@ -34,6 +38,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
@@ -43,38 +48,52 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Reporting and persisting of metrics, like number of infected people etc.
  */
-public final class EpisimReporting {
+public final class EpisimReporting implements BasicEventHandler {
 
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 
 	private final EpisimWriter writer;
 
+	/**
+	 * Base path for events, null if they don't need to be written.
+	 */
+	private final Path eventPath;
+
 	private final BufferedWriter infectionReport;
 	private final BufferedWriter infectionEvents;
 	private final BufferedWriter restrictionReport;
 	private final BufferedWriter timeUse;
-
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
 	private final EpisimConfigGroup episimConfig;
+	private BufferedWriter events;
 
+	@Inject
 	EpisimReporting(Config config, EpisimWriter writer) {
 		String base = config.controler().getOutputDirectory();
 
-		if (!Files.exists(Paths.get(base))) {
-			try {
-				Files.createDirectories(Paths.get(base));
-			} catch (IOException e) {
-				log.error("Could not create output directory", e);
-				throw new UncheckedIOException(e);
-			}
-		}
-
 		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		try {
+			if (!Files.exists(Paths.get(base))) {
+				Files.createDirectories(Paths.get(base));
+			}
+
+			if (episimConfig.getOutputEventsFolder() != null && !episimConfig.getOutputEventsFolder().isEmpty()) {
+				eventPath = Path.of(base, episimConfig.getOutputEventsFolder());
+				if (!Files.exists(eventPath))
+					Files.createDirectories(eventPath);
+			} else
+				eventPath = null;
+
+		} catch (IOException e) {
+			log.error("Could not create output directory", e);
+			throw new UncheckedIOException(e);
+		}
 
 		this.writer = writer;
 
@@ -270,8 +289,32 @@ public final class EpisimReporting {
 		// report minutes
 		avg.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
 
-		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array) );
+		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array));
 		writer.append(timeUse, "\n");
+	}
+
+	@Override
+	public void handleEvent(Event event) {
+
+		// TODO: may filter only a subset
+		// write all events
+		if (events != null)
+			writer.append(events, event);
+
+	}
+
+	@Override
+	public void reset(int iteration) {
+
+		if (eventPath == null) return;
+
+		if (events != null) {
+			writer.append(events, "</events>");
+			writer.close(events);
+		}
+
+		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
 	}
 
 	enum InfectionsWriterFields {

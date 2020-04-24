@@ -59,7 +59,7 @@ public class BenchmarkIteration {
 	@Benchmark
 	public void iteration() {
 
-		runner.doStep(replay, handler, null, iteration);
+		runner.doStep(replay, handler, iteration);
 		iteration++;
 
 	}

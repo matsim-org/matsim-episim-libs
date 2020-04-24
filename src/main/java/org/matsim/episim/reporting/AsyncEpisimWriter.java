@@ -5,8 +5,10 @@ import com.lmax.disruptor.EventTranslatorThreeArg;
 import com.lmax.disruptor.EventTranslatorTwoArg;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.util.DaemonThreadFactory;
+import org.matsim.api.core.v01.events.Event;
 
 import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.Writer;
 
 /**
@@ -17,6 +19,7 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 
 	private final Disruptor<LogEvent> disruptor;
 	private final StringEventTranslator translator = new StringEventTranslator();
+	private final EventEventTranslator eventEventTranslator = new EventEventTranslator();
 
 	public AsyncEpisimWriter() {
 
@@ -37,6 +40,11 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	@Override
 	public void append(BufferedWriter writer, String content) {
 		disruptor.publishEvent(translator, writer, content, false);
+	}
+
+	@Override
+	public void append(BufferedWriter writer, Event event) {
+		disruptor.publishEvent(eventEventTranslator, writer, event);
 	}
 
 	@Override
@@ -111,4 +119,21 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 			}
 		}
 	}
+
+	/**
+	 * Convert MATSim event to log event.
+	 */
+	public static class EventEventTranslator implements EventTranslatorTwoArg<LogEvent, Writer, Event> {
+
+		@Override
+		public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1) {
+			event.writer = arg0;
+			try {
+				EpisimWriter.writeEvent(event.content, arg1);
+			} catch (IOException e) {
+				log.error("Could not append event");
+			}
+		}
+	}
+
 }

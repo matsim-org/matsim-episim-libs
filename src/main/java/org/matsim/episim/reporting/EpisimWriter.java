@@ -3,11 +3,13 @@ package org.matsim.episim.reporting;
 import com.google.common.base.Joiner;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.utils.io.IOUtils;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Map;
 
 /**
  * Utility class to write reported data into csv files.
@@ -52,6 +54,66 @@ public class EpisimWriter {
 	}
 
 	/**
+	 * Writes an event as xml representation to {@code out}.
+	 */
+	public static void writeEvent(final Appendable out, final Event event) throws IOException {
+		out.append("\t<event ");
+		Map<String, String> attr = event.getAttributes();
+		for (Map.Entry<String, String> entry : attr.entrySet()) {
+			out.append(entry.getKey());
+			out.append("=\"");
+
+			writeAttributeValue(out, entry.getValue());
+
+			out.append("\" ");
+		}
+		out.append(" />\n");
+	}
+
+	private static void writeAttributeValue(final Appendable out, final String attributeValue) throws IOException {
+		if (attributeValue == null) {
+			return;
+		}
+
+		int len = attributeValue.length();
+		boolean encode = false;
+		for (int pos = 0; pos < len; pos++) {
+			char ch = attributeValue.charAt(pos);
+			if (ch == '<') {
+				encode = true;
+				break;
+			} else if (ch == '>') {
+				encode = true;
+				break;
+			} else if (ch == '\"') {
+				encode = true;
+				break;
+			} else if (ch == '&') {
+				encode = true;
+				break;
+			}
+		}
+		if (encode) {
+			for (int pos = 0; pos < len; pos++) {
+				char ch = attributeValue.charAt(pos);
+				if (ch == '<') {
+					out.append("&lt;");
+				} else if (ch == '>') {
+					out.append("&gt;");
+				} else if (ch == '\"') {
+					out.append("&quot;");
+				} else if (ch == '&') {
+					out.append("&amp;");
+				} else {
+					out.append(ch);
+				}
+			}
+		}
+
+		out.append(attributeValue);
+	}
+
+	/**
 	 * Append a new row to the writer, columns separated by separator.
 	 */
 	public void append(BufferedWriter writer, String[] array) {
@@ -77,6 +139,18 @@ public class EpisimWriter {
 	}
 
 	/**
+	 * Appends an event as xml representation to the output.
+	 */
+	public void append(BufferedWriter writer, Event event) {
+		try {
+			writeEvent(writer, event);
+		} catch (IOException e) {
+			log.error("Could not write event");
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	/**
 	 * Close a writer for writing.
 	 */
 	public void close(BufferedWriter writer) {
@@ -87,5 +161,4 @@ public class EpisimWriter {
 			throw new UncheckedIOException(e);
 		}
 	}
-
 }
