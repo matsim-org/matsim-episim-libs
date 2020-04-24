@@ -65,13 +65,11 @@ public final class DefaultProgressionModel implements ProgressionModel {
 			case contagious:
 
 				if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
-					// 10% chance of getting randomly tested and detected each day
-					if (rnd.nextDouble() < 0.1) {
-						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
-						for (EpisimPerson pw : person.getTraceableContactPersons(now - episimConfig.getTracingDayDistance() * DAY)) {
-							quarantinePerson(pw, day);
-						}
+					// 10% chance of getting randomly tested and detected each day
+					// TODO: actually rather independent from tracing...
+					if (rnd.nextDouble() < 0.1) {
+						onInfectionDetected(person, now, day);
 					}
 				}
 
@@ -81,14 +79,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						// 80% show symptoms and go into quarantine
 						// Diamond Princess study: (only) 18% show no symptoms.
 						person.setDiseaseStatus(now, DiseaseStatus.showingSymptoms);
-						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-
-						if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
-							for (EpisimPerson pw : person.getTraceableContactPersons(now - episimConfig.getTracingDayDistance() * DAY)) {
-								quarantinePerson(pw, day);
-							}
-						}
-
+						onInfectionDetected(person, now, day);
 					}
 
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
@@ -138,10 +129,35 @@ public final class DefaultProgressionModel implements ProgressionModel {
 		person.clearTraceableContractPersons(now - 7 * DAY);
 	}
 
+	/**
+	 * Called when the infection of a person is known, either through testing or symptoms.
+	 */
+	private void onInfectionDetected(EpisimPerson person, double now, int day) {
+
+		person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+
+		// perform tracing
+		if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
+
+			String homeId = (String) person.getAttributes().getAttribute("homeId");
+
+			// TODO: tracing household members makes always sense, no app or anything needed..
+			// they might not appear as contact persons under certain circumstances
+
+			for (EpisimPerson pw : person.getTraceableContactPersons(now - episimConfig.getTracingDayDistance() * DAY)) {
+
+				// Persons of the same household are always traced successfully
+				if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
+						|| rnd.nextDouble() < episimConfig.getTracingProbability())
+
+					quarantinePerson(pw, day);
+
+			}
+		}
+	}
+
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		// probability based tracing efficiency would be use full here.
-		// still all persons in household of p would need to be quarantined
 
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);

@@ -47,6 +47,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
+	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
@@ -75,6 +76,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * How many days the tracing works back.
 	 */
 	private int tracingDayDistance = 4;
+	/**
+	 * Probability of successfully tracing a person.
+	 */
+	private double tracingProbability = 1.0;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -166,6 +171,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(TRACING_DAYS_DISTANCE)
 	public void setTracingDayDistance(int tracingDayDistance) {
 		this.tracingDayDistance = tracingDayDistance;
+	}
+
+	@StringGetter(TRACING_PROBABILITY)
+	public double getTracingProbability() {
+		return tracingProbability;
+	}
+
+	@StringSetter(TRACING_PROBABILITY)
+	public void setTracingProbability(double tracingProbability) {
+		this.tracingProbability = tracingProbability;
 	}
 
 	/**
