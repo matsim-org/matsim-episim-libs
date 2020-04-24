@@ -111,6 +111,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final SplittableRandom rnd;
 
 	private int iteration = 0;
+	private int initialInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -129,6 +130,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.rnd = rnd;
 		this.progressionModel = progressionModel;
 		this.infectionModel = infectionModel;
+		this.initialInfectionsLeft = episimConfig.getInitialInfections();
 	}
 
 	/**
@@ -319,28 +321,35 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		person.addToTrajectory(trajectoryElement);
 	}
 
+	/**
+	 * Create one infection every day until initialInfections is 0.
+	 */
 	private void handleInitialInfections() {
+
+		if (initialInfectionsLeft == 0) return;
+
 		String district = episimConfig.getInitialInfectionDistrict();
 
 		List<EpisimPerson> candidates = this.personMap.values().stream()
 				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
+				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
 				.collect(Collectors.toList());
 
-		if (candidates.size() < episimConfig.getInitialInfections()) {
+		if (candidates.size() < initialInfectionsLeft) {
 			log.warn("Not enough persons match the initial infection requirement, using whole population...");
 			candidates = Lists.newArrayList(this.personMap.values());
 		}
 
-		int cnt = episimConfig.getInitialInfections();
-		do {
+		while (true) {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 				log.warn("Person {} has initial infection", randomPerson.getPersonId());
-				cnt--;
+				break;
 			}
+		}
 
-		} while (cnt > 0);
+		initialInfectionsLeft--;
 	}
 
 	/**
@@ -390,8 +399,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		this.iteration = iteration;
 
-		if (iteration == 1) {
+		if (iteration >= 1) {
 			handleInitialInfections();
+		}
+
+		if (iteration == 1) {
 			insertStationaryAgents();
 		}
 

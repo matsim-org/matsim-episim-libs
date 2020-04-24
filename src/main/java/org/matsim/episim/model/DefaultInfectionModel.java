@@ -135,10 +135,11 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
-				//home can only interact with home or leisure
-				if (infectionType.contains("home") && !infectionType.contains("leis") && !(leavingPersonsActivity.contains("home") && otherPersonsActivity.contains("home"))) {
+				//home can only interact with home, leisure or work
+				if (infectionType.contains("home") && !infectionType.contains("leis") && !infectionType.contains("work")
+						&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
 					continue;
-				} else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.contains("edu") && otherPersonsActivity.contains("edu"))) {
+				} else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
 					//edu can only interact with work or edu
 					continue;
 				}
