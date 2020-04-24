@@ -143,7 +143,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, leavingPersonsActivity, now);
+					trackContactPerson(personLeavingContainer, contactPerson, now);
 				}
 			}
 
@@ -249,11 +249,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		return infectionType;
 	}
 
-	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, String leavingPersonsActivity, double now) {
-		if (leavingPersonsActivity.contains("home") || leavingPersonsActivity.contains("work") || (leavingPersonsActivity.contains("leisure") && rnd.nextDouble() < 0.8)) {
-			personLeavingContainer.addTraceableContactPerson(otherPerson, now);
-			otherPerson.addTraceableContactPerson(personLeavingContainer, now);
-		}
+	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {
+		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
+		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
 	}
 
 }
