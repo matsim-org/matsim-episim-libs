@@ -64,12 +64,12 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case contagious:
 
-				if (episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
+				if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
 					// 10% chance of getting randomly tested and detected each day
 					if (rnd.nextDouble() < 0.1) {
 						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
-						for (EpisimPerson pw : person.getTraceableContactPersons(now - person.daysSince(DiseaseStatus.contagious, day) * DAY)) {
+						for (EpisimPerson pw : person.getTraceableContactPersons(now - episimConfig.getTracingDayDistance() * DAY)) {
 							quarantinePerson(pw, day);
 						}
 					}
@@ -83,8 +83,8 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						person.setDiseaseStatus(now, DiseaseStatus.showingSymptoms);
 						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
-						if (episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes) {
-							for (EpisimPerson pw : person.getTraceableContactPersons(now - person.daysSince(DiseaseStatus.contagious, day) * DAY)) {
+						if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
+							for (EpisimPerson pw : person.getTraceableContactPersons(now - episimConfig.getTracingDayDistance() * DAY)) {
 								quarantinePerson(pw, day);
 							}
 						}
@@ -139,6 +139,9 @@ public final class DefaultProgressionModel implements ProgressionModel {
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
+
+		// probability based tracing efficiency would be use full here.
+		// still all persons in household of p would need to be quarantined
 
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
