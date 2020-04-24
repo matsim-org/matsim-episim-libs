@@ -56,7 +56,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
 		this(rnd, episimConfig, reporting,
-				maskModel, episimConfig.getPutTraceablePersonsInQuarantine() == EpisimConfigGroup.PutTracablePersonsInQuarantine.yes);
+				maskModel, episimConfig.getPutTraceablePersonsInQuarantineAfterDay() < Integer.MAX_VALUE);
 	}
 
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, boolean trackingEnabled) {
