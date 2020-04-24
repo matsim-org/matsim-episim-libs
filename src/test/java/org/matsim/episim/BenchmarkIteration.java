@@ -3,7 +3,6 @@ package org.matsim.episim;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.config.Config;
 import org.matsim.run.modules.SnzScenario;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.runner.Runner;
@@ -13,8 +12,6 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 import org.openjdk.jmh.runner.options.TimeValue;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
 
 @BenchmarkMode(Mode.AverageTime)
@@ -44,15 +41,15 @@ public class BenchmarkIteration {
 
 		Injector injector = Guice.createInjector(new EpisimModule(), new SnzScenario());
 
-		Config config = injector.getInstance(Config.class);
-		Files.createDirectories(Path.of(config.controler().getOutputDirectory()));
 
 		runner = injector.getInstance(EpisimRunner.class);
 		replay = injector.getInstance(ReplayHandler.class);
 		handler = injector.getInstance(InfectionEventHandler.class);
 
-
 		injector.getInstance(EventsManager.class).addHandler(handler);
+
+		// benchmark with event writing
+		injector.getInstance(EventsManager.class).addHandler(injector.getInstance(EpisimReporting.class));
 
 	}
 

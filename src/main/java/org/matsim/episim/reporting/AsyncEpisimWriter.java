@@ -24,12 +24,14 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	public AsyncEpisimWriter() {
 
 		// Specify the size of the ring buffer, must be power of 2.
-		int bufferSize = 10240;
+		int bufferSize = 16384;
 
 		disruptor = new Disruptor<>(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE);
 
 		// Connect the handler
 		disruptor.handleEventsWith(this);
+
+		disruptor.start();
 	}
 
 	@Override
@@ -92,6 +94,7 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 
 		private void reset() {
 			close = false;
+			flush = true;
 
 			if (content.capacity() > BUFFER_SIZE) {
 				content.setLength(BUFFER_SIZE);
@@ -128,6 +131,7 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 		@Override
 		public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1) {
 			event.writer = arg0;
+			event.flush = false;
 			try {
 				EpisimWriter.writeEvent(event.content, arg1);
 			} catch (IOException e) {

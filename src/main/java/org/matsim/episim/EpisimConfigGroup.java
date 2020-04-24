@@ -41,7 +41,7 @@ import java.util.*;
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
-	private static final String OUTPUT_EVENTS_FOLDER = "outputEventsFolder";
+	private static final String OUTPUT_ALL_EVENTS = "outputAllEvents";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
@@ -56,7 +56,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
 
 	private String inputEventsFile = null;
-	private String outputEventsFolder = null;
+
+	/**
+	 * Whether to write every processed event or only Episim events.
+	 */
+	private boolean outputAllEvents = false;
 
 	// this is current default for 25% scenarios
 	private double calibrationParameter = 0.000002;
@@ -95,17 +99,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.inputEventsFile = inputEventsFile;
 	}
 
-	/**
-	 * Events will be written into subfolder of output (only if set)
-	 */
-	@StringGetter(OUTPUT_EVENTS_FOLDER)
-	public String getOutputEventsFolder() {
-		return outputEventsFolder;
+	@StringGetter(OUTPUT_ALL_EVENTS)
+	public boolean getOutputAllEvents() {
+		return outputAllEvents;
 	}
 
-	@StringSetter(OUTPUT_EVENTS_FOLDER)
-	public void setOutputEventsFolder(String outputEventsFolder) {
-		this.outputEventsFolder = outputEventsFolder;
+	@StringSetter(OUTPUT_ALL_EVENTS)
+	public void setOutputAllEvents(boolean outputAllEvents) {
+		this.outputAllEvents = outputAllEvents;
 	}
 
 	@StringGetter(CALIBRATION_PARAMETER)

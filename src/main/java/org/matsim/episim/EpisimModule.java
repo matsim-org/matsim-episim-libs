@@ -31,6 +31,7 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.model.*;
+import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import java.util.SplittableRandom;
@@ -80,11 +81,13 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	public EpisimWriter episimWriter(Config config) {
+	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
 
-		// TODO: differentiate when async writer is needed
-
-		return new EpisimWriter();
+		// Async writer is used for huge event number
+		if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getOutputAllEvents())
+			return new AsyncEpisimWriter();
+		else
+			return new EpisimWriter();
 	}
 
 	@Provides
