@@ -328,6 +328,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		if (initialInfectionsLeft == 0) return;
 
+		double now = EpisimUtils.getCorrectedTime(0, iteration);
+
 		String district = episimConfig.getInitialInfectionDistrict();
 
 		List<EpisimPerson> candidates = this.personMap.values().stream()
@@ -343,7 +345,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		while (true) {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
-				randomPerson.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
 				log.warn("Person {} has initial infection", randomPerson.getPersonId());
 				break;
 			}
