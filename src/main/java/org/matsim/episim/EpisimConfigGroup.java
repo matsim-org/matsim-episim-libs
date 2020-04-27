@@ -414,7 +414,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 */
 		tracing,
 		/**
-		 * Also write source events.
+		 * Write all, including input events.
 		 */
 		all
 	}

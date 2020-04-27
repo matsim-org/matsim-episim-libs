@@ -27,7 +27,7 @@ public class EpisimTestUtils {
 	};
 
 	private static final AtomicLong ID = new AtomicLong(0);
-	private static final EventsManager manager = Mockito.mock(EventsManager.class);
+	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class);
 
 	/**
 	 * Reset the person id counter.
@@ -77,7 +77,7 @@ public class EpisimTestUtils {
 	 * Create a person and add to container.
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), manager);
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 		p.getTrajectory().add(currentAct);
 
 		if (container != null) {

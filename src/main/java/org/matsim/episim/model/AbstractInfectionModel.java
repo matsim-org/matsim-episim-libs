@@ -179,6 +179,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, iteration);
 		}
 
+		reporting.reportInfection(personWrapper, infector, now, infectionType);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
 		// TODO: Currently not in use, is it still needed?
@@ -189,8 +190,6 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 				person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
 			}
 		}
-
-		reporting.reportInfection(personWrapper, infector, now, infectionType);
 	}
 
 	public Map<String, Restriction> getRestrictions() {
