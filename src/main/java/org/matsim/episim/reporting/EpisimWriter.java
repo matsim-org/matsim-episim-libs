@@ -33,6 +33,7 @@ public class EpisimWriter {
 		try {
 			writer.write(JOINER.join(enumClass.getEnumConstants()));
 			writer.write("\n");
+			writer.flush();
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -47,6 +48,7 @@ public class EpisimWriter {
 		try {
 			writer.write(JOINER.join(first, second, rest));
 			writer.write("\n");
+			writer.flush();
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}

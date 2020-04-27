@@ -41,7 +41,7 @@ import java.util.*;
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
-	private static final String OUTPUT_ALL_EVENTS = "outputAllEvents";
+	private static final String WRITE_EVENTS = "writeEvents";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
@@ -58,9 +58,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private String inputEventsFile = null;
 
 	/**
-	 * Whether to write every processed event or only Episim events.
+	 * Which events to write in the output.
 	 */
-	private boolean outputAllEvents = false;
+	private WriteEvents writeEvents = WriteEvents.episim;
 
 	// this is current default for 25% scenarios
 	private double calibrationParameter = 0.000002;
@@ -99,14 +99,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.inputEventsFile = inputEventsFile;
 	}
 
-	@StringGetter(OUTPUT_ALL_EVENTS)
-	public boolean getOutputAllEvents() {
-		return outputAllEvents;
+	@StringGetter(WRITE_EVENTS)
+	public WriteEvents getWriteEvents() {
+		return writeEvents;
 	}
 
-	@StringSetter(OUTPUT_ALL_EVENTS)
-	public void setOutputAllEvents(boolean outputAllEvents) {
-		this.outputAllEvents = outputAllEvents;
+	@StringSetter(WRITE_EVENTS)
+	public void setWriteEvents(WriteEvents writeEvents) {
+		this.writeEvents = writeEvents;
 	}
 
 	@StringGetter(CALIBRATION_PARAMETER)
@@ -388,6 +388,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	public enum FacilitiesHandling {bln, snz}
+
+	public enum WriteEvents {
+		/**
+		 * Write basic events like infections or disease status change.
+		 */
+		episim,
+		/**
+		 * Write additional contact tracing events.
+		 */
+		tracing,
+		/**
+		 * Also write source events.
+		 */
+		all
+	}
 
 	public static final class InfectionParams extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";

@@ -3,8 +3,12 @@ package org.matsim.episim.reporting;
 import com.lmax.disruptor.EventHandler;
 import com.lmax.disruptor.EventTranslatorThreeArg;
 import com.lmax.disruptor.EventTranslatorTwoArg;
+import com.lmax.disruptor.SleepingWaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
+import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.Event;
 
 import java.io.BufferedWriter;
@@ -15,28 +19,37 @@ import java.io.Writer;
  * Overwrites the default episim writer to do all IO in an extra thread.
  */
 public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler<AsyncEpisimWriter.LogEvent>,
-		EventTranslatorTwoArg<AsyncEpisimWriter.LogEvent, Writer, String[]> {
+		EventTranslatorTwoArg<AsyncEpisimWriter.LogEvent, Writer, Event> {
 
+	private final static Logger log = LogManager.getLogger(AsyncEpisimWriter.class);
 	private final Disruptor<LogEvent> disruptor;
 	private final StringEventTranslator translator = new StringEventTranslator();
-	private final EventEventTranslator eventEventTranslator = new EventEventTranslator();
-
-	public AsyncEpisimWriter() {
+	private final StringArrayEventTranslator arrayTranslator = new StringArrayEventTranslator();
+	/**
+	 * Constructor.
+	 *
+	 * @param singleProducer can be true when only one thread will publish events.
+	 */
+	public AsyncEpisimWriter(boolean singleProducer) {
 
 		// Specify the size of the ring buffer, must be power of 2.
 		int bufferSize = 16384;
 
-		disruptor = new Disruptor<>(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE);
+		disruptor = new Disruptor<>(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE,
+				singleProducer ? ProducerType.SINGLE : ProducerType.MULTI, new SleepingWaitStrategy());
+
 
 		// Connect the handler
 		disruptor.handleEventsWith(this);
+
+		log.info("Using async writer with singleProducer={}", singleProducer);
 
 		disruptor.start();
 	}
 
 	@Override
 	public void append(BufferedWriter writer, String[] array) {
-		disruptor.publishEvent(this, writer, array);
+		disruptor.publishEvent(arrayTranslator, writer, array);
 	}
 
 	@Override
@@ -46,7 +59,7 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 
 	@Override
 	public void append(BufferedWriter writer, Event event) {
-		disruptor.publishEvent(eventEventTranslator, writer, event);
+		disruptor.publishEvent(this, writer, event);
 	}
 
 	@Override
@@ -68,20 +81,17 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 		event.reset();
 	}
 
-	/**
-	 * Write one line with content separated by separator.
-	 */
 	@Override
-	public void translateTo(LogEvent event, long sequence, Writer arg0, String[] arg1) {
+	public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1) {
 		event.writer = arg0;
-
-		for (int i = 0; i < arg1.length; i++) {
-			event.content.append(arg1[i]);
-			if (i < arg1.length - 1) event.content.append(SEPARATOR);
+		event.flush = false;
+		try {
+			EpisimWriter.writeEvent(event.content, arg1);
+		} catch (IOException e) {
+			log.error("Could not append event");
 		}
-
-		event.content.append("\n");
 	}
+
 
 	protected static class LogEvent {
 
@@ -95,7 +105,6 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 		private void reset() {
 			close = false;
 			flush = true;
-
 			if (content.capacity() > BUFFER_SIZE) {
 				content.setLength(BUFFER_SIZE);
 				content.trimToSize();
@@ -108,7 +117,7 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	/**
 	 * Copy the string to buffer and also set close attribute.
 	 */
-	public static class StringEventTranslator implements EventTranslatorThreeArg<LogEvent, Writer, String, Boolean> {
+	public static final class StringEventTranslator implements EventTranslatorThreeArg<LogEvent, Writer, String, Boolean> {
 
 		@Override
 		public void translateTo(LogEvent event, long sequence, Writer arg0, String arg1, Boolean arg2) {
@@ -126,18 +135,23 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	/**
 	 * Convert MATSim event to log event.
 	 */
-	public static class EventEventTranslator implements EventTranslatorTwoArg<LogEvent, Writer, Event> {
+	public static final class StringArrayEventTranslator implements EventTranslatorTwoArg<LogEvent, Writer, String[]> {
 
+		/**
+		 * Write one line with content separated by separator.
+		 */
 		@Override
-		public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1) {
+		public void translateTo(LogEvent event, long sequence, Writer arg0, String[] arg1) {
 			event.writer = arg0;
-			event.flush = false;
-			try {
-				EpisimWriter.writeEvent(event.content, arg1);
-			} catch (IOException e) {
-				log.error("Could not append event");
+
+			for (int i = 0; i < arg1.length; i++) {
+				event.content.append(arg1[i]);
+				if (i < arg1.length - 1) event.content.append(SEPARATOR);
 			}
+
+			event.content.append("\n");
 		}
+
 	}
 
 }

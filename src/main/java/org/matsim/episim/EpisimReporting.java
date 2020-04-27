@@ -71,23 +71,32 @@ public final class EpisimReporting implements BasicEventHandler {
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+	/**
+	 * Current day / iteration.
+	 */
+	private int iteration;
 	private BufferedWriter events;
+
 
 	@Inject
 	EpisimReporting(Config config, EpisimWriter writer) {
-		String base = config.controler().getOutputDirectory();
+		String base;
+		String outDir = config.controler().getOutputDirectory();
+
+		// file names depend on the run name
+		if (config.controler().getRunId() != null) {
+			base = outDir + "/" + config.controler().getRunId() + ".";
+		} else if (!outDir.endsWith("/")) {
+			base = outDir + "/";
+		} else
+			base = outDir;
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		try {
-			if (!Files.exists(Paths.get(base))) {
-				Files.createDirectories(Paths.get(base));
-			}
-
-			eventPath = Path.of(base, "events");
+			eventPath = Path.of(outDir, "events");
 			if (!Files.exists(eventPath))
 				Files.createDirectories(eventPath);
-
 
 		} catch (IOException e) {
 			log.error("Could not create output directory", e);
@@ -104,7 +113,7 @@ public final class EpisimReporting implements BasicEventHandler {
 				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
 
 		sampleSize = episimConfig.getSampleSize();
-		writeAllEvents = episimConfig.getOutputAllEvents();
+		writeAllEvents = episimConfig.getWriteEvents() == EpisimConfigGroup.WriteEvents.all;
 
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
@@ -296,8 +305,10 @@ public final class EpisimReporting implements BasicEventHandler {
 	@Override
 	public void handleEvent(Event event) {
 
-		// Write event if desired
-		if (writeAllEvents || event instanceof EpisimPersonStatusEvent)
+		// Crucial episim events are always written
+		// source MATSim events only on first iteration and if activated -> these events are always the same everyday
+
+		if (event instanceof EpisimPersonStatusEvent || (writeAllEvents && iteration == 0))
 			writer.append(events, event);
 
 	}
@@ -305,15 +316,29 @@ public final class EpisimReporting implements BasicEventHandler {
 	@Override
 	public void reset(int iteration) {
 
+		this.iteration = iteration;
+
 		if (events != null) {
 			writer.append(events, "</events>");
 			writer.close(events);
 		}
 
-		// TODO: will always create a new file, even if not needed
-
 		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
 		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
+	}
+
+	public void reportSimulationEnd() {
+
+		if (events != null) {
+			writer.append(events, "</events>");
+			writer.close(events);
+		}
+
+		writer.close(infectionReport);
+		writer.close(infectionEvents);
+		writer.close(restrictionReport);
+		writer.close(timeUse);
+
 	}
 
 	enum InfectionsWriterFields {

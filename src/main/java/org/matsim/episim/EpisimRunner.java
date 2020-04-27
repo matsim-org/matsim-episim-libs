@@ -22,20 +22,9 @@ package org.matsim.episim;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
-import jdk.javadoc.doclet.Reporter;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
-import org.matsim.core.events.algorithms.EventWriter;
-import org.matsim.core.events.algorithms.EventWriterXML;
-import org.matsim.episim.events.EpisimPersonStatusEvent;
-
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -70,17 +59,19 @@ public class EpisimRunner {
 		// Construct these dependencies as late as possible, so all other configs etc have been fully configured
 		final ReplayHandler replay = replayProvider.get();
 		final InfectionEventHandler handler = handlerProvider.get();
+		final EpisimReporting reporting = reportingProvider.get();
 
 		manager.addHandler(handler);
-		manager.addHandler(reportingProvider.get());
+		manager.addHandler(reporting);
 
 		for (int iteration = 0; iteration <= maxIterations; iteration++) {
 
 			if (!doStep(replay, handler, iteration))
-				return;
+				break;
 
 		}
 
+		reporting.reportSimulationEnd();
 	}
 
 	/**
@@ -94,14 +85,6 @@ public class EpisimRunner {
 		if (handler.isFinished())
 			return false;
 
-		// report initial status:
-		if (iteration == 0) {
-			for (EpisimPerson person : handler.getPersons()) {
-				if (person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
-					manager.processEvent(new EpisimPersonStatusEvent(0., person.getPersonId(), person.getDiseaseStatus()));
-				}
-			}
-		}
 
 		// Process all events
 		replay.replayEvents(manager, iteration);

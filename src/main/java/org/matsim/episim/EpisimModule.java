@@ -84,8 +84,9 @@ public class EpisimModule extends AbstractModule {
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
 
 		// Async writer is used for huge event number
-		if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getOutputAllEvents())
-			return new AsyncEpisimWriter();
+		if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
+			// by default only one episim simulation is running
+			return new AsyncEpisimWriter(true);
 		else
 			return new EpisimWriter();
 	}
