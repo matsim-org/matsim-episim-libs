@@ -210,7 +210,7 @@ public final class AgeDependentProgressionModel implements ProgressionModel {
 			}
 
 		} else {
-			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependant progression is not possible.");
+			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
 		}
 
 		return proba;
@@ -242,7 +242,7 @@ public final class AgeDependentProgressionModel implements ProgressionModel {
 			}
 
 		} else {
-			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependant progression is not possible.");
+			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
 		}
 
 		return proba;
