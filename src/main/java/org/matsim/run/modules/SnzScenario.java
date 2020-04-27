@@ -100,7 +100,7 @@ public class SnzScenario extends AbstractModule {
 		addParams(episimConfig);
 
 		setContactIntensities(episimConfig);
-		int offset = 0;
+		int offset = -6;
 
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
 				.restrict(20 - offset, 0.95, "work")
