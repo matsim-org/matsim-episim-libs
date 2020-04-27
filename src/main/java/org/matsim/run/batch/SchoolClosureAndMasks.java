@@ -114,9 +114,9 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
 				// Google mobility data currently stops at day 58 (18.04.2020)
-				.restrict(58 - offset, params.remainingFractionWork, "work")
-				.restrict(58 - offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
-				.restrict(58 - offset, params.remainingFractionLeisure, "leisure")
+//				.restrict(58 - offset, params.remainingFractionWork, "work")
+//				.restrict(58 - offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
+//				.restrict(58 - offset, params.remainingFractionLeisure, "leisure")
 				// masks are worn from day 67 onwards (27.04.2020); compliance is set via config
 				.restrict(67 - offset, Restriction.of(params.remainingFractionWork, wornMask), "work")
 				.restrict(67 - offset, Restriction.of(params.remainingFractionShoppingBusinessErrands, wornMask), "shopping", "errands", "business")
@@ -159,13 +159,13 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 		@Parameter({0.5, 0.})
 		double remainingFractionSeconHigher;
 
-		@Parameter({0.2, 0.})
+		@Parameter({0.1, 0.3})
 		double remainingFractionLeisure;
 
-		@Parameter({0.45, 0.6})
+		@Parameter({0.45, 0.65})
 		double remainingFractionWork;
 
-		@Parameter({0.6, 0.4})
+		@Parameter({0.7, 0.9})
 		double remainingFractionShoppingBusinessErrands;
 		
 		@StringParameter({"NONE", "CLOTH", "SURGICAL"})
