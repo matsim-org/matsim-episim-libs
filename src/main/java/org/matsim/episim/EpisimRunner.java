@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -24,17 +24,7 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
-import org.matsim.core.events.algorithms.EventWriter;
-import org.matsim.core.events.algorithms.EventWriterXML;
-import org.matsim.episim.events.EpisimPersonStatusEvent;
-
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -45,14 +35,16 @@ public class EpisimRunner {
 	private final EventsManager manager;
 	private final Provider<InfectionEventHandler> handlerProvider;
 	private final Provider<ReplayHandler> replayProvider;
+	private final Provider<EpisimReporting> reportingProvider;
 
 	@Inject
 	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider,
-						Provider<ReplayHandler> replay) {
+						Provider<ReplayHandler> replay, Provider<EpisimReporting> reportingProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
 		this.replayProvider = replay;
+		this.reportingProvider = reportingProvider;
 	}
 
 	/**
@@ -60,44 +52,26 @@ public class EpisimRunner {
 	 *
 	 * @param maxIterations maximum number of iterations (inclusive)
 	 */
-	public void run(int maxIterations) throws IOException {
-
-		Path out = Paths.get(config.controler().getOutputDirectory());
-		if (!Files.exists(out))
-			Files.createDirectories(out);
-
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		Path eventPath = null;
-		if (episimConfig.getOutputEventsFolder() != null && !episimConfig.getOutputEventsFolder().isEmpty()) {
-			eventPath = out.resolve(episimConfig.getOutputEventsFolder());
-			if (!Files.exists(eventPath))
-				Files.createDirectories(eventPath);
-		}
+	public void run(int maxIterations) {
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-
-		simulationLoop(maxIterations, eventPath);
-	}
-
-	/**
-	 * Performs the simulation loop.
-	 */
-	void simulationLoop(final int maxIterations, @Nullable final Path eventPath) {
 
 		// Construct these dependencies as late as possible, so all other configs etc have been fully configured
 		final ReplayHandler replay = replayProvider.get();
 		final InfectionEventHandler handler = handlerProvider.get();
+		final EpisimReporting reporting = reportingProvider.get();
 
 		manager.addHandler(handler);
+		manager.addHandler(reporting);
 
 		for (int iteration = 0; iteration <= maxIterations; iteration++) {
 
-			if (!doStep(replay, handler, eventPath, iteration))
-				return;
+			if (!doStep(replay, handler, iteration))
+				break;
 
 		}
 
+		reporting.close();
 	}
 
 	/**
@@ -105,35 +79,15 @@ public class EpisimRunner {
 	 *
 	 * @return false, when the simulation should end
 	 */
-	boolean doStep(final ReplayHandler replay, InfectionEventHandler handler, @Nullable final Path eventPath, int iteration) {
-
-		EventWriter writer = null;
-		// Only write events if output was set
-		if (eventPath != null) {
-			writer = new EventWriterXML(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
-			manager.addHandler(writer);
-		}
+	boolean doStep(final ReplayHandler replay, InfectionEventHandler handler, int iteration) {
 
 		manager.resetHandlers(iteration);
 		if (handler.isFinished())
 			return false;
 
-		// report initial status:
-		if (iteration == 0) {
-			for (EpisimPerson person : handler.getPersons()) {
-				if (person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
-					manager.processEvent(new EpisimPersonStatusEvent(0., person.getPersonId(), person.getDiseaseStatus()));
-				}
-			}
-		}
 
 		// Process all events
 		replay.replayEvents(manager, iteration);
-
-		if (writer != null) {
-			manager.removeHandler(writer);
-			writer.closeFile();
-		}
 
 		return true;
 	}
