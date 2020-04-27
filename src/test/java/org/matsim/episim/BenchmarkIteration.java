@@ -41,7 +41,7 @@ public class BenchmarkIteration {
 
 		Injector injector = Guice.createInjector(new EpisimModule(), new SnzScenario());
 
-		injector.getInstance(EpisimConfigGroup.class).setWriteEvents(EpisimConfigGroup.WriteEvents.all);
+		//injector.getInstance(EpisimConfigGroup.class).setWriteEvents(EpisimConfigGroup.WriteEvents.all);
 
 		runner = injector.getInstance(EpisimRunner.class);
 		replay = injector.getInstance(ReplayHandler.class);

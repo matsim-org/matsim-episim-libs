@@ -54,8 +54,6 @@ public class EpisimRunner {
 	 */
 	public void run(int maxIterations) {
 
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-
 		// Construct these dependencies as late as possible, so all other configs etc have been fully configured
 		final ReplayHandler replay = replayProvider.get();
 		final InfectionEventHandler handler = handlerProvider.get();
@@ -63,6 +61,8 @@ public class EpisimRunner {
 
 		manager.addHandler(handler);
 		manager.addHandler(reporting);
+
+		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
 		for (int iteration = 0; iteration <= maxIterations; iteration++) {
 
