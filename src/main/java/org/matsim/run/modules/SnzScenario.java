@@ -78,7 +78,7 @@ public class SnzScenario extends AbstractModule {
 
 //		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
 //		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans_withDistricts.xml.gz");
-		config.plans().setInputFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans.xml.gz");
+		config.plans().setInputFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans_withDistricts.xml.gz");
 //		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
 //		config.plans().setInputFile("./output/filteredPopulation.xml.gz");
 
@@ -104,7 +104,7 @@ public class SnzScenario extends AbstractModule {
 
 		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
 
-		config.controler().setOutputDirectory("./output-belinV2-base-google-" + offset);
+		config.controler().setOutputDirectory("./output-munich-base-google-" + offset);
 
 		return config;
 	}
