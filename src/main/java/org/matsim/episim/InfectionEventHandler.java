@@ -106,7 +106,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final Scenario scenario;
 
 	private final EpisimConfigGroup episimConfig;
-	private final EventsManager eventsManager;
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 
@@ -119,11 +118,10 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, EventsManager eventsManager, ProgressionModel progressionModel,
+	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel,
 								 EpisimReporting reporting, InfectionModel infectionModel, SplittableRandom rnd) {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.scenario = scenario;
-		this.eventsManager = eventsManager;
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = reporting;
@@ -287,7 +285,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			attrs = new Attributes();
 		}
 
-		return new EpisimPerson(id, attrs, eventsManager);
+		return new EpisimPerson(id, attrs, reporting);
 	}
 
 	private Id<Facility> createEpisimFacilityId(HasFacilityId event) {

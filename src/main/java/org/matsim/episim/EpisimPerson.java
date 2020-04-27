@@ -21,15 +21,19 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
+import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -38,7 +42,7 @@ import java.util.stream.Collectors;
 public final class EpisimPerson implements Attributable {
 
 	private final Id<Person> personId;
-	private final EventsManager eventsManager;
+	private final EpisimReporting reporting;
 	private final Attributes attributes;
 	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<String> trajectory = new ArrayList<>();
@@ -51,7 +55,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Total spent time during activities.
 	 */
-	private final ObjectDoubleHashMap<String> spentTime = new ObjectDoubleHashMap<>();
+	private final MutableObjectDoubleMap<String> spentTime = new ObjectDoubleHashMap<>();
 
 	/**
 	 * The {@link EpisimContainer} the person is currently located in.
@@ -77,10 +81,10 @@ public final class EpisimPerson implements Attributable {
 	private String lastFacilityId;
 	private String firstFacilityId;
 
-	EpisimPerson(Id<Person> personId, Attributes attrs, EventsManager eventsManager) {
+	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this.personId = personId;
 		this.attributes = attrs;
-		this.eventsManager = eventsManager;
+		this.reporting = reporting;
 	}
 
 	public Id<Person> getPersonId() {
@@ -96,7 +100,7 @@ public final class EpisimPerson implements Attributable {
 		if (!statusChanges.containsKey(status))
 			statusChanges.put(status, now);
 
-		eventsManager.processEvent(new EpisimPersonStatusEvent(now, personId, status));
+		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
@@ -243,7 +247,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Spent time of this person.
 	 */
-	public ObjectDoubleHashMap<String> getSpentTime() {
+	public MutableObjectDoubleMap<String> getSpentTime() {
 		return spentTime;
 	}
 

@@ -74,7 +74,7 @@ public class SnzScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-		
+
 		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
 //		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans_withDistricts.xml.gz");
 //		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans.xml.gz");
@@ -107,7 +107,7 @@ public class SnzScenario extends AbstractModule {
 				.restrict(22 - offset, 0.9, "work")
 				.restrict(23 - offset, 0.85, "work")
 				.restrict(25 - offset, 0.8, "work")
-				.restrict(26 - offset, 0.65, "work")	
+				.restrict(26 - offset, 0.65, "work")
 				.restrict(27 - offset, 0.6, "work")
 				.restrict(28 - offset, 0.55, "work")
 				.restrict(31 - offset, 0.5, "work")
