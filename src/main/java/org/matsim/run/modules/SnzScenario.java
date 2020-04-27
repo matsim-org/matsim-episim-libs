@@ -147,7 +147,7 @@ public class SnzScenario extends AbstractModule {
 				.restrict(31 - offset, 0.1, "leisure")
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
-				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga")
+//				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga")
 				.build()
 		);
 
