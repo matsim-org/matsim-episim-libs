@@ -27,7 +27,7 @@ public class EpisimTestUtils {
 	};
 
 	private static final AtomicLong ID = new AtomicLong(0);
-	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class);
+	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 
 	/**
 	 * Reset the person id counter.
