@@ -29,11 +29,16 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzScenario;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMasks.Params> {
-
+public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolClosureAndMasks.Params> {
+	@Override
+	public LocalDate startDay() {
+		return LocalDate.of(2020, 3, 21);
+	}
+	
 	@Override
 	public Config baseCase(int id) {
 
@@ -58,7 +63,7 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 	}
 
 	@Override
-	public Config prepareConfig(int id, SchoolClosureAndMasks.Params params) {
+	public Config prepareConfig(int id, BerlinSchoolClosureAndMasks.Params params) {
 
 		Config config = baseCase(id);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -139,9 +144,8 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 	@Override
 	public Map<Integer, List<String>> getMeasures() {
 		return Map.of(
-				23, List.of("remainingFractionLeisure1"),
-				32, List.of("remainingFractionLeisure2", "remainingFractionWork", "remainingFractionShoppingBusinessErrands"),
-				60, List.of("remainingFractionKiga", "remainingFractionPrima", "remainingFractionSecon")
+				67, List.of("remainingFractionWork", "remainingFractionShoppingBusinessErrands", "remainingFractionLeisure"),
+				74, List.of("remainingFractionPrima", "remainingFractionKiga", "remainingFractionSeconHigher")
 		);
 	}
 

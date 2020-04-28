@@ -76,10 +76,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosureAndMasks")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.BerlinSchoolClosureAndMasks")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SchoolClosureAndMasks$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.BerlinSchoolClosureAndMasks$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
