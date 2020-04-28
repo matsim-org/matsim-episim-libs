@@ -66,7 +66,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 * Base path for event files.
 	 */
 	private final Path eventPath;
-	private final boolean writeAllEvents;
+	private final EpisimConfigGroup.WriteEvents writeEvents;
 
 	private final BufferedWriter infectionReport;
 	private final BufferedWriter infectionEvents;
@@ -126,7 +126,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
 
 		sampleSize = episimConfig.getSampleSize();
-		writeAllEvents = episimConfig.getWriteEvents() == EpisimConfigGroup.WriteEvents.all;
+		writeEvents = episimConfig.getWriteEvents();
 
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
@@ -355,6 +355,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	}
 
+	/**
+	 * This method may ever only do event writing, as it can be disabled via config.
+	 */
 	@Override
 	public void handleEvent(Event event) {
 
@@ -364,7 +367,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		// Crucial episim events are always written
 		// other only if enabled
 
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || writeAllEvents)
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || writeEvents == EpisimConfigGroup.WriteEvents.all)
 			writer.append(events, event);
 
 	}
@@ -374,7 +377,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		this.iteration = iteration;
 
-		if (iteration == 0) return;
+		if (iteration == 0 ||writeEvents == EpisimConfigGroup.WriteEvents.none) return;
 
 		if (events != null) {
 			writer.append(events, "</events>");

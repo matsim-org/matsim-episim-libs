@@ -406,6 +406,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	public enum WriteEvents {
 		/**
+		 * Disable event writing completely.
+		 */
+		none,
+		/**
 		 * Write basic events like infections or disease status change.
 		 */
 		episim,
