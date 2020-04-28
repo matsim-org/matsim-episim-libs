@@ -24,12 +24,13 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 
 /**
  * Main entry point and runner of one epidemic simulation.
  */
-public class EpisimRunner {
+public final class EpisimRunner {
 
 	private final Config config;
 	private final EventsManager manager;
@@ -54,15 +55,18 @@ public class EpisimRunner {
 	 */
 	public void run(int maxIterations) {
 
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
-
 		// Construct these dependencies as late as possible, so all other configs etc have been fully configured
 		final ReplayHandler replay = replayProvider.get();
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
 
 		manager.addHandler(handler);
-		manager.addHandler(reporting);
+
+		// reporting will write events if necessary
+		if (ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
+			manager.addHandler(reporting);
+
+		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
 		for (int iteration = 0; iteration <= maxIterations; iteration++) {
 

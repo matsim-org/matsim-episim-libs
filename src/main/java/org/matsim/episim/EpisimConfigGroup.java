@@ -234,10 +234,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	@StringSetter("policyConfig")
 	public void setPolicyConfig(String policyConfig) {
-		File file = new File(policyConfig);
-		if (!policyConfig.equals("null") && !file.exists())
-			throw new IllegalArgumentException("Policy config does not exist: " + policyConfig);
-		this.policyConfig = ConfigFactory.parseFileAnySyntax(file);
+		if (policyConfig == null)
+			this.policyConfig = ConfigFactory.empty();
+		else {
+			File file = new File(policyConfig);
+			if (!policyConfig.equals("null") && !file.exists())
+				throw new IllegalArgumentException("Policy config does not exist: " + policyConfig);
+			this.policyConfig = ConfigFactory.parseFileAnySyntax(file);
+		}
 	}
 
 	/**
@@ -405,6 +409,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public enum FacilitiesHandling {bln, snz}
 
 	public enum WriteEvents {
+		/**
+		 * Disable event writing completely.
+		 */
+		none,
 		/**
 		 * Write basic events like infections or disease status change.
 		 */

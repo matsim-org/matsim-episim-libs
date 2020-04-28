@@ -67,7 +67,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v7")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v8")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "75")
@@ -76,10 +76,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.BerlinSchoolClosureAndMasks")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SchoolClosure$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.BerlinSchoolClosureAndMasks$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -96,7 +96,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Files.createDirectories(input);
 
 		// Copy all resources
-		for (String name : Lists.newArrayList("run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
@@ -167,8 +167,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			int arrayEnd = (int) Math.ceil((double) Math.min(offset + step, prepare.runs.size() - offset) / stepSize) * stepSize;
 
 			lines.add(
-					String.format("sbatch --export=JAVA_OPTS,EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
-							offset, arrayEnd, stepSize, stepSize, runName)
+					String.format("sbatch --export=JAVA_OPTS,EXTRA_OFFSET=%d --array=0-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
+							offset, arrayEnd - 1, stepSize, stepSize, runName)
 			);
 		}
 
