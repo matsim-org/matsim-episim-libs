@@ -49,11 +49,11 @@ public class BuildSchoolPlans {
 
 	private static final Logger log = Logger.getLogger(BuildSchoolPlans.class);
 
-	private static final String INPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_u14population_emptyPlans.xml.gz";
+	private static final String INPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_emptyPlans.xml.gz";
 
-	private static final String INPUT_FACILITIES_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_educationFacilities.txt";
+	private static final String INPUT_FACILITIES_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_educationFacilities.txt";
 
-	private static final String OUTPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_u14population_schoolPlans.xml.gz";
+	private static final String OUTPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_schoolPlans.xml.gz";
 
 	private final static Random RND = new Random(1);
 
