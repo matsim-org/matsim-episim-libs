@@ -75,39 +75,65 @@ public class SnzScenario extends AbstractModule {
 	public Config config() {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
-//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans_withDistricts.xml.gz");
-		config.plans().setInputFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans_withDistricts.xml.gz");
-//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
-//		config.plans().setInputFile("./output/filteredPopulation.xml.gz");
-
-
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
-		episimConfig.setInputEventsFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz");
-
-//		episimConfig.setInputEventsFile("/Users/sebastianmuller/Documents/episim-original-data/20200410_CH2019.25pct.run1.output_events.reducedForEpisim.xml.gz");
-
+		int offset = -4;
 
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_001_7);
 		episimConfig.setInitialInfections(50);
-		episimConfig.setInitialInfectionDistrict("München");
+		setContactIntensities(episimConfig);
 		addParams(episimConfig);
 
-		setContactIntensities(episimConfig);
-		int offset = -4;
-
-		episimConfig.setPolicy(FixedPolicy.class, buildPolicyMunich(offset)	);
-
-		config.controler().setOutputDirectory("./output-munich-base-google-" + offset);
+		prepareRunMunich(config, episimConfig, offset);
+//		prepareRunBerlin(config, episimConfig, offset);
+//		prepareRunBerlinV2(config, episimConfig, offset);
+//		prepareRunHeinsberg(config, episimConfig, offset);
 
 		return config;
 	}
+
+	private void prepareRunMunich(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans_withDistricts.xml.gz");
+
+		episimConfig.setInitialInfectionDistrict("München");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyMunich(offset)	);
+		config.controler().setOutputDirectory("./output-munich-" + offset);
+	}
+
+	private void prepareRunBerlinV2(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
+
+		episimConfig.setInitialInfectionDistrict("Berlin");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
+		config.controler().setOutputDirectory("./output-berlinV2-" + offset);
+	}
+
+	private void prepareRunBerlin(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans_withDistricts.xml.gz");
+
+		episimConfig.setInitialInfectionDistrict("Berlin");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
+		config.controler().setOutputDirectory("./output-berlin-" + offset);
+	}
+
+	private void prepareRunHeinsberg(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
+
+		episimConfig.setInitialInfectionDistrict("Heinsberg");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyHeinsberg(offset)	);
+		config.controler().setOutputDirectory("./output-heinsberg-" + offset);
+	}
+
+	private com.typesafe.config.Config buildPolicyHeinsberg(int offset) {
+		//TODO @ricardo
+		return null;
+	}
+
 
 	private com.typesafe.config.Config buildPolicyBerlin(int offset) {
 		return FixedPolicy.config()
