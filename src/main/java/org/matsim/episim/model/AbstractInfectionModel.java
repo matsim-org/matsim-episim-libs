@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -146,7 +146,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 * Set the iteration number and restrictions that are in place.
 	 */
 	@Override
-	public final void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
+	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
 		this.iteration = iteration;
 		this.restrictions = restrictions;
 	}
@@ -179,6 +179,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, iteration);
 		}
 
+		reporting.reportInfection(personWrapper, infector, now, infectionType);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
 		// TODO: Currently not in use, is it still needed?
@@ -189,8 +190,6 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 				person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
 			}
 		}
-
-		reporting.reportInfection(personWrapper, infector, now, infectionType);
 	}
 
 	public Map<String, Restriction> getRestrictions() {

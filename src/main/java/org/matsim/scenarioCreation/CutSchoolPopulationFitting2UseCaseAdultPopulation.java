@@ -46,16 +46,17 @@ import java.util.stream.Collectors;
  *
  *
  *
- * This class aims to cut a school population down to an area of interest by looking up the corresponding adult population and matching the id of the home facility.
- * This means, the output will contain all children living in facilities in which adults live.
+ * This class aims to cut a school population down to an area of interest by looking up the corresponding shape file and filtering the children population in a first processing step.
+ * Secondly, the home facilities of the children are compared to the adult population, such that the output will only contain children living in facilities in which adults live.
  * It is assumed that the input children file can have a higher sample size than the adult file. To account for that, the resulting children population
- * is sampled down.
+ * is sampled down by the given sample size.
  * <p>
  * <b>parameters:</b> <br>
  * input <br>
  * (1) population containing <b>school population</b> for germany  (snz scenario u14 population)<br>
  * (2) population containing <b>adult population</b> for use case (snz scenario o14 population for bln, munich, heinsberg)<br>
- * (3) <b>sample size ratio</b> (input children sample size / input adult sample size)<br>
+ * (3) path to shape file determining the use case area
+ * (4) <b>sample size for children</b><br>
  * output:<br>
  * (4) path for population containing school population for use case in the same sample size as the adults are, no plans but only attributes<br>
  * (5) path for population containing ALL persons with no plans in the target sample size<br>
@@ -68,13 +69,13 @@ import java.util.stream.Collectors;
 class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 	private static final String INPUT_SCHOOL_POPULATION_GER = "../../svn/shared-svn/projects/episim/matsim-files/snz/Deutschland/de_populationU14_fromPopulationAttributes.xml.gz";
-	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_plans_adults_25pct.xml.gz";
-	private static final String INPUT_SHAPE_USECASE = "";
+	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_adults_emptyPlans.xml.gz";
+	private static final String INPUT_SHAPE_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/shape-File/dilutionArea.shp";
 	private static final double SAMPLE_SIZE_FOR_CHILDREN_IN_SHAPE = 0.25d;
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
-	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_u14population_noPlans.xml.gz";
-	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz";
+	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_u14population_emptyPlans.xml.gz";
+	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans.xml.gz";
 
 	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
 
@@ -98,7 +99,7 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 		}
 
 		Population children = PopulationUtils.readPopulation(inputChildren);
-		Population adults = PopulationUtils.readPopulation(inputAdults);
+			Population adults = PopulationUtils.readPopulation(inputAdults);
 
 		log.info("nr of children in input file = " + children.getPersons().size());
 		log.info("nr of adults in input file = " + adults.getPersons().size());

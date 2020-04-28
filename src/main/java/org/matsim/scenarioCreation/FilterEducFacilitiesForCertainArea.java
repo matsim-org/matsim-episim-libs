@@ -54,8 +54,8 @@ public class FilterEducFacilitiesForCertainArea {
 
 	private static final String workingDir = "../../svn/shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathOfEduFacilitiesGER = workingDir + "Deutschland/de_facilities.education.xy";
-	private static final String ShapeFile = workingDir + "Berlin/original-data/berlin_umland.shp";
-	private static final String outputEducFileDir = workingDir + "Berlin/processed-data/be_snz_educationFacilities.txt";
+	private static final String ShapeFile = workingDir + "BerlinV2/shape-File/dilutionArea.shp";
+	private static final String outputEducFileDir = workingDir + "BerlinV2/processed-data/be_v2_snz_educationFacilities.txt";
 	private static List<EducFacility> educList = new ArrayList<>();
 	private static List<EducFacility> educListNewArea = new ArrayList<>();
 	private static List<EducFacility> educListNewAreaForOutput = new ArrayList<>();

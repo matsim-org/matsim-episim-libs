@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -21,14 +21,20 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
+import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Persons current state in the simulation.
@@ -36,15 +42,20 @@ import java.util.*;
 public final class EpisimPerson implements Attributable {
 
 	private final Id<Person> personId;
-	private final EventsManager eventsManager;
+	private final EpisimReporting reporting;
 	private final Attributes attributes;
-	private final Set<EpisimPerson> traceableContactPersons = new LinkedHashSet<>();
+	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<String> trajectory = new ArrayList<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
 	 */
 	private final EnumMap<DiseaseStatus, Double> statusChanges = new EnumMap<>(DiseaseStatus.class);
+
+	/**
+	 * Total spent time during activities.
+	 */
+	private final MutableObjectDoubleMap<String> spentTime = new ObjectDoubleHashMap<>();
 
 	/**
 	 * The {@link EpisimContainer} the person is currently located in.
@@ -70,10 +81,10 @@ public final class EpisimPerson implements Attributable {
 	private String lastFacilityId;
 	private String firstFacilityId;
 
-	EpisimPerson(Id<Person> personId, Attributes attrs, EventsManager eventsManager) {
+	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this.personId = personId;
 		this.attributes = attrs;
-		this.eventsManager = eventsManager;
+		this.reporting = reporting;
 	}
 
 	public Id<Person> getPersonId() {
@@ -89,7 +100,7 @@ public final class EpisimPerson implements Attributable {
 		if (!statusChanges.containsKey(status))
 			statusChanges.put(status, now);
 
-		eventsManager.processEvent(new EpisimPersonStatusEvent(now, personId, status));
+		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
@@ -145,12 +156,25 @@ public final class EpisimPerson implements Attributable {
 		this.lastFacilityId = lastFacilityId;
 	}
 
-	public void addTraceableContactPerson(EpisimPerson personWrapper) {
-		traceableContactPersons.add(personWrapper);
+	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
+		// Always use the latest tracking date
+		traceableContactPersons.put(personWrapper, now);
 	}
 
-	public Set<EpisimPerson> getTraceableContactPersons() {
-		return traceableContactPersons;
+	/**
+	 * Get all traced contacts that happened after certain time.
+	 */
+	public Set<EpisimPerson> getTraceableContactPersons(double after) {
+		return traceableContactPersons.keySet()
+				.stream().filter(k -> traceableContactPersons.get(k) >= after)
+				.collect(Collectors.toSet());
+	}
+
+	/**
+	 * Remove old contact tracing data before a certain date.
+	 */
+	public void clearTraceableContractPersons(double before) {
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
 	}
 
 	void addToTrajectory(String trajectoryElement) {
@@ -211,6 +235,20 @@ public final class EpisimPerson implements Attributable {
 
 	void setFirstFacilityId(String firstFacilityId) {
 		this.firstFacilityId = firstFacilityId;
+	}
+
+	/**
+	 * Add amount of time to spent time for an activity.
+	 */
+	public void addSpentTime(String actType, double timeSpent) {
+		spentTime.addToValue(actType, timeSpent);
+	}
+
+	/**
+	 * Spent time of this person.
+	 */
+	public MutableObjectDoubleMap<String> getSpentTime() {
+		return spentTime;
 	}
 
 	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms, seriouslySick, critical, recovered}

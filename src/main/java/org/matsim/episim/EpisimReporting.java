@@ -8,114 +8,134 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
 package org.matsim.episim;
 
-import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
+import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
+import org.matsim.api.core.v01.events.Event;
+import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.reporting.EpisimWriter;
 
 import java.io.BufferedWriter;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Collection;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Reporting and persisting of metrics, like number of infected people etc.
  */
-public final class EpisimReporting {
+public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
-	private static final Joiner separator = Joiner.on("\t");
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
 
-	private final BufferedWriter infectionsWriter;
-	private final BufferedWriter infectionEventsWriter;
-	private final BufferedWriter restrictionWriter;
+	private final EpisimWriter writer;
+	private final EventsManager manager;
+
+	/**
+	 * Base path for event files.
+	 */
+	private final Path eventPath;
+	private final EpisimConfigGroup.WriteEvents writeEvents;
+
+	private final BufferedWriter infectionReport;
+	private final BufferedWriter infectionEvents;
+	private final BufferedWriter restrictionReport;
+	private final BufferedWriter timeUse;
+
+	/**
+	 * Aggregated cumulative hospital cases by district.
+	 */
+	private final MutableObjectIntMap<String> hospitalCases = new ObjectIntHashMap<>();
 
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+	/**
+	 * Current day / iteration.
+	 */
+	private int iteration;
+	private BufferedWriter events;
 
-	EpisimReporting(Config config) {
+
+	@Inject
+	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {
 		String base;
+		String outDir = config.controler().getOutputDirectory();
+
+		// file names depend on the run name
 		if (config.controler().getRunId() != null) {
-			base = config.controler().getOutputDirectory() + "/" + config.controler().getRunId() + ".";
-		} else {
-			base = config.controler().getOutputDirectory() + "/";
+			base = outDir + "/" + config.controler().getRunId() + ".";
+		} else if (!outDir.endsWith("/")) {
+			base = outDir + "/";
+		} else
+			base = outDir;
+
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		try {
+			eventPath = Path.of(outDir, "events");
+			if (!Files.exists(eventPath))
+				Files.createDirectories(eventPath);
+
+		} catch (IOException e) {
+			log.error("Could not create output directory", e);
+			throw new UncheckedIOException(e);
 		}
 
-		EpisimConfigGroup episimConfigGroup = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.writer = writer;
+		this.manager = manager;
 
-		infectionsWriter = prepareWriter(base + "infections.txt", InfectionsWriterFields.class);
-		infectionEventsWriter = prepareWriter(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
-		restrictionWriter = prepareRestrictionWriter(base + "restrictions.txt", episimConfigGroup.createInitialRestrictions());
-		sampleSize = episimConfigGroup.getSampleSize();
+		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
+		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
+		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
+				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
+				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+
+		sampleSize = episimConfig.getSampleSize();
+		writeEvents = episimConfig.getWriteEvents();
 
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
-					episimConfigGroup.getPolicy().root().render(ConfigRenderOptions.defaults()
+					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
 							.setOriginComments(false)
 							.setJson(false)));
 		} catch (IOException e) {
 			log.error("Could not write policy config", e);
 		}
-	}
-
-	private static void write(String[] array, BufferedWriter writer) {
-		try {
-			writer.write(separator.join(array));
-			writer.newLine();
-			writer.flush();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-	}
-
-	private static BufferedWriter prepareWriter(String filename, Class<? extends Enum<?>> enumClass) {
-		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
-		try {
-			writer.write(separator.join(enumClass.getEnumConstants()));
-			writer.newLine();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-		return writer;
-	}
-
-	private BufferedWriter prepareRestrictionWriter(String filename, Map<String, Restriction> r) {
-		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
-		try {
-			writer.write(separator.join("day", "", r.keySet().toArray()));
-			writer.newLine();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-		return writer;
 	}
 
 	/**
@@ -189,8 +209,16 @@ public final class EpisimReporting {
 			}
 		}
 
-		reports.forEach((k, v) -> v.scale(1 / sampleSize));
+		// aggregate hospital cases at last
+		long nHospitalCumulative = 0;
+		for (String district : reports.keySet()) {
+			nHospitalCumulative += hospitalCases.get(district);
+			reports.get(district).nHospitalCumulative = hospitalCases.get(district);
+		}
 
+		reports.get("total").nHospitalCumulative = nHospitalCumulative;
+
+		reports.forEach((k, v) -> v.scale(1 / sampleSize));
 
 		return reports;
 	}
@@ -199,9 +227,8 @@ public final class EpisimReporting {
 	 * Writes the infection report to csv.
 	 */
 	void reporting(Map<String, InfectionReport> reports, int iteration) {
-		if (iteration == 0) {
-			return;
-		}
+		if (iteration == 0) return;
+
 		InfectionReport t = reports.get("total");
 
 		log.warn("===============================");
@@ -229,6 +256,7 @@ public final class EpisimReporting {
 
 			array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
 			array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((r.nTotalInfected + r.nRecovered));
+			array[InfectionsWriterFields.nHospitalCumulative.ordinal()] = Long.toString(r.nHospitalCumulative);
 
 			array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString(r.nInQuarantine);
 
@@ -236,7 +264,7 @@ public final class EpisimReporting {
 			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
-			write(array, infectionsWriter);
+			writer.append(infectionReport, array);
 		}
 	}
 
@@ -250,28 +278,119 @@ public final class EpisimReporting {
 			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
+		manager.processEvent(new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
+				personWrapper.getCurrentContainer().getContainerId(), infectionType));
+
+
 		String[] array = new String[InfectionEventsWriterFields.values().length];
 		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(now);
 		array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
 		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
 		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
 
-		write(array, infectionEventsWriter);
+		writer.append(infectionEvents, array);
 	}
 
 	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
-		try {
-			restrictionWriter.write(separator.join(iteration, "", restrictions.values().toArray()));
-			restrictionWriter.newLine();
-			restrictionWriter.flush();
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+		if (iteration == 0) return;
+
+		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, "", restrictions.values().toArray()));
+		writer.append(restrictionReport, "\n");
+	}
+
+	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration) {
+
+		if (iteration == 0) return;
+
+		ObjectDoubleHashMap<String> avg = new ObjectDoubleHashMap<>();
+
+		int i = 1;
+		for (EpisimPerson person : persons) {
+
+			// computing incremental avg.
+			// Average += (NewValue - Average) / NewSampleCount;
+			for (String act : activities) {
+				avg.addToValue(act, (person.getSpentTime().get(act) - avg.get(act)) / i);
+			}
+
+			person.getSpentTime().clear();
+			i++;
 		}
+
+		List<String> order = Lists.newArrayList(activities);
+		Object[] array = new String[order.size()];
+		Arrays.fill(array, "");
+
+		// report minutes
+		avg.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
+
+		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array));
+		writer.append(timeUse, "\n");
+	}
+
+	/**
+	 * Report that a person status has changed and publish corresponding event.
+	 */
+	public void reportPersonStatus(EpisimPerson person, EpisimPersonStatusEvent event) {
+
+		if (event.getDiseaseStatus() == EpisimPerson.DiseaseStatus.seriouslySick) {
+			String districtName = (String) person.getAttributes().getAttribute("district");
+			hospitalCases.addToValue(districtName == null ? "unknown" : districtName, 1);
+		}
+
+		manager.processEvent(event);
+	}
+
+	public void close() {
+
+		if (events != null) {
+			writer.append(events, "</events>");
+			writer.close(events);
+		}
+
+		writer.close(infectionReport);
+		writer.close(infectionEvents);
+		writer.close(restrictionReport);
+		writer.close(timeUse);
+
+	}
+
+	/**
+	 * This method may ever only do event writing, as it can be disabled via config.
+	 */
+	@Override
+	public void handleEvent(Event event) {
+
+		// Events on 0th day are not needed
+		if (iteration == 0) return;
+
+		// Crucial episim events are always written
+		// other only if enabled
+
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || writeEvents == EpisimConfigGroup.WriteEvents.all)
+			writer.append(events, event);
+
+	}
+
+	@Override
+	public void reset(int iteration) {
+
+		this.iteration = iteration;
+
+		if (iteration == 0 ||writeEvents == EpisimConfigGroup.WriteEvents.none) return;
+
+		if (events != null) {
+			writer.append(events, "</events>");
+			writer.close(events);
+		}
+
+		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
 	}
 
 	enum InfectionsWriterFields {
 		time, day, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected, nInfectedCumulative,
-		nRecovered, nInQuarantine, district
+		nHospitalCumulative, nRecovered, nInQuarantine, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType}
@@ -292,6 +411,7 @@ public final class EpisimReporting {
 		public long nSeriouslySick = 0;
 		public long nCritical = 0;
 		public long nTotalInfected = 0;
+		public long nHospitalCumulative = 0;
 		public long nRecovered = 0;
 		public long nInQuarantine = 0;
 
@@ -313,6 +433,7 @@ public final class EpisimReporting {
 			nSeriouslySick *= factor;
 			nCritical *= factor;
 			nTotalInfected *= factor;
+			nHospitalCumulative *= factor;
 			nRecovered *= factor;
 			nInQuarantine *= factor;
 		}

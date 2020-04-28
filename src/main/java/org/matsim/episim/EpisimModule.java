@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -31,6 +31,8 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.model.*;
+import org.matsim.episim.reporting.AsyncEpisimWriter;
+import org.matsim.episim.reporting.EpisimWriter;
 
 import java.util.SplittableRandom;
 
@@ -45,15 +47,13 @@ public class EpisimModule extends AbstractModule {
 
 		binder().requireExplicitBindings();
 
-		// TODO: reporting can not be bound eager, because output path is not constructed yet
-		// probably reporting should create directory if needed, instead
-
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(DefaultProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(EpisimRunner.class).in(Singleton.class);
 		bind(ReplayHandler.class).in(Singleton.class);
 		bind(InfectionEventHandler.class).in(Singleton.class);
+		bind(EpisimReporting.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -81,8 +81,14 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
-	public EpisimReporting episimReporting(Config config) {
-		return new EpisimReporting(config);
+	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
+
+		// Async writer is used for huge event number
+		if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
+			// by default only one episim simulation is running
+			return new AsyncEpisimWriter(true);
+		else
+			return new EpisimWriter();
 	}
 
 	@Provides

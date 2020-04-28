@@ -1,10 +1,9 @@
 package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.facilities.Facility;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
@@ -27,7 +26,7 @@ public class EpisimTestUtils {
 	};
 
 	private static final AtomicLong ID = new AtomicLong(0);
-	private static final EventsManager manager = Mockito.mock(EventsManager.class);
+	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 
 	/**
 	 * Reset the person id counter.
@@ -53,13 +52,16 @@ public class EpisimTestUtils {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c1.0").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c5").setContactIntensity(5));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c10").setContactIntensity(10));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home").setContactIntensity(10));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leis").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setContactIntensity(1));
 
 		return episimConfig;
 	}
 
 	public static InfectionEventHandler.EpisimFacility createFacility() {
-		return new InfectionEventHandler.EpisimFacility(Id.create(ID.getAndIncrement(), Facility.class));
+		return new InfectionEventHandler.EpisimFacility(Id.create(ID.getAndIncrement(), ActivityFacility.class));
 	}
 
 	/**
@@ -74,7 +76,7 @@ public class EpisimTestUtils {
 	 * Create a person and add to container.
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
-		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), manager);
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 		p.getTrajectory().add(currentAct);
 
 		if (container != null) {

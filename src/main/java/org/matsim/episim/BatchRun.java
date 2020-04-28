@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -22,20 +22,26 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -52,9 +58,9 @@ public interface BatchRun<T> {
 	/**
 	 * Loads the defined parameters and executes the {@link #prepareConfig(int, Object)} procedure.
 	 *
-	 * @param clazz setup class
+	 * @param clazz      setup class
 	 * @param paramClazz class holding the parameters
-	 * @param <T> params type
+	 * @param <T>        params type
 	 */
 	static <T> PreparedRun prepare(Class<? extends BatchRun<T>> clazz, Class<T> paramClazz) {
 
@@ -89,6 +95,10 @@ public interface BatchRun<T> {
 			throw new IllegalArgumentException(e);
 		}
 
+		Config base = setup.baseCase(0);
+		if (base != null)
+			runs.add(new PreparedRun.Run(0, Lists.newArrayList("base"), base));
+
 		List<List<Object>> combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));
 
 		int id = 0;
@@ -112,22 +122,49 @@ public interface BatchRun<T> {
 
 		log.info("Prepared {} runs for {} with params {}", runs.size(), clazz.getSimpleName(), paramClazz.getName());
 
-		return new PreparedRun(setup, fields.stream().map(Field::getName).collect(Collectors.toList()), runs);
+		return new PreparedRun(setup, fields.stream().map(Field::getName).collect(Collectors.toList()), allParams, runs);
+	}
+
+	/**
+	 * The start of the scenario as day in real world.
+	 */
+	default LocalDate startDay() {
+		return LocalDate.now();
+	}
+
+	/**
+	 * Provide a base case without any parametrization.
+	 */
+	@Nullable
+	default Config baseCase(int id) {
+		return null;
 	}
 
 	/**
 	 * Prepare a config using the given parameters.
-	 * @param id task id
+	 *
+	 * @param id     task id
 	 * @param params parameters to use
 	 * @return initialized config
 	 */
 	Config prepareConfig(int id, T params);
 
 	/**
+	 * Map days to measures for the metadata template.
+	 */
+	default Map<Integer, List<String>> getMeasures() {
+		return Maps.newHashMap();
+	}
+
+	/**
 	 * Write additionally needed files to {@code directory}, if any are needed.
 	 * Don't write the config!
 	 */
-	default void writeAuxiliaryFiles(Path directory, Config config) throws IOException {}
+	default void writeAuxiliaryFiles(Path directory, Config config) throws IOException {
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		if (episimConfig.getPolicyConfig() != null)
+			Files.writeString(directory.resolve(episimConfig.getPolicyConfig()), episimConfig.getPolicy().root().render());
+	}
 
 	/**
 	 * Desired output name.

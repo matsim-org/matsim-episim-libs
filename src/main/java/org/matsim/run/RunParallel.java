@@ -166,11 +166,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(module));
 			EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 
-			try {
-				runner.run(500);
-			} catch (IOException e) {
-				log.error("Error running simulation", e);
-			}
+			runner.run(200);
 
 			log.info("Task finished: {}", module.config.controler().getOutputDirectory());
 		}

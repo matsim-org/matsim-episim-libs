@@ -7,13 +7,13 @@ process to create a snz scenario
     (class FilterEducFacilitiesForCertainArea)
 
 2. filter germany events
-        a. by event type (only ActivityStart, ActivityEnd, PersonEntersVehicle, PersonLeavesvehicle will remain)
+        a. by event type (only ActivityStart, ActivityEnd, PersonEntersVehicle, PersonLeavesVehicle will remain)
         b. by adult id set
     AND
     change facilities in events such that only remaining facilities (see step 1) are visited
     (class FilterEvents)
 
-3. filter germany adult population attributes file by adult id for use case set and convert it to plans file format (containing no plans but only attributes)
+3. filter germany adult population attributes file by adult-id-for-use-case-set and convert it to plans file format (containing no plans but only attributes)
     (class ConvertPersonAttributes)
 
 4. filter germany school population (containing no plans) such that only children remain that have home id's which are also referenced by remaining adults
@@ -23,6 +23,8 @@ process to create a snz scenario
         (1) only school population with no plans
         (2) merge from (1) and step (3)
     (class CutSchoolPopulationFitting2UseCaseAdultPopulation)
+
+    //TODO description of the step assigning districts is missing....
 
 5. build plans for school population, (take step 4 (1) as input)
 

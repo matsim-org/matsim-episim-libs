@@ -32,14 +32,14 @@ import java.util.SplittableRandom;
 /**
  * Default progression model with deterministic (but random) state transitions at fixed days.
  */
-public final class DefaultProgressionModel implements ProgressionModel {
+public final class AgeDependentProgressionModel implements ProgressionModel {
 
 	private static final double DAY = 24. * 3600;
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
 	@Inject
-	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
+	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 	}
@@ -88,7 +88,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case showingSymptoms:
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 10) {
-					double proba = 0.05625;
+					double proba = getAgeDependentProbaOfTransitioningToSeriouslySick(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
 					}
@@ -99,7 +99,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case seriouslySick:
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 11) {
-					double proba = 0.25;
+					double proba = getAgeDependentProbaOfTransitioningToCritical(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.critical);
 					}
@@ -175,6 +175,77 @@ public final class DefaultProgressionModel implements ProgressionModel {
 						p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 				}
 		}
+	}
+
+
+	private double getAgeDependentProbaOfTransitioningToSeriouslySick(EpisimPerson person, double now) {
+
+		double proba = -1;
+
+		if (person.getAttributes().getAsMap().containsKey("age")) {
+			int age = (int) person.getAttributes().getAttribute("age");
+
+			if (age < 0 || age > 120) {
+				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
+			}
+
+			if (age < 10) {
+				proba = 0.06 / 100;
+			} else if (age < 20) {
+				proba = 0.19 / 100;
+			} else if (age < 30) {
+				proba = 0.77 / 100;
+			} else if (age < 40) {
+				proba = 2.06 / 100;
+			} else if (age < 50) {
+				proba = 3.16 / 100;
+			} else if (age < 60) {
+				proba = 6.57 / 100;
+			} else if (age < 70) {
+				proba = 10.69 / 100;
+			} else if (age < 80) {
+				proba = 15.65 / 100;
+			} else {
+				proba = 17.58 / 100;
+			}
+
+		} else {
+			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
+		}
+
+		return proba;
+	}
+
+	private double getAgeDependentProbaOfTransitioningToCritical(EpisimPerson person, double now) {
+
+		double proba = -1;
+
+		if (person.getAttributes().getAsMap().containsKey("age")) {
+			int age = (int) person.getAttributes().getAttribute("age");
+
+			if (age < 0 || age > 120) {
+				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
+			}
+
+			if (age < 40) {
+				proba = 5. / 100;
+			} else if (age < 50) {
+				proba = 6.3 / 100;
+			} else if (age < 60) {
+				proba = 12.2 / 100;
+			} else if (age < 70) {
+				proba = 27.4 / 100;
+			} else if (age < 80) {
+				proba = 43.2 / 100;
+			} else {
+				proba = 70.9 / 100;
+			}
+
+		} else {
+			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
+		}
+
+		return proba;
 	}
 
 	@Override

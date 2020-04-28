@@ -28,6 +28,7 @@ public class DefaultInfectionModelTest {
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
 	private DefaultInfectionModel model;
+	private DefaultFaceMaskModel maskModel;
 	private Map<String, Restriction> restrictions;
 
 
@@ -35,7 +36,10 @@ public class DefaultInfectionModelTest {
 	public void setup() {
 		EpisimReporting reporting = mock(EpisimReporting.class);
 		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, reporting, new DefaultFaceMaskModel(), false);
+		SplittableRandom rnd = new SplittableRandom(1);
+
+		maskModel = new DefaultFaceMaskModel(config, rnd);
+		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, false);
 		restrictions = config.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -170,12 +174,33 @@ public class DefaultInfectionModelTest {
 
 	@Test
 	public void noCrossInfection() {
-		double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
+		double rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
 				() -> EpisimTestUtils.createFacility(1, "home", EpisimTestUtils.CONTAGIOUS),
-				(f) -> EpisimTestUtils.createPerson("c10", f)
+				(f) -> EpisimTestUtils.createPerson("edu", f)
 		);
 
 		assertThat(rate).isCloseTo(0, OFFSET);
+
+		rate = sampleInfectionRate(Duration.ofMinutes(30), "edu",
+				() -> EpisimTestUtils.createFacility(1, "edu", EpisimTestUtils.CONTAGIOUS),
+				(f) -> EpisimTestUtils.createPerson("leis", f)
+		);
+
+		assertThat(rate).isCloseTo(0, OFFSET);
+	}
+
+	@Test
+	public void crossInfection() {
+
+		for (String other : List.of("leis", "work", "home")) {
+			double rate = sampleInfectionRate(Duration.ofHours(24), "home",
+					() -> EpisimTestUtils.createFacility(1, "home", EpisimTestUtils.CONTAGIOUS),
+					(f) -> EpisimTestUtils.createPerson(other, f)
+			);
+
+			assertThat(rate).as("home with " + other)
+					.isCloseTo(1, OFFSET);
+		}
 	}
 
 	@Test
@@ -204,28 +229,29 @@ public class DefaultInfectionModelTest {
 
 		// Container with persons of different state
 		Supplier<InfectionEventHandler.EpisimFacility> container = () -> {
-			InfectionEventHandler.EpisimFacility f = EpisimTestUtils.createFacility(3, "c10", EpisimTestUtils.CONTAGIOUS);
-			EpisimTestUtils.addPersons(f, 3, "c10", EpisimTestUtils.FULL_QUARANTINE);
-			EpisimTestUtils.addPersons(f, 3, "c10", (p) -> {
-			});
-			EpisimTestUtils.addPersons(f, 3, "c10", (p) -> p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.recovered));
-			EpisimTestUtils.addPersons(f, 3, "c10", (p) -> p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious));
+			InfectionEventHandler.EpisimFacility f = EpisimTestUtils.createFacility(3, "leis", EpisimTestUtils.CONTAGIOUS);
+			EpisimTestUtils.addPersons(f, 3, "leis", EpisimTestUtils.FULL_QUARANTINE);
+			EpisimTestUtils.addPersons(f, 1, "leis", (p) -> { });
+			EpisimTestUtils.addPersons(f, 1, "work", (p) -> { });
+			EpisimTestUtils.addPersons(f, 1, "home", (p) -> { });
+			EpisimTestUtils.addPersons(f, 3, "leis", (p) -> p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.recovered));
+			EpisimTestUtils.addPersons(f, 3, "leis", (p) -> p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious));
 			return f;
 		};
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, new DefaultFaceMaskModel(), false);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, maskModel, false);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
-		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "c10", container);
+		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, new DefaultFaceMaskModel(), true);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, maskModel, true);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 
-		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "c10", container);
+		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
 		List<Object[]> noTracking = Mockito.mockingDetails(rNoTracking).getInvocations().stream()
 				.filter(inv -> inv.getMethod().getName().equals("reportInfection"))

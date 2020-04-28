@@ -56,9 +56,12 @@ public final class Restriction {
 		);
 	}
 
+	/**
+	 * This method is also used to write the restriction to csv.
+	 */
 	@Override
 	public String toString() {
-		return String.valueOf(remainingFraction);
+		return String.format("%.2f_%s", remainingFraction, requireMask);
 	}
 
 	public double getRemainingFraction() {
