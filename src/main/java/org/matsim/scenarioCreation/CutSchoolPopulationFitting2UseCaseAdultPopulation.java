@@ -69,13 +69,13 @@ import java.util.stream.Collectors;
 class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 	private static final String INPUT_SCHOOL_POPULATION_GER = "../../svn/shared-svn/projects/episim/matsim-files/snz/Deutschland/de_populationU14_fromPopulationAttributes.xml.gz";
-	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_adults_emptyPlans.xml.gz";
-	private static final String INPUT_SHAPE_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/shape-File/dilutionArea.shp";
+	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_adults_emptyPlans.xml.gz";
+	private static final String INPUT_SHAPE_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/Shape-File/dilutionArea.shp";
 	private static final double SAMPLE_SIZE_FOR_CHILDREN_IN_SHAPE = 0.25d;
 	//name of the attribute in children population that is supposed to match facility id of parent
 	private static final String HOME_FACILITY_ATTRIBUTE_NAME = "homeId";
-	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_u14population_emptyPlans.xml.gz";
-	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans.xml.gz";
+	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_emptyPlans.xml.gz";
+	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_entirePopulation_emptyPlans.xml.gz";
 
 	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
 
