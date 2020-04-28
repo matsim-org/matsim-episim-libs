@@ -67,7 +67,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v7")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v8")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "75")
@@ -76,10 +76,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosureAndMasks")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SchoolClosure$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SchoolClosureAndMasks$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
