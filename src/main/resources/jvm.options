@@ -3,5 +3,8 @@
 -Djava.awt.headless=true
 
 -XX:GCTimeLimit=35
--XX:+UseParallelGC
 -XX:+AlwaysPreTouch
+
+# Disabled, because currently G1 offers better performance
+# when the heap is nearly full
+# -XX:+UseParallelGC

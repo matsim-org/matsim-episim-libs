@@ -1,10 +1,9 @@
 package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.facilities.Facility;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
@@ -62,7 +61,7 @@ public class EpisimTestUtils {
 	}
 
 	public static InfectionEventHandler.EpisimFacility createFacility() {
-		return new InfectionEventHandler.EpisimFacility(Id.create(ID.getAndIncrement(), Facility.class));
+		return new InfectionEventHandler.EpisimFacility(Id.create(ID.getAndIncrement(), ActivityFacility.class));
 	}
 
 	/**

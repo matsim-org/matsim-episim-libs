@@ -35,7 +35,6 @@ import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
 import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -46,7 +45,7 @@ import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
-import org.matsim.facilities.Facility;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
@@ -76,7 +75,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private final Map<Id<Person>, EpisimPerson> personMap = new IdMap<>(Person.class);
 	private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new IdMap<>(Vehicle.class);
-	private final Map<Id<Facility>, EpisimFacility> pseudoFacilityMap = new IdMap<>(Facility.class,
+	private final Map<Id<ActivityFacility>, EpisimFacility> pseudoFacilityMap = new IdMap<>(ActivityFacility.class,
 			// the number of facility ids is not known beforehand, so we use this as initial estimate
 			(int) (Id.getNumberOfIds(Vehicle.class) * 1.3));
 
@@ -174,7 +173,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityEndEvent.getPersonId(), this::createPerson);
-		Id<Facility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
+		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
 		EpisimFacility episimFacility;
 		if (iteration == 0) {
@@ -257,7 +256,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = this.personMap.computeIfAbsent(activityStartEvent.getPersonId(), this::createPerson);
 
 		// create pseudo facility id that includes the activity type:
-		Id<Facility> episimFacilityId = createEpisimFacilityId(activityStartEvent);
+		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityStartEvent);
 
 		// find the facility
 		EpisimFacility episimFacility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
@@ -288,16 +287,17 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		return new EpisimPerson(id, attrs, reporting);
 	}
 
-	private Id<Facility> createEpisimFacilityId(HasFacilityId event) {
+	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
 		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
-			return Id.create(event.getFacilityId(), Facility.class);
+			return event.getFacilityId();
 		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
+			// TODO: this has poor performance and should be preprocessing...
 			if (event instanceof ActivityStartEvent) {
 				ActivityStartEvent theEvent = (ActivityStartEvent) event;
-				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), Facility.class);
+				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
 			} else if (event instanceof ActivityEndEvent) {
 				ActivityEndEvent theEvent = (ActivityEndEvent) event;
-				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), Facility.class);
+				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
 			} else {
 				throw new IllegalStateException("unexpected event type=" + ((Event) event).getEventType());
 			}
@@ -366,7 +366,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 				if (homeId != null) {
 
-					Id<Facility> facilityId = Id.create(homeId, Facility.class);
+					Id<ActivityFacility> facilityId = Id.create(homeId, ActivityFacility.class);
 					EpisimFacility facility = pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
 					EpisimPerson episimPerson = personMap.computeIfAbsent(p.getId(), this::createPerson);
 
@@ -421,7 +421,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	}
 
 	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
-		Id<Facility> firstFacilityId = Id.create(person.getFirstFacilityId(), Facility.class);
+		Id<ActivityFacility> firstFacilityId = Id.create(person.getFirstFacilityId(), ActivityFacility.class);
 
 		// now is the next day
 		double now = (iteration + 1) * 86400d;
@@ -466,8 +466,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 	}
 
-	public static final class EpisimFacility extends EpisimContainer<Facility> {
-		EpisimFacility(Id<Facility> facilityId) {
+	public static final class EpisimFacility extends EpisimContainer<ActivityFacility> {
+		EpisimFacility(Id<ActivityFacility> facilityId) {
 			super(facilityId);
 		}
 	}
