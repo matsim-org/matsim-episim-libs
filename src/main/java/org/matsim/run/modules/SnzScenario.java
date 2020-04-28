@@ -100,11 +100,11 @@ public class SnzScenario extends AbstractModule {
 		addParams(episimConfig);
 
 		setContactIntensities(episimConfig);
-		int offset = -6;
+		int offset = 0;
 
-		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
+//		episimConfig.setPolicy(FixedPolicy.class, buildPolicyMunich(offset)	);
 
-		config.controler().setOutputDirectory("./output-munich-base-google-" + offset);
+		config.controler().setOutputDirectory("./output-munich-base-NORESTRICTIONS" + offset);
 
 		return config;
 	}
