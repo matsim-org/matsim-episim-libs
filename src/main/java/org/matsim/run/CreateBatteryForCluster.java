@@ -96,7 +96,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Files.createDirectories(input);
 
 		// Copy all resources
-		for (String name : Lists.newArrayList("run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
