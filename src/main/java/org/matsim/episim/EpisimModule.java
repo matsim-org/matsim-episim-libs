@@ -48,7 +48,7 @@ public class EpisimModule extends AbstractModule {
 		binder().requireExplicitBindings();
 
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(ProgressionModel.class).to(DefaultProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(EpisimRunner.class).in(Singleton.class);
 		bind(ReplayHandler.class).in(Singleton.class);
