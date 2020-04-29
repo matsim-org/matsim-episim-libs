@@ -68,9 +68,9 @@ public final class AgeDependentProgressionModel implements ProgressionModel {
 
 					// 10% chance of getting randomly tested and detected each day
 					// TODO: actually rather independent from tracing...
-					if (rnd.nextDouble() < 0.1) {
-						onInfectionDetected(person, now, day);
-					}
+//					if (rnd.nextDouble() < 0.1) {
+//						onInfectionDetected(person, now, day);
+//					}
 				}
 
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 6) {
