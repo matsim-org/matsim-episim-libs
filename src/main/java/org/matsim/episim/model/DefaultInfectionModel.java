@@ -46,7 +46,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	/**
 	 * Flag to enable tracking, which is considerably slower.
 	 */
-	private final boolean trackingEnabled;
+	private final int trackingAfterDay;
 
 	/**
 	 * Face mask model, which decides which masks the persons are wearing.
@@ -61,13 +61,13 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
 		this(rnd, episimConfig, reporting,
-				maskModel, episimConfig.getPutTraceablePersonsInQuarantineAfterDay() < Integer.MAX_VALUE);
+				maskModel,  episimConfig.getPutTraceablePersonsInQuarantineAfterDay());
 	}
 
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, boolean trackingEnabled) {
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {
 		super(rnd, episimConfig, reporting);
 		this.maskModel = maskModel;
-		this.trackingEnabled = trackingEnabled;
+		this.trackingAfterDay = trackingAfterDay;
 	}
 
 	@Override
@@ -96,6 +96,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd)) {
 			return;
 		}
+
+		// start tracking late as possible because of computational costs
+		boolean trackingEnabled = iteration >= trackingAfterDay;
 
 		EpisimConfigGroup.InfectionParams leavingParams = null;
 
