@@ -14,12 +14,12 @@ echo "Filtering output..."
 
 for f in output/*/*.infections.txt; do
     name=$(basename "$f")
-    head -1 $f > tmp/$name
-    grep $1 $f >> tmp/$name
+    head -1 $f > tmp/$name.csv
+    grep $1 $f >> tmp/$name.csv
 done
 
 echo "Creating zip file..."
 
-zip --junk-paths summaries.zip tmp/*.txt
+zip --junk-paths summaries.zip tmp/*.csv
 
 rm -r tmp
