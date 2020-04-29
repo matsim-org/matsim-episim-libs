@@ -22,7 +22,7 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -41,7 +41,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -133,6 +132,13 @@ public interface BatchRun<T> {
 	}
 
 	/**
+	 * List of options that will be added to the metadata.
+	 */
+	default List<Option> getOptions() {
+		return List.of();
+	}
+
+	/**
 	 * Provide a base case without any parametrization.
 	 */
 	@Nullable
@@ -148,13 +154,6 @@ public interface BatchRun<T> {
 	 * @return initialized config
 	 */
 	Config prepareConfig(int id, T params);
-
-	/**
-	 * Map days to measures for the metadata template.
-	 */
-	default Map<Integer, List<String>> getMeasures() {
-		return Maps.newHashMap();
-	}
 
 	/**
 	 * Write additionally needed files to {@code directory}, if any are needed.
@@ -201,6 +200,62 @@ public interface BatchRun<T> {
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface StringParameter {
 		String[] value();
+	}
+
+
+	/**
+	 * Describes one option group of parameters with multiple measures.
+	 */
+	final class Option {
+
+		public final String heading;
+		public final String subheading;
+		public final int day;
+
+		/**
+		 * Tuples of (title, paramName).
+		 */
+		public final List<Pair<String, String>> measures = new ArrayList<>();
+
+		private Option(String heading, String subheading, int day) {
+			this.heading = heading;
+			this.subheading = subheading;
+			this.day = day;
+		}
+
+		/**
+		 * Creates a new option group.
+		 * @param heading header shown in ui
+		 * @param subheading description shown ui
+		 * @param day day when it will be in effect
+		 */
+		public static Option of(String heading, String subheading, int day) {
+			return new Option(heading, subheading, day);
+		}
+
+		/**
+		 * See {@link #of(String, String, int)}.
+		 */
+		public static Option of(String heading, int day) {
+			return new Option(heading, "", day);
+		}
+
+		/**
+		 * See {@link #of(String, String, int)}.
+		 */
+		public static Option of(String heading) {
+			return new Option(heading, "", -1);
+		}
+
+		/**
+		 * Add an measure to this option
+		 * @param title title shown in ui
+		 * @param param name of the parameter in code
+		 */
+		public Option measure(String title, String param) {
+			measures.add(Pair.of(title, param));
+			return this;
+		}
 	}
 
 }

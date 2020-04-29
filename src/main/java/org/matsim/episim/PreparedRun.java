@@ -20,6 +20,9 @@
  */
 package org.matsim.episim;
 
+import org.apache.commons.lang3.tuple.Pair;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 
 import java.util.*;
@@ -28,6 +31,8 @@ import java.util.*;
  * Class holding the result of {@link BatchRun#prepare(Class, Class)} with all information of the run.
  */
 public final class PreparedRun {
+
+	private static final Logger log = LogManager.getLogger(PreparedRun.class);
 
 	/**
 	 * Instance of the setup class.
@@ -72,25 +77,41 @@ public final class PreparedRun {
 
 		List<Object> opts = new ArrayList<>();
 
-		for (Map.Entry<Integer, List<String>> day : setup.getMeasures().entrySet()) {
+		// Check if parameters have been described in the options
+		Set<String> describedParams = new HashSet<>();
+
+		for (BatchRun.Option option : setup.getOptions()) {
 
 			Map<String, Object> byDay = new LinkedHashMap<>();
 
-
-			byDay.put("day", day.getKey());
-			byDay.put("heading", "<Please providing heading>");
-			byDay.put("subheading", "<Please provide subheading>");
+			byDay.put("day", option.day);
+			byDay.put("heading", option.heading);
+			byDay.put("subheading", option.subheading);
 
 			List<Map<String, Object>> measures = new ArrayList<>();
-			for (String m : day.getValue()) {
+			for (Pair<String, String> m : option.measures) {
+
+				if (!parameter.contains(m.getRight())) {
+					log.warn("The parameter '{}' ({}) in the description is not defined in the run.", m.getRight(), m.getLeft());
+				}
+
+				describedParams.add(m.getRight());
+
 				measures.add(
-						Map.of("measure", m, "title", "<Please provide a title>")
+						Map.of("measure", m.getRight(), "title", m.getLeft())
 				);
 			}
 
 			byDay.put("measures", measures);
 
 			opts.add(byDay);
+		}
+
+		for (String param : parameter) {
+			if (param.equals("offset")) continue;
+
+			if (!describedParams.contains(param))
+				log.warn("Parameter '{}' is not in any measure in .getOptions()", param);
 		}
 
 		data.put("optionGroups", opts);

@@ -63,6 +63,11 @@ public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolC
 	}
 
 	@Override
+	public List<Option> getOptions() {
+		return BerlinSchoolClosureAndMasks.OPTIONS;
+	}
+
+	@Override
 	public Config prepareConfig(int id, MunichSchoolClosureAndMasks.Params params) {
 
 		Config config = baseCase(id);
@@ -159,14 +164,6 @@ public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolC
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
 
 		return config;
-	}
-
-	@Override
-	public Map<Integer, List<String>> getMeasures() {
-		return Map.of(
-				67, List.of("remainingFractionWork", "remainingFractionShoppingBusinessErrands", "remainingFractionLeisure"),
-				74, List.of("remainingFractionPrima", "remainingFractionKiga", "remainingFractionSeconHigher")
-		);
 	}
 
 	public static final class Params {
