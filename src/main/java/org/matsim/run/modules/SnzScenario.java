@@ -82,8 +82,9 @@ public class SnzScenario extends AbstractModule {
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_001_7);
 		episimConfig.setInitialInfections(50);
-		setContactIntensities(episimConfig);
 		addParams(episimConfig);
+		setContactIntensities(episimConfig);
+		
 
 		prepareRunMunich(config, episimConfig, offset);
 //		prepareRunBerlin(config, episimConfig, offset);
