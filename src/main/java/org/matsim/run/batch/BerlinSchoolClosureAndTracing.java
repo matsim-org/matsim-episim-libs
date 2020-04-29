@@ -49,7 +49,7 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 	);
 
 	@Override
-	public LocalDate startDay() {
+	public LocalDate startDate() {
 		return LocalDate.of(2020, 3, 21);
 	}
 
@@ -153,7 +153,7 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
-	
+
 
 		return config;
 	}
@@ -180,13 +180,13 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 
 		@Parameter({0.7, 0.9})
 		double remainingFractionShoppingBusinessErrands;
-		
+
 		@IntParameter({1, 3, 5})
 		int tracingDayDistance;
-		
+
 		@Parameter({1.0, 0.75, 0.5})
 		double tracingProbability;
-		
+
 		@StringParameter({"allExceptShoppingAndPt"})
 		int tracingActivities;
 

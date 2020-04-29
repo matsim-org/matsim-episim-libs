@@ -127,7 +127,7 @@ public interface BatchRun<T> {
 	/**
 	 * The start of the scenario as day in real world.
 	 */
-	default LocalDate startDay() {
+	default LocalDate startDate() {
 		return LocalDate.now();
 	}
 

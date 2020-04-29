@@ -69,7 +69,7 @@ public final class PreparedRun {
 
 		Map<String, Object> data = new LinkedHashMap<>();
 
-		data.put("dayZero", setup.startDay());
+		data.put("startDate", setup.startDate());
 
 		int index = parameter.indexOf("offset");
 		if (index > -1)
