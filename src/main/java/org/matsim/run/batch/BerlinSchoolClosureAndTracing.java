@@ -88,8 +88,8 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		int offset = params.offset;
 		episimConfig.setPutTraceablePersonsInQuarantineAfterDay(67 - offset);
-		episimConfig.setTracingProbability(params.tracingProbability - offset);
-		episimConfig.setTracingDayDistance(params.tracingDayDistance - offset);
+		episimConfig.setTracingProbability(params.tracingProbability);
+		episimConfig.setTracingDayDistance(params.tracingDayDistance);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
 				//taken from Google mobility report
