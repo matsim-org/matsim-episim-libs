@@ -57,6 +57,10 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
 	 */
 	private final List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
+	/**
+	 * This buffer is used to store the infection type.
+	 */
+	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
@@ -140,15 +144,15 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
 			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
 
-			String infectionType = getInfectionType(container, leavingPersonsActivity, otherPersonsActivity);
+			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
 				//home can only interact with home, leisure or work
-				if (infectionType.contains("home") && !infectionType.contains("leis") && !infectionType.contains("work")
+				if (infectionType.indexOf("home") >= 0 && infectionType.indexOf("leis") == -1 && infectionType.indexOf("work") == -1
 						&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
 					continue;
-				} else if (infectionType.contains("edu") && !infectionType.contains("work") && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
+				} else if (infectionType.indexOf("edu") >= 0 && infectionType.indexOf("work") == -1 && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
 					//edu can only interact with work or edu
 					continue;
 				}
@@ -250,16 +254,21 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 	}
 
-	private String getInfectionType(EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
-		String infectionType;
+	/**
+	 * Attention: In order to re-use the underlying object, this function returns a buffer.
+	 * Be aware that the old result will be overwritten, when the function is called multiple times.
+	 */
+	private static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
+		buffer.setLength(0);
 		if (container instanceof InfectionEventHandler.EpisimFacility) {
-			infectionType = leavingPersonsActivity + "_" + otherPersonsActivity;
+			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
+			return buffer;
 		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
-			infectionType = "pt";
+			buffer.append("pt");
+			return buffer;
 		} else {
 			throw new RuntimeException("Infection situation is unknown");
 		}
-		return infectionType;
 	}
 
 	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {
