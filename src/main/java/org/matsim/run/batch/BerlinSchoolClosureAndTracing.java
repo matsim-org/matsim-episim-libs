@@ -188,9 +188,6 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 		@Parameter({1.0, 0.75, 0.5})
 		double tracingProbability;
 
-		@StringParameter({"allExceptShoppingAndPt"})
-		int tracingActivities;
-
 	}
 
 }
