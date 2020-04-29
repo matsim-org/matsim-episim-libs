@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Collect and process output
+# Collect and process output of batch runs
 if [ -z "$1" ]
   then
-    echo "No target district supplied"
+    echo "Must pass city name EXACTLY as written in infections.txt"
+    echo "e.g.: collect.sh Berlin"
     exit 1
 fi
 
@@ -13,12 +14,12 @@ echo "Filtering output..."
 
 for f in output/*/*.infections.txt; do
     name=$(basename "$f")
-    grep -E "day|$1" $f > tmp/$name
+    head -1 $f > tmp/$name
+    grep $1 $f >> tmp/$name
 done
-
 
 echo "Creating zip file..."
 
-cd tmp
+zip --junk-paths summaries.zip tmp/*.txt
 
-zip ../summaries.zip *.txt
+rm -r tmp
