@@ -75,7 +75,7 @@ public class SnzScenario extends AbstractModule {
 	public Config config() {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		int offset = -4;
+		int offset = -6;
 
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
@@ -86,9 +86,9 @@ public class SnzScenario extends AbstractModule {
 		setContactIntensities(episimConfig);
 		
 
-		prepareRunMunich(config, episimConfig, offset);
+//		prepareRunMunich(config, episimConfig, offset);
 //		prepareRunBerlin(config, episimConfig, offset);
-//		prepareRunBerlinV2(config, episimConfig, offset);
+		prepareRunBerlinV2(config, episimConfig, offset);
 //		prepareRunHeinsberg(config, episimConfig, offset);
 
 		return config;
@@ -109,7 +109,7 @@ public class SnzScenario extends AbstractModule {
 
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
-		config.controler().setOutputDirectory("./output-berlinV2-" + offset);
+		config.controler().setOutputDirectory("./output-berlinV2-google-progr" + offset);
 	}
 
 	private void prepareRunBerlin(Config config, EpisimConfigGroup episimConfig, int offset) {
@@ -182,7 +182,7 @@ public class SnzScenario extends AbstractModule {
 				.restrict(31 - offset, 0.1, "leisure")
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
-//				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga")
+				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga")
 				.build();
 	}
 
