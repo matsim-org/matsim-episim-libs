@@ -183,13 +183,13 @@ public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolC
 		@Parameter({0.1, 0.3})
 		double remainingFractionLeisure;
 
-		@Parameter({0.45, 0.65})
+		@Parameter({0.55, 0.75})
 		double remainingFractionWork;
 
-		@Parameter({0.7, 0.9})
+		@Parameter({0.65, 0.85})
 		double remainingFractionShoppingBusinessErrands;
 
-		@StringParameter({"NONE", "CLOTH", "SURGICAL"})
+		@StringParameter({"CLOTH", "SURGICAL"})
 		String mask;
 
 		@Parameter({0., 0.5, 0.9, 1.})
