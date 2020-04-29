@@ -101,6 +101,7 @@ public class EpisimContainer<T> {
 	}
 
 	public List<EpisimPerson> getPersons() {
-		return Collections.unmodifiableList(personsAsList);
+		// Using Collections.unmodifiableList(...) puts huge pressure on the GC if its called hundred thousand times per second
+		return personsAsList;
 	}
 }

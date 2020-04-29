@@ -20,13 +20,13 @@
  */
 package org.matsim.episim.model;
 
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -52,6 +52,11 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 * Face mask model, which decides which masks the persons are wearing.
 	 */
 	private final FaceMaskModel maskModel;
+
+	/**
+	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
+	 */
+	private final List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
 
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
@@ -93,7 +98,8 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		}
 
 		EpisimConfigGroup.InfectionParams leavingParams = null;
-		List<EpisimPerson> otherPersonsInContainer = Lists.newArrayList(container.getPersons());
+
+		otherPersonsInContainer.addAll(container.getPersons());
 		otherPersonsInContainer.remove(personLeavingContainer);
 
 		// For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
@@ -194,6 +200,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType);
 			}
 		}
+
+		// Clear cached container
+		otherPersonsInContainer.clear();
 	}
 
 	/**
