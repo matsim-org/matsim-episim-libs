@@ -36,7 +36,7 @@ import java.util.Map;
 public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolClosureAndMasks.Params> {
 	@Override
 	public LocalDate startDate() {
-		return LocalDate.of(2020, 3, 21);
+		return LocalDate.of(2020, 2, 21);
 	}
 
 	@Override
