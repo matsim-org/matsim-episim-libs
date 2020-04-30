@@ -50,9 +50,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
-	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
-	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
-	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
@@ -78,18 +75,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * If not null, filter persons for initial infection by district.
 	 */
 	private String initialInfectionDistrict = null;
-	/**
-	 * Day after which tracing starts and puts persons into quarantine.
-	 */
-	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;
-	/**
-	 * How many days the tracing works back.
-	 */
-	private int tracingDayDistance = 4;
-	/**
-	 * Probability of successfully tracing a person.
-	 */
-	private double tracingProbability = 1.0;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -152,7 +137,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setInitialInfectionDistrict(String initialInfectionDistrict) {
 		this.initialInfectionDistrict = initialInfectionDistrict;
 	}
-	
+
 	@StringGetter(INITIAL_START_INFECTIONS)
 	public int getInitialStartInfection() {
 		return initialStartInfections;
@@ -162,7 +147,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setInitialStartInfection(int initialStartInfections) {
 		this.initialStartInfections = initialStartInfections;
 	}
-	
+
 	@StringGetter(MASK_COMPLIANCE)
 	public double getMaskCompliance() {
 		return maskCompliance;
@@ -171,36 +156,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(MASK_COMPLIANCE)
 	public void setMaskCompliance(double maskCompliance) {
 		this.maskCompliance = maskCompliance;
-	}
-
-	@StringGetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
-	public int getPutTraceablePersonsInQuarantineAfterDay() {
-		return putTraceablePersonsInQuarantineAfterDay;
-	}
-
-	@StringSetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
-	public void setPutTraceablePersonsInQuarantineAfterDay(int putTraceablePersonsInQuarantineAfterDay) {
-		this.putTraceablePersonsInQuarantineAfterDay = putTraceablePersonsInQuarantineAfterDay;
-	}
-
-	@StringGetter(TRACING_DAYS_DISTANCE)
-	public int getTracingDayDistance() {
-		return tracingDayDistance;
-	}
-
-	@StringSetter(TRACING_DAYS_DISTANCE)
-	public void setTracingDayDistance(int tracingDayDistance) {
-		this.tracingDayDistance = tracingDayDistance;
-	}
-
-	@StringGetter(TRACING_PROBABILITY)
-	public double getTracingProbability() {
-		return tracingProbability;
-	}
-
-	@StringSetter(TRACING_PROBABILITY)
-	public void setTracingProbability(double tracingProbability) {
-		this.tracingProbability = tracingProbability;
 	}
 
 	/**

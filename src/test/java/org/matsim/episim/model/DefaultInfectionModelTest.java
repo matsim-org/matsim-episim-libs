@@ -39,7 +39,7 @@ public class DefaultInfectionModelTest {
 		SplittableRandom rnd = new SplittableRandom(1);
 
 		maskModel = new DefaultFaceMaskModel(config, rnd);
-		model = new DefaultInfectionModel(rnd, config, reporting, maskModel);
+		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE);
 		restrictions = config.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 

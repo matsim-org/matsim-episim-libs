@@ -57,7 +57,7 @@ public final class Restriction {
 	}
 
 	/**
-	 * Instantiate a restriction-
+	 * Instantiate a restriction.
 	 */
 	public static Restriction of(double remainingFraction, double exposure, FaceMask mask) {
 		return new Restriction(remainingFraction, exposure, mask);

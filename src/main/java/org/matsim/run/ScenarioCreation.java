@@ -28,7 +28,7 @@ import picocli.AutoComplete;
 import picocli.CommandLine;
 
 /**
- * Runnable class that does nothing by itself, but has the be invoked with one subcommand of
+ * Runnable class that does nothing by itself, but has to be invoked with one subcommand of
  * the scenario creation utils.
  */
 @CommandLine.Command(

@@ -85,6 +85,13 @@ public class EpisimModule extends AbstractModule {
 		return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 	}
 
+
+	@Provides
+	@Singleton
+	public TracingConfigGroup tracingConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+	}
+
 	@Provides
 	@Singleton
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {

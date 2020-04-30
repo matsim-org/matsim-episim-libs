@@ -21,31 +21,31 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.EpisimReporting;
-import org.matsim.episim.EpisimUtils;
 
 import java.util.SplittableRandom;
 
 /**
  * Default progression model with deterministic (but random) state transitions at fixed days.
+ * This class in designed to for subclassing to support defining different transition probabilities.
  */
-public final class DefaultProgressionModel implements ProgressionModel {
+public class DefaultProgressionModel implements ProgressionModel {
 
 	private static final double DAY = 24. * 3600;
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
+	private final TracingConfigGroup tracingConfig;
 
 	@Inject
-	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
+	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
+		this.tracingConfig = tracingConfig;
 	}
 
 	@Override
-	public void updateState(EpisimPerson person, int day) {
+	public final void updateState(EpisimPerson person, int day) {
 		// Called at the beginning of iteration
 		double now = EpisimUtils.getCorrectedTime(0, day);
 		switch (person.getDiseaseStatus()) {
@@ -64,22 +64,18 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case contagious:
 
-				if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
-
-					// 10% chance of getting randomly tested and detected each day
-					// TODO: actually rather independent from tracing...
-					if (rnd.nextDouble() < 0.1) {
-						onInfectionDetected(person, now, day);
-					}
-				}
-
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 6) {
 					final double nextDouble = rnd.nextDouble();
 					if (nextDouble < 0.8) {
 						// 80% show symptoms and go into quarantine
 						// Diamond Princess study: (only) 18% show no symptoms.
 						person.setDiseaseStatus(now, DiseaseStatus.showingSymptoms);
-						onInfectionDetected(person, now, day);
+						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+
+						// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
+						if (tracingConfig.getTracingDelay() == 0) {
+							performTracing(person, now, day);
+						}
 					}
 
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
@@ -87,8 +83,14 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				}
 				break;
 			case showingSymptoms:
+
+				// person switches to showing symptoms exactly at day 6, so we account for the delay here
+				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == tracingConfig.getTracingDelay() + 6) {
+					performTracing(person, now, day);
+				}
+
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 10) {
-					double proba = 0.05625;
+					double proba = getProbaOfTransitioningToSeriouslySick(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
 					}
@@ -99,7 +101,7 @@ public final class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case seriouslySick:
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 11) {
-					double proba = 0.25;
+					double proba = getProbaOfTransitioningToCritical(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.critical);
 					}
@@ -130,30 +132,42 @@ public final class DefaultProgressionModel implements ProgressionModel {
 	}
 
 	/**
-	 * Called when the infection of a person is known, either through testing or symptoms.
+	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
-	private void onInfectionDetected(EpisimPerson person, double now, int day) {
+	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person, double now) {
+		return 0.05625;
+	}
 
-		person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+	/**
+	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
+	 */
+	protected double getProbaOfTransitioningToCritical(EpisimPerson person, double now) {
+		return 0.25;
+	}
 
-		// perform tracing
-		if (day >= episimConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
 
-			String homeId = (String) person.getAttributes().getAttribute("homeId");
+	/**
+	 * Perform the tracing procedure for a person. Also ensures if enabled for current day.
+	 */
+	private void performTracing(EpisimPerson person, double now, int day) {
 
-			// TODO: tracing household members makes always sense, no app or anything needed..
-			// they might not appear as contact persons under certain circumstances
+		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
 
-			for (EpisimPerson pw : person.getTraceableContactPersons(now - episimConfig.getTracingDayDistance() * DAY)) {
+		String homeId = (String) person.getAttributes().getAttribute("homeId");
 
-				// Persons of the same household are always traced successfully
-				if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-						|| rnd.nextDouble() < episimConfig.getTracingProbability())
+		// TODO: tracing household members makes always sense, no app or anything needed..
+		// they might not appear as contact persons under certain circumstances
 
-					quarantinePerson(pw, day);
+		for (EpisimPerson pw : person.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {
 
-			}
+			// Persons of the same household are always traced successfully
+			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
+					|| rnd.nextDouble() < tracingConfig.getTracingProbability())
+
+				quarantinePerson(pw, day);
+
 		}
+
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
@@ -162,23 +176,23 @@ public final class DefaultProgressionModel implements ProgressionModel {
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
-			String homeId = (String) p.getAttributes().getAttribute("homeId");
+			if (tracingConfig.getQuarantineHousehold()) {
+				String homeId = (String) p.getAttributes().getAttribute("homeId");
+				// put every member of household into quarantine
+				if (homeId != null)
+					for (EpisimPerson other : p.getTraceableContactPersons(0)) {
+						String otherHome = (String) other.getAttributes().getAttribute("homeId");
+						if (homeId.equals(otherHome) && other.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no
+								&& other.getDiseaseStatus() != DiseaseStatus.recovered)
 
-			// put every member of household into quarantine
-			if (homeId != null)
-				for (EpisimPerson other : p.getTraceableContactPersons(0)) {
-
-					String otherHome = (String) other.getAttributes().getAttribute("homeId");
-					if (homeId.equals(otherHome) && other.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no
-							&& other.getDiseaseStatus() != DiseaseStatus.recovered)
-
-						p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-				}
+							p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+					}
+			}
 		}
 	}
 
 	@Override
-	public boolean canProgress(EpisimReporting.InfectionReport report) {
+	public final boolean canProgress(EpisimReporting.InfectionReport report) {
 		return report.nTotalInfected > 0 || report.nInQuarantine > 0;
 	}
 }

@@ -64,8 +64,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
-		this(rnd, episimConfig, reporting, maskModel, episimConfig.getPutTraceablePersonsInQuarantineAfterDay());
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+								 EpisimReporting reporting, FaceMaskModel maskModel) {
+		this(rnd, episimConfig, reporting, maskModel, tracingConfig.getPutTraceablePersonsInQuarantineAfterDay());
 	}
 
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {

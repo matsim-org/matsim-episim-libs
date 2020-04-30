@@ -24,6 +24,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzScenario;
 
@@ -90,9 +91,12 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 		Config config = baseCase(id);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		int offset = params.offset;
-		episimConfig.setPutTraceablePersonsInQuarantineAfterDay(67 - offset);
-		episimConfig.setTracingProbability(params.tracingProbability);
-		episimConfig.setTracingDayDistance(params.tracingDayDistance);
+
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(67 - offset);
+		tracingConfig.setTracingProbability(params.tracingProbability);
+		tracingConfig.setTracingDayDistance(params.tracingDayDistance);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
 				//taken from Google mobility report
