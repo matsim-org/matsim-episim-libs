@@ -88,8 +88,9 @@ public class SnzScenario extends AbstractModule {
 
 //		prepareRunMunich(config, episimConfig, offset);
 //		prepareRunBerlin(config, episimConfig, offset);
-		prepareRunBerlinV2(config, episimConfig, offset);
+//		prepareRunBerlinV2(config, episimConfig, offset);
 //		prepareRunHeinsberg(config, episimConfig, offset);
+		prepareRunHeinsbergSmall(config, episimConfig, offset);
 
 		return config;
 	}
@@ -129,12 +130,37 @@ public class SnzScenario extends AbstractModule {
 		episimConfig.setPolicy(FixedPolicy.class, buildPolicyHeinsberg(offset)	);
 		config.controler().setOutputDirectory("./output-heinsberg-" + offset);
 	}
+	private void prepareRunHeinsbergSmall(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_snz_eventsForEpisim.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_snz_populationWithDistrict.xml.gz");
 
-	private com.typesafe.config.Config buildPolicyHeinsberg(int offset) {
-		//TODO @ricardo
-		return null;
+		episimConfig.setInitialInfectionDistrict("Heinsberg");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyHeinsberg(offset)	);
+		config.controler().setOutputDirectory("./output-heinsbergSmall4-" + offset);
 	}
 
+	private com.typesafe.config.Config buildPolicyHeinsberg(int offset) {
+		
+		return FixedPolicy.config()
+				.restrict(11 - offset, 0.90, "work")
+				.restrict(30 - offset, 0.40, "work")
+				
+				.restrict(11 - offset, 0., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher")
+				.restrict(24 - offset, 0.1, "educ_secondary")
+				.restrict(30 - offset, 0.0, "educ_secondary")
+				.restrict(65 - offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(68 - offset, 0.1, "educ_secondary")
+				.restrict(79 - offset, 0.2, "educ_secondary")
+				
+				.restrict(11 - offset, 0.60, "leisure")
+				.restrict(30 - offset, 0.40, "leisure")
+				.restrict(37 - offset, 0.10, "leisure")
+
+				
+				.restrict(11 - offset, 0.90, "shopping", "errands", "business")
+				.restrict(32 - offset, 0.70, "shopping", "errands", "business")
+				.build();
+	}
 
 	private com.typesafe.config.Config buildPolicyBerlin(int offset) {
 		return FixedPolicy.config()
