@@ -39,7 +39,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	protected final Scenario scenario = null;
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
-	private final EpisimReporting reporting;
+	protected final EpisimReporting reporting;
 	protected int iteration;
 	private Map<String, Restriction> restrictions;
 
@@ -154,7 +154,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
+	void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType) {
 
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
@@ -179,7 +179,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, iteration);
 		}
 
-		reporting.reportInfection(personWrapper, infector, now, infectionType);
+		reporting.reportInfection(personWrapper, infector, now, infectionType.toString());
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
 		// TODO: Currently not in use, is it still needed?

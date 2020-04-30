@@ -58,7 +58,9 @@
         <module name="AvoidDoubleBraceInitialization"/>
         <module name="AvoidNoArgumentSuperConstructorCall"/>
         <module name="CovariantEquals"/>
-        <module name="DeclarationOrder"/>
+        <module name="DeclarationOrder">
+            <property name="ignoreModifiers" value="true"/>
+        </module>
         <module name="DefaultComesLast"/>
         <module name="EmptyStatement"/>
         <module name="FallThrough"/>
@@ -137,14 +139,14 @@
         </module>
         <module name="MissingJavadocType">
             <property name="scope" value="public"/>
-            <property name="skipAnnotations" value="Generated,Command,CommandLine"/>
+            <property name="skipAnnotations" value="Generated"/>
         </module>
         <module name="NonEmptyAtclauseDescription"/>
 
 
         <!-- Metrics -->
         <module name="JavaNCSS">
-            <property name="methodMaximum" value="60"/>
+            <property name="methodMaximum" value="70"/>
             <property name="classMaximum" value="800"/>
             <property name="fileMaximum" value="1000"/>
         </module>
@@ -161,6 +163,7 @@
         <module name="TodoComment">
             <!-- High priority comments -->
             <property name="format" value="yyyyyy"/>
+            <message key="todo.match" value="Address this issue or reduce severity (yyyy)"/>
         </module>
         <module name="UpperEll"/>
 

@@ -36,7 +36,7 @@ import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
  */
 public class RunMATSim {
 
-	private static final String INPUT_SCHOOL_PLANS =  "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_u14population_schoolPlans.xml.gz";
+	private static final String INPUT_SCHOOL_PLANS =  "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_schoolPlans.xml.gz";
 
 
 	public static void main(String[] args) {
@@ -61,11 +61,11 @@ public class RunMATSim {
 		config.qsim().setStartTime(0);
 		config.qsim().setEndTime(36. * 3600);
 
-		config.network().setInputFile("../../svn/shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedNetwork.xml.gz");
+		config.network().setInputFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/input-data/he_optimizedNetwork.xml.gz");
 
 		config.transit().setUseTransit(true);
-		config.transit().setTransitScheduleFile("../../svn/shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedSchedule.xml.gz");
-		config.transit().setVehiclesFile("../../svn/shared-svn/projects/avoev/matsim-input-files/berlin/v0/optimizedVehicles.xml.gz");
+		config.transit().setTransitScheduleFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/input-data/he_optimizedSchedule.xml.gz");
+		config.transit().setVehiclesFile("../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/input-data/he_optimizedVehicles.xml.gz");
 		config.transitRouter().setMaxBeelineWalkConnectionDistance(300);
 
 		config.plans().setInputFile(plansFile);

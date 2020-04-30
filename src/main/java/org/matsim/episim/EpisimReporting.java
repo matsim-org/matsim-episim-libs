@@ -34,6 +34,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.episim.events.EpisimContactEvent;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.policy.Restriction;
@@ -268,6 +269,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		}
 	}
 
+	/**
+	 * Report the occurrence of an infection.
+	 * @param personWrapper infected person
+	 * @param infector infector
+	 * @param infectionType activities of both persons
+	 */
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
@@ -289,6 +296,21 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
 
 		writer.append(infectionEvents, array);
+	}
+
+	/**
+	 * Report the occurrence of an contact between two persons.
+	 * TODO Attention: Currently this only includes a subset of contacts (between persons with certain disease status).
+	 * @see EpisimContactEvent
+	 */
+	public void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
+							  StringBuilder actType, double duration) {
+
+		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
+			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
+					actType.toString(), duration));
+		}
+
 	}
 
 	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
@@ -341,6 +363,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		manager.processEvent(event);
 	}
 
+	@Override
 	public void close() {
 
 		if (events != null) {
@@ -399,6 +422,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 * Detailed infection report for the end of a day.
 	 * Although the fields are mutable, do not change them outside this class.
 	 */
+	@SuppressWarnings("VisibilityModifier")
 	public static class InfectionReport {
 
 		public final String name;
@@ -415,12 +439,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		public long nRecovered = 0;
 		public long nInQuarantine = 0;
 
+		/**
+		 * Constructor.
+		 */
 		public InfectionReport(String name, double time, long day) {
 			this.name = name;
 			this.time = time;
 			this.day = day;
 		}
 
+		/**
+		 * Total number of persons in the simulation.
+		 */
 		public long nTotal() {
 			return nSusceptible + nTotalInfected + nRecovered;
 		}

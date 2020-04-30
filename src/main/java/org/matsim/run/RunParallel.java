@@ -33,7 +33,6 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import picocli.CommandLine;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +43,13 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Execute one {@link BatchRun} run in parallel. The work can also be distributed across multiple runners,
+ * by using the <em>--worker-index</em> and <em>--total-worker</em> options.
+ *
+ * @param <T> type to match batch run and params
+ * @see CreateBatteryForCluster
+ */
 @CommandLine.Command(
 		name = "runParallel",
 		description = "Run batch scenario in parallel in one process.",
@@ -52,15 +58,15 @@ import java.util.concurrent.Executors;
 )
 public class RunParallel<T> implements Callable<Integer> {
 
-	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
+	private static final Logger log = LogManager.getLogger(RunParallel.class);
 
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.SchoolClosure}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.BerlinSchoolClosureAndMasks}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.SchoolClosure$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.BerlinSchoolClosureAndMasks$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")

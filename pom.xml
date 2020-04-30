@@ -216,11 +216,10 @@
                     <excludes>
                         <exclude>**/*$*</exclude> <!-- exclude all inner classes -->
                     </excludes>
-                    <forkMode>once</forkMode>
+                    <!-- Don't run multiple tests in one jvm! Class mocking interferes with the integration test -->
+                    <reuseForks>false</reuseForks>
                     <!-- avoid out of memory errors: -->
                     <argLine>-Xmx6000m -Djava.awt.headless=true -Dmatsim.preferLocalDtds=true</argLine>
-                    <!-- <parallel>all</parallel> -->
-                    <useUnlimitedThreads>true</useUnlimitedThreads>
                 </configuration>
             </plugin>
 

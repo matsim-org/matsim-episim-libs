@@ -14,13 +14,17 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -35,6 +39,7 @@ public class RunEpisimIntegrationTest {
 	@Parameterized.Parameter
 	public int it;
 	private EpisimConfigGroup episimConfig;
+	private TracingConfigGroup tracingConfig;
 	private EpisimRunner runner;
 
 	@Parameterized.Parameters(name = "it{0}")
@@ -45,10 +50,11 @@ public class RunEpisimIntegrationTest {
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-		Injector injector = Guice.createInjector(new EpisimModule(), new TestScenario());
+		Injector injector = Guice.createInjector(new EpisimModule(), new TestScenario(utils));
 
+		episimConfig = injector.getInstance(EpisimConfigGroup.class);
+		tracingConfig = injector.getInstance(TracingConfigGroup.class);
 		runner = injector.getInstance(EpisimRunner.class);
-
 	}
 
 	@After
@@ -72,6 +78,29 @@ public class RunEpisimIntegrationTest {
 	@Test
 	public void testBaseCase() throws IOException {
 		runner.run(it);
+	}
+
+	@Test
+	public void testTracing() throws IOException {
+
+		// day when tracing starts
+		int tDay = it / 2;
+
+		tracingConfig.setTracingDelay(1);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(tDay);
+
+		runner.run(it);
+
+		// the input of the base case
+		Path baseCase = Path.of(utils.getClassInputDirectory(), utils.getMethodName().replace("Tracing", "BaseCase"));
+
+		List<String> baseLines = Files.readAllLines(baseCase.resolve("infections.txt"));
+		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));
+
+		// Check that first 50% are identical (before tracking started)
+		assertThat(baseLines.subList(0, tDay)).isEqualTo(cmpLines.subList(0, tDay));
+		assertThat(baseLines.subList(tDay, Math.min(it, baseLines.size())))
+				.isNotEqualTo(cmpLines.subList(tDay, Math.min(it, cmpLines.size())));
 	}
 
 	@Test
@@ -111,13 +140,19 @@ public class RunEpisimIntegrationTest {
 		runner.run(it);
 	}
 
-	private class TestScenario extends AbstractModule {
+	private static class TestScenario extends AbstractModule {
+
+		private final MatsimTestUtils utils;
+
+		private TestScenario(MatsimTestUtils utils) {
+			this.utils = utils;
+		}
 
 		@Provides
 		@Singleton
 		public Config config() {
 			Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-			episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 			episimConfig.setInputEventsFile(
 					"https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/output-berlin-v5.4-1pct/berlin-v5.4-1pct.output_events_for_episim.xml.gz");

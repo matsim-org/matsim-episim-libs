@@ -54,6 +54,9 @@ import java.util.stream.Collectors;
 
 /**
  * Main event handler of episim.
+ * It consumes the events of a standard MATSim run and puts {@link EpisimPerson}s into {@link EpisimContainer}s during their activity.
+ * At the end of activities an {@link InfectionModel} is executed and also a {@link ProgressionModel} at the end of the day.
+ * See {@link EpisimModule} for which components may be substituted.
  */
 public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
 	// Some notes:
@@ -110,6 +113,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private int iteration = 0;
 	private int initialInfectionsLeft;
+	private int initialStartInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -128,6 +132,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.progressionModel = progressionModel;
 		this.infectionModel = infectionModel;
 		this.initialInfectionsLeft = episimConfig.getInitialInfections();
+		this.initialStartInfectionsLeft = episimConfig.getInitialStartInfection();
 	}
 
 	/**
@@ -341,15 +346,27 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		while (true) {
+			if (initialStartInfectionsLeft > 0) {
+				while(initialStartInfectionsLeft > 0) {
+					EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
+					if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
+						randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
+						log.warn("Person {} has initial infection", randomPerson.getPersonId());
+						initialStartInfectionsLeft--;
+						initialInfectionsLeft--;
+					}
+				}
+				break;
+			}
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
 				log.warn("Person {} has initial infection", randomPerson.getPersonId());
+				initialInfectionsLeft--;
 				break;
 			}
 		}
 
-		initialInfectionsLeft--;
 	}
 
 	/**
@@ -460,12 +477,18 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		return Collections.unmodifiableCollection(personMap.values());
 	}
 
+	/**
+	 * Container that is always a vehicle.
+	 */
 	public static final class EpisimVehicle extends EpisimContainer<Vehicle> {
 		EpisimVehicle(Id<Vehicle> vehicleId) {
 			super(vehicleId);
 		}
 	}
 
+	/**
+	 * Container that is a facility and occurred during an activity.
+	 */
 	public static final class EpisimFacility extends EpisimContainer<ActivityFacility> {
 		EpisimFacility(Id<ActivityFacility> facilityId) {
 			super(facilityId);

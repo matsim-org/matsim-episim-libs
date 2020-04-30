@@ -88,6 +88,13 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create a person with specific reporting.
+	 */
+	public static EpisimPerson createPerson(EpisimReporting reporting) {
+		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+	}
+
+	/**
 	 * Add persons to a facility.
 	 */
 	public static InfectionEventHandler.EpisimFacility addPersons(InfectionEventHandler.EpisimFacility container, int n,

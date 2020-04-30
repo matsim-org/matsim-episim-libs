@@ -29,6 +29,9 @@ import org.matsim.episim.policy.FixedPolicy;
 
 import javax.inject.Singleton;
 
+/**
+ * Scenario based on data provided by snz. Please note that this data is not publicly available.
+ */
 public class SnzScenario extends AbstractModule {
 
 	public static final String[] DEFAULT_ACTIVITIES = {
@@ -74,35 +77,102 @@ public class SnzScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-
-		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
-//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans_withDistricts.xml.gz");
-//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans.xml.gz");
-//		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
-//		config.plans().setInputFile("./output/filteredPopulation.xml.gz");
-
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
-//		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz");
-
-//		episimConfig.setInputEventsFile("/Users/sebastianmuller/Documents/episim-original-data/20200410_CH2019.25pct.run1.output_events.reducedForEpisim.xml.gz");
-
+		int offset = -6;
 
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_001_7);
+		addParams(episimConfig);
+		setContactIntensities(episimConfig);
+
+
+//		prepareRunMunich(config, episimConfig, offset);
+//		prepareRunBerlin(config, episimConfig, offset);
+//		prepareRunBerlinV2(config, episimConfig, offset);
+//		prepareRunHeinsberg(config, episimConfig, offset);
+		prepareRunHeinsbergSmall(config, episimConfig, offset);
+
+		return config;
+	}
+
+	private void prepareRunMunich(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_snz_episim_events.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_entirePopulation_noPlans_withDistricts.xml.gz");
+
+		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialInfectionDistrict("München");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyMunich(offset)	);
+		config.controler().setOutputDirectory("./output-munich-" + offset);
+	}
+
+	private void prepareRunBerlinV2(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
+
 		episimConfig.setInitialInfections(50);
 		episimConfig.setInitialInfectionDistrict("Berlin");
-		addParams(episimConfig);
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
+		config.controler().setOutputDirectory("./output-berlinV2-google-progr" + offset);
+	}
 
-		setContactIntensities(episimConfig);
-		int offset = -6;
+	private void prepareRunBerlin(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_snz_episim_events.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans_withDistricts.xml.gz");
 
-		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialInfectionDistrict("Berlin");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyBerlin(offset)	);
+		config.controler().setOutputDirectory("./output-berlin-" + offset);
+	}
+
+	private void prepareRunHeinsberg(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_events_total.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg/episim-input/he_entirePopulation_noPlans.xml.gz");
+
+		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialStartInfection(10);
+		episimConfig.setInitialInfectionDistrict("Heinsberg");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyHeinsberg(offset)	);
+		config.controler().setOutputDirectory("./output-heinsberg-" + offset);
+	}
+	private void prepareRunHeinsbergSmall(Config config, EpisimConfigGroup episimConfig, int offset) {
+		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_snz_eventsForEpisim.xml.gz");
+		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_snz_populationWithDistrict.xml.gz");
+
+		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialStartInfection(10);
+		episimConfig.setInitialInfectionDistrict("Heinsberg");
+		episimConfig.setPolicy(FixedPolicy.class, buildPolicyHeinsberg(offset)	);
+		config.controler().setOutputDirectory("./output-heinsbergSmall4-" + offset);
+	}
+
+	private com.typesafe.config.Config buildPolicyHeinsberg(int offset) {
+		
+		return FixedPolicy.config()
+				.restrict(11 - offset, 0.90, "work")
+				.restrict(30 - offset, 0.40, "work")
+				
+				.restrict(11 - offset, 0., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher")
+				.restrict(24 - offset, 0.1, "educ_secondary")
+				.restrict(30 - offset, 0.0, "educ_secondary")
+				.restrict(65 - offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(68 - offset, 0.1, "educ_secondary")
+				.restrict(79 - offset, 0.2, "educ_secondary")
+
+				.restrict(11 - offset, 0.60, "leisure")
+				.restrict(30 - offset, 0.40, "leisure")
+				.restrict(37 - offset, 0.10, "leisure")
+
+				
+				.restrict(11 - offset, 0.90, "shopping", "errands", "business")
+				.restrict(32 - offset, 0.70, "shopping", "errands", "business")
+				.build();
+	}
+
+	private com.typesafe.config.Config buildPolicyBerlin(int offset) {
+		return FixedPolicy.config()
 				.restrict(20 - offset, 0.95, "work")
 				.restrict(22 - offset, 0.9, "work")
 				.restrict(23 - offset, 0.85, "work")
@@ -145,14 +215,79 @@ public class SnzScenario extends AbstractModule {
 				.restrict(29 - offset, 0.23, "leisure")
 				.restrict(30 - offset, 0.16, "leisure")
 				.restrict(31 - offset, 0.1, "leisure")
+
+				//day 23 is the saturday 14th of march, so the weekend before schools got closed..
+				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai, apr'20
+				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
+				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
+				.build();
+	}
+
+	private com.typesafe.config.Config buildPolicyMunich(int offset) {
+		return FixedPolicy.config()
+
+				//holidays
+				.restrict(1 - offset, 0.95, "work")
+				.restrict(2 - offset, 0.9, "work")
+				.restrict(3 - offset, 0.85, "work")
+				.restrict(4 - offset, 0.75, "work")
+				.restrict(6 - offset, 0.85, "work")
+				.restrict(9 - offset, 0.9, "work")
+				.restrict(10 - offset, 0.95, "work")
+				.restrict(11 - offset, 1.0, "work")
+
+				//..
+				.restrict(21 - offset, 0.95, "work")
+				.restrict(23 - offset, 0.9, "work")
+				.restrict(24 - offset, 0.85, "work")
+				.restrict(25 - offset, 0.8, "work")
+				.restrict(26 - offset, 0.75, "work")
+				.restrict(27 - offset, 0.7, "work")
+				.restrict(28 - offset, 0.65, "work")
+				.restrict(30 - offset, 0.6, "work")
+				.restrict(32 - offset, 0.55, "work")
+
+				//other
+				.restrict(6 - offset, 0.95, "shopping", "errands", "business")
+				.open(7 - offset, "shopping", "errands", "business")
+				.restrict(14 - offset, 0.95, "shopping", "errands", "business")
+				.open(15 - offset, "shopping", "errands", "business")
+				.restrict(19 - offset, 0.95, "shopping", "errands", "business")
+				.open(20 - offset, "shopping", "errands", "business")
+				.restrict(26 - offset, 0.90, "shopping", "errands", "business")
+				.restrict(27 - offset, 0.80, "shopping", "errands", "business")
+				.restrict(28 - offset, 0.75, "shopping", "errands", "business")
+				.restrict(29 - offset, 0.80, "shopping", "errands", "business")
+				.restrict(30 - offset, 0.70, "shopping", "errands", "business")
+				.restrict(31 - offset, 0.65, "shopping", "errands", "business")
+				.restrict(32 - offset, 0.55, "shopping", "errands", "business")
+				.restrict(36 - offset, 0.6, "shopping", "errands", "business")
+				.restrict(44 - offset, 0.65, "shopping", "errands", "business")
+				.restrict(46 - offset, 0.7, "shopping", "errands", "business")
+				.restrict(48 - offset, 0.75, "shopping", "errands", "business")
+				.restrict(49 - offset, 0.8, "shopping", "errands", "business")
+				.restrict(51 - offset, 0.70, "shopping", "errands", "business")
+				.restrict(55 - offset, 0.65, "shopping", "errands", "business")
+
+				//leisure
+				.restrict(18 - offset, 0.94, "leisure")
+				.restrict(19 - offset, 0.87, "leisure")
+				.restrict(20 - offset, 0.81, "leisure")
+				.restrict(21 - offset, 0.74, "leisure")
+				.restrict(22 - offset, 0.68, "leisure")
+				.restrict(23 - offset, 0.61, "leisure")
+				.restrict(24 - offset, 0.55, "leisure")
+				.restrict(25 - offset, 0.49, "leisure")
+				.restrict(26 - offset, 0.42, "leisure")
+				.restrict(27 - offset, 0.36, "leisure")
+				.restrict(28 - offset, 0.29, "leisure")
+				.restrict(29 - offset, 0.23, "leisure")
+				.restrict(30 - offset, 0.16, "leisure")
+				.restrict(31 - offset, 0.1, "leisure")
+				//day 23 is the saturday 14th of march, so the weekend before schools got closed..
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
-//				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga")
-				.build()
-		);
-
-		config.controler().setOutputDirectory("./output-belinV2-base-google-" + offset);
-
-		return config;
+				.build();
 	}
+
 }

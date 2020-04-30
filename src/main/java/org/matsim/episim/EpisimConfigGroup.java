@@ -24,7 +24,8 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.magnos.trie.Trie;
 import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
@@ -38,6 +39,9 @@ import javax.validation.constraints.NotNull;
 import java.io.File;
 import java.util.*;
 
+/**
+ * Main config for episim.
+ */
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
@@ -45,13 +49,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
-	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
-	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
-	private static final String TRACING_PROBABILITY = "tracingProbability";
+	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
 	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
 
-	private static final Logger log = Logger.getLogger(EpisimConfigGroup.class);
+	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
@@ -68,28 +70,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
 	private double maskCompliance = 1d;
+	private int initialStartInfections = 0;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
 	private String initialInfectionDistrict = null;
-	/**
-	 * Day after which tracing starts and puts persons into quarantine.
-	 */
-	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;
-	/**
-	 * How many days the tracing works back.
-	 */
-	private int tracingDayDistance = 4;
-	/**
-	 * Probability of successfully tracing a person.
-	 */
-	private double tracingProbability = 1.0;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 
+	/**
+	 * Default constructor.
+	 */
 	public EpisimConfigGroup() {
 		super(GROUPNAME);
 	}
@@ -144,6 +138,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.initialInfectionDistrict = initialInfectionDistrict;
 	}
 
+	@StringGetter(INITIAL_START_INFECTIONS)
+	public int getInitialStartInfection() {
+		return initialStartInfections;
+	}
+
+	@StringSetter(INITIAL_START_INFECTIONS)
+	public void setInitialStartInfection(int initialStartInfections) {
+		this.initialStartInfections = initialStartInfections;
+	}
+
 	@StringGetter(MASK_COMPLIANCE)
 	public double getMaskCompliance() {
 		return maskCompliance;
@@ -152,36 +156,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(MASK_COMPLIANCE)
 	public void setMaskCompliance(double maskCompliance) {
 		this.maskCompliance = maskCompliance;
-	}
-
-	@StringGetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
-	public int getPutTraceablePersonsInQuarantineAfterDay() {
-		return putTraceablePersonsInQuarantineAfterDay;
-	}
-
-	@StringSetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
-	public void setPutTraceablePersonsInQuarantineAfterDay(int putTraceablePersonsInQuarantineAfterDay) {
-		this.putTraceablePersonsInQuarantineAfterDay = putTraceablePersonsInQuarantineAfterDay;
-	}
-
-	@StringGetter(TRACING_DAYS_DISTANCE)
-	public int getTracingDayDistance() {
-		return tracingDayDistance;
-	}
-
-	@StringSetter(TRACING_DAYS_DISTANCE)
-	public void setTracingDayDistance(int tracingDayDistance) {
-		this.tracingDayDistance = tracingDayDistance;
-	}
-
-	@StringGetter(TRACING_PROBABILITY)
-	public double getTracingProbability() {
-		return tracingProbability;
-	}
-
-	@StringSetter(TRACING_PROBABILITY)
-	public void setTracingProbability(double tracingProbability) {
-		this.tracingProbability = tracingProbability;
 	}
 
 	/**
@@ -234,14 +208,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	@StringSetter("policyConfig")
 	public void setPolicyConfig(String policyConfig) {
-		File file = new File(policyConfig);
-		if (!policyConfig.equals("null") && !file.exists())
-			throw new IllegalArgumentException("Policy config does not exist: " + policyConfig);
-		this.policyConfig = ConfigFactory.parseFileAnySyntax(file);
+		if (policyConfig == null)
+			this.policyConfig = ConfigFactory.empty();
+		else {
+			File file = new File(policyConfig);
+			if (!policyConfig.equals("null") && !file.exists())
+				throw new IllegalArgumentException("Policy config does not exist: " + policyConfig);
+			this.policyConfig = ConfigFactory.parseFileAnySyntax(file);
+		}
 	}
 
 	/**
-	 * Overwrite the policy location, which will be returned by {@link #getPolicyConfig()}
+	 * Overwrite the policy location, which will be returned by {@link #getPolicyConfig()}.
 	 */
 	public void setOverwritePolicyLocation(String overwritePolicyLocation) {
 		this.overwritePolicyLocation = overwritePolicyLocation;
@@ -398,12 +376,30 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity));
 	}
 
+	/**
+	 * All defined infection parameter.
+	 */
 	public Collection<InfectionParams> getInfectionParams() {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 	}
 
-	public enum FacilitiesHandling {bln, snz}
+	/**
+	 * Defines how facilities should be handled.
+	 */
+	public enum FacilitiesHandling {
+		/**
+		 * A facility id will be constructed using the link id where the activity is performed.
+		 */
+		bln,
+		/**
+		 * Facilities ids of activities will be used directly.
+		 */
+		snz
+	}
 
+	/**
+	 * Defines which events will be written.
+	 */
 	public enum WriteEvents {
 		/**
 		 * Disable event writing completely.
@@ -423,6 +419,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		all
 	}
 
+	/**
+	 * Parameter set for one activity type.
+	 */
 	public static final class InfectionParams extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
@@ -440,12 +439,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		private Set<String> mappedNames;
 		private double contactIntensity = 1.;
 
+		/**
+		 * See {@link #InfectionParams(String, String...)}. Name itself will also be used as prefix.
+		 */
 		public InfectionParams(final String containerName) {
 			this();
 			this.containerName = containerName;
 			this.mappedNames = Sets.newHashSet(containerName);
 		}
 
+		/**
+		 * Constructor.
+		 * @param containerName name name of this activity type
+		 * @param mappedNames activity prefixes that will also be mapped to this container
+		 */
 		public InfectionParams(final String containerName, String... mappedNames) {
 			this();
 			this.containerName = containerName;

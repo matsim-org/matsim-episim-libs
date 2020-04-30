@@ -47,13 +47,18 @@ public class EpisimModule extends AbstractModule {
 
 		binder().requireExplicitBindings();
 
+		// Main model classes regarding progression / infection etc..
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(DefaultProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
+
+		// Internal classes, should rarely be needed to be reconfigured
 		bind(EpisimRunner.class).in(Singleton.class);
 		bind(ReplayHandler.class).in(Singleton.class);
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
+
+		// Ah, ok, here one sees how it is plugged together.  kai, apr'20
 	}
 
 	@Provides
@@ -61,6 +66,7 @@ public class EpisimModule extends AbstractModule {
 	public Scenario scenario(Config config) {
 
 		// guice will use no args constructor by default, we check if this config was initialized
+		// this is only the case when no explicit binding are required
 		if (config.getModules().size() == 0)
 			throw new IllegalArgumentException("Please provide a config module or binding.");
 
@@ -77,6 +83,13 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public EpisimConfigGroup episimConfigGroup(Config config) {
 		return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+	}
+
+
+	@Provides
+	@Singleton
+	public TracingConfigGroup tracingConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 	}
 
 	@Provides

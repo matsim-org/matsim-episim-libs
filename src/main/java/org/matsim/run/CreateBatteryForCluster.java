@@ -45,10 +45,20 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 
+/**
+ * Creates batch scripts to execute one {@link BatchRun} on a computing cluster.
+ * It will write all necessary configs, run scripts and metadata information.
+ * <p>
+ * For examples look in the <em>org.matsim.run.batch</em> package. The classes there
+ * can be used for this run class as <em>--setup</em> and <em>--params</em> option to create a batch run.
+ *
+ * @param <T> type to match run and params
+ */
 @CommandLine.Command(
 		name = "createBattery",
 		description = "Create batch scripts for execution on computing cluster.",
@@ -67,19 +77,19 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
 	private String runName;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v7")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v8")
 	private String runVersion;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "75")
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "70")
 	private int stepSize;
 
-	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4G -Xmx4G")
+	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4600m -Xmx4600m")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SchoolClosure")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.MunichSchoolClosureAndMasks")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SchoolClosure$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.MunichSchoolClosureAndMasks$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -96,7 +106,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Files.createDirectories(input);
 
 		// Copy all resources
-		for (String name : Lists.newArrayList("run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
@@ -118,7 +128,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				.registerModule(new JavaTimeModule())
 				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-		LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
+		Map<String, Object> metadata = new LinkedHashMap<>();
 
 		metadata.put("city", StringUtils.capitalize(runName));
 		metadata.put("readme", runVersion + "-notes.md");
@@ -167,8 +177,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			int arrayEnd = (int) Math.ceil((double) Math.min(offset + step, prepare.runs.size() - offset) / stepSize) * stepSize;
 
 			lines.add(
-					String.format("sbatch --export=JAVA_OPTS,EXTRA_OFFSET=%d --array=1-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
-							offset, arrayEnd, stepSize, stepSize, runName)
+					String.format("sbatch --export=JAVA_OPTS,EXTRA_OFFSET=%d --array=0-%d:%d --ntasks-per-node=%d --job-name=%s runSlurm.sh",
+							offset, arrayEnd - 1, stepSize, stepSize, runName)
 			);
 		}
 

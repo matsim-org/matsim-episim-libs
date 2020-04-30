@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -48,6 +48,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 
+/**
+ * Preprocessing step that takes the home ids of each person in a population and looks up their district from a shape file.
+ * Writes a new population file with the additional "district" attribute as result.
+ */
 @CommandLine.Command(
 		name = "districtLookup",
 		description = "Calculate and attach district information to a population.",
@@ -102,7 +106,7 @@ public class DistrictLookup implements Callable<Integer> {
 				String district = index.query(x, y);
 
 				p.getAttributes().putAttribute("district", district);
-			} catch (Exception e) {
+			} catch (RuntimeException e) {
 				unknown++;
 			}
 		}

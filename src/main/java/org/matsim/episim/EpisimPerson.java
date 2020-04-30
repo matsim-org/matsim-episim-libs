@@ -26,7 +26,6 @@ import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.model.FaceMask;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
@@ -138,7 +137,8 @@ public final class EpisimPerson implements Attributable {
 	@Beta
 	public int daysSinceQuarantine(int currentDay) {
 
-		// yyyyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
+		// yyyy since this API is so unstable, I would prefer to have the class non-public.  kai, apr'20
+		// -> api now marked as unstable and containing an api note, because it is used by the models it has to be public. chr, apr'20
 		if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
 
 		return currentDay - quarantineDate;
@@ -245,13 +245,19 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Spent time of this person.
+	 * Spent time of this person by activity.
 	 */
 	public MutableObjectDoubleMap<String> getSpentTime() {
 		return spentTime;
 	}
 
+	/**
+	 * Disease status of a person.
+	 */
 	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms, seriouslySick, critical, recovered}
 
+	/**
+	 * Quarantine status of a person.
+	 */
 	public enum QuarantineStatus {full, atHome, no}
 }

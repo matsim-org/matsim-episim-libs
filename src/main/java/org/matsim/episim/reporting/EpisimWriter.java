@@ -26,7 +26,7 @@ public class EpisimWriter {
 	public static final Joiner JOINER = Joiner.on(SEPARATOR);
 
 	/**
-	 * Creates a csv writer and write the header using enum definition.s
+	 * Creates a csv writer and write the header using enum definition.
 	 */
 	public static BufferedWriter prepare(String filename, Class<? extends Enum<?>> enumClass) {
 		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
@@ -41,7 +41,7 @@ public class EpisimWriter {
 	}
 
 	/**
-	 * Creates a csv writer and writes the header according to {@link Joiner#join(Object, Object, Object...)}
+	 * Creates a csv writer and writes the header according to {@link Joiner#join(Object, Object, Object...)}.
 	 */
 	public static BufferedWriter prepare(String filename, Object first, Object second, Object... rest) {
 		BufferedWriter writer = IOUtils.getBufferedWriter(filename);
@@ -72,6 +72,10 @@ public class EpisimWriter {
 		out.append(" />\n");
 	}
 
+	/**
+	 * Same logic as in {@link org.matsim.core.events.algorithms.EventWriterXML}. But we need to ability to write directly
+	 * to he target {@code out} without creating an intermediate representation.
+	 */
 	private static void writeAttributeValue(final Appendable out, final String attributeValue) throws IOException {
 		if (attributeValue == null) {
 			return;

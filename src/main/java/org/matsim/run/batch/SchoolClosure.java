@@ -27,9 +27,6 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzScenario;
 
-import java.util.List;
-import java.util.Map;
-
 public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 	@Override
@@ -77,15 +74,6 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
 
 		return config;
-	}
-
-	@Override
-	public Map<Integer, List<String>> getMeasures() {
-		return Map.of(
-				23, List.of("remainingFractionLeisure1"),
-				32, List.of("remainingFractionLeisure2", "remainingFractionWork", "remainingFractionShoppingBusinessErrands"),
-				60, List.of("remainingFractionKiga", "remainingFractionPrima", "remainingFractionSecon")
-		);
 	}
 
 	public static final class Params {

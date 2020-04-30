@@ -29,10 +29,34 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzScenario;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
-public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMasks.Params> {
+/**
+ * Batch run for Berlin using different school closure timing and mask options.
+ */
+public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolClosureAndMasks.Params> {
+
+	public static final List<Option> OPTIONS = List.of(
+			Option.of("Worn masks", 67)
+					.measure("Mask type", "mask")
+					.measure("Mask compliance", "maskCompliance"),
+
+			Option.of("Out-of-home activities limited", "By type and percent (%)", 67)
+					.measure("Work activities", "remainingFractionWork")
+					.measure("Other activities", "remainingFractionShoppingBusinessErrands")
+					.measure("Leisure activities", "remainingFractionLeisure"),
+
+			Option.of("Reopening of educational facilities", "Students returning (%)", 74)
+					.measure("Going to primary school", "remainingFractionPrima")
+					.measure("Going to kindergarten", "remainingFractionKiga")
+					.measure("Going to secondary/univ.", "remainingFractionSeconHigher")
+	);
+
+	@Override
+	public LocalDate startDate() {
+		return LocalDate.of(2020, 3, 21);
+	}
 
 	@Override
 	public Config baseCase(int id) {
@@ -58,7 +82,12 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 	}
 
 	@Override
-	public Config prepareConfig(int id, SchoolClosureAndMasks.Params params) {
+	public List<Option> getOptions() {
+		return OPTIONS;
+	}
+
+	@Override
+	public Config prepareConfig(int id, BerlinSchoolClosureAndMasks.Params params) {
 
 		Config config = baseCase(id);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -66,14 +95,14 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 		FaceMask wornMask = FaceMask.valueOf(params.mask);
 		episimConfig.setMaskCompliance(params.maskCompliance);
 
-		
+
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
 				//taken from Google mobility report
 				.restrict(20 - offset, 0.95, "work")
 				.restrict(22 - offset, 0.9, "work")
 				.restrict(23 - offset, 0.85, "work")
 				.restrict(25 - offset, 0.8, "work")
-				.restrict(26 - offset, 0.65, "work")	
+				.restrict(26 - offset, 0.65, "work")
 				.restrict(27 - offset, 0.6, "work")
 				.restrict(28 - offset, 0.55, "work")
 				.restrict(31 - offset, 0.5, "work")
@@ -132,17 +161,8 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
-		
-		return config;
-	}
 
-	@Override
-	public Map<Integer, List<String>> getMeasures() {
-		return Map.of(
-				23, List.of("remainingFractionLeisure1"),
-				32, List.of("remainingFractionLeisure2", "remainingFractionWork", "remainingFractionShoppingBusinessErrands"),
-				60, List.of("remainingFractionKiga", "remainingFractionPrima", "remainingFractionSecon")
-		);
+		return config;
 	}
 
 	public static final class Params {
@@ -155,7 +175,7 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 
 		@Parameter({0.5, 0.1})
 		double remainingFractionPrima;
-		
+
 		@Parameter({0.5, 0.})
 		double remainingFractionSeconHigher;
 
@@ -167,10 +187,10 @@ public final class SchoolClosureAndMasks implements BatchRun<SchoolClosureAndMas
 
 		@Parameter({0.7, 0.9})
 		double remainingFractionShoppingBusinessErrands;
-		
+
 		@StringParameter({"NONE", "CLOTH", "SURGICAL"})
 		String mask;
-		
+
 		@Parameter({0., 0.5, 0.9, 1.})
 		double maskCompliance;
 
