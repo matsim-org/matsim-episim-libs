@@ -54,6 +54,9 @@ import java.util.stream.Collectors;
 
 /**
  * Main event handler of episim.
+ * It consumes the events of a standard MATSim run and puts {@link EpisimPerson}s into {@link EpisimContainer}s during their activity.
+ * At the end of activities an {@link InfectionModel} is executed and also on {@link ProgressionModel} at the end of the day.
+ * See {@link EpisimModule} for, which component may be substituted.
  */
 public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
 	// Some notes:

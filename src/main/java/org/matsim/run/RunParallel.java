@@ -48,6 +48,7 @@ import java.util.concurrent.Executors;
  * by using the <em>--worker-index</em> and <em>--total-worker</em> options.
  *
  * @param <T> type to match batch run and params
+ * @see CreateBatteryForCluster
  */
 @CommandLine.Command(
 		name = "runParallel",
@@ -57,7 +58,7 @@ import java.util.concurrent.Executors;
 )
 public class RunParallel<T> implements Callable<Integer> {
 
-	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
+	private static final Logger log = LogManager.getLogger(RunParallel.class);
 
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;

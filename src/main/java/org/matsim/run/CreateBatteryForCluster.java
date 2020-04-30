@@ -53,6 +53,9 @@ import java.util.stream.Collectors;
 /**
  * Creates batch scripts to execute one {@link BatchRun} on a computing cluster.
  * It will write all necessary configs, run scripts and metadata information.
+ * <p>
+ * For examples look in the <em>org.matsim.run.batch</em> package. The classes there
+ * can be used for this run class as <em>--setup</em> and <em>--params</em> option to create a batch run.
  *
  * @param <T> type to match run and params
  */

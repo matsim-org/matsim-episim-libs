@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.io.Writer;
 
 /**
- * Overwrites the default episim writer to do all IO in an extra thread.
+ * Overwrites the default episim writer to do all IO in an extra thread using the {@link Disruptor} library.
  */
 public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler<AsyncEpisimWriter.LogEvent>,
 		EventTranslatorTwoArg<AsyncEpisimWriter.LogEvent, Writer, Event> {

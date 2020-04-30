@@ -29,6 +29,9 @@ import org.matsim.core.controler.ControlerUtils;
 
 /**
  * Main entry point and runner of one epidemic simulation.
+ *
+ * Using the {@link #run(int)} method, this class will repeatedly loop over {@link InfectionEventHandler} with
+ * events provided by the {@link ReplayHandler}.
  */
 public final class EpisimRunner {
 
