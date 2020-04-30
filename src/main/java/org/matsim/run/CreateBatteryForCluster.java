@@ -45,10 +45,17 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 
+/**
+ * Creates batch scripts to execute one {@link BatchRun} on a computing cluster.
+ * It will write all necessary configs, run scripts and metadata information.
+ *
+ * @param <T> type to match run and params
+ */
 @CommandLine.Command(
 		name = "createBattery",
 		description = "Create batch scripts for execution on computing cluster.",
@@ -118,7 +125,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				.registerModule(new JavaTimeModule())
 				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-		LinkedHashMap<String, Object> metadata = new LinkedHashMap<>();
+		Map<String, Object> metadata = new LinkedHashMap<>();
 
 		metadata.put("city", StringUtils.capitalize(runName));
 		metadata.put("readme", runVersion + "-notes.md");

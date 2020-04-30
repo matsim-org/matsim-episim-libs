@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -43,6 +43,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
+/**
+ * Main class to start episim. It will plug the {@link EpisimModule} together with user supplied modules and start
+ * the {@link EpisimRunner}.
+ * There needs to be a module that provides a {@link Config} for episim to run or it can be supplied as option with
+ * <em>--config [path to xml]</em>
+ * <p>
+ * Example usage:
+ * <pre>
+ *   	org.matsim.run.RunEpisim --modules OpenBerlinScenario
+ * </pre>
+ */
 @CommandLine.Command(
 		name = "episim",
 		headerHeading = RunEpisim.HEADER,
@@ -128,7 +139,7 @@ public class RunEpisim implements Callable<Integer> {
 		log.info("Starting with modules: {}", modules);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(modules));
-		// yyyy In MATSim, the use of "override" in the production code was a consequence of the original design, which was a framework with default modules, and the
+		// yyyyyy In MATSim, the use of "override" in the production code was a consequence of the original design, which was a framework with default modules, and the
 		// capability to replace them was added later.  Most of us agree that this went against the intent of Guice, which we interpret as forcing users to provide unique
 		// bindings, and abort when there are zero or multiple bindings for the same thing.  With that interpretation, "override" should not be used in production code, but
 		// only for testing. --  Here, it seems, that we are going back to the matsim approach where there are default modules everywhere, and configuration is done by
@@ -146,6 +157,8 @@ public class RunEpisim implements Callable<Integer> {
 
 		Config config = injector.getInstance(Config.class);
 
+		// We collect the remaining unparsed options and give them to the MATSim command line util
+		// it will parse options to modify the config like --config:controler.runId
 		if (remainder != null)
 			ConfigUtils.applyCommandline(config, Arrays.copyOfRange(remainder, 0, remainder.length));
 		// yyyy We now have two command line utils on top of each other.  I can see that it makes sense to use an external library rather than
@@ -161,6 +174,9 @@ public class RunEpisim implements Callable<Integer> {
 		return 0;
 	}
 
+	/**
+	 * Resolve and instantiate modules by their name.
+	 */
 	private List<Module> resolveModules(List<String> modules) throws ReflectiveOperationException {
 		List<Module> result = new ArrayList<>();
 

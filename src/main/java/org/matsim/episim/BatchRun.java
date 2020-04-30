@@ -248,7 +248,7 @@ public interface BatchRun<T> {
 		}
 
 		/**
-		 * Add an measure to this option
+		 * Adds an measure to this option.
 		 * @param title title shown in ui
 		 * @param param name of the parameter in code
 		 */

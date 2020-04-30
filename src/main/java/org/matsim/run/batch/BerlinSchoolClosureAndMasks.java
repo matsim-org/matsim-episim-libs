@@ -32,9 +32,12 @@ import org.matsim.run.modules.SnzScenario;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Batch run for Berlin using different school closure timing and mask options.
+ */
 public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolClosureAndMasks.Params> {
 
-	public static List<Option> OPTIONS = List.of(
+	public static final List<Option> OPTIONS = List.of(
 			Option.of("Worn masks", 67)
 					.measure("Mask type", "mask")
 					.measure("Mask compliance", "maskCompliance"),

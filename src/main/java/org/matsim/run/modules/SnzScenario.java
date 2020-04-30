@@ -29,6 +29,9 @@ import org.matsim.episim.policy.FixedPolicy;
 
 import javax.inject.Singleton;
 
+/**
+ * Scenario based on data provided by snz. Please note that this data is not publicly available.
+ */
 public class SnzScenario extends AbstractModule {
 
 	public static final String[] DEFAULT_ACTIVITIES = {
@@ -83,7 +86,7 @@ public class SnzScenario extends AbstractModule {
 		episimConfig.setCalibrationParameter(0.000_001_7);
 		addParams(episimConfig);
 		setContactIntensities(episimConfig);
-		
+
 
 //		prepareRunMunich(config, episimConfig, offset);
 //		prepareRunBerlin(config, episimConfig, offset);
@@ -157,7 +160,7 @@ public class SnzScenario extends AbstractModule {
 				.restrict(65 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(68 - offset, 0.1, "educ_secondary")
 				.restrict(79 - offset, 0.2, "educ_secondary")
-				
+
 				.restrict(11 - offset, 0.60, "leisure")
 				.restrict(30 - offset, 0.40, "leisure")
 				.restrict(37 - offset, 0.10, "leisure")
@@ -212,6 +215,8 @@ public class SnzScenario extends AbstractModule {
 				.restrict(29 - offset, 0.23, "leisure")
 				.restrict(30 - offset, 0.16, "leisure")
 				.restrict(31 - offset, 0.1, "leisure")
+
+				//day 23 is the saturday 14th of march, so the weekend before schools got closed..
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai, apr'20
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
 				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
@@ -279,6 +284,7 @@ public class SnzScenario extends AbstractModule {
 				.restrict(29 - offset, 0.23, "leisure")
 				.restrict(30 - offset, 0.16, "leisure")
 				.restrict(31 - offset, 0.1, "leisure")
+				//day 23 is the saturday 14th of march, so the weekend before schools got closed..
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
 				.build();

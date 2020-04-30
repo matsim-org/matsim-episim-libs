@@ -34,6 +34,7 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
+ * Default infection model executed, when a person ends his activity.
  * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
  * <pre>
  *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * exposure)
@@ -64,14 +65,30 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel) {
-		this(rnd, episimConfig, reporting,
-				maskModel,  episimConfig.getPutTraceablePersonsInQuarantineAfterDay());
+		this(rnd, episimConfig, reporting, maskModel, episimConfig.getPutTraceablePersonsInQuarantineAfterDay());
 	}
 
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {
 		super(rnd, episimConfig, reporting);
 		this.maskModel = maskModel;
 		this.trackingAfterDay = trackingAfterDay;
+	}
+
+	/**
+	 * Attention: In order to re-use the underlying object, this function returns a buffer.
+	 * Be aware that the old result will be overwritten, when the function is called multiple times.
+	 */
+	private static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
+		buffer.setLength(0);
+		if (container instanceof InfectionEventHandler.EpisimFacility) {
+			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
+			return buffer;
+		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+			buffer.append("pt");
+			return buffer;
+		} else {
+			throw new RuntimeException("Infection situation is unknown");
+		}
 	}
 
 	@Override
@@ -252,23 +269,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		} else
 			throw new IllegalStateException("Don't know how to deal with container " + container);
 
-	}
-
-	/**
-	 * Attention: In order to re-use the underlying object, this function returns a buffer.
-	 * Be aware that the old result will be overwritten, when the function is called multiple times.
-	 */
-	private static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity, String otherPersonsActivity) {
-		buffer.setLength(0);
-		if (container instanceof InfectionEventHandler.EpisimFacility) {
-			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
-			return buffer;
-		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
-			buffer.append("pt");
-			return buffer;
-		} else {
-			throw new RuntimeException("Infection situation is unknown");
-		}
 	}
 
 	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {

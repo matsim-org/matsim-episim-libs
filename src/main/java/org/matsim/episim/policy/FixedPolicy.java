@@ -33,6 +33,9 @@ import java.util.Map;
  */
 public class FixedPolicy extends ShutdownPolicy {
 
+	/**
+	 * Constructor.
+	 */
 	public FixedPolicy(Config config) {
 		super(config);
 	}

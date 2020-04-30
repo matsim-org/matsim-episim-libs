@@ -31,8 +31,10 @@ import org.matsim.run.modules.SnzScenario;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
+/**
+ * See {@link BerlinSchoolClosureAndMasks}, but for munich.
+ */
 public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolClosureAndMasks.Params> {
 	@Override
 	public LocalDate startDate() {
@@ -168,7 +170,7 @@ public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolC
 
 	public static final class Params {
 
-		@IntParameter({-6})
+		@IntParameter({-6, 6})
 		int offset;
 
 		@Parameter({0.5, 0.1})

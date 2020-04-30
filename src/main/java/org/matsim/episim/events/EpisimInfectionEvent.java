@@ -25,6 +25,9 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 	private final Id<?> containerId;
 	private final String infectionType;
 
+	/**
+	 * Constructor.
+	 */
 	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType) {
 		super(time);
 

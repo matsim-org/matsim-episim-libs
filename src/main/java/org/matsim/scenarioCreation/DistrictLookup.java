@@ -48,6 +48,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 
+/**
+ * Preprocessing step that takes the home ids of each person in a population and looks up their district from a shape file.
+ * Writes a new population file with the additional "district" attribute as result.
+ */
 @CommandLine.Command(
 		name = "districtLookup",
 		description = "Calculate and attach district information to a population.",
@@ -102,7 +106,7 @@ public class DistrictLookup implements Callable<Integer> {
 				String district = index.query(x, y);
 
 				p.getAttributes().putAttribute("district", district);
-			} catch (Exception e) {
+			} catch (RuntimeException e) {
 				unknown++;
 			}
 		}
