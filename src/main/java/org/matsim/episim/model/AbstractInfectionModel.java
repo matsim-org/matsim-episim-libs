@@ -39,7 +39,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	protected final Scenario scenario = null;
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
-	private final EpisimReporting reporting;
+	protected final EpisimReporting reporting;
 	protected int iteration;
 	private Map<String, Restriction> restrictions;
 

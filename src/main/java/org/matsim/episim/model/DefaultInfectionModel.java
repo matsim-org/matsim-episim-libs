@@ -202,6 +202,10 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 			}
 
+			// Only a subset of contacts are reported at the moment
+			// TODO: should be invoked earlier if performance penalty is not too high
+			reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
+
 			// Parameter will only be retrieved one time
 			if (leavingParams == null)
 				leavingParams = getInfectionParams(container, leavingPersonsActivity);
