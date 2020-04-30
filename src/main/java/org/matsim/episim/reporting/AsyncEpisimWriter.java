@@ -21,7 +21,7 @@ import java.io.Writer;
 public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler<AsyncEpisimWriter.LogEvent>,
 		EventTranslatorTwoArg<AsyncEpisimWriter.LogEvent, Writer, Event> {
 
-	private final static Logger log = LogManager.getLogger(AsyncEpisimWriter.class);
+	private static final Logger log = LogManager.getLogger(AsyncEpisimWriter.class);
 	private final Disruptor<LogEvent> disruptor;
 	private final StringEventTranslator translator = new StringEventTranslator();
 	private final StringArrayEventTranslator arrayTranslator = new StringArrayEventTranslator();

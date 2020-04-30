@@ -30,9 +30,12 @@ import org.matsim.run.modules.SnzScenario;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Batch run for Berlin executing different school closure and tracing options.
+ */
 public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoolClosureAndTracing.Params> {
 
-	public static List<Option> OPTIONS = List.of(
+	public static final List<Option> OPTIONS = List.of(
 			Option.of("Contact tracing", 67)
 					.measure("Tracing Distance", "tracingDayDistance")
 					.measure("Tracing Probability", "tracingProbability"),

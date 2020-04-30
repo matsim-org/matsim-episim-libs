@@ -29,7 +29,6 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 
@@ -68,6 +67,8 @@ public class EpisimContainer<T> {
 	}
 
 	/**
+	 * Removes a person from this container.
+	 * @throws RuntimeException if the person was not in the container.
 	 * @noinspection UnusedReturnValue
 	 */
 	EpisimPerson removePerson(Id<Person> personId) {

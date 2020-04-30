@@ -54,6 +54,9 @@ public final class PreparedRun {
 	 */
 	public final List<Run> runs;
 
+	/**
+	 * Constructor, see Javadoc of {@link PreparedRun}s fields for additional info.
+	 */
 	public PreparedRun(BatchRun<?> setup, List<String> parameter, List<List<Object>> parameterValues, List<Run> runs) {
 		this.setup = setup;
 		this.parameter = parameter;

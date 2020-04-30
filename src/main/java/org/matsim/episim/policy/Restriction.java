@@ -26,28 +26,46 @@ public final class Restriction {
 	 */
 	private FaceMask requireMask;
 
+	/**
+	 * Constructor.
+	 */
 	public Restriction(double remainingFraction, double exposure, FaceMask requireMask) {
 		this.remainingFraction = remainingFraction;
 		this.exposure = exposure;
 		this.requireMask = requireMask;
 	}
 
+	/**
+	 * Restriction that allows everything.
+	 */
 	public static Restriction none() {
 		return new Restriction(1d, 1d, FaceMask.NONE);
 	}
 
+	/**
+	 * Restriction only reducing the {@link #remainingFraction}.
+	 */
 	public static Restriction of(double remainingFraction) {
 		return new Restriction(remainingFraction, 1d, FaceMask.NONE);
 	}
 
+	/**
+	 * See {@link #of(double, double, FaceMask)}.
+	 */
 	public static Restriction of(double remainingFraction, FaceMask mask) {
 		return new Restriction(remainingFraction, 1d, mask);
 	}
 
+	/**
+	 * Instantiate a restriction-
+	 */
 	public static Restriction of(double remainingFraction, double exposure, FaceMask mask) {
 		return new Restriction(remainingFraction, exposure, mask);
 	}
 
+	/**
+	 * Creates a restriction from a config entry.
+	 */
 	public static Restriction fromConfig(Config config) {
 		return new Restriction(
 				config.getDouble("fraction"),

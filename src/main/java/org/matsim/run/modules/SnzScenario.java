@@ -29,6 +29,9 @@ import org.matsim.episim.policy.FixedPolicy;
 
 import javax.inject.Singleton;
 
+/**
+ * Scenario based on data provided by snz. Please note that this data is not publicly available.
+ */
 public class SnzScenario extends AbstractModule {
 
 	public static final String[] DEFAULT_ACTIVITIES = {
@@ -84,7 +87,7 @@ public class SnzScenario extends AbstractModule {
 		episimConfig.setInitialInfections(50);
 		addParams(episimConfig);
 		setContactIntensities(episimConfig);
-		
+
 
 //		prepareRunMunich(config, episimConfig, offset);
 //		prepareRunBerlin(config, episimConfig, offset);

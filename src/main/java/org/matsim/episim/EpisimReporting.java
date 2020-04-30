@@ -268,6 +268,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		}
 	}
 
+	/**
+	 * Report the occurrence of an infection.
+	 * @param personWrapper infected person
+	 * @param infector infector
+	 * @param infectionType activities of both persons
+	 */
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
@@ -341,6 +347,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		manager.processEvent(event);
 	}
 
+	@Override
 	public void close() {
 
 		if (events != null) {
@@ -399,6 +406,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 * Detailed infection report for the end of a day.
 	 * Although the fields are mutable, do not change them outside this class.
 	 */
+	@SuppressWarnings("VisibilityModifier")
 	public static class InfectionReport {
 
 		public final String name;
@@ -415,12 +423,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		public long nRecovered = 0;
 		public long nInQuarantine = 0;
 
+		/**
+		 * Constructor.
+		 */
 		public InfectionReport(String name, double time, long day) {
 			this.name = name;
 			this.time = time;
 			this.day = day;
 		}
 
+		/**
+		 * Total number of persons in the simulation.
+		 */
 		public long nTotal() {
 			return nSusceptible + nTotalInfected + nRecovered;
 		}

@@ -460,12 +460,18 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		return Collections.unmodifiableCollection(personMap.values());
 	}
 
+	/**
+	 * Container that is always a vehicle.
+	 */
 	public static final class EpisimVehicle extends EpisimContainer<Vehicle> {
 		EpisimVehicle(Id<Vehicle> vehicleId) {
 			super(vehicleId);
 		}
 	}
 
+	/**
+	 * Container that is a facility and occurred during an activity.
+	 */
 	public static final class EpisimFacility extends EpisimContainer<ActivityFacility> {
 		EpisimFacility(Id<ActivityFacility> facilityId) {
 			super(facilityId);
