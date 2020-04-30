@@ -88,6 +88,7 @@ public class RunEpisim implements Callable<Integer> {
 				.setStopAtUnmatched(false)
 				.setUnmatchedOptionsArePositionalParams(true)
 				.execute(args);
+		// (the "execute" will run "RunEpisim#call()")
 	}
 
 	@Override
@@ -111,7 +112,7 @@ public class RunEpisim implements Callable<Integer> {
 
 		if (config != null) {
 			if (!Files.exists(config)) {
-				log.error("Config file {} does not exists.", config);
+				log.error("Config file {} does not exist.", config);
 				return 1;
 			}
 
@@ -127,6 +128,12 @@ public class RunEpisim implements Callable<Integer> {
 		log.info("Starting with modules: {}", modules);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(modules));
+		// yyyy In MATSim, the use of "override" in the production code was a consequence of the original design, which was a framework with default modules, and the
+		// capability to replace them was added later.  Most of us agree that this went against the intent of Guice, which we interpret as forcing users to provide unique
+		// bindings, and abort when there are zero or multiple bindings for the same thing.  With that interpretation, "override" should not be used in production code, but
+		// only for testing. --  Here, it seems, that we are going back to the matsim approach where there are default modules everywhere, and configuration is done by
+		// replacing them.  Was the other approach (to enforce explicit bindings, i.e. to _not_ use override in the production code) ever tried?  If so, for which reasons
+		// was it rejected?  kai, apr'20
 
 		StringBuilder bindings = new StringBuilder();
 
@@ -141,6 +148,8 @@ public class RunEpisim implements Callable<Integer> {
 
 		if (remainder != null)
 			ConfigUtils.applyCommandline(config, Arrays.copyOfRange(remainder, 0, remainder.length));
+		// yyyy We now have two command line utils on top of each other.  I can see that it makes sense to use an external library rather than
+		// something self-written.  But could you please defend the design decision to use both of them on top of each other?  kai, apr'20
 
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 

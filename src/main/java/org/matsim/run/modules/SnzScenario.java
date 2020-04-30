@@ -180,9 +180,9 @@ public class SnzScenario extends AbstractModule {
 				.restrict(29 - offset, 0.23, "leisure")
 				.restrict(30 - offset, 0.16, "leisure")
 				.restrict(31 - offset, 0.1, "leisure")
-				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga")
+				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai, apr'20
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
-				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga")
+				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
 				.build();
 	}
 

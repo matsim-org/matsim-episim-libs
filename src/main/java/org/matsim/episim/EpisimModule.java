@@ -54,6 +54,8 @@ public class EpisimModule extends AbstractModule {
 		bind(ReplayHandler.class).in(Singleton.class);
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
+
+		// Ah, ok, here one sees how it is plugged together.  kai, apr'20
 	}
 
 	@Provides
