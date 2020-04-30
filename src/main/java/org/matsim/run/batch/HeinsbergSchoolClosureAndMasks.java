@@ -70,6 +70,7 @@ public final class HeinsbergSchoolClosureAndMasks implements BatchRun<HeinsbergS
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_001_7);
 		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialStartInfection(10);
 		episimConfig.setInitialInfectionDistrict("Heinsberg");
 
 		SnzScenario.addParams(episimConfig);

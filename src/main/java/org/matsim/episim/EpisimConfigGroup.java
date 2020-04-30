@@ -45,6 +45,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
+	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
 	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
@@ -68,6 +69,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
 	private double maskCompliance = 1d;
+	private int initialStartInfections = 0;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
@@ -143,7 +145,17 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setInitialInfectionDistrict(String initialInfectionDistrict) {
 		this.initialInfectionDistrict = initialInfectionDistrict;
 	}
+	
+	@StringGetter(INITIAL_START_INFECTIONS)
+	public int getInitialStartInfection() {
+		return initialStartInfections;
+	}
 
+	@StringSetter(INITIAL_START_INFECTIONS)
+	public void setInitialStartInfection(int initialStartInfections) {
+		this.initialStartInfections = initialStartInfections;
+	}
+	
 	@StringGetter(MASK_COMPLIANCE)
 	public double getMaskCompliance() {
 		return maskCompliance;

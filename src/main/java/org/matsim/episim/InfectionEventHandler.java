@@ -110,6 +110,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private int iteration = 0;
 	private int initialInfectionsLeft;
+	private int initialStartInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -128,6 +129,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.progressionModel = progressionModel;
 		this.infectionModel = infectionModel;
 		this.initialInfectionsLeft = episimConfig.getInitialInfections();
+		this.initialStartInfectionsLeft = episimConfig.getInitialStartInfection();
 	}
 
 	/**
@@ -341,15 +343,27 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		while (true) {
+			if (initialStartInfectionsLeft > 0) {
+				while(initialStartInfectionsLeft > 0) {
+					EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
+					if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
+						randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
+						log.warn("Person {} has initial infection", randomPerson.getPersonId());
+						initialStartInfectionsLeft--;
+						initialInfectionsLeft--;
+					}					
+				}
+				break;
+			}
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
 				log.warn("Person {} has initial infection", randomPerson.getPersonId());
+				initialInfectionsLeft--;
 				break;
 			}
 		}
-
-		initialInfectionsLeft--;
+		
 	}
 
 	/**
