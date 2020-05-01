@@ -22,7 +22,6 @@ package org.matsim.run.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import com.google.inject.internal.cglib.core.$AbstractClassGenerator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
@@ -91,9 +90,9 @@ public class SnzScenario extends AbstractModule {
 
 //		prepareRunMunich(config, episimConfig, offset);
 //		prepareRunBerlin(config, episimConfig, offset);
-//		prepareRunBerlinV2(config, episimConfig, offset);
+		prepareRunBerlinV2(config, episimConfig, offset);
 //		prepareRunHeinsberg(config, episimConfig, offset);
-		prepareRunHeinsbergSmall(config, episimConfig, offset);
+//		prepareRunHeinsbergSmall(config, episimConfig, offset);
 
 		return config;
 	}
@@ -108,7 +107,7 @@ public class SnzScenario extends AbstractModule {
 		config.controler().setOutputDirectory("./output-munich-" + offset);
 	}
 
-	private void prepareRunBerlinV2(Config config, EpisimConfigGroup episimConfig, int offset) {
+	public static void prepareRunBerlinV2(Config config, EpisimConfigGroup episimConfig, int offset) {
 		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz");
 		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
 
@@ -172,59 +171,78 @@ public class SnzScenario extends AbstractModule {
 				.build();
 	}
 
-	/* package private for a test */ com.typesafe.config.Config buildPolicyBerlin(int offset){
+	static class LinearInterpolation{
+		private final long firstDay;
+		private final double firstValue;
+		private final long lastDay;
+		private final double lastValue;
+		LinearInterpolation( long firstDay, double firstValue, long lastDay, double lastValue ) {
+			this.firstDay = firstDay;
+			this.firstValue = firstValue;
+			this.lastDay = lastDay;
+			this.lastValue = lastValue;
+		}
+		double getValue( long day ) {
+			return firstValue + (lastValue-firstValue)*(day-firstDay)/(lastDay-firstDay);
+			// corner cases:
+			// * day=firstDay --> fraction=firstValue
+			// * day=lastDay --> fraction=lastValue
+		}
+	}
+
+	/* package private for a test */ static com.typesafe.config.Config buildPolicyBerlin(int offset){
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 		{
-			int firstDay = 19 - offset;
-			int lastDay = 33 - offset;
-			double firstValue=1.;
-			double lastValue=0.45;
+			final int firstDay = 17 - offset; // 2 days earlier than previously
+			final int lastDay = 31 - offset; // 2 days earlier than previously
+			LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, 0.45 );
 			for( int day = firstDay ; day <= lastDay ; day++ ){
-
-				double fraction = firstValue + (lastValue-firstValue)*(day-firstDay)/(lastDay-firstDay);
-				// corner cases:
-				// * day=firstDay --> fraction=firstValue
-				// * day=lastDay --> fraction=lastValue
-
-				builder.restrict( day, fraction, "work" );
+				builder.restrict( day, interpolation.getValue( day ), "work" );
 			}
 		}
-		builder.restrict(15 - offset, 0.95, "shopping", "errands", "business")
-				.open(17 - offset, "shopping", "errands", "business")
-				.restrict(19 - offset, 0.95, "shopping", "errands", "business")
-				.open(20 - offset, "shopping", "errands", "business")
-				.restrict(26 - offset, 0.95, "shopping", "errands", "business")
-				.restrict(27 - offset, 0.85, "shopping", "errands", "business")
-				.restrict(28 - offset, 0.75, "shopping", "errands", "business")
-				.restrict(29 - offset, 0.7, "shopping", "errands", "business")
-				.restrict(31 - offset, 0.65, "shopping", "errands", "business")
-				.restrict(33 - offset, 0.6, "shopping", "errands", "business")
-				.restrict(35 - offset, 0.65, "shopping", "errands", "business")
-				.restrict(36 - offset, 0.6, "shopping", "errands", "business")
-				.restrict(40 - offset, 0.65, "shopping", "errands", "business")
-				.restrict(45 - offset, 0.7, "shopping", "errands", "business")
-				.restrict(46 - offset, 0.75, "shopping", "errands", "business")
-				.restrict(48 - offset, 0.8, "shopping", "errands", "business")
-				.restrict(49 - offset, 0.85, "shopping", "errands", "business")
-				.restrict(50 - offset, 0.75, "shopping", "errands", "business")
-				.restrict(55 - offset, 0.7, "shopping", "errands", "business")
-				.restrict(18 - offset, 0.94, "leisure")
-				.restrict(19 - offset, 0.87, "leisure")
-				.restrict(20 - offset, 0.81, "leisure")
-				.restrict(21 - offset, 0.74, "leisure")
-				.restrict(22 - offset, 0.68, "leisure")
-				.restrict(23 - offset, 0.61, "leisure")
-				.restrict(24 - offset, 0.55, "leisure")
-				.restrict(25 - offset, 0.49, "leisure")
-				.restrict(26 - offset, 0.42, "leisure")
-				.restrict(27 - offset, 0.36, "leisure")
-				.restrict(28 - offset, 0.29, "leisure")
-				.restrict(29 - offset, 0.23, "leisure")
-				.restrict(30 - offset, 0.16, "leisure")
-				.restrict(31 - offset, 0.1, "leisure")
+		{
+			final int firstDay = 17 - offset;
+			final int lastDay = 31 - offset;
+			LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, 0.1 );
+			for( int day = firstDay ; day <= lastDay ; day++ ){
+				builder.restrict( day, interpolation.getValue( day ), "leisure" );
+			}
+		}
+		{
+			final int firstDay = 24 - offset;
+			final int lastDay = 31 - offset;
+			LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, 0.5 );
+			for( int day = firstDay ; day <= lastDay ; day++ ){
+				builder.restrict( day, interpolation.getValue( day ), "shopping", "errands", "business" );
+			}
+		}
 
+//		builder.restrict(15 - offset, 0.95, "shopping", "errands", "business")
+//				.open(17 - offset, "shopping", "errands", "business")
+//				.restrict(19 - offset, 0.95, "shopping", "errands", "business")
+//				.open(20 - offset, "shopping", "errands", "business")
+		// (kann man so machen, aber dann müssten wir Wochenend-Effekte auch in der base calibration (theta) drin haben.  kai, may'20)
+
+//				.restrict(26 - offset, 0.95, "shopping", "errands", "business")
+//				.restrict(27 - offset, 0.85, "shopping", "errands", "business")
+//				.restrict(28 - offset, 0.75, "shopping", "errands", "business")
+//				.restrict(29 - offset, 0.7, "shopping", "errands", "business")
+//				.restrict(31 - offset, 0.65, "shopping", "errands", "business")
+//				.restrict(33 - offset, 0.6, "shopping", "errands", "business")
+//				.restrict(35 - offset, 0.65, "shopping", "errands", "business")
+//				.restrict(36 - offset, 0.6, "shopping", "errands", "business")
+//				.restrict(40 - offset, 0.65, "shopping", "errands", "business")
+//				.restrict(45 - offset, 0.7, "shopping", "errands", "business")
+//				.restrict(46 - offset, 0.75, "shopping", "errands", "business")
+//				.restrict(48 - offset, 0.8, "shopping", "errands", "business")
+//				.restrict(49 - offset, 0.85, "shopping", "errands", "business")
+//				.restrict(50 - offset, 0.75, "shopping", "errands", "business")
+//				.restrict(55 - offset, 0.7, "shopping", "errands", "business")
+
+		builder
 				//day 23 is the saturday 14th of march, so the weekend before schools got closed..
-				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai, apr'20
+				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai,
+				 // apr'20
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
 				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
 		       ;

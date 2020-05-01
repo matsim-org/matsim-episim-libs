@@ -146,14 +146,7 @@ public class RunEpisim implements Callable<Integer> {
 		// replacing them.  Was the other approach (to enforce explicit bindings, i.e. to _not_ use override in the production code) ever tried?  If so, for which reasons
 		// was it rejected?  kai, apr'20
 
-		StringBuilder bindings = new StringBuilder();
-
-		for (Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
-			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ")
-					.append(e.getValue().getProvider()).append(" }");
-		}
-
-		log.info("Defined Bindings: {}", bindings.toString());
+		printBindings( injector );
 
 		Config config = injector.getInstance(Config.class);
 
@@ -172,6 +165,16 @@ public class RunEpisim implements Callable<Integer> {
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 		return 0;
+	}
+	static void printBindings( Injector injector ){
+		StringBuilder bindings = new StringBuilder();
+
+		for ( Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
+			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ")
+					.append(e.getValue().getProvider()).append(" }");
+		}
+
+		log.info("Defined Bindings: {}", bindings.toString());
 	}
 
 	/**
