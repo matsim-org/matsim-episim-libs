@@ -24,6 +24,8 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.TracingConfigGroup;
 
+import com.google.inject.Inject;
+
 import java.util.SplittableRandom;
 
 /**
@@ -34,6 +36,7 @@ public final class AgeDependentProgressionModel extends DefaultProgressionModel 
 	/**
 	 * Constructor as in {@link DefaultProgressionModel}.
 	 */
+	@Inject
 	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		super(rnd, episimConfig, tracingConfig);
 	}
