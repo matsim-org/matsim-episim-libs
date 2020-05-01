@@ -22,6 +22,7 @@ package org.matsim.run.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.google.inject.internal.cglib.core.$AbstractClassGenerator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
@@ -171,18 +172,24 @@ public class SnzScenario extends AbstractModule {
 				.build();
 	}
 
-	private com.typesafe.config.Config buildPolicyBerlin(int offset) {
-		return FixedPolicy.config()
-				.restrict(20 - offset, 0.95, "work")
-				.restrict(22 - offset, 0.9, "work")
-				.restrict(23 - offset, 0.85, "work")
-				.restrict(25 - offset, 0.8, "work")
-				.restrict(26 - offset, 0.65, "work")
-				.restrict(27 - offset, 0.6, "work")
-				.restrict(28 - offset, 0.55, "work")
-				.restrict(31 - offset, 0.5, "work")
-				.restrict(33 - offset, 0.45, "work")
-				.restrict(15 - offset, 0.95, "shopping", "errands", "business")
+	/* package private for a test */ com.typesafe.config.Config buildPolicyBerlin(int offset){
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+		{
+			int firstDay = 19 - offset;
+			int lastDay = 33 - offset;
+			double firstValue=1.;
+			double lastValue=0.45;
+			for( int day = firstDay ; day <= lastDay ; day++ ){
+
+				double fraction = firstValue + (lastValue-firstValue)*(day-firstDay)/(lastDay-firstDay);
+				// corner cases:
+				// * day=firstDay --> fraction=firstValue
+				// * day=lastDay --> fraction=lastValue
+
+				builder.restrict( day, fraction, "work" );
+			}
+		}
+		builder.restrict(15 - offset, 0.95, "shopping", "errands", "business")
 				.open(17 - offset, "shopping", "errands", "business")
 				.restrict(19 - offset, 0.95, "shopping", "errands", "business")
 				.open(20 - offset, "shopping", "errands", "business")
@@ -220,7 +227,8 @@ public class SnzScenario extends AbstractModule {
 				.restrict(23 - offset, 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai, apr'20
 				.restrict(23 - offset, 0., "educ_secondary", "educ_higher")
 				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
-				.build();
+		       ;
+		return builder.build();
 	}
 
 	private com.typesafe.config.Config buildPolicyMunich(int offset) {
