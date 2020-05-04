@@ -134,10 +134,9 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * The start of the scenario as day in real world.
+	 * The default start of the scenario as day in real world. Only needed if there are multiple start dates in the batch run.
 	 */
-	@Deprecated
-	default LocalDate startDate() {
+	default LocalDate getDefaultStartDate() {
 		return LocalDate.now();
 	}
 

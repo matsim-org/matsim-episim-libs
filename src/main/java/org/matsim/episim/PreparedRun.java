@@ -73,8 +73,10 @@ public final class PreparedRun {
 		Map<String, Object> data = new LinkedHashMap<>();
 
 		int index = parameter.indexOf("startDate");
-		if (index > -1)
+		if (index > -1) {
+			data.put("defaultStartDate", setup.getDefaultStartDate());
 			data.put("startDates", parameterValues.get(index));
+		}
 
 		List<Object> opts = new ArrayList<>();
 

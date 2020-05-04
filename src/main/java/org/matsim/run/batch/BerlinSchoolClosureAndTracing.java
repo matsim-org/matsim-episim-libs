@@ -53,7 +53,7 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 	);
 
 	@Override
-	public LocalDate startDate() {
+	public LocalDate getDefaultStartDate() {
 		return LocalDate.of(2020, 2, 21);
 	}
 

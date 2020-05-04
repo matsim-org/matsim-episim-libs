@@ -51,7 +51,7 @@ public final class HeinsbergSchoolClosureAndMasks implements BatchRun<HeinsbergS
 	);
 
 	@Override
-	public LocalDate startDate() {
+	public LocalDate getDefaultStartDate() {
 		return LocalDate.of(2020, 3, 16);
 	}
 
@@ -95,22 +95,22 @@ public final class HeinsbergSchoolClosureAndMasks implements BatchRun<HeinsbergS
 
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
-				
+
 				.restrict(11 - offset, 0.90, "work")
 				.restrict(30 - offset, 0.40, "work")
-				
+
 				.restrict(11 - offset, 0., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher")
 				.restrict(24 - offset, 0.1, "educ_secondary")
 				.restrict(30 - offset, 0.0, "educ_secondary")
 				.restrict(65 - offset, 0.1, "educ_primary", "educ_kiga")
 				.restrict(68 - offset, 0.1, "educ_secondary")
 				.restrict(79 - offset, 0.2, "educ_secondary")
-				
+
 				.restrict(11 - offset, 0.60, "leisure")
 				.restrict(30 - offset, 0.40, "leisure")
 				.restrict(37 - offset, 0.10, "leisure")
 
-				
+
 				.restrict(11 - offset, 0.90, "shopping", "errands", "business")
 				.restrict(32 - offset, 0.70, "shopping", "errands", "business")
 
