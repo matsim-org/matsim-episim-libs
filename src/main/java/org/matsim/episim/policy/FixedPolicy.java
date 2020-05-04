@@ -82,42 +82,44 @@ public class FixedPolicy extends ShutdownPolicy {
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
 
+		/**
+		 * Restrict activities at specific date time.
+		 *
+		 * @param date        the date (yyyy-mm-dd) when it will be in effect
+		 * @param restriction restriction to apply
+		 * @param activities  activities to restrict
+		 */
 		@SuppressWarnings("unchecked")
-		private ConfigBuilder restrict(String key, Restriction restriction, String... activities) {
+		public ConfigBuilder restrict(String date, Restriction restriction, String... activities) {
 
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
-				p.put(key, restriction.asMap());
+				p.put(date, restriction.asMap());
 			}
 
 			return this;
 		}
 
 		/**
-		 * Restrict activities at specific day relative to simulation start.
-		 *
-		 * @param day         the day/iteration when it will be in effect
-		 * @param restriction restriction to apply
-		 * @param activities  activities to restrict
-		 */
-		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
-			return restrict("day-" + day, restriction, activities);
-		}
-
-		/**
-		 * Restrict activities at specific date time.
-		 *
-		 * @see #restrict(long, Restriction, String...)
-		 */
-		public ConfigBuilder restrict(LocalDate date, Restriction restriction, String... activities) {
-			return restrict(date.toString(), restriction, activities);
-		}
-
-		/**
-		 * Same as {@link #restrict(LocalDate, Restriction, String...)} with default values.
+		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
 		 */
 		public ConfigBuilder restrict(LocalDate date, double fraction, String... activities) {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
+		}
+
+		/**
+		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
+		 */
+		public ConfigBuilder restrict(String date, double fraction, String... activities) {
+			// check if date is valid
+			return restrict(LocalDate.parse(date), fraction, activities);
+		}
+
+		/**
+		 * See {@link #restrict(String, Restriction, String...)}.
+		 */
+		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
+			return restrict("day-" + day, restriction, activities);
 		}
 
 		/**
@@ -159,12 +161,19 @@ public class FixedPolicy extends ShutdownPolicy {
 			while (today.isBefore(end) || today.isEqual(end)) {
 				double r = restriction.getRemainingFraction() + (fractionEnd - restriction.getRemainingFraction()) * (day / diff);
 
-				restrict(today, Restriction.of(r, restriction.getExposure(), restriction.getRequireMask()), activities);
+				restrict(today.toString(), Restriction.of(r, restriction.getExposure(), restriction.getRequireMask()), activities);
 				today = today.plusDays(1);
 				day++;
 			}
 
 			return this;
+		}
+
+		/**
+		 * See {@link #interpolate(LocalDate, LocalDate, Restriction, double, String...)}.
+		 */
+		public ConfigBuilder interpolate(String start, String end, Restriction restriction, double fractionEnd, String... activities) {
+			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, fractionEnd, activities);
 		}
 
 	}
