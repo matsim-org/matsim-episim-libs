@@ -171,18 +171,18 @@ public class SnzScenario extends AbstractModule {
 				.build();
 	}
 
-	static class LinearInterpolation{
+	public static class LinearInterpolation{
 		private final long firstDay;
 		private final double firstValue;
 		private final long lastDay;
 		private final double lastValue;
-		LinearInterpolation( long firstDay, double firstValue, long lastDay, double lastValue ) {
+		public LinearInterpolation( long firstDay, double firstValue, long lastDay, double lastValue ) {
 			this.firstDay = firstDay;
 			this.firstValue = firstValue;
 			this.lastDay = lastDay;
 			this.lastValue = lastValue;
 		}
-		double getValue( long day ) {
+		public double getValue( long day ) {
 			return firstValue + (lastValue-firstValue)*(day-firstDay)/(lastDay-firstDay);
 			// corner cases:
 			// * day=firstDay --> fraction=firstValue
