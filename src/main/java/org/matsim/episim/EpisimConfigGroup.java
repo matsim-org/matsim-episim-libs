@@ -37,6 +37,7 @@ import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -52,6 +53,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
 	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
+	private static final String START_DATE = "startDate";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -75,6 +77,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * If not null, filter persons for initial infection by district.
 	 */
 	private String initialInfectionDistrict = null;
+	/**
+	 * Start date of the simulation (Day 1).
+	 */
+	private LocalDate startDate = LocalDate.of(1970, 1, 1);
+	/**
+	 * Offset of start date in unix epoch seconds.
+	 */
+	private long startOffset = 0;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -146,6 +156,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(INITIAL_START_INFECTIONS)
 	public void setInitialStartInfection(int initialStartInfections) {
 		this.initialStartInfections = initialStartInfections;
+	}
+
+	@StringGetter(START_DATE)
+	public LocalDate getStartDate() {
+		return startDate;
+	}
+
+	@StringSetter(START_DATE)
+	public void setStartDate(String startDate) {
+		setStartDate(LocalDate.parse(startDate));
+	}
+
+	public void setStartDate(LocalDate startDate) {
+		this.startDate = startDate;
+		this.startOffset = EpisimUtils.getStartOffset(startDate);
+	}
+
+	public long getStartOffset() {
+		return startOffset;
 	}
 
 	@StringGetter(MASK_COMPLIANCE)

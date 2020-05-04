@@ -175,8 +175,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		// TODO: during iteration persons can get infected after 24h
 		// this can lead to strange effects / ordering of events, because it is assumed one iteration is one day
 		// now is overwritten to be at the end of day
-		if (now >= EpisimUtils.getCorrectedTime(24 * 60 * 60, iteration)) {
-			now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, iteration);
+		if (now >= EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60, iteration)) {
+			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
 		}
 
 		reporting.reportInfection(personWrapper, infector, now, infectionType.toString());

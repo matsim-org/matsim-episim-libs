@@ -331,7 +331,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		if (initialInfectionsLeft == 0) return;
 
-		double now = EpisimUtils.getCorrectedTime(0, iteration);
+		// TODO: initial infections now have to be one day later?
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		String district = episimConfig.getInitialInfectionDistrict();
 
@@ -347,7 +348,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		while (true) {
 			if (initialStartInfectionsLeft > 0) {
-				while(initialStartInfectionsLeft > 0) {
+				while (initialStartInfectionsLeft > 0) {
 					EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 					if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 						randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
@@ -441,7 +442,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		Id<ActivityFacility> firstFacilityId = Id.create(person.getFirstFacilityId(), ActivityFacility.class);
 
 		// now is the next day
-		double now = (iteration + 1) * 86400d;
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration + 1);
 
 		if (person.isInContainer()) {
 			EpisimContainer<?> container = person.getCurrentContainer();

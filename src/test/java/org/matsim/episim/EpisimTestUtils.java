@@ -114,4 +114,13 @@ public class EpisimTestUtils {
 		container.removePerson(p.getPersonId());
 	}
 
+
+	/**
+	 * Report with zero values.
+	 */
+	public static EpisimReporting.InfectionReport createReport(String date, long day) {
+		return new EpisimReporting.InfectionReport("test", 0, date, day);
+	}
+
+
 }

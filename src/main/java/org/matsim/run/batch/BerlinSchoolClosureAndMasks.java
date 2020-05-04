@@ -91,10 +91,10 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 
 		Config config = baseCase(id);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		int offset = params.offset;
+		int offset = 0;
 		FaceMask wornMask = FaceMask.valueOf(params.mask);
 		episimConfig.setMaskCompliance(params.maskCompliance);
-
+		episimConfig.setStartDate(params.startDate);
 
 		com.typesafe.config.Config policyConf = FixedPolicy.config()
 				//taken from Google mobility report
@@ -167,8 +167,8 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 
 	public static final class Params {
 
-		@IntParameter({-6})
-		int offset;
+		@StartDates("2020-03-21")
+		LocalDate startDate;
 
 		@Parameter({0.5, 0.1})
 		double remainingFractionKiga;

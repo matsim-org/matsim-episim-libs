@@ -23,8 +23,9 @@ package org.matsim.episim.policy;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import org.matsim.episim.EpisimReporting;
-import org.matsim.episim.model.FaceMask;
 
+import java.time.LocalDate;
+import java.time.Period;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,16 +50,24 @@ public class FixedPolicy extends ShutdownPolicy {
 
 	@Override
 	public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
-		long day = report.day;
-
 		for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
+			// activity name
 			if (!config.hasPath(entry.getKey())) continue;
 
-			Config subConfig = this.config.getConfig(entry.getKey());
-			String key = String.valueOf(day);
-			if (subConfig.hasPath(key)) {
+			Config actConfig = this.config.getConfig(entry.getKey());
+			String dayKey = "day-" + report.day;
+			String dateKey = report.date;
 
-				Restriction r = Restriction.fromConfig(subConfig.getConfig(key));
+			// check for day or date config
+			Config dayConfig = null;
+			if (actConfig.hasPath(dayKey))
+				dayConfig = actConfig.getConfig(dayKey);
+			else if (actConfig.hasPath(dateKey))
+				dayConfig = actConfig.getConfig(dateKey);
+
+			if (dayConfig != null) {
+
+				Restriction r = Restriction.fromConfig(dayConfig);
 
 				entry.getValue().setRemainingFraction(r.getRemainingFraction());
 				entry.getValue().setExposure(r.getExposure());
@@ -68,26 +77,47 @@ public class FixedPolicy extends ShutdownPolicy {
 	}
 
 	/**
-	 * Build fixed config.
+	 * Builder for {@link FixedPolicy} config.
 	 */
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
+
+		@SuppressWarnings("unchecked")
+		private ConfigBuilder restrict(String key, Restriction restriction, String... activities) {
+
+			for (String act : activities) {
+				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
+				p.put(key, restriction.asMap());
+			}
+
+			return this;
+		}
+
 		/**
-		 * Restrict activities at specific point of time.
+		 * Restrict activities at specific day relative to simulation start.
 		 *
 		 * @param day         the day/iteration when it will be in effect
 		 * @param restriction restriction to apply
 		 * @param activities  activities to restrict
 		 */
-		@SuppressWarnings("unchecked")
 		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
+			return restrict("day-" + day, restriction, activities);
+		}
 
-			for (String act : activities) {
-				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
-				p.put(String.valueOf(day), restriction.asMap());
-			}
+		/**
+		 * Restrict activities at specific date time.
+		 *
+		 * @see #restrict(long, Restriction, String...)
+		 */
+		public ConfigBuilder restrict(LocalDate date, Restriction restriction, String... activities) {
+			return restrict(date.toString(), restriction, activities);
+		}
 
-			return this;
+		/**
+		 * Same as {@link #restrict(LocalDate, Restriction, String...)} with default values.
+		 */
+		public ConfigBuilder restrict(LocalDate date, double fraction, String... activities) {
+			return restrict(date.toString(), Restriction.of(fraction), activities);
 		}
 
 		/**
@@ -95,13 +125,6 @@ public class FixedPolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder restrict(long day, double fraction, String... activities) {
 			return restrict(day, Restriction.of(fraction), activities);
-		}
-
-		/**
-		 * Same as {@link #restrict(long, Restriction, String...)}  with default values.
-		 */
-		public ConfigBuilder restrict(long day, double fraction, FaceMask mask, String... activities) {
-			return restrict(day, Restriction.of(fraction, mask), activities);
 		}
 
 		/**
@@ -116,6 +139,32 @@ public class FixedPolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder open(long day, String... activities) {
 			return this.restrict(day, Restriction.none(), activities);
+		}
+
+
+		/**
+		 * Create a config entry with linear interpolated {@link Restriction#getRemainingFraction()}. All start and end values are inclusive.
+		 *
+		 * @param start       starting date
+		 * @param end         end tate
+		 * @param restriction starting restriction and fraction
+		 * @param fractionEnd remaining fraction at end date
+		 * @param activities  activities to restrict
+		 */
+		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, double fractionEnd, String... activities) {
+			double day = 0;
+			int diff = Period.between(start, end).getDays();
+
+			LocalDate today = start;
+			while (today.isBefore(end) || today.isEqual(end)) {
+				double r = restriction.getRemainingFraction() + (fractionEnd - restriction.getRemainingFraction()) * (day / diff);
+
+				restrict(today, Restriction.of(r, restriction.getExposure(), restriction.getRequireMask()), activities);
+				today = today.plusDays(1);
+				day++;
+			}
+
+			return this;
 		}
 
 	}

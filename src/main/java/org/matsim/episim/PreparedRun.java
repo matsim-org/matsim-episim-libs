@@ -72,11 +72,9 @@ public final class PreparedRun {
 
 		Map<String, Object> data = new LinkedHashMap<>();
 
-		data.put("startDate", setup.startDate());
-
-		int index = parameter.indexOf("offset");
+		int index = parameter.indexOf("startDate");
 		if (index > -1)
-			data.put("offset", parameterValues.get(index));
+			data.put("startDates", parameterValues.get(index));
 
 		List<Object> opts = new ArrayList<>();
 
@@ -111,7 +109,7 @@ public final class PreparedRun {
 		}
 
 		for (String param : parameter) {
-			if (param.equals("offset")) continue;
+			if (param.equals("startDate")) continue;
 
 			if (!describedParams.contains(param))
 				log.warn("Parameter '{}' is not in any measure in .getOptions()", param);

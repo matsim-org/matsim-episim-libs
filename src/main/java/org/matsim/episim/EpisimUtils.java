@@ -23,6 +23,10 @@ package org.matsim.episim;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
+
 /**
  * Common utility class for episim.
  */
@@ -32,12 +36,32 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Calculates the time based on the current iteration.
-	 *
-	 * @param time time relative to start of day
+	 * Calculates the relative time based on iteration. Only used internally because start offset
+	 * has to be added too.
 	 */
-	public static double getCorrectedTime(double time, long iteration) {
+	private static double getCorrectedTime(double time, long iteration) {
 		return Math.min(time, 3600. * 24) + iteration * 24. * 3600;
+	}
+
+	/**
+	 * Calculates the time based on the current iteration and start day.
+	 *
+	 * @param startDate offset of the start date
+	 * @param time      time relative to start of day
+	 * @see #getStartOffset(LocalDate)
+	 */
+	public static double getCorrectedTime(long startDate, double time, long iteration) {
+		// start date refers to iteration 1, therefore 1 has to be subtracted
+		// TODO: not yet working return startDate + getCorrectedTime(time, iteration - 1);
+
+		return getCorrectedTime(time, iteration);
+	}
+
+	/**
+	 * Calculates the start offset in seconds of simulation start.
+	 */
+	public static long getStartOffset(LocalDate startDate) {
+		return startDate.atTime(LocalTime.MIDNIGHT).atZone(ZoneOffset.UTC).toEpochSecond();
 	}
 
 
