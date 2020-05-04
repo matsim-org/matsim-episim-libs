@@ -35,6 +35,9 @@ import java.time.LocalDate;
  */
 public class SnzBerlinScenario extends AbstractSnzScenario {
 
+	/**
+	 * The base policy based on actual restrictions in the past and google mobility data.
+	 */
 	public static FixedPolicy.ConfigBuilder basePolicy() {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
@@ -64,7 +67,6 @@ public class SnzBerlinScenario extends AbstractSnzScenario {
 
 		episimConfig.setInitialInfections(50);
 		episimConfig.setInitialInfectionDistrict("Berlin");
-
 
 		episimConfig.setStartDate("2020-02-21");
 		episimConfig.setPolicy(FixedPolicy.class, basePolicy().build());

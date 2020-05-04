@@ -88,7 +88,7 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 		episimConfig.setMaskCompliance(params.maskCompliance);
 		episimConfig.setStartDate(params.startDate);
 
-		// TODO replace offset
+		// TODO replace offset with actual dates
 
 		com.typesafe.config.Config policyConf = SnzBerlinScenario.basePolicy()
 
