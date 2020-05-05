@@ -70,6 +70,35 @@ public class DefaultProgressionModelTest {
 	}
 
 	@Test
+	public void tracingDistance() {
+
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
+		tracingConfig.setTracingDelay(2);
+		tracingConfig.setTracingDayDistance(1);
+
+		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
+		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		for (int day = 0; day <= 5; day++) {
+			model.updateState(p, day);
+		}
+
+		EpisimPerson first = EpisimTestUtils.createPerson(reporting);
+		EpisimPerson last = EpisimTestUtils.createPerson(reporting);
+
+		p.addTraceableContactPerson(first, 4 * 24 * 3600);
+		p.addTraceableContactPerson(last, 5 * 24 * 3600);
+
+		model.updateState(p, 6);
+		model.updateState(p, 7);
+		model.updateState(p, 8);
+
+
+		assertThat(first.getQuarantineStatus()).isEqualTo(EpisimPerson.QuarantineStatus.no);
+		assertThat(last.getQuarantineStatus()).isEqualTo(EpisimPerson.QuarantineStatus.atHome);
+
+	}
+
+	@Test
 	public void traceHome() {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);

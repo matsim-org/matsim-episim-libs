@@ -86,7 +86,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				// person switches to showing symptoms exactly at day 6, so we account for the delay here
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == tracingConfig.getTracingDelay() + 6) {
-					performTracing(person, now, day);
+					performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
 				}
 
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 10) {
