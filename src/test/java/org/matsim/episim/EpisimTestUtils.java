@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 public class EpisimTestUtils {
 
 	public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
+	public static final Consumer<EpisimPerson> SYMPTOMS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.showingSymptoms);
 
 	public static final Consumer<EpisimPerson> FULL_QUARANTINE = person -> {
 		person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);
@@ -21,7 +22,7 @@ public class EpisimTestUtils {
 	};
 
 	public static final Consumer<EpisimPerson> HOME_QUARANTINE = person -> {
-		person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);
+		person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.showingSymptoms);
 		person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, 0);
 	};
 
@@ -53,6 +54,7 @@ public class EpisimTestUtils {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c5").setContactIntensity(5));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c10").setContactIntensity(10));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leis").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setContactIntensity(1));

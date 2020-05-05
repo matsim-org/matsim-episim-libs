@@ -119,10 +119,10 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		switch (personWrapper.getDiseaseStatus()) {
 			case susceptible:
 			case contagious:
+			case showingSymptoms:
 				return true;
 
 			case infectedButNotContagious:
-			case showingSymptoms: //assume is at home
 			case recovered:
 			case seriouslySick: // assume is in hospital
 			case critical:
@@ -139,6 +139,9 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 */
 	static boolean personsCanInfectEachOther(EpisimPerson person1, EpisimPerson person2) {
 		if (person1.getDiseaseStatus() == person2.getDiseaseStatus()) return false;
+		// at least one of the persons must be susceptible
+		if (person1.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible && person2.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible)
+			return false;
 		return (hasDiseaseStatusRelevantForInfectionDynamics(person1) && hasDiseaseStatusRelevantForInfectionDynamics(person2));
 	}
 
@@ -159,7 +162,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
 		}
-		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious) {
+		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {
 			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
 		}
 		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {

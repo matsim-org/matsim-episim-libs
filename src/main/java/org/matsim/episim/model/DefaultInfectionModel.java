@@ -207,15 +207,15 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 			}
 
 			// Only a subset of contacts are reported at the moment
-			// TODO: should be invoked earlier if performance penalty is not too high
+			// TODO: should be invoked earlier if performance penalty is not to high
 			reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
 
 			// Parameter will only be retrieved one time
 			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, leavingPersonsActivity);
+				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
@@ -267,13 +267,22 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	}
 
 	/**
-	 * Get the relevant infection parameter based on container and activity.
+	 * Get the relevant infection parameter based on container and activity and person.
 	 */
-	private EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, String activity) {
+	private EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			return episimConfig.selectInfectionParams(container.getContainerId().toString());
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
-			return episimConfig.selectInfectionParams(activity);
+			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
+
+			// Select different infection params for home quarantined persons
+			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && params.getContainerName().equals("home")) {
+				EpisimConfigGroup.InfectionParams q_h = episimConfig.getInfectionParam("quarantine_home");
+				if (q_h == null) throw new IllegalStateException("Please define 'quarantine_home' infection parameter.");
+				return q_h;
+			}
+
+			return params;
 		} else
 			throw new IllegalStateException("Don't know how to deal with container " + container);
 

@@ -33,6 +33,8 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 				.setContactIntensity(2.0);
 		episimConfig.getOrAddContainerParams("home")
 				.setContactIntensity(3.0);
+		episimConfig.getOrAddContainerParams("quarantine_home")
+				.setContactIntensity(3.0);
 	}
 
 	public static void addParams(EpisimConfigGroup episimConfig) {
@@ -50,7 +52,7 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("business"));
 
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
-
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home"));
 	}
 
 

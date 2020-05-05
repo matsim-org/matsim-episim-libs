@@ -395,14 +395,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * @return matched infection param
 	 * @throws NoSuchElementException when no param could be matched
 	 */
-	public @NotNull
-	InfectionParams selectInfectionParams(String activity) {
+	@NotNull
+	public InfectionParams selectInfectionParams(String activity) {
 
 		InfectionParams params = paramsTrie.get(activity, TrieMatch.STARTS_WITH);
 		if (params != null)
 			return params;
 
 		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity));
+	}
+
+	/**
+	 * Get the {@link InfectionParams} of a container by its name.
+	 */
+	public InfectionParams getInfectionParam(String containerName) {
+		return this.getContainerParams().get(containerName);
 	}
 
 	/**
@@ -479,8 +486,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		/**
 		 * Constructor.
+		 *
 		 * @param containerName name name of this activity type
-		 * @param mappedNames activity prefixes that will also be mapped to this container
+		 * @param mappedNames   activity prefixes that will also be mapped to this container
 		 */
 		public InfectionParams(final String containerName, String... mappedNames) {
 			this();
