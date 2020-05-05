@@ -25,7 +25,7 @@ import com.typesafe.config.Config;
 import org.matsim.episim.EpisimReporting;
 
 import java.time.LocalDate;
-import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -81,9 +81,8 @@ public class FixedPolicy extends ShutdownPolicy {
 	 */
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
-
 		/**
-		 * Restrict activities at specific date time.
+		 * Restrict activities at specific date in absolute time.
 		 *
 		 * @param date        the date (yyyy-mm-dd) when it will be in effect
 		 * @param restriction restriction to apply
@@ -149,13 +148,14 @@ public class FixedPolicy extends ShutdownPolicy {
 		 *
 		 * @param start       starting date
 		 * @param end         end tate
-		 * @param restriction starting restriction and fraction
+		 * @param restriction starting restriction at start date
 		 * @param fractionEnd remaining fraction at end date
 		 * @param activities  activities to restrict
 		 */
 		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, double fractionEnd, String... activities) {
 			double day = 0;
-			int diff = Period.between(start, end).getDays();
+
+			long diff = ChronoUnit.DAYS.between(start, end);
 
 			LocalDate today = start;
 			while (today.isBefore(end) || today.isEqual(end)) {

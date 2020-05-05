@@ -29,7 +29,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario;
 
 import java.time.LocalDate;
-import java.time.Period;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -87,7 +87,8 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 
 		episimConfig.setStartDate(params.startDate);
 
-		int offset = Period.between(params.startDate, LocalDate.parse("2020-04-27")).getDays();
+		// +1 because end date is exclusive
+		int offset = (int) (ChronoUnit.DAYS.between(params.startDate, LocalDate.parse("2020-04-27")) + 1);
 
 		// should be day 67
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
