@@ -2,7 +2,6 @@
 #SBATCH --time=02:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=82
-#SBATCH --mem-per-cpu=4096
 
 # This job should only be run with --array given via command line
 # NTASKS_PER_NODE may be overwritten by command line argument
