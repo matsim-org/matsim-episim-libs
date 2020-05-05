@@ -69,6 +69,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		this(rnd, episimConfig, reporting, maskModel, tracingConfig.getPutTraceablePersonsInQuarantineAfterDay());
 	}
 
+	/**
+	 * Constructor when no injection is used.
+	 */
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {
 		super(rnd, episimConfig, reporting);
 		this.maskModel = maskModel;

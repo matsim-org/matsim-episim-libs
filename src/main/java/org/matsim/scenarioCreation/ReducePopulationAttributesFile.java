@@ -24,7 +24,10 @@ import java.io.*;
 import java.util.ArrayList;
 
 
-public class ReducePopulationAttributesFile {
+public final class ReducePopulationAttributesFile {
+
+	private ReducePopulationAttributesFile() {
+	}
 
 	public static void main(String[] args) throws IOException {
 

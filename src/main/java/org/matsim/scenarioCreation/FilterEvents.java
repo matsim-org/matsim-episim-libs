@@ -70,7 +70,7 @@ public class FilterEvents implements Callable<Integer> {
 	}
 
 	private static Map<Id<ActivityFacility>, Id<ActivityFacility>> readAndMapMergedFacilities(String path) throws IOException {
-		Set<EducFacility> remainingFacilities = EducFacilities.readEducFacilites(path, null);
+		Set<EducFacility> remainingFacilities = EducFacility.readEducFacilities(path, null);
 		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements = new HashMap<>();
 		for (EducFacility remainingFacility : remainingFacilities) {
 			for (Id<ActivityFacility> containedFacility : remainingFacility.getContainedFacilities()) {

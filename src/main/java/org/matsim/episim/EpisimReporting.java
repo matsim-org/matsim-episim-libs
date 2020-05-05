@@ -150,7 +150,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
 
-		InfectionReport report = new InfectionReport("total", time,  date, iteration);
+		InfectionReport report = new InfectionReport("total", time, date, iteration);
 		reports.put("total", report);
 
 		for (EpisimPerson person : persons) {
@@ -277,8 +277,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	/**
 	 * Report the occurrence of an infection.
+	 *
 	 * @param personWrapper infected person
-	 * @param infector infector
+	 * @param infector      infector
 	 * @param infectionType activities of both persons
 	 */
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
@@ -307,6 +308,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	/**
 	 * Report the occurrence of an contact between two persons.
 	 * TODO Attention: Currently this only includes a subset of contacts (between persons with certain disease status).
+	 *
 	 * @see EpisimContactEvent
 	 */
 	public void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
@@ -406,7 +408,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		this.iteration = iteration;
 
-		if (iteration == 0 ||writeEvents == EpisimConfigGroup.WriteEvents.none) return;
+		if (iteration == 0 || writeEvents == EpisimConfigGroup.WriteEvents.none) return;
 
 		if (events != null) {
 			writer.append(events, "</events>");

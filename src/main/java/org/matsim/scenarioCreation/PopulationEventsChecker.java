@@ -42,13 +42,16 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class PopulationEventsChecker {
+public final class PopulationEventsChecker {
 
 
 	private static final String INPUT_POPULATION_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans.xml.gz";
 	private static final String INPUT_EVENTS_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_adults_eventsFiltered.xml.gz";
 	private static final String OUTPUT_POPULATION_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans_eventAttributes.xml.gz";
 	private static final String OUTPUT_CSV_FILE ="D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans_eventsAnalysis.csv";
+
+	private PopulationEventsChecker() {
+	}
 
 	public static void main(String[] args) {
 

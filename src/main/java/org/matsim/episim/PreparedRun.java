@@ -131,6 +131,9 @@ public final class PreparedRun {
 		public final List<Object> params;
 		public final Config config;
 
+		/**
+		 * Constructor.
+		 */
 		public Run(int id, List<Object> params, Config config) {
 			this.id = id;
 			this.params = params;

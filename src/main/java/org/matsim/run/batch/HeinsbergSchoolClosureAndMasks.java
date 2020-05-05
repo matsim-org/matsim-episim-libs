@@ -37,7 +37,7 @@ import java.util.List;
  */
 public final class HeinsbergSchoolClosureAndMasks implements BatchRun<HeinsbergSchoolClosureAndMasks.Params> {
 
-	public static List<Option> OPTIONS = List.of(
+	public static final List<Option> OPTIONS = List.of(
 			Option.of("Worn masks", 72)
 					.measure("Mask type", "mask")
 					.measure("Mask compliance", "maskCompliance"),
