@@ -28,10 +28,11 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 
 import javax.inject.Singleton;
-import java.time.LocalDate;
 
 /**
- * Scenario based on data provided by snz. Please note that this data is not publicly available.
+ * Snz scenario for Berlin.
+ *
+ * @see AbstractSnzScenario
  */
 public class SnzBerlinScenario extends AbstractSnzScenario {
 
