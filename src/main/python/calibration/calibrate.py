@@ -5,17 +5,15 @@ import argparse
 import subprocess
 
 import numpy as np
-import optuna
 import pandas as pd
+import optuna
 
-STORAGE = 'calibration.db'
 
-
-def infection_rate(f, target_rate=2, target_interval=3):
+def infection_rate(f, district, target_rate=2, target_interval=3):
     """  Calculates the R values between a fixed day interval and returns MSE according to target rate """
 
     df = pd.read_csv(f, sep="\t")
-    df = df[df.district == "Berlin"]
+    df = df[df.district == district]
 
     rates = []
     for i in range(25, 40):
@@ -36,11 +34,12 @@ def objective(trial):
     c = trial.suggest_uniform('calibrationParameter', 1e-07, 5e-06)
 
     cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial --number %d --calibParameter %f" % (n, c)
+    district = trial.study.user_attrs["district"]
 
-    print("Running:", cmd)
+    print("Running calibration (district: %s) : %s" % (district, cmd))
     subprocess.run(cmd)
 
-    rate, error = infection_rate("output-calibration/%d/infections.txt" % n)
+    rate, error = infection_rate("output-calibration/%d/infections.txt" % n, district)
     trial.set_user_attr('mean_infection_rate', rate)
 
     return error
@@ -49,11 +48,15 @@ def objective(trial):
 if __name__ == "__main__":
     # Needs to be run from top-level episim directory!
 
-    parser = argparse.ArgumentParser(description='Process some integers.')
-    parser.add_argument('n_trials', metavar='N', type=int, help='number of trials', default=10)
+    parser = argparse.ArgumentParser(description='Run calibrations with optuna.')
+    parser.add_argument('n_trials', metavar='N', type=int, nargs='?', help='Number of trials', default=10)
+    parser.add_argument('--district', type=str, help='District to calibrate for', default='Berlin')
+
     args = parser.parse_args()
 
     study = optuna.create_study(study_name='calibration', direction='minimize',
                                 storage='sqlite:///calibration.db', load_if_exists=True)
+
+    study.set_user_attr('district', args.district)
 
     study.optimize(objective, n_trials=args.n_trials)

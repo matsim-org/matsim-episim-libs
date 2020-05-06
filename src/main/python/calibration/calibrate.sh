@@ -5,7 +5,7 @@
 #$ -m a
 #$ -M mueller@vsp.tu-berlin.de
 #$ -cwd
-#$ -pe mp 6
+#$ -pe mp 5
 #$ -l mem_free=25G
 
 date
