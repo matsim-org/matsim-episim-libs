@@ -181,19 +181,6 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-
-			if (tracingConfig.getQuarantineHousehold()) {
-				String homeId = (String) p.getAttributes().getAttribute("homeId");
-				// put every member of household into quarantine
-				if (homeId != null)
-					for (EpisimPerson other : p.getTraceableContactPersons(0)) {
-						String otherHome = (String) other.getAttributes().getAttribute("homeId");
-						if (homeId.equals(otherHome) && other.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no
-								&& other.getDiseaseStatus() != DiseaseStatus.recovered)
-
-							other.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-					}
-			}
 		}
 	}
 
