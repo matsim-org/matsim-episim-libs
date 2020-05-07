@@ -303,7 +303,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
 		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
-			return event.getFacilityId();
+			Id<ActivityFacility> id = event.getFacilityId();
+			if (id == null)
+				throw new IllegalStateException("No facility id present. Please switch to episimConfig.setFacilitiesHandling( EpisimConfigGroup.FacilitiesHandling.bln ) ");
+
+			return id;
 		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
 			// TODO: this has poor performance and should be preprocessing...
 			if (event instanceof ActivityStartEvent) {
