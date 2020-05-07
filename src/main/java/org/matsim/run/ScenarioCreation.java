@@ -20,10 +20,7 @@
  */
 package org.matsim.run;
 
-import org.matsim.scenarioCreation.ConvertPersonAttributes;
-import org.matsim.scenarioCreation.DownSampleScenario;
-import org.matsim.scenarioCreation.FilterEvents;
-import org.matsim.scenarioCreation.MergeEvents;
+import org.matsim.scenarioCreation.*;
 import picocli.AutoComplete;
 import picocli.CommandLine;
 
@@ -36,7 +33,7 @@ import picocli.CommandLine;
 		description = "Scenario creation tool for Episim offering various subcommands.",
 		mixinStandardHelpOptions = true,
 		usageHelpWidth = 120,
-		subcommands = {CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
+		subcommands = {CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class, RunTrial.class,
 				ConvertPersonAttributes.class, FilterEvents.class, MergeEvents.class, DownSampleScenario.class}
 )
 public class ScenarioCreation implements Runnable {

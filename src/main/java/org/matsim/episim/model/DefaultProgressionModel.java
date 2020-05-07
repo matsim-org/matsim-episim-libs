@@ -86,7 +86,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				// person switches to showing symptoms exactly at day 6, so we account for the delay here
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == tracingConfig.getTracingDelay() + 6) {
-					performTracing(person, now, day);
+					performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
 				}
 
 				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 10) {
@@ -153,12 +153,20 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
 
-		String homeId = (String) person.getAttributes().getAttribute("homeId");
+		String homeId = null;
+
+		// quarantine household flag controls direct household and 2nd order household
+		if (tracingConfig.getQuarantineHousehold())
+			homeId = (String) person.getAttributes().getAttribute("homeId");
 
 		// TODO: tracing household members makes always sense, no app or anything needed..
 		// they might not appear as contact persons under certain circumstances
 
 		for (EpisimPerson pw : person.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {
+
+			// don't draw random number when tracing is practically off
+			if (tracingConfig.getTracingProbability() == 0 && homeId == null)
+				continue;
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
@@ -167,27 +175,12 @@ public class DefaultProgressionModel implements ProgressionModel {
 				quarantinePerson(pw, day);
 
 		}
-
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-
-			if (tracingConfig.getQuarantineHousehold()) {
-				String homeId = (String) p.getAttributes().getAttribute("homeId");
-				// put every member of household into quarantine
-				if (homeId != null)
-					for (EpisimPerson other : p.getTraceableContactPersons(0)) {
-						String otherHome = (String) other.getAttributes().getAttribute("homeId");
-						if (homeId.equals(otherHome) && other.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no
-								&& other.getDiseaseStatus() != DiseaseStatus.recovered)
-
-							p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-					}
-			}
 		}
 	}
 

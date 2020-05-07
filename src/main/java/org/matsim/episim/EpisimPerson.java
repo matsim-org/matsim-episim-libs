@@ -40,6 +40,11 @@ import java.util.stream.Collectors;
  */
 public final class EpisimPerson implements Attributable {
 
+	/**
+	 * Attribute for the ability to be traced.
+	 */
+	public static final String TRACING_ATTR = "hasTracing";
+
 	private final Id<Person> personId;
 	private final EpisimReporting reporting;
 	private final Attributes attributes;
@@ -157,8 +162,10 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
-		// Always use the latest tracking date
-		traceableContactPersons.put(personWrapper, now);
+		// check if both persons have tracing capability
+		if (isTraceable() && personWrapper.isTraceable())
+			// Always use the latest tracking date
+			traceableContactPersons.put(personWrapper, now);
 	}
 
 	/**
@@ -175,6 +182,16 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public void clearTraceableContractPersons(double before) {
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+	}
+
+
+	/**
+	 * Returns whether the person can be traced. When {@link #TRACING_ATTR} is not set it is always true.
+	 */
+	public boolean isTraceable() {
+		Boolean tracing = (Boolean) attributes.getAttribute(TRACING_ATTR);
+		if (tracing ==  null) return true;
+		return tracing;
 	}
 
 	void addToTrajectory(String trajectoryElement) {

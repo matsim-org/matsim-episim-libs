@@ -312,11 +312,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 * @see EpisimContactEvent
 	 */
 	public void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-							  StringBuilder actType, double duration) {
+							  StringBuilder actType, double duration, double infectionProb) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
-					actType.toString(), duration));
+					actType.toString(), duration, infectionProb));
 		}
 
 	}
@@ -395,10 +395,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		// Events on 0th day are not needed
 		if (iteration == 0) return;
 
-		// Crucial episim events are always written
-		// other only if enabled
+		// Crucial episim events are always written, others only if enabled
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent
+				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)
+				|| writeEvents == EpisimConfigGroup.WriteEvents.all)
 
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || writeEvents == EpisimConfigGroup.WriteEvents.all)
 			writer.append(events, event);
 
 	}
