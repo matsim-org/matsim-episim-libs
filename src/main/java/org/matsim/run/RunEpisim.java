@@ -102,6 +102,35 @@ public class RunEpisim implements Callable<Integer> {
 		// (the "execute" will run "RunEpisim#call()")
 	}
 
+	static void printBindings(Injector injector) {
+		StringBuilder bindings = new StringBuilder();
+
+		for (Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
+			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ")
+					.append(e.getValue().getProvider()).append(" }");
+		}
+
+		log.info("Defined Bindings: {}", bindings.toString());
+	}
+
+	/**
+	 * Resolve and instantiate modules by their name.
+	 */
+	public static List<Module> resolveModules(List<String> modules) throws ReflectiveOperationException {
+		List<Module> result = new ArrayList<>();
+
+		for (String name : modules) {
+			// Build module path
+			if (!name.contains(".")) name = "org.matsim.run.modules." + name;
+
+			Class<?> clazz = ClassLoader.getSystemClassLoader().loadClass(name);
+			Module module = (Module) clazz.getDeclaredConstructor().newInstance();
+			result.add(module);
+		}
+
+		return result;
+	}
+
 	@Override
 	public Integer call() throws Exception {
 
@@ -146,7 +175,7 @@ public class RunEpisim implements Callable<Integer> {
 		// replacing them.  Was the other approach (to enforce explicit bindings, i.e. to _not_ use override in the production code) ever tried?  If so, for which reasons
 		// was it rejected?  kai, apr'20
 
-		printBindings( injector );
+		printBindings(injector);
 
 		Config config = injector.getInstance(Config.class);
 
@@ -165,34 +194,6 @@ public class RunEpisim implements Callable<Integer> {
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 		return 0;
-	}
-	static void printBindings( Injector injector ){
-		StringBuilder bindings = new StringBuilder();
-
-		for ( Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
-			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ")
-					.append(e.getValue().getProvider()).append(" }");
-		}
-
-		log.info("Defined Bindings: {}", bindings.toString());
-	}
-
-	/**
-	 * Resolve and instantiate modules by their name.
-	 */
-	private List<Module> resolveModules(List<String> modules) throws ReflectiveOperationException {
-		List<Module> result = new ArrayList<>();
-
-		for (String name : modules) {
-			// Build module path
-			if (!name.contains(".")) name = "org.matsim.run.modules." + name;
-
-			Class<?> clazz = ClassLoader.getSystemClassLoader().loadClass(name);
-			Module module = (Module) clazz.getDeclaredConstructor().newInstance();
-			result.add(module);
-		}
-
-		return result;
 	}
 
 	private class ConfigHolder extends AbstractModule {

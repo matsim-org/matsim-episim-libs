@@ -31,7 +31,7 @@ def objective(trial):
     """ Runs one episim trial """
 
     n = trial.number
-    c = trial.suggest_uniform('calibrationParameter', 1e-07, 5e-06)
+    c = trial.suggest_uniform("calibrationParameter", 1e-07, 5e-06)
 
     cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial --number %d --calibParameter %f" % (n, c)
     district = trial.study.user_attrs["district"]
@@ -40,7 +40,7 @@ def objective(trial):
     subprocess.run(cmd)
 
     rate, error = infection_rate("output-calibration/%d/infections.txt" % n, district)
-    trial.set_user_attr('mean_infection_rate', rate)
+    trial.set_user_attr("mean_infection_rate", rate)
 
     return error
 
@@ -48,15 +48,17 @@ def objective(trial):
 if __name__ == "__main__":
     # Needs to be run from top-level episim directory!
 
-    parser = argparse.ArgumentParser(description='Run calibrations with optuna.')
-    parser.add_argument('n_trials', metavar='N', type=int, nargs='?', help='Number of trials', default=10)
-    parser.add_argument('--district', type=str, help='District to calibrate for', default='Berlin')
+    parser = argparse.ArgumentParser(description="Run calibrations with optuna.")
+    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
+    parser.add_argument("--district", type=str, default="Berlin",
+                        help="District to calibrate for. Should be 'unknown' if no district information is available")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzScenario")
 
     args = parser.parse_args()
 
-    study = optuna.create_study(study_name='calibration', direction='minimize',
-                                storage='sqlite:///calibration.db', load_if_exists=True)
+    study = optuna.create_study(study_name="calibration", direction="minimize",
+                                storage="sqlite:///calibration.db", load_if_exists=True)
 
-    study.set_user_attr('district', args.district)
+    study.set_user_attr("district", args.district)
 
     study.optimize(objective, n_trials=args.n_trials)
