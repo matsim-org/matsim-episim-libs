@@ -108,8 +108,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final Scenario scenario;
 
 	private final EpisimConfigGroup episimConfig;
+	private final TracingConfigGroup tracingConfig;
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
+
+	/**
+	 * Local random, e.g. used for person initialization.
+	 */
+	private final SplittableRandom localRnd;
 
 	private int iteration = 0;
 	private int initialInfectionsLeft;
@@ -124,11 +130,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel,
 								 EpisimReporting reporting, InfectionModel infectionModel, SplittableRandom rnd) {
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.scenario = scenario;
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = reporting;
 		this.rnd = rnd;
+		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
 		this.progressionModel = progressionModel;
 		this.infectionModel = infectionModel;
 		this.initialInfectionsLeft = episimConfig.getInitialInfections();
@@ -285,16 +293,21 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (person != null) {
 			attrs = person.getAttributes();
 		} else {
-			// TODO: should warn here, but would produce too many messages the moment
 			attrs = new Attributes();
 		}
+
+		attrs.putAttribute(EpisimPerson.TRACING_ATTR, localRnd.nextDouble() < tracingConfig.getEquipmentRate());
 
 		return new EpisimPerson(id, attrs, reporting);
 	}
 
 	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
 		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
-			return event.getFacilityId();
+			Id<ActivityFacility> id = event.getFacilityId();
+			if (id == null)
+				throw new IllegalStateException("No facility id present. Please switch to episimConfig.setFacilitiesHandling( EpisimConfigGroup.FacilitiesHandling.bln ) ");
+
+			return id;
 		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
 			// TODO: this has poor performance and should be preprocessing...
 			if (event instanceof ActivityStartEvent) {

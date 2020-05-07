@@ -12,6 +12,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
+	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
@@ -24,7 +25,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private int tracingDayDistance = 4;
 
 	/**
-	 * Amount of days after the person showing symtomps.
+	 * Amount of days after the person showing symptoms.
 	 */
 	private int tracingDelay = 0;
 
@@ -32,6 +33,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Probability of successfully tracing a person.
 	 */
 	private double tracingProbability = 1.0;
+
+	/**
+	 * Probability that a person is equipped with a tracing device.
+	 */
+	private double equipmentRate = 1.0;
 
 	/**
 	 * Members of the same household will be put into quarantine, as well if one person of it had contact with infected person.
@@ -83,6 +89,16 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(TRACING_PROBABILITY)
 	public void setTracingProbability(double tracingProbability) {
 		this.tracingProbability = tracingProbability;
+	}
+
+	@StringGetter(EQUIPMENT_RATE)
+	public double getEquipmentRate() {
+		return equipmentRate;
+	}
+
+	@StringSetter(EQUIPMENT_RATE)
+	public void setEquipmentRate(double equipmentRate) {
+		this.equipmentRate = equipmentRate;
 	}
 
 	@StringSetter(QUARANTINE_HOUSEHOLD)
