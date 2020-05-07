@@ -178,7 +178,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, now);
+					trackContactPerson(personLeavingContainer, contactPerson, now, infectionType);
 				}
 			}
 
@@ -255,7 +255,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 		Map<String, Restriction> r = getRestrictions();
 
-		double exposure = Math.max(r.get(act1.getContainerName()).getExposure(), r.get(act2.getContainerName()).getExposure());
+		double exposure = Math.min(r.get(act1.getContainerName()).getExposure(), r.get(act2.getContainerName()).getExposure());
 		double contactIntensity = Math.max(act1.getContactIntensity(), act2.getContactIntensity());
 
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
@@ -290,7 +290,13 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 	}
 
-	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {
+	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, StringBuilder infectionType) {
+
+		// Don't track certain activities
+		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
+			return;
+		}
+
 		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
 		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
 	}

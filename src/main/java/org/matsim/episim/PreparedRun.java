@@ -78,6 +78,10 @@ public final class PreparedRun {
 			data.put("startDates", parameterValues.get(index));
 		}
 
+		// Newer runs should not need to use the offset parameter anymore
+		int indexOffset = parameter.indexOf("offset");
+			data.put("offset", parameterValues.get(indexOffset));
+
 		List<Object> opts = new ArrayList<>();
 
 		// Check if parameters have been described in the options
