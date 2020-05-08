@@ -397,10 +397,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		// Crucial episim events are always written, others only if enabled
 		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent
-				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)
-				|| writeEvents == EpisimConfigGroup.WriteEvents.all)
+				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 
 			writer.append(events, event);
+
+		} else if (writeEvents == EpisimConfigGroup.WriteEvents.all) {
+
+			// All non-epism events need a corrected timestamp
+			writer.append(events, event,
+					EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), event.getTime(), iteration));
+
+		}
 
 	}
 

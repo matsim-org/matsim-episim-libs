@@ -29,6 +29,8 @@ public class EpisimTestUtils {
 	private static final AtomicLong ID = new AtomicLong(0);
 	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 
+	public static final EpisimConfigGroup TEST_CONFIG = createTestConfig();
+
 	/**
 	 * Reset the person id counter.
 	 */
@@ -58,6 +60,8 @@ public class EpisimTestUtils {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leis").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home_quarantine").setContactIntensity(1));
 
 		return episimConfig;
 	}
@@ -79,7 +83,8 @@ public class EpisimTestUtils {
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
-		p.getTrajectory().add(currentAct);
+
+		p.getTrajectory().add(new EpisimPerson.Activity(currentAct, TEST_CONFIG.selectInfectionParams(currentAct)));
 
 		if (container != null) {
 			container.addPerson(p, 0);

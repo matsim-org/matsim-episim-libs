@@ -43,7 +43,6 @@ public final class ReplayHandler {
 	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
 	private final Scenario scenario;
-	private final long startOffset;
 	private final List<Event> events = new ArrayList<>();
 
 	/**
@@ -60,8 +59,6 @@ public final class ReplayHandler {
 
 		log.info("Read in {} events, with time range {} - {}", events.size(), events.get(0).getTime(),
 				events.get(events.size() - 1).getTime());
-
-		startOffset = config.getStartOffset();
 	}
 
 	/**
@@ -69,35 +66,7 @@ public final class ReplayHandler {
 	 */
 	public void replayEvents(final EventsManager manager, final int iteration) {
 		for (final Event e : events) {
-
-			if (e instanceof ActivityStartEvent) {
-				ActivityStartEvent ev = (ActivityStartEvent) e;
-				manager.processEvent(
-						new ActivityStartEvent(EpisimUtils.getCorrectedTime(startOffset, ev.getTime(), iteration), ev.getPersonId(),
-								ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord())
-				);
-
-			} else if (e instanceof ActivityEndEvent) {
-				ActivityEndEvent ev = (ActivityEndEvent) e;
-				manager.processEvent(
-						new ActivityEndEvent(EpisimUtils.getCorrectedTime(startOffset, ev.getTime(), iteration), ev.getPersonId(),
-								ev.getLinkId(), ev.getFacilityId(), ev.getActType())
-				);
-
-			} else if (e instanceof PersonEntersVehicleEvent) {
-				PersonEntersVehicleEvent ev = (PersonEntersVehicleEvent) e;
-				manager.processEvent(
-						new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(startOffset, e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
-				);
-
-			} else if (e instanceof PersonLeavesVehicleEvent) {
-				PersonLeavesVehicleEvent ev = (PersonLeavesVehicleEvent) e;
-				manager.processEvent(
-						new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(startOffset, e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
-				);
-
-			} else
-				manager.processEvent(e);
+			manager.processEvent(e);
 		}
 	}
 
@@ -117,7 +86,10 @@ public final class ReplayHandler {
 					coord = link.getToNode().getCoord();
 				}
 
-				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType(), coord);
+				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern(), coord);
+			} if (event instanceof ActivityEndEvent) {
+				ActivityEndEvent e = (ActivityEndEvent) event;
+				event = new ActivityEndEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern());
 			}
 
 			events.add(event);

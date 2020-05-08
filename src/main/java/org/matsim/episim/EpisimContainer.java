@@ -57,12 +57,14 @@ public class EpisimContainer<T> {
 	}
 
 	void addPerson(EpisimPerson person, double now) {
-		if (persons.containsKey(person.getPersonId().index()))
+		final int index = person.getPersonId().index();
+
+		if (persons.containsKey(index))
 			throw new IllegalStateException("Person already contained in this container.");
 
-		persons.put(person.getPersonId().index(), person);
+		persons.put(index, person);
 		personsAsList.add(person);
-		containerEnterTimes.put(person.getPersonId().index(), now);
+		containerEnterTimes.put(index, now);
 		person.setCurrentContainer(this);
 	}
 

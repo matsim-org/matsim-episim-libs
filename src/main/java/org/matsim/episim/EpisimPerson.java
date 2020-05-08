@@ -49,7 +49,7 @@ public final class EpisimPerson implements Attributable {
 	private final EpisimReporting reporting;
 	private final Attributes attributes;
 	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
-	private final List<String> trajectory = new ArrayList<>();
+	private final List<Activity> trajectory = new ArrayList<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -194,11 +194,11 @@ public final class EpisimPerson implements Attributable {
 		return tracing;
 	}
 
-	void addToTrajectory(String trajectoryElement) {
+	void addToTrajectory(Activity trajectoryElement) {
 		trajectory.add(trajectoryElement);
 	}
 
-	public List<String> getTrajectory() {
+	public List<Activity> getTrajectory() {
 		return trajectory;
 	}
 
@@ -277,4 +277,21 @@ public final class EpisimPerson implements Attributable {
 	 * Quarantine status of a person.
 	 */
 	public enum QuarantineStatus {full, atHome, no}
+
+	/**
+	 * Activity performed by a person. Holds the type and its infection params.
+	 */
+	public static final class Activity {
+
+		public final String actType;
+		public final EpisimConfigGroup.InfectionParams params;
+
+		/**
+		 * Constructor.
+		 */
+		public Activity(String actType, EpisimConfigGroup.InfectionParams params) {
+			this.actType = actType;
+			this.params = params;
+		}
+	}
 }
