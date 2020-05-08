@@ -118,7 +118,7 @@ public class EpisimTestUtils {
 	 * Remove person from container.
 	 */
 	public static void removePerson(EpisimContainer<?> container, EpisimPerson p) {
-		container.removePerson(p.getPersonId());
+		container.removePerson(p);
 	}
 
 

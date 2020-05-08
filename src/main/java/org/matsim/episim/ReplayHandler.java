@@ -25,7 +25,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.*;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
+import org.matsim.api.core.v01.events.ActivityStartEvent;
+import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
@@ -34,6 +36,7 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+
 
 /**
  * Handler that replays events from {@link EpisimConfigGroup#getInputEventsFile()} with corrected time and attributes.
@@ -87,7 +90,7 @@ public final class ReplayHandler {
 				}
 
 				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern(), coord);
-			} if (event instanceof ActivityEndEvent) {
+			} else if (event instanceof ActivityEndEvent) {
 				ActivityEndEvent e = (ActivityEndEvent) event;
 				event = new ActivityEndEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern());
 			}

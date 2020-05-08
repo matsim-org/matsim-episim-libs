@@ -213,7 +213,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 
-		episimFacility.removePerson(episimPerson.getPersonId());
+		episimFacility.removePerson(episimPerson);
 		if (episimPerson.getCurrentPositionInTrajectory() == 0) {
 			episimPerson.setFirstFacilityId(episimFacilityId.toString());
 		}
@@ -256,7 +256,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// find vehicle:
 		EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());
 
-		EpisimPerson episimPerson = episimVehicle.getPerson(leavesVehicleEvent.getPersonId());
+		EpisimPerson episimPerson = this.personMap.computeIfAbsent(leavesVehicleEvent.getPersonId(), this::createPerson);
 
 		infectionModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
 
@@ -266,7 +266,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		episimPerson.addSpentTime("pt", timeSpent);
 
 		// remove person from vehicle:
-		episimVehicle.removePerson(episimPerson.getPersonId());
+		episimVehicle.removePerson(episimPerson);
 	}
 
 	@Override
@@ -494,7 +494,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				person.addSpentTime(actType, now - lastFacility.getContainerEnteringTime(person.getPersonId()));
 
 
-				lastFacility.removePerson(person.getPersonId());
+				lastFacility.removePerson(person);
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, now);
 			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
@@ -502,7 +502,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				infectionModel.infectionDynamicsVehicle(person, lastVehicle, now);
 				person.addSpentTime("pt", now - lastVehicle.getContainerEnteringTime(person.getPersonId()));
 
-				lastVehicle.removePerson(person.getPersonId());
+				lastVehicle.removePerson(person);
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, now);
 			}
