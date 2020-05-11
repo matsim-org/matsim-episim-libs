@@ -43,7 +43,7 @@ public final class RunTrial implements Callable<Integer> {
 			defaultValue = "false")
 	private boolean withRestrictions;
 
-	@CommandLine.Parameters(paramLabel = "MODULE", arity = "1..*", defaultValue = "SnzScenario",
+	@CommandLine.Parameters(paramLabel = "MODULE", arity = "1..*", defaultValue = "SnzBerlinScenario",
 			description = "List of modules to load (See RunEpisim)")
 	private List<String> moduleNames = new ArrayList<>();
 

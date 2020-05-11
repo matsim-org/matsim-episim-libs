@@ -32,9 +32,9 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("educ_secondary")
 				.setContactIntensity(2.0);
 		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(3.0);
+				.setContactIntensity(1.0);
 		episimConfig.getOrAddContainerParams("quarantine_home")
-				.setContactIntensity(3.0);
+				.setContactIntensity(1.0);
 	}
 
 	public static void addParams(EpisimConfigGroup episimConfig) {
@@ -57,7 +57,7 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 
 
 	/**
-	 * Provider method that needs to be overwrite to generate fully configured scenario.
+	 * Provider method that needs to be overwritten to generate fully configured scenario.
 	 * Needs to be annotated with {@link Provides} and {@link Singleton}
 	 */
 	public abstract Config config();
@@ -74,7 +74,7 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_001_7);
+		episimConfig.setCalibrationParameter(0.000_002_8);
 
 		addParams(episimConfig);
 		setContactIntensities(episimConfig);
