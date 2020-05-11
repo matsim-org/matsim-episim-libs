@@ -506,7 +506,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	@Override
 	public void reset(int iteration) {
 
-		// safte checks
+		// safety checks
 		if (!init)
 			throw new IllegalStateException(".init() was not called!");
 		if (iteration <= 0)
