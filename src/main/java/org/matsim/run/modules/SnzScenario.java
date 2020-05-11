@@ -26,6 +26,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import javax.inject.Singleton;
 
@@ -173,6 +174,10 @@ public class SnzScenario extends AbstractModule {
 				.build();
 	}
 
+	/**
+	 * Use newer {@link FixedPolicy.ConfigBuilder#interpolate(String, String, Restriction, double, String...)} instead.
+	 */
+	@Deprecated
 	public static class LinearInterpolation{
 		private final long firstDay;
 		private final double firstValue;
