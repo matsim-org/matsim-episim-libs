@@ -42,15 +42,20 @@ public class SnzBerlinScenario extends AbstractSnzScenario {
 	public static FixedPolicy.ConfigBuilder basePolicy() {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
-				.interpolate("2020-03-08", "2020-03-22", Restriction.of(1), 0.45, "work")
-				.interpolate("2020-03-08", "2020-03-22", Restriction.of(1), 0.1, "leisure")
-				.interpolate("2020-03-15", "2020-03-22", Restriction.of(1), 0.5, "shopping", "errands", "business")
+				.interpolate("2020-03-07", "2020-03-14", Restriction.of(1), 0.8, "work")
+				.interpolate("2020-03-14", "2020-03-21", Restriction.of(0.8), 0.5, "work")
+				.interpolate("2020-03-21", "2020-03-28", Restriction.of(0.5), 0.45, "work")
+				.interpolate("2020-04-06", "2020-04-20", Restriction.of(45), 0.55, "work")
+				
+				.interpolate("2020-03-15", "2020-03-29", Restriction.of(1), 0.1, "leisure")
+				
+				.interpolate("2020-02-29", "2020-03-07", Restriction.of(1), 0.95, "shopping", "errands", "business")
+				.interpolate("2020-03-07", "2020-03-14", Restriction.of(0.95), 0.85, "shopping", "errands", "business")
+				.interpolate("2020-03-14", "2020-03-21", Restriction.of(0.85), 0.4, "shopping", "errands", "business")
 
-				//day 23 is the saturday 14th of march, so the weekend before schools got closed..
+				//saturday 14th of march, so the weekend before schools got closed..
 				.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai,
-				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher")
-
-				.restrict("2020-05-04", 0.5, "educ_primary", "educ_kiga"); // 4/may.  Already "history" (on 30/apr).  :-)
+				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher");
 
 		return builder;
 	}
@@ -69,10 +74,10 @@ public class SnzBerlinScenario extends AbstractSnzScenario {
 		episimConfig.setInitialInfections(50);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 
-		episimConfig.setStartDate("2020-02-21");
+		episimConfig.setStartDate("2020-02-15");
 		episimConfig.setPolicy(FixedPolicy.class, basePolicy().build());
 
-		config.controler().setOutputDirectory("./output-berlinV2-google-progr");
+		config.controler().setOutputDirectory("./output-berlinV2-google-");
 
 
 		return config;
