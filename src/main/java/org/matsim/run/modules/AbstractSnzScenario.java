@@ -57,7 +57,7 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 
 
 	/**
-	 * Provider method that needs to be overwrite to generate fully configured scenario.
+	 * Provider method that needs to be overwritten to generate fully configured scenario.
 	 * Needs to be annotated with {@link Provides} and {@link Singleton}
 	 */
 	public abstract Config config();
