@@ -17,7 +17,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.episim.analysis;
+package org.matsim.episim.events;
 
 import org.matsim.core.events.handler.EventHandler;
 import org.matsim.episim.events.EpisimInfectionEvent;

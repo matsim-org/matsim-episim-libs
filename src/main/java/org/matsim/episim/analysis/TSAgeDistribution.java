@@ -32,6 +32,7 @@ import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.episim.events.EpisimEventsReader;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInfectionEventHandler;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -39,7 +40,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class TSAgeDistribution {
+class TSAgeDistribution {
 
 
 	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
