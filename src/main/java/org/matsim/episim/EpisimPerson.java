@@ -40,15 +40,11 @@ import java.util.stream.Collectors;
  */
 public final class EpisimPerson implements Attributable {
 
-	/**
-	 * Attribute for the ability to be traced.
-	 */
-	public static final String TRACING_ATTR = "hasTracing";
-
 	private final Id<Person> personId;
 	private final EpisimReporting reporting;
+	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
-	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
+	private final MutableObjectDoubleMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<Activity> trajectory = new ArrayList<>();
 
 	/**
@@ -79,15 +75,26 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private int quarantineDate = -1;
 	private int currentPositionInTrajectory;
+
 	/**
 	 * The last visited {@link org.matsim.facilities.ActivityFacility}.
 	 */
 	private String lastFacilityId;
 	private String firstFacilityId;
 
+	/**
+	 * Whether this person can be traced.
+	 */
+	private boolean traceable;
+
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
+		this(personId, attrs, true, reporting);
+	}
+
+	EpisimPerson(Id<Person> personId, Attributes attrs, boolean traceable, EpisimReporting reporting) {
 		this.personId = personId;
 		this.attributes = attrs;
+		this.traceable = traceable;
 		this.reporting = reporting;
 	}
 
@@ -184,14 +191,15 @@ public final class EpisimPerson implements Attributable {
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
 	}
 
-
 	/**
-	 * Returns whether the person can be traced. When {@link #TRACING_ATTR} is not set it is always true.
+	 * Returns whether the person can be traced.
 	 */
 	public boolean isTraceable() {
-		Boolean tracing = (Boolean) attributes.getAttribute(TRACING_ATTR);
-		if (tracing ==  null) return true;
-		return tracing;
+		return traceable;
+	}
+
+	public void setTraceable(boolean traceable) {
+		this.traceable = traceable;
 	}
 
 	void addToTrajectory(Activity trajectoryElement) {

@@ -378,9 +378,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			attrs = new Attributes();
 		}
 
-		attrs.putAttribute(EpisimPerson.TRACING_ATTR, localRnd.nextDouble() < tracingConfig.getEquipmentRate());
+		boolean traceable = localRnd.nextDouble() < tracingConfig.getEquipmentRate();
 
-		return new EpisimPerson(id, attrs, reporting);
+		return new EpisimPerson(id, attrs, traceable, reporting);
 	}
 
 	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
