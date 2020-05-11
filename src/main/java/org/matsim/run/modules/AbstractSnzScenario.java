@@ -5,6 +5,8 @@ import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.AgeDependentProgressionModel;
+import org.matsim.episim.model.ProgressionModel;
 
 import javax.inject.Singleton;
 
@@ -55,6 +57,13 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home"));
 	}
 
+	@Override
+	protected void configure() {
+
+		// Use age dependent progression model
+		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		// WARNING: This does not affect runs with --config file, especially batch runs !!
+	}
 
 	/**
 	 * Provider method that needs to be overwritten to generate fully configured scenario.

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash --login
 #$ -l h_rt=86400
 #$ -o ./logfile_$JOB_NAME.log
 #$ -j y

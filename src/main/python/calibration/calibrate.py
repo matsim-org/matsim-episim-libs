@@ -39,7 +39,7 @@ def objective(trial):
     cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --calibParameter %f" % (scenario, n, c)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
-    subprocess.run(cmd)
+    subprocess.run(cmd, shell=True)
 
     rate, error = infection_rate("output-calibration/%d/infections.txt" % n, district)
     trial.set_user_attr("mean_infection_rate", rate)
