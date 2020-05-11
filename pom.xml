@@ -66,6 +66,11 @@
             <url>http://mvn.slimjars.com</url>
         </repository>
 
+        <repository>
+            <id>tablesaw</id>
+            <url>https://mvnrepository.com/artifact/tech.tablesaw/tablesaw-core</url>
+        </repository>
+
     </repositories>
 
     <dependencies>
@@ -181,6 +186,22 @@
             <version>1.23</version>
             <scope>test</scope>
         </dependency>
+
+        <dependency>
+            <groupId>tech.tablesaw</groupId>
+            <artifactId>tablesaw-core</artifactId>
+            <version>0.38.1</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.tablesaw</groupId>
+            <artifactId>tablesaw-jsplot</artifactId>
+            <version>0.38.1</version>
+        </dependency>
+<!--        <dependency>-->
+<!--            <groupId>tech.tablesaw</groupId>-->
+<!--            <artifactId>tablesaw-html</artifactId>-->
+<!--            <version>LATEST</version>-->
+<!--        </dependency>-->
 
     </dependencies>
 
