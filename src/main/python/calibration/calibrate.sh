@@ -21,6 +21,9 @@ echo "using alternative java"
 module add java/11
 java -version
 
+# Activate the virtual environment
+source bin/activate
+
 # Script starts 5 processes in parallel
 for i in $(seq 0 4); do
    $command &
