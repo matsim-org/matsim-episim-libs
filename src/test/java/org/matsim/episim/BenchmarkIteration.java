@@ -21,7 +21,7 @@ public class BenchmarkIteration {
 	private EpisimRunner runner;
 	private InfectionEventHandler handler;
 	private ReplayHandler replay;
-	private int iteration;
+	private int iteration = 1;
 
 	public static void main(String[] args) throws RunnerException {
 
@@ -52,6 +52,7 @@ public class BenchmarkIteration {
 		// benchmark with event writing
 		//injector.getInstance(EventsManager.class).addHandler(injector.getInstance(EpisimReporting.class));
 
+		handler.init(replay.getEvents());
 	}
 
 	@Benchmark

@@ -118,6 +118,8 @@ public class FixedPolicy extends ShutdownPolicy {
 		 * See {@link #restrict(String, Restriction, String...)}.
 		 */
 		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
+			if (day <= 0) throw new IllegalArgumentException("Day must be larger than 0");
+
 			return restrict("day-" + day, restriction, activities);
 		}
 

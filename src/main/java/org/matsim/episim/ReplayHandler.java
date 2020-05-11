@@ -74,6 +74,13 @@ public final class ReplayHandler {
 	}
 
 	/**
+	 * All available events.
+	 */
+	public List<Event> getEvents() {
+		return events;
+	}
+
+	/**
 	 * Helper class to read events one time.
 	 */
 	private final class EventReader implements BasicEventHandler {
