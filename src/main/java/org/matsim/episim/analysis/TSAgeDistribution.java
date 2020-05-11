@@ -21,34 +21,30 @@
 package org.matsim.episim.analysis;
 
 
+import org.apache.commons.io.FileUtils;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.events.ActivityEndEvent;
-import org.matsim.api.core.v01.events.ActivityStartEvent;
-import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
-import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
-import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.core.utils.misc.Counter;
+import org.matsim.episim.events.EpisimEventsReader;
 import org.matsim.episim.events.EpisimInfectionEvent;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class TSAgeDistribution {
 
 
 	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
-	private static final String INPUT_EVENTS = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz";
-	private static final String OUTPUTDIR = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/";
+	private static final String INPUT_EVENTS_DIR = "D:/svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/events/";
+	private static final String OUTPUTDIR = "D:/svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/";
 
 	public static void main(String[] args) {
 
@@ -72,7 +68,15 @@ public class TSAgeDistribution {
 		EventsManager manager = EventsUtils.createEventsManager();
 		AgeDistributionAnalysisHandler handler = new AgeDistributionAnalysisHandler();
 		manager.addHandler(handler);
-		EventsUtils.readEvents(manager, INPUT_EVENTS);
+
+		File eventsDir = new File(INPUT_EVENTS_DIR);
+		if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
+		Collection<File> fileList = FileUtils.listFiles(eventsDir, new String[]{"gz"}, false);
+		Counter counter = new Counter("reading events file nr ");
+		fileList.forEach(file -> {
+			counter.incCounter();
+			new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+		});
 
 		Map<Integer, Integer> infectionExactAges = new HashMap<>();
 		Map<Integer, Integer> infectionAgeGroups = new HashMap<>();
