@@ -27,11 +27,14 @@ hh.index = pd.date_range(start='2020-03-01',periods=hh.index.size)
 # base = 'piecewise__theta2.8E-6__offset-3__leis_1.0_1.0_0.0_0.0__other0.2/'
 # simStartDate='2020-02-18'
 
-base = 'piecewise__theta2.8E-6__offset-4__leis_1.0_0.7_0.7_0.1__other0.2/'
-simStartDate='2020-02-17'
+# base = 'piecewise__theta2.8E-6__offset-4__leis_1.0_0.7_0.7_0.1__other0.2/'
+# base = 'piecewise__theta2.8E-6__offset-4__work_1.0_1.0__leis_1.0_1.0__eduLower_1.0__eduHigher_1.0__other1.0/'
+# base = 'piecewise__theta2.8E-6__offset-4__work_0.75_0.75__leis_0.7_0.7__eduLower_0.1__eduHigher_0.0__other0.2/'
+# simStartDate='2020-02-17'
 
 # base = 'piecewise__theta2.8E-6__offset-5__leis_1.0_1.0_0.0_0.0__other0.2/'
-# simStartDate='2020-02-16'
+base = 'piecewise__theta2.8E-6__offset-5__work_0.75_0.75__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
+simStartDate='2020-02-16'
 
 # base = 'piecewise__theta2.8E-6__offset-6__leis1.0_0.7_0.1__other0.2/'
 # base = 'piecewise__theta2.8E-6__offset-6__leis_1.0_1.0_0.0_0.0__other0.2/'
@@ -39,10 +42,12 @@ simStartDate='2020-02-17'
 
 rr = pd.read_csv(base+'infections.txt', sep='\t' )
 
-infectedCumulative = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick']]
-infectedCumulative.index = pd.date_range(start=simStartDate, periods=infectedCumulative.size)
+infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
+infected.index = pd.date_range(start=simStartDate, periods=infected.size/2)
 
-rr3 = pd.concat([hh['Stationäre Behandlung'], infectedCumulative], axis=1).fillna(value=0.)
+infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
+
+rr3 = pd.concat([hh['Stationäre Behandlung'], infected['shouldBeInHospital'], infected['nCritical']], axis=1).fillna(value=0.)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
@@ -66,7 +71,7 @@ nShowingSymptoms.index = pd.date_range(start=simStartDate, periods=nShowingSympt
 
 rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative], axis=1).fillna(value=0.)
 
-rr3 = pd.concat([rr2b.diff(),nContagious.diff(),nShowingSymptoms.diff()], axis=1)
+rr3 = pd.concat([rr2b.diff(),nContagious.diff(),nShowingSymptoms.diff()], axis=1)*7/40
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
@@ -74,8 +79,8 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '-', '-', '-','-','']) +
                   cycler(marker=['o','','','',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,1000)
+axes = rr3.plot(logy=False,grid=True)
+axes.set_ylim(0,800)
 # plt.axvline(23, color='y', linestyle='-', lw=1)
 pyplot.show()
 
@@ -92,7 +97,7 @@ rr3 = pd.concat([rr2b,fit],axis=1)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
-rr3.plot(logy=True,grid=True)
+rr3.plot(logy=False,grid=True)
 pyplot.axvline(23, color='y', linestyle='-', lw=1)
 pyplot.show()
 

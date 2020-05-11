@@ -174,35 +174,79 @@ public class KnRunEpisim {
 
 
 				FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-				final double work = 0.45;
+
+				final double workMid = 0.75;
+				final double workEnd = 0.45;
+//				final double workEnd = workMid;
+
+				final double leisureMid = 0.7;
+				final double leisureEnd = 0.1;
+//				final double leisureEnd = leisureMid;
+
+//				final double eduLower = 0.1;
+				final double eduLower = 1.;
+//
+//				final double eduHigher = 0.0 ;
+				final double eduHigher = 1.;
+
 				final double other = 0.2;
 
-				final double leisure1a = 1.0;
-				final double leisure1b = 0.7;
-				final double leisure2a = 0.7; // first day of Berlin Veranstaltungsverbot (sunday)
-				final double leisure2b = 0.1;
-				{
-					final int firstDay = 14-offset;
-					final int lastDay = 24-offset;
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, leisure1a, lastDay, leisure1b );
+//				final double workMid = 1.;
+//				final double workEnd = 1.;
+//
+//				final double leisureMid = 1.;
+//				final double leisureEnd = 1.;
+//
+//				final double eduLower = 1.;
+//				final double eduHigher = 1.;
+//
+//				final double other = 1.;
+
+				{ // leisure 1:
+					final int firstDay = 14-offset; // "14-offset" ist sozusagen das Ende der letzten Woche, in der ich noch regulär im Büro war
+					final int lastDay = 25-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, leisureMid );
 					for( int day = firstDay ; day <= lastDay ; day++ ){
 						builder.restrict( day, interpolation.getValue( day ), "leisure" );
 					}
 				}
-				{
-					final int firstDay = 24-offset;
-					final int lastDay = 29-offset;
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, leisure2a, lastDay, leisure2b );
+				{ // errands
+					final int firstDay = 14-offset; // (retail in google is combined with leisure!)
+					final int lastDay = 29-offset; // leisure change last day
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, other );
 					for( int day = firstDay ; day <= lastDay ; day++ ){
-						builder.restrict( day, interpolation.getValue( day ), "leisure" );
+						builder.restrict( day, interpolation.getValue( day ), "shopping", "errands", "business" );
 					}
 				}
-				{
-					final int firstDay = 19-offset;
-					final int lastDay = 32-offset;
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, work );
+				{ // work 1:
+					final int firstDay = 19-offset; // ("18-offset" ist der Montag, ab dem ich weitgehend home office gemacht habe)
+					final int lastDay = 25-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, workMid );
 					for( int day = firstDay ; day <= lastDay ; day++ ){
 						builder.restrict( day, interpolation.getValue( day ), "work" );
+					}
+				}
+				// ===========================================
+				{ // edu:
+					builder.restrict( 23-offset, eduLower, "educ_primary", "educ_kiga" ) // "23-offset" = Samstag vor Schulschliessungen
+					       .restrict( 23-offset, eduHigher, "educ_secondary", "educ_higher" )
+//					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
+					;
+				}
+				{ // work 2:
+					final int firstDay = 25-offset;
+					final int lastDay = 32-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, workMid, lastDay, workEnd );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "work" );
+					}
+				}
+				{ // leisure 2:
+					final int firstDay = 25-offset;
+					final int lastDay = 29-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, leisureMid, lastDay, leisureEnd );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "leisure" );
 					}
 				}
 //				{
@@ -213,20 +257,6 @@ public class KnRunEpisim {
 //						builder.restrict( day, interpolation.getValue( day ), "work" );
 //					}
 //				}
-				{
-					final int firstDay = 14-offset; // leisure change first day
-					final int lastDay = 29-offset; // leisure change last day
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, other );
-					for( int day = firstDay ; day <= lastDay ; day++ ){
-						builder.restrict( day, interpolation.getValue( day ), "shopping", "errands", "business" );
-					}
-				}
-				{
-					builder.restrict( 23-offset, 0.1, "educ_primary", "educ_kiga" ) // day 23 is the saturday 14th of march, so the weekend
-					       .restrict( 23-offset, 0., "educ_secondary", "educ_higher" )
-//					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
-					;
-				}
 				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
 				episimConfig.setSampleSize(0.25);
 
@@ -244,8 +274,10 @@ public class KnRunEpisim {
 				strb.append( "__theta" + episimConfig.getCalibrationParameter() );
 				strb.append( "__offset" + offset );
 //				strb.append( "_ciHome" + episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-//				strb.append( "_work" + work );
-				strb.append( "__leis_" + leisure1a + '_' + leisure1b + "_" + leisure2a + "_" + leisure2b );
+				strb.append( "__work_" + workMid + "_" + workEnd );
+				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
+				strb.append( "__eduLower_"  + eduLower);
+				strb.append( "__eduHigher_" + eduHigher );
 				strb.append( "__other" + other );
 				config.controler().setOutputDirectory( strb.toString() );
 
