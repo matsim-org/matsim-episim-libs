@@ -33,10 +33,12 @@ def objective(trial):
     n = trial.number
     c = trial.suggest_uniform("calibrationParameter", 1e-07, 5e-06)
 
-    cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial --number %d --calibParameter %f" % (n, c)
+    scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
 
-    print("Running calibration (district: %s) : %s" % (district, cmd))
+    cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --calibParameter %f" % (scenario, n, c)
+
+    print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
     subprocess.run(cmd)
 
     rate, error = infection_rate("output-calibration/%d/infections.txt" % n, district)
@@ -52,7 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzScenario")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario")
 
     args = parser.parse_args()
 
@@ -60,5 +62,6 @@ if __name__ == "__main__":
                                 storage="sqlite:///calibration.db", load_if_exists=True)
 
     study.set_user_attr("district", args.district)
+    study.set_user_attr("scenario", args.scenario)
 
     study.optimize(objective, n_trials=args.n_trials)
