@@ -123,9 +123,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
-				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
-				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -335,14 +335,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	}
 
-	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
+	void reportRestrictions(Map<String, Restriction> restrictions, long iteration, String date) {
 		if (iteration == 0) return;
 
-		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, "", restrictions.values().toArray()));
+		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, date, restrictions.values().toArray()));
 		writer.append(restrictionReport, "\n");
 	}
 
-	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration) {
+	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
 
 		if (iteration == 0) return;
 
@@ -368,7 +368,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		// report minutes
 		avg.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
 
-		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array));
+		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, date, array));
 		writer.append(timeUse, "\n");
 	}
 
