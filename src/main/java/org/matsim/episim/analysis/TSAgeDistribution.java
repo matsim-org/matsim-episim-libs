@@ -65,16 +65,15 @@ public class TSAgeDistribution {
 		System.out.println("exactAges sum = " + exactAges.values().stream().collect(Collectors.summingInt(Integer::intValue)));
 		System.out.println("ageGroups sum = " + ageGroups.values().stream().collect(Collectors.summingInt(Integer::intValue)));
 
+		File eventsDir = new File(INPUT_EVENTS_DIR);
+		if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
+		List<File> fileList = new ArrayList(FileUtils.listFiles(eventsDir, new String[]{"gz"}, false));
 		EventsManager manager = EventsUtils.createEventsManager();
 		AgeDistributionAnalysisHandler handler = new AgeDistributionAnalysisHandler();
 		manager.addHandler(handler);
 
-		File eventsDir = new File(INPUT_EVENTS_DIR);
-		if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
-		Collection<File> fileList = FileUtils.listFiles(eventsDir, new String[]{"gz"}, false);
 		Counter counter = new Counter("reading events file nr ");
 		fileList.forEach(file -> {
-			counter.incCounter();
 			new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
 		});
 
@@ -90,9 +89,25 @@ public class TSAgeDistribution {
 			infectionAgeGroups.compute(ageGroup, (k,v) -> v==null? 1 : v+1);
 		}
 
+		Map<Integer, Map<Integer,Integer>> infectionAgeGroupsPerWeek = new HashMap<>();
+		for (Integer week : handler.infectedPersonsPerWeek.keySet()) {
+			Set<Id<Person>> infectedPersons = handler.infectedPersonsPerWeek.get(week);
+			Map<Integer,Integer> weekAgeGroups = new HashMap<>();
+			infectionAgeGroups.keySet().forEach(ageGroup -> weekAgeGroups.put(ageGroup,0));
+			for (Id<Person> personId : infectedPersons) {
+				Person person = population.getPersons().get(personId);
+				int age = (int) person.getAttributes().getAttribute("age");
+				int ageGroup = Math.floorDiv(age,10);
+				weekAgeGroups.compute(ageGroup, (k,v) -> v==null? 1 : v+1);
+			}
+			infectionAgeGroupsPerWeek.put(week, weekAgeGroups);
+		}
+
+
 		{ //write exactAges
 			BufferedWriter writer = IOUtils.getBufferedWriter(OUTPUTDIR + "exactAges.csv");
 			try {
+
 				writer.write("age;nrOfPersonInPop;nrOfInfectionEvents");
 
 				for(int age : exactAges.keySet()){
@@ -109,12 +124,23 @@ public class TSAgeDistribution {
 		{	//write ageGroups
 			BufferedWriter writer = IOUtils.getBufferedWriter(OUTPUTDIR + "ageGroups.csv");
 			try {
-				writer.write("age;nrOfPersonInPop;nrOfInfectionEvents");
+				String header = "ageGroup;nrOfPersonInPop;nrOfInfectionEvents";
+				List<Integer> weeks = new ArrayList(infectionAgeGroupsPerWeek.keySet());
+				Collections.sort(weeks);
 
-				for(int age : ageGroups.keySet()){
-					infectionAgeGroups.putIfAbsent(age, 0);
+				for (Integer week : weeks) {
+					header += ";week" + week;
+				}
+				writer.write(header);
+
+				for(int ageGroup : ageGroups.keySet()){
+					infectionAgeGroups.putIfAbsent(ageGroup, 0);
 					writer.newLine();
-					writer.write("" + age + ";" + ageGroups.get(age) + ";" + infectionAgeGroups.get(age));
+					String line = "" + ageGroup + ";" + ageGroups.get(ageGroup) + ";" + infectionAgeGroups.get(ageGroup);
+					for (Integer week : weeks) {
+						line += ";" + infectionAgeGroupsPerWeek.get(week).get(ageGroup);
+					}
+					writer.write(line);
 				}
 				writer.close();
 			} catch (IOException e) {
@@ -126,11 +152,18 @@ public class TSAgeDistribution {
 
 	private static class AgeDistributionAnalysisHandler implements EpisimInfectionEventHandler {
 		Set<Id<Person>> personCache = new HashSet<>();
+		Map<Integer,Set<Id<Person>>> infectedPersonsPerWeek = new HashMap<>();
 
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
-			personCache.add(event.getInfectorId());
+			int day = (int) Math.floor(event.getTime() /  (24*3600) );
+			int week = Math.floorDiv(day, 7);
+
+//			personCache.add(event.getInfectorId());
 			personCache.add(event.getPersonId());
+
+			infectedPersonsPerWeek.putIfAbsent(week, new HashSet<>());
+			infectedPersonsPerWeek.get(week).add(event.getPersonId());
 		}
 	}
 }
