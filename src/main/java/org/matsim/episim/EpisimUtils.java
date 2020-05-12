@@ -20,9 +20,14 @@
  */
 package org.matsim.episim;
 
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
+import org.apache.commons.io.FileUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -108,6 +113,29 @@ public final class EpisimUtils {
 			field.set(rnd, seed);
 		} catch (ReflectiveOperationException e) {
 			throw new IllegalStateException("Could not extract seed", e);
+		}
+	}
+
+
+	/**
+	 * Compress directory recursively.
+	 */
+	public static void compressDirectory(String rootDir, String sourceDir, ArchiveOutputStream out) throws IOException {
+		File[] fileList = new File(sourceDir).listFiles();
+		if (fileList == null) return;
+		for (File file : fileList) {
+			// Zip files (i.e. other snapshots) are not added
+			if (file.getName().endsWith(".zip"))
+				continue;
+
+			if (file.isDirectory()) {
+				compressDirectory(rootDir, sourceDir + "/" + file.getName(), out);
+			} else {
+				ArchiveEntry entry = out.createArchiveEntry(file, "output" + sourceDir.replace(rootDir, "") + "/" + file.getName());
+				out.putArchiveEntry(entry);
+				FileUtils.copyFile(file, out);
+				out.closeArchiveEntry();
+			}
 		}
 	}
 }

@@ -56,6 +56,13 @@ public class EpisimWriter {
 	}
 
 	/**
+	 * Create a writer for appending to existing file and does not write anything initially.
+	 */
+	public static BufferedWriter prepare(String filename) {
+		return IOUtils.getBufferedWriter(IOUtils.getFileUrl(filename), IOUtils.CHARSET_UTF8, true);
+	}
+
+	/**
 	 * Writes an event as xml representation to {@code out}.
 	 */
 	protected static void writeEvent(final Appendable out, final Event event, final double correctedTime) throws IOException {
@@ -162,6 +169,7 @@ public class EpisimWriter {
 
 	/**
 	 * Writes an event with corrected time attribute.
+	 *
 	 * @see #append(BufferedWriter, Event)
 	 */
 	public void append(BufferedWriter writer, Event event, double correctedTime) {

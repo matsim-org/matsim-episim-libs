@@ -63,16 +63,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	private final EpisimWriter writer;
 	private final EventsManager manager;
 
+	private final String base;
 	/**
 	 * Base path for event files.
 	 */
 	private final Path eventPath;
 	private final EpisimConfigGroup.WriteEvents writeEvents;
-
-	private final BufferedWriter infectionReport;
-	private final BufferedWriter infectionEvents;
-	private final BufferedWriter restrictionReport;
-	private final BufferedWriter timeUse;
 
 	/**
 	 * Aggregated cumulative cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
@@ -90,11 +86,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 */
 	private int iteration;
 	private BufferedWriter events;
+	private BufferedWriter infectionReport;
+	private BufferedWriter infectionEvents;
+	private BufferedWriter restrictionReport;
+	private BufferedWriter timeUse;
 
 
 	@Inject
 	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {
-		String base;
 		String outDir = config.controler().getOutputDirectory();
 
 		// file names depend on the run name
@@ -143,6 +142,16 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		} catch (IOException e) {
 			log.error("Could not write policy config", e);
 		}
+	}
+
+	/**
+	 * Opens files for output in append mode.
+	 */
+	void append() {
+		infectionReport = EpisimWriter.prepare(base + "infections.txt");
+		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
+		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
+		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
 	}
 
 	/**

@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
 
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
@@ -69,8 +70,14 @@ public class EpisimContainer<T> {
 	/**
 	 * Writes state to stream.
 	 */
-	void write(ObjectOutput out) {
+	void write(ObjectOutput out) throws IOException {
 
+		out.writeInt(containerEnterTimes.size());
+
+		for (EpisimPerson p : personsAsList) {
+			out.writeUTF(p.getPersonId().toString());
+			out.writeDouble(containerEnterTimes.get(p.getPersonId().index()));
+		}
 	}
 
 	void addPerson(EpisimPerson person, double now) {

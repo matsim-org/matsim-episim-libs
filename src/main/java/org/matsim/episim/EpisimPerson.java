@@ -22,6 +22,7 @@ package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
 import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
+import org.eclipse.collections.api.tuple.primitive.ObjectDoublePair;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
@@ -29,6 +30,7 @@ import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
+import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.*;
@@ -43,8 +45,12 @@ public final class EpisimPerson implements Attributable {
 	private final EpisimReporting reporting;
 	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
-	private final MutableObjectDoubleMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<Activity> trajectory = new ArrayList<>();
+
+	/**
+	 * Traced contacts with other persons.
+	 */
+	private final MutableObjectDoubleMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -99,6 +105,7 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Reads persons state from stream.
+	 *
 	 * @param persons map of all persons in the simulation
 	 */
 	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) {
@@ -108,8 +115,44 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Writes person state to stream.
 	 */
-	void write(ObjectOutput out) {
+	void write(ObjectOutput out) throws IOException {
 
+		out.writeInt(trajectory.size());
+		for (Activity act : trajectory) {
+			out.writeUTF(act.actType);
+		}
+
+		out.write(traceableContactPersons.size());
+		for (ObjectDoublePair<EpisimPerson> kv : traceableContactPersons.keyValuesView()) {
+			out.writeUTF(kv.getOne().getPersonId().toString());
+			out.writeDouble(kv.getTwo());
+		}
+
+		out.write(statusChanges.size());
+		for (Map.Entry<DiseaseStatus, Double> e : statusChanges.entrySet()) {
+			out.writeInt(e.getKey().ordinal());
+			out.writeDouble(e.getValue());
+		}
+
+		out.writeBoolean(currentContainer != null);
+		if (currentContainer != null)
+			out.writeUTF(currentContainer.getContainerId().toString());
+
+		out.writeInt(status.ordinal());
+		out.writeInt(quarantineStatus.ordinal());
+		out.writeInt(quarantineDate);
+		out.writeInt(currentPositionInTrajectory);
+		out.writeBoolean(firstFacilityId != null);
+
+		// null strings can not be written
+		if (firstFacilityId != null)
+			out.writeUTF(firstFacilityId);
+		out.writeBoolean(lastFacilityId != null);
+
+		if (lastFacilityId != null)
+			out.writeUTF(lastFacilityId);
+
+		out.writeBoolean(traceable);
 	}
 
 	public Id<Person> getPersonId() {
