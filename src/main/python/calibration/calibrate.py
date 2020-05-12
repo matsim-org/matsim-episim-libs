@@ -83,7 +83,7 @@ def objective_offset(trial):
     e_sick, e_critical = hospitalization_rate("output-calibration-restrictions/%d/infections.txt" % n, district)
 
     trial.set_user_attr("error_sick", e_sick)
-    trial.set_user_attr("e_critical", e_critical)
+    trial.set_user_attr("error_critical", e_critical)
 
     return e_sick + e_critical
 
