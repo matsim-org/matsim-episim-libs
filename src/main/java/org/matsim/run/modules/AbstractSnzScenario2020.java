@@ -14,10 +14,10 @@ import javax.inject.Singleton;
  * Base class for a module containing the config for a snz scenario.
  * These are based on data provided by snz. Please note that this data is not publicly available.
  */
-public abstract class AbstractSnzScenario extends AbstractModule {
+public abstract class AbstractSnzScenario2020 extends AbstractModule {
 
 	public static final String[] DEFAULT_ACTIVITIES = {
-			"pt", "work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_higher", "shopping", "errands", "business"
+			"pt", "work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other", "shop_daily", "shop_other", "visit", "errands", "business"
 	};
 
 	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
@@ -26,6 +26,8 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("tr")
 				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("leisure")
+				.setContactIntensity(5.0);
+		episimConfig.getOrAddContainerParams("visit")
 				.setContactIntensity(5.0);
 		episimConfig.getOrAddContainerParams("educ_kiga")
 				.setContactIntensity(10.0);
@@ -48,8 +50,12 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_kiga"));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_primary"));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_secondary"));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_tertiary"));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_higher"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shopping"));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_other"));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shop_daily"));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shop_other"));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("visit"));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("errands"));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("business"));
 
@@ -81,9 +87,6 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
-
-		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_002_8);
 
 		addParams(episimConfig);
 		setContactIntensities(episimConfig);

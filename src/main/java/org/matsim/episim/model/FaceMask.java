@@ -6,6 +6,7 @@ package org.matsim.episim.model;
 public enum FaceMask {
 
 	// Mask types need to be order by effectiveness
+	// Values based on Eikenberry et al. https://arxiv.org/pdf/2004.03251.pdf, chapter 2.3 
 	NONE(1d, 1d),
 	CLOTH(0.6, 0.5),
 	SURGICAL(0.3, 0.2),
