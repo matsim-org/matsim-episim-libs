@@ -34,7 +34,7 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("educ_secondary")
 				.setContactIntensity(2.0);
 		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(1.0);
+				.setContactIntensity(3.0);
 		episimConfig.getOrAddContainerParams("quarantine_home")
 				.setContactIntensity(1.0);
 	}
