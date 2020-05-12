@@ -80,6 +80,7 @@ public final class PreparedRun {
 
 		// Newer runs should not need to use the offset parameter anymore
 		int indexOffset = parameter.indexOf("offset");
+		if (indexOffset > -1)
 			data.put("offset", parameterValues.get(indexOffset));
 
 		List<Object> opts = new ArrayList<>();
