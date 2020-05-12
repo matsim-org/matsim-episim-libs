@@ -49,6 +49,10 @@ import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -58,7 +62,8 @@ import java.util.stream.Collectors;
  * At the end of activities an {@link InfectionModel} is executed and also a {@link ProgressionModel} at the end of the day.
  * See {@link EpisimModule} for which components may be substituted.
  */
-public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
+public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler,
+		Externalizable {
 	// Some notes:
 
 	// * Especially if we repeat the same events file, then we do not have complete mixing.  So it may happen that only some subpopulations gets infected.
@@ -576,6 +581,55 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	public Collection<EpisimPerson> getPersons() {
 		return Collections.unmodifiableCollection(personMap.values());
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+
+		out.writeLong(EpisimUtils.getSeed(rnd));
+
+		out.writeInt(personMap.size());
+		for (Map.Entry<Id<Person>, EpisimPerson> e : personMap.entrySet()) {
+			out.writeUTF(e.getKey().toString());
+			e.getValue().write(out);
+		}
+
+		out.writeInt(vehicleMap.size());
+		for (Map.Entry<Id<Vehicle>, EpisimVehicle> e : vehicleMap.entrySet()) {
+			out.writeUTF(e.getKey().toString());
+			e.getValue().write(out);
+		}
+
+		out.writeInt(pseudoFacilityMap.size());
+		for (Map.Entry<Id<ActivityFacility>, EpisimFacility> e : pseudoFacilityMap.entrySet()) {
+			out.writeUTF(e.getKey().toString());
+			e.getValue().write(out);
+		}
+
+	}
+
+	@Override
+	public void readExternal(ObjectInput in) throws IOException {
+
+		EpisimUtils.setSeed(rnd, in.readLong());
+
+		int persons = in.readInt();
+		for (int i = 0; i < persons; i++) {
+			Id<Person> id = Id.create(in.readUTF(), Person.class);
+			personMap.get(id).read(in, personMap);
+		}
+
+		int vehicles = in.readInt();
+		for (int i = 0; i < vehicles; i++) {
+			Id<Vehicle> id = Id.create(in.readUTF(), Vehicle.class);
+			vehicleMap.get(id).read(in, personMap);
+		}
+
+		int container = in.readInt();
+		for (int i = 0; i < container; i++) {
+			Id<ActivityFacility> id = Id.create(in.readUTF(), ActivityFacility.class);
+			pseudoFacilityMap.get(id).read(in, personMap);
+		}
 	}
 
 	/**

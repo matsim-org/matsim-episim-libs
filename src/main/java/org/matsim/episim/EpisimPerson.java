@@ -29,10 +29,9 @@ import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Set;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -96,6 +95,21 @@ public final class EpisimPerson implements Attributable {
 		this.attributes = attrs;
 		this.traceable = traceable;
 		this.reporting = reporting;
+	}
+
+	/**
+	 * Reads persons state from stream.
+	 * @param persons map of all persons in the simulation
+	 */
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) {
+
+	}
+
+	/**
+	 * Writes person state to stream.
+	 */
+	void write(ObjectOutput out) {
+
 	}
 
 	public Id<Person> getPersonId() {

@@ -28,8 +28,11 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
 
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -54,6 +57,20 @@ public class EpisimContainer<T> {
 
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
+	}
+
+	/**
+	 * Reads containers state from stream.
+	 */
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) {
+
+	}
+
+	/**
+	 * Writes state to stream.
+	 */
+	void write(ObjectOutput out) {
+
 	}
 
 	void addPerson(EpisimPerson person, double now) {

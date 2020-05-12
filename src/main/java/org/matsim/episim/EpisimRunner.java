@@ -27,6 +27,10 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 
+import java.io.FileOutputStream;
+import java.io.ObjectOutputStream;
+import java.nio.file.Path;
+
 /**
  * Main entry point and runner of one epidemic simulation.
  *
@@ -73,10 +77,15 @@ public final class EpisimRunner {
 
 		handler.init(replay.getEvents());
 
+		// TODO: read snapshot here
+
 		for (int iteration = 1; iteration <= maxIterations; iteration++) {
 
 			if (!doStep(replay, handler, iteration))
 				break;
+
+
+			// TODO: write snapshot
 
 		}
 
@@ -99,6 +108,19 @@ public final class EpisimRunner {
 		replay.replayEvents(manager, iteration);
 
 		return true;
+	}
+
+
+	private void writeSnapshot(Path path) {
+
+		InfectionEventHandler handler = handlerProvider.get();
+
+//		handler.writeExternal(new ObjectOutputStream(new FileOutputStream(path.toFile())));
+
+	}
+
+	private void readSnapshot(Path path) {
+
 	}
 
 }

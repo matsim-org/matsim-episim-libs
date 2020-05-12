@@ -23,9 +23,11 @@ package org.matsim.episim;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 
+import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.SplittableRandom;
 
 /**
  * Common utility class for episim.
@@ -81,5 +83,31 @@ public final class EpisimUtils {
 		}
 		config.controler().setOutputDirectory(outdir.toString());
 
+	}
+
+	/**
+	 * Extracts the current state of a {@link SplittableRandom} instance.
+	 */
+	public static long getSeed(SplittableRandom rnd) {
+		try {
+			Field field = rnd.getClass().getDeclaredField("seed");
+			field.setAccessible(true);
+			return (long) field.get(rnd);
+		} catch (ReflectiveOperationException e) {
+			throw new IllegalStateException("Could not extract seed", e);
+		}
+	}
+
+	/**
+	 * Sets current seed of {@link SplittableRandom} instance.
+	 */
+	public static void setSeed(SplittableRandom rnd, long seed) {
+		try {
+			Field field = rnd.getClass().getDeclaredField("seed");
+			field.setAccessible(true);
+			field.set(rnd, seed);
+		} catch (ReflectiveOperationException e) {
+			throw new IllegalStateException("Could not extract seed", e);
+		}
 	}
 }
