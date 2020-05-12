@@ -10,6 +10,21 @@ import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
 
+def percentage_error(actual, predicted):
+    """ https://stackoverflow.com/questions/47648133/mape-calculation-in-python """
+    res = np.empty(actual.shape)
+    for j in range(actual.shape[0]):
+        if actual[j] != 0:
+            res[j] = (actual[j] - predicted[j]) / actual[j]
+        else:
+            res[j] = predicted[j] / np.mean(actual)
+    return res
+
+
+def mean_absolute_percentage_error(y_true, y_pred):
+    return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
+
+
 def infection_rate(f, district, target_rate=2, target_interval=3):
     """  Calculates the R values between a fixed day interval and returns MSE according to target rate """
 
@@ -38,8 +53,10 @@ def hospitalization_rate(f, district, target="berlin-hospital.csv", start="2020-
     df = df[(df.date >= start) & (df.date <= end)]
     cmp = cmp[(cmp.Datum >= start) & (cmp.Datum <= end)]
 
-    error_sick = mean_squared_log_error(cmp["Stationäre Behandlung"], df.nSeriouslySick)
-    error_critical = mean_squared_log_error(cmp["Intensivmedizin"], df.nCritical)
+    # One alternative: mean_squared_log_error
+
+    error_sick = mean_absolute_percentage_error(cmp["Stationäre Behandlung"], df.nSeriouslySick)
+    error_critical = mean_absolute_percentage_error(cmp["Intensivmedizin"], df.nCritical)
 
     return error_sick, error_critical
 
@@ -48,7 +65,7 @@ def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
     n = trial.number
-    c = trial.suggest_uniform("calibrationParameter", 1e-07, 5e-06)
+    c = trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06)
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
@@ -75,7 +92,7 @@ def objective_offset(trial):
     # TODO: needs to be set manually when performing offset calibration
     c = 0.000006
 
-    cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --days 90" \
+    cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --days 100" \
           " --number %d --calibParameter %.12f --with-restrictions --offset %d" % (scenario, n, c, offset)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
