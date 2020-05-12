@@ -4,6 +4,8 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -14,6 +16,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunEpisim;
 import picocli.CommandLine;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -27,6 +30,8 @@ import java.util.concurrent.Callable;
 )
 public final class RunTrial implements Callable<Integer> {
 
+	private static final Logger log = LogManager.getLogger(RunTrial.class);
+
 	@CommandLine.Option(names = "--number", description = "Trial number", required = true)
 	private int number;
 
@@ -35,6 +40,9 @@ public final class RunTrial implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--offset", description = "Adds an offset to start date", defaultValue = "0")
 	private int offset;
+
+	@CommandLine.Option(names = "--days", description = "Number of days to simulate", defaultValue = "45")
+	private int days;
 
 	@CommandLine.Option(
 			names = "--with-restrictions",
@@ -68,8 +76,9 @@ public final class RunTrial implements Callable<Integer> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		if (offset > 0) {
-			// TODO: when exactDate branch was merged
+		if (offset != 0) {
+			LocalDate startDate = episimConfig.getStartDate();
+			episimConfig.setStartDate(startDate.plusDays(offset));
 		}
 
 		// clear restrictions
@@ -79,8 +88,10 @@ public final class RunTrial implements Callable<Integer> {
 
 		episimConfig.setCalibrationParameter(calibParameter);
 
+		log.info("Starting run {} with parameter {}", number, calibParameter);
+
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(45);
+		runner.run(days);
 
 		return 0;
 	}
