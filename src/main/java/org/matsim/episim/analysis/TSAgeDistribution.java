@@ -46,9 +46,10 @@ import java.util.stream.Collectors;
 public class TSAgeDistribution {
 
 
-	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
-	private static final String INPUT_EVENTS = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz";
-	private static final String OUTPUTDIR = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/";
+	private static final String INPUT_POPULATION = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
+	private static final String INPUT_EVENTS = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz";
+//	private static final String OUTPUTDIR = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/";
+	private static final String OUTPUTDIR = "./";
 
 	public static void main(String[] args) {
 

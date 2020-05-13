@@ -10,7 +10,7 @@ from cycler import cycler
 import scipy as sp
 import matsim as ms
 
-hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=',').fillna(value=0.)
+hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
 hh.index = pd.date_range(start='2020-03-01',periods=hh.index.size)
 
 # In[]:
@@ -43,7 +43,7 @@ simStartDate='2020-02-16'
 rr = pd.read_csv(base+'infections.txt', sep='\t' )
 
 infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
-infected.index = pd.date_range(start=simStartDate, periods=infected.size/2)
+infected.index = pd.date_range(start=simStartDate, periods=infected.index.size)
 
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 
@@ -69,9 +69,9 @@ nContagious.index = pd.date_range(start=simStartDate, periods=nContagious.size)
 nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptoms']]
 nShowingSymptoms.index = pd.date_range(start=simStartDate, periods=nShowingSymptoms.size)
 
-rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative], axis=1).fillna(value=0.)
+rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
 
-rr3 = pd.concat([rr2b.diff(),nContagious.diff(),nShowingSymptoms.diff()], axis=1)*7/40
+rr3 = pd.concat([rr2b.diff(),nContagious.diff(),nShowingSymptoms.diff()], axis=1)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
@@ -79,8 +79,8 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '-', '-', '-','-','']) +
                   cycler(marker=['o','','','',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=False,grid=True)
-axes.set_ylim(0,800)
+axes = rr3.plot(logy=True,grid=True)
+# axes.set_ylim(0,1250)
 # plt.axvline(23, color='y', linestyle='-', lw=1)
 pyplot.show()
 
