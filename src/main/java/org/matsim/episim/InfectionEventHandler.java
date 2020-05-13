@@ -520,8 +520,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (iteration <= 0)
 			throw new IllegalArgumentException("Iteration must be larger 1!");
 		if (paramsMap.size() > 1000)
-			log.warn("Params map contains many entries. Activity types maybe not .intern() Strings");
-
+			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person);
@@ -590,6 +589,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void writeExternal(ObjectOutput out) throws IOException {
 
 		out.writeLong(EpisimUtils.getSeed(rnd));
+		out.writeInt(initialInfectionsLeft);
+		out.writeInt(initialStartInfectionsLeft);
 
 		out.writeInt(personMap.size());
 		for (Map.Entry<Id<Person>, EpisimPerson> e : personMap.entrySet()) {
@@ -615,6 +616,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void readExternal(ObjectInput in) throws IOException {
 
 		EpisimUtils.setSeed(rnd, in.readLong());
+		initialInfectionsLeft = in.readInt();
+		initialStartInfectionsLeft = in.readInt();
 
 		int persons = in.readInt();
 		for (int i = 0; i < persons; i++) {

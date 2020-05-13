@@ -46,8 +46,9 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 	@Override
 	public final void updateState(EpisimPerson person, int day) {
+
 		// Called at the beginning of iteration
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(),0, day);
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 		switch (person.getDiseaseStatus()) {
 			case susceptible:
 

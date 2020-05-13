@@ -120,8 +120,12 @@ public final class EpisimPerson implements Attributable {
 		int n = in.readInt();
 		trajectory.clear();
 		for (int i = 0; i < n; i++) {
-			String actType = readChars(in);
-			trajectory.add(params.get(actType.intern()));
+			String name = readChars(in).intern();
+			Activity e = params.get(name);
+			if (e == null)
+				throw new IllegalStateException("Could not reconstruct param: " + name);
+
+			trajectory.add(e);
 		}
 
 
@@ -148,7 +152,8 @@ public final class EpisimPerson implements Attributable {
 			} else
 				currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
 
-			if (currentContainer == null) throw new IllegalStateException("Could not reconstruct container: " + name);
+			if (currentContainer == null)
+				throw new IllegalStateException("Could not reconstruct container: " + name);
 		} else
 			currentContainer = null;
 

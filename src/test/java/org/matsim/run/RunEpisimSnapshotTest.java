@@ -44,7 +44,10 @@ public class RunEpisimSnapshotTest {
 		);
 
 		TracingConfigGroup tracingConfig = injector.getInstance(TracingConfigGroup.class);
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(10);
+
+		// TODO
+		//tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(10);
+
 	}
 
 	@Test
