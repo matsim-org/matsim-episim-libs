@@ -528,7 +528,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
 
-		reporting.reporting(reports, iteration);
+		reporting.reporting(reports, iteration, report.date);
 		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
