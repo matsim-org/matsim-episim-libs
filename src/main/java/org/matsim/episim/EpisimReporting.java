@@ -243,14 +243,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	/**
 	 * Writes the infection report to csv.
+	 * @param date 
 	 */
-	void reporting(Map<String, InfectionReport> reports, int iteration) {
+	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 		if (iteration == 0) return;
 
 		InfectionReport t = reports.get("total");
 
 		log.warn("===============================");
-		log.warn("Beginning day {}", iteration);
+		log.warn("Beginning day {} ({})", iteration, date);
 		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
