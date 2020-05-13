@@ -45,9 +45,17 @@ public final class AgeDependentProgressionModel extends DefaultProgressionModel 
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person, double now) {
 
 		double proba = -1;
+		
+		int age = -1;
+		
+		for (String attr : person.getAttributes().getAsMap().keySet()) {
+			if (attr.contains("age")) {
+				age = (int) person.getAttributes().getAttribute(attr);
+				break;
+			}
+		}
 
-		if (person.getAttributes().getAsMap().containsKey("age")) {
-			int age = (int) person.getAttributes().getAttribute("age");
+		if (age != -1) {
 
 			if (age < 0 || age > 120) {
 				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
@@ -83,9 +91,17 @@ public final class AgeDependentProgressionModel extends DefaultProgressionModel 
 	@Override
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person, double now) {
 		double proba = -1;
+		
+		int age = -1;
+		
+		for (String attr : person.getAttributes().getAsMap().keySet()) {
+			if (attr.contains("age")) {
+				age = (int) person.getAttributes().getAttribute(attr);
+				break;
+			}
+		}
 
-		if (person.getAttributes().getAsMap().containsKey("age")) {
-			int age = (int) person.getAttributes().getAttribute("age");
+		if (age != -1) {
 
 			if (age < 0 || age > 120) {
 				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);

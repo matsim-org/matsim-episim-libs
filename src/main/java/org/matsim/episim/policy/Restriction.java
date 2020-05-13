@@ -30,6 +30,9 @@ public final class Restriction {
 	 * Constructor.
 	 */
 	public Restriction(double remainingFraction, double exposure, FaceMask requireMask) {
+		if (remainingFraction < 0 || remainingFraction > 1)
+			throw new IllegalArgumentException("remainingFraction must be between 0 and 1.");
+
 		this.remainingFraction = remainingFraction;
 		this.exposure = exposure;
 		this.requireMask = requireMask;

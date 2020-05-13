@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Interface for defining the setup procedure of a batch run and the corresponding parameter class.
@@ -71,6 +72,14 @@ public interface BatchRun<T> {
 			Parameter param = field.getAnnotation(Parameter.class);
 			if (param != null) {
 				allParams.add(DoubleStream.of(param.value()).boxed().collect(Collectors.toList()));
+				fields.add(field);
+			}
+			StartDates dateParam = field.getAnnotation(StartDates.class);
+			if (dateParam != null) {
+				if (!field.getName().equals("startDate"))
+					throw new IllegalArgumentException("StartDates field must be called 'startDate'");
+
+				allParams.add(Stream.of(dateParam.value()).map(LocalDate::parse).collect(Collectors.toList()));
 				fields.add(field);
 			}
 			IntParameter intParam = field.getAnnotation(IntParameter.class);
@@ -125,9 +134,9 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * The start of the scenario as day in real world.
+	 * The default start of the scenario as day in real world. Only needed if there are multiple start dates in the batch run.
 	 */
-	default LocalDate startDate() {
+	default LocalDate getDefaultStartDate() {
 		return LocalDate.now();
 	}
 
@@ -172,6 +181,7 @@ public interface BatchRun<T> {
 		return Joiner.on("-").join(run.params);
 	}
 
+
 	/**
 	 * This declares a field as parameter for a batch run.
 	 */
@@ -182,6 +192,18 @@ public interface BatchRun<T> {
 		 * All values this parameter should attain.
 		 */
 		double[] value();
+	}
+
+	/**
+	 * Declares parameter as dates. Receiver must be {@link LocalDate} and named {@code startDate}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface StartDates {
+		/**
+		 * Desired start dates in the form yyyy-mm-dd.
+		 */
+		String[] value();
 	}
 
 	/**

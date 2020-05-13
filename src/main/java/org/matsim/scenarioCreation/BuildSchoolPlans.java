@@ -20,7 +20,8 @@
  */
 package org.matsim.scenarioCreation;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.*;
@@ -44,9 +45,9 @@ import java.util.stream.Collectors;
  * @author smueller, tschlenther
  */
 
-public class BuildSchoolPlans {
+public final class BuildSchoolPlans {
 
-	private static final Logger log = Logger.getLogger(BuildSchoolPlans.class);
+	private static final Logger log = LogManager.getLogger(BuildSchoolPlans.class);
 
 	private static final String INPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_emptyPlans.xml.gz";
 
@@ -55,6 +56,9 @@ public class BuildSchoolPlans {
 	private static final String OUTPUT_POPULATION_FILE_DEFAULT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_schoolPlans.xml.gz";
 
 	private static final Random RND = new Random(1);
+
+	private BuildSchoolPlans() {
+	}
 
 	public static void main(String[] args) throws IOException {
 
@@ -76,7 +80,7 @@ public class BuildSchoolPlans {
 
 	public static void buildSchoolPlans(Population schoolPopulation, String schoolFacilitiesFile, CoordinateTransformation facilityCoordTransformer) throws IOException {
 		log.info("start reading school facilities");
-		Set<EducFacility> allFacilities = EducFacilities.readEducFacilites(schoolFacilitiesFile, facilityCoordTransformer);
+		Set<EducFacility> allFacilities = EducFacility.readEducFacilities(schoolFacilitiesFile, facilityCoordTransformer);
 		log.info("start building school plans");
 		process(schoolPopulation, allFacilities);
 	}

@@ -27,6 +27,9 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzScenario;
 
+/**
+ * Older scenario with now outdated information.
+ */
 public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 
 	@Override

@@ -84,6 +84,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+	private final EpisimConfigGroup episimConfig;
 	/**
 	 * Current day / iteration.
 	 */
@@ -104,7 +105,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		} else
 			base = outDir;
 
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		try {
 			eventPath = Path.of(outDir, "events");
@@ -122,9 +123,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
-				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
-				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -150,7 +151,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	Map<String, InfectionReport> createReports(Collection<EpisimPerson> persons, int iteration) {
 
 		Map<String, InfectionReport> reports = new LinkedHashMap<>();
-		InfectionReport report = new InfectionReport("total", EpisimUtils.getCorrectedTime(0., iteration), iteration);
+
+		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+
+		InfectionReport report = new InfectionReport("total", time, date, iteration);
 		reports.put("total", report);
 
 		for (EpisimPerson person : persons) {
@@ -158,7 +163,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 			// Also aggregate by district
 			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
-					: districtName, name -> new InfectionReport(name, report.time, report.day));
+					: districtName, name -> new InfectionReport(name, report.time, report.date, report.day));
 			switch (person.getDiseaseStatus()) {
 				case susceptible:
 					report.nSusceptible++;
@@ -238,14 +243,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	/**
 	 * Writes the infection report to csv.
+	 * @param date 
 	 */
-	void reporting(Map<String, InfectionReport> reports, int iteration) {
+	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 		if (iteration == 0) return;
 
 		InfectionReport t = reports.get("total");
 
 		log.warn("===============================");
-		log.warn("Beginning day {}", iteration);
+		log.warn("Beginning day {} ({})", iteration, date);
 		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
@@ -261,6 +267,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 			String[] array = new String[InfectionsWriterFields.values().length];
 			array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);
 			array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);
+			array[InfectionsWriterFields.date.ordinal()] = r.date;
 			array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);
 			array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);
 			array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);
@@ -329,14 +336,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	}
 
-	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
+	void reportRestrictions(Map<String, Restriction> restrictions, long iteration, String date) {
 		if (iteration == 0) return;
 
-		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, "", restrictions.values().toArray()));
+		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, date, restrictions.values().toArray()));
 		writer.append(restrictionReport, "\n");
 	}
 
-	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration) {
+	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
 
 		if (iteration == 0) return;
 
@@ -362,7 +369,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		// report minutes
 		avg.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
 
-		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array));
+		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, date, array));
 		writer.append(timeUse, "\n");
 	}
 
@@ -432,7 +439,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	}
 
 	enum InfectionsWriterFields {
-		time, day, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
+		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
 		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative,
 		nRecovered, nInQuarantine, district
 	}
@@ -448,6 +455,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		public final String name;
 		public final double time;
+		public final String date;
 		public final long day;
 		public long nSusceptible = 0;
 		public long nInfectedButNotContagious = 0;
@@ -465,9 +473,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		/**
 		 * Constructor.
 		 */
-		public InfectionReport(String name, double time, long day) {
+		public InfectionReport(String name, double time, String date, long day) {
 			this.name = name;
 			this.time = time;
+			this.date = date;
 			this.day = day;
 		}
 

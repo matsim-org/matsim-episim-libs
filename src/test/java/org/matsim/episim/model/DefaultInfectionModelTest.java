@@ -27,6 +27,7 @@ public class DefaultInfectionModelTest {
 
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
+	private EpisimConfigGroup config;
 	private DefaultInfectionModel model;
 	private DefaultFaceMaskModel maskModel;
 	private Map<String, Restriction> restrictions;
@@ -35,9 +36,9 @@ public class DefaultInfectionModelTest {
 	@Before
 	public void setup() {
 		EpisimReporting reporting = mock(EpisimReporting.class);
-		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
 		SplittableRandom rnd = new SplittableRandom(1);
 
+		config = EpisimTestUtils.createTestConfig();
 		maskModel = new DefaultFaceMaskModel(config, rnd);
 		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE);
 		restrictions = config.createInitialRestrictions();
@@ -121,6 +122,16 @@ public class DefaultInfectionModelTest {
 				(f) -> EpisimTestUtils.createPerson("c10", f)
 		);
 		assertThat(rate).isCloseTo(0, OFFSET);
+	}
+
+	@Test
+	public void showingSymptoms() {
+
+		double rate = sampleInfectionRate(Duration.ofMinutes(10), "c10",
+				() -> EpisimTestUtils.createFacility(2, "c10", EpisimTestUtils.SYMPTOMS),
+				(f) -> EpisimTestUtils.createPerson("c10", f)
+		);
+		assertThat(rate).isCloseTo(1, OFFSET);
 	}
 
 	@Test
@@ -218,6 +229,33 @@ public class DefaultInfectionModelTest {
 		rate = sampleInfectionRate(Duration.ofHours(2), "c10",
 				() -> EpisimTestUtils.createFacility(5, "c10", EpisimTestUtils.HOME_QUARANTINE),
 				(f) -> EpisimTestUtils.createPerson("c10", f)
+		);
+
+		assertThat(rate).isCloseTo(0, OFFSET);
+	}
+
+	@Test
+	public void homeQuarantineContact() {
+
+		Function<InfectionEventHandler.EpisimFacility, EpisimPerson> createPerson = (f) -> {
+			EpisimPerson p = EpisimTestUtils.createPerson("home", f);
+			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, 0);
+			return p;
+		};
+
+		double rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
+				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
+				createPerson
+		);
+
+		assertThat(rate).isCloseTo(1, OFFSET);
+
+		// no contact between home quarantined persons
+		config.getOrAddContainerParams("quarantine_home").setContactIntensity(0);
+
+		rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
+				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
+				createPerson
 		);
 
 		assertThat(rate).isCloseTo(0, OFFSET);

@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -43,6 +43,7 @@ public final class ReplayHandler {
 	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
 	private final Scenario scenario;
+	private final long startOffset;
 	private final List<Event> events = new ArrayList<>();
 
 	/**
@@ -59,6 +60,8 @@ public final class ReplayHandler {
 
 		log.info("Read in {} events, with time range {} - {}", events.size(), events.get(0).getTime(),
 				events.get(events.size() - 1).getTime());
+
+		startOffset = config.getStartOffset();
 	}
 
 	/**
@@ -70,27 +73,27 @@ public final class ReplayHandler {
 			if (e instanceof ActivityStartEvent) {
 				ActivityStartEvent ev = (ActivityStartEvent) e;
 				manager.processEvent(
-						new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
+						new ActivityStartEvent(EpisimUtils.getCorrectedTime(startOffset, ev.getTime(), iteration), ev.getPersonId(),
 								ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord())
 				);
 
 			} else if (e instanceof ActivityEndEvent) {
 				ActivityEndEvent ev = (ActivityEndEvent) e;
 				manager.processEvent(
-						new ActivityEndEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
+						new ActivityEndEvent(EpisimUtils.getCorrectedTime(startOffset, ev.getTime(), iteration), ev.getPersonId(),
 								ev.getLinkId(), ev.getFacilityId(), ev.getActType())
 				);
 
 			} else if (e instanceof PersonEntersVehicleEvent) {
 				PersonEntersVehicleEvent ev = (PersonEntersVehicleEvent) e;
 				manager.processEvent(
-						new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
+						new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(startOffset, e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
 				);
 
 			} else if (e instanceof PersonLeavesVehicleEvent) {
 				PersonLeavesVehicleEvent ev = (PersonLeavesVehicleEvent) e;
 				manager.processEvent(
-						new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
+						new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(startOffset, e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
 				);
 
 			} else

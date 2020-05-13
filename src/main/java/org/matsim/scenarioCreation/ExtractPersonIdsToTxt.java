@@ -37,10 +37,13 @@ import java.io.IOException;
  * <p>
  * The id list is later taken as the basis for events filtering.
  */
-public class ExtractPersonIdsToTxt {
+public final class ExtractPersonIdsToTxt {
 
 	private static final String DEFAULT_INPUT_POPULATION = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_withoutNetworkInfo.xml.gz";
 	private static final String DEFAULT_OUTPUT_ID_TXT = "../../svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_optimizedPopulation_adults_idList.txt";
+
+	private ExtractPersonIdsToTxt() {
+	}
 
 	public static void main(String[] args) {
 

@@ -58,6 +58,7 @@ public class OpenBerlinScenario extends AbstractModule {
 		config.addContainerParams(new EpisimConfigGroup.InfectionParams("freight"));
 		// home act:
 		config.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
+		config.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home"));
 	}
 
 	@Provides

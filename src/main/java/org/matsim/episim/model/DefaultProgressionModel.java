@@ -47,7 +47,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	@Override
 	public final void updateState(EpisimPerson person, int day) {
 		// Called at the beginning of iteration
-		double now = EpisimUtils.getCorrectedTime(0, day);
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(),0, day);
 		switch (person.getDiseaseStatus()) {
 			case susceptible:
 
@@ -127,8 +127,8 @@ public class DefaultProgressionModel implements ProgressionModel {
 				throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 		}
 
-		// clear tracing older than 7 days
-		person.clearTraceableContractPersons(now - 7 * DAY);
+		// clear tracing if not relevant anymore
+		person.clearTraceableContractPersons(now - (tracingConfig.getTracingDelay() + tracingConfig.getTracingDayDistance() + 1) * DAY);
 	}
 
 	/**
