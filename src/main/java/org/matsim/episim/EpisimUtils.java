@@ -26,9 +26,9 @@ import org.apache.commons.io.FileUtils;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
@@ -137,5 +137,26 @@ public final class EpisimUtils {
 				out.closeArchiveEntry();
 			}
 		}
+	}
+
+	/**
+	 * Writes characters to output in null-terminated format.
+	 */
+	public static void writeChars(DataOutput out, String value) throws IOException {
+		if (value == null) throw new IllegalArgumentException("Can not write null values!");
+
+		byte[] bytes = value.getBytes(StandardCharsets.ISO_8859_1);
+		out.writeInt(bytes.length);
+		out.write(bytes);
+	}
+
+	/**
+	 * Read null-terminated strings from input stream.
+	 */
+	public static String readChars(DataInput in) throws IOException {
+		int length = in.readInt();
+		byte[] content = new byte[length];
+		in.readFully(content, 0, length);
+		return new String(content, 0, length, StandardCharsets.ISO_8859_1);
 	}
 }

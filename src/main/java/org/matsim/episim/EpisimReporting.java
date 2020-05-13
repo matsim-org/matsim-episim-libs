@@ -26,6 +26,7 @@ import com.typesafe.config.ConfigRenderOptions;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
+import org.eclipse.collections.api.tuple.primitive.ObjectIntPair;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
 import org.matsim.api.core.v01.events.Event;
@@ -40,10 +41,7 @@ import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.EpisimWriter;
 
-import java.io.BufferedWriter;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.UncheckedIOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -52,10 +50,13 @@ import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
+
 /**
  * Reporting and persisting of metrics, like number of infected people etc.
  */
-public final class EpisimReporting implements BasicEventHandler, Closeable {
+public final class EpisimReporting implements BasicEventHandler, Closeable, Externalizable {
 
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
@@ -451,6 +452,37 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
 		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+
+		out.writeInt(cumulativeCases.size());
+
+		for (Map.Entry<EpisimPerson.DiseaseStatus, MutableObjectIntMap<String>> e : cumulativeCases.entrySet()) {
+			out.writeInt(e.getKey().ordinal());
+			MutableObjectIntMap<String> map = e.getValue();
+			out.writeInt(map.size());
+
+			for (ObjectIntPair<String> kv : map.keyValuesView()) {
+				writeChars(out, kv.getOne());
+				out.writeInt(kv.getTwo());
+			}
+		}
+	}
+
+	@Override
+	public void readExternal(ObjectInput in) throws IOException {
+
+		int states = in.readInt();
+		for (int i = 0; i < states; i++) {
+			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];
+			int size = in.readInt();
+			for (int j = 0; j < size; j++) {
+				String key = readChars(in);
+				cumulativeCases.get(state).put(key, in.readInt());
+			}
+		}
 	}
 
 	enum InfectionsWriterFields {

@@ -27,14 +27,19 @@ import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.vehicles.Vehicle;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 
 /**
  * Persons current state in the simulation.
@@ -108,8 +113,60 @@ public final class EpisimPerson implements Attributable {
 	 *
 	 * @param persons map of all persons in the simulation
 	 */
-	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) {
+	void read(ObjectInput in, Map<String, Activity> params, Map<Id<Person>, EpisimPerson> persons,
+			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
+			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
 
+		int n = in.readInt();
+		trajectory.clear();
+		for (int i = 0; i < n; i++) {
+			String actType = readChars(in);
+			trajectory.add(params.get(actType.intern()));
+		}
+
+
+		n = in.readInt();
+		traceableContactPersons.clear();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			traceableContactPersons.put(persons.get(id), in.readDouble());
+		}
+
+		n = in.readInt();
+		statusChanges.clear();
+		for (int i = 0; i < n; i++) {
+			int status = in.readInt();
+			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());
+		}
+
+		// Current container is set
+		if (in.readBoolean()) {
+			boolean isVehicle = in.readBoolean();
+			String name = readChars(in);
+			if (isVehicle) {
+				currentContainer = vehicles.get(Id.create(name, Vehicle.class));
+			} else
+				currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
+
+			if (currentContainer == null) throw new IllegalStateException("Could not reconstruct container: " + name);
+		} else
+			currentContainer = null;
+
+		status = DiseaseStatus.values()[in.readInt()];
+		quarantineStatus = QuarantineStatus.values()[in.readInt()];
+		quarantineDate = in.readInt();
+		currentPositionInTrajectory = in.readInt();
+		if (in.readBoolean()) {
+			firstFacilityId = readChars(in);
+		} else
+			firstFacilityId = null;
+
+		if (in.readBoolean()) {
+			lastFacilityId = readChars(in);
+		} else
+			lastFacilityId = null;
+
+		traceable = in.readBoolean();
 	}
 
 	/**
@@ -119,38 +176,40 @@ public final class EpisimPerson implements Attributable {
 
 		out.writeInt(trajectory.size());
 		for (Activity act : trajectory) {
-			out.writeUTF(act.actType);
+			writeChars(out, act.actType);
 		}
 
-		out.write(traceableContactPersons.size());
+		out.writeInt(traceableContactPersons.size());
 		for (ObjectDoublePair<EpisimPerson> kv : traceableContactPersons.keyValuesView()) {
-			out.writeUTF(kv.getOne().getPersonId().toString());
+			writeChars(out, kv.getOne().getPersonId().toString());
 			out.writeDouble(kv.getTwo());
 		}
 
-		out.write(statusChanges.size());
+		out.writeInt(statusChanges.size());
 		for (Map.Entry<DiseaseStatus, Double> e : statusChanges.entrySet()) {
 			out.writeInt(e.getKey().ordinal());
 			out.writeDouble(e.getValue());
 		}
 
 		out.writeBoolean(currentContainer != null);
-		if (currentContainer != null)
-			out.writeUTF(currentContainer.getContainerId().toString());
+		if (currentContainer != null) {
+			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
+			writeChars(out, currentContainer.getContainerId().toString());
+		}
 
 		out.writeInt(status.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(currentPositionInTrajectory);
-		out.writeBoolean(firstFacilityId != null);
 
+		out.writeBoolean(firstFacilityId != null);
 		// null strings can not be written
 		if (firstFacilityId != null)
-			out.writeUTF(firstFacilityId);
-		out.writeBoolean(lastFacilityId != null);
+			writeChars(out, firstFacilityId);
 
+		out.writeBoolean(lastFacilityId != null);
 		if (lastFacilityId != null)
-			out.writeUTF(lastFacilityId);
+			writeChars(out, lastFacilityId);
 
 		out.writeBoolean(traceable);
 	}

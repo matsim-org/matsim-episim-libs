@@ -56,6 +56,9 @@ import java.io.ObjectOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.readChars;
+
 /**
  * Main event handler of episim.
  * It consumes the events of a standard MATSim run and puts {@link EpisimPerson}s into {@link EpisimContainer}s during their activity.
@@ -590,19 +593,19 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		out.writeInt(personMap.size());
 		for (Map.Entry<Id<Person>, EpisimPerson> e : personMap.entrySet()) {
-			out.writeUTF(e.getKey().toString());
+			writeChars(out, e.getKey().toString());
 			e.getValue().write(out);
 		}
 
 		out.writeInt(vehicleMap.size());
 		for (Map.Entry<Id<Vehicle>, EpisimVehicle> e : vehicleMap.entrySet()) {
-			out.writeUTF(e.getKey().toString());
+			writeChars(out, e.getKey().toString());
 			e.getValue().write(out);
 		}
 
 		out.writeInt(pseudoFacilityMap.size());
 		for (Map.Entry<Id<ActivityFacility>, EpisimFacility> e : pseudoFacilityMap.entrySet()) {
-			out.writeUTF(e.getKey().toString());
+			writeChars(out, e.getKey().toString());
 			e.getValue().write(out);
 		}
 
@@ -615,19 +618,19 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		int persons = in.readInt();
 		for (int i = 0; i < persons; i++) {
-			Id<Person> id = Id.create(in.readUTF(), Person.class);
-			personMap.get(id).read(in, personMap);
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			personMap.get(id).read(in, paramsMap, personMap, pseudoFacilityMap, vehicleMap);
 		}
 
 		int vehicles = in.readInt();
 		for (int i = 0; i < vehicles; i++) {
-			Id<Vehicle> id = Id.create(in.readUTF(), Vehicle.class);
+			Id<Vehicle> id = Id.create(readChars(in), Vehicle.class);
 			vehicleMap.get(id).read(in, personMap);
 		}
 
 		int container = in.readInt();
 		for (int i = 0; i < container; i++) {
-			Id<ActivityFacility> id = Id.create(in.readUTF(), ActivityFacility.class);
+			Id<ActivityFacility> id = Id.create(readChars(in), ActivityFacility.class);
 			pseudoFacilityMap.get(id).read(in, personMap);
 		}
 	}

@@ -31,10 +31,10 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 
+import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.nio.file.CopyOption;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -91,16 +91,15 @@ public final class EpisimRunner {
 
 		Path output = Path.of(config.controler().getOutputDirectory());
 
-		// TODO ##########################
-		episimConfig.setSnapshotInterval(2);
-		episimConfig.setStartFromSnapshot("episim-snapshot-006.zip");
-
 		int iteration = 1;
 		if (episimConfig.getStartFromSnapshot() != null) {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
 			reporting.append();
 		}
+
+
+		log.info("Starting from iteration {}...", iteration);
 
 		for (; iteration <= maxIterations; iteration++) {
 
@@ -143,6 +142,7 @@ public final class EpisimRunner {
 	private void writeSnapshot(Path output, int iteration) {
 
 		InfectionEventHandler handler = handlerProvider.get();
+		EpisimReporting reporting = reportingProvider.get();
 
 		Path path = output.resolve(String.format("episim-snapshot-%03d.zip", iteration));
 
@@ -157,16 +157,13 @@ public final class EpisimRunner {
 			EpisimUtils.compressDirectory(output.toString(), output.toString(), archive);
 
 			archive.putArchiveEntry(new ZipArchiveEntry("iteration"));
-			archive.write(iteration);
-			archive.closeArchiveEntry();
-
-			archive.putArchiveEntry(new ZipArchiveEntry("state"));
 			ObjectOutputStream oos = new ObjectOutputStream(archive);
-			handler.writeExternal(oos);
+			oos.writeInt(iteration);
+			oos.flush();
 			archive.closeArchiveEntry();
 
-
-//			handler.writeExternal(new ObjectOutputStream(new FileOutputStream(path.toFile())));
+			writeObject(handler, "state", archive);
+			writeObject(reporting, "reporting", archive);
 
 			archive.finish();
 			archive.close();
@@ -186,6 +183,7 @@ public final class EpisimRunner {
 	private int readSnapshot(Path output, Path path) {
 
 		InfectionEventHandler handler = handlerProvider.get();
+		EpisimReporting reporting = reportingProvider.get();
 
 		int iteration = -1;
 		try (var in = Files.newInputStream(path)) {
@@ -203,12 +201,19 @@ public final class EpisimRunner {
 				if (name.startsWith("output"))
 					Files.copy(archive, output.resolve(name.replace("output/", "")), StandardCopyOption.REPLACE_EXISTING);
 
-				if (name.equals("iteration"))
-					iteration = archive.read();
+				if (name.equals("iteration")) {
+					ObjectInputStream ois = new ObjectInputStream(archive);
+					iteration = ois.readInt();
+				}
 
 				if (name.equals("state")) {
 					ObjectInputStream ois = new ObjectInputStream(archive);
 					handler.readExternal(ois);
+				}
+
+				if (name.equals("reporting")) {
+					ObjectInputStream ois = new ObjectInputStream(archive);
+					reporting.readExternal(ois);
 				}
 			}
 
@@ -219,5 +224,18 @@ public final class EpisimRunner {
 		} catch (IOException | ArchiveException e) {
 			throw new IllegalStateException("Could not read snapshot", e);
 		}
+
 	}
+
+	/**
+	 * Helper method to write object into archive,
+	 */
+	private void writeObject(Externalizable obj, String name, ArchiveOutputStream archive) throws IOException {
+		archive.putArchiveEntry(new ZipArchiveEntry(name));
+		ObjectOutputStream oos = new ObjectOutputStream(archive);
+		obj.writeExternal(oos);
+		oos.flush();
+		archive.closeArchiveEntry();
+	}
+
 }
