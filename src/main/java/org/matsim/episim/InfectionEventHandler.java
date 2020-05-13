@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,8 +57,8 @@ import java.io.ObjectOutput;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.matsim.episim.EpisimUtils.writeChars;
 import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 
 /**
  * Main event handler of episim.
@@ -270,7 +271,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void handleEvent(ActivityStartEvent activityStartEvent) {
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
-
 
 		if (!shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType())) {
 			return;
@@ -591,6 +591,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		out.writeLong(EpisimUtils.getSeed(rnd));
 		out.writeInt(initialInfectionsLeft);
 		out.writeInt(initialStartInfectionsLeft);
+		out.writeInt(iteration);
+
+		out.writeInt(restrictions.size());
+		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
+			writeChars(out, e.getKey());
+			writeChars(out, e.getValue().asMap().toString());
+		}
 
 		out.writeInt(personMap.size());
 		for (Map.Entry<Id<Person>, EpisimPerson> e : personMap.entrySet()) {
@@ -618,6 +625,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimUtils.setSeed(rnd, in.readLong());
 		initialInfectionsLeft = in.readInt();
 		initialStartInfectionsLeft = in.readInt();
+		iteration = in.readInt();
+
+		int r = in.readInt();
+		for (int i = 0; i < r; i++) {
+			String act = readChars(in);
+			restrictions.put(act, Restriction.fromConfig(ConfigFactory.parseString(readChars(in))));
+		}
 
 		int persons = in.readInt();
 		for (int i = 0; i < persons; i++) {

@@ -157,6 +157,13 @@ public final class EpisimPerson implements Attributable {
 		} else
 			currentContainer = null;
 
+		n = in.readInt();
+		spentTime.clear();
+		for (int i = 0; i < n; i++) {
+			String act = readChars(in);
+			spentTime.put(act, in.readDouble());
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
@@ -200,6 +207,12 @@ public final class EpisimPerson implements Attributable {
 		if (currentContainer != null) {
 			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
 			writeChars(out, currentContainer.getContainerId().toString());
+		}
+
+		out.writeInt(spentTime.size());
+		for (ObjectDoublePair<String> kv : spentTime.keyValuesView()) {
+			writeChars(out, kv.getOne());
+			out.writeDouble(kv.getTwo());
 		}
 
 		out.writeInt(status.ordinal());

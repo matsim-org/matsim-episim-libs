@@ -3,6 +3,7 @@ package org.matsim.run;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.matsim.core.config.Config;
@@ -44,9 +45,7 @@ public class RunEpisimSnapshotTest {
 		);
 
 		TracingConfigGroup tracingConfig = injector.getInstance(TracingConfigGroup.class);
-
-		// TODO
-		//tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(10);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(10);
 
 	}
 
@@ -73,9 +72,10 @@ public class RunEpisimSnapshotTest {
 	}
 
 	@Test
+	@Ignore("Snapshot file not checked into git because of its size")
 	public void fixedSnapshot() {
 
-		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + "episim-snapshot-015.zip");
+		episimConfig.setStartFromSnapshot(utils.getInputDirectory() + "episim-snapshot-015.zip");
 		runner.run(30);
 
 		RunEpisimIntegrationTest.assertSimulationOutput(utils);

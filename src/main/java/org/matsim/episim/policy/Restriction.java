@@ -118,7 +118,10 @@ public final class Restriction {
 		requireMask = FaceMask.NONE;
 	}
 
-	Map<String, Object> asMap() {
+	/**
+	 * Attributes of this restriction as map.
+	 */
+	public Map<String, Object> asMap() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("fraction", remainingFraction);
 		map.put("exposure", exposure);
