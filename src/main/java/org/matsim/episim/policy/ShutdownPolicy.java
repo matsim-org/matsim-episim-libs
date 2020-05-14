@@ -28,6 +28,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,6 +49,14 @@ public abstract class ShutdownPolicy {
 		this.config = config;
 		log.info("Using policy {} with config: {}", getClass(), config.root().render(ConfigRenderOptions.concise().setJson(false)));
 	}
+
+
+	/**
+	 * Initialized the policies at start of simulation.
+	 * @param start simulation start date
+	 * @param restrictions unrestricted and uninitialized restrictions
+	 */
+	public abstract void init(LocalDate start, ImmutableMap<String, Restriction> restrictions);
 
 	/**
 	 * Update the restrictions at the start of the day based on the report.

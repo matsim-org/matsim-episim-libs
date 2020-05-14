@@ -27,6 +27,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
 import org.matsim.episim.EpisimReporting;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +92,11 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 	}
 
 	@Override
+	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
+		// Nothing to init
+	}
+
+	@Override
 	public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
 
 		if (report.nCritical >= beds * shutdownTrigger)
@@ -152,6 +158,7 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 			params.put("open-all", proportion);
 			return this;
 		}
+
 		/**
 		 * See {@link ICUDependentPolicy#reopenTrigger}.
 		 */

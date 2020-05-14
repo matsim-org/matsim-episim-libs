@@ -22,6 +22,7 @@ package org.matsim.episim.policy;
 
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
+import com.typesafe.config.ConfigValue;
 import org.matsim.episim.EpisimReporting;
 
 import java.time.LocalDate;
@@ -46,6 +47,33 @@ public class FixedPolicy extends ShutdownPolicy {
 	 */
 	public static ConfigBuilder config() {
 		return new ConfigBuilder();
+	}
+
+	@Override
+	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
+
+		// Init restrictions that are before simulation start
+		for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
+
+			// activity name
+			if (!config.hasPath(entry.getKey())) continue;
+
+			Config actConfig = this.config.getConfig(entry.getKey());
+
+			for (Map.Entry<String, ConfigValue> days : actConfig.root().entrySet()) {
+
+				if (days.getKey().startsWith("day")) continue;
+
+				LocalDate date = LocalDate.parse(days.getKey());
+				if (date.isBefore(start)) {
+					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
+
+					entry.getValue().setRemainingFraction(r.getRemainingFraction());
+					entry.getValue().setExposure(r.getExposure());
+					entry.getValue().setRequireMask(r.getRequireMask());
+				}
+			}
+		}
 	}
 
 	@Override
