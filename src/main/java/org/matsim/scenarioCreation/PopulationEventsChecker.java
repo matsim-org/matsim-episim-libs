@@ -42,6 +42,14 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * This class analyzes the amount of times a person described in {@code INPUT_POPULATION_FILE} performs an activity that is relevant for episim.
+ * This can help to determine whether the population contains persons that do not occur in the events file (e.g. because they perform a stay-home-plan).
+ * 2 files are dumped out: <br>
+ * 1) a csv file containing a a dataset per person in the population showing the amount of events for each relevant event type<br>
+ * 2) a population file containing the same information, but as person attributes 'glued' to the corresponding person
+ *
+ */
 public final class PopulationEventsChecker {
 
 
