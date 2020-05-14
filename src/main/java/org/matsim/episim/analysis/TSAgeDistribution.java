@@ -49,9 +49,9 @@ import java.util.stream.Collectors;
  * This class aims to analyze the age distribution of persons that get infected within episim.
  * You need to provide a population file containing the age of a person as person attribute 'age'.
  * Furthermore, you need to provide the path to the directory containing the episim-events-files.
- * Finally, two csv files is dumped out, containing the number of infected persons per <br>
- *     1) exact age (number)
- *     2) age group (10 year bins, ie. 0-9 years, 10-19 years,....)
+ * Finally, two csv files are dumped out, containing the number of infected persons per <br>
+ *     1) exact age (number) <br>
+ *     2) age group (10 year bins, ie. 0-9 years, 10-19 years,....) <br>
  */
 class TSAgeDistribution {
 
