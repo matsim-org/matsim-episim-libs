@@ -252,6 +252,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		insertStationaryAgents();
 
+		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
+
 		// Clear time-use after first iteration
 		personMap.values().forEach(p -> p.getSpentTime().clear());
 		init = true;
