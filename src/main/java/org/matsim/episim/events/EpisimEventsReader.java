@@ -41,6 +41,11 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 	private EventsReaderXMLv1 delegate;
 
+	/**
+	 * TODO: read other episimevents (EpisimContactEvent, EpisimPersonStatusEvent)
+	 *
+	 * @param events
+	 */
 	public EpisimEventsReader(EventsManager events) {
 		delegate = new EventsReaderXMLv1(events);
 		this.setValidating(false);
