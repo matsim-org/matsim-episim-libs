@@ -136,6 +136,8 @@ public class KnRunEpisim {
 				Config config = ConfigUtils.createConfig(new EpisimConfigGroup() );
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+				episimConfig.setWriteEvents( EpisimConfigGroup.WriteEvents.episim );
+
 				episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 				episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz" );
@@ -143,47 +145,120 @@ public class KnRunEpisim {
 
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
-				FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-				final double work = 0.45;
-				final double leis = 0.1;
-				final double other = 0.2;
-				{
-					final int firstDay = 23;
-					final int lastDay = 31;
-		//			LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1, lastDay, 0.45 );
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, work, lastDay, work );
-					for( int day = firstDay ; day <= lastDay ; day++ ){
-						builder.restrict( day, interpolation.getValue( day ), "work" );
-					}
-				}
-				{
-					final int firstDay = 23;
-					final int lastDay = 31;
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, leis, lastDay, leis );
-					for( int day = firstDay ; day <= lastDay ; day++ ){
-						builder.restrict( day, interpolation.getValue( day ), "leisure" );
-					}
-				}
-				{
-					final int firstDay = 23;
-					final int lastDay = 31;
-					LinearInterpolation interpolation = new LinearInterpolation( firstDay, other, lastDay, other );
-					for( int day = firstDay ; day <= lastDay ; day++ ){
-						builder.restrict( day, interpolation.getValue( day ), "shopping", "errands", "business" );
-					}
-				}
-				{
-					builder.restrict( 23, 0.1, "educ_primary", "educ_kiga" ) // day 23 is the saturday 14th of march, so the weekend
-					       .restrict( 23, 0., "educ_secondary", "educ_higher" )
-					//				.restrict(74 - offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
-					;
-				}
-				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
-				episimConfig.setSampleSize(0.25);
 
 				SnzScenario.addParams(episimConfig );
 
 				SnzScenario.setContactIntensities(episimConfig );
+
+				// I had originally thought that one could calibrate the offset by shifting the unrestricted growth left/right until it hits
+				// the hospital numbers.  Turns out that this does not work since the early leisure participation reductions already
+				// influence this.  So the problem now is that this interacts. Consequence: rather fix the support days, and only change the
+				// participation rates.
+
+				episimConfig.setCalibrationParameter(0.000_002_8);
+				final int offset = -5; // offset -6 now means first day = 15/feb (to set in python code)
+				episimConfig.getOrAddContainerParams("home").setContactIntensity(1.);
+
+				// day 1 is 21/feb+offset.  In consequence:
+
+				// * 5/mar is day 14+offset (first day of leisure linear reduction)
+				// * 15/mar is day 24+offset (first day of "Veranstaltungsverbot" = Sunday)
+				// * 20/mar is day 29+offset (last day of leisure linear reduction)
+
+				// * 10/mar is day 19+offset (first day of work linear reduction)
+				// * 23/mar is day 32+offset (last day of work linear reduction)
+
+				// * errands etc. are reduced with same days as leisure
+
+				// * 14/mar is day 23+offset (first day of school closures = Saturday)
+
+
+				FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+
+				final double workMid = 0.75;
+				final double workEnd = 0.45;
+//				final double workEnd = workMid;
+
+				final double leisureMid = 0.7;
+				final double leisureEnd = 0.1;
+//				final double leisureEnd = leisureMid;
+
+//				final double eduLower = 0.1;
+				final double eduLower = 1.;
+//
+//				final double eduHigher = 0.0 ;
+				final double eduHigher = 1.;
+
+				final double other = 0.2;
+
+//				final double workMid = 1.;
+//				final double workEnd = 1.;
+//
+//				final double leisureMid = 1.;
+//				final double leisureEnd = 1.;
+//
+//				final double eduLower = 1.;
+//				final double eduHigher = 1.;
+//
+//				final double other = 1.;
+
+				{ // leisure 1:
+					final int firstDay = 14-offset; // "14-offset" ist sozusagen das Ende der letzten Woche, in der ich noch regulär im Büro war
+					final int lastDay = 25-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, leisureMid );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "leisure" );
+					}
+				}
+				{ // errands
+					final int firstDay = 14-offset; // (retail in google is combined with leisure!)
+					final int lastDay = 29-offset; // leisure change last day
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, other );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "shopping", "errands", "business" );
+					}
+				}
+				{ // work 1:
+					final int firstDay = 19-offset; // ("18-offset" ist der Montag, ab dem ich weitgehend home office gemacht habe (9.3.))
+					final int lastDay = 25-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, workMid );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "work" );
+					}
+				}
+				// ===========================================
+				{ // edu:
+					builder.restrict( 23-offset, eduLower, "educ_primary", "educ_kiga" ) // "23-offset" = Samstag vor Schulschliessungen = 14.3.
+					       .restrict( 23-offset, eduHigher, "educ_secondary", "educ_higher" )
+//					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
+					;
+				}
+				{ // work 2:
+					final int firstDay = 25-offset;
+					final int lastDay = 32-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, workMid, lastDay, workEnd );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "work" );
+					}
+				}
+				{ // leisure 2:
+					final int firstDay = 25-offset;
+					final int lastDay = 29-offset;
+					LinearInterpolation interpolation = new LinearInterpolation( firstDay, leisureMid, lastDay, leisureEnd );
+					for( int day = firstDay ; day <= lastDay ; day++ ){
+						builder.restrict( day, interpolation.getValue( day ), "leisure" );
+					}
+				}
+//				{
+//					final int firstDay = 54-offset;
+//					final int lastDay = 62-offset;
+//					LinearInterpolation interpolation = new LinearInterpolation( firstDay, work, lastDay, 0.55 );
+//					for( int day = firstDay ; day <= lastDay ; day++ ){
+//						builder.restrict( day, interpolation.getValue( day ), "work" );
+//					}
+//				}
+				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
+				episimConfig.setSampleSize(0.25);
 
 //				episimConfig.getOrAddContainerParams("home").setContactIntensity(3.);
 //				episimConfig.setCalibrationParameter(0.000_001_7);
@@ -194,17 +269,19 @@ public class KnRunEpisim {
 //				episimConfig.getOrAddContainerParams("home").setContactIntensity(1.);
 //				episimConfig.setCalibrationParameter(0.000_002_4); // maybe should have been 2_3
 
-				episimConfig.getOrAddContainerParams("home").setContactIntensity(2.);
-				episimConfig.setCalibrationParameter(0.000_002_0);
-
 				StringBuilder strb = new StringBuilder();
-				strb.append( "output" );
-				strb.append( "-theta" + episimConfig.getCalibrationParameter() );
-				strb.append( "-ciHome" + episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-				strb.append( "-work" + work );
-				strb.append( "-leis" + leis );
-				strb.append( "-other" + other );
+				strb.append( "piecewise" );
+				strb.append( "__theta" + episimConfig.getCalibrationParameter() );
+				strb.append( "__offset" + offset );
+//				strb.append( "_ciHome" + episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
+				strb.append( "__work_" + workMid + "_" + workEnd );
+				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
+				strb.append( "__eduLower_"  + eduLower);
+				strb.append( "__eduHigher_" + eduHigher );
+				strb.append( "__other" + other );
 				config.controler().setOutputDirectory( strb.toString() );
+
+//				config.controler().setOutputDirectory( "base-theta" + episimConfig.getCalibrationParameter() );
 
 				return config;
 			}

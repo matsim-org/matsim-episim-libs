@@ -123,9 +123,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
-				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
-				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
+				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -253,14 +253,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	/**
 	 * Writes the infection report to csv.
+	 * @param date 
 	 */
-	void reporting(Map<String, InfectionReport> reports, int iteration) {
+	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 		if (iteration == 0) return;
 
 		InfectionReport t = reports.get("total");
 
 		log.warn("===============================");
-		log.warn("Beginning day {}", iteration);
+		log.warn("Beginning day {} ({})", iteration, date);
 		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
@@ -345,14 +346,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	}
 
-	void reportRestrictions(Map<String, Restriction> restrictions, long iteration) {
+	void reportRestrictions(Map<String, Restriction> restrictions, long iteration, String date) {
 		if (iteration == 0) return;
 
-		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, "", restrictions.values().toArray()));
+		writer.append(restrictionReport, EpisimWriter.JOINER.join(iteration, date, restrictions.values().toArray()));
 		writer.append(restrictionReport, "\n");
 	}
 
-	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration) {
+	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
 
 		if (iteration == 0) return;
 
@@ -378,7 +379,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// report minutes
 		avg.forEachKeyValue((k, v) -> array[order.indexOf(k)] = String.valueOf(v / 60d));
 
-		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, "", array));
+		writer.append(timeUse, EpisimWriter.JOINER.join(iteration, date, array));
 		writer.append(timeUse, "\n");
 	}
 

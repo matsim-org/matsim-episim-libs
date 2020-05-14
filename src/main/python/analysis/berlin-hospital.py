@@ -11,11 +11,9 @@ import scipy as sp
 
 # In[]:
 
-base = 'src/main/python/analysis/'
-
 # In[]:
 
-rr = pd.read_csv(base+'berlin-hospital.csv', sep=',' ).fillna(value=0.)
+rr = pd.read_csv('src/main/python/analysis/berlin-hospital.csv', sep=',').fillna(value=0.)
 rr.index = pd.date_range(start='2020-03-01',periods=59)
 
 # rr2 = rr['neu'].rolling(9).mean()
