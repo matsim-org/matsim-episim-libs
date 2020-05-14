@@ -25,6 +25,8 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("tr")
 				.setContactIntensity(10.0);
+		episimConfig.getOrAddContainerParams("work")
+				.setContactIntensity(2.0);
 		episimConfig.getOrAddContainerParams("leisure")
 				.setContactIntensity(5.0);
 		episimConfig.getOrAddContainerParams("visit")
