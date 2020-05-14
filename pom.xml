@@ -22,6 +22,7 @@
     <properties>
         <matsim.version>12.0-SNAPSHOT</matsim.version>
         <!--<matsim.version>12.0-2020w09-SNAPSHOT</matsim.version>-->
+        <mainClass>org.matsim.run.RunEpisim</mainClass>
     </properties>
 
     <repositories>
@@ -197,11 +198,11 @@
             <artifactId>tablesaw-jsplot</artifactId>
             <version>0.38.1</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>tech.tablesaw</groupId>-->
-<!--            <artifactId>tablesaw-html</artifactId>-->
-<!--            <version>LATEST</version>-->
-<!--        </dependency>-->
+        <!--        <dependency>-->
+        <!--            <groupId>tech.tablesaw</groupId>-->
+        <!--            <artifactId>tablesaw-html</artifactId>-->
+        <!--            <version>LATEST</version>-->
+        <!--        </dependency>-->
 
     </dependencies>
 
@@ -258,7 +259,7 @@
                             <outputFile>${project.basedir}/${project.build.finalName}.jar</outputFile>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.matsim.run.RunEpisim</mainClass>
+                                    <mainClass>${mainClass}</mainClass>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
@@ -272,7 +273,33 @@
                                         <exclude>META-INF/*.RSA</exclude>
                                     </excludes>
                                 </filter>
+                                <!-- Force some inclusion because of minimizing -->
+                                <filter>
+                                    <artifact>org.apache.logging.log4j:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>xerces:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.hibernate.validator:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.glassfish:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
                             </filters>
+                            <minimizeJar>true</minimizeJar>
                         </configuration>
                     </execution>
                 </executions>
@@ -351,7 +378,7 @@
                         <argument>--force</argument><!-- overwrite if exists -->
                         <argument>--completionScript</argument>
                         <argument>${project.build.directory}/episim_auto_completion.bash</argument>
-                        <argument>org.matsim.run.RunEpisim</argument>
+                        <argument>${mainClass}</argument>
                     </arguments>
                 </configuration>
                 <executions>
