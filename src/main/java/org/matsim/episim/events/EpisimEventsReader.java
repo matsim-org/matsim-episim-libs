@@ -42,6 +42,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 	private EventsReaderXMLv1 delegate;
 
 	/**
+	 * EventsReader for EpisimEvents. Currently, only EpisimInfectionEvents are supported.
 	 * TODO: read other episimevents (EpisimContactEvent, EpisimPersonStatusEvent)
 	 *
 	 * @param events
