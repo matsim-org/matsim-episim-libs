@@ -44,8 +44,8 @@ public class EpisimPersonTest {
 
 		p1.clearTraceableContractPersons(Integer.MAX_VALUE);
 
-		p1.getAttributes().putAttribute(EpisimPerson.TRACING_ATTR, true);
-		p2.getAttributes().putAttribute(EpisimPerson.TRACING_ATTR, false);
+		p1.setTraceable(true);
+		p2.setTraceable(false);
 
 		assertThat(p1.isTraceable()).isTrue();
 
@@ -54,7 +54,7 @@ public class EpisimPersonTest {
 		assertThat(p1.getTraceableContactPersons(0))
 				.isEmpty();
 
-		p2.getAttributes().putAttribute(EpisimPerson.TRACING_ATTR, true);
+		p2.setTraceable(true);
 
 		p1.addTraceableContactPerson(p2, 0);
 		assertThat(p1.getTraceableContactPersons(0)).containsExactly(p2);

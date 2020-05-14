@@ -162,8 +162,8 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				}
 			}
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
+			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
+			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
@@ -279,9 +279,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 			// Select different infection params for home quarantined persons
 			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && params.getContainerName().equals("home")) {
-				EpisimConfigGroup.InfectionParams q_h = episimConfig.getInfectionParam("quarantine_home");
-				if (q_h == null) throw new IllegalStateException("Please define 'quarantine_home' infection parameter.");
-				return q_h;
+				return qhParams.params;
 			}
 
 			return params;

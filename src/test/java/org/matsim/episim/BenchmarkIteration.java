@@ -22,7 +22,7 @@ public class BenchmarkIteration {
 	private EpisimRunner runner;
 	private InfectionEventHandler handler;
 	private ReplayHandler replay;
-	private int iteration;
+	private int iteration = 1;
 
 	public static void main(String[] args) throws RunnerException {
 
@@ -42,7 +42,7 @@ public class BenchmarkIteration {
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzBerlinScenario()));
 
 		//injector.getInstance(EpisimConfigGroup.class).setWriteEvents(EpisimConfigGroup.WriteEvents.all);
-		//injector.getInstance(EpisimConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(0);
+		injector.getInstance(TracingConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(0);
 
 		runner = injector.getInstance(EpisimRunner.class);
 		replay = injector.getInstance(ReplayHandler.class);
@@ -53,6 +53,7 @@ public class BenchmarkIteration {
 		// benchmark with event writing
 		//injector.getInstance(EventsManager.class).addHandler(injector.getInstance(EpisimReporting.class));
 
+		handler.init(replay.getEvents());
 	}
 
 	@Benchmark

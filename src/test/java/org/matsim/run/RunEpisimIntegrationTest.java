@@ -112,7 +112,7 @@ public class RunEpisimIntegrationTest {
 
 		episimConfig.setStartDate(start);
 		episimConfig.setPolicyConfig(FixedPolicy.config()
-				.shutdown(0, "freight")
+				.shutdown(1, "freight")
 				.shutdown(6, "leisure", "edu", "business")
 				.restrict(6, 0.2, "work", "other")
 				.restrict(6, 0.3, "shop", "errands")
@@ -124,7 +124,6 @@ public class RunEpisimIntegrationTest {
 
 
 		// re-test with fixed date config, which should be the same result
-
 		setup();
 		episimConfig.setStartDate(start);
 		episimConfig.setPolicyConfig(FixedPolicy.config()
