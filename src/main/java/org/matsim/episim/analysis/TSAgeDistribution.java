@@ -72,7 +72,7 @@ class TSAgeDistribution {
 		System.out.println("exactAges sum = " + exactAges.values().stream().collect(Collectors.summingInt(Integer::intValue)));
 		System.out.println("ageGroups sum = " + ageGroups.values().stream().collect(Collectors.summingInt(Integer::intValue)));
 
-		File eventsDir = new File(INPUT_EVENTS_DIR);
+		File eventsDir = new File(INPUT_EVENTS);
 		if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
 		List<File> fileList = new ArrayList(FileUtils.listFiles(eventsDir, new String[]{"gz"}, false));
 		EventsManager manager = EventsUtils.createEventsManager();
