@@ -75,7 +75,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setInitialInfections(50);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_001_6);
+		episimConfig.setCalibrationParameter(0.000_001_5);
 
 		episimConfig.setStartDate("2020-02-15");
 		episimConfig.setPolicy(FixedPolicy.class, basePolicy().build());
