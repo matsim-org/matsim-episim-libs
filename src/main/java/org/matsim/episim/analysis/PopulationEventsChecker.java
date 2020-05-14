@@ -50,7 +50,7 @@ import java.util.Set;
  * 2) a population file containing the same information, but as person attributes 'glued' to the corresponding person
  *
  */
-public final class PopulationEventsChecker {
+final class PopulationEventsChecker {
 
 
 	private static final String INPUT_POPULATION_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans.xml.gz";

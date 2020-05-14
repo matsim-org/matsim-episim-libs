@@ -39,7 +39,7 @@ import java.util.Map;
  * This class aims to analyze the age distribution within home facilities of the input population. It classifies the inhabitants of each home facility into age groups and dumps
  * out a csv containing the number of people belonging to every age group, for every home facility.
  */
-public final class AnalyzeHomeFacilities {
+final class AnalyzeHomeFacilities {
 
 	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz";
 	private static final String OUTPUT_CSV = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans_homeIdCounts.csv";
