@@ -28,7 +28,7 @@ import java.util.TreeMap;
 class KNActAnalysis{
 	private static final Logger log = Logger.getLogger( KNActAnalysis.class );
 
-	private static final String base = "piecewise__theta2.8E-6__offset-5__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
+	private static final String base = "piecewise__theta2.8E-6__startDate_2020-02-20__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
 
 	public static void main( String[] args ) throws IOException{
 
