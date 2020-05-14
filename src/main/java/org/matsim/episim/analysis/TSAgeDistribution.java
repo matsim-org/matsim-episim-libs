@@ -23,10 +23,15 @@ package org.matsim.episim.analysis;
 
 import org.apache.commons.io.FileUtils;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
+import org.matsim.api.core.v01.events.ActivityStartEvent;
+import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
+import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.misc.Counter;
@@ -43,9 +48,10 @@ import java.util.stream.Collectors;
 class TSAgeDistribution {
 
 
-	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
-	private static final String INPUT_EVENTS_DIR = "D:/svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/events/";
-	private static final String OUTPUTDIR = "D:/svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/";
+	private static final String INPUT_POPULATION = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
+	private static final String INPUT_EVENTS = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz";
+//	private static final String OUTPUTDIR = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/";
+	private static final String OUTPUTDIR = "./";
 
 	public static void main(String[] args) {
 

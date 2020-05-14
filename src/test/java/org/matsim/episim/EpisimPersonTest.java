@@ -10,7 +10,7 @@ public class EpisimPersonTest {
 	public void daysSince() {
 
 		EpisimPerson p = EpisimTestUtils.createPerson("work", null);
-		double now = EpisimUtils.getCorrectedTime(0, 5);
+		double now = EpisimUtils.getCorrectedTime(0,0, 5);
 
 		p.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 		assertThat(p.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, 5))
@@ -20,12 +20,12 @@ public class EpisimPersonTest {
 				.isEqualTo(5);
 
 		// change during the third day
-		now = EpisimUtils.getCorrectedTime(3600, 3);
+		now = EpisimUtils.getCorrectedTime(0,3600, 3);
 		p.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.critical);
 		assertThat(p.daysSince(EpisimPerson.DiseaseStatus.critical, 4))
 				.isEqualTo(1);
 
-		now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, 4);
+		now = EpisimUtils.getCorrectedTime(0,24 * 60 * 60 - 1, 4);
 		p.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
 		assertThat(p.daysSince(EpisimPerson.DiseaseStatus.recovered, 4))
 				.isEqualTo(0);
@@ -44,8 +44,8 @@ public class EpisimPersonTest {
 
 		p1.clearTraceableContractPersons(Integer.MAX_VALUE);
 
-		p1.getAttributes().putAttribute(EpisimPerson.TRACING_ATTR, true);
-		p2.getAttributes().putAttribute(EpisimPerson.TRACING_ATTR, false);
+		p1.setTraceable(true);
+		p2.setTraceable(false);
 
 		assertThat(p1.isTraceable()).isTrue();
 
@@ -54,7 +54,7 @@ public class EpisimPersonTest {
 		assertThat(p1.getTraceableContactPersons(0))
 				.isEmpty();
 
-		p2.getAttributes().putAttribute(EpisimPerson.TRACING_ATTR, true);
+		p2.setTraceable(true);
 
 		p1.addTraceableContactPerson(p2, 0);
 		assertThat(p1.getTraceableContactPersons(0)).containsExactly(p2);

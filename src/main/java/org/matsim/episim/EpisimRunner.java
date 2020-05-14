@@ -71,7 +71,9 @@ public final class EpisimRunner {
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
-		for (int iteration = 0; iteration <= maxIterations; iteration++) {
+		handler.init(replay.getEvents());
+
+		for (int iteration = 1; iteration <= maxIterations; iteration++) {
 
 			if (!doStep(replay, handler, iteration))
 				break;

@@ -20,7 +20,8 @@
  */
 package org.matsim.scenarioCreation.openBerlinScenario;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.*;
 import org.matsim.core.config.ConfigUtils;
@@ -37,15 +38,17 @@ import java.util.stream.Collectors;
  *
  * @author tschlenther
  */
-class AssignChildrenToParentHomeLocations {
+final class AssignChildrenToParentHomeLocations {
 
-	private static final Logger log = Logger.getLogger(AssignChildrenToParentHomeLocations.class);
+	private static final Logger log = LogManager.getLogger(AssignChildrenToParentHomeLocations.class);
 
 	private static final String emptyChildrenPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/cemdap_input/500/plans_children.xml.gz";
 	//    private static final String openBerlinPopulationFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-10pct/input/berlin-v5.4-10pct.plans.xml.gz";
 	private static final String openBerlinPopulationFile = "https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/berlin/berlin-v5.4-1pct/input/berlin-v5.4-1pct.plans.xml.gz";
 	private static final String outputChildrenPlansFile = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_children_assignedToParents_1pct.xml.gz";
 
+	private AssignChildrenToParentHomeLocations() {
+	}
 
 	public static void main(String[] args) {
 

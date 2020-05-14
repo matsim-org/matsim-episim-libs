@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -103,30 +104,39 @@ public class RunEpisimIntegrationTest {
 				.isNotEqualTo(cmpLines.subList(tDay, Math.min(it, cmpLines.size())));
 	}
 
-	@Test
-	public void testNoPt() throws IOException {
 
+	@Test
+	public void testPlausibleShutdown() {
+
+		LocalDate start = LocalDate.of(2020, 2, 1);
+
+		episimConfig.setStartDate(start);
 		episimConfig.setPolicyConfig(FixedPolicy.config()
-				.shutdown(5, "pt")
+				.shutdown(1, "freight")
+				.shutdown(6, "leisure", "edu", "business")
+				.restrict(6, 0.2, "work", "other")
+				.restrict(6, 0.3, "shop", "errands")
+				.build()
+		);
+
+		runner.run(it);
+		assertSimulationOutput();
+
+
+		// re-test with fixed date config, which should be the same result
+		setup();
+		episimConfig.setStartDate(start);
+		episimConfig.setPolicyConfig(FixedPolicy.config()
+				.restrict(start, 0.0, "freight")
+				.restrict(start.withDayOfMonth(6), 0.0, "leisure", "edu", "business")
+				.restrict(start.withDayOfMonth(6), 0.2, "work", "other")
+				.restrict(start.withDayOfMonth(6), 0.3, "shop", "errands")
 				.build()
 		);
 
 		runner.run(it);
 	}
 
-	@Test
-	public void testPlausibleShutdown() throws IOException {
-
-		episimConfig.setPolicyConfig(FixedPolicy.config()
-				.shutdown(0, "freight")
-				.shutdown(it, "leisure", "edu", "business")
-				.restrict(it, 0.2, "work", "other")
-				.restrict(it, 0.3, "shop", "errands")
-				.build()
-		);
-
-		runner.run(it);
-	}
 
 	@Test
 	public void testTotalShutdown() throws IOException {

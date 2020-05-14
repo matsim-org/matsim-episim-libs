@@ -37,6 +37,7 @@ import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -52,6 +53,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
 	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
+	private static final String START_DATE = "startDate";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -75,6 +77,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * If not null, filter persons for initial infection by district.
 	 */
 	private String initialInfectionDistrict = null;
+	/**
+	 * Start date of the simulation (Day 1).
+	 */
+	private LocalDate startDate = LocalDate.of(1970, 1, 1);
+	/**
+	 * Offset of start date in unix epoch seconds.
+	 */
+	private long startOffset = 0;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -146,6 +156,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(INITIAL_START_INFECTIONS)
 	public void setInitialStartInfection(int initialStartInfections) {
 		this.initialStartInfections = initialStartInfections;
+	}
+
+	@StringGetter(START_DATE)
+	public LocalDate getStartDate() {
+		return startDate;
+	}
+
+	@StringSetter(START_DATE)
+	public void setStartDate(String startDate) {
+		setStartDate(LocalDate.parse(startDate));
+	}
+
+	public void setStartDate(LocalDate startDate) {
+		this.startDate = startDate;
+		this.startOffset = EpisimUtils.getStartOffset(startDate);
+	}
+
+	public long getStartOffset() {
+		return startOffset;
 	}
 
 	@StringGetter(MASK_COMPLIANCE)
@@ -366,14 +395,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * @return matched infection param
 	 * @throws NoSuchElementException when no param could be matched
 	 */
-	public @NotNull
-	InfectionParams selectInfectionParams(String activity) {
+	@NotNull
+	public InfectionParams selectInfectionParams(String activity) {
 
 		InfectionParams params = paramsTrie.get(activity, TrieMatch.STARTS_WITH);
 		if (params != null)
 			return params;
 
 		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity));
+	}
+
+	/**
+	 * Get the {@link InfectionParams} of a container by its name.
+	 */
+	public InfectionParams getInfectionParam(String containerName) {
+		return this.getContainerParams().get(containerName);
 	}
 
 	/**
@@ -450,8 +486,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		/**
 		 * Constructor.
+		 *
 		 * @param containerName name name of this activity type
-		 * @param mappedNames activity prefixes that will also be mapped to this container
+		 * @param mappedNames   activity prefixes that will also be mapped to this container
 		 */
 		public InfectionParams(final String containerName, String... mappedNames) {
 			this();

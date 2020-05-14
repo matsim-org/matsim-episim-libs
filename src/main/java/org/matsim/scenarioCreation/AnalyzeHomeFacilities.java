@@ -35,11 +35,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AnalyzeHomeFacilities {
+public final class AnalyzeHomeFacilities {
 
 	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz";
 	private static final String OUTPUT_CSV = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans_homeIdCounts.csv";
 	private static final String OUTPUT_FACILITIES = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans_homeFacilities.xml";
+
+	private AnalyzeHomeFacilities() {
+	}
 
 	public static void main(String[] args) {
 

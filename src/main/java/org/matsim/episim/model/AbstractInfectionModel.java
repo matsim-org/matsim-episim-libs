@@ -40,89 +40,36 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 	protected final EpisimReporting reporting;
+
+	/**
+	 * Infections parameter instances for re-use. These are params that are always needed independent of the scenario.
+	 */
+	protected final EpisimPerson.Activity trParams;
+	/**
+	 * Home quarantine infection param
+	 */
+	protected final EpisimPerson.Activity qhParams;
 	protected int iteration;
+
 	private Map<String, Restriction> restrictions;
+
 
 	AbstractInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.reporting = reporting;
-	}
-
-	private static boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-																Map<String, Restriction> restrictions, SplittableRandom rnd) {
-		String act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
-
-		// Check if person is home quarantined
-		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && !act.startsWith("home"))
-			return false;
-
-		return actIsRelevant(act, episimConfig, restrictions, rnd);
-	}
-
-	private static boolean actIsRelevant(String act, EpisimConfigGroup episimConfig,
-										 Map<String, Restriction> restrictions, SplittableRandom rnd) {
-
-		EpisimConfigGroup.InfectionParams infectionParams = episimConfig.selectInfectionParams(act);
-		Restriction r = restrictions.get(infectionParams.getContainerName());
-		// avoid use of rnd if outcome is known beforehand
-		if (r.getRemainingFraction() == 1)
-			return true;
-		if (r.getRemainingFraction() == 0)
-			return false;
-
-		return rnd.nextDouble() < r.getRemainingFraction();
-
-	}
-
-	private static boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-															Map<String, Restriction> restrictions, SplittableRandom rnd) {
-		String lastAct = "";
-		if (person.getCurrentPositionInTrajectory() != 0) {
-			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
-		}
-
-		String nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
-
-		// TODO: tr is a hardcoded activity for "pt"
-		// last activity is only considered if present
-		return actIsRelevant("tr", episimConfig, restrictions, rnd) && actIsRelevant(nextAct, episimConfig, restrictions, rnd)
-				&& (lastAct.isEmpty() || actIsRelevant(lastAct, episimConfig, restrictions, rnd));
-
-	}
-
-	/**
-	 * Checks whether person is relevant for tracking or for infection dynamics.  Currently, "relevant for infection dynamics" is a subset of "relevant for
-	 * tracking".  However, I am not sure if this will always be the case.  kai, apr'20
-	 *
-	 * @noinspection BooleanMethodIsAlwaysInverted
-	 */
-	static boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
-																Map<String, Restriction> restrictions, SplittableRandom rnd) {
-
-		// Infected but not contagious persons are considered additionally
-		if (!hasDiseaseStatusRelevantForInfectionDynamics(person) &&
-				person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
-			return false;
-
-		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
-			return false;
-		}
-
-		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd)) {
-			return true;
-		}
-		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd);
+		this.trParams = new EpisimPerson.Activity("tr", episimConfig.selectInfectionParams("tr"));
+		this.qhParams = new EpisimPerson.Activity("quarantine_home", episimConfig.selectInfectionParams("quarantine_home"));
 	}
 
 	private static boolean hasDiseaseStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
 		switch (personWrapper.getDiseaseStatus()) {
 			case susceptible:
 			case contagious:
+			case showingSymptoms:
 				return true;
 
 			case infectedButNotContagious:
-			case showingSymptoms: //assume is at home
 			case recovered:
 			case seriouslySick: // assume is in hospital
 			case critical:
@@ -139,7 +86,72 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 */
 	static boolean personsCanInfectEachOther(EpisimPerson person1, EpisimPerson person2) {
 		if (person1.getDiseaseStatus() == person2.getDiseaseStatus()) return false;
+		// at least one of the persons must be susceptible
+		if (person1.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible && person2.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible)
+			return false;
 		return (hasDiseaseStatusRelevantForInfectionDynamics(person1) && hasDiseaseStatusRelevantForInfectionDynamics(person2));
+	}
+
+	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
+		EpisimPerson.Activity act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+
+		// Check if person is home quarantined
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && !act.actType.startsWith("home"))
+			return false;
+
+		return actIsRelevant(act, restrictions, rnd);
+	}
+
+	private boolean actIsRelevant(EpisimPerson.Activity act, Map<String, Restriction> restrictions, SplittableRandom rnd) {
+
+		Restriction r = restrictions.get(act.params.getContainerName());
+		// avoid use of rnd if outcome is known beforehand
+		if (r.getRemainingFraction() == 1)
+			return true;
+		if (r.getRemainingFraction() == 0)
+			return false;
+
+		return rnd.nextDouble() < r.getRemainingFraction();
+
+	}
+
+	private boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
+													 Map<String, Restriction> restrictions, SplittableRandom rnd) {
+		EpisimPerson.Activity lastAct = null;
+		if (person.getCurrentPositionInTrajectory() != 0) {
+			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
+		}
+
+		EpisimPerson.Activity nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+
+		// last activity is only considered if present
+		return actIsRelevant(trParams, restrictions, rnd) && actIsRelevant(nextAct, restrictions, rnd)
+				&& (lastAct == null || actIsRelevant(lastAct, restrictions, rnd));
+
+	}
+
+	/**
+	 * Checks whether person is relevant for tracking or for infection dynamics.  Currently, "relevant for infection dynamics" is a subset of "relevant for
+	 * tracking".  However, I am not sure if this will always be the case.  kai, apr'20
+	 *
+	 * @noinspection BooleanMethodIsAlwaysInverted
+	 */
+	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
+																		 Map<String, Restriction> restrictions, SplittableRandom rnd) {
+
+		// Infected but not contagious persons are considered additionally
+		if (!hasDiseaseStatusRelevantForInfectionDynamics(person) &&
+				person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
+			return false;
+
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+			return false;
+		}
+
+		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, restrictions, rnd)) {
+			return true;
+		}
+		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd);
 	}
 
 	/**
@@ -154,12 +166,12 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType) {
+	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType) {
 
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
 		}
-		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious) {
+		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {
 			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
 		}
 		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
@@ -175,8 +187,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		// TODO: during iteration persons can get infected after 24h
 		// this can lead to strange effects / ordering of events, because it is assumed one iteration is one day
 		// now is overwritten to be at the end of day
-		if (now >= EpisimUtils.getCorrectedTime(24 * 60 * 60, iteration)) {
-			now = EpisimUtils.getCorrectedTime(24 * 60 * 60 - 1, iteration);
+		if (now >= EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60, iteration)) {
+			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
 		}
 
 		reporting.reportInfection(personWrapper, infector, now, infectionType.toString());

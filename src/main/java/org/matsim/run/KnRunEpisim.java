@@ -114,7 +114,7 @@ public class KnRunEpisim {
 				// Async writer is used for huge event number
 				if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
 					// by default only one episim simulation is running
-					return new AsyncEpisimWriter(true);
+					return new AsyncEpisimWriter(1);
 				else
 					return new EpisimWriter();
 			}
@@ -219,7 +219,7 @@ public class KnRunEpisim {
 					}
 				}
 				{ // work 1:
-					final int firstDay = 19-offset; // ("18-offset" ist der Montag, ab dem ich weitgehend home office gemacht habe)
+					final int firstDay = 19-offset; // ("18-offset" ist der Montag, ab dem ich weitgehend home office gemacht habe (9.3.))
 					final int lastDay = 25-offset;
 					LinearInterpolation interpolation = new LinearInterpolation( firstDay, 1., lastDay, workMid );
 					for( int day = firstDay ; day <= lastDay ; day++ ){
@@ -228,7 +228,7 @@ public class KnRunEpisim {
 				}
 				// ===========================================
 				{ // edu:
-					builder.restrict( 23-offset, eduLower, "educ_primary", "educ_kiga" ) // "23-offset" = Samstag vor Schulschliessungen
+					builder.restrict( 23-offset, eduLower, "educ_primary", "educ_kiga" ) // "23-offset" = Samstag vor Schulschliessungen = 14.3.
 					       .restrict( 23-offset, eduHigher, "educ_secondary", "educ_higher" )
 //					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
 					;

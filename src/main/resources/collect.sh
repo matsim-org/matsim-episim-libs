@@ -18,6 +18,11 @@ for f in output/*/*.infections.txt; do
     grep $1 $f >> tmp/$name.csv
 done
 
+for f in output/*/*.restrictions.txt; do
+    name=$(basename "$f")
+    cp $f tmp/$name.csv
+done
+
 echo "Creating zip file..."
 
 zip --junk-paths summaries.zip tmp/*.csv

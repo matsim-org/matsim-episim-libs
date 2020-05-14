@@ -277,3 +277,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/java,linux,macos,maven,windows,eclipse,intellij
+
+piecewise*
+zz_archive*
+testoutput*

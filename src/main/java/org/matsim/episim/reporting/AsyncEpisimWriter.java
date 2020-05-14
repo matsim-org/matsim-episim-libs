@@ -7,6 +7,7 @@ import com.lmax.disruptor.SleepingWaitStrategy;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
+import com.lmax.disruptor.util.Util;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.Event;
@@ -19,30 +20,30 @@ import java.io.Writer;
  * Overwrites the default episim writer to do all IO in an extra thread using the {@link Disruptor} library.
  */
 public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler<AsyncEpisimWriter.LogEvent>,
-		EventTranslatorTwoArg<AsyncEpisimWriter.LogEvent, Writer, Event> {
+		EventTranslatorThreeArg<AsyncEpisimWriter.LogEvent, Writer, Event, Double> {
 
 	private static final Logger log = LogManager.getLogger(AsyncEpisimWriter.class);
 	private final Disruptor<LogEvent> disruptor;
 	private final StringEventTranslator translator = new StringEventTranslator();
 	private final StringArrayEventTranslator arrayTranslator = new StringArrayEventTranslator();
+
 	/**
 	 * Constructor.
 	 *
-	 * @param singleProducer can be true when only one thread will publish events.
+	 * @param numProducer Expected number of producer. Does not need to be exact, but has to be larger 1 if there are multiple.
 	 */
-	public AsyncEpisimWriter(boolean singleProducer) {
+	public AsyncEpisimWriter(int numProducer) {
 
 		// Specify the size of the ring buffer, must be power of 2.
-		int bufferSize = 16384;
+		int bufferSize = Math.max(16384, Util.ceilingNextPowerOfTwo(4096 * numProducer));
 
 		disruptor = new Disruptor<>(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE,
-				singleProducer ? ProducerType.SINGLE : ProducerType.MULTI, new SleepingWaitStrategy());
-
+				numProducer == 1 ? ProducerType.SINGLE : ProducerType.MULTI, new SleepingWaitStrategy());
 
 		// Connect the handler
 		disruptor.handleEventsWith(this);
 
-		log.info("Using async writer with singleProducer={}", singleProducer);
+		log.info("Using async writer with producer={}, bufferSize={}", numProducer, bufferSize);
 
 		disruptor.start();
 	}
@@ -59,7 +60,12 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 
 	@Override
 	public void append(BufferedWriter writer, Event event) {
-		disruptor.publishEvent(this, writer, event);
+		disruptor.publishEvent(this, writer, event, -1d);
+	}
+
+	@Override
+	public void append(BufferedWriter writer, Event event, double correctedTime) {
+		disruptor.publishEvent(this, writer, event, correctedTime);
 	}
 
 	@Override
@@ -82,11 +88,11 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	}
 
 	@Override
-	public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1) {
+	public void translateTo(LogEvent event, long sequence, Writer arg0, Event arg1, Double arg2) {
 		event.writer = arg0;
 		event.flush = false;
 		try {
-			EpisimWriter.writeEvent(event.content, arg1);
+			EpisimWriter.writeEvent(event.content, arg1, arg2);
 		} catch (IOException e) {
 			log.error("Could not append event");
 		}

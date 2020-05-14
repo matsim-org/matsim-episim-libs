@@ -17,6 +17,8 @@ public class EpisimConfigGroupTest {
 		EpisimConfigGroup.InfectionParams work = config.getOrAddContainerParams("work");
 		EpisimConfigGroup.InfectionParams edu = config.getOrAddContainerParams("edu_high");
 		EpisimConfigGroup.InfectionParams kiga = config.getOrAddContainerParams("edu_kiga");
+		EpisimConfigGroup.InfectionParams home = config.getOrAddContainerParams("home");
+		config.getOrAddContainerParams("quarantine_home");
 
 		assertThat(config.selectInfectionParams("work_4345"))
 				.isSameAs(work);
@@ -27,8 +29,11 @@ public class EpisimConfigGroupTest {
 		assertThat(config.selectInfectionParams("edu_high_435"))
 				.isSameAs(edu);
 
-		assertThat(config.selectInfectionParams("edu_kiga"))
+		assertThat(config.selectInfectionParams("edu_kiga_678"))
 				.isSameAs(kiga);
+
+		assertThat(config.selectInfectionParams("home_123"))
+				.isSameAs(home);
 
 		assertThatExceptionOfType(NoSuchElementException.class)
 				.isThrownBy(() -> config.selectInfectionParams("unknown"));

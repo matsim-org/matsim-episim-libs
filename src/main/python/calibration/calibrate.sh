@@ -1,17 +1,17 @@
-#!/bin/bash
+#!/bin/bash --login
 #$ -l h_rt=86400
 #$ -o ./logfile_$JOB_NAME.log
 #$ -j y
 #$ -m a
 #$ -M mueller@vsp.tu-berlin.de
 #$ -cwd
-#$ -pe mp 5
-#$ -l mem_free=25G
+#$ -pe mp 3
+#$ -l mem_free=16G
 
 date
 hostname
 
-command="python calibrate.py 20"
+command="python calibrate.py"
 
 echo ""
 echo "command is $command"
@@ -21,8 +21,11 @@ echo "using alternative java"
 module add java/11
 java -version
 
-# Script starts 5 processes in parallel
-for i in $(seq 0 4); do
+# Activate the virtual environment
+source bin/activate
+
+# Script starts 3 processes in parallel
+for i in $(seq 0 2); do
    $command &
    sleep 20
 done

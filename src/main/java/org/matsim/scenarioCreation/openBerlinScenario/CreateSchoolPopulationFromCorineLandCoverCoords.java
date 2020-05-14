@@ -42,7 +42,7 @@ import java.util.Map;
  *
  * @author tschlenther
  */
-class CreateSchoolPopulationFromCorineLandCoverCoords {
+final class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 	private static final double SAMPLE_SIZE = 0.1;
 
@@ -59,6 +59,9 @@ class CreateSchoolPopulationFromCorineLandCoverCoords {
 
 	private static final String OUTPUT_PLANS_ENTIRE_BLN = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/berlin-v5.4-10pct-plans-includingChildren-corineCoords.xml.gz";
 	private static final String OUTPUT_PLANS_SCHOOLPOP = "../../svn/shared-svn/studies/countries/de/open_berlin_scenario/be_5/population/plans_500_onlyChildren_corineCoords_10pct.xml.gz";
+
+	private CreateSchoolPopulationFromCorineLandCoverCoords() {
+	}
 
 	public static void main(String[] args) {
 

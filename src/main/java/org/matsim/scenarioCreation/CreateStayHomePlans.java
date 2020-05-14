@@ -26,17 +26,23 @@ import org.matsim.api.core.v01.population.PopulationFactory;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordUtils;
 
-public class CreateStayHomePlans {
+/**
+ * Executable class that attaches home activity to all persons plans.
+ */
+public final class CreateStayHomePlans {
 
-	private static String INPUT_PLANS = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Munich/processed-data/mu_u14population_noPlans.xml.gz";
-	private static String OUTPUT_PLANS = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Munich/processed-data/mu_u14population_stayHomePlans.xml.gz";
+	private static final String INPUT_PLANS = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Munich/processed-data/mu_u14population_noPlans.xml.gz";
+	private static final String OUTPUT_PLANS = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Munich/processed-data/mu_u14population_stayHomePlans.xml.gz";
+
+	private CreateStayHomePlans() {
+	}
 
 	public static void main(String[] args) {
 
 		String input = INPUT_PLANS;
 		String output = OUTPUT_PLANS;
 
-		if(args.length > 0){
+		if (args.length > 0) {
 			input = args[0];
 			output = args[1];
 		}
@@ -51,7 +57,7 @@ public class CreateStayHomePlans {
 			double y = (double) person.getAttributes().getAttribute("homeY");
 
 			Plan plan = factory.createPlan();
-			plan.addActivity(factory.createActivityFromCoord("home", CoordUtils.createCoord(x,y)));
+			plan.addActivity(factory.createActivityFromCoord("home", CoordUtils.createCoord(x, y)));
 
 			person.addPlan(plan);
 			person.setSelectedPlan(plan);

@@ -69,6 +69,9 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		this(rnd, episimConfig, reporting, maskModel, tracingConfig.getPutTraceablePersonsInQuarantineAfterDay());
 	}
 
+	/**
+	 * Constructor when no injection is used.
+	 */
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {
 		super(rnd, episimConfig, reporting);
 		this.maskModel = maskModel;
@@ -159,8 +162,8 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				}
 			}
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
+			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
+			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
@@ -175,7 +178,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, now);
+					trackContactPerson(personLeavingContainer, contactPerson, now, infectionType);
 				}
 			}
 
@@ -207,10 +210,10 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 			// Parameter will only be retrieved one time
 			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, leavingPersonsActivity);
+				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
@@ -252,7 +255,7 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 		Map<String, Restriction> r = getRestrictions();
 
-		double exposure = Math.max(r.get(act1.getContainerName()).getExposure(), r.get(act2.getContainerName()).getExposure());
+		double exposure = Math.min(r.get(act1.getContainerName()).getExposure(), r.get(act2.getContainerName()).getExposure());
 		double contactIntensity = Math.max(act1.getContactIntensity(), act2.getContactIntensity());
 
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
@@ -266,19 +269,32 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	}
 
 	/**
-	 * Get the relevant infection parameter based on container and activity.
+	 * Get the relevant infection parameter based on container and activity and person.
 	 */
-	private EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, String activity) {
+	private EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			return episimConfig.selectInfectionParams(container.getContainerId().toString());
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
-			return episimConfig.selectInfectionParams(activity);
+			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
+
+			// Select different infection params for home quarantined persons
+			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && params.getContainerName().equals("home")) {
+				return qhParams.params;
+			}
+
+			return params;
 		} else
 			throw new IllegalStateException("Don't know how to deal with container " + container);
 
 	}
 
-	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {
+	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, StringBuilder infectionType) {
+
+		// Don't track certain activities
+		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
+			return;
+		}
+
 		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
 		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
 	}
