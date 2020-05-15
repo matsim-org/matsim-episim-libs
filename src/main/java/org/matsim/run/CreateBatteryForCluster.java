@@ -101,7 +101,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		BatchRun.Metadata meta = prepare.setup.getMetadata();
 		String runName = meta.name;
-		Path dir = output.resolve(runVersion).resolve(meta.region).resolve(meta.name);
+		Path dir = output.resolve(runVersion).resolve(meta.name).resolve(meta.region);
 		Path input = dir.resolve("input");
 
 		Files.createDirectories(input);
