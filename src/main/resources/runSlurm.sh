@@ -46,7 +46,7 @@ for cid in $(seq 0 $NTpn); do
    let nID=offset+cid		# [0,...] requires array stepsize of NTpn (number of tasks to be run per node)
 # arguments
    input="input/config_${SLURM_JOB_NAME}${nID}.xml"
-   arguments="--config $input --config:controler.runId ${SLURM_JOB_NAME}${nID}"
+   arguments="--config $input"
    command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
    echo ""
    echo "command $cid is $command"

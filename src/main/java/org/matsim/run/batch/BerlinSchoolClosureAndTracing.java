@@ -59,6 +59,11 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 	}
 
 	@Override
+	public Metadata getMetadata() {
+		return Metadata.of("berlin", "tracing");
+	}
+
+	@Override
 	public Config baseCase(int id) {
 
 		SnzBerlinScenario module = new SnzBerlinScenario();

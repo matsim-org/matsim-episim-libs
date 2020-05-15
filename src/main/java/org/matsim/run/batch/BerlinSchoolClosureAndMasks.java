@@ -59,16 +59,21 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 	}
 
 	@Override
+	public Metadata getMetadata() {
+		return Metadata.of("berlin", "masks");
+	}
+
+	@Override
 	public Config baseCase(int id) {
 
 		SnzBerlinScenario module = new SnzBerlinScenario();
 
 		Config config = module.config();
-		config.plans().setInputFile("../be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
+		config.plans().setInputFile("../../../episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../be_v2_snz_episim_events.xml.gz");
+		episimConfig.setInputEventsFile("../../../episim-input/be_v2_snz_episim_events.xml.gz");
 
 		return config;
 	}

@@ -141,6 +141,13 @@ public interface BatchRun<T> {
 	}
 
 	/**
+	 * Returns name of the region.
+	 */
+	default Metadata getMetadata() {
+		return Metadata.of("region", "default");
+	}
+
+	/**
 	 * List of options that will be added to the metadata.
 	 */
 	default List<Option> getOptions() {
@@ -278,6 +285,28 @@ public interface BatchRun<T> {
 			measures.add(Pair.of(title, param));
 			return this;
 		}
+	}
+
+	/**
+	 * Contains the metadata of a batch run.
+	 */
+	final class Metadata {
+
+		public final String region;
+		public final String name;
+
+		public Metadata(String region, String name) {
+			this.region = region;
+			this.name = name;
+		}
+
+		/**
+		 * Creates new metadata instance.
+		 */
+		public static Metadata of(String region, String name) {
+			return new Metadata(region, name);
+		}
+
 	}
 
 }

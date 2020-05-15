@@ -116,7 +116,7 @@ public final class PreparedRun {
 		}
 
 		for (String param : parameter) {
-			if (param.equals("startDate")) continue;
+			if (param.equals("startDate") || param.equals("offset")) continue;
 
 			if (!describedParams.contains(param))
 				log.warn("Parameter '{}' is not in any measure in .getOptions()", param);

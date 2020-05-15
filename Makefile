@@ -25,8 +25,6 @@ clean:
 battery:
 	rsync -rvPc battery $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)/episim
 
-deploy-jar: $(JAR)
-	scp $(JAR) $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)/episim/battery/$(RUN)
 
 # TODO: these can be removed if we get the input files directly or the creation process is simplyfied
 
