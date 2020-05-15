@@ -15,38 +15,14 @@ hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 
 # In[]:
 
-# base = 'output-theta1.1E-6-ciHome10.0-work0.45-leis0.0-other0.1/'
-# base = 'output-theta1.7E-6-ciHome3.0-work0.45-leis0.0-other0.1/'
-# base = 'output-theta2.4E-6-ciHome1.0-work0.45-leis0.1-other0.1/'
-# base = 'output-theta2.4E-6-ciHome1.0-work0.45-leis0.1-other0.4/'
-# base = 'output-theta2.0E-6-ciHome2.0-work0.45-leis0.1-other0.2/'
-# base = 'piecewise-theta3.9E-6-offset-8-ciHome1.0-work0.45-leis0.1-other0.2/'
-# base = 'piecewise-theta2.8E-6-offset0-ciHome1.0-work1.0-leis1.0-other1.0/'
-
-# base = 'piecewise-theta2.8E-6-offset-3-ciHome1.0-work0.45-leis0.1-other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-3__leis_1.0_1.0_0.0_0.0__other0.2/'
-# simStartDate='2020-02-18'
-
-# base = 'piecewise__theta2.8E-6__offset-4__leis_1.0_0.7_0.7_0.1__other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-4__work_1.0_1.0__leis_1.0_1.0__eduLower_1.0__eduHigher_1.0__other1.0/'
-# base = 'piecewise__theta2.8E-6__offset-4__work_0.75_0.75__leis_0.7_0.7__eduLower_0.1__eduHigher_0.0__other0.2/'
-# simStartDate='2020-02-17'
-
-# base = 'piecewise__theta2.8E-6__offset-5__leis_1.0_1.0_0.0_0.0__other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-5__work_0.75_0.75__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
-base = 'piecewise__theta2.8E-6__startDate_2020-02-20__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
-# base = 'piecewise__theta1.6E-6__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
-
-# base = 'piecewise__theta2.8E-6__offset-6__leis1.0_0.7_0.1__other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-6__leis_1.0_1.0_0.0_0.0__other0.2/'
-# simStartDate='2020-02-15'
+# base = 'piecewise__theta2.8E-6__ciHome0.3__ciQHome0.1__startDate_2020-02-18__unrestricted/'
+base = 'piecewise__theta2.8E-6__ciHome0.3__ciQHome0.1__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
 
 infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
-# infected.index = Pandas.date_range(start=simStartDate, periods=infected.index.size)
 
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 
@@ -55,8 +31,8 @@ rr3 = pd.concat([hh['Stationäre Behandlung'], hh['Intensivmedizin'], infected['
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
-                  cycler(linestyle=['', '', '-', '-','-','']) +
-                  cycler(marker=['o','o','','',",",'']))
+                  cycler(linestyle=['', '', '', '','-','']) +
+                  cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 rr3.plot(logy=True,grid=True)
 pyplot.show()

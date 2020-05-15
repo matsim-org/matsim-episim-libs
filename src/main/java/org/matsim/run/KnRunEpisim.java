@@ -40,9 +40,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
-import org.matsim.run.modules.AbstractSnzScenario;
 import org.matsim.run.modules.AbstractSnzScenario2020;
-import org.matsim.run.modules.SnzScenario;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -159,11 +157,12 @@ public class KnRunEpisim {
 
 				// I had originally thought that one could calibrate the offset by shifting the unrestricted growth left/right until it hits
 				// the hospital numbers.  Turns out that this does not work since the early leisure participation reductions already
-				// influence this.  So the problem now is that this interacts. Consequence: rather fix the support days, and only change the
+				// influence this.  So the problem now is that this interacts. Consequence: fix the support days, and only change the
 				// participation rates.
 
-				episimConfig.setCalibrationParameter(0.000_001_6);
-				episimConfig.getOrAddContainerParams("home").setContactIntensity(1.);
+				episimConfig.setCalibrationParameter(0.000_002_8);
+				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
+				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.1 );
 
 				// day 1 is 21/feb+offset.  In consequence:
 
@@ -183,17 +182,13 @@ public class KnRunEpisim {
 
 				final double workMid = 0.75;
 				final double workEnd = 0.45;
-//				final double workEnd = workMid;
 
 				final double leisureMid = 0.7;
 				final double leisureEnd = 0.1;
-//				final double leisureEnd = leisureMid;
 
 				final double eduLower = 0.1;
-//				final double eduLower = 1.;
-//
+
 				final double eduHigher = 0.0 ;
-//				final double eduHigher = 1.;
 
 				final double other = 0.2;
 
@@ -232,28 +227,19 @@ public class KnRunEpisim {
 				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
 				episimConfig.setSampleSize(0.25);
 
-//				episimConfig.getOrAddContainerParams("home").setContactIntensity(3.);
-//				episimConfig.setCalibrationParameter(0.000_001_7);
-
-//				episimConfig.getOrAddContainerParams("home").setContactIntensity(10.);
-//				episimConfig.setCalibrationParameter(0.000_001_1);
-
-//				episimConfig.getOrAddContainerParams("home").setContactIntensity(1.);
-//				episimConfig.setCalibrationParameter(0.000_002_4); // maybe should have been 2_3
-
 				StringBuilder strb = new StringBuilder();
 				strb.append( "piecewise" );
 				strb.append( "__theta" + episimConfig.getCalibrationParameter() );
-//				strb.append( "_ciHome" + episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
+				strb.append( "__ciHome" + episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
+				strb.append( "__ciQHome" + episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
 				strb.append( "__startDate_" + episimConfig.getStartDate() );
 				strb.append( "__work_" + workMid + "_" + workEnd );
 				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
 				strb.append( "__eduLower_"  + eduLower);
 				strb.append( "__eduHigher_" + eduHigher );
 				strb.append( "__other" + other );
+//				strb.append( "__unrestricted" );
 				config.controler().setOutputDirectory( strb.toString() );
-
-//				config.controler().setOutputDirectory( "base-theta" + episimConfig.getCalibrationParameter() );
 
 				return config;
 			}
