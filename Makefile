@@ -23,7 +23,7 @@ clean:
 
 # Helper script for deploying the battery
 battery:
-	rsync -rvPc battery $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)/episim
+	rsync -rvPc battery/ $(USER)@blogin.hlrn.de:/scratch/usr/$(USER)/episim
 
 
 # TODO: these can be removed if we get the input files directly or the creation process is simplyfied
