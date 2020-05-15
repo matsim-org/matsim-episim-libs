@@ -24,6 +24,7 @@ import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 
@@ -54,11 +55,13 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.interpolate("2020-03-06", "2020-03-13", Restriction.of(0.95), 0.85, "shop_daily", "shop_other", "errands", "business")
 				.interpolate("2020-03-13", "2020-03-20", Restriction.of(0.85), 0.4, "shop_daily", "shop_other", "errands", "business")
 				.interpolate("2020-04-20", "2020-04-27", Restriction.of(0.4), 0.5, "shop_daily", "shop_other", "errands", "business")
-				.interpolate("2020-04-28", "2020-05-04", Restriction.of(0.5), 0.55, "shop_daily", "shop_other", "errands", "business")
+				.interpolate("2020-04-28", "2020-05-04", Restriction.of(0.5, FaceMask.CLOTH), 0.55, "shop_daily", "shop_other", "errands", "business")
 
 				//saturday 14th of march, so the weekend before schools got closed..
 				.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga") 
-				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				
+				.restrict("2020-04-27", Restriction.of(1, FaceMask.CLOTH), "pt", "tr");
 
 		return builder;
 	}
@@ -83,7 +86,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setStartDate("2020-02-15");
 		episimConfig.setPolicy(FixedPolicy.class, basePolicy().build());
 
-		config.controler().setOutputDirectory("./output-berlin-25pct-restricts2-" + episimConfig.getStartDate());
+		config.controler().setOutputDirectory("./output-berlin-25pct-calibr2-" + episimConfig.getCalibrationParameter());
 
 
 		return config;
