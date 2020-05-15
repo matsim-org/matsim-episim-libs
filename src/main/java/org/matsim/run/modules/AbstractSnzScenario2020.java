@@ -34,8 +34,14 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.getOrAddContainerParams("educ_kiga")
 				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("educ_primary")
-				.setContactIntensity(4.0);
+				.setContactIntensity(6.0);
 		episimConfig.getOrAddContainerParams("educ_secondary")
+				.setContactIntensity(2.0);
+		episimConfig.getOrAddContainerParams("educ_tertiary")
+				.setContactIntensity(2.0);
+		episimConfig.getOrAddContainerParams("educ_higher")
+				.setContactIntensity(2.0);
+		episimConfig.getOrAddContainerParams("educ_other")
 				.setContactIntensity(2.0);
 		episimConfig.getOrAddContainerParams("home")
 				.setContactIntensity(3.0 / 4.);
