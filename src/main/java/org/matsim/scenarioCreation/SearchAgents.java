@@ -33,6 +33,11 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Class writes all persons having their homeID around a certain coordinate (for example 300m). This idList can be used if you
+ * want to set the initial infections at one defined place and not all over one district.
+ */
+
 public final class SearchAgents {
 	private static final String workingDir = "../shared-svn/projects/episim/matsim-files/";
 	private static final String inputPopulationAdult = workingDir

@@ -21,6 +21,7 @@
 package org.matsim.episim.analysis;
 
 
+import org.apache.commons.io.FileUtils;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
@@ -33,17 +34,26 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.core.utils.misc.Counter;
+import org.matsim.episim.events.EpisimEventsReader;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInfectionEventHandler;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
-public class TSAgeDistribution {
+/**
+ * This class aims to analyze the age distribution of persons that get infected within episim.
+ * You need to provide a population file containing the age of a person as person attribute 'age'.
+ * Furthermore, you need to provide the path to the directory containing the episim-events-files.
+ * Finally, two csv files is dumped out, containing the number of infected persons per <br>
+ *     1) exact age (number)
+ *     2) age group (10 year bins, ie. 0-9 years, 10-19 years,....)
+ */
+class TSAgeDistribution {
 
 
 	private static final String INPUT_POPULATION = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz";
@@ -70,10 +80,17 @@ public class TSAgeDistribution {
 		System.out.println("exactAges sum = " + exactAges.values().stream().collect(Collectors.summingInt(Integer::intValue)));
 		System.out.println("ageGroups sum = " + ageGroups.values().stream().collect(Collectors.summingInt(Integer::intValue)));
 
+		File eventsDir = new File(INPUT_EVENTS);
+		if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
+		List<File> fileList = new ArrayList(FileUtils.listFiles(eventsDir, new String[]{"gz"}, false));
 		EventsManager manager = EventsUtils.createEventsManager();
 		AgeDistributionAnalysisHandler handler = new AgeDistributionAnalysisHandler();
 		manager.addHandler(handler);
-		EventsUtils.readEvents(manager, INPUT_EVENTS);
+
+		Counter counter = new Counter("reading events file nr ");
+		fileList.forEach(file -> {
+			new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+		});
 
 		Map<Integer, Integer> infectionExactAges = new HashMap<>();
 		Map<Integer, Integer> infectionAgeGroups = new HashMap<>();
@@ -87,9 +104,25 @@ public class TSAgeDistribution {
 			infectionAgeGroups.compute(ageGroup, (k,v) -> v==null? 1 : v+1);
 		}
 
+		Map<Integer, Map<Integer,Integer>> infectionAgeGroupsPerWeek = new HashMap<>();
+		for (Integer week : handler.infectedPersonsPerWeek.keySet()) {
+			Set<Id<Person>> infectedPersons = handler.infectedPersonsPerWeek.get(week);
+			Map<Integer,Integer> weekAgeGroups = new HashMap<>();
+			infectionAgeGroups.keySet().forEach(ageGroup -> weekAgeGroups.put(ageGroup,0));
+			for (Id<Person> personId : infectedPersons) {
+				Person person = population.getPersons().get(personId);
+				int age = (int) person.getAttributes().getAttribute("age");
+				int ageGroup = Math.floorDiv(age,10);
+				weekAgeGroups.compute(ageGroup, (k,v) -> v==null? 1 : v+1);
+			}
+			infectionAgeGroupsPerWeek.put(week, weekAgeGroups);
+		}
+
+
 		{ //write exactAges
 			BufferedWriter writer = IOUtils.getBufferedWriter(OUTPUTDIR + "exactAges.csv");
 			try {
+
 				writer.write("age;nrOfPersonInPop;nrOfInfectionEvents");
 
 				for(int age : exactAges.keySet()){
@@ -106,12 +139,23 @@ public class TSAgeDistribution {
 		{	//write ageGroups
 			BufferedWriter writer = IOUtils.getBufferedWriter(OUTPUTDIR + "ageGroups.csv");
 			try {
-				writer.write("age;nrOfPersonInPop;nrOfInfectionEvents");
+				String header = "ageGroup;nrOfPersonInPop;nrOfInfectionEvents";
+				List<Integer> weeks = new ArrayList(infectionAgeGroupsPerWeek.keySet());
+				Collections.sort(weeks);
 
-				for(int age : ageGroups.keySet()){
-					infectionAgeGroups.putIfAbsent(age, 0);
+				for (Integer week : weeks) {
+					header += ";week" + week;
+				}
+				writer.write(header);
+
+				for(int ageGroup : ageGroups.keySet()){
+					infectionAgeGroups.putIfAbsent(ageGroup, 0);
 					writer.newLine();
-					writer.write("" + age + ";" + ageGroups.get(age) + ";" + infectionAgeGroups.get(age));
+					String line = "" + ageGroup + ";" + ageGroups.get(ageGroup) + ";" + infectionAgeGroups.get(ageGroup);
+					for (Integer week : weeks) {
+						line += ";" + infectionAgeGroupsPerWeek.get(week).get(ageGroup);
+					}
+					writer.write(line);
 				}
 				writer.close();
 			} catch (IOException e) {
@@ -123,11 +167,18 @@ public class TSAgeDistribution {
 
 	private static class AgeDistributionAnalysisHandler implements EpisimInfectionEventHandler {
 		Set<Id<Person>> personCache = new HashSet<>();
+		Map<Integer,Set<Id<Person>>> infectedPersonsPerWeek = new HashMap<>();
 
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
-			personCache.add(event.getInfectorId());
+			int day = (int) Math.floor(event.getTime() /  (24*3600) );
+			int week = Math.floorDiv(day, 7);
+
+//			personCache.add(event.getInfectorId());
 			personCache.add(event.getPersonId());
+
+			infectedPersonsPerWeek.putIfAbsent(week, new HashSet<>());
+			infectedPersonsPerWeek.get(week).add(event.getPersonId());
 		}
 	}
 }
