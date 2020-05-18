@@ -133,4 +133,21 @@ public class DefaultProgressionModelTest {
 
 	}
 
+
+	@Test
+	public void defaultTransition() {
+
+		// Depends on random seed
+		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
+		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		for (int day = 0; day <= 16; day++) {
+			model.updateState(p, day);
+
+			if (day == 3) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.infectedButNotContagious);
+			if (day == 4) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.contagious);
+			if (day == 6) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.showingSymptoms);
+			if (day == 16) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.recovered);
+
+		}
+	}
 }
