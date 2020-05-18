@@ -24,6 +24,8 @@ import com.google.inject.Inject;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
@@ -33,10 +35,25 @@ import java.util.SplittableRandom;
 public class DefaultProgressionModel implements ProgressionModel {
 
 	private static final double DAY = 24. * 3600;
+
+	/**
+	 * Definition of state transitions from {@code status}.
+	 * @see Transition
+	 */
+	private static final Map<DiseaseStatus, Transition> STATES = new EnumMap<>(DiseaseStatus.class);
+	static {
+		STATES.putAll(Map.of(
+				DiseaseStatus.infectedButNotContagious, Transition.fixed(4),
+				DiseaseStatus.contagious, Transition.fixed(2),
+				DiseaseStatus.showingSymptoms, Transition.fixed(4),
+				DiseaseStatus.seriouslySick, Transition.fixed(1),
+				DiseaseStatus.critical, Transition.fixed(9)
+		));
+	}
+
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
-
 
 	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
@@ -48,7 +65,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	@Override
 	public final void updateState(EpisimPerson person, int day) {
 		// Called at the beginning of iteration
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(),0, day);
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 		switch (person.getDiseaseStatus()) {
 			case susceptible:
 
@@ -59,13 +76,13 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				break;
 			case infectedButNotContagious:
-				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 4) {
+				if (shouldTransition(person, DiseaseStatus.infectedButNotContagious, day)) {
 					person.setDiseaseStatus(now, DiseaseStatus.contagious);
 				}
 				break;
 			case contagious:
 
-				if (person.daysSince(DiseaseStatus.contagious, day) == 2) {
+				if (shouldTransition(person, DiseaseStatus.contagious, day)) {
 					final double nextDouble = rnd.nextDouble();
 					if (nextDouble < 0.8) {
 						// 80% show symptoms and go into quarantine
@@ -90,7 +107,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 					performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
 				}
 
-				if (person.daysSince(DiseaseStatus.showingSymptoms, day) == 4) {
+				if (shouldTransition(person, DiseaseStatus.showingSymptoms, day)) {
 					double proba = getProbaOfTransitioningToSeriouslySick(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
@@ -102,7 +119,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case seriouslySick:
 				if (!person.hadDiseaseStatus(DiseaseStatus.critical) &&
-						person.daysSince(DiseaseStatus.seriouslySick, day) == 1) {
+						shouldTransition(person, DiseaseStatus.seriouslySick, day)) {
 					double proba = getProbaOfTransitioningToCritical(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.critical);
@@ -112,7 +129,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 				}
 				break;
 			case critical:
-				if (person.daysSince(DiseaseStatus.critical, day) == 9) {
+				if (shouldTransition(person, DiseaseStatus.critical, day)) {
 					// (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
 					// they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
 					// hospital beds.)
@@ -147,6 +164,16 @@ public class DefaultProgressionModel implements ProgressionModel {
 		return 0.25;
 	}
 
+	/**
+	 * Determine whether a person disease status should transition to next status.
+	 */
+	private boolean shouldTransition(EpisimPerson person, DiseaseStatus status, int day) {
+		Transition t = STATES.get(status);
+		if (t.prob > 0)
+			return rnd.nextDouble() < t.prob;
+
+		return person.daysSince(status, day) == t.maxDay;
+	}
 
 	/**
 	 * Perform the tracing procedure for a person. Also ensures if enabled for current day.
@@ -189,5 +216,37 @@ public class DefaultProgressionModel implements ProgressionModel {
 	@Override
 	public final boolean canProgress(EpisimReporting.InfectionReport report) {
 		return report.nTotalInfected > 0 || report.nInQuarantine > 0;
+	}
+
+
+	/**
+	 * Describes how long a person stays in a certain state.
+	 */
+	static final class Transition {
+
+		final double prob;
+		final int maxDay;
+
+		private Transition(double prob, int maxDay) {
+			this.prob = prob;
+			this.maxDay = maxDay;
+		}
+
+		/**
+		 * Create a new transition definition.
+		 *
+		 * @param prob   probability of going to next state (each day)
+		 * @param maxDay maximum number of days of staying in this state
+		 */
+		static Transition prob(double prob, int maxDay) {
+			return new Transition(prob, maxDay);
+		}
+
+		/**
+		 * Deterministic transition at day {@code day}.
+		 */
+		static Transition fixed(int day) {
+			return new Transition(0, day);
+		}
 	}
 }
