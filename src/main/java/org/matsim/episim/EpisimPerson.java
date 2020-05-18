@@ -141,6 +141,13 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Return whether a person had (or currently has) a certain disease status.
+	 */
+	public boolean hadDiseaseStatus(DiseaseStatus status) {
+		return statusChanges.containsKey(status);
+	}
+
+	/**
 	 * Days elapsed since person was put into quarantine.
 	 *
 	 * @param currentDay current day (iteration)

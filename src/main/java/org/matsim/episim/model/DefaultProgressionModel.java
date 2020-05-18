@@ -37,6 +37,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
 
+
 	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		this.rnd = rnd;
@@ -64,7 +65,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case contagious:
 
-				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 6) {
+				if (person.daysSince(DiseaseStatus.contagious, day) == 2) {
 					final double nextDouble = rnd.nextDouble();
 					if (nextDouble < 0.8) {
 						// 80% show symptoms and go into quarantine
@@ -78,39 +79,40 @@ public class DefaultProgressionModel implements ProgressionModel {
 						}
 					}
 
-				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
+				} else if (person.daysSince(DiseaseStatus.contagious, day) >= 12) {
 					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
 				}
 				break;
 			case showingSymptoms:
 
 				// person switches to showing symptoms exactly at day 6, so we account for the delay here
-				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == tracingConfig.getTracingDelay() + 6) {
+				if (person.daysSince(DiseaseStatus.showingSymptoms, day) == tracingConfig.getTracingDelay()) {
 					performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
 				}
 
-				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 10) {
+				if (person.daysSince(DiseaseStatus.showingSymptoms, day) == 4) {
 					double proba = getProbaOfTransitioningToSeriouslySick(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
 					}
 
-				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
+				} else if (person.daysSince(DiseaseStatus.showingSymptoms, day) >= 10) {
 					person.setDiseaseStatus(now, DiseaseStatus.recovered);
 				}
 				break;
 			case seriouslySick:
-				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 11) {
+				if (!person.hadDiseaseStatus(DiseaseStatus.critical) &&
+						person.daysSince(DiseaseStatus.seriouslySick, day) == 1) {
 					double proba = getProbaOfTransitioningToCritical(person, now);
 					if (rnd.nextDouble() < proba) {
 						person.setDiseaseStatus(now, DiseaseStatus.critical);
 					}
-				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 23) {
+				} else if (person.daysSince(DiseaseStatus.seriouslySick, day) >= 13) {
 					person.setDiseaseStatus(now, DiseaseStatus.recovered);
 				}
 				break;
 			case critical:
-				if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) == 20) {
+				if (person.daysSince(DiseaseStatus.critical, day) == 9) {
 					// (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
 					// they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
 					// hospital beds.)
