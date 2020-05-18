@@ -21,6 +21,8 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
+import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
+import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -38,9 +40,11 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 	/**
 	 * Definition of state transitions from {@code status}.
+	 *
 	 * @see Transition
 	 */
 	private static final Map<DiseaseStatus, Transition> STATES = new EnumMap<>(DiseaseStatus.class);
+
 	static {
 		STATES.putAll(Map.of(
 				DiseaseStatus.infectedButNotContagious, Transition.fixed(4),
@@ -54,6 +58,11 @@ public class DefaultProgressionModel implements ProgressionModel {
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
+
+	/**
+	 * Maps person id to the day of next state transition.
+	 */
+	private final MutableIntIntMap transitions = new IntIntHashMap();
 
 	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
@@ -168,11 +177,24 @@ public class DefaultProgressionModel implements ProgressionModel {
 	 * Determine whether a person disease status should transition to next status.
 	 */
 	private boolean shouldTransition(EpisimPerson person, DiseaseStatus status, int day) {
-		Transition t = STATES.get(status);
-		if (t.prob > 0)
-			return rnd.nextDouble() < t.prob;
+		int index = person.getPersonId().index();
+		int daysSince = person.daysSince(status, day);
+		int transitionDay = transitions.getIfAbsent(index, -1);
 
-		return person.daysSince(status, day) == t.maxDay;
+		if (transitionDay > -1 && transitionDay == daysSince) {
+			transitions.remove(index);
+			return true;
+		}
+
+		Transition t = STATES.get(status);
+		transitionDay = t.getTransitionDay(rnd);
+
+		// transition day is drawn one time and then cached
+		if (transitionDay == daysSince)
+			return true;
+
+		transitions.put(index, transitionDay);
+		return false;
 	}
 
 	/**
@@ -219,34 +241,4 @@ public class DefaultProgressionModel implements ProgressionModel {
 	}
 
 
-	/**
-	 * Describes how long a person stays in a certain state.
-	 */
-	static final class Transition {
-
-		final double prob;
-		final int maxDay;
-
-		private Transition(double prob, int maxDay) {
-			this.prob = prob;
-			this.maxDay = maxDay;
-		}
-
-		/**
-		 * Create a new transition definition.
-		 *
-		 * @param prob   probability of going to next state (each day)
-		 * @param maxDay maximum number of days of staying in this state
-		 */
-		static Transition prob(double prob, int maxDay) {
-			return new Transition(prob, maxDay);
-		}
-
-		/**
-		 * Deterministic transition at day {@code day}.
-		 */
-		static Transition fixed(int day) {
-			return new Transition(0, day);
-		}
-	}
 }
