@@ -39,7 +39,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	private static final double DAY = 24. * 3600;
 
 	/**
-	 * Definition of state transitions from {@code status}.
+	 * Definition of state transitions from {@code status} to next state.
 	 *
 	 * @see Transition
 	 */
