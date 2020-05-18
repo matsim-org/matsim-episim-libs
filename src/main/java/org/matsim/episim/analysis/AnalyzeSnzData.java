@@ -1,3 +1,23 @@
+/* *********************************************************************** *
+ * project: org.matsim.*
+ * Controler.java
+ *                                                                         *
+ * *********************************************************************** *
+ *                                                                         *
+ * copyright       : (C) 2007 by the members listed in the COPYING,        *
+ *                   LICENSE and WARRANTY file.                            *
+ * email           : info at matsim dot org                                *
+ *                                                                         *
+ * *********************************************************************** *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *   See also COPYING, LICENSE and WARRANTY file                           *
+ *                                                                         *
+ * *********************************************************************** */
+
 package org.matsim.episim.analysis;
 
 import java.io.BufferedReader;
@@ -13,21 +33,30 @@ import java.util.zip.GZIPInputStream;
 
 import org.matsim.core.utils.io.IOUtils;
 
-//TODO @ Ricardo comments 
-public class AnalyzeSnzData {
+/**
+ * This class reads the SENEZON data for every day. The data is filtered by the
+ * zip codes of every area. It is possible to create results for every day or
+ * for every week. The weekly results sums up the activityDuration over every
+ * day of the week. The base line is always the first day or the first week.
+ * The results are the percentile of the changes compared to the base.
+ */
+class AnalyzeSnzData {
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 
 		boolean weekly = true;
 
+		// zip codes for Berlin
 		List<Integer> zipCodesBerlin = new ArrayList<Integer>();
 		for (int i = 10115; i <= 14199; i++)
 			zipCodesBerlin.add(i);
 
+		// zip codes for Munich
 		List<Integer> zipCodesMunich = new ArrayList<Integer>();
 		for (int i = 80331; i <= 81929; i++)
 			zipCodesMunich.add(i);
 
+		// zip codes for the district "Kreis Heinsberg"
 		List<Integer> zipCodesHeinsberg = Arrays.asList(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844);
 
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", weekly);
@@ -38,9 +67,14 @@ public class AnalyzeSnzData {
 
 	private static void analyzeDataForCertainArea(List<Integer> listZipCodes, String area, boolean weekly)
 			throws IOException, FileNotFoundException {
-		try (BufferedReader br = new BufferedReader(new InputStreamReader(
-				new GZIPInputStream(new FileInputStream("../../Desktop/snz/Bewegungsdaten/snzDataD.csv.gz"))))) {
-			BufferedWriter writer = IOUtils.getBufferedWriter(area + "SnzData.csv");
+		String outputFile = null;
+		if (weekly)
+			outputFile = "output/" + area + "SnzData_weekly.csv";
+		else
+			outputFile = area + "SnzData_daily.csv";
+		try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(
+				"../shared-svn/projects/episim/data/Bewegungsdaten/snzDataD_until20200509.csv.gz"))))) {
+			BufferedWriter writer = IOUtils.getBufferedWriter(outputFile);
 			try {
 				writer.write(
 						"date;accomp;business;education;errands;home;leisure;shop_daily;shop_other;traveling;undefined;visit;work;notAtHome"
@@ -91,6 +125,7 @@ public class AnalyzeSnzData {
 						countingDays++;
 						if (countingDays == 7) {
 							countingDays = 0;
+							// sets the base
 							if (homeBase == 0) {
 								accompBase = sumAccomp;
 								businessBase = sumBusiness;
