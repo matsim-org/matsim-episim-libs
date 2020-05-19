@@ -111,7 +111,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case showingSymptoms:
 
-				// person switches to showing symptoms exactly at day 6, so we account for the delay here
+				// account for the delay in showing symptoms here
 				if (person.daysSince(DiseaseStatus.showingSymptoms, day) == tracingConfig.getTracingDelay()) {
 					performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
 				}

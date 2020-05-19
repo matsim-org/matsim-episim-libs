@@ -5,6 +5,7 @@ import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.assertj.core.data.Offset;
 import org.junit.Test;
+import org.matsim.episim.EpisimUtils;
 
 import java.util.SplittableRandom;
 
@@ -40,4 +41,13 @@ public class TransitionTest {
 
 	}
 
+	@Test
+	public void sigmaZero() {
+
+		SplittableRandom rnd = new SplittableRandom(1);
+		Transition t = Transition.logNormalWithMean(10, 0);
+		for (int i = 0; i < 1000; i++) {
+			assertThat(t.getTransitionDay(rnd)).isEqualTo(10);
+		}
+	}
 }
