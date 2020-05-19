@@ -36,12 +36,14 @@ public class DefaultProgressionModel implements ProgressionModel {
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
+	private final EpisimReporting reporting;
 
 	@Inject
-	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
+	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, EpisimReporting reporting) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.tracingConfig = tracingConfig;
+		this.reporting = reporting;
 	}
 
 	@Override
@@ -80,6 +82,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
 					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
+					reporting.reportRecovery(now, person, -1.0);
 				}
 				break;
 			case showingSymptoms:
@@ -97,6 +100,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
 					person.setDiseaseStatus(now, DiseaseStatus.recovered);
+					reporting.reportRecovery(now, person, -1.0);
 				}
 				break;
 			case seriouslySick:
@@ -107,6 +111,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 					}
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 23) {
 					person.setDiseaseStatus(now, DiseaseStatus.recovered);
+					reporting.reportRecovery(now, person, -1.0);
 				}
 				break;
 			case critical:

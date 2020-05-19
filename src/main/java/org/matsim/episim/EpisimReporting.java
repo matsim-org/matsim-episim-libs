@@ -71,6 +71,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	private final BufferedWriter infectionReport;
 	private final BufferedWriter infectionEvents;
+	private final BufferedWriter recoveryEvents;
 	private final BufferedWriter restrictionReport;
 	private final BufferedWriter timeUse;
 
@@ -121,6 +122,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
+		recoveryEvents = EpisimWriter.prepare(base + "recoveryEvents.txt", RecoveryEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
 				"day", "", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
@@ -298,6 +300,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		writer.append(infectionEvents, array);
 	}
 
+	public void reportRecovery(double now, EpisimPerson person, double utilOfIllness) {
+		writer.append(recoveryEvents, new String[]{Double.toString(now), person.getPersonId().toString(), Double.toString(utilOfIllness)});
+	}
+
 	/**
 	 * Report the occurrence of an contact between two persons.
 	 * TODO Attention: Currently this only includes a subset of contacts (between persons with certain disease status).
@@ -373,6 +379,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		writer.close(infectionReport);
 		writer.close(infectionEvents);
+		writer.close(recoveryEvents);
 		writer.close(restrictionReport);
 		writer.close(timeUse);
 
@@ -418,6 +425,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType}
+
+	enum RecoveryEventsWriterFields {time, recovered, utilOfIllness}
 
 	/**
 	 * Detailed infection report for the end of a day.
