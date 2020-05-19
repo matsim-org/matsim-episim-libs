@@ -164,7 +164,6 @@ public class KnRunEpisim {
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
 				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
-				episimConfig.setAdditionalHospitalAdmissionOffset( 6 );
 
 				// ---
 
@@ -253,7 +252,6 @@ public class KnRunEpisim {
 //				strb.append( "__eduLower_"  + eduLower);
 //				strb.append( "__eduHigher_" + eduHigher );
 //				strb.append( "__other" + other );
-				strb.append( "__hsptlOffst" ).append( episimConfig.getAdditionalHospitalAdmissionOffset() );
 				strb.append( "__leisureMid2_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2 ) );
 				strb.append("__midDateLeisure_").append( midDateLeisure );
 				config.controler().setOutputDirectory( strb.toString() );
