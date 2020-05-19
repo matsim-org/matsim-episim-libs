@@ -165,7 +165,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	 * @return same instance for more fluent api
 	 */
 	@Beta
-	public final DefaultProgressionModel putTransition(DiseaseStatus status, Transition t) {
+	public final DefaultProgressionModel setTransition(DiseaseStatus status, Transition t) {
 		states.put(status, t);
 		return this;
 	}
