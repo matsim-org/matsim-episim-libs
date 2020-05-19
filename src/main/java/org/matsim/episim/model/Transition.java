@@ -7,6 +7,7 @@ import java.util.SplittableRandom;
 
 /**
  * Describes how long a person stays in a certain state.
+ * This interface also provides factory methods for some common transitions.
  */
 public interface Transition {
 
@@ -21,14 +22,28 @@ public interface Transition {
 	 * Probabilistic transition with log normal distribution.
 	 * Parameter of the distribution will be calculated from given mean und standard deviation.
 	 *
+	 * @param mean desired mean of the distribution
+	 * @param std desired standard deviation
+	 *
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormal(double mean, double std) {
+	static Transition logNormalWithMean(double mean, double std) {
 
 		double mu = Math.log((mean * mean) / Math.sqrt(mean * mean + std * std));
 		double sigma = Math.log(1 + (std * std) / (mean * mean));
 
 		return new LogNormalTransition(mu, Math.sqrt(sigma));
+	}
+
+	/**
+	 * Probabilistic state transition with log normal distribution.
+	 * @param median desired median, i.e. exp(mu)
+	 * @param sigma sigma parameter
+	 *
+	 * @see LogNormalTransition
+	 */
+	static Transition logNormalWithMedian(double median, double sigma) {
+		return new LogNormalTransition(Math.log(median), sigma);
 	}
 
 	/**
@@ -43,7 +58,7 @@ public interface Transition {
 
 		private final int day;
 
-		public FixedTransition(int day) {
+		private FixedTransition(int day) {
 			this.day = day;
 		}
 
@@ -62,7 +77,7 @@ public interface Transition {
 		private final double mu;
 		private final double sigma;
 
-		public LogNormalTransition(double mu, double sigma) {
+		private LogNormalTransition(double mu, double sigma) {
 			this.mu = mu;
 			this.sigma = sigma;
 		}

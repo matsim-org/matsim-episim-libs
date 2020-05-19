@@ -20,6 +20,7 @@
  */
 package org.matsim.episim.model;
 
+import com.google.common.annotations.Beta;
 import com.google.inject.Inject;
 import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
 import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
@@ -43,17 +44,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	 *
 	 * @see Transition
 	 */
-	private static final Map<DiseaseStatus, Transition> STATES = new EnumMap<>(DiseaseStatus.class);
-
-	static {
-		STATES.putAll(Map.of(
-				DiseaseStatus.infectedButNotContagious, Transition.fixed(4),
-				DiseaseStatus.contagious, Transition.fixed(2),
-				DiseaseStatus.showingSymptoms, Transition.fixed(4),
-				DiseaseStatus.seriouslySick, Transition.fixed(1),
-				DiseaseStatus.critical, Transition.fixed(9)
-		));
-	}
+	private final Map<DiseaseStatus, Transition> states = new EnumMap<>(DiseaseStatus.class);
 
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
@@ -69,6 +60,15 @@ public class DefaultProgressionModel implements ProgressionModel {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.tracingConfig = tracingConfig;
+
+		// Default state transitions
+		states.putAll(Map.of(
+				DiseaseStatus.infectedButNotContagious, Transition.fixed(4),
+				DiseaseStatus.contagious, Transition.fixed(2),
+				DiseaseStatus.showingSymptoms, Transition.fixed(4),
+				DiseaseStatus.seriouslySick, Transition.fixed(1),
+				DiseaseStatus.critical, Transition.fixed(9)
+		));
 	}
 
 	@Override
@@ -160,6 +160,17 @@ public class DefaultProgressionModel implements ProgressionModel {
 	}
 
 	/**
+	 * Overwrites current {@link Transition} for {@code status} with a new one.
+	 * @apiNote Unstable API
+	 * @return same instance for more fluent api
+	 */
+	@Beta
+	public final DefaultProgressionModel putTransition(DiseaseStatus status, Transition t) {
+		states.put(status, t);
+		return this;
+	}
+
+	/**
 	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
 	 */
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person, double now) {
@@ -186,7 +197,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 			return true;
 		}
 
-		Transition t = STATES.get(status);
+		Transition t = states.get(status);
 		transitionDay = t.getTransitionDay(rnd);
 
 		// transition day is drawn one time and then cached
