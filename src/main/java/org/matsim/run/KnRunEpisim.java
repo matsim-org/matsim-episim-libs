@@ -40,14 +40,17 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
-import org.matsim.run.modules.AbstractSnzScenario;
 import org.matsim.run.modules.AbstractSnzScenario2020;
-import org.matsim.run.modules.SnzScenario;
+import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.SplittableRandom;
 
 public class KnRunEpisim {
@@ -151,67 +154,67 @@ public class KnRunEpisim {
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
 
-				episimConfig.setStartDate( LocalDate.of( 2020, 2, 18) );
+				episimConfig.setStartDate( LocalDate.of( 2020, 2, 9) );
 
-				AbstractSnzScenario2020.addParams(episimConfig );
+				SnzBerlinScenario25pct2020.addParams(episimConfig );
 
-				AbstractSnzScenario2020.setContactIntensities(episimConfig );
+				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
 
-				// I had originally thought that one could calibrate the offset by shifting the unrestricted growth left/right until it hits
-				// the hospital numbers.  Turns out that this does not work since the early leisure participation reductions already
-				// influence this.  So the problem now is that this interacts. Consequence: rather fix the support days, and only change the
-				// participation rates.
+				episimConfig.setCalibrationParameter(0.000_000_7);
+//				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
+				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
-				episimConfig.setCalibrationParameter(0.000_001_6);
-				episimConfig.getOrAddContainerParams("home").setContactIntensity(1.);
 
-				// day 1 is 21/feb+offset.  In consequence:
-
-				// * 5/mar is day 14+offset (first day of leisure linear reduction)
-				// * 15/mar is day 24+offset (first day of "Veranstaltungsverbot" = Sunday)
-				// * 20/mar is day 29+offset (last day of leisure linear reduction)
-
-				// * 10/mar is day 19+offset (first day of work linear reduction)
-				// * 23/mar is day 32+offset (last day of work linear reduction)
-
-				// * errands etc. are reduced with same days as leisure
-
-				// * 14/mar is day 23+offset (first day of school closures = Saturday)
-
+				// ---
 
 				FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
-				final double workMid = 0.75;
-				final double workEnd = 0.45;
-//				final double workEnd = workMid;
+				// I had originally thought that one could calibrate the offset by shifting the unrestricted growth left/right until it hits
+				// the hospital numbers.  Turns out that this does not work since the early leisure participation reductions already
+				// influence this.  So the problem now is that this interacts. Consequence: fix the support days, and only change the
+				// participation rates.
 
-				final double leisureMid = 0.7;
-				final double leisureEnd = 0.1;
-//				final double leisureEnd = leisureMid;
+				boolean unrestricted = false ;
 
-				final double eduLower = 0.1;
-//				final double eduLower = 1.;
-//
-				final double eduHigher = 0.0 ;
-//				final double eduHigher = 1.;
+				final double alpha = 1.5;
 
-				final double other = 0.2;
+				double workMid;
+				double workEnd;
+				double leisureMid;
+				double leisureMid2;
+				double leisureEnd;
+				double eduLower;
+				double eduHigher;
+				if ( unrestricted ){
+					workMid = workEnd = 1.;
+					leisureMid = 1.;
+					leisureMid2 = 1.;
+					leisureEnd = 1;
+					eduLower = 1.;
+					eduHigher = 1.;
+				} else{
+					workMid = Math.max( 0., 1. - alpha * 0.25 );
+					workEnd = Math.max( 0., 1. - alpha * 0.55 );
 
-				final LocalDate midDateLeisure = LocalDate.of( 2020, 3,16 );
+					leisureMid = Math.max( 0., 1. - alpha * 0.2 );
+					leisureEnd = Math.max( 0., 1. - alpha * 0.6 );
+					leisureMid2 = leisureEnd;
+
+					eduLower = 0.1;
+
+					eduHigher = 0.0;
+				}
+
+				final LocalDate midDateLeisure = LocalDate.of( 2020, 3,14 ); // Schliessung von Clubs, Bars, Kneipen
+				final LocalDate midDateWork = LocalDate.of( 2020, 3, 16 );
+
 				{ // leisure 1:
 					final LocalDate startDate = LocalDate.of( 2020, 3, 5 ); // Do der letzten Woche, an der ich noch regulär im Büro war
 					builder.interpolate( startDate, midDateLeisure, Restriction.of( 1. ), leisureMid, "leisure", "visit","shop_other" );
 				}
-				{ // errands
-					final LocalDate startDate = LocalDate.of( 2020, 3, 5 ); // (retail in google is combined with leisure!)
-					final LocalDate endDate = LocalDate.of( 2020, 3, 29 ); // leisure change last day
-					builder.interpolate( startDate, endDate, Restriction.of( 1. ), other, "shopping", "errands", "business",
-							"shop_daily", "shop_other" ) ;
-				}
-				final LocalDate midDateWork = LocalDate.of( 2020, 3, 16 );
 				{ // work 1:
 					final LocalDate startDate = LocalDate.of( 2020, 3, 10 ); // (ab Mo, 9.3. habe ich weitgehend home office gemacht)
-					builder.interpolate( startDate, midDateWork, Restriction.of( 1. ), workMid, "work" );
+					builder.interpolate( startDate, midDateWork, Restriction.of( 1. ), workMid, "work","errands","business","shop_daily" );
 
 				}
 				// ===========================================
@@ -221,39 +224,37 @@ public class KnRunEpisim {
 //					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
 					;
 				}
-				{ // work 2:
-					final LocalDate endDate = LocalDate.of( 2020, 3, 23 );
-					builder.interpolate( midDateWork, endDate, Restriction.of( workMid ), workEnd,"work" );
-				}
+				// ===========================================
 				{ // leisure 2:
 					final LocalDate endDate = LocalDate.of( 2020, 3, 20 );
-					builder.interpolate( midDateLeisure, endDate, Restriction.of( leisureMid ), leisureEnd, "leisure", "visit" );
+					builder.interpolate( midDateLeisure, endDate, Restriction.of( leisureMid2 ), leisureEnd, "leisure", "visit", "shop_other" );
+				}
+				{ // work 2:
+					final LocalDate endDate = LocalDate.of( 2020, 3, 23 );
+					builder.interpolate( midDateWork, endDate, Restriction.of( workMid ), workEnd,"work","errands","business","shop_daily");
 				}
 				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
 				episimConfig.setSampleSize(0.25);
 
-//				episimConfig.getOrAddContainerParams("home").setContactIntensity(3.);
-//				episimConfig.setCalibrationParameter(0.000_001_7);
-
-//				episimConfig.getOrAddContainerParams("home").setContactIntensity(10.);
-//				episimConfig.setCalibrationParameter(0.000_001_1);
-
-//				episimConfig.getOrAddContainerParams("home").setContactIntensity(1.);
-//				episimConfig.setCalibrationParameter(0.000_002_4); // maybe should have been 2_3
-
 				StringBuilder strb = new StringBuilder();
 				strb.append( "piecewise" );
-				strb.append( "__theta" + episimConfig.getCalibrationParameter() );
-//				strb.append( "_ciHome" + episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-				strb.append( "__startDate_" + episimConfig.getStartDate() );
-				strb.append( "__work_" + workMid + "_" + workEnd );
-				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
-				strb.append( "__eduLower_"  + eduLower);
-				strb.append( "__eduHigher_" + eduHigher );
-				strb.append( "__other" + other );
+				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() );
+				strb.append( "__ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
+				strb.append( "__ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
+				strb.append( "__startDate_" ).append( episimConfig.getStartDate() );
+				if ( unrestricted ) {
+					strb.append( "__unrestricted" );
+				} else{
+					strb.append( "__alpha_" + alpha );
+				}
+//				strb.append( "__work_" + workMid + "_" + workEnd );
+//				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
+//				strb.append( "__eduLower_"  + eduLower);
+//				strb.append( "__eduHigher_" + eduHigher );
+//				strb.append( "__other" + other );
+				strb.append( "__leisureMid2_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2 ) );
+				strb.append("__midDateLeisure_").append( midDateLeisure );
 				config.controler().setOutputDirectory( strb.toString() );
-
-//				config.controler().setOutputDirectory( "base-theta" + episimConfig.getCalibrationParameter() );
 
 				return config;
 			}

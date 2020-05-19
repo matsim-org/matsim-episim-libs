@@ -255,6 +255,10 @@ public final class EpisimPerson implements Attributable {
 	public void setQuarantineStatus(QuarantineStatus quarantineStatus, int iteration) {
 		this.quarantineStatus = quarantineStatus;
 		this.quarantineDate = iteration;
+
+		// this function should receive now instead of iteration
+		// only for testing currently
+		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
 	}
 
 
@@ -272,6 +276,13 @@ public final class EpisimPerson implements Attributable {
 		double day = Math.floor(statusChanges.get(status) / 86400d);
 
 		return currentDay - (int) day;
+	}
+
+	/**
+	 * Return whether a person had (or currently has) a certain disease status.
+	 */
+	public boolean hadDiseaseStatus(DiseaseStatus status) {
+		return statusChanges.containsKey(status);
 	}
 
 	/**

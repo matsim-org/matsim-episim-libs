@@ -30,8 +30,11 @@ import java.util.*;
 class KNInfectionsAnalysis{
 	private static final Logger log = Logger.getLogger( KNInfectionsAnalysis.class );
 
-	private static final String base = "piecewise__theta2.8E-6__startDate_2020-02-20__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
-
+//	private static final String base = "piecewise__theta2.8E-6__startDate_2020-02-20__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
+//	private static final String base = "piecewise__theta2.8E-6__ciHome0.1__ciQHome0.01__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0" +
+//							   ".1__eduHigher_0.0__other0.2/";
+	static String base = "piecewise__theta2.8E-6__ciHome0.3__ciQHome0.1__startDate_2020-02-18__unrestricted/";
+//	static String base = "piecewise__theta2.8E-6__ciHome0.3__ciQHome0.1__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
 	private static class MyHousehold {
 		private final String id;
 		public Set<Person> otherInfecteds = new LinkedHashSet<>();
@@ -62,15 +65,21 @@ class KNInfectionsAnalysis{
 		Reader in = new FileReader( base + "infectionEvents.txt" );
 		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter( '\t' ).parse( in );
 		for( CSVRecord record : records ){
-			Person person = scenario.getPopulation().getPersons().get( Id.createPersonId( record.get( "infected" ) ) );
-			String homeId = (String) person.getAttributes().getAttribute( "homeId" );
-			Gbl.assertNotNull( homeId );
-			MyHousehold household = households.get( homeId );
-			Gbl.assertNotNull( household );
-			if ( household.firstInfected ==null ) {
-				household.firstInfected = person;
+			// check if person is first person in hh to get infected; if so, memorize:
+			final Person infectedPerson = scenario.getPopulation().getPersons().get( Id.createPersonId( record.get( "infected" ) ) );
+			final String infectedHomeId = (String) infectedPerson.getAttributes().getAttribute( "homeId" );
+			final MyHousehold household = households.get( infectedHomeId );
+			if( household.firstInfected == null ){
+				household.firstInfected = infectedPerson;
+			} else{
+				if( record.get( "infectionType" ).equals( "home_home" ) ){
+					household.otherInfecteds.add( infectedPerson );
+					Person infector = scenario.getPopulation().getPersons().get( Id.createPersonId( record.get( "infector" ) ) );
+					String infectorHomeId = (String) infector.getAttributes().getAttribute( "homeId" );
+					MyHousehold infectorHousehold = households.get( infectorHomeId );
+					Gbl.assertIf( household.equals( infectorHousehold ) );
+				}
 			}
-			household.otherInfecteds.add( person );
 		}
 		// ---
 		double nInfectedHouseholds = 0.;
@@ -84,6 +93,6 @@ class KNInfectionsAnalysis{
 			}
 		}
 		// ---
-		log.info("percentage of secondary persons in HHs that got infected =" + nSecondaryHHInfections/nOtherPersonsInInfectedHouseholds );
+		log.info("percentage of secondary persons in HHs that had at least one infection = " + nSecondaryHHInfections/nOtherPersonsInInfectedHouseholds );
 	}
 }

@@ -59,13 +59,13 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(ConvertPersonAttributes.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file", defaultValue = "../../Desktop/snz/populationAttributes2020.xml.gz")
 	private Path input;
 
-	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.")
+	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/input-data/he_idList_2020_100pt.txt")
 	private Path personIds;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "output/filteredPopulation.xml.gz")
+	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path output;
 
 	public static void main(String[] args) {

@@ -23,6 +23,8 @@ package org.matsim.episim;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.math3.random.BitsStreamGenerator;
+import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 
@@ -87,7 +89,6 @@ public final class EpisimUtils {
 			}
 		}
 		config.controler().setOutputDirectory(outdir.toString());
-
 	}
 
 	/**
@@ -159,4 +160,36 @@ public final class EpisimUtils {
 		in.readFully(content, 0, length);
 		return new String(content, 0, length, StandardCharsets.ISO_8859_1);
 	}
+
+	/**
+	 * Draw a gaussian distributed random number (mean=0, var=1)
+	 *
+	 * @param rnd splittable random instance
+	 * @see BitsStreamGenerator#nextGaussian()
+	 */
+	public static double nextGaussian(SplittableRandom rnd) {
+		// Normally this allows to generate two numbers, but one is thrown away because this function is stateless
+		// generate a new pair of gaussian numbers
+		final double x = rnd.nextDouble();
+		final double y = rnd.nextDouble();
+		final double alpha = 2 * FastMath.PI * x;
+		final double r = FastMath.sqrt(-2 * FastMath.log(y));
+		return r * FastMath.cos(alpha);
+		// nextGaussian = r * FastMath.sin(alpha);
+	}
+
+	/**
+	 * Draws a log normal distributed random number according to X=e^{\mu+\sigma Z}, where Z is a standard normal distribution.
+	 *
+	 * @param rnd splittable random instance
+	 * @param mu mu ( median exp mu)
+	 * @param sigma sigma
+	 */
+	public static double nextLogNormal(SplittableRandom rnd, double mu, double sigma) {
+		if (sigma == 0)
+			return Math.exp(mu);
+
+		return Math.exp(sigma * nextGaussian(rnd) + mu);
+	}
+
 }

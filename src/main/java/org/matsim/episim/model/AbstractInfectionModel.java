@@ -35,6 +35,7 @@ import java.util.SplittableRandom;
  * Base implementation for infection dynamics.
  */
 public abstract class AbstractInfectionModel implements InfectionModel {
+	public static final String QUARANTINE_HOME = "quarantine_home";
 
 	protected final Scenario scenario = null;
 	protected final SplittableRandom rnd;
@@ -46,7 +47,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 */
 	protected final EpisimPerson.Activity trParams;
 	/**
-	 * Home quarantine infection param
+	 * Home quarantine infection param.
 	 */
 	protected final EpisimPerson.Activity qhParams;
 	protected int iteration;
@@ -59,7 +60,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		this.episimConfig = episimConfig;
 		this.reporting = reporting;
 		this.trParams = new EpisimPerson.Activity("tr", episimConfig.selectInfectionParams("tr"));
-		this.qhParams = new EpisimPerson.Activity("quarantine_home", episimConfig.selectInfectionParams("quarantine_home"));
+		this.qhParams = new EpisimPerson.Activity( QUARANTINE_HOME, episimConfig.selectInfectionParams( QUARANTINE_HOME ));
 	}
 
 	private static boolean hasDiseaseStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {

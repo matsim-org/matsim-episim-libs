@@ -13,40 +13,46 @@ import matsim as ms
 hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
 hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 
+cc = pd.read_csv('../covid-sim/src/assets/' + 'berlin-cases.csv', sep=",").fillna(value=0.)
+cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
+
 # In[]:
 
-# base = 'output-theta1.1E-6-ciHome10.0-work0.45-leis0.0-other0.1/'
-# base = 'output-theta1.7E-6-ciHome3.0-work0.45-leis0.0-other0.1/'
-# base = 'output-theta2.4E-6-ciHome1.0-work0.45-leis0.1-other0.1/'
-# base = 'output-theta2.4E-6-ciHome1.0-work0.45-leis0.1-other0.4/'
-# base = 'output-theta2.0E-6-ciHome2.0-work0.45-leis0.1-other0.2/'
-# base = 'piecewise-theta3.9E-6-offset-8-ciHome1.0-work0.45-leis0.1-other0.2/'
-# base = 'piecewise-theta2.8E-6-offset0-ciHome1.0-work1.0-leis1.0-other1.0/'
-
-# base = 'piecewise-theta2.8E-6-offset-3-ciHome1.0-work0.45-leis0.1-other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-3__leis_1.0_1.0_0.0_0.0__other0.2/'
-# simStartDate='2020-02-18'
-
-# base = 'piecewise__theta2.8E-6__offset-4__leis_1.0_0.7_0.7_0.1__other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-4__work_1.0_1.0__leis_1.0_1.0__eduLower_1.0__eduHigher_1.0__other1.0/'
-# base = 'piecewise__theta2.8E-6__offset-4__work_0.75_0.75__leis_0.7_0.7__eduLower_0.1__eduHigher_0.0__other0.2/'
-# simStartDate='2020-02-17'
-
-# base = 'piecewise__theta2.8E-6__offset-5__leis_1.0_1.0_0.0_0.0__other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-5__work_0.75_0.75__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
-base = 'piecewise__theta2.8E-6__startDate_2020-02-20__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
-# base = 'piecewise__theta1.6E-6__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/'
-
-# base = 'piecewise__theta2.8E-6__offset-6__leis1.0_0.7_0.1__other0.2/'
-# base = 'piecewise__theta2.8E-6__offset-6__leis_1.0_1.0_0.0_0.0__other0.2/'
-# simStartDate='2020-02-15'
+# base = 'piecewise__theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-09__unrestricted__hsptlOffst6__leisureMid2_1__midDateLeisure_2020-03-14/'
+base = 'piecewise__theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-09__alpha_1.5__hsptlOffst6__leisureMid2_0.1__midDateLeisure_2020-03-14/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
 
+# --
+
+infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
+
+nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
+
+nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
+
+rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
+
+rr3 = pd.concat([cc['cases'], rr2b.diff(), nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+
+pyplot.close('all')
+pyplot.rcParams['figure.figsize']=[12, 7]
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
+                  cycler(linestyle=['', '', '-', '-','-','']) +
+                  cycler(marker=['o','o','','',",",'']))
+pyplot.rc('axes', prop_cycle=default_cycler)
+axes = rr3.plot(logy=True,grid=True)
+# axes.set_ylim(0,1250)
+pyplot.axvline(pd.to_datetime('2020-03-19'), color='pink', linestyle='-', lw=1)
+pyplot.show()
+
+# In[]:
+
+# --
+
 infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
-# infected.index = Pandas.date_range(start=simStartDate, periods=infected.index.size)
 
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 
@@ -55,33 +61,10 @@ rr3 = pd.concat([hh['Stationäre Behandlung'], hh['Intensivmedizin'], infected['
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
-                  cycler(linestyle=['', '', '-', '-','-','']) +
-                  cycler(marker=['o','o','','',",",'']))
+                  cycler(linestyle=['', '', '', '','-','']) +
+                  cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 rr3.plot(logy=True,grid=True)
-pyplot.show()
-
-# In[]:
-
-infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
-
-nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagious']]
-
-nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptoms']]
-
-rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
-
-rr3 = pd.concat([rr2b.diff(), nContagious.diff(), nShowingSymptoms.diff()], axis=1)
-
-pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
-default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
-                  cycler(linestyle=['', '-', '-', '-','-','']) +
-                  cycler(marker=['o','','','',",",'']))
-pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,1250)
-# plt.axvline(23, color='y', linestyle='-', lw=1)
 pyplot.show()
 
 # In[]:
@@ -91,17 +74,22 @@ pyplot.show()
 rr2b = infectedCumulative['nInfectedCumulative']
 
 fit = pd.Series(2 * np.exp(np.arange(0, 60, 1) * np.log(2.) / 2.8))
+fit.index = pd.date_range(start="2020-02-15", periods=60)
 
 rr3 = pd.concat([rr2b, fit], axis=1)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 7]
-rr3.plot(logy=False,grid=True)
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
+                  cycler(linestyle=['-', '-', '-', '-','-','']) +
+                  cycler(marker=['','','','',",",'']))
+pyplot.rc('axes', prop_cycle=default_cycler)
+rr3.plot(logy=True,grid=True)
 pyplot.axvline(23, color='y', linestyle='-', lw=1)
 pyplot.show()
 
-# # ln[]:
-#
+# ln[]:
+
 # ss = pd.read_csv(base + 'timeUse.txt', sep='\t' )
 #
 # ss.drop(columns=['day','Unnamed: 1','home'],inplace=True)
