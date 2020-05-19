@@ -19,7 +19,7 @@ public class DefaultProgressionModelTest {
 	public void setup() {
 		reporting = mock(EpisimReporting.class);
 		tracingConfig = new TracingConfigGroup();
-		model = new DefaultProgressionModel(new SplittableRandom(1), new EpisimConfigGroup(), tracingConfig);
+		model = new DefaultProgressionModel(new SplittableRandom(1), new EpisimConfigGroup(), tracingConfig, reporting);
 	}
 
 	@Test
