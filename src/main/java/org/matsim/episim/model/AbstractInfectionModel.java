@@ -34,7 +34,7 @@ import java.util.SplittableRandom;
 /**
  * Base implementation for infection dynamics.
  */
-public abstract class AbstractInfectionModel implements InfectionModel {
+abstract class AbstractInfectionModel implements InfectionModel {
 
 	protected final Scenario scenario = null;
 	protected final SplittableRandom rnd;
@@ -46,7 +46,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 */
 	protected final EpisimPerson.Activity trParams;
 	/**
-	 * Home quarantine infection param
+	 * Home quarantine infection param.
 	 */
 	protected final EpisimPerson.Activity qhParams;
 	protected int iteration;

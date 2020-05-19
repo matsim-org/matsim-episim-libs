@@ -1,8 +1,5 @@
 package org.matsim.episim.model;
 
-import org.apache.commons.math3.stat.descriptive.moment.Mean;
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
-import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
 import org.matsim.episim.*;
@@ -152,24 +149,5 @@ public class DefaultProgressionModelTest {
 			if (day == 16) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.recovered);
 
 		}
-	}
-
-	@Test
-	public void logNormal() {
-
-		SplittableRandom rnd = new SplittableRandom(1);
-
-		Transition t = Transition.logNormal(10, 5);
-		double[] values = new double[100_000];
-		for (int i = 0; i < values.length; i++) {
-			values[i] = t.getTransitionDay(rnd);
-		}
-
-		assertThat(new Mean().evaluate(values))
-				.isCloseTo(10, Offset.offset(0.1));
-
-		assertThat(new StandardDeviation().evaluate(values))
-				.isCloseTo(5, Offset.offset(0.1));
-
 	}
 }
