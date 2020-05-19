@@ -53,6 +53,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.EpisimPerson.*;
+
 public class KnRunEpisim {
 	private static final Logger log = LogManager.getLogger( KnRunEpisim.class );
 
@@ -137,6 +139,22 @@ public class KnRunEpisim {
 				return new SplittableRandom(config.global().getRandomSeed());
 			}
 		} );
+
+		final double infectedBNCMean = 4.;
+		final double infectedBNCStd = 2.;
+
+		final double contagiousMean = 2.;
+		final double contagiousStd = 1.;
+
+		final double withSymptomsMean = 6.;
+		final double withSymptomsStd = 0.;
+
+		final double seriouslySickMean = 1.;
+		final double seriouslySickStd = 0.;
+
+		final double criticalMean = 9.;
+		final double criticalStd = 0.;
+
 		modules.add( new AbstractModule(){
 			@Provides
 			@Singleton
@@ -154,7 +172,7 @@ public class KnRunEpisim {
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
 
-				episimConfig.setStartDate( LocalDate.of( 2020, 2, 9) );
+				episimConfig.setStartDate( LocalDate.of( 2020, 2, 6) );
 
 				SnzBerlinScenario25pct2020.addParams(episimConfig );
 
@@ -254,6 +272,11 @@ public class KnRunEpisim {
 //				strb.append( "__other" + other );
 				strb.append( "__leisureMid2_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2 ) );
 				strb.append("__midDateLeisure_").append( midDateLeisure );
+				strb.append( "__infectedBNC_" ).append( infectedBNCMean ).append( "_" ).append( infectedBNCStd );
+				strb.append( "__contagious_" ).append( contagiousMean ).append( "_" ).append( contagiousStd );
+				strb.append( "__withSymptoms_" ).append( withSymptomsMean ).append( "_" ).append( withSymptomsStd );
+				strb.append( "__seriouslySick_" ).append( seriouslySickMean ).append( "_" ).append( seriouslySickStd );
+				strb.append( "__critical_" ).append( criticalMean ).append( "_" ).append( criticalStd );
 				config.controler().setOutputDirectory( strb.toString() );
 
 				return config;
@@ -270,6 +293,15 @@ public class KnRunEpisim {
 		Config config = injector.getInstance(Config.class);
 
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
+
+		ProgressionModel pm = injector.getInstance( ProgressionModel.class );
+		if ( pm instanceof DefaultProgressionModel ) {
+			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.infectedButNotContagious, Transition.logNormalWithMean( infectedBNCMean, infectedBNCStd ) );
+			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.contagious, Transition.logNormalWithMean( contagiousMean, contagiousStd ) );
+			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.showingSymptoms, Transition.logNormalWithMean( withSymptomsMean, withSymptomsStd ) );
+			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.seriouslySick, Transition.logNormalWithMean( seriouslySickMean, seriouslySickStd ) );
+			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.critical, Transition.logNormalWithMean( criticalMean, criticalStd ) );
+		}
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(100);
