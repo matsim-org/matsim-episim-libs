@@ -40,13 +40,11 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
-import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -54,6 +52,8 @@ import java.util.Locale;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.*;
+import static org.matsim.episim.model.Transition.logNormalWithMeanAndStd;
+import static org.matsim.episim.model.Transition.logNormalWithMedianAndStd;
 
 public class KnRunEpisim {
 	private static final Logger log = LogManager.getLogger( KnRunEpisim.class );
@@ -140,19 +140,36 @@ public class KnRunEpisim {
 			}
 		} );
 
-		final double infectedBNCMean = 4.;
+		/*
+		 * 2020-05-20 RKI:
+		 *
+		 * Inkubationszeit 5-6 Tage (da wir im Mittel bei 0.5 anstecken und bei Übergang 5 -> 6 Symptome entwickeln, hätten wir das genau)
+		 *
+		 * Serielles Intervall 4 Tage.  Daraus folgt eigentlich fast zwangsläufig, dass die meisten Ansteckungen zwischen Tag 3 und Tag 5 nach
+		 * Ansteckung stattfinden.
+		 *
+		 * Symptome bis Hospitalisierung: 4 bis 7
+		 *
+		 * Symptome bis Intensiv:
+		 */
+
+		boolean usingMeans = false ;
+
+		final double infectedToContag = 4.; // orig 4
 		final double infectedBNCStd = 2.;
 
-		final double contagiousMean = 2.;
+		final double contagToSymptoms = 2.; // orig 2
 		final double contagiousStd = 1.;
 
-		final double withSymptomsMean = 6.;
+		// ---
+
+		final double SymptomsToSSick = 8.; // orig 4; RKI 7; DAe 4;
 		final double withSymptomsStd = 0.;
 
-		final double seriouslySickMean = 1.;
+		final double sStickToCritical = 2.; // 3.; // orig 1; RKI ?; DAe 5
 		final double seriouslySickStd = 0.;
 
-		final double criticalMean = 9.;
+		final double criticalToBetter = 10.; // orig 9
 		final double criticalStd = 0.;
 
 		modules.add( new AbstractModule(){
@@ -172,7 +189,7 @@ public class KnRunEpisim {
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
 
-				episimConfig.setStartDate( LocalDate.of( 2020, 2, 6) );
+				episimConfig.setStartDate( LocalDate.of( 2020, 2, 12) );
 
 				SnzBerlinScenario25pct2020.addParams(episimConfig );
 
@@ -194,18 +211,20 @@ public class KnRunEpisim {
 
 				boolean unrestricted = false ;
 
-				final double alpha = 1.5;
+				final double alpha = 1.2;
 
 				double workMid;
 				double workEnd;
-				double leisureMid;
+				double leisureMid1;
+				double leisureMid2Base;
 				double leisureMid2;
 				double leisureEnd;
 				double eduLower;
 				double eduHigher;
 				if ( unrestricted ){
 					workMid = workEnd = 1.;
-					leisureMid = 1.;
+					leisureMid1 = 1.;
+					leisureMid2Base = 1.;
 					leisureMid2 = 1.;
 					leisureEnd = 1;
 					eduLower = 1.;
@@ -214,9 +233,10 @@ public class KnRunEpisim {
 					workMid = Math.max( 0., 1. - alpha * 0.25 );
 					workEnd = Math.max( 0., 1. - alpha * 0.55 );
 
-					leisureMid = Math.max( 0., 1. - alpha * 0.2 );
+					leisureMid1 = Math.max( 0., 1. - alpha * 0.2 );
+					leisureMid2Base = 0.4;
+					leisureMid2 = Math.max( 0., 1. - alpha * leisureMid2Base );
 					leisureEnd = Math.max( 0., 1. - alpha * 0.6 );
-					leisureMid2 = leisureEnd;
 
 					eduLower = 0.1;
 
@@ -228,7 +248,7 @@ public class KnRunEpisim {
 
 				{ // leisure 1:
 					final LocalDate startDate = LocalDate.of( 2020, 3, 5 ); // Do der letzten Woche, an der ich noch regulär im Büro war
-					builder.interpolate( startDate, midDateLeisure, Restriction.of( 1. ), leisureMid, "leisure", "visit","shop_other" );
+					builder.interpolate( startDate, midDateLeisure, Restriction.of( 1. ), leisureMid1, "leisure", "visit","shop_other" );
 				}
 				{ // work 1:
 					final LocalDate startDate = LocalDate.of( 2020, 3, 10 ); // (ab Mo, 9.3. habe ich weitgehend home office gemacht)
@@ -255,8 +275,7 @@ public class KnRunEpisim {
 				episimConfig.setSampleSize(0.25);
 
 				StringBuilder strb = new StringBuilder();
-				strb.append( "piecewise" );
-				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() );
+				strb.append( "theta" ).append( episimConfig.getCalibrationParameter() );
 				strb.append( "__ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
 				strb.append( "__ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
 				strb.append( "__startDate_" ).append( episimConfig.getStartDate() );
@@ -270,13 +289,16 @@ public class KnRunEpisim {
 //				strb.append( "__eduLower_"  + eduLower);
 //				strb.append( "__eduHigher_" + eduHigher );
 //				strb.append( "__other" + other );
-				strb.append( "__leisureMid2_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2 ) );
-				strb.append("__midDateLeisure_").append( midDateLeisure );
-				strb.append( "__infectedBNC_" ).append( infectedBNCMean ).append( "_" ).append( infectedBNCStd );
-				strb.append( "__contagious_" ).append( contagiousMean ).append( "_" ).append( contagiousStd );
-				strb.append( "__withSymptoms_" ).append( withSymptomsMean ).append( "_" ).append( withSymptomsStd );
-				strb.append( "__seriouslySick_" ).append( seriouslySickMean ).append( "_" ).append( seriouslySickStd );
-				strb.append( "__critical_" ).append( criticalMean ).append( "_" ).append( criticalStd );
+				strb.append( "__leisMid2Base_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2Base ) );
+//				strb.append("__midDateLeisure_").append( midDateLeisure );
+				strb.append( "__infectedBNC_" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
+				strb.append( "__contag_" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
+				strb.append( "__wSymp_" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
+				strb.append( "__sSick_" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
+				strb.append( "__crit_" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
+				if ( usingMeans ) {
+					strb.append( "__usingMeans" );
+				}
 				config.controler().setOutputDirectory( strb.toString() );
 
 				return config;
@@ -296,15 +318,24 @@ public class KnRunEpisim {
 
 		ProgressionModel pm = injector.getInstance( ProgressionModel.class );
 		if ( pm instanceof DefaultProgressionModel ) {
-			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.infectedButNotContagious, Transition.logNormalWithMean( infectedBNCMean, infectedBNCStd ) );
-			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.contagious, Transition.logNormalWithMean( contagiousMean, contagiousStd ) );
-			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.showingSymptoms, Transition.logNormalWithMean( withSymptomsMean, withSymptomsStd ) );
-			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.seriouslySick, Transition.logNormalWithMean( seriouslySickMean, seriouslySickStd ) );
-			((DefaultProgressionModel) pm).setTransition( DiseaseStatus.critical, Transition.logNormalWithMean( criticalMean, criticalStd ) );
+			final DefaultProgressionModel defaultProgressionModel = (DefaultProgressionModel) pm;
+			if ( usingMeans ){
+				defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMeanAndStd( infectedToContag, infectedBNCStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMeanAndStd( contagToSymptoms, contagiousStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMeanAndStd( SymptomsToSSick, withSymptomsStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMeanAndStd( sStickToCritical, seriouslySickStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMeanAndStd( criticalToBetter, criticalStd ) );
+			} else {
+				defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( infectedToContag, infectedBNCStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( contagToSymptoms, contagiousStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( SymptomsToSSick, withSymptomsStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( sStickToCritical, seriouslySickStd ) );
+				defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( criticalToBetter, criticalStd ) );
+			}
 		}
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(100);
+		runner.run(150);
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 

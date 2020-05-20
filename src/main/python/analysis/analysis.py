@@ -10,16 +10,23 @@ from cycler import cycler
 import scipy as sp
 import matsim as ms
 
+# todo: https??
 hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
+# hh = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/10052020_TaSpi.csv', sep=";").fillna(value=0.)
 hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 
-cc = pd.read_csv('../covid-sim/src/assets/' + 'berlin-cases.csv', sep=",").fillna(value=0.)
+cc = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv', sep=",").fillna(value=0.)
 cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-# base = 'piecewise__theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-09__unrestricted__hsptlOffst6__leisureMid2_1__midDateLeisure_2020-03-14/'
-base = 'piecewise__theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-09__alpha_1.5__hsptlOffst6__leisureMid2_0.1__midDateLeisure_2020-03-14/'
+# base = 'zz_archive-2020-05-20/theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisureMid2_0.5__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0_usingMeans/'
+# base =                                       'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_3.0_0.0__crit_10.0_0.0__usingMeans/'
+# base =                                       'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0__usingMeans/'
+
+
+# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_3.0_0.0__crit_10.0_0.0/'
+base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -38,14 +45,14 @@ rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean(
 rr3 = pd.concat([cc['cases'], rr2b.diff(), nContagious.diff(), nShowingSymptoms.diff()], axis=1)
 
 pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
-default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
+pyplot.rcParams['figure.figsize']=[12, 5]
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple']) +
                   cycler(linestyle=['', '', '-', '-','-','']) +
                   cycler(marker=['o','o','','',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 # axes.set_ylim(0,1250)
-pyplot.axvline(pd.to_datetime('2020-03-19'), color='pink', linestyle='-', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-19'), color='red', linestyle='-', lw=1)
 pyplot.show()
 
 # In[]:
@@ -59,7 +66,7 @@ infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritica
 rr3 = pd.concat([hh['Stationäre Behandlung'], hh['Intensivmedizin'], infected['shouldBeInHospital'], infected['nCritical']], axis=1).fillna(value=0.)
 
 pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
+pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '', '', '','-','']) +
                   cycler(marker=['.','.','.','.',",",'']))
@@ -79,7 +86,7 @@ fit.index = pd.date_range(start="2020-02-15", periods=60)
 rr3 = pd.concat([rr2b, fit], axis=1)
 
 pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
+pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['-', '-', '-', '-','-','']) +
                   cycler(marker=['','','','',",",'']))

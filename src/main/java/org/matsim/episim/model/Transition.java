@@ -48,7 +48,7 @@ public interface Transition {
 	 * @param sigma  sigma parameter
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormalWithMedian(double median, double sigma) {
+	static Transition logNormalWithMedianAndSigma( double median, double sigma ) {
 
 		double mu = Math.log(median);
 		return new LogNormalTransition(mu, sigma);
