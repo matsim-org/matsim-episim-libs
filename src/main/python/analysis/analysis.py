@@ -26,7 +26,11 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 
 # base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_3.0_0.0__crit_10.0_0.0/'
-base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_3.0_1.5__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__beta_0.7__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+base = 'theta1.0E-6__ciHome0.75__ciQHome0.01__startDate_2020-02-12__beta_0.5__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -42,16 +46,16 @@ nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulati
 
 rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
 
-rr3 = pd.concat([cc['cases'], rr2b.diff(), nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+rr3 = pd.concat([cc['cases'], nContagious.diff(), nShowingSymptoms.diff()], axis=1)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple']) +
-                  cycler(linestyle=['', '', '-', '-','-','']) +
-                  cycler(marker=['o','o','','',",",'']))
+                  cycler(linestyle=['', '', '', '-','-','']) +
+                  cycler(marker=['.','','o','',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,1250)
+# axes.set_ylim(0,400)
 pyplot.axvline(pd.to_datetime('2020-03-19'), color='red', linestyle='-', lw=1)
 pyplot.show()
 
@@ -60,6 +64,7 @@ pyplot.show()
 # --
 
 infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
+
 
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 

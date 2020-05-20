@@ -155,7 +155,7 @@ public final class EpisimUtils {
 		
 		HashMap<String, Double> lastRestrictions = new HashMap<String, Double>();
 		boolean didRestriction = true;
-		boolean doInterpolation = false;
+		boolean doInterpolation = false; // == "interpolationOverWeekendsAndHolidays"?  yyyy  kai, may'20
 		String lastDate = null;
 		for( CSVRecord record : records ){
 			
@@ -182,12 +182,16 @@ public final class EpisimUtils {
 					
 					if (!activity.contains("home")) {
 						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5 && !bankHolidays.contains(corrDate)) {
-							builder.restrict(corrDate, remainingFraction * alpha, activity);
+							double reduction = Math.min( 1., alpha * (1. - remainingFraction) );
+							builder.restrict(corrDate, 1.-reduction, activity);
 							
 							if (doInterpolation) {
+								// yy why can't you use the interpolation facility provided by the framework?  kai, may'20
 								int ii = LocalDate.parse(lastDate).until(LocalDate.parse(corrDate)).getDays();
 								for (int jj = 1; jj<ii; jj++ ) {
-									builder.restrict(LocalDate.parse(lastDate).plusDays(jj), (lastRestrictions.get(activity) + (remainingFraction - lastRestrictions.get(activity)) * (1.0 * jj / (1.0 * ii))) * alpha, activity);
+									double interpolatedRemainingFraction = lastRestrictions.get( activity ) + (remainingFraction - lastRestrictions.get( activity )) * (1.0 * jj / (1.0 * ii)) ;
+									double interpolatedReduction = Math.min( 1., alpha * (1. - interpolatedRemainingFraction));
+									builder.restrict(LocalDate.parse(lastDate ).plusDays(jj ), 1.-interpolatedReduction, activity );
 									LocalDate.parse(lastDate).plusDays(jj);
 								}
 							}
@@ -208,7 +212,7 @@ public final class EpisimUtils {
 			
 		}
 		
-		builder.restrict("2020-03-14", 0.1 * alpha, "educ_primary", "educ_kiga") 
+		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 		.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		
 		return builder;

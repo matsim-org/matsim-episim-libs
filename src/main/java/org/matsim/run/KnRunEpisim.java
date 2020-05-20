@@ -155,11 +155,11 @@ public class KnRunEpisim {
 
 		boolean usingMeans = false ;
 
-		final double infectedToContag = 4.; // orig 4
-		final double infectedBNCStd = 2.;
+		final double infectedToContag = 3.; // orig 4
+		final double infectedBNCStd = infectedToContag/2.;
 
-		final double contagToSymptoms = 2.; // orig 2
-		final double contagiousStd = 1.;
+		final double contagToSymptoms = 1.5; // orig 2
+		final double contagiousStd = contagToSymptoms/2.;
 
 		// ---
 
@@ -175,7 +175,7 @@ public class KnRunEpisim {
 		modules.add( new AbstractModule(){
 			@Provides
 			@Singleton
-			public Config config() {
+			public Config config() throws IOException{
 				Config config = ConfigUtils.createConfig(new EpisimConfigGroup() );
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -195,83 +195,20 @@ public class KnRunEpisim {
 
 				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
 
-				episimConfig.setCalibrationParameter(0.000_000_7);
+				episimConfig.setCalibrationParameter(0.000_001);
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
 				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
 
 				// ---
 
-				FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-
-				// I had originally thought that one could calibrate the offset by shifting the unrestricted growth left/right until it hits
-				// the hospital numbers.  Turns out that this does not work since the early leisure participation reductions already
-				// influence this.  So the problem now is that this interacts. Consequence: fix the support days, and only change the
-				// participation rates.
-
+				double beta = 0.4;
 				boolean unrestricted = false ;
 
-				final double alpha = 1.2;
-
-				double workMid;
-				double workEnd;
-				double leisureMid1;
-				double leisureMid2Base;
-				double leisureMid2;
-				double leisureEnd;
-				double eduLower;
-				double eduHigher;
-				if ( unrestricted ){
-					workMid = workEnd = 1.;
-					leisureMid1 = 1.;
-					leisureMid2Base = 1.;
-					leisureMid2 = 1.;
-					leisureEnd = 1;
-					eduLower = 1.;
-					eduHigher = 1.;
-				} else{
-					workMid = Math.max( 0., 1. - alpha * 0.25 );
-					workEnd = Math.max( 0., 1. - alpha * 0.55 );
-
-					leisureMid1 = Math.max( 0., 1. - alpha * 0.2 );
-					leisureMid2Base = 0.4;
-					leisureMid2 = Math.max( 0., 1. - alpha * leisureMid2Base );
-					leisureEnd = Math.max( 0., 1. - alpha * 0.6 );
-
-					eduLower = 0.1;
-
-					eduHigher = 0.0;
+				if ( !unrestricted ){
+					episimConfig.setPolicy( FixedPolicy.class, EpisimUtils.createRestrictionsFromCSV( episimConfig, beta ).build() );
 				}
 
-				final LocalDate midDateLeisure = LocalDate.of( 2020, 3,14 ); // Schliessung von Clubs, Bars, Kneipen
-				final LocalDate midDateWork = LocalDate.of( 2020, 3, 16 );
-
-				{ // leisure 1:
-					final LocalDate startDate = LocalDate.of( 2020, 3, 5 ); // Do der letzten Woche, an der ich noch regulär im Büro war
-					builder.interpolate( startDate, midDateLeisure, Restriction.of( 1. ), leisureMid1, "leisure", "visit","shop_other" );
-				}
-				{ // work 1:
-					final LocalDate startDate = LocalDate.of( 2020, 3, 10 ); // (ab Mo, 9.3. habe ich weitgehend home office gemacht)
-					builder.interpolate( startDate, midDateWork, Restriction.of( 1. ), workMid, "work","errands","business","shop_daily" );
-
-				}
-				// ===========================================
-				{ // edu:
-					builder.restrict( LocalDate.of( 2020, 3, 14), eduLower, "educ_primary", "educ_kiga" ) // = Samstag vor Schulschliessungen
-					       .restrict( LocalDate.of( 2020, 3, 14 ), eduHigher, "educ_secondary", "educ_higher", "educ_other", "educ_tertiary" )
-//					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
-					;
-				}
-				// ===========================================
-				{ // leisure 2:
-					final LocalDate endDate = LocalDate.of( 2020, 3, 20 );
-					builder.interpolate( midDateLeisure, endDate, Restriction.of( leisureMid2 ), leisureEnd, "leisure", "visit", "shop_other" );
-				}
-				{ // work 2:
-					final LocalDate endDate = LocalDate.of( 2020, 3, 23 );
-					builder.interpolate( midDateWork, endDate, Restriction.of( workMid ), workEnd,"work","errands","business","shop_daily");
-				}
-				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
 				episimConfig.setSampleSize(0.25);
 
 				StringBuilder strb = new StringBuilder();
@@ -282,14 +219,14 @@ public class KnRunEpisim {
 				if ( unrestricted ) {
 					strb.append( "__unrestricted" );
 				} else{
-					strb.append( "__alpha_" + alpha );
+					strb.append( "__beta_" + beta );
 				}
 //				strb.append( "__work_" + workMid + "_" + workEnd );
 //				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
 //				strb.append( "__eduLower_"  + eduLower);
 //				strb.append( "__eduHigher_" + eduHigher );
 //				strb.append( "__other" + other );
-				strb.append( "__leisMid2Base_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2Base ) );
+//				strb.append( "__leisMid2Base_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2Base ) );
 //				strb.append("__midDateLeisure_").append( midDateLeisure );
 				strb.append( "__infectedBNC_" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
 				strb.append( "__contag_" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
