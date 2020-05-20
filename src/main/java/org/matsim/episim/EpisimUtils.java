@@ -20,14 +20,22 @@
  */
 package org.matsim.episim;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.policy.FixedPolicy;
 
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.Reader;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.HashSet;
 import java.util.SplittableRandom;
 
 /**
@@ -114,6 +122,53 @@ public final class EpisimUtils {
 			return Math.exp(mu);
 
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
+	}
+	
+	/**
+	 * Creates restrictions from csv from Senozon data. 
+	 * Restrictions at educational facilites are created manually.
+	 * 
+	 */
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha ) throws IOException {
+		
+		HashSet<String> activities = new HashSet<String>();
+		
+		for ( ConfigGroup a : episimConfig.getParameterSets().get("infectionParams")) {
+			activities.add(a.getParams().get("activityType"));
+		}
+		
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+
+		Reader in = new FileReader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv" );
+		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter( '\t' ).parse( in );
+		
+		for( CSVRecord record : records ){
+			for (String a : activities) {
+				if (record.toMap().keySet().contains(a)) {
+					
+					String date = record.get("date");
+					String y = date.substring(0, 4);
+					String m = date.substring(4, 6);
+					String d = date.substring(6, 8);
+					String corrDate = y + "-" + m + "-" + d;
+
+					double remainingFraction = 1. + (Integer.parseInt(record.get(a)) / 100.); 
+					if (remainingFraction > 1) {
+						remainingFraction = 1;
+					}
+					
+					if (!a.contains("home") && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5) {
+						builder.restrict(corrDate, remainingFraction * alpha, a);
+					}
+					
+				}
+			}
+		}
+		
+		builder.restrict("2020-03-14", 0.1 * alpha, "educ_primary", "educ_kiga") 
+		.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		
+		return builder;
 	}
 
 }
