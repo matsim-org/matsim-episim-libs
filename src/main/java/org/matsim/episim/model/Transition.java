@@ -28,6 +28,9 @@ public interface Transition {
 	 */
 	static Transition logNormalWithMean(double mean, double std) {
 
+		// mean==median if std=0
+		if (std == 0) return logNormalWithMedianAndSigma(mean, 0);
+
 		double mu = Math.log((mean * mean) / Math.sqrt(mean * mean + std * std));
 		double sigma = Math.log(1 + (std * std) / (mean * mean));
 
@@ -48,7 +51,7 @@ public interface Transition {
 	 * @param sigma  sigma parameter
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormalWithMedianAndSigma( double median, double sigma ) {
+	static Transition logNormalWithMedianAndSigma(double median, double sigma) {
 
 		double mu = Math.log(median);
 		return new LogNormalTransition(mu, sigma);
@@ -62,6 +65,9 @@ public interface Transition {
 	 * @see LogNormalTransition
 	 */
 	static Transition logNormalWithMedianAndStd(double median, double std) {
+
+		// equation below is numerical unstable for std near zero
+		if (std == 0) return logNormalWithMedianAndSigma(median, 0);
 
 		double mu = Math.log(median);
 
@@ -110,6 +116,9 @@ public interface Transition {
 		private LogNormalTransition(double mu, double sigma) {
 			this.mu = mu;
 			this.sigma = sigma;
+
+			if (sigma < 0 || Double.isNaN(sigma))
+				throw new IllegalArgumentException("Sigma must be >= 0");
 		}
 
 		@Override
