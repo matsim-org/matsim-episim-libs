@@ -35,6 +35,7 @@ import java.io.Reader;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.SplittableRandom;
 
@@ -127,11 +128,21 @@ public final class EpisimUtils {
 	/**
 	 * Creates restrictions from csv from Senozon data. 
 	 * Restrictions at educational facilites are created manually.
+	 * Weekends and bank holidays in 2020 are interpolated.
 	 * 
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha ) throws IOException {
 		
 		HashSet<String> activities = new HashSet<String>();
+		
+		HashSet<String> bankHolidays = new HashSet<String>();
+		bankHolidays.add("2020-04-10"); //Karfreitag
+		bankHolidays.add("2020-04-13"); //Ostermontag
+		bankHolidays.add("2020-05-01"); //Tag der Arbeit
+		bankHolidays.add("2020-05-08"); //Tag der Befreiung
+		bankHolidays.add("2020-05-21"); //Himmelfahrt
+		bankHolidays.add("2020-05-22"); //Brueckentag
+		bankHolidays.add("2020-06-01"); //Pfingsten
 		
 		for ( ConfigGroup a : episimConfig.getParameterSets().get("infectionParams")) {
 			activities.add(a.getParams().get("activityType"));
@@ -142,27 +153,59 @@ public final class EpisimUtils {
 		Reader in = new FileReader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv" );
 		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter( '\t' ).parse( in );
 		
+		HashMap<String, Double> lastRestrictions = new HashMap<String, Double>();
+		boolean didRestriction = true;
+		boolean doInterpolation = false;
+		String lastDate = null;
 		for( CSVRecord record : records ){
-			for (String a : activities) {
-				if (record.toMap().keySet().contains(a)) {
-					
-					String date = record.get("date");
-					String y = date.substring(0, 4);
-					String m = date.substring(4, 6);
-					String d = date.substring(6, 8);
-					String corrDate = y + "-" + m + "-" + d;
+			
+			String date = record.get("date");
+			String y = date.substring(0, 4);
+			String m = date.substring(4, 6);
+			String d = date.substring(6, 8);
+			String corrDate = y + "-" + m + "-" + d;
+			
+			doInterpolation = false;
+			
+			if (!didRestriction && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5 && !bankHolidays.contains(corrDate)) {
+				doInterpolation = true;	
+			}
+			
+			didRestriction = false;
+			
+			for (String activity : activities) {
+				if (record.toMap().keySet().contains(activity)) {
 
-					double remainingFraction = 1. + (Integer.parseInt(record.get(a)) / 100.); 
-					if (remainingFraction > 1) {
-						remainingFraction = 1;
-					}
+					double remainingFraction = 1. + (Integer.parseInt(record.get(activity)) / 100.); 
 					
-					if (!a.contains("home") && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5) {
-						builder.restrict(corrDate, remainingFraction * alpha, a);
+					if (remainingFraction > 1) remainingFraction = 1;
+					
+					if (!activity.contains("home")) {
+						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5 && !bankHolidays.contains(corrDate)) {
+							builder.restrict(corrDate, remainingFraction * alpha, activity);
+							
+							if (doInterpolation) {
+								int ii = LocalDate.parse(lastDate).until(LocalDate.parse(corrDate)).getDays();
+								for (int jj = 1; jj<ii; jj++ ) {
+									builder.restrict(LocalDate.parse(lastDate).plusDays(jj), (lastRestrictions.get(activity) + (remainingFraction - lastRestrictions.get(activity)) * (1.0 * jj / (1.0 * ii))) * alpha, activity);
+									LocalDate.parse(lastDate).plusDays(jj);
+								}
+							}
+							
+							lastRestrictions.putIfAbsent(activity, remainingFraction);
+							lastRestrictions.replace(activity, remainingFraction);
+							didRestriction = true;
+							
+						}
+						
 					}
 					
 				}
+				
 			}
+			
+			if (didRestriction) lastDate = corrDate;
+			
 		}
 		
 		builder.restrict("2020-03-14", 0.1 * alpha, "educ_primary", "educ_kiga") 
