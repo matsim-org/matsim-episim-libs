@@ -37,14 +37,15 @@ import org.matsim.core.utils.io.IOUtils;
  * This class reads the SENEZON data for every day. The data is filtered by the
  * zip codes of every area. It is possible to create results for every day or
  * for every week. The weekly results sums up the activityDuration over every
- * day of the week. The base line is always the first day or the first week.
- * The results are the percentile of the changes compared to the base.
+ * day of the week. The base line is always the first day or the first week. The
+ * results are the percentile of the changes compared to the base.
  */
+
 class AnalyzeSnzData {
 
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 
-		boolean weekly = true;
+		boolean weekly = false;
 
 		// zip codes for Berlin
 		List<Integer> zipCodesBerlin = new ArrayList<Integer>();
@@ -69,15 +70,15 @@ class AnalyzeSnzData {
 			throws IOException, FileNotFoundException {
 		String outputFile = null;
 		if (weekly)
-			outputFile = "output/" + area + "SnzData_weekly.csv";
+			outputFile = "output/" + area + "SnzData_weekly_daily_until20200517.csv";
 		else
-			outputFile = area + "SnzData_daily.csv";
+			outputFile = "output/" + area + "SnzData_daily_until20200517.csv";
 		try (BufferedReader br = new BufferedReader(new InputStreamReader(new GZIPInputStream(new FileInputStream(
-				"../shared-svn/projects/episim/data/Bewegungsdaten/snzDataD_until20200509.csv.gz"))))) {
+				"../shared-svn/projects/episim/data/Bewegungsdaten/snzDataD_until20200517.csv.gz"))))) {
 			BufferedWriter writer = IOUtils.getBufferedWriter(outputFile);
 			try {
 				writer.write(
-						"date;accomp;business;education;errands;home;leisure;shop_daily;shop_other;traveling;undefined;visit;work;notAtHome"
+						"date\taccomp\tbusiness\teducation\terrands\thome\tleisure\tshop_daily\tshop_other\ttraveling\tundefined\tvisit\twork\tnotAtHome"
 								+ "\n");
 
 				String line;
@@ -117,10 +118,10 @@ class AnalyzeSnzData {
 
 				while ((line = br.readLine()) != null) {
 					String[] parts = line.split(",");
-					if (parts[dateLocation].contains("date"))
+					if (parts[dateLocation].contains("date") || parts.length<2)
 						continue;
 					if (!weekly)
-						countingDays = 7;
+						countingDays = 6;
 					if (currantDate != null && !parts[dateLocation].contains(currantDate)) {
 						countingDays++;
 						if (countingDays == 7) {
@@ -141,18 +142,18 @@ class AnalyzeSnzData {
 								workBase = sumWork;
 								notAtHomeBase = sumNotAtHome;
 							}
-							writer.write(currantDate + ";" + Math.round((sumAccomp / accompBase - 1) * 100) + ";"
-									+ Math.round((sumBusiness / businessBase - 1) * 100) + ";"
-									+ Math.round((sumEducation / educationBase - 1) * 100) + ";"
-									+ Math.round((sumErrands / errandsBase - 1) * 100) + ";"
-									+ Math.round((sumHome / homeBase - 1) * 100) + ";"
-									+ Math.round((sumLeisure / leisureBase - 1) * 100) + ";"
-									+ Math.round((sumShopDaily / shopDailyBase - 1) * 100) + ";"
-									+ Math.round((sumShopOther / shopOtherBase - 1) * 100) + ";"
-									+ Math.round((sumTraveling / travelingBase - 1) * 100) + ";"
-									+ Math.round((sumUndefined / undefinedBase - 1) * 100) + ";"
-									+ Math.round((sumVisit / visitBase - 1) * 100) + ";"
-									+ Math.round((sumWork / workBase - 1) * 100) + ";"
+							writer.write(currantDate + "\t" + Math.round((sumAccomp / accompBase - 1) * 100) + "\t"
+									+ Math.round((sumBusiness / businessBase - 1) * 100) + "\t"
+									+ Math.round((sumEducation / educationBase - 1) * 100) + "\t"
+									+ Math.round((sumErrands / errandsBase - 1) * 100) + "\t"
+									+ Math.round((sumHome / homeBase - 1) * 100) + "\t"
+									+ Math.round((sumLeisure / leisureBase - 1) * 100) + "\t"
+									+ Math.round((sumShopDaily / shopDailyBase - 1) * 100) + "\t"
+									+ Math.round((sumShopOther / shopOtherBase - 1) * 100) + "\t"
+									+ Math.round((sumTraveling / travelingBase - 1) * 100) + "\t"
+									+ Math.round((sumUndefined / undefinedBase - 1) * 100) + "\t"
+									+ Math.round((sumVisit / visitBase - 1) * 100) + "\t"
+									+ Math.round((sumWork / workBase - 1) * 100) + "\t"
 									+ Math.round((sumNotAtHome / notAtHomeBase - 1) * 100) + "\n");
 
 							sumAccomp = 0;
@@ -237,18 +238,18 @@ class AnalyzeSnzData {
 				if (weekly && countingDays != 7)
 					writer.close();
 				else {
-					writer.write(currantDate + ";" + Math.round((sumAccomp / accompBase - 1) * 100) + ";"
-							+ Math.round((sumBusiness / businessBase - 1) * 100) + ";"
-							+ Math.round((sumEducation / educationBase - 1) * 100) + ";"
-							+ Math.round((sumErrands / errandsBase - 1) * 100) + ";"
-							+ Math.round((sumHome / homeBase - 1) * 100) + ";"
-							+ Math.round((sumLeisure / leisureBase - 1) * 100) + ";"
-							+ Math.round((sumShopDaily / shopDailyBase - 1) * 100) + ";"
-							+ Math.round((sumShopOther / shopOtherBase - 1) * 100) + ";"
-							+ Math.round((sumTraveling / travelingBase - 1) * 100) + ";"
-							+ Math.round((sumUndefined / undefinedBase - 1) * 100) + ";"
-							+ Math.round((sumVisit / visitBase - 1) * 100) + ";"
-							+ Math.round((sumWork / workBase - 1) * 100) + ";"
+					writer.write(currantDate + "\t" + Math.round((sumAccomp / accompBase - 1) * 100) + "\t"
+							+ Math.round((sumBusiness / businessBase - 1) * 100) + "\t"
+							+ Math.round((sumEducation / educationBase - 1) * 100) + "\t"
+							+ Math.round((sumErrands / errandsBase - 1) * 100) + "\t"
+							+ Math.round((sumHome / homeBase - 1) * 100) + "\t"
+							+ Math.round((sumLeisure / leisureBase - 1) * 100) + "\t"
+							+ Math.round((sumShopDaily / shopDailyBase - 1) * 100) + "\t"
+							+ Math.round((sumShopOther / shopOtherBase - 1) * 100) + "\t"
+							+ Math.round((sumTraveling / travelingBase - 1) * 100) + "\t"
+							+ Math.round((sumUndefined / undefinedBase - 1) * 100) + "\t"
+							+ Math.round((sumVisit / visitBase - 1) * 100) + "\t"
+							+ Math.round((sumWork / workBase - 1) * 100) + "\t"
 							+ Math.round((sumNotAtHome / notAtHomeBase - 1) * 100));
 					writer.close();
 				}
