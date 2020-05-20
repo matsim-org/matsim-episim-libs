@@ -134,8 +134,8 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		// shuffle, those are 10 different persons every day.
 
 		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
-//		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
-		int contactWith = Math.min(otherPersonsInContainer.size(), 10 );
+		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+//		int contactWith = Math.min(otherPersonsInContainer.size(), 10 );
 		for (int ii = 0; ii < contactWith; ii++) {
 
 			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
