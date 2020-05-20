@@ -14,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 public class TransitionTest {
 
 	@Test
-	public void logNormal() {
+	public void logNormalMean() {
 
 		SplittableRandom rnd = new SplittableRandom(1);
 
@@ -29,15 +29,37 @@ public class TransitionTest {
 
 		assertThat(new StandardDeviation().evaluate(values))
 				.isCloseTo(5, Offset.offset(0.1));
+	}
 
+	@Test
+	public void logNormalMedian() {
 
-		t = Transition.logNormalWithMedian(20, 3);
+		SplittableRandom rnd = new SplittableRandom(1);
+
+		double[] values = new double[100_000];
+
+		Transition t = Transition.logNormalWithMedian(10, 3);
+		for (int i = 0; i < values.length; i++) {
+			values[i] = t.getTransitionDay(rnd);
+		}
+
+		assertThat(new Median().evaluate(values))
+				.isCloseTo(10, Offset.offset(0.1));
+
+		assertThat(new StandardDeviation().evaluate(values))
+				.isCloseTo(3, Offset.offset(0.1));
+
+		t = Transition.logNormalWithMedian(20, 5);
+		values = new double[100_000];
 		for (int i = 0; i < values.length; i++) {
 			values[i] = t.getTransitionDay(rnd);
 		}
 
 		assertThat(new Median().evaluate(values))
 				.isCloseTo(20, Offset.offset(0.1));
+
+		assertThat(new StandardDeviation().evaluate(values))
+				.isCloseTo(5, Offset.offset(0.1));
 
 	}
 
