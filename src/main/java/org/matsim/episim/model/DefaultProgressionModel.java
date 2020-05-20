@@ -200,8 +200,9 @@ public class DefaultProgressionModel implements ProgressionModel {
 		Transition t = states.get(status);
 		transitionDay = t.getTransitionDay(rnd);
 
+		// transitions at day 0 are performed one day later
 		// transition day is drawn one time and then cached
-		if (transitionDay == daysSince)
+		if (transitionDay == 0 || transitionDay == daysSince)
 			return true;
 
 		transitions.put(index, transitionDay);
