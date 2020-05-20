@@ -195,6 +195,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 					report.nRecovered++;
 					district.nRecovered++;
 					break;
+				case dead:
+					report.nDead++;
+					district.nDead++;
+					break;
 				default:
 					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 			}
@@ -239,9 +243,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
+		log.warn("No of deceased persons={} / {}%", decimalFormat.format(t.nDead), 100 * t.nDead / t.nTotal());
 		log.warn("---");
 		log.warn("No of persons in quarantine={}", decimalFormat.format(t.nInQuarantine));
 		log.warn("100 persons={} agents", sampleSize * 100);
+		if (t.nDead + t.nRecovered > 0) {
+			log.warn("---");
+			log.warn("Infection mortality rate={}", (double) t.nDead / (t.nDead + t.nRecovered));
+		}
 		log.warn("===============================");
 
 		// Write all reports for each district
@@ -300,7 +309,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		writer.append(infectionEvents, array);
 	}
 
-	public void reportRecovery(double now, EpisimPerson person, double utilOfIllness) {
+	public void reportRecoveryOrDeath(double now, EpisimPerson person, double utilOfIllness) {
 		writer.append(recoveryEvents, new String[]{Double.toString(now), person.getPersonId().toString(), Double.toString(utilOfIllness)});
 	}
 
@@ -448,6 +457,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		public long nHospitalCumulative = 0;
 		public long nRecovered = 0;
 		public long nInQuarantine = 0;
+		public long nDead = 0;
 
 		/**
 		 * Constructor.
@@ -476,6 +486,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 			nHospitalCumulative *= factor;
 			nRecovered *= factor;
 			nInQuarantine *= factor;
+			nDead *= factor;
 		}
 	}
 }

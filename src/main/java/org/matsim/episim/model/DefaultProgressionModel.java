@@ -86,7 +86,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
 					person.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.recovered);
-					reporting.reportRecovery(now, person, -1.0);
+					reporting.reportRecoveryOrDeath(now, person, -0.0);
 				}
 				break;
 			case showingSymptoms:
@@ -104,7 +104,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 16) {
 					person.setDiseaseStatus(now, DiseaseStatus.recovered);
-					reporting.reportRecovery(now, person, -1.0);
+					reporting.reportRecoveryOrDeath(now, person, -0.0);
 				}
 				break;
 			case seriouslySick:
@@ -115,7 +115,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 					}
 				} else if (person.daysSince(DiseaseStatus.infectedButNotContagious, day) >= 23) {
 					person.setDiseaseStatus(now, DiseaseStatus.recovered);
-					reporting.reportRecovery(now, person, -1.0);
+					reporting.reportRecoveryOrDeath(now, person, -0.0);
 				}
 				break;
 			case critical:
@@ -123,7 +123,12 @@ public class DefaultProgressionModel implements ProgressionModel {
 					// (transition back to seriouslySick.  Note that this needs to be earlier than sSick->recovered, otherwise
 					// they stay in sSick.  Problem is that we need differentiation between intensive care beds and normal
 					// hospital beds.)
-					person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
+					if (rnd.nextDouble() < 0.18) {
+						person.setDiseaseStatus(now, DiseaseStatus.dead);
+						reporting.reportRecoveryOrDeath(now, person, -1.0);
+					} else {
+						person.setDiseaseStatus(now, DiseaseStatus.seriouslySick);
+					}
 				}
 				break;
 			case recovered:
@@ -131,6 +136,8 @@ public class DefaultProgressionModel implements ProgressionModel {
 				if (quarantineEnabled && person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
 					person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 
+				break;
+			case dead:
 				break;
 			default:
 				throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
