@@ -18,7 +18,7 @@ public class TransitionTest {
 
 		SplittableRandom rnd = new SplittableRandom(1);
 
-		Transition t = Transition.logNormalWithMean(10, 5);
+		Transition t = Transition.logNormalWithMeanAndStd(10, 5);
 		double[] values = new double[100_000];
 		for (int i = 0; i < values.length; i++) {
 			values[i] = t.getTransitionDay(rnd);
@@ -38,7 +38,7 @@ public class TransitionTest {
 
 		double[] values = new double[100_000];
 
-		Transition t = Transition.logNormalWithMedian(10, 3);
+		Transition t = Transition.logNormalWithMedianAndStd(10, 3);
 		for (int i = 0; i < values.length; i++) {
 			values[i] = t.getTransitionDay(rnd);
 		}
@@ -49,7 +49,7 @@ public class TransitionTest {
 		assertThat(new StandardDeviation().evaluate(values))
 				.isCloseTo(3, Offset.offset(0.1));
 
-		t = Transition.logNormalWithMedian(20, 5);
+		t = Transition.logNormalWithMedianAndStd(20, 5);
 		values = new double[100_000];
 		for (int i = 0; i < values.length; i++) {
 			values[i] = t.getTransitionDay(rnd);
@@ -67,7 +67,7 @@ public class TransitionTest {
 	public void sigmaZero() {
 
 		SplittableRandom rnd = new SplittableRandom(1);
-		Transition t = Transition.logNormalWithMean(10, 0);
+		Transition t = Transition.logNormalWithMeanAndStd(10, 0);
 		for (int i = 0; i < 1000; i++) {
 			assertThat(t.getTransitionDay(rnd)).isEqualTo(10);
 		}

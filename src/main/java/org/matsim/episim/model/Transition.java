@@ -35,13 +35,33 @@ public interface Transition {
 	}
 
 	/**
+	 * Same as {@link #logNormalWithMean(double, double)}
+	 */
+	static Transition logNormalWithMeanAndStd(double mean, double std) {
+		return logNormalWithMean(mean, std);
+	}
+
+	/**
+	 * Probabilistic state transition with log normal distribution.
+	 *
+	 * @param median desired median, i.e. exp(mu)
+	 * @param sigma  sigma parameter
+	 * @see LogNormalTransition
+	 */
+	static Transition logNormalWithMedian(double median, double sigma) {
+
+		double mu = Math.log(median);
+		return new LogNormalTransition(mu, sigma);
+	}
+
+	/**
 	 * Probabilistic state transition with log normal distribution.
 	 *
 	 * @param median desired median, i.e. exp(mu)
 	 * @param std    desired standard deviation
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormalWithMedian(double median, double std) {
+	static Transition logNormalWithMedianAndStd(double median, double std) {
 
 		double mu = Math.log(median);
 
@@ -50,7 +70,7 @@ public interface Transition {
 
 		// solve for sigma
 		// https://www.wolframalpha.com/input/?i=solve+e%5E%28mu+%2B+s+%2F+2%29+*+sqrt%28e%5Es+-+1%29+%3D+x+for+s
-		double ssigma = Math.log(0.5 * Math.exp(-2 * mu) * (Math.exp(2*mu) + Math.sqrt(Math.exp(4*mu) + 4 * Math.exp(2 * mu) * std * std)));
+		double ssigma = Math.log(0.5 * Math.exp(-2 * mu) * (Math.exp(2 * mu) + Math.sqrt(Math.exp(4 * mu) + 4 * Math.exp(2 * mu) * std * std)));
 
 		return new LogNormalTransition(mu, Math.sqrt(ssigma));
 	}
