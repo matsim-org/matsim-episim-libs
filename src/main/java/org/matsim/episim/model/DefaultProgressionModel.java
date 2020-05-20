@@ -37,6 +37,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
 	private final EpisimReporting reporting;
+	private final boolean quarantineEnabled;
 
 	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, EpisimReporting reporting) {
@@ -44,6 +45,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 		this.episimConfig = episimConfig;
 		this.tracingConfig = tracingConfig;
 		this.reporting = reporting;
+		this.quarantineEnabled = episimConfig.getPolicy().getBoolean("quarantine");
 	}
 
 	@Override
@@ -54,7 +56,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 			case susceptible:
 
 				// A healthy quarantined person is dismissed from quarantine after some time
-				if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.daysSinceQuarantine(day) > 14) {
+				if (quarantineEnabled && person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.daysSinceQuarantine(day) > 14) {
 					person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 				}
 
@@ -72,7 +74,9 @@ public class DefaultProgressionModel implements ProgressionModel {
 						// 80% show symptoms and go into quarantine
 						// Diamond Princess study: (only) 18% show no symptoms.
 						person.setDiseaseStatus(now, DiseaseStatus.showingSymptoms);
-						person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+						if (quarantineEnabled) {
+							person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+						}
 
 						// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
 						if (tracingConfig.getTracingDelay() == 0) {
@@ -124,7 +128,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 				break;
 			case recovered:
 				// one day after recovering person is released from quarantine
-				if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+				if (quarantineEnabled && person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
 					person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 
 				break;
@@ -184,7 +188,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
+		if (quarantineEnabled && p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 		}
 	}

@@ -118,6 +118,11 @@ public class FixedPolicy extends ShutdownPolicy {
 			return this.restrict(day, Restriction.none(), activities);
 		}
 
+		public ConfigBuilder quarantine(boolean quarantine) {
+			params.put("quarantine", quarantine);
+			return this;
+		}
+
 	}
 
 }

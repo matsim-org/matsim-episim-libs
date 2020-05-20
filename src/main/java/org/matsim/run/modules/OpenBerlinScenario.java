@@ -82,16 +82,17 @@ public class OpenBerlinScenario extends AbstractModule {
 		episimConfig.setCalibrationParameter(2);
 		//  episimConfig.setOutputEventsFolder("events");
 
-		long closingIteration = 14;
+		long closingIteration = 0;
 
 		addDefaultParams(episimConfig);
 
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-				.shutdown(closingIteration, "leisure", "edu")
-				.restrict(closingIteration, 0.2, "work", "business", "other")
-				.restrict(closingIteration, 0.3, "shop", "errands")
-				.restrict(closingIteration, 0.5, "pt")
-				.open(closingIteration + 60, DEFAULT_ACTIVITIES)
+				.restrict(closingIteration, 0.6, "leisure", "edu")
+				.restrict(closingIteration, 0.6, "work", "business", "other")
+				.restrict(closingIteration, 0.6, "shop", "errands")
+				.restrict(closingIteration, 0.6, "pt")
+				//.open(closingIteration + 60, DEFAULT_ACTIVITIES)
+				.quarantine(false)
 				.build()
 		);
 
