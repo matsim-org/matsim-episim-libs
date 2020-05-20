@@ -79,7 +79,7 @@ public class OpenBerlinScenario extends AbstractModule {
 
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.bln);
 		episimConfig.setSampleSize(0.01);
-		episimConfig.setCalibrationParameter(0.1);
+		episimConfig.setCalibrationParameter(0.0001);
 		//  episimConfig.setOutputEventsFolder("events");
 
 		long closingIteration = 0;
