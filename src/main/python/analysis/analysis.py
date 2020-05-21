@@ -20,17 +20,10 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-# base = 'zz_archive-2020-05-20/theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisureMid2_0.5__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0_usingMeans/'
-# base =                                       'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_3.0_0.0__crit_10.0_0.0__usingMeans/'
-# base =                                       'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0__usingMeans/'
-
-
-# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_3.0_0.0__crit_10.0_0.0/'
-# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_4.0_2.0__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
-# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_3.0_1.5__contag_2.0_1.0__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
-# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__alpha_1.2__leisMid2Base_0.4__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
-# base = 'theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-12__beta_0.7__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
-base = 'theta1.0E-6__ciHome0.75__ciQHome0.01__startDate_2020-02-12__beta_0.5__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'theta2.3E-6__ciHome0.75__ciQHome0.01__startDate_2020-02-15__unrestricted__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'theta2.3E-6__ciHome0.75__ciQHome0.01__startDate_2020-02-15__alpha_1.6__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
+# base = 'mxIAct10_theta1.0E-6_ciHome0.75_ciQHome0.01_startDate2020-02-18_unrestricted__infectedBNC3.0_1.5__contag1.5_0.75__wSymp8.0_0.0__sSick2.0_0.0__crit10.0_0.0/'
+base = 'mxIAct10_theta1.0E-6_ciHome0.75_ciQHome0.01_startDate2020-02-18_alpha1.2__infectedBNC3.0_1.5__contag1.5_0.75__wSymp8.0_0.0__sSick2.0_0.0__crit10.0_0.0/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -76,7 +69,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '', '', '','-','']) +
                   cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-rr3.plot(logy=True,grid=True)
+rr3.plot(logy=False,grid=True)
 pyplot.show()
 
 # In[]:

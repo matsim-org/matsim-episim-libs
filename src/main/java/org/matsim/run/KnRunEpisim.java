@@ -189,50 +189,50 @@ public class KnRunEpisim {
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
 
-				episimConfig.setStartDate( LocalDate.of( 2020, 2, 12) );
+				episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
 
 				SnzBerlinScenario25pct2020.addParams(episimConfig );
 
 				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
 
-				episimConfig.setCalibrationParameter(0.000_001);
+//				episimConfig.setMaxInteractions( 3 );
+//				episimConfig.setCalibrationParameter(0.000_002_3);
+				// (value for up to 3 interaction partners)
+
+				episimConfig.setMaxInteractions( 10 );
+				episimConfig.setCalibrationParameter( 0.000_001 );
+
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
 				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
 
 				// ---
 
-				double beta = 0.4;
+				double alpha = 1.2;
 				boolean unrestricted = false ;
 
 				if ( !unrestricted ){
-					episimConfig.setPolicy( FixedPolicy.class, EpisimUtils.createRestrictionsFromCSV( episimConfig, beta ).build() );
+					episimConfig.setPolicy( FixedPolicy.class, EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha ).build() );
 				}
 
 				episimConfig.setSampleSize(0.25);
 
 				StringBuilder strb = new StringBuilder();
-				strb.append( "theta" ).append( episimConfig.getCalibrationParameter() );
-				strb.append( "__ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-				strb.append( "__ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
-				strb.append( "__startDate_" ).append( episimConfig.getStartDate() );
+				strb.append( "mxIAct" ).append( episimConfig.getMaxInteractions() );
+				strb.append( "_theta" ).append( episimConfig.getCalibrationParameter() );
+				strb.append( "_ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
+				strb.append( "_ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
+				strb.append( "_startDate" ).append( episimConfig.getStartDate() );
 				if ( unrestricted ) {
-					strb.append( "__unrestricted" );
+					strb.append( "_unrestricted" );
 				} else{
-					strb.append( "__beta_" + beta );
+					strb.append( "_alpha" + alpha );
 				}
-//				strb.append( "__work_" + workMid + "_" + workEnd );
-//				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
-//				strb.append( "__eduLower_"  + eduLower);
-//				strb.append( "__eduHigher_" + eduHigher );
-//				strb.append( "__other" + other );
-//				strb.append( "__leisMid2Base_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2Base ) );
-//				strb.append("__midDateLeisure_").append( midDateLeisure );
-				strb.append( "__infectedBNC_" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
-				strb.append( "__contag_" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
-				strb.append( "__wSymp_" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
-				strb.append( "__sSick_" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
-				strb.append( "__crit_" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
+				strb.append( "__infectedBNC" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
+				strb.append( "__contag" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
+				strb.append( "__wSymp" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
+				strb.append( "__sSick" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
+				strb.append( "__crit" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
 				if ( usingMeans ) {
 					strb.append( "__usingMeans" );
 				}

@@ -454,6 +454,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 */
 		all
 	}
+	private int maxInteractions = 3;
+	public int getMaxInteractions(){
+		return maxInteractions;
+	}
+	public void setMaxInteractions( int maxInteractions ){
+		this.maxInteractions = maxInteractions;
+	}
 
 	/**
 	 * Parameter set for one activity type.
@@ -549,5 +556,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 	}
+
 
 }
