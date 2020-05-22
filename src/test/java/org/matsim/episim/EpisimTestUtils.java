@@ -46,6 +46,7 @@ public class EpisimTestUtils {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setSampleSize(1);
+		episimConfig.setMaxInteractions(10);
 		episimConfig.setCalibrationParameter(0.001);
 
 		// No container name should be the prefix of another one
