@@ -134,6 +134,10 @@ public class FixedPolicy extends ShutdownPolicy {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
 		}
 
+		public ConfigBuilder restrict(LocalDate date, Restriction restriction, String... activities) {
+			return restrict(date.toString(), restriction, activities);
+		}
+
 		/**
 		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
 		 */
