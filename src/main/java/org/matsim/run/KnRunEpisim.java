@@ -29,6 +29,7 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.OutputDirectoryLogging;
@@ -51,6 +52,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.SplittableRandom;
 
+import static java.lang.Math.max;
 import static org.matsim.episim.EpisimPerson.*;
 import static org.matsim.episim.model.Transition.logNormalWithMeanAndStd;
 import static org.matsim.episim.model.Transition.logNormalWithMedianAndStd;
@@ -99,11 +101,13 @@ public class KnRunEpisim {
 				if (config.getModules().size() == 0)
 					throw new IllegalArgumentException("Please provide a config module or binding.");
 
-				config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn );
+				config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore );
 
 				// save some time for not needed inputs
 				config.facilities().setInputFile(null);
 				config.vehicles().setVehiclesFile(null);
+
+				ConfigUtils.writeConfig( config, "before loading scenario" );
 
 				return ScenarioUtils.loadScenario(config );
 			}
@@ -151,15 +155,20 @@ public class KnRunEpisim {
 		 * Symptome bis Hospitalisierung: 4 bis 7
 		 *
 		 * Symptome bis Intensiv:
+		 *
+		 * ---
+		 *
+		 * Moduls is left of median: median = exp(mu); mode = exp(mu - sigma^2).  In consequence, the dynamically relevant times are shortened by
+		 * increasing sigma, without having to touch the median.
 		 */
 
 		boolean usingMeans = false ;
 
 		final double infectedToContag = 3.; // orig 4
-		final double infectedBNCStd = infectedToContag/2.;
+		final double infectedBNCStd = infectedToContag/1.;
 
 		final double contagToSymptoms = 1.5; // orig 2
-		final double contagiousStd = contagToSymptoms/2.;
+		final double contagiousStd = contagToSymptoms/1.;
 
 		// ---
 
@@ -185,6 +194,8 @@ public class KnRunEpisim {
 
 				episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz" );
 				config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz" );
+				episimConfig.setSampleSize(0.25);
+
 
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
@@ -200,41 +211,93 @@ public class KnRunEpisim {
 				// (value for up to 3 interaction partners)
 
 				episimConfig.setMaxInteractions( 10 );
-				episimConfig.setCalibrationParameter( 0.000_001 );
+				episimConfig.setCalibrationParameter( 0.000_000_7 );
 
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
 				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
-
 				// ---
 
-				double alpha = 1.2;
-				boolean unrestricted = false ;
+				RestrictionsType restrictionsType = RestrictionsType.frmSnz;
 
-				if ( !unrestricted ){
-					episimConfig.setPolicy( FixedPolicy.class, EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha ).build() );
+				final ExposureChangeType exposureChangeType = ExposureChangeType.inclHome;
+				final LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
+				final double changedExposure = 0.1;
+
+				final LocalDate triangleStartDate = LocalDate.of( 2020, 3, 12 );
+				double alpha = 1.6;
+
+				if ( restrictionsType==RestrictionsType.triang ) {
+					List<String> allActivitiesExceptHomeList = new ArrayList<>();
+					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
+						final String activityType = infectionParams.getParams().get( "activityType" );
+						if ( !activityType.contains( "home" ) ){
+							allActivitiesExceptHomeList.add( activityType );
+						}
+					}
+					final String[] actsExceptHome = allActivitiesExceptHomeList.toArray( new String[0] );
+					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
+					// ===
+					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
+					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
+					// exposure change:
+					restrictions.restrict(
+							dateOfExposureChange,
+							Restriction.of(1.,changedExposure,FaceMask.NONE ),
+							actsExceptHome );
+					// quick reductions towards lockdown:
+					restrictions.interpolate(
+							triangleStartDate,
+							date_2020_03_24,
+							Restriction.of(1.,changedExposure,FaceMask.NONE ),
+							remainingFractionAtMax,
+							actsExceptHome );
+					// slow re-opening:
+					restrictions.interpolate(
+							date_2020_03_24,
+							LocalDate.of( 2020,5,10 ),
+							Restriction.of(remainingFractionAtMax,changedExposure, FaceMask.CLOTH),
+							max( 0., 1.-alpha*0.2),
+							actsExceptHome );
+
+					// ===
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
+
+				} else if ( restrictionsType==RestrictionsType.frmSnz ){
+					FixedPolicy.ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, dateOfExposureChange, changedExposure );
+					if ( exposureChangeType==ExposureChangeType.inclHome ){
+						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure, FaceMask.NONE ), "home" );
+					}
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
 				}
 
-				episimConfig.setSampleSize(0.25);
 
 				StringBuilder strb = new StringBuilder();
-				strb.append( "mxIAct" ).append( episimConfig.getMaxInteractions() );
+				strb.append( restrictionsType.name() );
 				strb.append( "_theta" ).append( episimConfig.getCalibrationParameter() );
-				strb.append( "_ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-				strb.append( "_ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
-				strb.append( "_startDate" ).append( episimConfig.getStartDate() );
-				if ( unrestricted ) {
-					strb.append( "_unrestricted" );
-				} else{
-					strb.append( "_alpha" + alpha );
-				}
+//				strb.append( "_ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
+//				strb.append( "_ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
 				strb.append( "__infectedBNC" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
 				strb.append( "__contag" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
-				strb.append( "__wSymp" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
-				strb.append( "__sSick" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
-				strb.append( "__crit" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
-				if ( usingMeans ) {
-					strb.append( "__usingMeans" );
+//				strb.append( "__wSymp" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
+//				strb.append( "__sSick" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
+//				strb.append( "__crit" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
+				strb.append( "_startDate" ).append( episimConfig.getStartDate() );
+				strb.append( "_chExposure" + changedExposure );
+				strb.append( "_@" + dateOfExposureChange );
+				strb.append( "_" + exposureChangeType.name() );
+				switch( restrictionsType ) {
+					case unrestr:
+						break;
+					case triang:
+						strb.append( "_StartBehavChange" + triangleStartDate );
+						strb.append( "_alpha" + alpha );
+						break;
+					case frmSnz:
+						strb.append( "_alpha" + alpha );
+						break;
+					default:
+						throw new IllegalStateException( "Unexpected value: " + restrictionsType );
 				}
 				config.controler().setOutputDirectory( strb.toString() );
 
@@ -277,5 +340,8 @@ public class KnRunEpisim {
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
+
+	enum RestrictionsType {unrestr, triang, frmSnz }
+	enum ExposureChangeType{ exclHome, inclHome }
 
 }

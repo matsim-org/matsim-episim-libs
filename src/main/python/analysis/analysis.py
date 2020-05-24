@@ -20,36 +20,55 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-# base = 'theta2.3E-6__ciHome0.75__ciQHome0.01__startDate_2020-02-15__unrestricted__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
-# base = 'theta2.3E-6__ciHome0.75__ciQHome0.01__startDate_2020-02-15__alpha_1.6__infectedBNC_3.0_1.5__contag_1.5_0.75__wSymp_8.0_0.0__sSick_2.0_0.0__crit_10.0_0.0/'
-# base = 'mxIAct10_theta1.0E-6_ciHome0.75_ciQHome0.01_startDate2020-02-18_unrestricted__infectedBNC3.0_1.5__contag1.5_0.75__wSymp8.0_0.0__sSick2.0_0.0__crit10.0_0.0/'
-base = 'mxIAct10_theta1.0E-6_ciHome0.75_ciQHome0.01_startDate2020-02-18_alpha1.2__infectedBNC3.0_1.5__contag1.5_0.75__wSymp8.0_0.0__sSick2.0_0.0__crit10.0_0.0/'
+# base = 'theta7.0E-7_startDate2020-02-15_unrestricted__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_unrestricted_chExpDate2020-03-05_chExposure0.5__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_alpha2.5_chExposure0.5_@2020-03-05__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_alpha1.5_chExposure0.5__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_alpha1.3_chExposure0.8__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_alpha1.2_chExposure0.7__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_chExposure0.7_@2020-03-02_alpha1.2_StartBehavChange2020-03-12__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-15_chExposure0.5_@2020-03-02_alpha1.4_StartBehavChange2020-03-12__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'theta7.0E-7_startDate2020-02-12_chExposure0.5_@2020-03-02_alpha0.0_StartBehavChange2020-03-12__infectedBNC3.0_3.0__contag1.5_1.5/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.5_@2020-03-02_alpha1.5/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.2_@2020-03-04_alpha2.0/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-04_alpha1.5/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-10_alpha2.0/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-14_chExposure0.1_@2020-03-10_alpha1.6/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_alpha1.6/'
+base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_inclHome_alpha1.6/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
 
-# --
-
 infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
-
 nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
-
 nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
 
-rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
+# rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
 
-rr3 = pd.concat([cc['cases'], nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+fit = pd.Series(1 * np.exp(np.arange(0, 21, 1) * np.log(2.) / 2.8))
+fit.index = pd.date_range(start="2020-02-20", periods=fit.size)
+
+fit2 = pd.Series(60 * np.exp(np.arange(0, 30, 1) * np.log(2.) / 8))
+fit2.index = pd.date_range(start="2020-03-01", periods=30)
+
+fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
+fit3.index = pd.date_range(start="2020-03-01", periods=80)
+
+rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
-default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple']) +
-                  cycler(linestyle=['', '', '', '-','-','']) +
-                  cycler(marker=['.','','o','',",",'']))
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
+                  cycler(linestyle=['', '-', '', '','-','-','-']) +
+                  cycler(marker=['','','','o','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,400)
-pyplot.axvline(pd.to_datetime('2020-03-19'), color='red', linestyle='-', lw=1)
+# axes.set_ylim(0,250)
+pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
 pyplot.show()
 
 # In[]:
@@ -69,7 +88,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '', '', '','-','']) +
                   cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-rr3.plot(logy=False,grid=True)
+rr3.plot(logy=True,grid=True)
 pyplot.show()
 
 # In[]:
