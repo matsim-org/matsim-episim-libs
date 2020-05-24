@@ -27,7 +27,9 @@ import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -131,19 +133,40 @@ public final class EpisimUtils {
 	 * Weekends and bank holidays in 2020 are interpolated.
 	 * 
 	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha ) throws IOException {
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV( EpisimConfigGroup episimConfig, double alpha, LocalDate changeDate,
+									   double changedExposure ) throws IOException {
 		
 		HashSet<String> activities = new HashSet<String>();
 		
 		HashSet<String> bankHolidays = new HashSet<String>();
+		bankHolidays.add("2020-04-09"); // one before Karfreitag
 		bankHolidays.add("2020-04-10"); //Karfreitag
 		bankHolidays.add("2020-04-13"); //Ostermontag
+		bankHolidays.add("2020-04-30"); // one before Tag der Arbeit
 		bankHolidays.add("2020-05-01"); //Tag der Arbeit
+		bankHolidays.add("2020-05-07"); // one before Tag der Befreiung
 		bankHolidays.add("2020-05-08"); //Tag der Befreiung
+		bankHolidays.add("2020-05-20"); // one before Himmelfahrt
 		bankHolidays.add("2020-05-21"); //Himmelfahrt
 		bankHolidays.add("2020-05-22"); //Brueckentag
 		bankHolidays.add("2020-06-01"); //Pfingsten
-		
+
+		bankHolidays.add("2020-05-01");
+		bankHolidays.add("2020-05-02");
+		bankHolidays.add("2020-05-03");
+		bankHolidays.add("2020-05-04");
+		bankHolidays.add("2020-05-05");
+		bankHolidays.add("2020-05-06");
+		bankHolidays.add("2020-05-07");
+		bankHolidays.add("2020-05-08");
+		bankHolidays.add("2020-05-09");
+		bankHolidays.add("2020-05-10");
+		bankHolidays.add("2020-05-11");
+		bankHolidays.add("2020-05-12");
+		bankHolidays.add("2020-05-13");
+		bankHolidays.add("2020-05-14");
+		bankHolidays.add("2020-05-15");
+
 		for ( ConfigGroup a : episimConfig.getParameterSets().get("infectionParams")) {
 			activities.add(a.getParams().get("activityType"));
 		}
@@ -157,6 +180,7 @@ public final class EpisimUtils {
 		boolean didRestriction = true;
 		boolean doInterpolation = false; // == "interpolationOverWeekendsAndHolidays"?  yyyy  kai, may'20
 		String lastDate = null;
+		double exposure = 1.;
 		for( CSVRecord record : records ){
 			
 			String date = record.get("date");
@@ -164,10 +188,15 @@ public final class EpisimUtils {
 			String m = date.substring(4, 6);
 			String d = date.substring(6, 8);
 			String corrDate = y + "-" + m + "-" + d;
+
+			if ( LocalDate.parse(corrDate).isEqual( changeDate ) || LocalDate.parse( corrDate ).isAfter( changeDate ) ) {
+				exposure = changedExposure;
+			}
 			
 			doInterpolation = false;
 			
-			if (!didRestriction && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5 && !bankHolidays.contains(corrDate)) {
+			if (!didRestriction && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
+				// also exclude fridays.  also see below
 				doInterpolation = true;	
 			}
 			
@@ -181,9 +210,10 @@ public final class EpisimUtils {
 					if (remainingFraction > 1) remainingFraction = 1;
 					
 					if (!activity.contains("home")) {
-						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 5 && !bankHolidays.contains(corrDate)) {
+						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
+							// also exclude fridays.  also see above
 							double reduction = Math.min( 1., alpha * (1. - remainingFraction) );
-							builder.restrict(corrDate, 1.-reduction, activity);
+							builder.restrict(corrDate, Restriction.of( 1.-reduction, exposure, FaceMask.NONE), activity);
 							
 							if (doInterpolation) {
 								// yy why can't you use the interpolation facility provided by the framework?  kai, may'20
@@ -191,7 +221,7 @@ public final class EpisimUtils {
 								for (int jj = 1; jj<ii; jj++ ) {
 									double interpolatedRemainingFraction = lastRestrictions.get( activity ) + (remainingFraction - lastRestrictions.get( activity )) * (1.0 * jj / (1.0 * ii)) ;
 									double interpolatedReduction = Math.min( 1., alpha * (1. - interpolatedRemainingFraction));
-									builder.restrict(LocalDate.parse(lastDate ).plusDays(jj ), 1.-interpolatedReduction, activity );
+									builder.restrict(LocalDate.parse(lastDate ).plusDays(jj ), Restriction.of(1.-interpolatedReduction, exposure, FaceMask.NONE ), activity );
 									LocalDate.parse(lastDate).plusDays(jj);
 								}
 							}
