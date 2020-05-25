@@ -97,7 +97,7 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Draw a gaussian distributed random number (mean=0, var=1)
+	 * Draw a gaussian distributed random number (mean=0, var=1).
 	 *
 	 * @param rnd splittable random instance
 	 * @see BitsStreamGenerator#nextGaussian()
@@ -126,18 +126,18 @@ public final class EpisimUtils {
 
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
 	}
-	
+
 	/**
-	 * Creates restrictions from csv from Senozon data. 
+	 * Creates restrictions from csv from Senozon data.
 	 * Restrictions at educational facilites are created manually.
 	 * Weekends and bank holidays in 2020 are interpolated.
-	 * 
+	 *
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV( EpisimConfigGroup episimConfig, double alpha, LocalDate changeDate,
 									   double changedExposure ) throws IOException {
-		
+
 		HashSet<String> activities = new HashSet<String>();
-		
+
 		HashSet<String> bankHolidays = new HashSet<String>();
 		bankHolidays.add("2020-04-09"); // one before Karfreitag
 		bankHolidays.add("2020-04-10"); //Karfreitag
@@ -170,19 +170,19 @@ public final class EpisimUtils {
 		for ( ConfigGroup a : episimConfig.getParameterSets().get("infectionParams")) {
 			activities.add(a.getParams().get("activityType"));
 		}
-		
+
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
 		Reader in = new FileReader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv" );
 		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter( '\t' ).parse( in );
-		
+
 		HashMap<String, Double> lastRestrictions = new HashMap<String, Double>();
 		boolean didRestriction = true;
 		boolean doInterpolation = false; // == "interpolationOverWeekendsAndHolidays"?  yyyy  kai, may'20
 		String lastDate = null;
 		double exposure = 1.;
 		for( CSVRecord record : records ){
-			
+
 			String date = record.get("date");
 			String y = date.substring(0, 4);
 			String m = date.substring(4, 6);
@@ -192,29 +192,29 @@ public final class EpisimUtils {
 			if ( LocalDate.parse(corrDate).isEqual( changeDate ) || LocalDate.parse( corrDate ).isAfter( changeDate ) ) {
 				exposure = changedExposure;
 			}
-			
+
 			doInterpolation = false;
-			
+
 			if (!didRestriction && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
 				// also exclude fridays.  also see below
-				doInterpolation = true;	
+				doInterpolation = true;
 			}
-			
+
 			didRestriction = false;
-			
+
 			for (String activity : activities) {
 				if (record.toMap().keySet().contains(activity)) {
 
-					double remainingFraction = 1. + (Integer.parseInt(record.get(activity)) / 100.); 
-					
+					double remainingFraction = 1. + (Integer.parseInt(record.get(activity)) / 100.);
+
 					if (remainingFraction > 1) remainingFraction = 1;
-					
+
 					if (!activity.contains("home")) {
 						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
 							// also exclude fridays.  also see above
 							double reduction = Math.min( 1., alpha * (1. - remainingFraction) );
 							builder.restrict(corrDate, Restriction.of( 1.-reduction, exposure, FaceMask.NONE), activity);
-							
+
 							if (doInterpolation) {
 								// yy why can't you use the interpolation facility provided by the framework?  kai, may'20
 								int ii = LocalDate.parse(lastDate).until(LocalDate.parse(corrDate)).getDays();
@@ -225,26 +225,26 @@ public final class EpisimUtils {
 									LocalDate.parse(lastDate).plusDays(jj);
 								}
 							}
-							
+
 							lastRestrictions.putIfAbsent(activity, remainingFraction);
 							lastRestrictions.replace(activity, remainingFraction);
 							didRestriction = true;
-							
+
 						}
-						
+
 					}
-					
+
 				}
-				
+
 			}
-			
+
 			if (didRestriction) lastDate = corrDate;
-			
+
 		}
-		
+
 		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 		.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		
+
 		return builder;
 	}
 

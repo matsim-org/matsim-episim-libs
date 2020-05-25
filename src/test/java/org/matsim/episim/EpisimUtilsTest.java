@@ -1,15 +1,14 @@
 package org.matsim.episim;
 
-import com.typesafe.config.Config;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
 import org.apache.commons.math3.util.FastMath;
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.assertj.core.data.Percentage;
-import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
-import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.IOException;
@@ -18,7 +17,7 @@ import java.util.SplittableRandom;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class EpisimUtilsTest {
-	private static final Logger log = Logger.getLogger( EpisimUtilsTest.class );
+	private static final Logger log = LogManager.getLogger(EpisimUtilsTest.class);
 
 	private static final Percentage OFFSET = Percentage.withPercentage(1.5);
 
@@ -47,12 +46,14 @@ public class EpisimUtilsTest {
 		assertThat(std * std).isCloseTo((FastMath.exp(ssigma) - 1) * FastMath.exp(2 * mu + ssigma), OFFSET);
 
 	}
+
+	@Ignore("not implemented")
 	@Test
-	public void testCreateRestrictionsFromCSV() throws IOException{
+	public void testCreateRestrictionsFromCSV() throws IOException {
 
 		EpisimConfigGroup episimConfig = new EpisimConfigGroup();
 
-		SnzBerlinScenario25pct2020.addParams(episimConfig );
+		SnzBerlinScenario25pct2020.addParams(episimConfig);
 
 //		FixedPolicy.ConfigBuilder result = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, LocalDate.of( 2020, 3, 1 ), 1. );
 //		Config result2 = result.build();
