@@ -16,16 +16,16 @@ class KNTestLognormal{
 	public static void main( String[] args ) throws IOException{
 
 		double alpha = Math.exp(5-1);
-//		Transition abc = Transition.logNormalWithMedianAndStd( 10., 8. );
-		Transition abc = Transition.logNormalWithMean( 10., 8. );
-//		Transition def = Transition.logNormalWithMedianAndStd( 2., alpha*2 );
+		Transition abc = Transition.logNormalWithMedianAndStd( 3., 3 );
+//		Transition abc = Transition.logNormalWithMean( 10., 8. );
+		Transition def = Transition.logNormalWithMedianAndStd( 1.5, 1.5 );
 		SplittableRandom rnd = new SplittableRandom();
 
 		NavigableMap<Integer,Double> map = new TreeMap<>();
 
 		final int nCases = 10000;
 		for ( int ii = 0 ; ii< nCases ; ii++ ){
-			int result = abc.getTransitionDay( rnd ) ;//+ def.getTransitionDay( rnd );
+			int result = abc.getTransitionDay( rnd ) + def.getTransitionDay( rnd );
 			Double prev = map.get( result );
 			if ( prev==null ) {
 				map.put( result, 1.);

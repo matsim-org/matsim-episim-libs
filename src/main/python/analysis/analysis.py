@@ -20,28 +20,9 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-# base = 'theta7.0E-7_startDate2020-02-15_unrestricted__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_unrestricted_chExpDate2020-03-05_chExposure0.5__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_alpha2.5_chExposure0.5_@2020-03-05__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_alpha1.5_chExposure0.5__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_alpha1.3_chExposure0.8__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_alpha1.2_chExposure0.7__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_chExposure0.7_@2020-03-02_alpha1.2_StartBehavChange2020-03-12__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-15_chExposure0.5_@2020-03-02_alpha1.4_StartBehavChange2020-03-12__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'theta7.0E-7_startDate2020-02-12_chExposure0.5_@2020-03-02_alpha0.0_StartBehavChange2020-03-12__infectedBNC3.0_3.0__contag1.5_1.5/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.5_@2020-03-02_alpha1.5/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.2_@2020-03-04_alpha2.0/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-04_alpha1.5/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-10_alpha2.0/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-14_chExposure0.1_@2020-03-10_alpha1.6/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_alpha1.6/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_inclHome_alpha1.6/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_inclHome_alpha2.0/'
-# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_exclHome_StartBehavChange2020-03-12_alpha2.0/'
-# base = 'triang_startDate2020-02-15_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_chExposure1.0_@2020-03-10_exclHome_triangStart2020-03-08_alpha2.0/'
-# base = 'triang_startDate2020-02-15_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_chExposure0.4_@2020-03-10_exclHome_triangStart2020-03-08_alpha1.3/'
-base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.4_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
-# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-10_alpha2.0/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.3_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.4_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])

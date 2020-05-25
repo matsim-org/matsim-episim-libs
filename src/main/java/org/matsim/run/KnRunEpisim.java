@@ -233,21 +233,21 @@ public class KnRunEpisim {
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
 
 					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
-					double changedExposure = 0.3;
+					double changedExposure = 0.5;
 
 					LocalDate triangleStartDate = LocalDate.of( 2020, 3, 8 );
 					double alpha = 1.2;
 
 					final FaceMask mask = FaceMask.NONE;
 
-					List<String> allActivitiesExceptHomeList = new ArrayList<>();
+					List<String> allActivitiesExceptHomeAndEduList = new ArrayList<>();
 					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
 						final String activityType = infectionParams.getParams().get( "activityType" );
 						if ( !activityType.contains( "home" ) && !activityType.contains( "educ_" ) ){
-							allActivitiesExceptHomeList.add( activityType );
+							allActivitiesExceptHomeAndEduList.add( activityType );
 						}
 					}
-					final String[] actsExceptHome = allActivitiesExceptHomeList.toArray( new String[0] );
+					final String[] actsExceptHomeAndEdu = allActivitiesExceptHomeAndEduList.toArray( new String[0] );
 					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
 					// ===
 					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
@@ -255,18 +255,18 @@ public class KnRunEpisim {
 					// exposure change:
 					restrictions.restrict( dateOfExposureChange,
 							Restriction.of(1.,changedExposure,FaceMask.NONE ),
-							actsExceptHome );
+							actsExceptHomeAndEdu );
 					// quick reductions towards lockdown:
 					restrictions.interpolate( triangleStartDate, date_2020_03_24,
 							Restriction.of(1.,changedExposure,FaceMask.NONE ), Restriction.of(remainingFractionAtMax),
-							actsExceptHome );
+							actsExceptHomeAndEdu );
 					// school closures:
 					restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 					       .restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 					// slow re-opening:
 					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,10 ),
 							Restriction.of(remainingFractionAtMax,changedExposure, mask ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
-							actsExceptHome );
+							actsExceptHomeAndEdu );
 
 					// ===
 					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
