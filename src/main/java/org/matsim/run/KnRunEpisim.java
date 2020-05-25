@@ -162,8 +162,6 @@ public class KnRunEpisim {
 		 * increasing sigma, without having to touch the median.
 		 */
 
-		boolean usingMeans = false ;
-
 		final double infectedToContag = 3.; // orig 4
 		final double infectedBNCStd = infectedToContag/1.;
 
@@ -200,15 +198,12 @@ public class KnRunEpisim {
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
 
-				episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
-
 				SnzBerlinScenario25pct2020.addParams(episimConfig );
 
 				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
 
 //				episimConfig.setMaxInteractions( 3 );
 //				episimConfig.setCalibrationParameter(0.000_002_3);
-				// (value for up to 3 interaction partners)
 
 				episimConfig.setMaxInteractions( 10 );
 				episimConfig.setCalibrationParameter( 0.000_000_7 );
@@ -218,59 +213,9 @@ public class KnRunEpisim {
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.frmSnz;
+				RestrictionsType restrictionsType = RestrictionsType.triang;
 
-				final ExposureChangeType exposureChangeType = ExposureChangeType.inclHome;
-				final LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
-				final double changedExposure = 0.1;
-
-				final LocalDate triangleStartDate = LocalDate.of( 2020, 3, 12 );
-				double alpha = 1.6;
-
-				if ( restrictionsType==RestrictionsType.triang ) {
-					List<String> allActivitiesExceptHomeList = new ArrayList<>();
-					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
-						final String activityType = infectionParams.getParams().get( "activityType" );
-						if ( !activityType.contains( "home" ) ){
-							allActivitiesExceptHomeList.add( activityType );
-						}
-					}
-					final String[] actsExceptHome = allActivitiesExceptHomeList.toArray( new String[0] );
-					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
-					// ===
-					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
-					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
-					// exposure change:
-					restrictions.restrict(
-							dateOfExposureChange,
-							Restriction.of(1.,changedExposure,FaceMask.NONE ),
-							actsExceptHome );
-					// quick reductions towards lockdown:
-					restrictions.interpolate(
-							triangleStartDate,
-							date_2020_03_24,
-							Restriction.of(1.,changedExposure,FaceMask.NONE ),
-							remainingFractionAtMax,
-							actsExceptHome );
-					// slow re-opening:
-					restrictions.interpolate(
-							date_2020_03_24,
-							LocalDate.of( 2020,5,10 ),
-							Restriction.of(remainingFractionAtMax,changedExposure, FaceMask.CLOTH),
-							max( 0., 1.-alpha*0.2),
-							actsExceptHome );
-
-					// ===
-					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
-
-				} else if ( restrictionsType==RestrictionsType.frmSnz ){
-					FixedPolicy.ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, dateOfExposureChange, changedExposure );
-					if ( exposureChangeType==ExposureChangeType.inclHome ){
-						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure, FaceMask.NONE ), "home" );
-					}
-					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
-				}
-
+				final ExposureChangeType exposureChangeType = ExposureChangeType.exclHome;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( restrictionsType.name() );
@@ -282,23 +227,83 @@ public class KnRunEpisim {
 //				strb.append( "__wSymp" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
 //				strb.append( "__sSick" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
 //				strb.append( "__crit" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
-				strb.append( "_startDate" ).append( episimConfig.getStartDate() );
-				strb.append( "_chExposure" + changedExposure );
-				strb.append( "_@" + dateOfExposureChange );
 				strb.append( "_" + exposureChangeType.name() );
-				switch( restrictionsType ) {
-					case unrestr:
-						break;
-					case triang:
-						strb.append( "_StartBehavChange" + triangleStartDate );
-						strb.append( "_alpha" + alpha );
-						break;
-					case frmSnz:
-						strb.append( "_alpha" + alpha );
-						break;
-					default:
-						throw new IllegalStateException( "Unexpected value: " + restrictionsType );
+
+				if ( restrictionsType==RestrictionsType.triang ) {
+					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
+
+					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
+					double changedExposure = 0.3;
+
+					LocalDate triangleStartDate = LocalDate.of( 2020, 3, 8 );
+					double alpha = 1.2;
+
+					final FaceMask mask = FaceMask.NONE;
+
+					List<String> allActivitiesExceptHomeList = new ArrayList<>();
+					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
+						final String activityType = infectionParams.getParams().get( "activityType" );
+						if ( !activityType.contains( "home" ) && !activityType.contains( "educ_" ) ){
+							allActivitiesExceptHomeList.add( activityType );
+						}
+					}
+					final String[] actsExceptHome = allActivitiesExceptHomeList.toArray( new String[0] );
+					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
+					// ===
+					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
+					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
+					// exposure change:
+					restrictions.restrict( dateOfExposureChange,
+							Restriction.of(1.,changedExposure,FaceMask.NONE ),
+							actsExceptHome );
+					// quick reductions towards lockdown:
+					restrictions.interpolate( triangleStartDate, date_2020_03_24,
+							Restriction.of(1.,changedExposure,FaceMask.NONE ), remainingFractionAtMax,
+							actsExceptHome );
+					// school closures:
+					restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+					       .restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+					// slow re-opening:
+					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,10 ),
+							Restriction.of(remainingFractionAtMax,changedExposure, mask ), max( 0., 1.-alpha*0.2 ),
+							actsExceptHome );
+
+					// ===
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
+
+					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
+
+					strb.append( "_chExposure" ).append( changedExposure );
+					strb.append( "_@" ).append( dateOfExposureChange );
+
+					strb.append( "_triangStart" ).append( triangleStartDate );
+					strb.append( "_alpha" ).append( alpha );
+
+					strb.append( "_masks_" ).append( mask.name() );
+
+				} else if ( restrictionsType==RestrictionsType.frmSnz ){
+					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
+
+					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
+					double changedExposure = 0.1;
+
+					double alpha = 2.;
+
+					FixedPolicy.ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, dateOfExposureChange, changedExposure );
+					if ( exposureChangeType==ExposureChangeType.inclHome ){
+						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure, FaceMask.NONE ), "home" );
+					}
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
+
+					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
+
+					strb.append( "_chExposure" + changedExposure );
+					strb.append( "_@" + dateOfExposureChange );
+
+					strb.append( "_alpha" + alpha );
 				}
+
+
 				config.controler().setOutputDirectory( strb.toString() );
 
 				return config;
@@ -319,19 +324,11 @@ public class KnRunEpisim {
 		ProgressionModel pm = injector.getInstance( ProgressionModel.class );
 		if ( pm instanceof DefaultProgressionModel ) {
 			final DefaultProgressionModel defaultProgressionModel = (DefaultProgressionModel) pm;
-			if ( usingMeans ){
-				defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMeanAndStd( infectedToContag, infectedBNCStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMeanAndStd( contagToSymptoms, contagiousStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMeanAndStd( SymptomsToSSick, withSymptomsStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMeanAndStd( sStickToCritical, seriouslySickStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMeanAndStd( criticalToBetter, criticalStd ) );
-			} else {
-				defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( infectedToContag, infectedBNCStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( contagToSymptoms, contagiousStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( SymptomsToSSick, withSymptomsStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( sStickToCritical, seriouslySickStd ) );
-				defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( criticalToBetter, criticalStd ) );
-			}
+			defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( infectedToContag, infectedBNCStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( contagToSymptoms, contagiousStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( SymptomsToSSick, withSymptomsStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( sStickToCritical, seriouslySickStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( criticalToBetter, criticalStd ) );
 		}
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);

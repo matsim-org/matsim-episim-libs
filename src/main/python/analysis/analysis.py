@@ -35,7 +35,13 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-10_alpha2.0/'
 # base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-14_chExposure0.1_@2020-03-10_alpha1.6/'
 # base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_alpha1.6/'
-base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_inclHome_alpha1.6/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_inclHome_alpha1.6/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_inclHome_alpha2.0/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-15_chExposure0.1_@2020-03-10_exclHome_StartBehavChange2020-03-12_alpha2.0/'
+# base = 'triang_startDate2020-02-15_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_chExposure1.0_@2020-03-10_exclHome_triangStart2020-03-08_alpha2.0/'
+# base = 'triang_startDate2020-02-15_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_chExposure0.4_@2020-03-10_exclHome_triangStart2020-03-08_alpha1.3/'
+base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.4_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'frmSnz_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_startDate2020-02-12_chExposure0.1_@2020-03-10_alpha2.0/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -47,7 +53,7 @@ nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulati
 
 # rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
 
-fit = pd.Series(1 * np.exp(np.arange(0, 21, 1) * np.log(2.) / 2.8))
+fit = pd.Series(1 * np.exp(np.arange(0, 30, 1) * np.log(2.) / 2.8))
 fit.index = pd.date_range(start="2020-02-20", periods=fit.size)
 
 fit2 = pd.Series(60 * np.exp(np.arange(0, 30, 1) * np.log(2.) / 8))
@@ -61,8 +67,8 @@ rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nSho
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
-                  cycler(linestyle=['', '-', '', '','-','-','-']) +
-                  cycler(marker=['','','','o','','','']))
+                  cycler(linestyle=['', '', '', '','-','-','-']) +
+                  cycler(marker=['','','.','','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 # axes.set_ylim(0,250)
