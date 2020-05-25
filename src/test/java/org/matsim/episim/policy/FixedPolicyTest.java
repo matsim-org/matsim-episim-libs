@@ -5,6 +5,7 @@ import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.model.FaceMask;
 
 import java.time.LocalDate;
 
@@ -39,18 +40,51 @@ public class FixedPolicyTest {
 	}
 
 	@Test
+	public void merge() {
+
+		FixedPolicy.ConfigBuilder config = FixedPolicy.config()
+				.restrict(1, Restriction.of(0.9), "home", "work")
+				.restrict(1, Restriction.ofMask(FaceMask.CLOTH), "work")
+				.restrict(2, Restriction.ofExposure(0.5), "home", "work")
+				.restrict(2, Restriction.of(0.4), "work");
+
+		FixedPolicy policy = new FixedPolicy(config.build());
+
+		policy.updateRestrictions(EpisimTestUtils.createReport("--", 1), r);
+
+		assertThat(r.get("home").getRemainingFraction()).isEqualTo(0.9);
+		assertThat(r.get("home").getExposure()).isEqualTo(1);
+
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
+		assertThat(r.get("work").getExposure()).isEqualTo(1);
+		assertThat(r.get("work").getRequireMask()).isEqualTo(FaceMask.CLOTH);
+
+		policy.updateRestrictions(EpisimTestUtils.createReport("--", 2), r);
+
+		assertThat(r.get("home").getRemainingFraction()).isEqualTo(0.9);
+		assertThat(r.get("home").getExposure()).isEqualTo(0.5);
+
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.4);
+		assertThat(r.get("work").getExposure()).isEqualTo(0.5);
+
+	}
+
+	@Test
 	public void interpolate() {
 
 		FixedPolicy.ConfigBuilder config = FixedPolicy.config()
 				.interpolate(
 						LocalDate.of(2020, 3, 20),
 						LocalDate.of(2020, 3, 30),
-						Restriction.of(0.95), 0.45, "work"
+						Restriction.of(0.95), Restriction.of(0.45),
+						"work"
 				)
 				.interpolate(
 						LocalDate.of(2020, 3, 31),
 						LocalDate.of(2020, 4, 10),
-						Restriction.of(0.5), 1, "work"
+						Restriction.of(0.5, 1.0, FaceMask.CLOTH),
+						Restriction.of(1, 0.5, FaceMask.CLOTH),
+						"work"
 				);
 
 		FixedPolicy policy = new FixedPolicy(config.build());
@@ -65,8 +99,13 @@ public class FixedPolicyTest {
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-03-30", -1), r);
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.45);
 
+		policy.updateRestrictions(EpisimTestUtils.createReport("2020-03-31", -1), r);
+		assertThat(r.get("work").getExposure()).isEqualTo(1);
+		assertThat(r.get("work").getRequireMask()).isEqualTo(FaceMask.CLOTH);
+
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-04-10", -1), r);
 		assertThat(r.get("work").getRemainingFraction()).isCloseTo(1, OFFSET);
+		assertThat(r.get("work").getExposure()).isCloseTo(0.5, OFFSET);
 
 
 	}

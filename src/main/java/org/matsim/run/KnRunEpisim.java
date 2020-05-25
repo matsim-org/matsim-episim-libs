@@ -258,14 +258,14 @@ public class KnRunEpisim {
 							actsExceptHome );
 					// quick reductions towards lockdown:
 					restrictions.interpolate( triangleStartDate, date_2020_03_24,
-							Restriction.of(1.,changedExposure,FaceMask.NONE ), remainingFractionAtMax,
+							Restriction.of(1.,changedExposure,FaceMask.NONE ), Restriction.of(remainingFractionAtMax),
 							actsExceptHome );
 					// school closures:
 					restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 					       .restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 					// slow re-opening:
 					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,10 ),
-							Restriction.of(remainingFractionAtMax,changedExposure, mask ), max( 0., 1.-alpha*0.2 ),
+							Restriction.of(remainingFractionAtMax,changedExposure, mask ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
 							actsExceptHome );
 
 					// ===

@@ -42,16 +42,16 @@ public class SnzBerlinScenario extends AbstractSnzScenario {
 	public static FixedPolicy.ConfigBuilder basePolicy() {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
-				.interpolate("2020-03-07", "2020-03-14", Restriction.of(1), 0.8, "work")
-				.interpolate("2020-03-14", "2020-03-21", Restriction.of(0.8), 0.5, "work")
-				.interpolate("2020-03-21", "2020-03-28", Restriction.of(0.5), 0.45, "work")
-				.interpolate("2020-04-06", "2020-04-20", Restriction.of(0.45), 0.55, "work")
+				.interpolate("2020-03-07", "2020-03-14", Restriction.of(1), Restriction.of(0.8), "work")
+				.interpolate("2020-03-14", "2020-03-21", Restriction.of(0.8), Restriction.of(0.5), "work")
+				.interpolate("2020-03-21", "2020-03-28", Restriction.of(0.5), Restriction.of(0.45), "work")
+				.interpolate("2020-04-06", "2020-04-20", Restriction.of(0.45), Restriction.of(0.55), "work")
 
-				.interpolate("2020-03-15", "2020-03-29", Restriction.of(1), 0.1, "leisure")
+				.interpolate("2020-03-15", "2020-03-29", Restriction.of(1), Restriction.of(0.1), "leisure")
 
-				.interpolate("2020-02-29", "2020-03-07", Restriction.of(1), 0.95, "shopping", "errands", "business")
-				.interpolate("2020-03-07", "2020-03-14", Restriction.of(0.95), 0.85, "shopping", "errands", "business")
-				.interpolate("2020-03-14", "2020-03-21", Restriction.of(0.85), 0.4, "shopping", "errands", "business")
+				.interpolate("2020-02-29", "2020-03-07", Restriction.of(1), Restriction.of(0.95), "shopping", "errands", "business")
+				.interpolate("2020-03-07", "2020-03-14", Restriction.of(0.95), Restriction.of(0.85), "shopping", "errands", "business")
+				.interpolate("2020-03-14", "2020-03-21", Restriction.of(0.85), Restriction.of(0.4), "shopping", "errands", "business")
 
 				//saturday 14th of march, so the weekend before schools got closed..
 				.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga") // yyyy I thought that school closures started on day 26. --?? kai,

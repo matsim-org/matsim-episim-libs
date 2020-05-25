@@ -1,6 +1,8 @@
 package org.matsim.episim.policy;
 
 import com.typesafe.config.Config;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.episim.model.FaceMask;
 
 import java.util.HashMap;
@@ -11,27 +13,34 @@ import java.util.Map;
  */
 public final class Restriction {
 
+	private static final Logger log = LogManager.getLogger(Restriction.class);
+
 	/**
 	 * Percentage of activities still performed.
+	 * Not defined if NaN.
 	 */
 	private double remainingFraction;
 
 	/**
 	 * Exposure during this activity.
+	 * Not defined if NaN.
 	 */
 	private double exposure;
 
 	/**
 	 * Persons are required to wear a mask with this or more effective type.
+	 * Not defined if null.
 	 */
 	private FaceMask requireMask;
 
 	/**
 	 * Constructor.
 	 */
-	public Restriction(double remainingFraction, double exposure, FaceMask requireMask) {
+	private Restriction(double remainingFraction, double exposure, FaceMask requireMask) {
 		if (remainingFraction < 0 || remainingFraction > 1)
-			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction );
+			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
+		if (exposure < 0)
+			throw new IllegalArgumentException("exposure must be larger than 0, but is=" + exposure);
 
 		this.remainingFraction = remainingFraction;
 		this.exposure = exposure;
@@ -49,14 +58,14 @@ public final class Restriction {
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, 1d, FaceMask.NONE);
+		return new Restriction(remainingFraction, Double.NaN, null);
 	}
 
 	/**
 	 * See {@link #of(double, double, FaceMask)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask) {
-		return new Restriction(remainingFraction, 1d, mask);
+		return new Restriction(remainingFraction, Double.NaN, mask);
 	}
 
 	/**
@@ -67,15 +76,31 @@ public final class Restriction {
 	}
 
 	/**
+	 * Creates a restriction with only mask set.
+	 */
+	public static Restriction ofMask(FaceMask mask) {
+		return new Restriction(Double.NaN, Double.NaN, mask);
+	}
+
+	/**
+	 * Creates a restriction with only exposure set.
+	 */
+	public static Restriction ofExposure(double exposure) {
+		return new Restriction(Double.NaN, exposure, null);
+	}
+
+
+	/**
 	 * Creates a restriction from a config entry.
 	 */
 	public static Restriction fromConfig(Config config) {
 		return new Restriction(
 				config.getDouble("fraction"),
 				config.getDouble("exposure"),
-				config.getEnum(FaceMask.class, "mask")
+				config.getIsNull("mask") ? null : config.getEnum(FaceMask.class, "mask")
 		);
 	}
+
 
 	/**
 	 * This method is also used to write the restriction to csv.
@@ -83,6 +108,51 @@ public final class Restriction {
 	@Override
 	public String toString() {
 		return String.format("%.2f_%s", remainingFraction, requireMask);
+	}
+
+	/**
+	 * Set restriction values from other restriction update.
+	 */
+	void update(Restriction r) {
+		// All values may be optional and are only set if present
+		if (!Double.isNaN(r.getRemainingFraction()))
+			setRemainingFraction(r.getRemainingFraction());
+
+		if (!Double.isNaN(r.getExposure()))
+			setExposure(r.getExposure());
+
+		if (r.getRequireMask() != null)
+			setRequireMask(r.getRequireMask());
+	}
+
+	/**
+	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
+	 *
+	 * @see #asMap()
+	 */
+	Restriction merge(Map<String, Object> r) {
+
+		double otherRf = (double) r.get("fraction");
+		double otherE = (double) r.get("exposure");
+		FaceMask otherMask = r.get("mask") == null ? null : FaceMask.valueOf((String) r.get("mask"));
+
+		if (!Double.isNaN(remainingFraction) && !Double.isNaN(otherRf) && remainingFraction != otherRf)
+			log.warn("Overwritten remainingFraction " + remainingFraction + " with " + otherRf);
+		else if (Double.isNaN(remainingFraction))
+			remainingFraction = otherRf;
+
+
+		if (!Double.isNaN(exposure) && !Double.isNaN(otherE) && exposure != otherE)
+			log.warn("Overwritten exposure " + exposure + " with " + otherE);
+		else if (Double.isNaN(exposure))
+			exposure = otherE;
+
+		if (requireMask != null && otherMask != null && requireMask != otherMask)
+			log.warn("Overwritten mask " + requireMask + " with " + otherMask);
+		else if (requireMask == null)
+			requireMask = otherMask;
+
+		return this;
 	}
 
 	public double getRemainingFraction() {
@@ -122,7 +192,7 @@ public final class Restriction {
 		Map<String, Object> map = new HashMap<>();
 		map.put("fraction", remainingFraction);
 		map.put("exposure", exposure);
-		map.put("mask", requireMask.name());
+		map.put("mask", requireMask != null ? requireMask.name() : null);
 		return map;
 	}
 
