@@ -7,10 +7,12 @@ import org.apache.commons.math3.util.FastMath;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.assertj.core.data.Percentage;
-import org.junit.Ignore;
+import org.junit.Assume;
 import org.junit.Test;
+import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.SplittableRandom;
 
@@ -47,7 +49,6 @@ public class EpisimUtilsTest {
 
 	}
 
-	@Ignore("not implemented")
 	@Test
 	public void testCreateRestrictionsFromCSV() throws IOException {
 
@@ -55,17 +56,16 @@ public class EpisimUtilsTest {
 
 		SnzBerlinScenario25pct2020.addParams(episimConfig);
 
-//		FixedPolicy.ConfigBuilder result = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, LocalDate.of( 2020, 3, 1 ), 1. );
-//		Config result2 = result.build();
+		File f = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv");
 
-//		log.info( result2.getConfig( "work" ) );
-//		log.info( result2.getConfig( "work" ).getConfig( "2020-03-22" ) );
-//		log.info( result2.getConfig( "work" ).getConfig( "2020-03-22" ).getDouble( "fraction" ) );
-//		Assert.assertEquals( 0.6575, result2.getConfig( "work" ).getConfig( "2020-03-22" ).getDouble( "fraction" ), Double.MIN_VALUE );
-//
-//		log.info( result2.getConfig( "leisure" ).getConfig( "2020-04-03" ).getDouble( "fraction" ) );
-//		Assert.assertEquals( 0.11538461538461539, result2.getConfig( "leisure" ).getConfig( "2020-04-03" ).getDouble( "fraction" ), Double.MIN_VALUE );
-		throw new RuntimeException("not implemented");
+		Assume.assumeTrue("Input must exist", f.exists());
 
+		FixedPolicy.ConfigBuilder config = EpisimUtils.createRestrictionsFromCSV(
+				episimConfig,
+				f,
+				1.0
+		);
+
+		//FileUtils.write(new File("out.json"), config.build().root().render(ConfigRenderOptions.defaults().setJson(true).setComments(false).setOriginComments(false)));
 	}
 }
