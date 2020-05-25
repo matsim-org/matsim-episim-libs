@@ -141,7 +141,6 @@ public final class Restriction {
 		else if (Double.isNaN(remainingFraction))
 			remainingFraction = otherRf;
 
-
 		if (!Double.isNaN(exposure) && !Double.isNaN(otherE) && exposure != otherE)
 			log.warn("Overwritten exposure " + exposure + " with " + otherE);
 		else if (Double.isNaN(exposure))
