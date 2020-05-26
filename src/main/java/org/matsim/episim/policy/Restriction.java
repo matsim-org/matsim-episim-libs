@@ -34,9 +34,15 @@ public final class Restriction {
 	private FaceMask requireMask;
 
 	/**
+	 * Compliance rate for masks. Overwrites global parameter if set.
+	 * Can be NaN to be undefined.
+	 */
+	private double complianceRate;
+
+	/**
 	 * Constructor.
 	 */
-	private Restriction(double remainingFraction, double exposure, FaceMask requireMask) {
+	private Restriction(double remainingFraction, double exposure, FaceMask requireMask, double complianceRate) {
 		if (remainingFraction < 0 || remainingFraction > 1)
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
 		if (exposure < 0)
@@ -45,48 +51,56 @@ public final class Restriction {
 		this.remainingFraction = remainingFraction;
 		this.exposure = exposure;
 		this.requireMask = requireMask;
+		this.complianceRate = complianceRate;
 	}
 
 	/**
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, FaceMask.NONE);
+		return new Restriction(1d, 1d, FaceMask.NONE, Double.NaN);
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, Double.NaN, null);
+		return new Restriction(remainingFraction, Double.NaN, null, Double.NaN);
 	}
 
 	/**
 	 * See {@link #of(double, double, FaceMask)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask) {
-		return new Restriction(remainingFraction, Double.NaN, mask);
+		return new Restriction(remainingFraction, Double.NaN, mask, Double.NaN);
 	}
 
 	/**
 	 * Instantiate a restriction.
 	 */
 	public static Restriction of(double remainingFraction, double exposure, FaceMask mask) {
-		return new Restriction(remainingFraction, exposure, mask);
+		return new Restriction(remainingFraction, exposure, mask, Double.NaN);
 	}
 
 	/**
-	 * Creates a restriction with only mask set.
+	 * Creates a restriction with required mask.
 	 */
 	public static Restriction ofMask(FaceMask mask) {
-		return new Restriction(Double.NaN, Double.NaN, mask);
+		return new Restriction(Double.NaN, Double.NaN, mask, Double.NaN);
+	}
+
+	/**
+	 * Creates a restriction with required mask and compliance rate.
+	 */
+	public static Restriction ofMask(FaceMask mask, double complianceRate) {
+		return new Restriction(Double.NaN, Double.NaN, mask, complianceRate);
 	}
 
 	/**
 	 * Creates a restriction with only exposure set.
 	 */
 	public static Restriction ofExposure(double exposure) {
-		return new Restriction(Double.NaN, exposure, null);
+		return new Restriction(Double.NaN, exposure, null, Double.NaN);
 	}
 
 
@@ -97,7 +111,8 @@ public final class Restriction {
 		return new Restriction(
 				config.getDouble("fraction"),
 				config.getDouble("exposure"),
-				config.getIsNull("mask") ? null : config.getEnum(FaceMask.class, "mask")
+				config.getIsNull("mask") ? null : config.getEnum(FaceMask.class, "mask"),
+				config.getDouble("compliance")
 		);
 	}
 
@@ -105,7 +120,7 @@ public final class Restriction {
 	 * Creates a copy of a restriction.
 	 */
 	static Restriction clone(Restriction restriction) {
-		return new Restriction(restriction.remainingFraction, restriction.exposure, restriction.requireMask);
+		return new Restriction(restriction.remainingFraction, restriction.exposure, restriction.requireMask, restriction.complianceRate);
 	}
 
 
@@ -130,6 +145,10 @@ public final class Restriction {
 
 		if (r.getRequireMask() != null)
 			setRequireMask(r.getRequireMask());
+
+		if (!Double.isNaN(r.getComplianceRate()))
+			setComplianceRate(r.getComplianceRate());
+
 	}
 
 	/**
@@ -141,6 +160,7 @@ public final class Restriction {
 
 		double otherRf = (double) r.get("fraction");
 		double otherE = (double) r.get("exposure");
+		double otherComp = (double) r.get("compliance");
 		FaceMask otherMask = r.get("mask") == null ? null : FaceMask.valueOf((String) r.get("mask"));
 
 		if (!Double.isNaN(remainingFraction) && !Double.isNaN(otherRf) && remainingFraction != otherRf)
@@ -149,7 +169,7 @@ public final class Restriction {
 			remainingFraction = otherRf;
 
 		if (!Double.isNaN(exposure) && !Double.isNaN(otherE) && exposure != otherE)
-			log.warn("Dupliated exposure " + exposure + " and " + otherE);
+			log.warn("Duplicated exposure " + exposure + " and " + otherE);
 		else if (Double.isNaN(exposure))
 			exposure = otherE;
 
@@ -157,6 +177,11 @@ public final class Restriction {
 			log.warn("Duplicated mask " + requireMask + " and " + otherMask);
 		else if (requireMask == null)
 			requireMask = otherMask;
+
+		if (!Double.isNaN(complianceRate) && !Double.isNaN(otherComp) && complianceRate != otherComp)
+			log.warn("Duplicated complianceRate " + complianceRate + " and " + otherComp);
+		else if (Double.isNaN(complianceRate))
+			exposure = otherComp;
 
 		return this;
 	}
@@ -185,6 +210,14 @@ public final class Restriction {
 		this.requireMask = requireMask;
 	}
 
+	public double getComplianceRate() {
+		return complianceRate;
+	}
+
+	void setComplianceRate(double complianceRate) {
+		this.complianceRate = complianceRate;
+	}
+
 	void fullShutdown() {
 		remainingFraction = 0d;
 	}
@@ -199,6 +232,7 @@ public final class Restriction {
 		map.put("fraction", remainingFraction);
 		map.put("exposure", exposure);
 		map.put("mask", requireMask != null ? requireMask.name() : null);
+		map.put("compliance", complianceRate);
 		return map;
 	}
 

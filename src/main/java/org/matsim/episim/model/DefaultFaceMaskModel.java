@@ -1,6 +1,7 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
+import org.eclipse.collections.api.map.primitive.MutableIntBooleanMap;
 import org.eclipse.collections.impl.map.mutable.primitive.IntBooleanHashMap;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
@@ -14,7 +15,7 @@ import java.util.SplittableRandom;
  */
 public class DefaultFaceMaskModel implements FaceMaskModel {
 
-	private final IntBooleanHashMap personWearsMask = new IntBooleanHashMap();
+	private final MutableIntBooleanMap personWearsMask = new IntBooleanHashMap();
 	private final EpisimConfigGroup episimConfig;
 	private final SplittableRandom rnd;
 
@@ -34,8 +35,17 @@ public class DefaultFaceMaskModel implements FaceMaskModel {
 	@Override
 	public FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, int currentDay, Restriction restriction) {
 
+		if (restriction.getRequireMask() == FaceMask.NONE) return FaceMask.NONE;
+
+		// global parameter overwritten
+		if (!Double.isNaN(restriction.getComplianceRate())) {
+			if (restriction.getComplianceRate() == 1d) return restriction.getRequireMask();
+			if (restriction.getComplianceRate() == 0d) return FaceMask.NONE;
+			return rnd.nextDouble() < restriction.getComplianceRate() ? restriction.getRequireMask() : FaceMask.NONE;
+		}
+
 		if (episimConfig.getMaskCompliance() == 1d) return restriction.getRequireMask();
-		if (episimConfig.getMaskCompliance() == 0d || restriction.getRequireMask() == FaceMask.NONE) return FaceMask.NONE;
+		if (episimConfig.getMaskCompliance() == 0d) return FaceMask.NONE;
 
 		int key = person.getPersonId().index();
 
