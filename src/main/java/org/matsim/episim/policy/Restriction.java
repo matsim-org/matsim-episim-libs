@@ -101,6 +101,13 @@ public final class Restriction {
 		);
 	}
 
+	/**
+	 * Creates a copy of a restriction.
+	 */
+	static Restriction clone(Restriction restriction) {
+		return new Restriction(restriction.remainingFraction, restriction.exposure, restriction.requireMask);
+	}
+
 
 	/**
 	 * This method is also used to write the restriction to csv.
@@ -137,17 +144,17 @@ public final class Restriction {
 		FaceMask otherMask = r.get("mask") == null ? null : FaceMask.valueOf((String) r.get("mask"));
 
 		if (!Double.isNaN(remainingFraction) && !Double.isNaN(otherRf) && remainingFraction != otherRf)
-			log.warn("Overwritten remainingFraction " + remainingFraction + " with " + otherRf);
+			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
 		else if (Double.isNaN(remainingFraction))
 			remainingFraction = otherRf;
 
 		if (!Double.isNaN(exposure) && !Double.isNaN(otherE) && exposure != otherE)
-			log.warn("Overwritten exposure " + exposure + " with " + otherE);
+			log.warn("Dupliated exposure " + exposure + " and " + otherE);
 		else if (Double.isNaN(exposure))
 			exposure = otherE;
 
 		if (requireMask != null && otherMask != null && requireMask != otherMask)
-			log.warn("Overwritten mask " + requireMask + " with " + otherMask);
+			log.warn("Duplicated mask " + requireMask + " and " + otherMask);
 		else if (requireMask == null)
 			requireMask = otherMask;
 

@@ -116,11 +116,14 @@ public class FixedPolicy extends ShutdownPolicy {
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
 
+				// Because of merging, each activity needs a separate restriction
+				Restriction clone = Restriction.clone(restriction);
+
 				// merge if there is an entry already
 				if (p.containsKey(date))
-					restriction.merge(p.get(date));
+					clone.merge(p.get(date));
 
-				p.put(date, restriction.asMap());
+				p.put(date, clone.asMap());
 			}
 
 			return this;
