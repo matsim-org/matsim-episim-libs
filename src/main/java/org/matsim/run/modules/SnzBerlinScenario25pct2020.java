@@ -24,9 +24,14 @@ import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
+
+import java.io.File;
+import java.io.IOException;
 
 import javax.inject.Singleton;
 
@@ -82,12 +87,31 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setInitialInfections(50);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_002_3);
-
-		episimConfig.setStartDate("2020-02-13");
-		episimConfig.setPolicy(FixedPolicy.class, basePolicy().build());
-
-		config.controler().setOutputDirectory("./output-berlin-25pct-restricts-" + episimConfig.getStartDate());
+		episimConfig.setCalibrationParameter(0.000_002_0);
+		episimConfig.setMaxInteractions(3);
+		
+		double alpha = 2.0;
+		double exposure = 0.5;
+		String startDate = "2020-02-11";
+		String dateOfExposureChange = "2020-03-10";
+		
+		ConfigBuilder configBuilder = null;
+		
+		episimConfig.setStartDate(startDate);
+		try {
+			configBuilder = EpisimUtils.createRestrictionsFromCSV(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		configBuilder.restrict(dateOfExposureChange, Restriction.ofExposure(exposure), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		configBuilder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+			.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		
+		
+		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
+		config.controler().setOutputDirectory("./output-berlin-25pct-restricts-" + alpha + "-" + exposure + "-" + dateOfExposureChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-" + episimConfig.getCalibrationParameter());
 
 
 		return config;
