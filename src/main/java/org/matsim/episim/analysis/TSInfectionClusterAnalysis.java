@@ -78,7 +78,7 @@ class TSInfectionClusterAnalysis {
 			maxClusterWriter.close();
 
 			manager.removeHandler(activityClusterHandler);
-			CSVWriter infectionWriter = new CSVWriter(Files.newBufferedWriter(Paths.get(OUTPUTDIR + "leisureInfectionGroups.csv")));
+			CSVWriter infectionWriter = new CSVWriter(Files.newBufferedWriter(Paths.get(OUTPUTDIR + "leisure_leisure_InfectionGroups.csv")));
 			InfectionGroupSizeHandler handler = new InfectionGroupSizeHandler(activityClusterHandler, infectionWriter);
 			manager.addHandler(handler);
 
@@ -176,7 +176,7 @@ class InfectionGroupSizeHandler implements EpisimInfectionEventHandler{
 				"infectedPerson",
 				"containerId",
 				"currentGroupSizeLeisure",
-				"currentGroupSizeOtherThanLeisure"});
+				"currentGroupSizeOtherThanLeisure"}, false);
 	}
 
 	@Override
@@ -200,12 +200,12 @@ class InfectionGroupSizeHandler implements EpisimInfectionEventHandler{
 				}
 			}
 
-			infectionWriter.writeNext(new String[]{"" + event.getTime(),
+			infectionWriter.writeNext(new String[]{"" + (int) event.getTime(),
 					"" + event.getInfectorId(),
 					"" + event.getPersonId(),
 					"" + event.getContainerId(),
 					"" + currentAmountOfPeopleDoingLeisureInTheSameContainer,
-					"" + sumOfPeopleInContainerForOtherActTypes});
+					"" + sumOfPeopleInContainerForOtherActTypes},false);
 		}
 	}
 
