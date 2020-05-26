@@ -51,7 +51,7 @@ class TSInfectionClusterAnalysis {
 	private static final String INPUT_INFECTION_EVENTS_DIR = "../../svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/events";
 	private static final String INPUT_MATSIM_EVENTS = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz";
 
-	private static final String OUTPUTDIR = "../../svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/";
+	private static final String OUTPUTDIR = "../../svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/";
 
 
 	public static void main(String[] args) {
@@ -143,9 +143,10 @@ class ActivityClusterHandler implements ActivityStartEventHandler, ActivityEndEv
 		int newValue = lastEntry.getSecond() - 1;
 
 		if(newValue < 0 ){
-			//an agent starts in the sim with activityEnd- we need to correct values...
-			for(Tuple<Double, Integer> tuple : timeLine){
-				tuple = new Tuple<>(tuple.getFirst(), tuple.getSecond() + 1);
+			//an agent starts in the sim with activityEnd - we need to correct values...
+			for(int i=0; i < timeLine.size(); i++){
+				Tuple<Double, Integer> oldTuple = timeLine.get(i);
+				timeLine.set(i, new Tuple<>(oldTuple.getFirst(),oldTuple.getSecond() + 1));
 			}
 //			if(lastEntry.getFirst() != 0.0) throw new IllegalStateException("time = " + activityEndEvent.getTime() + "; new value = " + newValue + "; container = " + facility + "; acttype = " + actType );
 			newValue = 0;
@@ -212,14 +213,18 @@ class InfectionGroupSizeHandler implements EpisimInfectionEventHandler{
 		ArrayList<Tuple<Double, Integer>> timeLine = activityClusterHandler.timeLineOfPeopleInContainerPerActType.get(actType).get(container);
 		if (timeLine == null) throw new IllegalStateException();
 
-		time = time % 86400; //episim runs over multiple days
+		double daytime = time % 86400; //episim runs over multiple days
 
-		if(actType.equals("leisure") && (time > timeLine.get(timeLine.size() - 1 ).getFirst() || time < timeLine.get(0).getFirst()) ){
-			throw new IllegalArgumentException();
+		if(actType.equals("leisure") && (daytime > timeLine.get(timeLine.size() - 1 ).getFirst() || daytime < timeLine.get(0).getFirst()) ){
+			if(daytime >= 86399){ //for non-circular trajectories, agents are moved "manually" (without activtyEndEvent) at the end of the day so this might happen
+				System.out.println("WARN - END SIM INFECTION ? ");
+			} else {
+				throw new IllegalArgumentException();
+			}
 		}
 		for (int i = 0; i < timeLine.size() - 1; i++){
-			if(timeLine.get(i+1).getFirst() > time){
-				if (! (timeLine.get(i).getFirst() <= time) ) throw new IllegalArgumentException();
+			if(timeLine.get(i+1).getFirst() > daytime){
+				if (! (timeLine.get(i).getFirst() <= daytime) ) throw new IllegalArgumentException();
 				return timeLine.get(i).getSecond();
 			}
 		}
