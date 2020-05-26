@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.model.FaceMask;
 
+import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -17,36 +18,38 @@ public final class Restriction {
 
 	/**
 	 * Percentage of activities still performed.
-	 * Not defined if NaN.
 	 */
-	private double remainingFraction;
+	@Nullable
+	private Double remainingFraction;
 
 	/**
 	 * Exposure during this activity.
-	 * Not defined if NaN.
 	 */
-	private double exposure;
+	@Nullable
+	private Double exposure;
 
 	/**
 	 * Persons are required to wear a mask with this or more effective type.
-	 * Not defined if null.
 	 */
+	@Nullable
 	private FaceMask requireMask;
 
 	/**
 	 * Compliance rate for masks. Overwrites global parameter if set.
-	 * Can be NaN to be undefined.
 	 */
-	private double complianceRate;
+	@Nullable
+	private Double complianceRate;
 
 	/**
 	 * Constructor.
 	 */
-	private Restriction(double remainingFraction, double exposure, FaceMask requireMask, double complianceRate) {
-		if (remainingFraction < 0 || remainingFraction > 1)
+	private Restriction(@Nullable Double remainingFraction, @Nullable Double exposure,
+						@Nullable FaceMask requireMask, @Nullable Double complianceRate) {
+
+		if (remainingFraction != null && (remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
-		if (exposure < 0)
-			throw new IllegalArgumentException("exposure must be larger than 0, but is=" + exposure);
+		if (exposure != null && exposure < 0)
+			throw new IllegalArgumentException("exposure must be larger than 0 but is=" + exposure);
 
 		this.remainingFraction = remainingFraction;
 		this.exposure = exposure;
@@ -58,49 +61,49 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, FaceMask.NONE, Double.NaN);
+		return new Restriction(1d, 1d, FaceMask.NONE, null);
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, Double.NaN, null, Double.NaN);
+		return new Restriction(remainingFraction, null, null, null);
 	}
 
 	/**
 	 * See {@link #of(double, double, FaceMask)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask) {
-		return new Restriction(remainingFraction, Double.NaN, mask, Double.NaN);
+		return new Restriction(remainingFraction, null, mask, null);
 	}
 
 	/**
 	 * Instantiate a restriction.
 	 */
 	public static Restriction of(double remainingFraction, double exposure, FaceMask mask) {
-		return new Restriction(remainingFraction, exposure, mask, Double.NaN);
+		return new Restriction(remainingFraction, exposure, mask, null);
 	}
 
 	/**
 	 * Creates a restriction with required mask.
 	 */
 	public static Restriction ofMask(FaceMask mask) {
-		return new Restriction(Double.NaN, Double.NaN, mask, Double.NaN);
+		return new Restriction(null, null, mask, null);
 	}
 
 	/**
 	 * Creates a restriction with required mask and compliance rate.
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(Double.NaN, Double.NaN, mask, complianceRate);
+		return new Restriction(null, null, mask, complianceRate);
 	}
 
 	/**
 	 * Creates a restriction with only exposure set.
 	 */
 	public static Restriction ofExposure(double exposure) {
-		return new Restriction(Double.NaN, exposure, null, Double.NaN);
+		return new Restriction(null, exposure, null, null);
 	}
 
 
@@ -109,10 +112,10 @@ public final class Restriction {
 	 */
 	public static Restriction fromConfig(Config config) {
 		return new Restriction(
-				config.getDouble("fraction"),
-				config.getDouble("exposure"),
+				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
+				config.getIsNull("exposure") ? null : config.getDouble("exposure"),
 				config.getIsNull("mask") ? null : config.getEnum(FaceMask.class, "mask"),
-				config.getDouble("compliance")
+				config.getIsNull("compliance") ? null : config.getDouble("compliance")
 		);
 	}
 
@@ -137,16 +140,16 @@ public final class Restriction {
 	 */
 	void update(Restriction r) {
 		// All values may be optional and are only set if present
-		if (!Double.isNaN(r.getRemainingFraction()))
+		if (r.getRemainingFraction() != null)
 			setRemainingFraction(r.getRemainingFraction());
 
-		if (!Double.isNaN(r.getExposure()))
+		if (r.getExposure() != null)
 			setExposure(r.getExposure());
 
 		if (r.getRequireMask() != null)
 			setRequireMask(r.getRequireMask());
 
-		if (!Double.isNaN(r.getComplianceRate()))
+		if (r.getComplianceRate() != null)
 			setComplianceRate(r.getComplianceRate());
 
 	}
@@ -158,19 +161,19 @@ public final class Restriction {
 	 */
 	Restriction merge(Map<String, Object> r) {
 
-		double otherRf = (double) r.get("fraction");
-		double otherE = (double) r.get("exposure");
-		double otherComp = (double) r.get("compliance");
+		Double otherRf = (Double) r.get("fraction");
+		Double otherE = (Double) r.get("exposure");
+		Double otherComp = (Double) r.get("compliance");
 		FaceMask otherMask = r.get("mask") == null ? null : FaceMask.valueOf((String) r.get("mask"));
 
-		if (!Double.isNaN(remainingFraction) && !Double.isNaN(otherRf) && remainingFraction != otherRf)
+		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf))
 			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
-		else if (Double.isNaN(remainingFraction))
+		else if (remainingFraction == null)
 			remainingFraction = otherRf;
 
-		if (!Double.isNaN(exposure) && !Double.isNaN(otherE) && exposure != otherE)
+		if (exposure != null && otherE != null && !exposure.equals(otherE))
 			log.warn("Duplicated exposure " + exposure + " and " + otherE);
-		else if (Double.isNaN(exposure))
+		else if (exposure == null)
 			exposure = otherE;
 
 		if (requireMask != null && otherMask != null && requireMask != otherMask)
@@ -178,15 +181,15 @@ public final class Restriction {
 		else if (requireMask == null)
 			requireMask = otherMask;
 
-		if (!Double.isNaN(complianceRate) && !Double.isNaN(otherComp) && complianceRate != otherComp)
+		if (complianceRate != null && otherComp != null && !complianceRate.equals(otherComp))
 			log.warn("Duplicated complianceRate " + complianceRate + " and " + otherComp);
-		else if (Double.isNaN(complianceRate))
+		else if (complianceRate == null)
 			complianceRate = otherComp;
 
 		return this;
 	}
 
-	public double getRemainingFraction() {
+	public Double getRemainingFraction() {
 		return remainingFraction;
 	}
 
@@ -194,7 +197,7 @@ public final class Restriction {
 		this.remainingFraction = remainingFraction;
 	}
 
-	public double getExposure() {
+	public Double getExposure() {
 		return exposure;
 	}
 
@@ -210,7 +213,8 @@ public final class Restriction {
 		this.requireMask = requireMask;
 	}
 
-	public double getComplianceRate() {
+	@Nullable
+	public Double getComplianceRate() {
 		return complianceRate;
 	}
 

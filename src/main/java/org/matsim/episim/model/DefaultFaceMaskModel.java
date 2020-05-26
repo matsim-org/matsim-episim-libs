@@ -38,7 +38,7 @@ public class DefaultFaceMaskModel implements FaceMaskModel {
 		if (restriction.getRequireMask() == FaceMask.NONE) return FaceMask.NONE;
 
 		// global parameter overwritten
-		if (!Double.isNaN(restriction.getComplianceRate())) {
+		if (restriction.getComplianceRate() != null) {
 			if (restriction.getComplianceRate() == 1d) return restriction.getRequireMask();
 			if (restriction.getComplianceRate() == 0d) return FaceMask.NONE;
 			return rnd.nextDouble() < restriction.getComplianceRate() ? restriction.getRequireMask() : FaceMask.NONE;

@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
@@ -199,10 +200,16 @@ public class FixedPolicy extends ShutdownPolicy {
 
 			long diff = ChronoUnit.DAYS.between(start, end);
 
+			double rf = Objects.requireNonNullElse(restriction.getRemainingFraction(), Double.NaN);
+			double rfEnd = Objects.requireNonNullElse(restrictionEnd.getRemainingFraction(), Double.NaN);
+
+			double exp = Objects.requireNonNullElse(restriction.getExposure(), Double.NaN);
+			double expEnd = Objects.requireNonNullElse(restrictionEnd.getExposure(), Double.NaN);
+
 			LocalDate today = start;
 			while (today.isBefore(end) || today.isEqual(end)) {
-				double r = restriction.getRemainingFraction() + (restrictionEnd.getRemainingFraction() - restriction.getRemainingFraction()) * (day / diff);
-				double e = restriction.getExposure() + (restrictionEnd.getExposure() - restriction.getExposure()) * (day / diff);
+				double r = rf + (rfEnd - rf) * (day / diff);
+				double e = exp + (expEnd - exp) * (day / diff);
 
 				if (Double.isNaN(r) && Double.isNaN(e))
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and exposure are undefined.");
