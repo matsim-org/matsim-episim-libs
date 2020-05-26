@@ -20,7 +20,9 @@
  */
 package org.matsim.episim;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.io.Resources;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -41,12 +43,14 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Common utility class for episim.
@@ -256,6 +260,7 @@ public final class EpisimUtils {
 
 	/**
 	 * Read in restrictions from csv file. A support point will be calculated and intermediate values calculated for each week.
+	 *
 	 * @param alpha modulate the amount reduction
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
@@ -322,6 +327,68 @@ public final class EpisimUtils {
 				builder.restrict(start.plusDays(i), r, e.getKey());
 			}
 		}
+
+		return builder;
+	}
+
+	/**
+	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
+	 *
+	 * @param alpha modulate the amount reduction
+	 */
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+
+		Reader in = new FileReader(input);
+		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+		// activity reduction for notAtHome each day
+		Map<LocalDate, Double> days = new LinkedHashMap<>();
+
+		for (CSVRecord record : parser) {
+			LocalDate date = LocalDate.parse(record.get(0), fmt);
+
+			int value = Integer.parseInt(record.get("notAtHome"));
+
+			double remainingFraction = 1. + (value / 100.);
+			// modulate reduction with alpha
+			double reduction = Math.min(1., alpha * (1. - remainingFraction));
+			days.put(date, Math.min(1, 1 - reduction));
+		}
+
+		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
+				.stream().map(LocalDate::parse).collect(Collectors.toSet());
+
+		// activities to set
+		String[] act = episimConfig.getInfectionParams().stream()
+				.map(EpisimConfigGroup.InfectionParams::getContainerName)
+				.filter(name -> !name.startsWith("edu") && !name.startsWith("home"))
+				.toArray(String[]::new);
+
+		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
+		LocalDate end = Iterables.getLast(days.keySet());
+
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+
+		while (start.isBefore(end)) {
+
+			List<Double> values = new ArrayList<>();
+			for (int i = 0; i < 7; i++) {
+				LocalDate day = start.plusDays(i);
+				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
+						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
+					values.add(days.get(day));
+				}
+			}
+
+			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+
+			// Calc next sunday
+			int n = 7 - start.getDayOfWeek().getValue() % 7;
+			builder.restrict(start, avg, act);
+			start = start.plusDays(n);
+		}
+
 
 		return builder;
 	}

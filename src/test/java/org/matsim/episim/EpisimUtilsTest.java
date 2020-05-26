@@ -66,6 +66,11 @@ public class EpisimUtilsTest {
 				1.0
 		);
 
+
+		FixedPolicy.ConfigBuilder config2 = EpisimUtils.createRestrictionsFromCSV2(episimConfig, f, 1.0);
+
 		//FileUtils.write(new File("out.json"), config.build().root().render(ConfigRenderOptions.defaults().setJson(true).setComments(false).setOriginComments(false)));
 	}
+
+
 }
