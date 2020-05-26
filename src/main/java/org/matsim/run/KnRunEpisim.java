@@ -206,7 +206,7 @@ public class KnRunEpisim {
 //				episimConfig.setCalibrationParameter(0.000_002_3);
 
 				episimConfig.setMaxInteractions( 10 );
-				episimConfig.setCalibrationParameter( 0.000_000_7 );
+				episimConfig.setCalibrationParameter( 0.000_000_69 );
 
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
 				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
@@ -220,26 +220,21 @@ public class KnRunEpisim {
 				StringBuilder strb = new StringBuilder();
 				strb.append( restrictionsType.name() );
 				strb.append( "_theta" ).append( episimConfig.getCalibrationParameter() );
-//				strb.append( "_ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-//				strb.append( "_ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
 				strb.append( "__infectedBNC" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
 				strb.append( "__contag" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
-//				strb.append( "__wSymp" ).append( SymptomsToSSick ).append( "_" ).append( withSymptomsStd );
-//				strb.append( "__sSick" ).append( sStickToCritical ).append( "_" ).append( seriouslySickStd );
-//				strb.append( "__crit" ).append( criticalToBetter ).append( "_" ).append( criticalStd );
 				strb.append( "_" + exposureChangeType.name() );
 
 				if ( restrictionsType==RestrictionsType.triang ) {
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
 
-					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
+					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 8 );
 					double changedExposure = 0.5;
+					// (8.3.: Empfehlung Absage Veranstaltungen > 1000 Teilnehmer ???; Verhaltensänderungen?)
 
 					LocalDate triangleStartDate = LocalDate.of( 2020, 3, 8 );
 					double alpha = 1.2;
 
-					final FaceMask mask = FaceMask.NONE;
-
+					// ===
 					List<String> allActivitiesExceptHomeAndEduList = new ArrayList<>();
 					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
 						final String activityType = infectionParams.getParams().get( "activityType" );
@@ -248,25 +243,36 @@ public class KnRunEpisim {
 						}
 					}
 					final String[] actsExceptHomeAndEdu = allActivitiesExceptHomeAndEduList.toArray( new String[0] );
+					final String[] educ_lower = {"educ_primary", "educ_kiga"};
+					final String[] educ_higher = {"educ_secondary", "educ_higher", "educ_tertiary", "educ_other"};
 					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
 					// ===
 					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
 					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
 					// exposure change:
 					restrictions.restrict( dateOfExposureChange,
-							Restriction.of(1.,changedExposure,FaceMask.NONE ),
+							Restriction.ofExposure( changedExposure ),
 							actsExceptHomeAndEdu );
 					// quick reductions towards lockdown:
 					restrictions.interpolate( triangleStartDate, date_2020_03_24,
 							Restriction.of(1.,changedExposure,FaceMask.NONE ), Restriction.of(remainingFractionAtMax),
 							actsExceptHomeAndEdu );
 					// school closures:
-					restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-					       .restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+					restrictions.restrict( "2020-03-14", 0.1, educ_lower ).restrict( "2020-03-14", 0., educ_higher );
 					// slow re-opening:
 					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,10 ),
 							Restriction.of(remainingFractionAtMax,changedExposure, mask ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
 							actsExceptHomeAndEdu );
+							Restriction.of( remainingFractionAtMax ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
+							actsExceptHomeAndEdu );
+					// absorb masks into exposures and ramp up:
+					final LocalDate maskDate = LocalDate.of( 2020, 4, 15 );
+					final int nDays = 14;
+					for ( int ii = 0 ; ii<= nDays ; ii++ ){
+						double newExposure = changedExposure + ( changedExposure*0.25 - changedExposure ) * ii / nDays ;
+						// check: ii=0 --> old value; ii=nDays --> new value
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ), "shop_daily", "shop_other", "pt" );
+					}
 
 					// ===
 					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
@@ -276,10 +282,10 @@ public class KnRunEpisim {
 					strb.append( "_chExposure" ).append( changedExposure );
 					strb.append( "_@" ).append( dateOfExposureChange );
 
-					strb.append( "_triangStart" ).append( triangleStartDate );
+					strb.append( "_triangStrt" ).append( triangleStartDate );
 					strb.append( "_alpha" ).append( alpha );
 
-					strb.append( "_masks_" ).append( mask.name() );
+					strb.append( "_masksStrt" ).append( maskDate );
 
 				} else if ( restrictionsType==RestrictionsType.frmSnz ){
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );

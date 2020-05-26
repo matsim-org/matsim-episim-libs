@@ -22,7 +22,12 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.3_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
 # base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.4_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
-base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStrt2020-03-08_alpha1.2_masksStrt2021-04-30/'
+# base = 'triang_theta6.8E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt9999-04-30/'
+# base = 'triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt9999-04-30/'
+base = 'triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt2020-04-15/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
