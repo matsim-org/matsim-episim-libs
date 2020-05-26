@@ -362,7 +362,7 @@ public final class EpisimUtils {
 		// activities to set
 		String[] act = episimConfig.getInfectionParams().stream()
 				.map(EpisimConfigGroup.InfectionParams::getContainerName)
-				.filter(name -> !name.startsWith("edu") && !name.startsWith("home"))
+				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
 				.toArray(String[]::new);
 
 		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
