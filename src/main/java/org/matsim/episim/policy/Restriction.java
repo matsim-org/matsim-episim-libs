@@ -181,7 +181,7 @@ public final class Restriction {
 		if (!Double.isNaN(complianceRate) && !Double.isNaN(otherComp) && complianceRate != otherComp)
 			log.warn("Duplicated complianceRate " + complianceRate + " and " + otherComp);
 		else if (Double.isNaN(complianceRate))
-			exposure = otherComp;
+			complianceRate = otherComp;
 
 		return this;
 	}
