@@ -18,7 +18,9 @@ import picocli.CommandLine;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
@@ -26,11 +28,16 @@ import java.util.concurrent.Callable;
  */
 @CommandLine.Command(
 		name = "trial",
-		description = "Run one simulation trial (used for calibration)"
+		description = "Run one simulation trial (used for calibration)",
+		abbreviateSynopsis = true,
+		showDefaultValues = true
 )
 public final class RunTrial implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RunTrial.class);
+
+	@CommandLine.Parameters(paramLabel = "MODULE", arity = "1..*", description = "List of modules to load (See RunEpisim)")
+	private List<String> moduleNames = new ArrayList<>();
 
 	@CommandLine.Option(names = "--number", description = "Trial number", required = true)
 	private int number;
@@ -44,19 +51,25 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--days", description = "Number of days to simulate", defaultValue = "45")
 	private int days;
 
+	@CommandLine.Option(names = "--ci", description = "Overwrite contact intensities", split = ";")
+	private Map<String, Double> ci = new HashMap<>();
+
+	@CommandLine.Option(names = "--alpha", description = "Alpha parameter of restrictions", defaultValue = "1")
+	private double alpha;
+
+	@CommandLine.Option(names = "--exposure", description = "Changed exposure", defaultValue = "1")
+	private double exposure;
+
 	@CommandLine.Option(
 			names = "--with-restrictions",
-			description = "By default the restrictions are removed completely in order to calibrate" +
+			description = "By default the restrictions are removed completely in order to calibrate " +
 					"for unconstrained exponential growth. This flag keeps original restrictions and policy as defined in the scenario.",
 			defaultValue = "false")
 	private boolean withRestrictions;
 
-	@CommandLine.Parameters(paramLabel = "MODULE", arity = "1..*", defaultValue = "SnzBerlinScenario",
-			description = "List of modules to load (See RunEpisim)")
-	private List<String> moduleNames = new ArrayList<>();
-
 	public static void main(String[] args) {
-		System.exit(new CommandLine(new RunTrial()).execute(args));
+		System.exit(new CommandLine(new RunTrial())
+				.execute(args));
 	}
 
 	@Override
@@ -95,4 +108,5 @@ public final class RunTrial implements Callable<Integer> {
 
 		return 0;
 	}
+
 }
