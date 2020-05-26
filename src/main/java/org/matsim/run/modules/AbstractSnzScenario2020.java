@@ -5,8 +5,14 @@ import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
+
+import static org.matsim.episim.model.Transition.logNormalWithMedianAndStd;
+
+import java.util.SplittableRandom;
 
 import javax.inject.Singleton;
 
@@ -71,14 +77,6 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home"));
 	}
 
-	@Override
-	protected void configure() {
-
-		// Use age dependent progression model
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-		// WARNING: This does not affect runs with --config file, especially batch runs !!
-	}
-
 	/**
 	 * Provider method that needs to be overwritten to generate fully configured scenario.
 	 * Needs to be annotated with {@link Provides} and {@link Singleton}
@@ -100,6 +98,23 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		setContactIntensities(episimConfig);
 
 		return config;
+	}
+	
+	@Provides
+	@Singleton
+	public ProgressionModel progressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
+		// WARNING: This does not affect runs with --config file, especially batch runs !!
+
+		AgeDependentProgressionModel defaultProgressionModel = new AgeDependentProgressionModel(rnd, episimConfig, tracingConfig);
+		
+		defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( 3., 3. ) );
+		defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( 1.5, 1.5 ) );
+		defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( 8, 0 ) );
+		defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( 2, 0 ) );
+		defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( 10, 0 ) );
+		
+		return defaultProgressionModel;
+		
 	}
 
 
