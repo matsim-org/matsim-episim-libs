@@ -44,25 +44,26 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     return rates.mean(), np.square(rates - target_rate).mean()
 
 
-def calc_multi_error(f, district, target="berlin-hospital.csv", start="2020-03-15", end="2020-05-08"):
+def calc_multi_error(f, district, hospital="berlin-hospital.csv", rki="berlin-cases.csv", start="2020-03-10", end="2020-05-08"):
     """ Compares hospitalization rate """
 
     df = pd.read_csv(f, sep="\t", parse_dates=[2])
     df = df[df.district == district]
-    cmp = pd.read_csv(target, parse_dates=[0], dayfirst=True)
+    cmp = pd.read_csv(hospital, parse_dates=[0], dayfirst=True)
+    rki = pd.read_csv(rki, parse_dates={'date': ['month', 'day', 'year']})
 
     df = df[(df.date >= start) & (df.date <= end)]
     cmp = cmp[(cmp.Datum >= start) & (cmp.Datum <= end)]
+    rki = rki[(rki.date >= start) & (rki.date <= end)]
 
     peak = str(df.loc[df.nShowingSymptomsCumulative.diff(1).idxmax()].date)
 
-    # One alternative: mean_squared_log_error
     error_sick = mean_squared_log_error(cmp["Stationäre Behandlung"], df.nSeriouslySick)
     error_critical = mean_squared_log_error(cmp["Intensivmedizin"], df.nCritical)
 
     # Assume Dunkelziffer of factor 8
-    error_cases = mean_squared_log_error(cmp["Gemeldete Fälle"].diff(1).dropna() * 8,
-                                         df.nShowingSymptomsCumulative.diff(1).dropna())
+    # error_cases = mean_squared_log_error(cmp["Gemeldete Fälle"].diff(1).dropna() * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
+    error_cases = mean_squared_log_error(rki.drop(rki.index[0]).cases * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
 
     return error_cases, error_sick, error_critical, peak
 
