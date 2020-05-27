@@ -161,6 +161,15 @@ public class DefaultInfectionModelTest {
 				(f) -> EpisimTestUtils.createPerson("c00", f)
 		);
 		assertThat(rate).isCloseTo(0, OFFSET);
+
+		// no infections without exposure
+		restrictions.put("c10", Restriction.of(1.0, 0.0, FaceMask.NONE));
+		rate = sampleInfectionRate(Duration.ofHours(2), "c10",
+				() -> EpisimTestUtils.createFacility(1, "c10", EpisimTestUtils.CONTAGIOUS),
+				(f) -> EpisimTestUtils.createPerson("c10", f)
+		);
+		assertThat(rate).isCloseTo(0, OFFSET);
+
 	}
 
 	@Test

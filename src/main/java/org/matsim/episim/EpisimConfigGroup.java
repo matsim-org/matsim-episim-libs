@@ -90,6 +90,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Config policyConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
+	private int maxInteractions = 3;
 
 	/**
 	 * Default constructor.
@@ -341,6 +342,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void addContainerParams(final InfectionParams params) {
 		final InfectionParams previous = this.getContainerParams().get(params.getContainerName());
 
+		Optional<String> match = params.mappedNames.stream().filter(s -> paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();
+		if (match.isPresent()) {
+			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params.");
+		}
+
 		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
 
 		if (previous != null) {
@@ -419,6 +425,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
 	}
 
+	public int getMaxInteractions() {
+		return maxInteractions;
+	}
+
+	public void setMaxInteractions(int maxInteractions) {
+		this.maxInteractions = maxInteractions;
+	}
+
 	/**
 	 * Defines how facilities should be handled.
 	 */
@@ -453,13 +467,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Write all, including input events.
 		 */
 		all
-	}
-	private int maxInteractions = 3;
-	public int getMaxInteractions(){
-		return maxInteractions;
-	}
-	public void setMaxInteractions( int maxInteractions ){
-		this.maxInteractions = maxInteractions;
 	}
 
 	/**
