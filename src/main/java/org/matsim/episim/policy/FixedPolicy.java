@@ -104,6 +104,8 @@ public class FixedPolicy extends ShutdownPolicy {
 	 */
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
+		private ConfigBuilder() {}
+
 		/**
 		 * Restrict activities at specific date in absolute time.
 		 *
@@ -113,6 +115,9 @@ public class FixedPolicy extends ShutdownPolicy {
 		 */
 		@SuppressWarnings("unchecked")
 		public ConfigBuilder restrict(String date, Restriction restriction, String... activities) {
+
+			if (activities.length == 0)
+				throw new IllegalArgumentException("No activities given");
 
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());

@@ -30,12 +30,10 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 
+import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
-
-import javax.inject.Singleton;
 
 /**
  * Snz scenario for Berlin.
@@ -43,6 +41,28 @@ import javax.inject.Singleton;
  * @see AbstractSnzScenario
  */
 public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
+
+	/**
+	 * The base policy based on actual restrictions in the past and mobility data
+	 */
+	public static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig , File csv, double alpha,
+													   double ciCorrection, String dateOfCiChange,
+													   double clothMaskCompliance, double surgicalMaskCompliance) throws IOException {
+
+		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha);
+
+		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
+
+		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				//.restrict("2020-04-27", Restriction.ofMask(FaceMask.CLOTH, clothMaskCompliance), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+		;
+
+		return builder;
+	}
 
 	@Provides
 	@Singleton
@@ -64,31 +84,20 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		double alpha = 1.4;
 		double ciCorrection = 0.5;
-		double clothMaskCompliance = 1./3.;
-		double surgicalMaskCompliance = 1./6.;
+		double clothMaskCompliance = 1. / 3.;
+		double surgicalMaskCompliance = 1. / 6.;
 
+		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv");
 		String startDate = "2020-02-11";
 		String dateOfCiChange = "2020-03-10";
-
-		ConfigBuilder configBuilder = new ConfigBuilder();
-
 		episimConfig.setStartDate(startDate);
+
+		ConfigBuilder configBuilder = null;
 		try {
-//			configBuilder = EpisimUtils.createRestrictionsFromCSV(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
-			configBuilder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
+			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, clothMaskCompliance, surgicalMaskCompliance);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
-		configBuilder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		configBuilder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
-				
-		configBuilder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-			.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-			//.restrict("2020-04-27", Restriction.ofMask(FaceMask.CLOTH, clothMaskCompliance), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
-			.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
-			.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
-			;
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
 		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + clothMaskCompliance + "-" + surgicalMaskCompliance + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());

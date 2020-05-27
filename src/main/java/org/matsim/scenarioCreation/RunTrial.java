@@ -14,8 +14,10 @@ import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunEpisim;
+import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import picocli.CommandLine;
 
+import java.io.File;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -57,8 +59,8 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--alpha", description = "Alpha parameter of restrictions", defaultValue = "1")
 	private double alpha;
 
-	@CommandLine.Option(names = "--exposure", description = "Changed exposure", defaultValue = "1")
-	private double exposure;
+	@CommandLine.Option(names = "--correction", description = "Contact intensity correction", defaultValue = "1")
+	private double correction;
 
 	@CommandLine.Option(
 			names = "--with-restrictions",
@@ -97,6 +99,13 @@ public final class RunTrial implements Callable<Integer> {
 		// clear restrictions
 		if (!withRestrictions) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
+		} else {
+			// currently hardcoded for specific scenario
+			episimConfig.setMaxInteractions(3);
+			FixedPolicy.ConfigBuilder policy = SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200517.csv"),
+					alpha, correction, "2020-03-10", 1 / 3., 1 / 6.);
+
+			episimConfig.setPolicy(FixedPolicy.class, policy.build());
 		}
 
 		episimConfig.setCalibrationParameter(calibParameter);

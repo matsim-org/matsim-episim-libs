@@ -44,7 +44,7 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     return rates.mean(), np.square(rates - target_rate).mean()
 
 
-def calc_multi_error(f, district, hospital="berlin-hospital.csv", rki="berlin-cases.csv", start="2020-03-10", end="2020-05-08"):
+def calc_multi_error(f, district, hospital="berlin-hospital.csv", rki="berlin-cases.csv", start="2020-03-10", end="2020-05-20"):
     """ Compares hospitalization rate """
 
     df = pd.read_csv(f, sep="\t", parse_dates=[2])
@@ -102,14 +102,14 @@ def objective_multi(trial):
         c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
         offset=trial.suggest_int('offset', -8, 4),
         # ci_homeq=trial.suggest_loguniform("home_quarantine", 0.1, 1),
-        ci_homeq=0.5,
+        ci_homeq=1,
         alpha=trial.suggest_uniform("alpha", 1, 3),
-        exposure=trial.suggest_uniform("exposure", 0.2, 1),
+        correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 100" \
+    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 110" \
           " --number %(number)d --calibParameter %(c).10f --with-restrictions --offset %(offset)d" \
-          " --alpha %(alpha).3f --exposure %(exposure).3f" \
+          " --alpha %(alpha).3f --correction %(correction).3f" \
           " --ci home_quarantine=%(ci_homeq).4f " % params
 
     print("Running multi objective with params: %s" % params)

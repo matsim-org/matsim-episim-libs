@@ -223,7 +223,7 @@ public final class Restriction {
 	 *
 	 * @see #asMap()
 	 */
-	Restriction merge(Map<String, Object> r) {
+	void merge(Map<String, Object> r) {
 
 		Double otherRf = (Double) r.get("fraction");
 		Double otherE = (Double) r.get("ciCorrection");
@@ -243,11 +243,10 @@ public final class Restriction {
 			ciCorrection = otherE;
 
 		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks))
-			log.warn("Duplicated mask usage" + maskUsage + " and " + otherMasks);
+			log.warn("Duplicated mask usage " + maskUsage + " and " + otherMasks);
 		else if (maskUsage.isEmpty())
 			maskUsage.putAll(otherMasks);
 
-		return this;
 	}
 
 	public Double getRemainingFraction() {
