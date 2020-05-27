@@ -97,22 +97,22 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 
 		return config;
 	}
-	
+
 	@Provides
 	@Singleton
 	public ProgressionModel progressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		// WARNING: This does not affect runs with --config file, especially batch runs !!
 
 		AgeDependentProgressionModel defaultProgressionModel = new AgeDependentProgressionModel(rnd, episimConfig, tracingConfig);
-		
+
 		defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( 3., 3. ) );
 		defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( 1.5, 1.5 ) );
 		defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( 8, 0 ) );
 		defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( 2, 0 ) );
 		defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( 10, 0 ) );
-		
+
 		return defaultProgressionModel;
-		
+
 	}
 
 
