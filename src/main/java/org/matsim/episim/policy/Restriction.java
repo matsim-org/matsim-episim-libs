@@ -46,9 +46,9 @@ public final class Restriction {
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double exposure,
 						@Nullable FaceMask requireMask, @Nullable Double complianceRate) {
 
-		if (remainingFraction != null && (remainingFraction < 0 || remainingFraction > 1))
+		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
-		if (exposure != null && exposure < 0)
+		if (exposure != null &&  (Double.isNaN(exposure) || exposure < 0))
 			throw new IllegalArgumentException("exposure must be larger than 0 but is=" + exposure);
 
 		this.remainingFraction = remainingFraction;
@@ -72,7 +72,7 @@ public final class Restriction {
 	}
 
 	/**
-	 * See {@link #of(double, double, FaceMask)}.
+	 * See {@link #of(Double, Double, FaceMask)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask) {
 		return new Restriction(remainingFraction, null, mask, null);
@@ -81,7 +81,7 @@ public final class Restriction {
 	/**
 	 * Instantiate a restriction.
 	 */
-	public static Restriction of(double remainingFraction, double exposure, FaceMask mask) {
+	public static Restriction of(Double remainingFraction, Double exposure, FaceMask mask) {
 		return new Restriction(remainingFraction, exposure, mask, null);
 	}
 
@@ -132,7 +132,7 @@ public final class Restriction {
 	 */
 	@Override
 	public String toString() {
-		return String.format("%.2f_%s", remainingFraction, requireMask);
+		return String.format("%.2f_%.2f_%s", remainingFraction, exposure, requireMask);
 	}
 
 	/**

@@ -44,8 +44,6 @@ public class SnzScenario extends AbstractModule {
 	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
 		episimConfig.getOrAddContainerParams("pt")
 				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("tr")
-				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("leisure")
 				.setContactIntensity(5.0);
 		episimConfig.getOrAddContainerParams("educ_kiga")

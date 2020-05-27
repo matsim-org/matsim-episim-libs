@@ -83,7 +83,7 @@ public class FixedPolicyTest {
 						LocalDate.of(2020, 3, 31),
 						LocalDate.of(2020, 4, 10),
 						Restriction.of(0.5, 1.0, FaceMask.CLOTH),
-						Restriction.of(1, 0.5, FaceMask.CLOTH),
+						Restriction.of(1d, 0.5, FaceMask.CLOTH),
 						"work"
 				);
 
