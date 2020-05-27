@@ -46,7 +46,10 @@ import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -217,8 +220,11 @@ public class KnRunEpisim {
 
 				final ExposureChangeType exposureChangeType = ExposureChangeType.exclHome;
 
+				System.out.println(  ) ;
+
 				StringBuilder strb = new StringBuilder();
-				strb.append( restrictionsType.name() );
+				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm:ss" ) ) );
+				strb.append( "_" ).append( restrictionsType.name() );
 				strb.append( "_theta" ).append( episimConfig.getCalibrationParameter() );
 				strb.append( "__infectedBNC" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
 				strb.append( "__contag" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
@@ -255,23 +261,22 @@ public class KnRunEpisim {
 							actsExceptHomeAndEdu );
 					// quick reductions towards lockdown:
 					restrictions.interpolate( triangleStartDate, date_2020_03_24,
-							Restriction.of(1.,changedExposure,FaceMask.NONE ), Restriction.of(remainingFractionAtMax),
+							Restriction.of(1.), Restriction.of(remainingFractionAtMax),
 							actsExceptHomeAndEdu );
 					// school closures:
 					restrictions.restrict( "2020-03-14", 0.1, educ_lower ).restrict( "2020-03-14", 0., educ_higher );
 					// slow re-opening:
 					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,10 ),
-							Restriction.of(remainingFractionAtMax,changedExposure, mask ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
-							actsExceptHomeAndEdu );
-							Restriction.of( remainingFractionAtMax ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
+							Restriction.of(remainingFractionAtMax ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
 							actsExceptHomeAndEdu );
 					// absorb masks into exposures and ramp up:
 					final LocalDate maskDate = LocalDate.of( 2020, 4, 15 );
-					final int nDays = 14;
+					final int nDays = 1;
 					for ( int ii = 0 ; ii<= nDays ; ii++ ){
-						double newExposure = changedExposure + ( changedExposure*0.25 - changedExposure ) * ii / nDays ;
+						double newExposure = changedExposure + ( changedExposure*0. - changedExposure ) * ii / nDays ;
 						// check: ii=0 --> old value; ii=nDays --> new value
-						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ), "shop_daily", "shop_other", "pt" );
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ),
+								"shop_daily", "shop_other", "pt", "work", "leisure" );
 					}
 
 					// ===
