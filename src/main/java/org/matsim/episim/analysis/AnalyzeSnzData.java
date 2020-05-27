@@ -111,7 +111,7 @@ class AnalyzeSnzData {
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile);
 		try {
 			writer.write(
-					"date\taccomp\tbusiness\teducation\terrands\thome\tleisure\tshop_daily\tshop_other\ttraveling\tundefined\tvisit\twork\tnotAtHome\tnotAtHomeAcceptLeisureAndEdu"
+					"date\taccomp\tbusiness\teducation\terrands\thome\tleisure\tshop_daily\tshop_other\ttraveling\tundefined\tvisit\twork\tnotAtHome\tnotAtHomeExceptLeisureAndEdu"
 							+ "\n");
 			String line;
 			int dateLocation = 0;
@@ -145,8 +145,8 @@ class AnalyzeSnzData {
 			double workBase = 0;
 			double sumNotAtHome = 0;
 			double notAtHomeBase = 0;
-			double sumNotAtHomeAcceptLeisureAndEdu = 0;
-			double notAtHomeAcceptLeisureAndEduBase = 0;
+			double sumNotAtHomeExceptLeisureAndEdu = 0;
+			double notAtHomeExceptLeisureAndEduBase = 0;
 			String currantDate = null;
 			int countingDays = 0;
 
@@ -170,7 +170,7 @@ class AnalyzeSnzData {
 					sumVisit = 0;
 					sumWork = 0;
 					sumNotAtHome = 0;
-					sumNotAtHomeAcceptLeisureAndEdu = 0;
+					sumNotAtHomeExceptLeisureAndEdu = 0;
 
 					while ((line = br.readLine()) != null) {
 						String[] parts = line.split(",");
@@ -183,14 +183,14 @@ class AnalyzeSnzData {
 							if (parts[actTypeLocation].contains("accomp")) {
 								sumAccomp = sumAccomp + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("business")) {
 								sumBusiness = sumBusiness + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
@@ -202,7 +202,7 @@ class AnalyzeSnzData {
 							if (parts[actTypeLocation].contains("errands")) {
 								sumErrands = sumErrands + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
@@ -218,42 +218,42 @@ class AnalyzeSnzData {
 							if (parts[actTypeLocation].contains("shop_daily")) {
 								sumShopDaily = sumShopDaily + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("shop_other")) {
 								sumShopOther = sumShopOther + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("traveling")) {
 								sumTraveling = sumTraveling + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("undefined")) {
 								sumUndefined = sumUndefined + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("visit")) {
 								sumVisit = sumVisit + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("work")) {
 								sumWork = sumWork + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
 										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
@@ -274,7 +274,7 @@ class AnalyzeSnzData {
 						visitBase = sumVisit;
 						workBase = sumWork;
 						notAtHomeBase = sumNotAtHome;
-						notAtHomeAcceptLeisureAndEduBase = sumNotAtHomeAcceptLeisureAndEdu;
+						notAtHomeExceptLeisureAndEduBase = sumNotAtHomeExceptLeisureAndEdu;
 					}
 				}
 				writer.write(currantDate + "\t" + Math.round((sumAccomp / accompBase - 1) * 100) + "\t"
@@ -290,7 +290,7 @@ class AnalyzeSnzData {
 						+ Math.round((sumVisit / visitBase - 1) * 100) + "\t"
 						+ Math.round((sumWork / workBase - 1) * 100) + "\t"
 						+ Math.round((sumNotAtHome / notAtHomeBase - 1) * 100) + "\t"
-						+ Math.round((sumNotAtHomeAcceptLeisureAndEdu / notAtHomeAcceptLeisureAndEduBase - 1) * 100)
+						+ Math.round((sumNotAtHomeExceptLeisureAndEdu / notAtHomeExceptLeisureAndEduBase - 1) * 100)
 						+ "\n");
 				if (countingDays == 1 || countingDays % 5 == 0)
 					log.info("Finished day " + countingDays);
