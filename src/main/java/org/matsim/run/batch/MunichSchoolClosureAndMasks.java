@@ -68,7 +68,6 @@ public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolC
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		FaceMask wornMask = FaceMask.valueOf(params.mask);
-		episimConfig.setMaskCompliance(params.maskCompliance);
 		episimConfig.setStartDate(params.startDate);
 
 		// TODO: base policy without offset
@@ -80,15 +79,15 @@ public final class MunichSchoolClosureAndMasks implements BatchRun<MunichSchoolC
 //				.restrict(58 - offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")
 //				.restrict(58 - offset, params.remainingFractionLeisure, "leisure")
 				// masks are worn from day 67 onwards (27.04.2020); compliance is set via config
-				.restrict("2020-04-27", Restriction.of(params.remainingFractionWork, wornMask), "work")
-				.restrict("2020-04-27", Restriction.of(params.remainingFractionShoppingBusinessErrands, wornMask), "shopping", "errands", "business")
-				.restrict("2020-04-27", Restriction.of(params.remainingFractionLeisure, wornMask), "leisure")
-				.restrict("2020-04-27", Restriction.of(1, wornMask), "pt", "tr")
-				.restrict("2020-04-27", Restriction.of(0.1, wornMask), "educ_primary", "educ_kiga")
+				.restrict("2020-04-27", Restriction.of(params.remainingFractionWork, wornMask, params.maskCompliance), "work")
+				.restrict("2020-04-27", Restriction.of(params.remainingFractionShoppingBusinessErrands, wornMask, params.maskCompliance), "shopping", "errands", "business")
+				.restrict("2020-04-27", Restriction.of(params.remainingFractionLeisure, wornMask, params.maskCompliance), "leisure")
+				.restrict("2020-04-27", Restriction.of(1, wornMask, params.maskCompliance), "pt", "tr")
+				.restrict("2020-04-27", Restriction.of(0.1, wornMask, params.maskCompliance), "educ_primary", "educ_kiga")
 				// edu facilities can be reopend from day 74 (04.05.2020)
-				.restrict("2020-04-05", Restriction.of(params.remainingFractionKiga, wornMask), "educ_kiga")
-				.restrict("2020-04-05", Restriction.of(params.remainingFractionPrima, wornMask), "educ_primary")
-				.restrict("2020-04-05", Restriction.of(params.remainingFractionSeconHigher, wornMask), "educ_secondary", "educ_higher")
+				.restrict("2020-04-05", Restriction.of(params.remainingFractionKiga, wornMask, params.maskCompliance), "educ_kiga")
+				.restrict("2020-04-05", Restriction.of(params.remainingFractionPrima, wornMask, params.maskCompliance), "educ_primary")
+				.restrict("2020-04-05", Restriction.of(params.remainingFractionSeconHigher, wornMask, params.maskCompliance), "educ_secondary", "educ_higher")
 				.build();
 
 		String policyFileName = "input/policy" + id + ".conf";

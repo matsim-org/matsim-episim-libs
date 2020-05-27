@@ -302,7 +302,7 @@ public class KnRunEpisim {
 
 					FixedPolicy.ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, dateOfExposureChange, changedExposure );
 					if ( exposureChangeType==ExposureChangeType.inclHome ){
-						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure, FaceMask.NONE ), "home" );
+						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure ), "home" );
 					}
 					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
 

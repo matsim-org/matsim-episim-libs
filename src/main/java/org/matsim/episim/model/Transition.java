@@ -38,7 +38,7 @@ public interface Transition {
 	}
 
 	/**
-	 * Same as {@link #logNormalWithMean(double, double)}
+	 * Same as {@link #logNormalWithMean(double, double)}.
 	 */
 	static Transition logNormalWithMeanAndStd(double mean, double std) {
 		return logNormalWithMean(mean, std);

@@ -6,8 +6,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.episim.model.FaceMask;
 
 import javax.annotation.Nullable;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Represent the current restrictions on an activity type.
@@ -29,77 +28,111 @@ public final class Restriction {
 	private Double ciCorrection;
 
 	/**
-	 * Persons are required to wear a mask with this or more effective type.
+	 * Maps mask type to percentage of persons wearing it.
 	 */
-	@Nullable
-	private FaceMask requireMask;
-
-	/**
-	 * Compliance rate for masks. Overwrites global parameter if set.
-	 */
-	@Nullable
-	private Double complianceRate;
+	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
 
 	/**
 	 * Constructor.
 	 */
-	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection,
-						@Nullable FaceMask requireMask, @Nullable Double complianceRate) {
+	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Map<FaceMask, Double> maskUsage) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
 		if (ciCorrection != null && (Double.isNaN(ciCorrection) || ciCorrection < 0))
 			throw new IllegalArgumentException("contact intensity correction must be larger than 0 but is=" + ciCorrection);
+		if (maskUsage != null && maskUsage.values().stream().anyMatch(p -> p < 0 || p > 1))
+			throw new IllegalArgumentException("Mask usage probabilities must be between [0, 1]");
 
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
-		this.requireMask = requireMask;
-		this.complianceRate = complianceRate;
+
+		// Compute cumulative probabilities
+		if (maskUsage != null && !maskUsage.isEmpty()) {
+			if (maskUsage.containsKey(FaceMask.NONE))
+				throw new IllegalArgumentException("Mask usage for NONE can not be given");
+
+			double total = maskUsage.values().stream().mapToDouble(Double::doubleValue).sum();
+			if (total > 1) throw new IllegalArgumentException("Sum of mask usage rates must be < 1");
+
+			double sum = 1 - total;
+			this.maskUsage.put(FaceMask.NONE, sum);
+
+			for (FaceMask m : FaceMask.values()) {
+				if (maskUsage.containsKey(m)) {
+					sum += maskUsage.get(m);
+					this.maskUsage.put(m, sum);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Create from other restriction.
+	 *
+	 * @param maskUsage will only be used of other is null
+	 */
+	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
+		this.remainingFraction = remainingFraction;
+		this.ciCorrection = ciCorrection;
+		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
 	}
 
 	/**
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, FaceMask.NONE, null);
+		return new Restriction(1d, 1d, null);
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null, null);
+		return new Restriction(remainingFraction, null, null);
 	}
 
 	/**
-	 * See {@link #of(Double, Double, FaceMask)}.
+	 * Restriction with remaining fraction and ci correction.
 	 */
-	public static Restriction of(double remainingFraction, FaceMask mask) {
-		return new Restriction(remainingFraction, null, mask, null);
+	public static Restriction of(double remainingFraction, double ciCorrection) {
+		return new Restriction(remainingFraction, ciCorrection, null);
 	}
 
 	/**
-	 * Instantiate a restriction.
+	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
-	public static Restriction of(Double remainingFraction, Double ciCorrection, FaceMask mask) {
-		return new Restriction(remainingFraction, ciCorrection, mask, null);
+	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
+		return new Restriction(remainingFraction, ciCorrection, maskUsage);
 	}
 
 	/**
-	 * Creates a restriction with required mask.
+	 * Helper function for restriction with one mask compliance.
+	 * See {@link #ofMask(FaceMask, double)}.
 	 */
-	public static Restriction ofMask(FaceMask mask) {
-		return new Restriction(null, null, mask, null);
+	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
+		return new Restriction(remainingFraction, null, Map.of(mask, maskCompliance));
 	}
 
 	/**
-	 * Creates a restriction with required mask and compliance rate.
+	 * Creates a restriction with one mask type and its compliance rates.
+	 *
+	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, mask, complianceRate);
+		return new Restriction(null, null, Map.of(mask, complianceRate));
 	}
 
 	/**
+	 * Creates a restriction with required masks and compliance rates. Sum has to be smaller than 1.
+	 * Not defined probability goes into the {@link FaceMask#NONE}.
+	 */
+	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
+		return new Restriction(null, null, maskUsage);
+	}
+
+	/**
+	 * Renamed to ci correction.
 	 * @deprecated Use {@link #ofCiCorrection(double)}.
 	 */
 	@Deprecated
@@ -111,18 +144,23 @@ public final class Restriction {
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null, null);
+		return new Restriction(null, ciCorrection, null);
 	}
 
 	/**
 	 * Creates a restriction from a config entry.
 	 */
 	public static Restriction fromConfig(Config config) {
+		Map<String, Double> nameMap = (Map<String, Double>) config.getValue("masks").unwrapped();
+		Map<FaceMask, Double> enumMap = new EnumMap<>(FaceMask.class);
+
+		if (nameMap != null)
+			nameMap.forEach((k, v) -> enumMap.put(FaceMask.valueOf(k), v));
+
 		return new Restriction(
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
 				config.getIsNull("ciCorrection") ? null : config.getDouble("ciCorrection"),
-				config.getIsNull("mask") ? null : config.getEnum(FaceMask.class, "mask"),
-				config.getIsNull("compliance") ? null : config.getDouble("compliance")
+				enumMap, null
 		);
 	}
 
@@ -130,16 +168,37 @@ public final class Restriction {
 	 * Creates a copy of a restriction.
 	 */
 	static Restriction clone(Restriction restriction) {
-		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.requireMask, restriction.complianceRate);
+		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, null, restriction);
 	}
 
+	/**
+	 * Determines / Randomly draws which mask a persons wears while this restriction is in place.
+	 */
+	public FaceMask determineMask(SplittableRandom rnd) {
+
+		if (maskUsage.isEmpty()) return FaceMask.NONE;
+
+		double p = Double.NaN;
+		for (Map.Entry<FaceMask, Double> e : maskUsage.entrySet()) {
+
+			if (e.getValue() == 1d) return e.getKey();
+			else if (Double.isNaN(p))
+				p = rnd.nextDouble();
+
+			if (p < e.getValue())
+				return e.getKey();
+
+		}
+
+		throw new IllegalStateException("Could not determine mask. Probabilities are likely wrong.");
+	}
 
 	/**
 	 * This method is also used to write the restriction to csv.
 	 */
 	@Override
 	public String toString() {
-		return String.format("%.2f_%.2f_%s", remainingFraction, ciCorrection, requireMask);
+		return String.format("%.2f_%.2f_%s", remainingFraction, ciCorrection, maskUsage);
 	}
 
 	/**
@@ -148,17 +207,15 @@ public final class Restriction {
 	void update(Restriction r) {
 		// All values may be optional and are only set if present
 		if (r.getRemainingFraction() != null)
-			setRemainingFraction(r.getRemainingFraction());
+			remainingFraction = r.getRemainingFraction();
 
 		if (r.getCiCorrection() != null)
-			setCiCorrection(r.getCiCorrection());
+			ciCorrection = r.getCiCorrection();
 
-		if (r.getRequireMask() != null)
-			setRequireMask(r.getRequireMask());
-
-		if (r.getComplianceRate() != null)
-			setComplianceRate(r.getComplianceRate());
-
+		if (!r.maskUsage.isEmpty()) {
+			maskUsage.clear();
+			maskUsage.putAll(r.maskUsage);
+		}
 	}
 
 	/**
@@ -170,8 +227,10 @@ public final class Restriction {
 
 		Double otherRf = (Double) r.get("fraction");
 		Double otherE = (Double) r.get("ciCorrection");
-		Double otherComp = (Double) r.get("compliance");
-		FaceMask otherMask = r.get("mask") == null ? null : FaceMask.valueOf((String) r.get("mask"));
+
+		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
+		((Map<String, Double>) r.get("masks"))
+				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
 
 		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf))
 			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
@@ -183,15 +242,10 @@ public final class Restriction {
 		else if (ciCorrection == null)
 			ciCorrection = otherE;
 
-		if (requireMask != null && otherMask != null && requireMask != otherMask)
-			log.warn("Duplicated mask " + requireMask + " and " + otherMask);
-		else if (requireMask == null)
-			requireMask = otherMask;
-
-		if (complianceRate != null && otherComp != null && !complianceRate.equals(otherComp))
-			log.warn("Duplicated complianceRate " + complianceRate + " and " + otherComp);
-		else if (complianceRate == null)
-			complianceRate = otherComp;
+		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks))
+			log.warn("Duplicated mask usage" + maskUsage + " and " + otherMasks);
+		else if (maskUsage.isEmpty())
+			maskUsage.putAll(otherMasks);
 
 		return this;
 	}
@@ -208,25 +262,8 @@ public final class Restriction {
 		return ciCorrection;
 	}
 
-	void setCiCorrection(double ciCorrection) {
-		this.ciCorrection = ciCorrection;
-	}
-
-	public FaceMask getRequireMask() {
-		return requireMask;
-	}
-
-	void setRequireMask(FaceMask requireMask) {
-		this.requireMask = requireMask;
-	}
-
-	@Nullable
-	public Double getComplianceRate() {
-		return complianceRate;
-	}
-
-	void setComplianceRate(double complianceRate) {
-		this.complianceRate = complianceRate;
+	Map<FaceMask, Double> getMaskUsage() {
+		return maskUsage;
 	}
 
 	void fullShutdown() {
@@ -235,15 +272,19 @@ public final class Restriction {
 
 	void open() {
 		remainingFraction = 1d;
-		requireMask = FaceMask.NONE;
+		maskUsage = null;
 	}
 
 	Map<String, Object> asMap() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("fraction", remainingFraction);
 		map.put("ciCorrection", ciCorrection);
-		map.put("mask", requireMask != null ? requireMask.name() : null);
-		map.put("compliance", complianceRate);
+
+		// Must be converted to map with strings
+		Map<String, Double> nameMap = new LinkedHashMap<>();
+		maskUsage.forEach((k, v) -> nameMap.put(k.name(), v));
+		map.put("masks", nameMap);
+
 		return map;
 	}
 

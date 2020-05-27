@@ -85,20 +85,19 @@ public final class HeinsbergSchoolClosureAndMasks implements BatchRun<HeinsbergS
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		int offset = params.offset;
 		FaceMask wornMask = FaceMask.valueOf(params.mask);
-		episimConfig.setMaskCompliance(params.maskCompliance);
 
 		com.typesafe.config.Config policyConf = SnzHeinsbergScenario.basePolicy(offset)
 
 				// masks are worn from day 72 onwards (27.04.2020); compliance is set via config
-				.restrict(72 - offset, Restriction.of(params.remainingFractionWork, wornMask), "work")
-				.restrict(72 - offset, Restriction.of(params.remainingFractionShoppingBusinessErrands, wornMask), "shopping", "errands", "business")
-				.restrict(72 - offset, Restriction.of(params.remainingFractionLeisure, wornMask), "leisure")
-				.restrict(72 - offset, Restriction.of(1, wornMask), "pt", "tr")
-				.restrict(72 - offset, Restriction.of(0.1, wornMask), "educ_primary", "educ_kiga")
+				.restrict(72 - offset, Restriction.of(params.remainingFractionWork, wornMask, params.maskCompliance), "work")
+				.restrict(72 - offset, Restriction.of(params.remainingFractionShoppingBusinessErrands, wornMask, params.maskCompliance), "shopping", "errands", "business")
+				.restrict(72 - offset, Restriction.of(params.remainingFractionLeisure, wornMask, params.maskCompliance), "leisure")
+				.restrict(72 - offset, Restriction.of(1, wornMask, params.maskCompliance), "pt", "tr")
+				.restrict(72 - offset, Restriction.of(0.1, wornMask, params.maskCompliance), "educ_primary", "educ_kiga")
 				// edu facilities can be reopend from day 79 (04.05.2020)
-				.restrict(79 - offset, Restriction.of(params.remainingFractionKiga, wornMask), "educ_kiga")
-				.restrict(79 - offset, Restriction.of(params.remainingFractionPrima, wornMask), "educ_primary")
-				.restrict(79 - offset, Restriction.of(params.remainingFractionSeconHigher, wornMask), "educ_secondary", "educ_higher")
+				.restrict(79 - offset, Restriction.of(params.remainingFractionKiga, wornMask, params.maskCompliance), "educ_kiga")
+				.restrict(79 - offset, Restriction.of(params.remainingFractionPrima, wornMask, params.maskCompliance), "educ_primary")
+				.restrict(79 - offset, Restriction.of(params.remainingFractionSeconHigher, wornMask, params.maskCompliance), "educ_secondary", "educ_higher")
 				.build();
 
 		String policyFileName = "input/policy" + id + ".conf";

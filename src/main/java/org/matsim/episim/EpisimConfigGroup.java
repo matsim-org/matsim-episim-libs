@@ -71,7 +71,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
-	private double maskCompliance = 1d;
 	private int initialStartInfections = 0;
 	/**
 	 * If not null, filter persons for initial infection by district.
@@ -176,16 +175,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	public long getStartOffset() {
 		return startOffset;
-	}
-
-	@StringGetter(MASK_COMPLIANCE)
-	public double getMaskCompliance() {
-		return maskCompliance;
-	}
-
-	@StringSetter(MASK_COMPLIANCE)
-	public void setMaskCompliance(double maskCompliance) {
-		this.maskCompliance = maskCompliance;
 	}
 
 	/**

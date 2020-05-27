@@ -35,7 +35,6 @@ import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 
@@ -223,7 +222,7 @@ public final class EpisimUtils {
 						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
 							// also exclude fridays.  also see above
 							double reduction = Math.min(1., alpha * (1. - remainingFraction));
-							builder.restrict(corrDate, Restriction.of(1. - reduction, exposure, FaceMask.NONE), activity);
+							builder.restrict(corrDate, Restriction.of(1. - reduction, exposure), activity);
 
 							if (doInterpolation) {
 								// yy why can't you use the interpolation facility provided by the framework?  kai, may'20
@@ -231,7 +230,7 @@ public final class EpisimUtils {
 								for (int jj = 1; jj < ii; jj++) {
 									double interpolatedRemainingFraction = lastRestrictions.get(activity) + (remainingFraction - lastRestrictions.get(activity)) * (1.0 * jj / (1.0 * ii));
 									double interpolatedReduction = Math.min(1., alpha * (1. - interpolatedRemainingFraction));
-									builder.restrict(LocalDate.parse(lastDate).plusDays(jj), Restriction.of(1. - interpolatedReduction, exposure, FaceMask.NONE), activity);
+									builder.restrict(LocalDate.parse(lastDate).plusDays(jj), Restriction.of(1. - interpolatedReduction, exposure), activity);
 									LocalDate.parse(lastDate).plusDays(jj);
 								}
 							}

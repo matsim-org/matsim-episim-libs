@@ -163,7 +163,7 @@ public class DefaultInfectionModelTest {
 		assertThat(rate).isCloseTo(0, OFFSET);
 
 		// no infections without contact intensity
-		restrictions.put("c10", Restriction.of(1.0, 0.0, FaceMask.NONE));
+		restrictions.put("c10", Restriction.of(1.0, 0.0));
 		rate = sampleInfectionRate(Duration.ofHours(2), "c10",
 				() -> EpisimTestUtils.createFacility(1, "c10", EpisimTestUtils.CONTAGIOUS),
 				(f) -> EpisimTestUtils.createPerson("c10", f)
@@ -333,7 +333,7 @@ public class DefaultInfectionModelTest {
 				})
 		);
 
-		restrictions.put(type, Restriction.of(0.5, 1.0, FaceMask.NONE));
+		restrictions.put(type, Restriction.of(0.5, 1.0));
 
 		double rateRestricted = sampleTotalInfectionRate(20_000, Duration.ofMinutes(30), type,
 				() -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> {
