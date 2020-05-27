@@ -32,6 +32,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.zip.GZIPInputStream;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.core.utils.io.IOUtils;
 
 /**
@@ -42,10 +44,14 @@ import org.matsim.core.utils.io.IOUtils;
 
 class AnalyzeSnzData {
 
+	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
+
 	public static void main(String[] args) throws FileNotFoundException, IOException {
 
 		String inputFolder = "../shared-svn/projects/episim/data/Bewegungsdaten/";
+		log.info("Searching for files in the folder: " + inputFolder);
 		ArrayList<File> filesWithData = findInputFiles(inputFolder);
+		log.info("Amount of found files: " + filesWithData.size());
 
 		// zip codes for Berlin
 		List<Integer> zipCodesBerlin = new ArrayList<Integer>();
@@ -61,11 +67,15 @@ class AnalyzeSnzData {
 		List<Integer> zipCodesHeinsberg = Arrays.asList(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844);
 
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
-		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
-		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
+//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
+//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
 
+		log.info("Done!");
 	}
 
+	/**
+	 * This method searches all files with an certain name in a given folder.
+	 */
 	private static ArrayList<File> findInputFiles(String inputFolder) {
 		File[] fileArray = readFile(inputFolder);
 		ArrayList<File> fileData = new ArrayList<File>();
@@ -83,6 +93,9 @@ class AnalyzeSnzData {
 		return fileData;
 	}
 
+	/**
+	 * This method reads a folder and gives back a list of files in this folder.
+	 */
 	private static File[] readFile(String inputFolder) {
 		File f = new File(inputFolder);
 		File[] fileArray = f.listFiles();
@@ -91,12 +104,14 @@ class AnalyzeSnzData {
 
 	private static void analyzeDataForCertainArea(List<Integer> listZipCodes, String area,
 			ArrayList<File> filesWithData) throws IOException, FileNotFoundException {
+
+		log.info("Analyze data for " + area);
 		String outputFile = null;
-		outputFile = "output/" + area + "SnzData_daily_until20200517-Test.csv";
+		outputFile = "output/" + area + "SnzData_daily_until20200517.csv";
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile);
 		try {
 			writer.write(
-					"date\taccomp\tbusiness\teducation\terrands\thome\tleisure\tshop_daily\tshop_other\ttraveling\tundefined\tvisit\twork\tnotAtHome"
+					"date\taccomp\tbusiness\teducation\terrands\thome\tleisure\tshop_daily\tshop_other\ttraveling\tundefined\tvisit\twork\tnotAtHome\tnotAtHomeAcceptLeisureAndEdu"
 							+ "\n");
 			String line;
 			int dateLocation = 0;
@@ -130,9 +145,14 @@ class AnalyzeSnzData {
 			double workBase = 0;
 			double sumNotAtHome = 0;
 			double notAtHomeBase = 0;
+			double sumNotAtHomeAcceptLeisureAndEdu = 0;
+			double notAtHomeAcceptLeisureAndEduBase = 0;
 			String currantDate = null;
+			int countingDays = 0;
 
 			for (File file : filesWithData) {
+
+				countingDays++;
 
 				try (BufferedReader br = new BufferedReader(
 						new InputStreamReader(new GZIPInputStream(new FileInputStream(file.getAbsolutePath()))))) {
@@ -150,6 +170,7 @@ class AnalyzeSnzData {
 					sumVisit = 0;
 					sumWork = 0;
 					sumNotAtHome = 0;
+					sumNotAtHomeAcceptLeisureAndEdu = 0;
 
 					while ((line = br.readLine()) != null) {
 						String[] parts = line.split(",");
@@ -162,11 +183,15 @@ class AnalyzeSnzData {
 							if (parts[actTypeLocation].contains("accomp")) {
 								sumAccomp = sumAccomp + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("business")) {
 								sumBusiness = sumBusiness + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("education")) {
@@ -177,6 +202,8 @@ class AnalyzeSnzData {
 							if (parts[actTypeLocation].contains("errands")) {
 								sumErrands = sumErrands + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("home")) {
@@ -191,31 +218,43 @@ class AnalyzeSnzData {
 							if (parts[actTypeLocation].contains("shop_daily")) {
 								sumShopDaily = sumShopDaily + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("shop_other")) {
 								sumShopOther = sumShopOther + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("traveling")) {
 								sumTraveling = sumTraveling + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("undefined")) {
 								sumUndefined = sumUndefined + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("visit")) {
 								sumVisit = sumVisit + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 							if (parts[actTypeLocation].contains("work")) {
 								sumWork = sumWork + Double.parseDouble(parts[durationLocation]);
 								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
+								sumNotAtHomeAcceptLeisureAndEdu = sumNotAtHomeAcceptLeisureAndEdu
+										+ Double.parseDouble(parts[durationLocation]);
 								continue;
 							}
 						}
@@ -235,6 +274,7 @@ class AnalyzeSnzData {
 						visitBase = sumVisit;
 						workBase = sumWork;
 						notAtHomeBase = sumNotAtHome;
+						notAtHomeAcceptLeisureAndEduBase = sumNotAtHomeAcceptLeisureAndEdu;
 					}
 				}
 				writer.write(currantDate + "\t" + Math.round((sumAccomp / accompBase - 1) * 100) + "\t"
@@ -249,9 +289,14 @@ class AnalyzeSnzData {
 						+ Math.round((sumUndefined / undefinedBase - 1) * 100) + "\t"
 						+ Math.round((sumVisit / visitBase - 1) * 100) + "\t"
 						+ Math.round((sumWork / workBase - 1) * 100) + "\t"
-						+ Math.round((sumNotAtHome / notAtHomeBase - 1) * 100) + "\n");
+						+ Math.round((sumNotAtHome / notAtHomeBase - 1) * 100) + "\t"
+						+ Math.round((sumNotAtHomeAcceptLeisureAndEdu / notAtHomeAcceptLeisureAndEduBase - 1) * 100)
+						+ "\n");
+				if (countingDays == 1 || countingDays % 5 == 0)
+					log.info("Finished day " + countingDays);
 			}
 			writer.close();
+			log.info("Write analyze of " + countingDays + " is writen to " + outputFile);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
