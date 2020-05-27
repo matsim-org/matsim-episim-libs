@@ -29,8 +29,6 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
 		episimConfig.getOrAddContainerParams("pt")
 				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("tr")
-				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("work")
 				.setContactIntensity(3.0);
 		episimConfig.getOrAddContainerParams("leisure")
@@ -52,7 +50,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.getOrAddContainerParams("home")
 				.setContactIntensity(3.0 / 4.);
 		episimConfig.getOrAddContainerParams("quarantine_home")
-				.setContactIntensity(3.0 / 4. / 10.);
+				.setContactIntensity(0.01);
 	}
 
 	public static void addParams(EpisimConfigGroup episimConfig) {
