@@ -23,10 +23,10 @@ public final class Restriction {
 	private Double remainingFraction;
 
 	/**
-	 * Exposure during this activity.
+	 * Contact intensity correction factor.
 	 */
 	@Nullable
-	private Double exposure;
+	private Double ciCorrection;
 
 	/**
 	 * Persons are required to wear a mask with this or more effective type.
@@ -43,16 +43,16 @@ public final class Restriction {
 	/**
 	 * Constructor.
 	 */
-	private Restriction(@Nullable Double remainingFraction, @Nullable Double exposure,
+	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection,
 						@Nullable FaceMask requireMask, @Nullable Double complianceRate) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
-		if (exposure != null &&  (Double.isNaN(exposure) || exposure < 0))
-			throw new IllegalArgumentException("exposure must be larger than 0 but is=" + exposure);
+		if (ciCorrection != null && (Double.isNaN(ciCorrection) || ciCorrection < 0))
+			throw new IllegalArgumentException("contact intensity correction must be larger than 0 but is=" + ciCorrection);
 
 		this.remainingFraction = remainingFraction;
-		this.exposure = exposure;
+		this.ciCorrection = ciCorrection;
 		this.requireMask = requireMask;
 		this.complianceRate = complianceRate;
 	}
@@ -81,8 +81,8 @@ public final class Restriction {
 	/**
 	 * Instantiate a restriction.
 	 */
-	public static Restriction of(Double remainingFraction, Double exposure, FaceMask mask) {
-		return new Restriction(remainingFraction, exposure, mask, null);
+	public static Restriction of(Double remainingFraction, Double ciCorrection, FaceMask mask) {
+		return new Restriction(remainingFraction, ciCorrection, mask, null);
 	}
 
 	/**
@@ -100,12 +100,19 @@ public final class Restriction {
 	}
 
 	/**
-	 * Creates a restriction with only exposure set.
+	 * @deprecated Use {@link #ofCiCorrection(double)}.
 	 */
+	@Deprecated
 	public static Restriction ofExposure(double exposure) {
-		return new Restriction(null, exposure, null, null);
+		return ofCiCorrection(exposure);
 	}
 
+	/**
+	 * Creates a restriction, which has only a contact intensity correction set.
+	 */
+	public static Restriction ofCiCorrection(double ciCorrection) {
+		return new Restriction(null, ciCorrection, null, null);
+	}
 
 	/**
 	 * Creates a restriction from a config entry.
@@ -113,7 +120,7 @@ public final class Restriction {
 	public static Restriction fromConfig(Config config) {
 		return new Restriction(
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
-				config.getIsNull("exposure") ? null : config.getDouble("exposure"),
+				config.getIsNull("ciCorrection") ? null : config.getDouble("ciCorrection"),
 				config.getIsNull("mask") ? null : config.getEnum(FaceMask.class, "mask"),
 				config.getIsNull("compliance") ? null : config.getDouble("compliance")
 		);
@@ -123,7 +130,7 @@ public final class Restriction {
 	 * Creates a copy of a restriction.
 	 */
 	static Restriction clone(Restriction restriction) {
-		return new Restriction(restriction.remainingFraction, restriction.exposure, restriction.requireMask, restriction.complianceRate);
+		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.requireMask, restriction.complianceRate);
 	}
 
 
@@ -132,7 +139,7 @@ public final class Restriction {
 	 */
 	@Override
 	public String toString() {
-		return String.format("%.2f_%.2f_%s", remainingFraction, exposure, requireMask);
+		return String.format("%.2f_%.2f_%s", remainingFraction, ciCorrection, requireMask);
 	}
 
 	/**
@@ -143,8 +150,8 @@ public final class Restriction {
 		if (r.getRemainingFraction() != null)
 			setRemainingFraction(r.getRemainingFraction());
 
-		if (r.getExposure() != null)
-			setExposure(r.getExposure());
+		if (r.getCiCorrection() != null)
+			setCiCorrection(r.getCiCorrection());
 
 		if (r.getRequireMask() != null)
 			setRequireMask(r.getRequireMask());
@@ -162,7 +169,7 @@ public final class Restriction {
 	Restriction merge(Map<String, Object> r) {
 
 		Double otherRf = (Double) r.get("fraction");
-		Double otherE = (Double) r.get("exposure");
+		Double otherE = (Double) r.get("ciCorrection");
 		Double otherComp = (Double) r.get("compliance");
 		FaceMask otherMask = r.get("mask") == null ? null : FaceMask.valueOf((String) r.get("mask"));
 
@@ -171,10 +178,10 @@ public final class Restriction {
 		else if (remainingFraction == null)
 			remainingFraction = otherRf;
 
-		if (exposure != null && otherE != null && !exposure.equals(otherE))
-			log.warn("Duplicated exposure " + exposure + " and " + otherE);
-		else if (exposure == null)
-			exposure = otherE;
+		if (ciCorrection != null && otherE != null && !ciCorrection.equals(otherE))
+			log.warn("Duplicated ci correction " + ciCorrection + " and " + otherE);
+		else if (ciCorrection == null)
+			ciCorrection = otherE;
 
 		if (requireMask != null && otherMask != null && requireMask != otherMask)
 			log.warn("Duplicated mask " + requireMask + " and " + otherMask);
@@ -197,19 +204,19 @@ public final class Restriction {
 		this.remainingFraction = remainingFraction;
 	}
 
-	public Double getExposure() {
-		return exposure;
+	public Double getCiCorrection() {
+		return ciCorrection;
 	}
 
-	public void setExposure(double exposure) {
-		this.exposure = exposure;
+	void setCiCorrection(double ciCorrection) {
+		this.ciCorrection = ciCorrection;
 	}
 
 	public FaceMask getRequireMask() {
 		return requireMask;
 	}
 
-	public void setRequireMask(FaceMask requireMask) {
+	void setRequireMask(FaceMask requireMask) {
 		this.requireMask = requireMask;
 	}
 
@@ -234,7 +241,7 @@ public final class Restriction {
 	Map<String, Object> asMap() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("fraction", remainingFraction);
-		map.put("exposure", exposure);
+		map.put("ciCorrection", ciCorrection);
 		map.put("mask", requireMask != null ? requireMask.name() : null);
 		map.put("compliance", complianceRate);
 		return map;

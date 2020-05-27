@@ -62,7 +62,6 @@ public class EpisimTestUtils {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home_quarantine").setContactIntensity(1));
 
 		return episimConfig;
 	}
