@@ -347,7 +347,7 @@ public final class EpisimUtils {
 		for (CSVRecord record : parser) {
 			LocalDate date = LocalDate.parse(record.get(0), fmt);
 
-			int value = Integer.parseInt(record.get("notAtHome"));
+			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
 
 			double remainingFraction = 1. + (value / 100.);
 			// modulate reduction with alpha
