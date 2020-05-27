@@ -90,6 +90,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 */
 	private int iteration;
 	private BufferedWriter events;
+	private String memorizedDate = null ;
 
 
 	@Inject
@@ -246,6 +247,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 	 * @param date 
 	 */
 	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
+
+		memorizedDate = date ;
+
 		if (iteration == 0) return;
 
 		InfectionReport t = reports.get("total");
@@ -316,6 +320,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
 		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
 		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
+		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;
 
 		writer.append(infectionEvents, array);
 	}
@@ -451,7 +456,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		nRecovered, nInQuarantine, district
 	}
 
-	enum InfectionEventsWriterFields {time, infector, infected, infectionType}
+	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date}
 
 	/**
 	 * Detailed infection report for the end of a day.

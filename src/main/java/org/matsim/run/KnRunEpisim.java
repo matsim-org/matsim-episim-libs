@@ -275,8 +275,10 @@ public class KnRunEpisim {
 					for ( int ii = 0 ; ii<= nDays ; ii++ ){
 						double newExposure = changedExposure + ( changedExposure*0. - changedExposure ) * ii / nDays ;
 						// check: ii=0 --> old value; ii=nDays --> new value
-						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ),
-								"shop_daily", "shop_other", "pt", "work", "leisure" );
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ), actsExceptHomeAndEdu );
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ), "pt","tr" );
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ), educ_higher );
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ), educ_lower );
 					}
 
 					// ===
