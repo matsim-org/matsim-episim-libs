@@ -32,6 +32,8 @@ import org.matsim.episim.policy.Restriction;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.inject.Singleton;
 
@@ -41,36 +43,6 @@ import javax.inject.Singleton;
  * @see AbstractSnzScenario
  */
 public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
-
-	/**
-	 * The base policy based on actual restrictions in the past and google mobility data.
-	 */
-	public static FixedPolicy.ConfigBuilder basePolicy() {
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
-				.interpolate("2020-03-06", "2020-03-13", Restriction.of(1), Restriction.of(0.8), "work")
-				.interpolate("2020-03-13", "2020-03-20", Restriction.of(0.8), Restriction.of(0.5), "work")
-				.interpolate("2020-03-20", "2020-03-27", Restriction.of(0.5), Restriction.of(0.45), "work")
-				.interpolate("2020-04-05", "2020-04-19", Restriction.of(0.45), Restriction.of(0.55), "work")
-				.interpolate("2020-04-20", "2020-04-27", Restriction.of(0.55), Restriction.of(0.6), "work")
-
-				.interpolate("2020-03-13", "2020-03-27", Restriction.of(1), Restriction.of(0.1), "leisure", "visit", "shop_other")
-				.restrict("2020-04-27", Restriction.of(0.1, FaceMask.CLOTH), "shop_other")
-
-				.interpolate("2020-02-28", "2020-03-06", Restriction.of(1), Restriction.of(0.95), "shop_daily", "errands", "business")
-				.interpolate("2020-03-06", "2020-03-13", Restriction.of(0.95), Restriction.ofExposure(0.85), "shop_daily", "errands", "business")
-				.interpolate("2020-03-13", "2020-03-20", Restriction.of(0.85), Restriction.of(0.4), "shop_daily", "errands", "business")
-				.interpolate("2020-04-20", "2020-04-27", Restriction.of(0.4), Restriction.of(0.5), "shop_daily", "errands", "business")
-				.interpolate("2020-04-28", "2020-05-04", Restriction.of(0.5, FaceMask.CLOTH), Restriction.of( 0.55), "shop_daily", "errands", "business")
-
-				//saturday 14th of march, so the weekend before schools got closed..
-				.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-
-				.restrict("2020-04-27", Restriction.of(1, FaceMask.CLOTH), "pt", "tr");
-
-		return builder;
-	}
 
 	@Provides
 	@Singleton
@@ -90,28 +62,37 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setCalibrationParameter(0.000_002_0);
 		episimConfig.setMaxInteractions(3);
 
-		double alpha = 2.0;
-		double exposure = 0.5;
-		String startDate = "2020-02-11";
-		String dateOfExposureChange = "2020-03-10";
+		double alpha = 1.4;
+		double ciCorrection = 0.5;
+		double clothMaskCompliance = 1./3.;
+		double surgicalMaskCompliance = 1./6.;
 
-		ConfigBuilder configBuilder = null;
+		String startDate = "2020-02-11";
+		String dateOfCiChange = "2020-03-10";
+
+		ConfigBuilder configBuilder = new ConfigBuilder();
 
 		episimConfig.setStartDate(startDate);
 		try {
-			configBuilder = EpisimUtils.createRestrictionsFromCSV(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
+//			configBuilder = EpisimUtils.createRestrictionsFromCSV(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
+			configBuilder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		configBuilder.restrict(dateOfExposureChange, Restriction.ofExposure(exposure), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		configBuilder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		configBuilder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
+				
 		configBuilder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-			.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
+			.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+			//.restrict("2020-04-27", Restriction.ofMask(FaceMask.CLOTH, clothMaskCompliance), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+			.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+			.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+			;
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
-		config.controler().setOutputDirectory("./output-berlin-25pct-restricts-" + alpha + "-" + exposure + "-" + dateOfExposureChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
-//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + clothMaskCompliance + "-" + surgicalMaskCompliance + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
 
 		return config;
