@@ -184,7 +184,7 @@ public class FixedPolicy extends ShutdownPolicy {
 
 
 		/**
-		 * Create a config entry with linear interpolated {@link Restriction#getRemainingFraction()} and {@link Restriction#getExposure()}.
+		 * Create a config entry with linear interpolated {@link Restriction#getRemainingFraction()} and {@link Restriction#getCiCorrection()} ()}.
 		 * If any of these is not defined the interpolation will also be undefined.
 		 * Required mask is always the same as in first parameter {@code restriction}.
 		 * All start and end values are inclusive.
@@ -192,7 +192,7 @@ public class FixedPolicy extends ShutdownPolicy {
 		 * @param start          starting date
 		 * @param end            end tate
 		 * @param restriction    starting restriction at start date
-		 * @param restrictionEnd remaining fraction / exposure at end date
+		 * @param restrictionEnd remaining fraction / ci corr at end date
 		 * @param activities     activities to restrict
 		 */
 		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, Restriction restrictionEnd, String... activities) {
@@ -203,8 +203,8 @@ public class FixedPolicy extends ShutdownPolicy {
 			double rf = Objects.requireNonNullElse(restriction.getRemainingFraction(), Double.NaN);
 			double rfEnd = Objects.requireNonNullElse(restrictionEnd.getRemainingFraction(), Double.NaN);
 
-			double exp = Objects.requireNonNullElse(restriction.getExposure(), Double.NaN);
-			double expEnd = Objects.requireNonNullElse(restrictionEnd.getExposure(), Double.NaN);
+			double exp = Objects.requireNonNullElse(restriction.getCiCorrection(), Double.NaN);
+			double expEnd = Objects.requireNonNullElse(restrictionEnd.getCiCorrection(), Double.NaN);
 
 			LocalDate today = start;
 			while (today.isBefore(end) || today.isEqual(end)) {
@@ -212,7 +212,7 @@ public class FixedPolicy extends ShutdownPolicy {
 				double e = exp + (expEnd - exp) * (day / diff);
 
 				if (Double.isNaN(r) && Double.isNaN(e))
-					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and exposure are undefined.");
+					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
 				restrict(today.toString(),
 						Restriction.of(

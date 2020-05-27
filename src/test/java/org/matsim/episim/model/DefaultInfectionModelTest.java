@@ -162,7 +162,7 @@ public class DefaultInfectionModelTest {
 		);
 		assertThat(rate).isCloseTo(0, OFFSET);
 
-		// no infections without exposure
+		// no infections without contact intensity
 		restrictions.put("c10", Restriction.of(1.0, 0.0, FaceMask.NONE));
 		rate = sampleInfectionRate(Duration.ofHours(2), "c10",
 				() -> EpisimTestUtils.createFacility(1, "c10", EpisimTestUtils.CONTAGIOUS),
