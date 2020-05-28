@@ -1,0 +1,124 @@
+package org.matsim.episim.analysis;
+
+import org.apache.commons.math3.linear.MatrixUtils;
+import org.apache.commons.math3.linear.RealMatrix;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
+import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
+import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
+import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.events.HasFacilityId;
+import org.matsim.core.api.experimental.events.EventsManager;
+import org.matsim.core.api.internal.HasPersonId;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.events.EventsUtils;
+import org.matsim.core.events.handler.BasicEventHandler;
+import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.geometry.transformations.TransformationFactory;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.scenarioCreation.DistrictLookup;
+import picocli.CommandLine;
+
+import java.io.BufferedWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.Callable;
+
+/**
+ * Util to create an origin destination matrix.
+ */
+@CommandLine.Command(
+		name = "createODMatrix",
+		description = "Creates an origin destination matrix using the trips from a event file and facility file as lookup."
+)
+class CreateODMatrix implements Callable<Integer> {
+
+	private static final Logger log = LogManager.getLogger(CreateODMatrix.class);
+
+	@CommandLine.Option(names = "--events", defaultValue = "de_2020_snz_episim_events_100pt.xml.gz")
+	private Path events;
+
+	@CommandLine.Option(names = "--facilities", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Deutschland/facilities_assigned_simplified.xml.gz")
+	private Path facilities;
+
+	@CommandLine.Option(names = "--shapeFile", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
+	private Path shapeFile;
+
+	@CommandLine.Option(names = "--output")
+	private Path output;
+
+	public static void main(String[] args) {
+		System.exit(new CommandLine(new CreateODMatrix()).execute(args));
+	}
+
+	@Override
+	public Integer call() throws Exception {
+
+		Config config = ConfigUtils.createConfig();
+		config.facilities().setInputFile(facilities.toString());
+
+		DistrictLookup.Index index = new DistrictLookup.Index(shapeFile.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:32632", "EPSG:25832"), "name_1");
+
+		Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		log.info("Read {} facilities", scenario.getActivityFacilities().getFacilities().size());
+
+		MutableObjectIntMap<String> regions = new ObjectIntHashMap<>();
+
+		// Map facility id to region
+		MutableIntIntMap facilities = new IntIntHashMap();
+
+		for (Map.Entry<Id<ActivityFacility>, ? extends ActivityFacility> e : scenario.getActivityFacilities().getFacilities().entrySet()) {
+			String target = index.query(e.getValue().getCoord().getX(), e.getValue().getCoord().getY()).intern();
+
+			int region = regions.getIfAbsentPut(target, regions::size);
+			facilities.put(e.getKey().index(), region);
+		}
+
+		log.info("Done loading facilities");
+
+		EventsManager manager = EventsUtils.createEventsManager();
+
+		MutableIntIntMap lastRegion = new IntIntHashMap();
+
+		RealMatrix m = MatrixUtils.createRealMatrix(regions.size(), regions.size());
+
+		manager.addHandler((BasicEventHandler) event -> {
+
+			if (event instanceof HasFacilityId && event instanceof HasPersonId) {
+				int person = ((HasPersonId) event).getPersonId().index();
+				int facility = ((HasFacilityId) event).getFacilityId().index();
+				int region = facilities.get(facility);
+				int last = lastRegion.getIfAbsent(person, -1);
+
+				if (last != region) {
+					lastRegion.put(person, region);
+					if (last != -1) {
+						m.addToEntry(last, region, 1);
+					}
+				}
+			}
+		});
+
+		EventsUtils.readEvents(manager, events.toString());
+
+		log.info("Finished reading events");
+
+		BufferedWriter out = Files.newBufferedWriter(output);
+		for (int i = 0; i < regions.size(); i++) {
+			for (int j = 0; j < regions.size(); j++) {
+				out.write(String.valueOf(m.getEntry(i, j)));
+				out.write("\t");
+			}
+
+			out.write("\n");
+		}
+
+		return 0;
+	}
+}

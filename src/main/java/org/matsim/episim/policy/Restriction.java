@@ -50,7 +50,7 @@ public final class Restriction {
 		// Compute cumulative probabilities
 		if (maskUsage != null && !maskUsage.isEmpty()) {
 			if (maskUsage.containsKey(FaceMask.NONE))
-				throw new IllegalArgumentException("Mask usage for NONE can not be given");
+				throw new IllegalArgumentException("Mask usage for NONE must not be given");
 
 			double total = maskUsage.values().stream().mapToDouble(Double::doubleValue).sum();
 			if (total > 1) throw new IllegalArgumentException("Sum of mask usage rates must be < 1");
