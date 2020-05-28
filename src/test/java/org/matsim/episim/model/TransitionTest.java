@@ -3,13 +3,17 @@ package org.matsim.episim.model;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
+import org.assertj.core.api.Condition;
+import org.assertj.core.data.Index;
 import org.assertj.core.data.Offset;
 import org.junit.Test;
-import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 
+import java.util.Objects;
 import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.matsim.episim.model.Transition.to;
 
 public class TransitionTest {
 
@@ -71,5 +75,28 @@ public class TransitionTest {
 		for (int i = 0; i < 1000; i++) {
 			assertThat(t.getTransitionDay(rnd)).isEqualTo(10);
 		}
+	}
+
+	@Test
+	public void builder() {
+
+		Transition.Builder config = Transition.config()
+				.from(DiseaseStatus.susceptible,
+						to(DiseaseStatus.infectedButNotContagious, Transition.fixed(2)))
+				.from(DiseaseStatus.infectedButNotContagious,
+						to(DiseaseStatus.contagious, Transition.fixed(5)))
+				.from(DiseaseStatus.contagious,
+						to(DiseaseStatus.showingSymptoms, Transition.logNormalWithMeanAndStd(2, 2)),
+						to(DiseaseStatus.seriouslySick, Transition.logNormalWithMean(4, 1)));
+
+		Transition.Builder b2 = Transition.parse(config.build());
+
+		assertThat(config.asArray())
+				.contains(Transition.fixed(2), Index.atIndex(DiseaseStatus.infectedButNotContagious.ordinal()))
+				.containsOnlyOnce(Transition.fixed(5))
+				.contains(Transition.logNormalWithMeanAndStd(2, 2), Transition.logNormalWithMean(4, 1))
+				.areExactly(4, new Condition<>(Objects::nonNull, "Not null"))
+				.isEqualTo(b2.asArray());
+
 	}
 }

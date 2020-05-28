@@ -1,12 +1,19 @@
 package org.matsim.episim.model;
 
+import com.google.common.primitives.Doubles;
+import org.apache.commons.math3.stat.descriptive.moment.Mean;
+import org.assertj.core.data.Percentage;
 import org.junit.Before;
 import org.junit.Test;
 import org.matsim.episim.*;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.matsim.episim.model.Transition.to;
 import static org.mockito.Mockito.mock;
 
 public class DefaultProgressionModelTest {
@@ -19,7 +26,7 @@ public class DefaultProgressionModelTest {
 	public void setup() {
 		reporting = mock(EpisimReporting.class);
 		tracingConfig = new TracingConfigGroup();
-		model = new DefaultProgressionModel(new SplittableRandom(1), new EpisimConfigGroup(), tracingConfig);
+		model = new NewProgressionModel(new SplittableRandom(1), new EpisimConfigGroup(), tracingConfig);
 	}
 
 	@Test
@@ -30,7 +37,7 @@ public class DefaultProgressionModelTest {
 		tracingConfig.setTracingDelay(0);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
-		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 5; day++) {
 			model.updateState(p, day);
 		}
@@ -49,7 +56,7 @@ public class DefaultProgressionModelTest {
 		tracingConfig.setTracingDelay(2);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
-		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 5; day++) {
 			model.updateState(p, day);
 		}
@@ -77,7 +84,7 @@ public class DefaultProgressionModelTest {
 		tracingConfig.setTracingDayDistance(1);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
-		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 5; day++) {
 			model.updateState(p, day);
 		}
@@ -107,7 +114,7 @@ public class DefaultProgressionModelTest {
 		tracingConfig.setQuarantineHouseholdMembers(false);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
-		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 5; day++) {
 			model.updateState(p, day);
 		}
@@ -133,21 +140,101 @@ public class DefaultProgressionModelTest {
 
 	}
 
-
 	@Test
 	public void defaultTransition() {
 
 		// Depends on random seed
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
-		p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 16; day++) {
 			model.updateState(p, day);
 
-			if (day == 3) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.infectedButNotContagious);
-			if (day == 4) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.contagious);
-			if (day == 6) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.showingSymptoms);
-			if (day == 16) assertThat(p.getDiseaseStatus()).isEqualTo(EpisimPerson.DiseaseStatus.recovered);
+			if (day == 3) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.infectedButNotContagious);
+			if (day == 4) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.contagious);
+			if (day == 6) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.showingSymptoms);
+			if (day == 16) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.recovered);
 
 		}
 	}
+
+
+	@Test
+	public void showingSymptom() {
+
+		// 80% should show symptoms after 6 days
+		int showSymptoms = 0;
+		for (int i = 0; i < 10_000; i++) {
+
+			EpisimPerson p = EpisimTestUtils.createPerson(reporting);
+			p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+
+			for (int day = 0; day <= 6; day++) {
+				model.updateState(p, day);
+			}
+
+			if (p.getDiseaseStatus() == DiseaseStatus.showingSymptoms)
+				showSymptoms++;
+
+		}
+
+		assertThat(showSymptoms)
+				.isCloseTo((int) (10_000 * 0.8), Percentage.withPercentage(1));
+
+	}
+
+
+	@Test
+	public void transitionDay() {
+
+		EpisimConfigGroup config = new EpisimConfigGroup();
+
+		config.setProgressionConfig(Transition.config()
+				.from(DiseaseStatus.infectedButNotContagious,
+						to(DiseaseStatus.contagious, Transition.fixed(4)))
+				.from(DiseaseStatus.contagious,
+						to(DiseaseStatus.showingSymptoms, Transition.logNormalWithMeanAndStd(10, 5)),
+						to(DiseaseStatus.recovered, Transition.logNormalWithMeanAndStd(10, 5)))
+				.from(DiseaseStatus.showingSymptoms,
+						to(DiseaseStatus.seriouslySick, Transition.fixed(0)),
+						to(DiseaseStatus.recovered, Transition.fixed(0)))
+				.from(DiseaseStatus.seriouslySick,
+						to(DiseaseStatus.critical, Transition.fixed(0)),
+						to(DiseaseStatus.recovered, Transition.fixed(0)))
+				.from(DiseaseStatus.critical,
+						to(DiseaseStatus.seriouslySick, Transition.fixed(0)))
+				.build());
+
+		model = new NewProgressionModel(new SplittableRandom(1), config, tracingConfig);
+
+		List<Double> recoveredDays = new ArrayList<>();
+
+		for (int i = 0; i < 10_000; i++) {
+
+			EpisimPerson p = EpisimTestUtils.createPerson(reporting);
+			p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+
+			int toDay = 40;
+			for (int day = 0; day <= toDay; day++) {
+				model.updateState(p, day);
+			}
+
+			if (p.getDiseaseStatus() == DiseaseStatus.recovered) {
+				recoveredDays.add((double) toDay - p.daysSince(DiseaseStatus.recovered, toDay));
+			}
+
+			if (p.hadDiseaseStatus(DiseaseStatus.critical)) {
+				// Transitions all happened on the same day
+				assertThat(p.daysSince(DiseaseStatus.critical, toDay))
+						.isEqualTo(p.daysSince(DiseaseStatus.showingSymptoms, toDay))
+						.isEqualTo(p.daysSince(DiseaseStatus.seriouslySick, toDay));
+			}
+
+		}
+
+		// In average persons should recover on day 14
+		assertThat(new Mean().evaluate(Doubles.toArray(recoveredDays)))
+				.isCloseTo(14, Percentage.withPercentage(1));
+	}
+
+
 }
