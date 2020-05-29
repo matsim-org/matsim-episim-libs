@@ -6,6 +6,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
 import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
+import org.eclipse.collections.api.tuple.primitive.ObjectIntPair;
 import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
 import org.matsim.api.core.v01.Id;
@@ -26,7 +27,9 @@ import picocli.CommandLine;
 import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 
 /**
@@ -49,7 +52,7 @@ class CreateODMatrix implements Callable<Integer> {
 	@CommandLine.Option(names = "--shapeFile", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
 
-	@CommandLine.Option(names = "--output")
+	@CommandLine.Option(names = "--output", defaultValue = "od.txt")
 	private Path output;
 
 	public static void main(String[] args) {
@@ -62,25 +65,36 @@ class CreateODMatrix implements Callable<Integer> {
 		Config config = ConfigUtils.createConfig();
 		config.facilities().setInputFile(facilities.toString());
 
-		DistrictLookup.Index index = new DistrictLookup.Index(shapeFile.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:32632", "EPSG:25832"), "name_1");
+		// name_1 is the Bundesland
+		DistrictLookup.Index index = new DistrictLookup.Index(shapeFile.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:4326"), "name_1");
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 
 		log.info("Read {} facilities", scenario.getActivityFacilities().getFacilities().size());
 
+		// map region name to its index
 		MutableObjectIntMap<String> regions = new ObjectIntHashMap<>();
 
-		// Map facility id to region
+		// Map facility id to region index
 		MutableIntIntMap facilities = new IntIntHashMap();
 
+		int warn = 0;
 		for (Map.Entry<Id<ActivityFacility>, ? extends ActivityFacility> e : scenario.getActivityFacilities().getFacilities().entrySet()) {
-			String target = index.query(e.getValue().getCoord().getX(), e.getValue().getCoord().getY()).intern();
+			try {
+				String target = index.query(e.getValue().getCoord().getX(), e.getValue().getCoord().getY()).intern();
+				int region = regions.getIfAbsentPut(target, regions::size);
 
-			int region = regions.getIfAbsentPut(target, regions::size);
-			facilities.put(e.getKey().index(), region);
+				log.trace("Matched {} to {}", e.getKey(), target);
+
+				facilities.put(e.getKey().index(), region);
+
+			} catch (NoSuchElementException exc) {
+				warn++;
+				log.debug("Could not match facility {}", e.getKey(), exc);
+			}
 		}
 
-		log.info("Done loading facilities");
+		log.info("Done loading facilities. {} could not be matched", warn);
 
 		EventsManager manager = EventsUtils.createEventsManager();
 
@@ -91,9 +105,15 @@ class CreateODMatrix implements Callable<Integer> {
 		manager.addHandler((BasicEventHandler) event -> {
 
 			if (event instanceof HasFacilityId && event instanceof HasPersonId) {
+				if (((HasPersonId) event).getPersonId() == null || ((HasFacilityId) event).getFacilityId() == null)
+					return;
+
 				int person = ((HasPersonId) event).getPersonId().index();
 				int facility = ((HasFacilityId) event).getFacilityId().index();
-				int region = facilities.get(facility);
+				int region = facilities.getIfAbsent(facility, -1);
+
+				if (region == -1) return;
+
 				int last = lastRegion.getIfAbsent(person, -1);
 
 				if (last != region) {
@@ -109,6 +129,9 @@ class CreateODMatrix implements Callable<Integer> {
 
 		log.info("Finished reading events");
 
+		Files.write(Path.of(output.toString() + ".index"),
+				regions.keyValuesView().toSortedList(Comparator.comparingInt(ObjectIntPair::getTwo)).collect(ObjectIntPair::getOne));
+
 		BufferedWriter out = Files.newBufferedWriter(output);
 		for (int i = 0; i < regions.size(); i++) {
 			for (int j = 0; j < regions.size(); j++) {
@@ -118,6 +141,8 @@ class CreateODMatrix implements Callable<Integer> {
 
 			out.write("\n");
 		}
+
+		out.close();
 
 		return 0;
 	}
