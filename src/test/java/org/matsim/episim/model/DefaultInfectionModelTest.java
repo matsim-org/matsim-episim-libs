@@ -40,7 +40,7 @@ public class DefaultInfectionModelTest {
 
 		config = EpisimTestUtils.createTestConfig();
 		maskModel = new DefaultFaceMaskModel(config, rnd);
-		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE);
+		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE, 0);
 		restrictions = config.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -288,14 +288,14 @@ public class DefaultInfectionModelTest {
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, maskModel, Integer.MAX_VALUE);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, maskModel, Integer.MAX_VALUE, 0);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, maskModel, 0);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, maskModel, 0, 0);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
