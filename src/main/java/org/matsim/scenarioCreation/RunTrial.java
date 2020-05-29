@@ -13,6 +13,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunEpisim;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import picocli.CommandLine;
@@ -44,7 +45,7 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--number", description = "Trial number", required = true)
 	private int number;
 
-	@CommandLine.Option(names = "--calibParameter", description = "Calibration parameter", required = true)
+	@CommandLine.Option(names = "--calibParameter", description = "Calibration parameter", defaultValue = "-1")
 	private double calibParameter;
 
 	@CommandLine.Option(names = "--offset", description = "Adds an offset to start date", defaultValue = "0")
@@ -56,18 +57,18 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--ci", description = "Overwrite contact intensities", split = ";")
 	private Map<String, Double> ci = new HashMap<>();
 
-	@CommandLine.Option(names = "--alpha", description = "Alpha parameter of restrictions", defaultValue = "1")
-	private double alpha;
-
 	@CommandLine.Option(names = "--correction", description = "Contact intensity correction", defaultValue = "1")
 	private double correction;
 
-	@CommandLine.Option(
-			names = "--with-restrictions",
-			description = "By default the restrictions are removed completely in order to calibrate " +
-					"for unconstrained exponential growth. This flag keeps original restrictions and policy as defined in the scenario.",
+	@CommandLine.Option(names = "--start", description = "Start day of the correction")
+	private String correctionStart;
+
+	// TODO: start from snapshot
+
+	@CommandLine.Option(names = "--unconstrained",
+			description = "Removes the restrictions completely in order to calibrate for unconstrained exponential growth.",
 			defaultValue = "false")
-	private boolean withRestrictions;
+	private boolean unconstrained;
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new RunTrial())
@@ -85,32 +86,44 @@ public final class RunTrial implements Callable<Integer> {
 
 		Config config = injector.getInstance(Config.class);
 
-		String name = withRestrictions ? "calibration-restrictions" : "calibration";
+		String name = unconstrained ? "calibration-unconstrained" : "calibration";
 
 		config.controler().setOutputDirectory(String.format("output-%s/%d/", name, number));
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		if (offset != 0) {
+			log.info("Using offset {} days", offset);
 			LocalDate startDate = episimConfig.getStartDate();
 			episimConfig.setStartDate(startDate.plusDays(offset));
 		}
 
 		// clear restrictions
-		if (!withRestrictions) {
+		if (unconstrained) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
+			log.info("Cleared all restrictions");
 		} else {
-			// currently hardcoded for specific scenario
-			episimConfig.setMaxInteractions(3);
-			FixedPolicy.ConfigBuilder policy = SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200517.csv"),
-					alpha, correction, "2020-03-10", 1 / 3., 1 / 6.);
 
-			episimConfig.setPolicy(FixedPolicy.class, policy.build());
+			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+			if (correctionStart != null) {
+				log.info("Setting ci correction at {} to {}", correctionStart, correction);
+				builder.restrict(correctionStart, Restriction.of(correction), SnzBerlinScenario25pct2020.DEFAULT_ACTIVITIES);
+			}
+
+			episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		}
 
-		episimConfig.setCalibrationParameter(calibParameter);
+		for (Map.Entry<String, Double> e : ci.entrySet()) {
+			log.info("Setting contact intensity {}={}", e.getKey(), e.getValue());
+			episimConfig.getOrAddContainerParams(e.getKey()).setContactIntensity(e.getValue());
+		}
 
-		log.info("Starting run {} with parameter {}", number, calibParameter);
+		if (calibParameter > -1) {
+			log.info("Setting calibration parameter to {}", calibParameter);
+			episimConfig.setCalibrationParameter(calibParameter);
+		}
+
+		log.info("Starting run number {}", number);
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(days);

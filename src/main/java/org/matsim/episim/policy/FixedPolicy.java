@@ -50,6 +50,13 @@ public class FixedPolicy extends ShutdownPolicy {
 		return new ConfigBuilder();
 	}
 
+	/**
+	 * Create a config builder with an existing config.
+	 */
+	public static ConfigBuilder parse(Config config) {
+		return new ConfigBuilder(config);
+	}
+
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
 
@@ -104,7 +111,15 @@ public class FixedPolicy extends ShutdownPolicy {
 	 */
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
-		private ConfigBuilder() {}
+		private ConfigBuilder() {
+		}
+
+		private ConfigBuilder(Config config) {
+			for (Map.Entry<String, ConfigValue> e : config.root().entrySet()) {
+				Object value = config.getValue(e.getKey()).unwrapped();
+				params.put(e.getKey(), value);
+			}
+		}
 
 		/**
 		 * Restrict activities at specific date in absolute time.

@@ -60,7 +60,7 @@ abstract class AbstractProgressionModel implements ProgressionModel {
 		if (transitionDay > -1) {
 			int nextState = nextStates.get(index);
 			int daysSince = person.daysSince(status, day);
-			if (transitionDay == daysSince) {
+			if (daysSince >= transitionDay) {
 				EpisimPerson.DiseaseStatus next = EpisimPerson.DiseaseStatus.values()[nextState];
 				person.setDiseaseStatus(now, next);
 				onTransition(person, now, day, status, next);

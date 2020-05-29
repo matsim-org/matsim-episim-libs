@@ -111,4 +111,23 @@ public class FixedPolicyTest {
 
 
 	}
+
+	@Test
+	public void builder() {
+
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
+				.restrict(1, Restriction.of(0.9), "home", "work")
+				.restrict(1, Restriction.ofMask(FaceMask.CLOTH, 1.0), "work")
+				.restrict(2, Restriction.ofCiCorrection(0.5), "home", "work")
+				.restrict(2, Restriction.of(0.4), "work");
+
+		assertThat(
+				FixedPolicy.parse(builder.build()).restrict(2, Restriction.of(0.7), "work").build()
+		)
+				.isEqualTo(
+						builder.restrict(2, Restriction.of(0.7), "work").build()
+				);
+
+
+	}
 }
