@@ -80,6 +80,10 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		episimConfig.setInputEventsFile("../be_2020_snz_episim_events_25pt.xml.gz");
 
+		episimConfig.setProgressionConfig(
+				SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config("input/progression" + id + ".conf")).build()
+		);
+
 		return config;
 	}
 
@@ -126,10 +130,6 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
 		episimConfig.setPolicy(FixedPolicy.class, policyConf);
-
-		episimConfig.setProgressionConfig(
-				SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config("input/progression" + id + ".conf")).build()
-		);
 
 		return config;
 	}
