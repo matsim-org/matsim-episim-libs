@@ -20,6 +20,7 @@ import picocli.CommandLine;
 
 import java.io.File;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -56,6 +57,9 @@ public final class RunTrial implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--ci", description = "Overwrite contact intensities", split = ";")
 	private Map<String, Double> ci = new HashMap<>();
+
+	@CommandLine.Option(names = "--alpha", description = "Alpha parameter for restrictions", defaultValue = "-1")
+	private double alpha;
 
 	@CommandLine.Option(names = "--correction", description = "Contact intensity correction", defaultValue = "1")
 	private double correction;
@@ -104,13 +108,16 @@ public final class RunTrial implements Callable<Integer> {
 			log.info("Cleared all restrictions");
 		} else {
 
-			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-			if (correctionStart != null) {
+			if (alpha > -1) {
+				episimConfig.setPolicy(FixedPolicy.class,
+						SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200524.csv"),
+								alpha, correction, correctionStart, 1. / 3., 1. / 6.).build());
+			} else if (correctionStart != null) {
+				FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 				log.info("Setting ci correction at {} to {}", correctionStart, correction);
-				builder.restrict(correctionStart, Restriction.of(correction), SnzBerlinScenario25pct2020.DEFAULT_ACTIVITIES);
+				builder.restrict(correctionStart, Restriction.ofCiCorrection(correction), SnzBerlinScenario25pct2020.DEFAULT_ACTIVITIES);
+				episimConfig.setPolicy(FixedPolicy.class, builder.build());
 			}
-
-			episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		}
 
 		for (Map.Entry<String, Double> e : ci.entrySet()) {
@@ -123,10 +130,18 @@ public final class RunTrial implements Callable<Integer> {
 			episimConfig.setCalibrationParameter(calibParameter);
 		}
 
-		log.info("Starting run number {}", number);
+		int iterations = days;
+
+		if (correctionStart != null) {
+			log.info("Using start date {} to calculate new number of iterations", correctionStart);
+			LocalDate endDate = LocalDate.parse(correctionStart).plusDays(days);
+			iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
+		}
+
+		log.info("Starting run number {} with {}", number, iterations);
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(days);
+		runner.run(iterations);
 
 		return 0;
 	}
