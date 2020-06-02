@@ -43,19 +43,14 @@ import java.util.List;
 public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Params> {
 
 	public static final List<Option> OPTIONS = List.of(
-			Option.of("Contact tracing", 67)
-					.measure("Tracing Distance", "tracingDayDistance")
+			Option.of("Contact tracing")
+					.measure("Tracing Period", "tracingPeriod")
+					.measure("Tracing Delay", "tracingDelay")
+					.measure("Tracing Capacity per Day", "tracingCapacity")
 					.measure("Tracing Probability", "tracingProbability"),
 
-			Option.of("Out-of-home activities limited", "By type and percent (%)", 67)
-					.measure("Work activities", "remainingFractionWork")
-					.measure("Other activities", "remainingFractionShoppingBusinessErrands")
-					.measure("Leisure activities", "remainingFractionLeisure"),
-
-			Option.of("Reopening of educational facilities", "Students returning (%)", 74)
-					.measure("Going to primary school", "remainingFractionPrima")
-					.measure("Going to kindergarten", "remainingFractionKiga")
-					.measure("Going to secondary/univ.", "remainingFractionSeconHigher")
+			Option.of("Activity Participation Trend")
+					.measure("Extrapolation type", "extrapolation")
 	);
 
 	@Override
@@ -105,7 +100,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		int offset = (int) (ChronoUnit.DAYS.between(startDate, LocalDate.parse("2020-04-27")) + 1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		tracingConfig.setTracingProbability(params.tracingProbability);
-		tracingConfig.setTracingDayDistance(params.tracingDayDistance);
+		tracingConfig.setTracingDayDistance(params.tracingPeriod);
 		tracingConfig.setMinDuration(15 * 60.);
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
@@ -137,7 +132,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 	public static final class Params {
 
 		@IntParameter({14})
-		int tracingDayDistance;
+		int tracingPeriod;
 
 		@IntParameter({2})
 		int tracingDelay;
@@ -145,7 +140,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		@IntParameter({0, 10, 20, 30, Integer.MAX_VALUE})
 		int tracingCapacity;
 
-		@Parameter({1.0, 0.75, 0.5})
+		@Parameter({0.75})
 		double tracingProbability;
 
 		@StringParameter({"linear", "exponential"})

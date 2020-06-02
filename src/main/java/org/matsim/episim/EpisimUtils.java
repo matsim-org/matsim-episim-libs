@@ -438,12 +438,12 @@ public final class EpisimUtils {
 
 			Exponential f = new Exponential();
 			FuncFitter fitter = new FuncFitter(f);
-			double[] coeeff = fitter.fit(points);
+			double[] coeff = fitter.fit(points);
 
 			// continue the trend
 			for (int i = 0; i < 25; i++) {
 
-				double predict = f.value(i + n, coeeff);
+				double predict = f.value(i + n, coeff);
 				builder.restrict(start, Math.min(predict, 1), act);
 				start = start.plusDays(7);
 			}
