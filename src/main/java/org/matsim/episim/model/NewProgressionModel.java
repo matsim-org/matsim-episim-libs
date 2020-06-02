@@ -53,6 +53,11 @@ public class NewProgressionModel extends AbstractProgressionModel {
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
 
+	/**
+	 * Tracing capacity left for the day.
+	 */
+	private int tracingCapacity = Integer.MAX_VALUE;
+
 	@Inject
 	public NewProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		super(rnd, episimConfig);
@@ -68,6 +73,11 @@ public class NewProgressionModel extends AbstractProgressionModel {
 		Transition.Builder t = Transition.parse(config);
 		log.info("Using disease progression config: {}", t);
 		tMatrix = t.asArray();
+	}
+
+	@Override
+	public void setIteration(int day) {
+		tracingCapacity = Integer.MAX_VALUE;
 	}
 
 	@Override
@@ -160,6 +170,8 @@ public class NewProgressionModel extends AbstractProgressionModel {
 
 		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
 
+		if (tracingCapacity <= 0) return;
+
 		String homeId = null;
 
 		// quarantine household flag controls direct household and 2nd order household
@@ -182,6 +194,8 @@ public class NewProgressionModel extends AbstractProgressionModel {
 				quarantinePerson(pw, day);
 
 		}
+
+		tracingCapacity--;
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
