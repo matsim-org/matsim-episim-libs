@@ -8,6 +8,8 @@ import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.model.FaceMask;
 
 import java.time.LocalDate;
+import java.util.Map;
+import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -44,7 +46,7 @@ public class FixedPolicyTest {
 
 		FixedPolicy.ConfigBuilder config = FixedPolicy.config()
 				.restrict(1, Restriction.of(0.9), "home", "work")
-				.restrict(1, Restriction.ofMask(FaceMask.CLOTH), "work")
+				.restrict(1, Restriction.ofMask(FaceMask.CLOTH, 1.0), "work")
 				.restrict(2, Restriction.ofCiCorrection(0.5), "home", "work")
 				.restrict(2, Restriction.of(0.4), "work");
 
@@ -57,7 +59,7 @@ public class FixedPolicyTest {
 
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
 		assertThat(r.get("work").getCiCorrection()).isEqualTo(1);
-		assertThat(r.get("work").getRequireMask()).isEqualTo(FaceMask.CLOTH);
+		assertThat(r.get("work").determineMask(new SplittableRandom(1))).isEqualTo(FaceMask.CLOTH);
 
 		policy.updateRestrictions(EpisimTestUtils.createReport("--", 2), r);
 
@@ -82,8 +84,8 @@ public class FixedPolicyTest {
 				.interpolate(
 						LocalDate.of(2020, 3, 31),
 						LocalDate.of(2020, 4, 10),
-						Restriction.of(0.5, 1.0, FaceMask.CLOTH),
-						Restriction.of(1d, 0.5, FaceMask.CLOTH),
+						Restriction.of(0.5, 1.0, Map.of(FaceMask.CLOTH, 1.0)),
+						Restriction.of(1d, 0.5, Map.of(FaceMask.CLOTH, 1.0)),
 						"work"
 				);
 
@@ -101,11 +103,30 @@ public class FixedPolicyTest {
 
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-03-31", -1), r);
 		assertThat(r.get("work").getCiCorrection()).isEqualTo(1);
-		assertThat(r.get("work").getRequireMask()).isEqualTo(FaceMask.CLOTH);
+		assertThat(r.get("work").determineMask(new SplittableRandom(1))).isEqualTo(FaceMask.CLOTH);
 
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-04-10", -1), r);
 		assertThat(r.get("work").getRemainingFraction()).isCloseTo(1, OFFSET);
 		assertThat(r.get("work").getCiCorrection()).isCloseTo(0.5, OFFSET);
+
+
+	}
+
+	@Test
+	public void builder() {
+
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
+				.restrict(1, Restriction.of(0.9), "home", "work")
+				.restrict(1, Restriction.ofMask(FaceMask.CLOTH, 1.0), "work")
+				.restrict(2, Restriction.ofCiCorrection(0.5), "home", "work")
+				.restrict(2, Restriction.of(0.4), "work");
+
+		assertThat(
+				FixedPolicy.parse(builder.build()).restrict(2, Restriction.of(0.7), "work").build()
+		)
+				.isEqualTo(
+						builder.restrict(2, Restriction.of(0.7), "work").build()
+				);
 
 
 	}

@@ -24,16 +24,23 @@ import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.Transition;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 
+import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
 
-import javax.inject.Singleton;
+import static org.matsim.episim.model.Transition.to;
 
 /**
  * Snz scenario for Berlin.
@@ -43,33 +50,58 @@ import javax.inject.Singleton;
 public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 	/**
-	 * The base policy based on actual restrictions in the past and google mobility data.
+	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	public static FixedPolicy.ConfigBuilder basePolicy() {
+	public static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
+													   double ciCorrection, String dateOfCiChange, EpisimUtils.Extrapolation extrapolation) throws IOException {
 
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config()
-				.interpolate("2020-03-06", "2020-03-13", Restriction.of(1), Restriction.of(0.8), "work")
-				.interpolate("2020-03-13", "2020-03-20", Restriction.of(0.8), Restriction.of(0.5), "work")
-				.interpolate("2020-03-20", "2020-03-27", Restriction.of(0.5), Restriction.of(0.45), "work")
-				.interpolate("2020-04-05", "2020-04-19", Restriction.of(0.45), Restriction.of(0.55), "work")
-				.interpolate("2020-04-20", "2020-04-27", Restriction.of(0.55), Restriction.of(0.6), "work")
+		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
 
-				.interpolate("2020-03-13", "2020-03-27", Restriction.of(1), Restriction.of(0.1), "leisure", "visit", "shop_other")
-				.restrict("2020-04-27", Restriction.of(0.1, FaceMask.CLOTH), "shop_other")
+		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
 
-				.interpolate("2020-02-28", "2020-03-06", Restriction.of(1), Restriction.of(0.95), "shop_daily", "errands", "business")
-				.interpolate("2020-03-06", "2020-03-13", Restriction.of(0.95), Restriction.ofExposure(0.85), "shop_daily", "errands", "business")
-				.interpolate("2020-03-13", "2020-03-20", Restriction.of(0.85), Restriction.of(0.4), "shop_daily", "errands", "business")
-				.interpolate("2020-04-20", "2020-04-27", Restriction.of(0.4), Restriction.of(0.5), "shop_daily", "errands", "business")
-				.interpolate("2020-04-28", "2020-05-04", Restriction.of(0.5, FaceMask.CLOTH), Restriction.of( 0.55), "shop_daily", "errands", "business")
-
-				//saturday 14th of march, so the weekend before schools got closed..
-				.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-
-				.restrict("2020-04-27", Restriction.of(1, FaceMask.CLOTH), "pt", "tr");
+//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+				.restrict("2020-05-11", 0.3, "educ_primary")
+				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-05-25", 0.3, "educ_kiga")
+//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+		;
 
 		return builder;
+	}
+
+	/**
+	 * Adds base progression config to the given builder.
+	 */
+	public static Transition.Builder baseProgressionConfig(Transition.Builder builder) {
+		return builder
+				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
+				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
+						to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
+
+// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
+// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
+				.from(EpisimPerson.DiseaseStatus.contagious,
+						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
+
+// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
+				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
+						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
+
+// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
+				.from(EpisimPerson.DiseaseStatus.seriouslySick,
+						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
+
+// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
+				.from(EpisimPerson.DiseaseStatus.critical,
+						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)));
+
 	}
 
 	@Provides
@@ -84,34 +116,45 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
 
-		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialInfections(200);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_002_0);
+		episimConfig.setCalibrationParameter(0.000_002_6);
 		episimConfig.setMaxInteractions(3);
+		String startDate = "2020-02-10";
+		episimConfig.setStartDate(startDate);
 
-		double alpha = 2.0;
-		double exposure = 0.5;
-		String startDate = "2020-02-11";
-		String dateOfExposureChange = "2020-03-10";
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
+		double tracingProbability = 0.75;
+		tracingConfig.setTracingProbability(tracingProbability);
+		tracingConfig.setTracingDayDistance(14);
+		tracingConfig.setMinDuration(15 * 60.);
+		tracingConfig.setQuarantineHouseholdMembers(true);
+		tracingConfig.setEquipmentRate(1.);
+		tracingConfig.setTracingDelay(2);
+		tracingConfig.setTracingCapacity(Integer.MAX_VALUE);
+
+		double alpha = 1.4;
+		double ciCorrection = 0.3;
+
+		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+		String dateOfCiChange = "2020-03-08";
+
+		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
 
 		ConfigBuilder configBuilder = null;
-
-		episimConfig.setStartDate(startDate);
 		try {
-			configBuilder = EpisimUtils.createRestrictionsFromCSV(episimConfig, new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv"), alpha);
+			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
-		configBuilder.restrict(dateOfExposureChange, Restriction.ofExposure(exposure), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		configBuilder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-			.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
-		config.controler().setOutputDirectory("./output-berlin-25pct-restricts-" + alpha + "-" + exposure + "-" + dateOfExposureChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
-//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-200init-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
 
 		return config;

@@ -1,20 +1,66 @@
 package org.matsim.episim.model;
 
+import com.google.common.base.Objects;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
+import com.typesafe.config.ConfigRenderOptions;
+import com.typesafe.config.ConfigValue;
 import org.apache.commons.math3.util.FastMath;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimUtils;
 
-import java.util.SplittableRandom;
+import java.util.*;
 
 /**
  * Describes how long a person stays in a certain state.
- * This interface also provides factory methods for some common transitions.
+ * Also provides factory methods for all available transitions.
+ * <p>
+ * Please note that it is not possible nor intended to inherit from this class outside of this package,
+ * as this would break serialization.
  */
-public interface Transition {
+public abstract class Transition {
+
+	/**
+	 * Inheritance is prohibited for external classes.
+	 */
+	Transition() {
+	}
+
+	/**
+	 * Parse Transition builder from a config file.
+	 */
+	public static Builder parse(Config config) {
+		return new Builder(config);
+	}
+
+	/**
+	 * Create a new transition config builder.
+	 */
+	public static Builder config() {
+		return new Builder((String) null);
+	}
+
+	/**
+	 * Create a new transition config builder with a filename, that will be used if the config is persisted.
+	 */
+	public static Builder config(String filename) {
+		return new Builder(filename);
+	}
+
+	/**
+	 * Creates a to transition, to be used in conjunction with the {@link Builder}.
+	 *
+	 * @param status target state
+	 * @param t      desired transition
+	 */
+	public static ToHolder to(DiseaseStatus status, Transition t) {
+		return new ToHolder(status, t);
+	}
 
 	/**
 	 * Deterministic transition at day {@code day}.
 	 */
-	static Transition fixed(int day) {
+	public static Transition fixed(int day) {
 		return new FixedTransition(day);
 	}
 
@@ -26,7 +72,7 @@ public interface Transition {
 	 * @param std  desired standard deviation
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormalWithMean(double mean, double std) {
+	public static Transition logNormalWithMean(double mean, double std) {
 
 		// mean==median if std=0
 		if (std == 0) return logNormalWithMedianAndSigma(mean, 0);
@@ -38,9 +84,9 @@ public interface Transition {
 	}
 
 	/**
-	 * Same as {@link #logNormalWithMean(double, double)}
+	 * Same as {@link #logNormalWithMean(double, double)}.
 	 */
-	static Transition logNormalWithMeanAndStd(double mean, double std) {
+	public static Transition logNormalWithMeanAndStd(double mean, double std) {
 		return logNormalWithMean(mean, std);
 	}
 
@@ -51,7 +97,7 @@ public interface Transition {
 	 * @param sigma  sigma parameter
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormalWithMedianAndSigma(double median, double sigma) {
+	public static Transition logNormalWithMedianAndSigma(double median, double sigma) {
 
 		double mu = Math.log(median);
 		return new LogNormalTransition(mu, sigma);
@@ -64,7 +110,7 @@ public interface Transition {
 	 * @param std    desired standard deviation
 	 * @see LogNormalTransition
 	 */
-	static Transition logNormalWithMedianAndStd(double median, double std) {
+	public static Transition logNormalWithMedianAndStd(double median, double std) {
 
 		// equation below is numerical unstable for std near zero
 		if (std == 0) return logNormalWithMedianAndSigma(median, 0);
@@ -84,12 +130,12 @@ public interface Transition {
 	/**
 	 * Returns the day when the transition should occur.
 	 */
-	int getTransitionDay(SplittableRandom rnd);
+	public abstract int getTransitionDay(SplittableRandom rnd);
 
 	/**
 	 * Implementation for a fixed transition.
 	 */
-	final class FixedTransition implements Transition {
+	private static final class FixedTransition extends Transition {
 
 		private final int day;
 
@@ -101,6 +147,19 @@ public interface Transition {
 		public int getTransitionDay(SplittableRandom rnd) {
 			return day;
 		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			FixedTransition that = (FixedTransition) o;
+			return day == that.day;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hashCode(day);
+		}
 	}
 
 	/**
@@ -108,7 +167,7 @@ public interface Transition {
 	 *
 	 * @see EpisimUtils#nextLogNormal(SplittableRandom, double, double)
 	 */
-	final class LogNormalTransition implements Transition {
+	private static final class LogNormalTransition extends Transition {
 
 		private final double mu;
 		private final double sigma;
@@ -124,6 +183,165 @@ public interface Transition {
 		@Override
 		public int getTransitionDay(SplittableRandom rnd) {
 			return (int) FastMath.round(EpisimUtils.nextLogNormal(rnd, mu, sigma));
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			LogNormalTransition that = (LogNormalTransition) o;
+			return Double.compare(that.mu, mu) == 0 &&
+					Double.compare(that.sigma, sigma) == 0;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hashCode(mu, sigma);
+		}
+	}
+
+	/**
+	 * Builder for a transition config.
+	 */
+	public static final class Builder {
+
+		private final String origin;
+		private final Map<DiseaseStatus, Map<DiseaseStatus, Transition>> transitions = new EnumMap<>(DiseaseStatus.class);
+
+		private Builder(String origin) {
+			this.origin = origin;
+		}
+
+		/**
+		 * Initialize from config.
+		 */
+		@SuppressWarnings("unchecked")
+		private Builder(Config config) {
+
+			for (Map.Entry<String, ConfigValue> e : config.root().entrySet()) {
+
+				DiseaseStatus status = DiseaseStatus.valueOf(e.getKey());
+				Config toConfig = config.getConfig(e.getKey());
+
+				List<ToHolder> tos = new ArrayList<>();
+
+				for (Map.Entry<String, ConfigValue> to : toConfig.root().entrySet()) {
+
+					Map<String, String> params = (Map<String, String>) to.getValue().unwrapped();
+
+					DiseaseStatus toStatus = DiseaseStatus.valueOf(to.getKey());
+					Transition t;
+					if (params.get("type").equals("FixedTransition"))
+						t = new FixedTransition(Integer.parseInt(params.get("day")));
+					else if (params.get("type").equals("LogNormalTransition"))
+						t = new LogNormalTransition(Double.parseDouble(params.get("mu")), Double.parseDouble(params.get("sigma")));
+					else
+						throw new IllegalArgumentException("Could not parse transition: " + params);
+
+					tos.add(to(toStatus, t));
+				}
+
+				from(status, tos.toArray(new ToHolder[0]));
+			}
+
+			this.origin = config.origin().description();
+		}
+
+		/**
+		 * Defines which transitions should be taken from the state {@code} status to the states defined in {@code to}.
+		 *
+		 * @param status the current disease status
+		 * @param to     collection of target states and their transitions.
+		 * @see #to(DiseaseStatus, Transition)
+		 */
+		public Builder from(DiseaseStatus status, ToHolder... to) {
+			if (to.length == 0) throw new IllegalArgumentException("No target states specified");
+
+			for (ToHolder t : to) {
+				transitions.computeIfAbsent(status, (k) -> new EnumMap<>(DiseaseStatus.class))
+						.put(t.status, t.t);
+			}
+			return this;
+		}
+
+		/**
+		 * Creates a config representation.
+		 */
+		public Config build() {
+
+			Map<String, Object> config = new LinkedHashMap<>();
+
+			for (Map.Entry<DiseaseStatus, Map<DiseaseStatus, Transition>> e : transitions.entrySet()) {
+
+				Map<String, Object> toConfig = new LinkedHashMap<>();
+
+				for (Map.Entry<DiseaseStatus, Transition> to : e.getValue().entrySet()) {
+					// params of the transition
+					Map<String, String> params = new LinkedHashMap<>();
+
+					Transition t = to.getValue();
+
+					params.put("type", t.getClass().getSimpleName());
+
+					if (t instanceof FixedTransition) {
+						params.put("day", String.valueOf(((FixedTransition) t).day));
+					} else if (t instanceof LogNormalTransition) {
+						params.put("mu", String.valueOf(((LogNormalTransition) t).mu));
+						params.put("sigma", String.valueOf(((LogNormalTransition) t).sigma));
+					} else
+						throw new IllegalArgumentException("Can not serialize unknown transition " + t);
+
+					toConfig.put(to.getKey().name(), params);
+				}
+
+				config.put(e.getKey().name(), toConfig);
+			}
+
+			return ConfigFactory.parseMap(config, origin);
+		}
+
+
+		/**
+		 * Returns the config as matrix with entries as transition from -> to, according to {@link DiseaseStatus#ordinal()}.
+		 * Not defined transitions will be null.
+		 */
+		public Transition[] asArray() {
+			Transition[] array = new Transition[DiseaseStatus.values().length * DiseaseStatus.values().length];
+
+			for (Map.Entry<DiseaseStatus, Map<DiseaseStatus, Transition>> e : transitions.entrySet()) {
+				for (Map.Entry<DiseaseStatus, Transition> to : e.getValue().entrySet()) {
+					array[e.getKey().ordinal() * DiseaseStatus.values().length + to.getKey().ordinal()] = to.getValue();
+				}
+			}
+
+			return array;
+		}
+
+		@Override
+		public String toString() {
+			return build().root().render(ConfigRenderOptions.concise().setJson(false));
+		}
+	}
+
+	/**
+	 * Holder class that saves the target status and desired transition.
+	 */
+	public static final class ToHolder {
+
+		public final DiseaseStatus status;
+		public final Transition t;
+
+		private ToHolder(DiseaseStatus status, Transition t) {
+			this.status = status;
+			this.t = t;
+		}
+
+		@Override
+		public String toString() {
+			return "ToHolder{" +
+					"status=" + status +
+					", t=" + t +
+					'}';
 		}
 	}
 }

@@ -30,6 +30,12 @@ import org.matsim.episim.EpisimReporting;
 public interface ProgressionModel {
 
 	/**
+	 * Called at the start of an iteration before executing the progression.
+	 */
+	default void setIteration(int day) {
+	}
+
+	/**
 	 * Called at the start of the day to update the state of a person.
 	 */
 	void updateState(EpisimPerson person, int day);

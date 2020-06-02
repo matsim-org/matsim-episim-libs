@@ -50,6 +50,13 @@ public class FixedPolicy extends ShutdownPolicy {
 		return new ConfigBuilder();
 	}
 
+	/**
+	 * Create a config builder with an existing config.
+	 */
+	public static ConfigBuilder parse(Config config) {
+		return new ConfigBuilder(config);
+	}
+
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
 
@@ -104,6 +111,16 @@ public class FixedPolicy extends ShutdownPolicy {
 	 */
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
+		private ConfigBuilder() {
+		}
+
+		private ConfigBuilder(Config config) {
+			for (Map.Entry<String, ConfigValue> e : config.root().entrySet()) {
+				Object value = config.getValue(e.getKey()).unwrapped();
+				params.put(e.getKey(), value);
+			}
+		}
+
 		/**
 		 * Restrict activities at specific date in absolute time.
 		 *
@@ -113,6 +130,9 @@ public class FixedPolicy extends ShutdownPolicy {
 		 */
 		@SuppressWarnings("unchecked")
 		public ConfigBuilder restrict(String date, Restriction restriction, String... activities) {
+
+			if (activities.length == 0)
+				throw new IllegalArgumentException("No activities given");
 
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
@@ -214,12 +234,7 @@ public class FixedPolicy extends ShutdownPolicy {
 				if (Double.isNaN(r) && Double.isNaN(e))
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
-				restrict(today.toString(),
-						Restriction.of(
-								Double.isNaN(r) ? null : r,
-								Double.isNaN(e) ? null : e,
-								restriction.getRequireMask()),
-						activities);
+				restrict(today.toString(), new Restriction(r, e, null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}

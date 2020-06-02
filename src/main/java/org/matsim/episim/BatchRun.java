@@ -179,6 +179,10 @@ public interface BatchRun<T> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		if (episimConfig.getPolicyConfig() != null)
 			Files.writeString(directory.resolve(episimConfig.getPolicyConfig()), episimConfig.getPolicy().root().render());
+
+		if (!episimConfig.getProgressionConfig().isEmpty())
+			Files.writeString(directory.resolve(episimConfig.getProgressionConfigName()), episimConfig.getProgressionConfig().root().render());
+
 	}
 
 	/**

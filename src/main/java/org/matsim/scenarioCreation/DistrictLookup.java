@@ -64,7 +64,7 @@ public class DistrictLookup implements Callable<Integer> {
 	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path input;
 
-	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../publiv-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
+	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
 
 	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts.xml.gz")
