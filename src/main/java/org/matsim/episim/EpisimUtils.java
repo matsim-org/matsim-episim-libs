@@ -26,8 +26,14 @@ import com.google.common.io.Resources;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+import org.apache.commons.math3.fitting.AbstractCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoint;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
+import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
@@ -399,22 +405,21 @@ public final class EpisimUtils {
 			int n = 7 - start.getDayOfWeek().getValue() % 7;
 			builder.restrict(start, avg, act);
 			start = start.plusDays(n);
-			//System.out.println(start + " " + avg);
 		}
 
 
-		// Use last 10 weeks for the trend
+		// Use last weeks for the trend
 		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
 		start = start.plusDays(7);
 
 		if (extrapolate == Extrapolation.linear) {
 
+			int n = trend.size();
 			SimpleRegression reg = new SimpleRegression();
-			for (int i = 0; i < trend.size(); i++) {
+			for (int i = 0; i < n; i++) {
 				reg.addData(i, trend.get(i));
 			}
 
-			int n = trend.size();
 			// continue the trend
 			for (int i = 0; i < 8; i++) {
 				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
@@ -422,9 +427,30 @@ public final class EpisimUtils {
 				start = start.plusDays(7);
 			}
 
-		} else if (extrapolate == Extrapolation.exponential) {
+		} else if (extrapolate == Extrapolation.logarithmic) {
 
+			List<WeightedObservedPoint> points = new ArrayList<>();
 
+			int n = 2;
+
+			points.add(new WeightedObservedPoint(1.0, 1, trend.get(trend.size() - 2)));
+			points.add(new WeightedObservedPoint(1.0, 2, trend.get(trend.size() - 1)));
+
+			// TODO: very unstable because only two points are used for the trend
+
+			Logarithm f = new Logarithm();
+			FuncFitter fitter = new FuncFitter(f);
+			double[] coeeff = fitter.fit(points);
+
+			// continue the trend
+			for (int i = 0; i < 25; i++) {
+
+				double predict = f.value(i + n + 1, coeeff);
+
+				builder.restrict(start, Math.min(predict, 1), act);
+				//System.out.println(start + " " + predict);
+				start = start.plusDays(7);
+			}
 		}
 
 
@@ -435,6 +461,62 @@ public final class EpisimUtils {
 	/**
 	 * Type of interpolation of activity pattern.
 	 */
-	public enum Extrapolation {none, linear, exponential}
+	public enum Extrapolation {none, linear, logarithmic}
+
+	/**
+	 * Function fitter using least squares.
+	 * https://stackoverflow.com/questions/11335127/how-to-use-java-math-commons-curvefitter
+	 */
+	public static final class FuncFitter extends AbstractCurveFitter {
+
+		private final ParametricUnivariateFunction f;
+
+		public FuncFitter(ParametricUnivariateFunction f) {
+			this.f = f;
+		}
+
+		protected LeastSquaresProblem getProblem(Collection<WeightedObservedPoint> points) {
+			final int len = points.size();
+			final double[] target = new double[len];
+			final double[] weights = new double[len];
+			final double[] initialGuess = {1.0, 1.0};
+
+			int i = 0;
+			for (WeightedObservedPoint point : points) {
+				target[i] = point.getY();
+				weights[i] = point.getWeight();
+				i += 1;
+			}
+
+			final AbstractCurveFitter.TheoreticalValuesFunction model = new
+					AbstractCurveFitter.TheoreticalValuesFunction(f, points);
+
+			return new LeastSquaresBuilder().
+					maxEvaluations(Integer.MAX_VALUE).
+					maxIterations(Integer.MAX_VALUE).
+					start(initialGuess).
+					target(target).
+					weight(new DiagonalMatrix(weights)).
+					model(model.getModelFunction(), model.getModelFunctionJacobian()).
+					build();
+		}
+
+	}
+
+	/**
+	 * Logarithmic function with slope and offset.
+	 */
+	private static final class Logarithm implements ParametricUnivariateFunction {
+
+		@Override
+		public double value(double x, double... parameters) {
+			return parameters[0] + parameters[1] * Math.log(x);
+		}
+
+		@Override
+		public double[] gradient(double x, double... parameters) {
+			return new double[]{1, Math.log(x)};
+		}
+	}
 
 }
