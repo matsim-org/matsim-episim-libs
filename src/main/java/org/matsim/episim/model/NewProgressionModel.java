@@ -95,11 +95,14 @@ public class NewProgressionModel extends AbstractProgressionModel {
 		super.updateState(person, day);
 
 		// account for the delay in showing symptoms and tracing
-		if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms &&
-				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingConfig.getTracingDelay()) {
+		int tracingDelay = tracingConfig.getTracingDelay();
+
+		// Delay 0 is already handled
+		if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
+				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingDelay) {
 			double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 
-			performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
+			performTracing(person, now - tracingDelay * DAY, day);
 		}
 	}
 
@@ -199,7 +202,7 @@ public class NewProgressionModel extends AbstractProgressionModel {
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| rnd.nextDouble() < tracingConfig.getTracingProbability())
+					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability())
 
 				quarantinePerson(pw, day);
 
