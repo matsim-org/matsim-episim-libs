@@ -63,6 +63,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
 				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+//				.restrict("2020-05-25", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
 
 		return builder;
@@ -94,7 +95,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		double clothMaskCompliance = 1. / 3.;
 		double surgicalMaskCompliance = 1. / 6.;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv");
+		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
 		String dateOfCiChange = "2020-03-08";
 		
 		com.typesafe.config.Config progressionConfig = Transition.config()
