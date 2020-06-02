@@ -26,6 +26,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.policy.FixedPolicy;
@@ -38,6 +39,8 @@ import static org.matsim.episim.model.Transition.to;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 
 /**
@@ -54,16 +57,19 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 													   double ciCorrection, String dateOfCiChange,
 													   double clothMaskCompliance, double surgicalMaskCompliance) throws IOException {
 
-		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha);
+		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, EpisimUtils.Extrapolation.linear);
 
 		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
 		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
 
 		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
 				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
-//				.restrict("2020-05-25", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-05-11", 0.3, "educ_primary")
+				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-05-25", 0.3, "educ_kiga")
+//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
 
 		return builder;
@@ -81,19 +87,32 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
 
-		episimConfig.setInitialInfections(50);
+		episimConfig.setInitialInfections(200);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_002_6);
 		episimConfig.setMaxInteractions(3);
 		String startDate = "2020-02-10";
 		episimConfig.setStartDate(startDate);
+		
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		
+		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
+		double tracingProbability = 0.75;
+		tracingConfig.setTracingProbability(tracingProbability);
+		tracingConfig.setTracingDayDistance(14);
+		tracingConfig.setMinDuration(15 * 60.);
+		tracingConfig.setQuarantineHouseholdMembers(true);
+		tracingConfig.setEquipmentRate(1.);
+		tracingConfig.setTracingDelay(2);
+		tracingConfig.setTracingCapacity(Integer.MAX_VALUE);
 
 
 		double alpha = 1.4;
 		double ciCorrection = 0.3;
-		double clothMaskCompliance = 1. / 3.;
-		double surgicalMaskCompliance = 1. / 6.;
+		double clothMaskCompliance = 1. / 3. * 0;
+		double surgicalMaskCompliance = 1. / 6. * 0;
 
 		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
 		String dateOfCiChange = "2020-03-08";
@@ -135,7 +154,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + clothMaskCompliance + "-" + surgicalMaskCompliance + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-200init-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + clothMaskCompliance + "-" + surgicalMaskCompliance + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
 
