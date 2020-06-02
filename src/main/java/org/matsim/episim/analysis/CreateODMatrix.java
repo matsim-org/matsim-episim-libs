@@ -11,6 +11,7 @@ import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.HasFacilityId;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.internal.HasPersonId;
@@ -121,6 +122,9 @@ class CreateODMatrix implements Callable<Integer> {
 					if (last != -1) {
 						m.addToEntry(last, region, 1);
 					}
+				} else if (event instanceof ActivityEndEvent) {
+					// count all end events if on same region
+					m.addToEntry(last, region, 1);
 				}
 			}
 		});
