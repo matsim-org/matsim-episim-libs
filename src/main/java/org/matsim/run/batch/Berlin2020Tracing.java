@@ -44,13 +44,20 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 	public static final List<Option> OPTIONS = List.of(
 			Option.of("Contact tracing")
-					.measure("Tracing Period", "tracingPeriod")
-					.measure("Tracing Delay", "tracingDelay")
-					.measure("Tracing Capacity per Day", "tracingCapacity")
-					.measure("Tracing Probability", "tracingProbability"),
+					.measure("Tracing period", "tracingPeriod")
+					.measure("Tracing delay", "tracingDelay")
+					.measure("Tracing capacity per day", "tracingCapacity")
+					.measure("Tracing probability", "tracingProbability"),
 
 			Option.of("Activity Participation Trend")
-					.measure("Extrapolation type", "extrapolation")
+					.measure("Extrapolation type", "extrapolation"),
+
+			Option.of("Reopening of educational facilities", "Students returning (%)", 119)
+					.measure("Going to primary school", "remainingFractionPrima")
+					.measure("Going to kindergarten", "remainingFractionKiga")
+					.measure("Going to secondary", "remainingFractionSecondary")
+					.measure("Going to Higher/other", "remainingFractionHigherOther")
+
 	);
 
 	@Override
@@ -69,11 +76,11 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 		Config config = module.config();
 
-		config.plans().setInputFile("../../../episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
+		config.plans().setInputFile("../../../../episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../be_2020_snz_episim_events_25pt.xml.gz");
+		episimConfig.setInputEventsFile("../../../episim-input/be_2020_snz_episim_events_25pt.xml.gz");
 
 		episimConfig.setProgressionConfig(
 				SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config("input/progression" + id + ".conf")).build()
@@ -113,23 +120,46 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
 		String dateOfCiChange = "2020-03-08";
 
-		com.typesafe.config.Config policyConf;
+		FixedPolicy.ConfigBuilder policyConf;
 		try {
 			policyConf = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange,
-					EpisimUtils.Extrapolation.valueOf(params.extrapolation))
-					.build();
+					EpisimUtils.Extrapolation.valueOf(params.extrapolation));
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
 
+		policyConf
+				.restrict("2020-06-08", params.remainingFractionPrima, "educ_primary")
+				.restrict("2020-06-08", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2020-06-08", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2020-06-08", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+
+
+				// Sommerferien
+				.restrict("2020-06-25", 0.3, "educ_primary")
+				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-06-25", 0.3, "educ_kiga");
+
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
-		episimConfig.setPolicy(FixedPolicy.class, policyConf);
+		episimConfig.setPolicy(FixedPolicy.class, policyConf.build());
 
 		return config;
 	}
 
 	public static final class Params {
+
+		@Parameter({0.3, 0.5, 1.0})
+		double remainingFractionKiga;
+
+		@Parameter({0.3, 0.5, 1.0})
+		double remainingFractionPrima;
+
+		@Parameter({0.2, 0.5, 1.0})
+		double remainingFractionSecondary;
+
+		@Parameter({0.2, 0.5, 1.0})
+		double remainingFractionHigherOther;
 
 		@IntParameter({14})
 		int tracingPeriod;
