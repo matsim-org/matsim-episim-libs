@@ -423,32 +423,28 @@ public final class EpisimUtils {
 			// continue the trend
 			for (int i = 0; i < 8; i++) {
 				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
-				//System.out.println(start + " " + reg.predict(n + i));
+//				System.out.println(start + " " + reg.predict(n + i));
 				start = start.plusDays(7);
 			}
 
-		} else if (extrapolate == Extrapolation.logarithmic) {
+		} else if (extrapolate == Extrapolation.exponential) {
 
 			List<WeightedObservedPoint> points = new ArrayList<>();
 
-			int n = 2;
+			int n = trend.size();
+			for (int i = 0; i < n; i++) {
+				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
+			}
 
-			points.add(new WeightedObservedPoint(1.0, 1, trend.get(trend.size() - 2)));
-			points.add(new WeightedObservedPoint(1.0, 2, trend.get(trend.size() - 1)));
-
-			// TODO: very unstable because only two points are used for the trend
-
-			Logarithm f = new Logarithm();
+			Exponential f = new Exponential();
 			FuncFitter fitter = new FuncFitter(f);
 			double[] coeeff = fitter.fit(points);
 
 			// continue the trend
 			for (int i = 0; i < 25; i++) {
 
-				double predict = f.value(i + n + 1, coeeff);
-
+				double predict = f.value(i + n, coeeff);
 				builder.restrict(start, Math.min(predict, 1), act);
-				//System.out.println(start + " " + predict);
 				start = start.plusDays(7);
 			}
 		}
@@ -461,7 +457,7 @@ public final class EpisimUtils {
 	/**
 	 * Type of interpolation of activity pattern.
 	 */
-	public enum Extrapolation {none, linear, logarithmic}
+	public enum Extrapolation {none, linear, exponential}
 
 	/**
 	 * Function fitter using least squares.
@@ -504,18 +500,19 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Logarithmic function with slope and offset.
+	 * Exponential function in the form of 1 - a * exp(-x / b).
 	 */
-	private static final class Logarithm implements ParametricUnivariateFunction {
+	private static final class Exponential implements ParametricUnivariateFunction {
 
 		@Override
 		public double value(double x, double... parameters) {
-			return parameters[0] + parameters[1] * Math.log(x);
+			return 1 - parameters[0] * Math.exp(-x / parameters[1]);
 		}
 
 		@Override
 		public double[] gradient(double x, double... parameters) {
-			return new double[]{1, Math.log(x)};
+			double exb = Math.exp(-x / parameters[1]);
+			return new double[]{-exb, - parameters[0] * x * exb / (parameters[1] * parameters[1])};
 		}
 	}
 
