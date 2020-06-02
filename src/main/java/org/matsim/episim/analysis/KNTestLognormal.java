@@ -1,5 +1,7 @@
 package org.matsim.episim.analysis;
 
+import org.matsim.core.router.Transit;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.Transition;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.columns.Column;
@@ -8,17 +10,26 @@ import tech.tablesaw.plotly.components.*;
 import tech.tablesaw.plotly.traces.ScatterTrace;
 import tech.tablesaw.plotly.traces.Trace;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
+
+import static java.nio.file.Files.createFile;
 
 class KNTestLognormal{
 
 	public static void main( String[] args ) throws IOException{
 
 		double alpha = Math.exp(5-1);
-		Transition abc = Transition.logNormalWithMedianAndStd( 3., 3 );
+		double median = 1.;
+		double mu = Math.log( median );
+		double sigma = 3.;
+//		Transition abc = Transition.logNormalWithMedianAndSigma( Math.exp(mu), sigma );
+		Transition abc = Transition.logNormalWithMedianAndStd( 4., 4 );
 //		Transition abc = Transition.logNormalWithMean( 10., 8. );
-		Transition def = Transition.logNormalWithMedianAndStd( 1.5, 1.5 );
+		Transition def = Transition.logNormalWithMedianAndStd( 2, 2 );
 		SplittableRandom rnd = new SplittableRandom();
 
 		NavigableMap<Integer,Double> map = new TreeMap<>();
@@ -63,7 +74,8 @@ class KNTestLognormal{
 		Layout layout = Layout.builder().width( 800 ).height(500 ).yAxis( yAxis ).build();
 		fig.setLayout( layout );
 
-		Plot.show(fig,"divname" );
+		Plot.show(fig,"divname" , new File("output1.html") );
+		Plot.show(fig,"divname" , new File("output2.html") );
 	}
 
 }

@@ -20,6 +20,7 @@
  */
 package org.matsim.episim.model;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.population.PopulationUtils;
@@ -167,7 +168,8 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType) {
+	protected void infectPerson( EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
+				     EpisimContainer<?> container ) {
 
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
@@ -192,7 +194,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
 		}
 
-		reporting.reportInfection(personWrapper, infector, now, infectionType.toString());
+		reporting.reportInfection(personWrapper, infector, now, infectionType.toString(), container );
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
 		// TODO: Currently not in use, is it still needed?

@@ -193,6 +193,8 @@ public final class EpisimPerson implements Attributable {
 		return traceableContactPersons.keySet()
 				.stream().filter(k -> traceableContactPersons.get(k) >= after)
 				.collect(Collectors.toSet());
+		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
+		// would argue that it is not a problem to have a person in there multiple times.  kai, may'20
 	}
 
 	/**
