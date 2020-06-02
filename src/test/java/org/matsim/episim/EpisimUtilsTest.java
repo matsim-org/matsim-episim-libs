@@ -56,7 +56,7 @@ public class EpisimUtilsTest {
 
 		SnzBerlinScenario25pct2020.addParams(episimConfig);
 
-		File f = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv");
+		File f = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
 
 		Assume.assumeTrue("Input must exist", f.exists());
 
@@ -67,7 +67,7 @@ public class EpisimUtilsTest {
 		);
 
 
-		FixedPolicy.ConfigBuilder config2 = EpisimUtils.createRestrictionsFromCSV2(episimConfig, f, 1.0);
+		FixedPolicy.ConfigBuilder config2 = EpisimUtils.createRestrictionsFromCSV2(episimConfig, f, 1.4, EpisimUtils.Extrapolation.linear);
 
 		//FileUtils.write(new File("out.json"), config.build().root().render(ConfigRenderOptions.defaults().setJson(true).setComments(false).setOriginComments(false)));
 	}

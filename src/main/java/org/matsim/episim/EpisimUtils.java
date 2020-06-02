@@ -29,6 +29,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math3.random.BitsStreamGenerator;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
 import org.eclipse.collections.api.tuple.primitive.IntDoublePair;
 import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
@@ -331,11 +332,19 @@ public final class EpisimUtils {
 	}
 
 	/**
+	 * Same as {@link #createRestrictionsFromCSV2(EpisimConfigGroup, File, double, Extrapolation)} with no extrapolation.
+	 */
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+		return createRestrictionsFromCSV2(episimConfig, input, alpha, Extrapolation.none);
+	}
+
+	/**
 	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
 	 *
 	 * @param alpha modulate the amount reduction
 	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
+																	   Extrapolation extrapolate) throws IOException {
 
 		Reader in = new FileReader(input);
 		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
@@ -369,6 +378,9 @@ public final class EpisimUtils {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
+		// trend used for extrapolation
+		List<Double> trend = new ArrayList<>();
+
 		while (start.isBefore(end)) {
 
 			List<Double> values = new ArrayList<>();
@@ -381,15 +393,48 @@ public final class EpisimUtils {
 			}
 
 			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+			trend.add(avg);
 
 			// Calc next sunday
 			int n = 7 - start.getDayOfWeek().getValue() % 7;
 			builder.restrict(start, avg, act);
 			start = start.plusDays(n);
+			//System.out.println(start + " " + avg);
+		}
+
+
+		// Use last 10 weeks for the trend
+		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
+		start = start.plusDays(7);
+
+		if (extrapolate == Extrapolation.linear) {
+
+			SimpleRegression reg = new SimpleRegression();
+			for (int i = 0; i < trend.size(); i++) {
+				reg.addData(i, trend.get(i));
+			}
+
+			int n = trend.size();
+			// continue the trend
+			for (int i = 0; i < 8; i++) {
+				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
+				//System.out.println(start + " " + reg.predict(n + i));
+				start = start.plusDays(7);
+			}
+
+		} else if (extrapolate == Extrapolation.exponential) {
+
+
 		}
 
 
 		return builder;
 	}
+
+
+	/**
+	 * Type of interpolation of activity pattern.
+	 */
+	public enum Extrapolation {none, linear, exponential}
 
 }

@@ -82,7 +82,7 @@ public class DefaultProgressionModelTest {
 		persons.forEach(p -> model.updateState(p, 6));
 
 		// Tests depends on random seed
-		// because only 80% are showing symptoms, on average the first 625 persons an be traced
+		// because only 80% are showing symptoms, on average the first 625 persons can be traced
 		for (int i = 0; i < 1000; i++) {
 
 			EpisimPerson p = persons.get(i);
