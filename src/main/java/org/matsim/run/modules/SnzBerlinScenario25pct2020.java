@@ -116,7 +116,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
 
-		episimConfig.setInitialInfections(200);
+		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_002_6);
