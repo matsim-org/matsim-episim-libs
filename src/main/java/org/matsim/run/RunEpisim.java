@@ -223,7 +223,7 @@ public class RunEpisim implements Callable<Integer> {
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(300);
+		runner.run(500);
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 

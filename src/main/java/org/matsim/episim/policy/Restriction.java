@@ -52,7 +52,8 @@ public final class Restriction {
 			if (maskUsage.containsKey(FaceMask.NONE))
 				throw new IllegalArgumentException("Mask usage for NONE must not be given");
 
-			double total = maskUsage.values().stream().mapToDouble(Double::doubleValue).sum();
+			// stream must be sorted or the order is undefined, which can result in different sums
+			double total = maskUsage.values().stream().sorted().mapToDouble(Double::doubleValue).sum();
 			if (total > 1) throw new IllegalArgumentException("Sum of mask usage rates must be < 1");
 
 			double sum = 1 - total;
@@ -151,11 +152,13 @@ public final class Restriction {
 	 * Creates a restriction from a config entry.
 	 */
 	public static Restriction fromConfig(Config config) {
-		Map<String, Double> nameMap = (Map<String, Double>) config.getValue("masks").unwrapped();
+		// Could be integer or double
+		Map<String, Number> nameMap = (Map<String, Number>) config.getValue("masks").unwrapped();
+
 		Map<FaceMask, Double> enumMap = new EnumMap<>(FaceMask.class);
 
 		if (nameMap != null)
-			nameMap.forEach((k, v) -> enumMap.put(FaceMask.valueOf(k), v));
+			nameMap.forEach((k, v) -> enumMap.put(FaceMask.valueOf(k), v.doubleValue()));
 
 		return new Restriction(
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
