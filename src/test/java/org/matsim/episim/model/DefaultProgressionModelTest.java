@@ -21,18 +21,20 @@ public class DefaultProgressionModelTest {
 	private EpisimReporting reporting;
 	private ProgressionModel model;
 	private TracingConfigGroup tracingConfig;
+	private EpisimConfigGroup episimConfig;
 
 	@Before
 	public void setup() {
 		reporting = mock(EpisimReporting.class);
 		tracingConfig = new TracingConfigGroup();
-		model = new NewProgressionModel(new SplittableRandom(1), new EpisimConfigGroup(), tracingConfig);
+		episimConfig = new EpisimConfigGroup();
+		model = new NewProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig);
 	}
 
 	@Test
 	public void tracing() {
 
-		// this test depends a bit on the random seed
+		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		tracingConfig.setTracingDelay(0);
 
@@ -46,6 +48,54 @@ public class DefaultProgressionModelTest {
 
 		model.updateState(p, 6);
 		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome);
+	}
+
+	@Test
+	public void tracingCapacity() {
+
+		tracingConfig.setTracingProbability(1);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
+		tracingConfig.setTracingDelay(0);
+		tracingConfig.setTracingCapacity(500);
+
+		episimConfig.setStartDate("2020-06-01");
+		episimConfig.setSampleSize(1);
+
+		List<EpisimPerson> persons = new ArrayList<>();
+
+		for (int i = 0; i < 1000; i++) {
+			EpisimPerson p = EpisimTestUtils.createPerson("home", null);
+			p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
+			persons.add(p);
+		}
+
+		for (int day = 0; day <= 5; day++) {
+			int thisDay = day;
+			model.setIteration(day);
+			persons.forEach(p -> model.updateState(p, thisDay));
+		}
+
+		persons.forEach(p -> p.addTraceableContactPerson(EpisimTestUtils.createPerson("work", null), 5 * 24 * 3600));
+
+		model.setIteration(6);
+
+		persons.forEach(p -> model.updateState(p, 6));
+
+		// Tests depends on random seed
+		// because only 80% are showing symptoms, on average the first 625 persons can be traced
+		for (int i = 0; i < 1000; i++) {
+
+			EpisimPerson p = persons.get(i);
+			if (i < 600 && p.getDiseaseStatus() == DiseaseStatus.showingSymptoms)
+				assertThat(p.getTraceableContactPersons(0))
+						.describedAs("Person %d with status %s", i, p.getDiseaseStatus())
+						.allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome);
+			else if (i >= 625)
+				assertThat(p.getTraceableContactPersons(0))
+						.describedAs("Person %d", i)
+						.allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no);
+
+		}
 	}
 
 	@Test

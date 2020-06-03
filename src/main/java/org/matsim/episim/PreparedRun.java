@@ -73,9 +73,13 @@ public final class PreparedRun {
 		Map<String, Object> data = new LinkedHashMap<>();
 
 		int index = parameter.indexOf("startDate");
+
+		data.put("defaultStartDate", setup.getDefaultStartDate());
+
 		if (index > -1) {
-			data.put("defaultStartDate", setup.getDefaultStartDate());
 			data.put("startDates", parameterValues.get(index));
+		} else {
+			data.put("startDates", List.of(setup.getDefaultStartDate()));
 		}
 
 		// Newer runs should not need to use the offset parameter anymore

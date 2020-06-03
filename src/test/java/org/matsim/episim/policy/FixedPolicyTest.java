@@ -1,12 +1,20 @@
 package org.matsim.episim.policy;
 
 import com.google.common.collect.ImmutableMap;
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigFactory;
 import org.assertj.core.data.Offset;
+import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -23,7 +31,8 @@ public class FixedPolicyTest {
 	public void setUp() {
 		r = ImmutableMap.of(
 				"home", Restriction.none(),
-				"work", Restriction.none()
+				"work", Restriction.none(),
+				"pt", Restriction.none()
 		);
 	}
 
@@ -127,7 +136,27 @@ public class FixedPolicyTest {
 				.isEqualTo(
 						builder.restrict(2, Restriction.of(0.7), "work").build()
 				);
+	}
 
 
+	@Test
+	public void config() throws IOException {
+
+		File f = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+
+		Assume.assumeTrue("Input must exist", f.exists());
+
+		String content = SnzBerlinScenario25pct2020.basePolicy(
+				EpisimTestUtils.createTestConfig(), f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
+		).build().root().render();
+
+		Config config = ConfigFactory.parseString(content);
+		LocalDate start = LocalDate.parse("2020-03-05");
+
+		FixedPolicy p = new FixedPolicy(config);
+		for (int i = 0; i < 200; i++) {
+			EpisimReporting.InfectionReport report = EpisimTestUtils.createReport(start.plusDays(i).toString(), i);
+			p.updateRestrictions(report, r);
+		}
 	}
 }

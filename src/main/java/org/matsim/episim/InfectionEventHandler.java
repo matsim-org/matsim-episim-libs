@@ -517,6 +517,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			log.warn("Params map contains many entries. Activity types maybe not .intern() Strings");
 
 
+		progressionModel.setIteration(iteration);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person);
 			person.setCurrentPositionInTrajectory(0);
