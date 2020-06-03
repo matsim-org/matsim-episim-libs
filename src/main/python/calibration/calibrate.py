@@ -10,6 +10,26 @@ import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
 
+def read_data(f, district, hospital, rki, window=5):
+    """   Reads in three csv files """
+    # Simulation output
+    df = pd.read_csv(f, sep="\t", parse_dates=[2])
+    df = df[df.district == district]
+    df.set_index('date', drop=False, inplace=True)
+    df['cases'] = df.nShowingSymptomsCumulative.diff(1)
+    df['casesSmoothed'] = df.cases.rolling(window).mean()
+    df['casesNorm'] = df.casesSmoothed / df.casesSmoothed.mean()
+
+    hospital = pd.read_csv(hospital, parse_dates=[0], dayfirst=True)
+    rki = pd.read_csv(rki, parse_dates={'date': ['month', 'day', 'year']})
+    rki.set_index('date', drop=False, inplace=True)
+    rki['casesCumulative'] = rki.cases.cumsum()
+    rki['casesSmoothed'] = rki.cases.rolling(window).mean()
+    rki['casesNorm'] = rki.casesSmoothed / rki.casesSmoothed.mean()
+
+    return df, hospital, rki
+
+
 def percentage_error(actual, predicted):
     """ https://stackoverflow.com/questions/47648133/mape-calculation-in-python """
     res = np.empty(actual.shape)
@@ -47,32 +67,33 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
 def calc_multi_error(f, district, start, end, hospital="berlin-hospital.csv", rki="berlin-cases.csv"):
     """ Compares hospitalization rate """
 
-    df = pd.read_csv(f, sep="\t", parse_dates=[2])
-    df = df[df.district == district]
-    cmp = pd.read_csv(hospital, parse_dates=[0], dayfirst=True)
-    rki = pd.read_csv(rki, parse_dates={'date': ['month', 'day', 'year']})
+    df, hospital, rki = read_data(f, district, hospital, rki)
 
     df = df[(df.date >= start) & (df.date <= end)]
-    cmp = cmp[(cmp.Datum >= start) & (cmp.Datum <= end)]
+    hospital = hospital[(hospital.Datum >= start) & (hospital.Datum <= end)]
     rki = rki[(rki.date >= start) & (rki.date <= end)]
 
-    peak = str(df.loc[df.nShowingSymptomsCumulative.diff(1).idxmax()].date)
+    peak = str(df.loc[df.cases.idxmax()].date)
 
-    error_sick = mean_squared_log_error(cmp["Stationäre Behandlung"], df.nSeriouslySick)
-    error_critical = mean_squared_log_error(cmp["Intensivmedizin"], df.nCritical)
+    error_sick = mean_squared_log_error(hospital["Stationäre Behandlung"], df.nSeriouslySick)
+    error_critical = mean_squared_log_error(hospital["Intensivmedizin"], df.nCritical)
 
     # Assume Dunkelziffer of factor 8
     # error_cases = mean_squared_log_error(cmp["Gemeldete Fälle"].diff(1).dropna() * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
-    error_cases = mean_squared_log_error(rki.drop(rki.index[0]).cases * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
+    # error_cases = mean_squared_log_error(rki.drop(rki.index[0]).cases * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
+    error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
 
-    return error_cases, error_sick, error_critical, peak
+    # Dunkelziffer
+    dz = float(df.nContagiousCumulative.tail(1) / rki.casesCumulative.tail(1))
+
+    return error_cases, error_sick, error_critical, peak, dz
 
 
 def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
     n = trial.number
-    c = trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06)
+    c = trial.suggest_uniform("calibrationParameter", 1e-06, 4e-06)
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
@@ -102,7 +123,7 @@ def objective_ci_correction(trial):
         end=trial.study.user_attrs["end"]
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 7" \
+    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 14" \
           " --number %(number)d --correction %(correction).3f" \
           "--start %(start)s" % params
 
@@ -110,12 +131,14 @@ def objective_ci_correction(trial):
     print("Running calibration command: %s" % cmd)
     subprocess.run(cmd, shell=True)
 
-    e_cases, e_sick, e_critical, peak = calc_multi_error("output-calibration/%d/infections.txt" % n,
-                                                         params["district"], start=params["start"], end=params["end"])
+    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n,
+                                                             params["district"], start=params["start"], end=params["end"])
 
     trial.set_user_attr("error_cases", e_cases)
     trial.set_user_attr("error_sick", e_sick)
     trial.set_user_attr("error_critical", e_critical)
+    trial.set_user_attr("peak", peak)
+    trial.set_user_attr("dz", dz)
 
     return e_cases
 
@@ -131,28 +154,29 @@ def objective_multi(trial):
         district=district,
         number=n,
         # Parameter to calibrate
-        c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
-        offset=trial.suggest_int('offset', -8, 4),
+        #c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
+        # offset=trial.suggest_int('offset', -8, 4),
         # ci_homeq=trial.suggest_loguniform("home_quarantine", 0.1, 1),
-        ci_homeq=1,
+        # ci_homeq=1,
+        alpha=trial.suggest_uniform("alpha", 1, 2),
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 110" \
-          " --number %(number)d --calibParameter %(c).10f --offset %(offset)d" \
-          " --correction %(correction).3f --start \"2020-03-10\""\
-          " --ci home_quarantine=%(ci_homeq).4f " % params
+    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 75" \
+          " --number %(number)d --alpha %(alpha).3f" \
+          " --correction %(correction).3f --start \"2020-03-08\"" % params
 
     print("Running multi objective with params: %s" % params)
     print("Running calibration command: %s" % cmd)
     subprocess.run(cmd, shell=True)
-    e_cases, e_sick, e_critical, peak = calc_multi_error("output-calibration/%d/infections.txt" % n, params["district"],
-                                                         start="2020-03-10", end="2020-05-20")
+    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n, params["district"],
+                                                             start="2020-03-08", end="2020-04-07")
 
     trial.set_user_attr("error_cases", e_cases)
     trial.set_user_attr("error_sick", e_sick)
     trial.set_user_attr("error_critical", e_critical)
     trial.set_user_attr("peak", peak)
+    trial.set_user_attr("dz", dz)
 
     return e_cases, e_sick, e_critical
 
