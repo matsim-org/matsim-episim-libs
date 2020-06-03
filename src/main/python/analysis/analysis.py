@@ -51,7 +51,7 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = '2020-05-31-16:43:43_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15/'
 # base = '2020-05-31-16:50:07_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed1.0__sSusc0.0_exclHome_startDate2020-02-15/'
 # base = '2020-05-31-16:51:16_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_exclHome_startDate2020-02-15/'
-base = '2020-05-31-16:51:03_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed3.0__sSusc0.0_exclHome_startDate2020-02-15/'
+# base = '2020-05-31-16:51:03_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed3.0__sSusc0.0_exclHome_startDate2020-02-15/'
 
 # base = '2020-05-31-16:51:16_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_exclHome_startDate2020-02-15/'
 # base = '2020-05-31-17:07:42_unrestr_theta2.0E-6__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_exclHome_startDate2020-02-15/'
@@ -77,6 +77,11 @@ base = '2020-05-31-16:51:03_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1
 
 # base = '2020-06-01_23-40-52__unrestr__theta1.0E-6@10__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sInfct1.0__sSusc0.0_startDate2020-02-15/'
 
+# base = '2020-06-02_20-49-43__unrestr__theta6.9E-7@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
+# base = '2020-06-02_21-30-45__unrestr__theta8.0E-7@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
+# base = '2020-06-02_21-30-53__unrestr__theta9.0E-7@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
+# base = '2020-06-02_21-31-01__unrestr__theta1.0E-6@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
+base = '2020-06-03_08-08-35__frmSnz__theta1.0E-6@10__pWSymp0.0__sInfct0.0__sSusc0.0_ciCorr0.3_@2020-03-08_alpha1.4_startDate2020-02-15_startDate2020-02-15/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -107,7 +112,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 # axes.set_ylim(0,250)
-# axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2022-02-15'))
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
 pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
 pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)

@@ -105,12 +105,12 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		int offset = (int) (ChronoUnit.DAYS.between(startDate, LocalDate.parse("2020-04-27")) + 1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		tracingConfig.setTracingProbability(params.tracingProbability);
-		tracingConfig.setTracingDayDistance(params.tracingDayDistance);
-		tracingConfig.setMinDuration(15 * 60.);
+		tracingConfig.setTracingMemory_days(params.tracingDayDistance );
+		tracingConfig.setMinContactDuration_sec(15 * 60. );
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
-		tracingConfig.setTracingCapacity(params.tracingCapacity);
-		tracingConfig.setTracingDelay(params.tracingDelay);
+		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity );
+		tracingConfig.setTracingDelay_days(params.tracingDelay );
 
 
 		double alpha = 1.4;

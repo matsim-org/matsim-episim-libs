@@ -53,14 +53,15 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 
 import static java.lang.Math.max;
+import static org.matsim.episim.EpisimConfigGroup.*;
 import static org.matsim.episim.EpisimPerson.*;
-import static org.matsim.episim.model.Transition.logNormalWithMedianAndStd;
 
 public class KnRunEpisim {
 	public static final String SUSCEPTIBILITY = "susceptibility";
@@ -71,7 +72,7 @@ public class KnRunEpisim {
 	private static final boolean verbose = false;
 	private static final boolean logToOutput = true;
 
-	private static final double sigmaInfectiousness = 1;
+	private static final double sigmaInfectiousness = 0;
 	// 2 leads to dynamics so unstable that it does not look plausible w.r.t. reality.  kai, jun'20
 
 	private static final double sigmaSusc = 0.;
@@ -150,7 +151,7 @@ public class KnRunEpisim {
 			public EpisimWriter episimWriter( EpisimConfigGroup episimConfig ) {
 
 				// Async writer is used for huge event number
-				if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
+				if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != WriteEvents.episim)
 					// by default only one episim simulation is running
 					return new AsyncEpisimWriter(1);
 				else
@@ -185,7 +186,7 @@ public class KnRunEpisim {
 		 * Moduls is left of median: median = exp(mu); mode = exp(mu - sigma^2).  In consequence, the dynamically relevant times are shortened by
 		 * increasing sigma, without having to touch the median.
 		 */
-
+		/*
 		final double infectedToContag = 3.; // orig 4
 		final double infectedBNCStd = infectedToContag/1.;
 
@@ -202,7 +203,7 @@ public class KnRunEpisim {
 
 		final double criticalToBetter = 10.; // orig 9
 		final double criticalStd = 0.;
-
+		*/
 		modules.add( new AbstractModule(){
 			@Provides
 			@Singleton
@@ -213,27 +214,42 @@ public class KnRunEpisim {
 
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-				episimConfig.setWriteEvents( EpisimConfigGroup.WriteEvents.episim );
+				episimConfig.setInitialInfections(200);
+				episimConfig.setInitialInfectionDistrict("Berlin");
 
-				episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
+				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+				int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01" ) ) + 1);
+				tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
+				double tracingProbability = 0.75;
+				tracingConfig.setTracingProbability(tracingProbability);
+				tracingConfig.setTracingMemory_days(14 );
+				tracingConfig.setMinContactDuration_sec(15 * 60. );
+				tracingConfig.setQuarantineHouseholdMembers(true);
+				tracingConfig.setEquipmentRate(1.);
+				tracingConfig.setTracingDelay_days(2 );
+				tracingConfig.setTracingCapacity_pers_per_day(30 );
+
+
+				episimConfig.setWriteEvents( WriteEvents.episim );
+
+				episimConfig.setFacilitiesHandling( FacilitiesHandling.snz );
 
 				episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz" );
 				config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz" );
 				episimConfig.setSampleSize(0.25);
 
-				episimConfig.setInitialInfections(50 );
-				episimConfig.setInitialInfectionDistrict("Berlin" );
-
 				SnzBerlinScenario25pct2020.addParams(episimConfig );
-
 				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
+				episimConfig.setProgressionConfig( SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config() ).build() );
 
 //				episimConfig.setMaxInteractions( 3 );
 //				episimConfig.setCalibrationParameter(0.000_002_3);
 
 				episimConfig.setMaxInteractions( 10 );
-//				episimConfig.setCalibrationParameter( 0.000_000_69 ); // sigmaInfec=0.
-				episimConfig.setCalibrationParameter( 0.000_000_8 ); // sigmaInfect=1.
+//				episimConfig.setCalibrationParameter( 0.000_000_69 ); // sigmaInfec=0. triang
+//				episimConfig.setCalibrationParameter( 0.000_000_8 ); // sigmaInfect=1. triang
+				episimConfig.setCalibrationParameter( 0.000_001 ); // sigmaInfec=0. snz
 
 //				episimConfig.setMaxInteractions( 100 );
 //				episimConfig.setCalibrationParameter( 0.000_000_1 );
@@ -248,15 +264,11 @@ public class KnRunEpisim {
 //				episimConfig.setCalibrationParameter( 0.000_000_0045 );
 
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
-				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
+//				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.unrestr;
-
-				final CiChangeType ciChangeType = CiChangeType.inclHome;
-
-				System.out.println(  ) ;
+				RestrictionsType restrictionsType = RestrictionsType.frmSnz;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
@@ -264,8 +276,6 @@ public class KnRunEpisim {
 				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() );
 				strb.append( "@" ).append( episimConfig.getMaxInteractions() );
 				strb.append( "__pWSymp" ).append( probaInfectWSymptoms );
-				strb.append( "__infectedBNC" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
-				strb.append( "__contag" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
 				strb.append( "__sInfct" ).append( sigmaInfectiousness );
 				strb.append( "__sSusc" ).append( sigmaSusc );
 
@@ -294,10 +304,7 @@ public class KnRunEpisim {
 					double ciCorrA = 0.55;
 					// (8.3.: Empfehlung Absage Veranstaltungen > 1000 Teilnehmer ???; Verhaltensänderungen?)
 					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), actsExceptHome );
-					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), "pt" );
-					if ( ciChangeType==CiChangeType.inclHome) {
-						restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), "home" );
-					}
+					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), "pt", "home" );
 					// Wir hatten sicher bereits Reaktionen im Arbeitsleben.  Nicht nur home office (= in den Mobilitätsdaten), sondern
 					// auch kein Händeschütteln, Abstand, Räume lüften.  Freizeit damit vermutlich auch; die Tatsache, dass (dennoch)
 					// viele der Berliner Grossinfektionen in dieser Woche in den Clubs stattfanden, ist vllt Konsequenz der Tatsache, dass
@@ -334,11 +341,8 @@ public class KnRunEpisim {
 					// ===
 					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
 
-					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
-
 					strb.append( "_ciCorrA" ).append( ciCorrA );
 					strb.append( "@" ).append( dateOfCiCorrA );
-					strb.append( "_" + ciChangeType.name() );
 
 					strb.append( "_triangStrt" ).append( triangleStartDate );
 					strb.append( "_alpha" ).append( alpha );
@@ -348,29 +352,23 @@ public class KnRunEpisim {
 				} else if ( restrictionsType==RestrictionsType.frmSnz ){
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
 
-					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
-					double changedExposure = 0.1;
+					double alpha = 1.4;
+					double ciCorrection = 0.3;
 
-					double alpha = 2.;
+					File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+					String dateOfCiChange = "2020-03-08";
 
-					FixedPolicy.ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, dateOfExposureChange, changedExposure );
-					if ( ciChangeType== CiChangeType.inclHome ){
-						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure ), "home" );
-					}
-					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
+					FixedPolicy.ConfigBuilder restrictions = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear );
 
-					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
+					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
-					strb.append( "_chExposure" + changedExposure );
-					strb.append( "_@" + dateOfExposureChange );
-					strb.append( "_" + ciChangeType.name() );
-
-					strb.append( "_alpha" + alpha );
+					strb.append( "_ciCorr" ).append( ciCorrection ).append( "_@" ).append( dateOfCiChange );
+					strb.append( "_alpha" ).append( alpha );
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
-					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
 				}
 
+				strb.append( "_startDate" ).append( episimConfig.getStartDate() );
 				config.controler().setOutputDirectory( strb.toString() );
 
 				return config;
@@ -397,16 +395,6 @@ public class KnRunEpisim {
 			throw new UncheckedIOException(e);
 		}
 
-		ProgressionModel pm = injector.getInstance( ProgressionModel.class );
-		if ( pm instanceof DefaultProgressionModel ) {
-			final DefaultProgressionModel defaultProgressionModel = (DefaultProgressionModel) pm;
-			defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( infectedToContag, infectedBNCStd ) );
-			defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( contagToSymptoms, contagiousStd ) );
-			defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( SymptomsToSSick, withSymptomsStd ) );
-			defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( sStickToCritical, seriouslySickStd ) );
-			defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( criticalToBetter, criticalStd ) );
-		}
-
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(365);
 
@@ -415,18 +403,16 @@ public class KnRunEpisim {
 	}
 
 	enum RestrictionsType {unrestr, triang, frmSnz }
-	enum CiChangeType{ exclHome, inclHome }
 
 	private static class MyInfectionModel extends DefaultInfectionModel {
 		private final FaceMaskModel maskModel;
 		@Inject MyInfectionModel( SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting,
 					  FaceMaskModel maskModel, TracingConfigGroup trConfig ) {
-			super( rnd,  episimConfig,  reporting, maskModel, trConfig.getPutTraceablePersonsInQuarantineAfterDay() );
+			super( rnd,  episimConfig, reporting, maskModel, trConfig.getPutTraceablePersonsInQuarantineAfterDay(),
+					trConfig.getPutTraceablePersonsInQuarantineAfterDay() );
 			this.maskModel = maskModel;
 		}
-		@Override protected double calcInfectionProbability(EpisimPerson target, EpisimPerson infector,
-							  EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
-							  double jointTimeInContainer) {
+		@Override protected double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, InfectionParams act1, InfectionParams act2, double jointTimeInContainer) {
 
 			if ( !( infector.getDiseaseStatus()==DiseaseStatus.contagious ) ){
 				if ( ! ( rnd.nextDouble() < probaInfectWSymptoms ) ) {

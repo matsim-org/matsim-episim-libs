@@ -79,7 +79,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(TRACING_DAYS_DISTANCE)
-	public void setTracingDayDistance(int tracingDayDistance) {
+	public void setTracingMemory_days( int tracingDayDistance ) {
 		this.tracingDayDistance = tracingDayDistance;
 	}
 
@@ -89,7 +89,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(TRACING_DELAY)
-	public void setTracingDelay(int tracingDelay) {
+	public void setTracingDelay_days( int tracingDelay ) {
 		this.tracingDelay = tracingDelay;
 	}
 
@@ -104,7 +104,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(CAPACITY)
-	public void setTracingCapacity(int tracingCapacity) {
+	public void setTracingCapacity_pers_per_day( int tracingCapacity ) {
 		this.tracingCapacity = tracingCapacity;
 	}
 
@@ -129,7 +129,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(MIN_DURATION)
-	public void setMinDuration(double minDuration) {
+	public void setMinContactDuration_sec( double minDuration ) {
 		this.minDuration = minDuration;
 	}
 
