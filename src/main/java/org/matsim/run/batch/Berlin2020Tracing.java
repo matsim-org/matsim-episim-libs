@@ -218,6 +218,9 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 	public static final class Params {
 
+		@IntParameter({4711, 577771864, 302099372})
+		int seed;
+
 		@Parameter({0.3, 0.5, 1.0})
 		double remainingFractionKiga;
 
@@ -244,9 +247,6 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		@StringParameter({"linear", "exponential"})
 		String extrapolation;
-
-		@IntParameter({4711, 577771864, 302099372})
-		int seed;
 
 	}
 
