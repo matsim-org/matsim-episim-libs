@@ -29,9 +29,16 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
+import org.apache.commons.math3.fitting.AbstractCurveFitter;
+import org.apache.commons.math3.fitting.WeightedObservedPoint;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
+import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
+import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
+import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
 import org.eclipse.collections.api.tuple.primitive.IntDoublePair;
 import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
@@ -402,11 +409,19 @@ public final class EpisimUtils {
 	}
 
 	/**
+	 * Same as {@link #createRestrictionsFromCSV2(EpisimConfigGroup, File, double, Extrapolation)} with no extrapolation.
+	 */
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+		return createRestrictionsFromCSV2(episimConfig, input, alpha, Extrapolation.none);
+	}
+
+	/**
 	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
 	 *
 	 * @param alpha modulate the amount reduction
 	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
+																	   Extrapolation extrapolate) throws IOException {
 
 		Reader in = new FileReader(input);
 		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
@@ -440,6 +455,9 @@ public final class EpisimUtils {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
+		// trend used for extrapolation
+		List<Double> trend = new ArrayList<>();
+
 		while (start.isBefore(end)) {
 
 			List<Double> values = new ArrayList<>();
@@ -452,6 +470,7 @@ public final class EpisimUtils {
 			}
 
 			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+			trend.add(avg);
 
 			// Calc next sunday
 			int n = 7 - start.getDayOfWeek().getValue() % 7;
@@ -460,7 +479,113 @@ public final class EpisimUtils {
 		}
 
 
+		// Use last weeks for the trend
+		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
+		start = start.plusDays(7);
+
+		if (extrapolate == Extrapolation.linear) {
+
+			int n = trend.size();
+			SimpleRegression reg = new SimpleRegression();
+			for (int i = 0; i < n; i++) {
+				reg.addData(i, trend.get(i));
+			}
+
+			// continue the trend
+			for (int i = 0; i < 8; i++) {
+				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
+				// System.out.println(start + " " + reg.predict(n + i));
+				start = start.plusDays(7);
+			}
+
+		} else if (extrapolate == Extrapolation.exponential) {
+
+			List<WeightedObservedPoint> points = new ArrayList<>();
+
+			int n = trend.size();
+			for (int i = 0; i < n; i++) {
+				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
+			}
+
+			Exponential f = new Exponential();
+			FuncFitter fitter = new FuncFitter(f);
+			double[] coeff = fitter.fit(points);
+
+			// continue the trend
+			for (int i = 0; i < 25; i++) {
+
+				double predict = f.value(i + n, coeff);
+				// System.out.println(start + " " + predict);
+				builder.restrict(start, Math.min(predict, 1), act);
+				start = start.plusDays(7);
+			}
+		}
+
+
 		return builder;
+	}
+
+
+	/**
+	 * Type of interpolation of activity pattern.
+	 */
+	public enum Extrapolation {none, linear, exponential}
+
+	/**
+	 * Function fitter using least squares.
+	 * https://stackoverflow.com/questions/11335127/how-to-use-java-math-commons-curvefitter
+	 */
+	public static final class FuncFitter extends AbstractCurveFitter {
+
+		private final ParametricUnivariateFunction f;
+
+		public FuncFitter(ParametricUnivariateFunction f) {
+			this.f = f;
+		}
+
+		protected LeastSquaresProblem getProblem(Collection<WeightedObservedPoint> points) {
+			final int len = points.size();
+			final double[] target = new double[len];
+			final double[] weights = new double[len];
+			final double[] initialGuess = {1.0, 1.0};
+
+			int i = 0;
+			for (WeightedObservedPoint point : points) {
+				target[i] = point.getY();
+				weights[i] = point.getWeight();
+				i += 1;
+			}
+
+			final AbstractCurveFitter.TheoreticalValuesFunction model = new
+					AbstractCurveFitter.TheoreticalValuesFunction(f, points);
+
+			return new LeastSquaresBuilder().
+					maxEvaluations(Integer.MAX_VALUE).
+					maxIterations(Integer.MAX_VALUE).
+					start(initialGuess).
+					target(target).
+					weight(new DiagonalMatrix(weights)).
+					model(model.getModelFunction(), model.getModelFunctionJacobian()).
+					build();
+		}
+
+	}
+
+	/**
+	 * Exponential function in the form of 1 - a * exp(-x / b).
+	 */
+	private static final class Exponential implements ParametricUnivariateFunction {
+
+		@Override
+		public double value(double x, double... parameters) {
+			return 1 - parameters[0] * Math.exp(-x / parameters[1]);
+		}
+
+		@Override
+		public double[] gradient(double x, double... parameters) {
+			double exb = Math.exp(-x / parameters[1]);
+			return new double[]{-exb, - parameters[0] * x * exb / (parameters[1] * parameters[1])};
+		}
 	}
 
 }

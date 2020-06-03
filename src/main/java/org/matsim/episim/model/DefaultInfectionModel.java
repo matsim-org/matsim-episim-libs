@@ -50,6 +50,11 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	private final int trackingAfterDay;
 
 	/**
+	 * See {@link TracingConfigGroup#getMinDuration()}
+	 */
+	private final double trackingMinDuration;
+
+	/**
 	 * Face mask model, which decides which masks the persons are wearing.
 	 */
 	private final FaceMaskModel maskModel;
@@ -66,16 +71,19 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
 								 EpisimReporting reporting, FaceMaskModel maskModel) {
-		this(rnd, episimConfig, reporting, maskModel, tracingConfig.getPutTraceablePersonsInQuarantineAfterDay());
+		this(rnd, episimConfig, reporting, maskModel,
+				tracingConfig.getPutTraceablePersonsInQuarantineAfterDay(), tracingConfig.getMinDuration());
 	}
 
 	/**
 	 * Constructor when no injection is used.
 	 */
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel,
+								 int trackingAfterDay, double trackingMinDuration) {
 		super(rnd, episimConfig, reporting);
 		this.maskModel = maskModel;
 		this.trackingAfterDay = trackingAfterDay;
+		this.trackingMinDuration = trackingMinDuration;
 	}
 
 	/**
@@ -168,6 +176,10 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
+			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
+			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
+			double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
 				//home can only interact with home, leisure or work
@@ -179,16 +191,13 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, now, infectionType);
+					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer,infectionType);
 				}
 			}
 
 			if (!AbstractInfectionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
 				continue;
 			}
-
-			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
-			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
 			// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
@@ -199,7 +208,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				// container from the beginning.  ????  kai, mar'20
 			}
 
-			double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 			if (jointTimeInContainer < 0 || jointTimeInContainer > 86400) {
 				log.warn(containerEnterTimeOfPersonLeaving);
 				log.warn(containerEnterTimeOfOtherPerson);
@@ -290,10 +298,15 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 	}
 
-	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, StringBuilder infectionType) {
+	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, double jointTimeInContainer, StringBuilder infectionType) {
 
 		// Don't track certain activities
 		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
+			return;
+		}
+
+		// don't track below threshold
+		if (jointTimeInContainer < trackingMinDuration) {
 			return;
 		}
 

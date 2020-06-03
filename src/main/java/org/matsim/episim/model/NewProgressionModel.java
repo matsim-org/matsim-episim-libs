@@ -9,6 +9,7 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 
+import java.time.LocalDate;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.model.Transition.to;
@@ -53,6 +54,11 @@ public class NewProgressionModel extends AbstractProgressionModel {
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
 
+	/**
+	 * Tracing capacity left for the day.
+	 */
+	private int tracingCapacity = Integer.MAX_VALUE;
+
 	@Inject
 	public NewProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		super(rnd, episimConfig);
@@ -71,16 +77,43 @@ public class NewProgressionModel extends AbstractProgressionModel {
 	}
 
 	@Override
+	public void setIteration(int day) {
+
+		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+
+		// Hardcoded capacity before 06-01
+		if (date.isBefore(LocalDate.parse("2020-06-01"))) {
+			tracingCapacity = (int) (30 * episimConfig.getSampleSize());
+		} else {
+			tracingCapacity = (int) (tracingConfig.getTracingCapacity() * episimConfig.getSampleSize());
+		}
+
+	}
+
+	@Override
 	public final void updateState(EpisimPerson person, int day) {
 		super.updateState(person, day);
 
 		// account for the delay in showing symptoms and tracing
-		if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms &&
-				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingConfig.getTracingDelay()) {
-			double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
+		int tracingDelay = tracingConfig.getTracingDelay();
 
-			performTracing(person, now - tracingConfig.getTracingDelay() * DAY, day);
+		// A healthy quarantined person is dismissed from quarantine after some time
+		if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
+				person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.daysSinceQuarantine(day) > 14) {
+			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 		}
+
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
+
+		// Delay 0 is already handled
+		if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
+				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingDelay) {
+
+			performTracing(person, now - tracingDelay * DAY, day);
+		}
+
+		// clear tracing if not relevant anymore
+		person.clearTraceableContractPersons(now - (tracingConfig.getTracingDelay() + tracingConfig.getTracingDayDistance() + 1) * DAY);
 	}
 
 	@Override
@@ -160,6 +193,8 @@ public class NewProgressionModel extends AbstractProgressionModel {
 
 		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
 
+		if (tracingCapacity <= 0) return;
+
 		String homeId = null;
 
 		// quarantine household flag controls direct household and 2nd order household
@@ -177,11 +212,13 @@ public class NewProgressionModel extends AbstractProgressionModel {
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| rnd.nextDouble() < tracingConfig.getTracingProbability())
+					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability())
 
 				quarantinePerson(pw, day);
 
 		}
+
+		tracingCapacity--;
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
