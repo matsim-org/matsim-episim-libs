@@ -170,6 +170,39 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 				.restrict("2021-01-04", params.remainingFractionKiga, "educ_kiga")
 				.restrict("2021-01-04", params.remainingFractionSecondary, "educ_secondary")
 				.restrict("2021-01-04", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				
+				// Winterferien
+				.restrict("2021-01-30", 0.3, "educ_primary")
+				.restrict("2021-01-30", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2021-01-30", 0.3, "educ_kiga")
+				
+				// Ende der Winterferien 2021
+				.restrict("2021-02-08", params.remainingFractionPrima, "educ_primary")
+				.restrict("2021-02-08", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2021-02-08", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2021-02-08", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				
+				// Osterferien 2021
+				.restrict("2021-03-27", 0.3, "educ_primary")
+				.restrict("2021-03-27", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2021-03-27", 0.3, "educ_kiga")
+				
+				// Ende der Osterferien 2021
+				.restrict("2021-04-12", params.remainingFractionPrima, "educ_primary")
+				.restrict("2021-04-12", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2021-04-12", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2021-04-12", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				
+				// Sommerferien 2021
+				.restrict("2021-06-25", 0.3, "educ_primary")
+				.restrict("2021-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2021-06-25", 0.3, "educ_kiga")
+				
+				// Ende der Sommerferien 2021
+				.restrict("2021-08-09", params.remainingFractionPrima, "educ_primary")
+				.restrict("2021-08-09", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2021-08-09", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2021-08-09", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
 
 				;
 
