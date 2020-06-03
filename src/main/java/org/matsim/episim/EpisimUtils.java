@@ -423,7 +423,7 @@ public final class EpisimUtils {
 			// continue the trend
 			for (int i = 0; i < 8; i++) {
 				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
-//				System.out.println(start + " " + reg.predict(n + i));
+				// System.out.println(start + " " + reg.predict(n + i));
 				start = start.plusDays(7);
 			}
 
@@ -444,6 +444,7 @@ public final class EpisimUtils {
 			for (int i = 0; i < 25; i++) {
 
 				double predict = f.value(i + n, coeff);
+				// System.out.println(start + " " + predict);
 				builder.restrict(start, Math.min(predict, 1), act);
 				start = start.plusDays(7);
 			}

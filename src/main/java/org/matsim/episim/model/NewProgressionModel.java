@@ -97,6 +97,12 @@ public class NewProgressionModel extends AbstractProgressionModel {
 		// account for the delay in showing symptoms and tracing
 		int tracingDelay = tracingConfig.getTracingDelay();
 
+		// A healthy quarantined person is dismissed from quarantine after some time
+		if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
+				person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.daysSinceQuarantine(day) > 14) {
+			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
+		}
+
 		// Delay 0 is already handled
 		if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
 				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingDelay) {

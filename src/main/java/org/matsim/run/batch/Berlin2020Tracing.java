@@ -167,7 +167,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		@IntParameter({2})
 		int tracingDelay;
 
-		@IntParameter({0, 10, 20, 30, Integer.MAX_VALUE})
+		@IntParameter({30, Integer.MAX_VALUE})
 		int tracingCapacity;
 
 		@Parameter({0.75})
