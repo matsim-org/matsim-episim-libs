@@ -29,6 +29,7 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.OutputDirectoryLogging;
@@ -40,18 +41,24 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
-import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.SplittableRandom;
+
+import static java.lang.Math.max;
+import static org.matsim.episim.EpisimPerson.*;
+import static org.matsim.episim.model.Transition.logNormalWithMeanAndStd;
+import static org.matsim.episim.model.Transition.logNormalWithMedianAndStd;
 
 public class KnRunEpisim {
 	private static final Logger log = LogManager.getLogger( KnRunEpisim.class );
@@ -97,11 +104,13 @@ public class KnRunEpisim {
 				if (config.getModules().size() == 0)
 					throw new IllegalArgumentException("Please provide a config module or binding.");
 
-				config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn );
+				config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore );
 
 				// save some time for not needed inputs
 				config.facilities().setInputFile(null);
 				config.vehicles().setVehiclesFile(null);
+
+				ConfigUtils.writeConfig( config, "before loading scenario" );
 
 				return ScenarioUtils.loadScenario(config );
 			}
@@ -137,10 +146,46 @@ public class KnRunEpisim {
 				return new SplittableRandom(config.global().getRandomSeed());
 			}
 		} );
+
+		/*
+		 * 2020-05-20 RKI:
+		 *
+		 * Inkubationszeit 5-6 Tage (da wir im Mittel bei 0.5 anstecken und bei Übergang 5 -> 6 Symptome entwickeln, hätten wir das genau)
+		 *
+		 * Serielles Intervall 4 Tage.  Daraus folgt eigentlich fast zwangsläufig, dass die meisten Ansteckungen zwischen Tag 3 und Tag 5 nach
+		 * Ansteckung stattfinden.
+		 *
+		 * Symptome bis Hospitalisierung: 4 bis 7
+		 *
+		 * Symptome bis Intensiv:
+		 *
+		 * ---
+		 *
+		 * Moduls is left of median: median = exp(mu); mode = exp(mu - sigma^2).  In consequence, the dynamically relevant times are shortened by
+		 * increasing sigma, without having to touch the median.
+		 */
+
+		final double infectedToContag = 3.; // orig 4
+		final double infectedBNCStd = infectedToContag/1.;
+
+		final double contagToSymptoms = 1.5; // orig 2
+		final double contagiousStd = contagToSymptoms/1.;
+
+		// ---
+
+		final double SymptomsToSSick = 8.; // orig 4; RKI 7; DAe 4;
+		final double withSymptomsStd = 0.;
+
+		final double sStickToCritical = 2.; // 3.; // orig 1; RKI ?; DAe 5
+		final double seriouslySickStd = 0.;
+
+		final double criticalToBetter = 10.; // orig 9
+		final double criticalStd = 0.;
+
 		modules.add( new AbstractModule(){
 			@Provides
 			@Singleton
-			public Config config() {
+			public Config config() throws IOException{
 				Config config = ConfigUtils.createConfig(new EpisimConfigGroup() );
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -150,110 +195,126 @@ public class KnRunEpisim {
 
 				episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz" );
 				config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz" );
+				episimConfig.setSampleSize(0.25);
+
 
 				episimConfig.setInitialInfections(50 );
 				episimConfig.setInitialInfectionDistrict("Berlin" );
-
-				episimConfig.setStartDate( LocalDate.of( 2020, 2, 9) );
 
 				SnzBerlinScenario25pct2020.addParams(episimConfig );
 
 				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
 
-				episimConfig.setCalibrationParameter(0.000_000_7);
+//				episimConfig.setMaxInteractions( 3 );
+//				episimConfig.setCalibrationParameter(0.000_002_3);
+
+				episimConfig.setMaxInteractions( 10 );
+				episimConfig.setCalibrationParameter( 0.000_000_69 );
+
 //				episimConfig.getOrAddContainerParams("home" ).setContactIntensity( 0.3 );
 				episimConfig.getOrAddContainerParams( AbstractInfectionModel.QUARANTINE_HOME ).setContactIntensity( 0.01 );
 
-
 				// ---
 
-				FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+				RestrictionsType restrictionsType = RestrictionsType.triang;
 
-				// I had originally thought that one could calibrate the offset by shifting the unrestricted growth left/right until it hits
-				// the hospital numbers.  Turns out that this does not work since the early leisure participation reductions already
-				// influence this.  So the problem now is that this interacts. Consequence: fix the support days, and only change the
-				// participation rates.
+				final ExposureChangeType exposureChangeType = ExposureChangeType.exclHome;
 
-				boolean unrestricted = false ;
-
-				final double alpha = 1.5;
-
-				double workMid;
-				double workEnd;
-				double leisureMid;
-				double leisureMid2;
-				double leisureEnd;
-				double eduLower;
-				double eduHigher;
-				if ( unrestricted ){
-					workMid = workEnd = 1.;
-					leisureMid = 1.;
-					leisureMid2 = 1.;
-					leisureEnd = 1;
-					eduLower = 1.;
-					eduHigher = 1.;
-				} else{
-					workMid = Math.max( 0., 1. - alpha * 0.25 );
-					workEnd = Math.max( 0., 1. - alpha * 0.55 );
-
-					leisureMid = Math.max( 0., 1. - alpha * 0.2 );
-					leisureEnd = Math.max( 0., 1. - alpha * 0.6 );
-					leisureMid2 = leisureEnd;
-
-					eduLower = 0.1;
-
-					eduHigher = 0.0;
-				}
-
-				final LocalDate midDateLeisure = LocalDate.of( 2020, 3,14 ); // Schliessung von Clubs, Bars, Kneipen
-				final LocalDate midDateWork = LocalDate.of( 2020, 3, 16 );
-
-				{ // leisure 1:
-					final LocalDate startDate = LocalDate.of( 2020, 3, 5 ); // Do der letzten Woche, an der ich noch regulär im Büro war
-					builder.interpolate( startDate, midDateLeisure, Restriction.of( 1. ), leisureMid, "leisure", "visit","shop_other" );
-				}
-				{ // work 1:
-					final LocalDate startDate = LocalDate.of( 2020, 3, 10 ); // (ab Mo, 9.3. habe ich weitgehend home office gemacht)
-					builder.interpolate( startDate, midDateWork, Restriction.of( 1. ), workMid, "work","errands","business","shop_daily" );
-
-				}
-				// ===========================================
-				{ // edu:
-					builder.restrict( LocalDate.of( 2020, 3, 14), eduLower, "educ_primary", "educ_kiga" ) // = Samstag vor Schulschliessungen
-					       .restrict( LocalDate.of( 2020, 3, 14 ), eduHigher, "educ_secondary", "educ_higher", "educ_other", "educ_tertiary" )
-//					       .restrict(74-offset, 0.5, "educ_primary", "educ_kiga") // 4/may.  Already "history" (on 30/apr).  :-)
-					;
-				}
-				// ===========================================
-				{ // leisure 2:
-					final LocalDate endDate = LocalDate.of( 2020, 3, 20 );
-					builder.interpolate( midDateLeisure, endDate, Restriction.of( leisureMid2 ), leisureEnd, "leisure", "visit", "shop_other" );
-				}
-				{ // work 2:
-					final LocalDate endDate = LocalDate.of( 2020, 3, 23 );
-					builder.interpolate( midDateWork, endDate, Restriction.of( workMid ), workEnd,"work","errands","business","shop_daily");
-				}
-				episimConfig.setPolicy( FixedPolicy.class, builder.build() );
-				episimConfig.setSampleSize(0.25);
+				System.out.println(  ) ;
 
 				StringBuilder strb = new StringBuilder();
-				strb.append( "piecewise" );
-				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() );
-				strb.append( "__ciHome" ).append( episimConfig.getOrAddContainerParams( "home" ).getContactIntensity() );
-				strb.append( "__ciQHome" ).append( episimConfig.getOrAddContainerParams( "quarantine_home" ).getContactIntensity() );
-				strb.append( "__startDate_" ).append( episimConfig.getStartDate() );
-				if ( unrestricted ) {
-					strb.append( "__unrestricted" );
-				} else{
-					strb.append( "__alpha_" + alpha );
+				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd-HH:mm:ss" ) ) );
+				strb.append( "_" ).append( restrictionsType.name() );
+				strb.append( "_theta" ).append( episimConfig.getCalibrationParameter() );
+				strb.append( "__infectedBNC" ).append( infectedToContag ).append( "_" ).append( infectedBNCStd );
+				strb.append( "__contag" ).append( contagToSymptoms ).append( "_" ).append( contagiousStd );
+				strb.append( "_" + exposureChangeType.name() );
+
+				if ( restrictionsType==RestrictionsType.triang ) {
+					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
+
+					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 8 );
+					double changedExposure = 0.5;
+					// (8.3.: Empfehlung Absage Veranstaltungen > 1000 Teilnehmer ???; Verhaltensänderungen?)
+
+					LocalDate triangleStartDate = LocalDate.of( 2020, 3, 8 );
+					double alpha = 1.2;
+
+					// ===
+					List<String> allActivitiesExceptHomeAndEduList = new ArrayList<>();
+					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
+						final String activityType = infectionParams.getParams().get( "activityType" );
+						if ( !activityType.contains( "home" ) && !activityType.contains( "educ_" ) ){
+							allActivitiesExceptHomeAndEduList.add( activityType );
+						}
+					}
+					final String[] actsExceptHomeAndEdu = allActivitiesExceptHomeAndEduList.toArray( new String[0] );
+					final String[] educ_lower = {"educ_primary", "educ_kiga"};
+					final String[] educ_higher = {"educ_secondary", "educ_higher", "educ_tertiary", "educ_other"};
+					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
+					// ===
+					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
+					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
+					// exposure change:
+					restrictions.restrict( dateOfExposureChange,
+							Restriction.ofExposure( changedExposure ),
+							actsExceptHomeAndEdu );
+					// quick reductions towards lockdown:
+					restrictions.interpolate( triangleStartDate, date_2020_03_24,
+							Restriction.of(1.), Restriction.of(remainingFractionAtMax),
+							actsExceptHomeAndEdu );
+					// school closures:
+					restrictions.restrict( "2020-03-14", 0.1, educ_lower ).restrict( "2020-03-14", 0., educ_higher );
+					// slow re-opening:
+					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,10 ),
+							Restriction.of(remainingFractionAtMax ), Restriction.of( max( 0., 1.-alpha*0.2 ) ),
+							actsExceptHomeAndEdu );
+					// absorb masks into exposures and ramp up:
+					final LocalDate maskDate = LocalDate.of( 2020, 4, 15 );
+					final int nDays = 1;
+					for ( int ii = 0 ; ii<= nDays ; ii++ ){
+						double newExposure = changedExposure + ( changedExposure*0. - changedExposure ) * ii / nDays ;
+						// check: ii=0 --> old value; ii=nDays --> new value
+						restrictions.restrict( maskDate.plusDays( ii ), Restriction.ofExposure( newExposure ),
+								"shop_daily", "shop_other", "pt", "work", "leisure" );
+					}
+
+					// ===
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
+
+					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
+
+					strb.append( "_chExposure" ).append( changedExposure );
+					strb.append( "_@" ).append( dateOfExposureChange );
+
+					strb.append( "_triangStrt" ).append( triangleStartDate );
+					strb.append( "_alpha" ).append( alpha );
+
+					strb.append( "_masksStrt" ).append( maskDate );
+
+				} else if ( restrictionsType==RestrictionsType.frmSnz ){
+					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
+
+					LocalDate dateOfExposureChange = LocalDate.of( 2020, 3, 10 );
+					double changedExposure = 0.1;
+
+					double alpha = 2.;
+
+					FixedPolicy.ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV( episimConfig, alpha, dateOfExposureChange, changedExposure );
+					if ( exposureChangeType==ExposureChangeType.inclHome ){
+						restrictions.restrict( dateOfExposureChange, Restriction.of( 1., changedExposure ), "home" );
+					}
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
+
+					strb.append( "_startDate" ).append( episimConfig.getStartDate() );
+
+					strb.append( "_chExposure" + changedExposure );
+					strb.append( "_@" + dateOfExposureChange );
+
+					strb.append( "_alpha" + alpha );
 				}
-//				strb.append( "__work_" + workMid + "_" + workEnd );
-//				strb.append( "__leis_" + leisureMid + "_" + leisureEnd );
-//				strb.append( "__eduLower_"  + eduLower);
-//				strb.append( "__eduHigher_" + eduHigher );
-//				strb.append( "__other" + other );
-				strb.append( "__leisureMid2_" ).append( new DecimalFormat("#.#", DecimalFormatSymbols.getInstance(Locale.US)).format( leisureMid2 ) );
-				strb.append("__midDateLeisure_").append( midDateLeisure );
+
+
 				config.controler().setOutputDirectory( strb.toString() );
 
 				return config;
@@ -271,11 +332,24 @@ public class KnRunEpisim {
 
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
+		ProgressionModel pm = injector.getInstance( ProgressionModel.class );
+		if ( pm instanceof DefaultProgressionModel ) {
+			final DefaultProgressionModel defaultProgressionModel = (DefaultProgressionModel) pm;
+			defaultProgressionModel.setTransition( DiseaseStatus.infectedButNotContagious, logNormalWithMedianAndStd( infectedToContag, infectedBNCStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.contagious, logNormalWithMedianAndStd( contagToSymptoms, contagiousStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.showingSymptoms, logNormalWithMedianAndStd( SymptomsToSSick, withSymptomsStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.seriouslySick, logNormalWithMedianAndStd( sStickToCritical, seriouslySickStd ) );
+			defaultProgressionModel.setTransition( DiseaseStatus.critical, logNormalWithMedianAndStd( criticalToBetter, criticalStd ) );
+		}
+
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(100);
+		runner.run(150);
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
+
+	enum RestrictionsType {unrestr, triang, frmSnz }
+	enum ExposureChangeType{ exclHome, inclHome }
 
 }

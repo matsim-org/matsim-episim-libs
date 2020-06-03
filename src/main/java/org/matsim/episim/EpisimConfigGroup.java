@@ -51,7 +51,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
-	private static final String MASK_COMPLIANCE = "maskCompliance";
 	private static final String SAMPLE_SIZE = "sampleSize";
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
@@ -73,7 +72,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
-	private double maskCompliance = 1d;
 	private int initialStartInfections = 0;
 	/**
 	 * If not null, filter persons for initial infection by district.
@@ -98,8 +96,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
+	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
+	private int maxInteractions = 3;
 
 	/**
 	 * Default constructor.
@@ -207,16 +207,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return startOffset;
 	}
 
-	@StringGetter(MASK_COMPLIANCE)
-	public double getMaskCompliance() {
-		return maskCompliance;
-	}
-
-	@StringSetter(MASK_COMPLIANCE)
-	public void setMaskCompliance(double maskCompliance) {
-		this.maskCompliance = maskCompliance;
-	}
-
 	/**
 	 * Sample size in relation to whole population, between (0, 1].
 	 */
@@ -299,6 +289,40 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.policyConfig = config;
 	}
 
+	@StringGetter("progressionConfig")
+	public String getProgressionConfigName() {
+		if (progressionConfig.origin().filename() != null)
+			return progressionConfig.origin().filename();
+
+		return progressionConfig.origin().description();
+	}
+
+	/**
+	 * Gets the progression config configuration.
+	 */
+	public Config getProgressionConfig() {
+		return progressionConfig;
+	}
+
+	public void setProgressionConfig(Config progressionConfig) {
+		this.progressionConfig = progressionConfig;
+	}
+
+	/**
+	 * Sets the progression config location as file name.
+	 */
+	@StringSetter("progressionConfig")
+	public void setProgressionConfig(String progressionConfig) {
+		if (progressionConfig == null)
+			this.progressionConfig = ConfigFactory.empty();
+		else {
+			File file = new File(progressionConfig);
+			if (!progressionConfig.equals("null") && !file.exists())
+				throw new IllegalArgumentException("Progression config does not exist: " + progressionConfig);
+			this.progressionConfig = ConfigFactory.parseFileAnySyntax(file);
+		}
+	}
+
 	/**
 	 * Create a configured instance of the desired policy.
 	 */
@@ -370,6 +394,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public void addContainerParams(final InfectionParams params) {
 		final InfectionParams previous = this.getContainerParams().get(params.getContainerName());
+
+		Optional<String> match = params.mappedNames.stream().filter(s -> paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();
+		if (match.isPresent()) {
+			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params.");
+		}
 
 		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
 
@@ -447,6 +476,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Collection<InfectionParams> getInfectionParams() {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
+	}
+
+	public int getMaxInteractions() {
+		return maxInteractions;
+	}
+
+	public void setMaxInteractions(int maxInteractions) {
+		this.maxInteractions = maxInteractions;
 	}
 
 	/**
@@ -579,5 +616,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 	}
+
 
 }

@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
@@ -49,6 +50,13 @@ public class FixedPolicy extends ShutdownPolicy {
 		return new ConfigBuilder();
 	}
 
+	/**
+	 * Create a config builder with an existing config.
+	 */
+	public static ConfigBuilder parse(Config config) {
+		return new ConfigBuilder(config);
+	}
+
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
 
@@ -67,10 +75,7 @@ public class FixedPolicy extends ShutdownPolicy {
 				LocalDate date = LocalDate.parse(days.getKey());
 				if (date.isBefore(start)) {
 					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
-
-					entry.getValue().setRemainingFraction(r.getRemainingFraction());
-					entry.getValue().setExposure(r.getExposure());
-					entry.getValue().setRequireMask(r.getRequireMask());
+					entry.getValue().update(r);
 				}
 			}
 		}
@@ -96,10 +101,7 @@ public class FixedPolicy extends ShutdownPolicy {
 			if (dayConfig != null) {
 
 				Restriction r = Restriction.fromConfig(dayConfig);
-
-				entry.getValue().setRemainingFraction(r.getRemainingFraction());
-				entry.getValue().setExposure(r.getExposure());
-				entry.getValue().setRequireMask(r.getRequireMask());
+				entry.getValue().update(r);
 			}
 		}
 	}
@@ -108,6 +110,16 @@ public class FixedPolicy extends ShutdownPolicy {
 	 * Builder for {@link FixedPolicy} config.
 	 */
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
+
+		private ConfigBuilder() {
+		}
+
+		private ConfigBuilder(Config config) {
+			for (Map.Entry<String, ConfigValue> e : config.root().entrySet()) {
+				Object value = config.getValue(e.getKey()).unwrapped();
+				params.put(e.getKey(), value);
+			}
+		}
 
 		/**
 		 * Restrict activities at specific date in absolute time.
@@ -119,9 +131,20 @@ public class FixedPolicy extends ShutdownPolicy {
 		@SuppressWarnings("unchecked")
 		public ConfigBuilder restrict(String date, Restriction restriction, String... activities) {
 
+			if (activities.length == 0)
+				throw new IllegalArgumentException("No activities given");
+
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
-				p.put(date, restriction.asMap());
+
+				// Because of merging, each activity needs a separate restriction
+				Restriction clone = Restriction.clone(restriction);
+
+				// merge if there is an entry already
+				if (p.containsKey(date))
+					clone.merge(p.get(date));
+
+				p.put(date, clone.asMap());
 			}
 
 			return this;
@@ -132,6 +155,13 @@ public class FixedPolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder restrict(LocalDate date, double fraction, String... activities) {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
+		}
+
+		/**
+		 * See {@link #restrict(String, Restriction, String...)}.
+		 */
+		public ConfigBuilder restrict(LocalDate date, Restriction restriction, String... activities) {
+			return restrict(date.toString(), restriction, activities);
 		}
 
 		/**
@@ -174,24 +204,37 @@ public class FixedPolicy extends ShutdownPolicy {
 
 
 		/**
-		 * Create a config entry with linear interpolated {@link Restriction#getRemainingFraction()}. All start and end values are inclusive.
+		 * Create a config entry with linear interpolated {@link Restriction#getRemainingFraction()} and {@link Restriction#getCiCorrection()} ()}.
+		 * If any of these is not defined the interpolation will also be undefined.
+		 * Required mask is always the same as in first parameter {@code restriction}.
+		 * All start and end values are inclusive.
 		 *
-		 * @param start       starting date
-		 * @param end         end tate
-		 * @param restriction starting restriction at start date
-		 * @param fractionEnd remaining fraction at end date
-		 * @param activities  activities to restrict
+		 * @param start          starting date
+		 * @param end            end tate
+		 * @param restriction    starting restriction at start date
+		 * @param restrictionEnd remaining fraction / ci corr at end date
+		 * @param activities     activities to restrict
 		 */
-		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, double fractionEnd, String... activities) {
+		public ConfigBuilder interpolate(LocalDate start, LocalDate end, Restriction restriction, Restriction restrictionEnd, String... activities) {
 			double day = 0;
 
 			long diff = ChronoUnit.DAYS.between(start, end);
 
+			double rf = Objects.requireNonNullElse(restriction.getRemainingFraction(), Double.NaN);
+			double rfEnd = Objects.requireNonNullElse(restrictionEnd.getRemainingFraction(), Double.NaN);
+
+			double exp = Objects.requireNonNullElse(restriction.getCiCorrection(), Double.NaN);
+			double expEnd = Objects.requireNonNullElse(restrictionEnd.getCiCorrection(), Double.NaN);
+
 			LocalDate today = start;
 			while (today.isBefore(end) || today.isEqual(end)) {
-				double r = restriction.getRemainingFraction() + (fractionEnd - restriction.getRemainingFraction()) * (day / diff);
+				double r = rf + (rfEnd - rf) * (day / diff);
+				double e = exp + (expEnd - exp) * (day / diff);
 
-				restrict(today.toString(), Restriction.of(r, restriction.getExposure(), restriction.getRequireMask()), activities);
+				if (Double.isNaN(r) && Double.isNaN(e))
+					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
+
+				restrict(today.toString(), new Restriction(r, e, null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}
@@ -200,10 +243,11 @@ public class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * See {@link #interpolate(LocalDate, LocalDate, Restriction, double, String...)}.
+		 * Interpolation for {@link Restriction#getRemainingFraction()} only.
+		 * See {@link #interpolate(LocalDate, LocalDate, Restriction, Restriction, String...)}.
 		 */
-		public ConfigBuilder interpolate(String start, String end, Restriction restriction, double fractionEnd, String... activities) {
-			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, fractionEnd, activities);
+		public ConfigBuilder interpolate(String start, String end, Restriction restriction, Restriction restrictionEnd, String... activities) {
+			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, restrictionEnd, activities);
 		}
 
 	}

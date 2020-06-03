@@ -10,42 +10,62 @@ from cycler import cycler
 import scipy as sp
 import matsim as ms
 
+# todo: https??
 hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
+# hh = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/10052020_TaSpi.csv', sep=";").fillna(value=0.)
 hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 
-cc = pd.read_csv('../covid-sim/src/assets/' + 'berlin-cases.csv', sep=",").fillna(value=0.)
+cc = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv', sep=",").fillna(value=0.)
 cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-# base = 'piecewise__theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-09__unrestricted__hsptlOffst6__leisureMid2_1__midDateLeisure_2020-03-14/'
-base = 'piecewise__theta7.0E-7__ciHome0.75__ciQHome0.01__startDate_2020-02-09__alpha_1.5__hsptlOffst6__leisureMid2_0.1__midDateLeisure_2020-03-14/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.3_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.4_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta7.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStart2020-03-08_alpha1.2_masks_NONE/'
+# base = 'triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-10_triangStrt2020-03-08_alpha1.2_masksStrt2021-04-30/'
+# base = 'triang_theta6.8E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt9999-04-30/'
+# base = 'triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt9999-04-30/'
+# base = 'triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt2020-04-15/'
+# base = '2020-05-26-19:43:07_triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt2020-04-15/'
+base = '2020-05-26-21:24:40_triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_chExposure0.5_@2020-03-08_triangStrt2020-03-08_alpha1.2_masksStrt2020-04-15/'
+
+
+
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
 
-# --
-
 infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
-
 nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
-
 nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
 
-rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
+# rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
 
-rr3 = pd.concat([cc['cases'], rr2b.diff(), nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+fit = pd.Series(1 * np.exp(np.arange(0, 30, 1) * np.log(2.) / 2.8))
+fit.index = pd.date_range(start="2020-02-20", periods=fit.size)
+
+fit2 = pd.Series(60 * np.exp(np.arange(0, 30, 1) * np.log(2.) / 8))
+fit2.index = pd.date_range(start="2020-03-01", periods=30)
+
+fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
+fit3.index = pd.date_range(start="2020-03-01", periods=80)
+
+rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
 
 pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
-default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
-                  cycler(linestyle=['', '', '-', '-','-','']) +
-                  cycler(marker=['o','o','','',",",'']))
+pyplot.rcParams['figure.figsize']=[12, 5]
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
+                  cycler(linestyle=['', '', '', '','-','-','-']) +
+                  cycler(marker=['','','.','','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,1250)
-pyplot.axvline(pd.to_datetime('2020-03-19'), color='pink', linestyle='-', lw=1)
+# axes.set_ylim(0,250)
+pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
 pyplot.show()
 
 # In[]:
@@ -54,12 +74,13 @@ pyplot.show()
 
 infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
 
+
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 
 rr3 = pd.concat([hh['Stationäre Behandlung'], hh['Intensivmedizin'], infected['shouldBeInHospital'], infected['nCritical']], axis=1).fillna(value=0.)
 
 pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
+pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '', '', '','-','']) +
                   cycler(marker=['.','.','.','.',",",'']))
@@ -79,7 +100,7 @@ fit.index = pd.date_range(start="2020-02-15", periods=60)
 rr3 = pd.concat([rr2b, fit], axis=1)
 
 pyplot.close('all')
-pyplot.rcParams['figure.figsize']=[12, 7]
+pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['-', '-', '-', '-','-','']) +
                   cycler(marker=['','','','',",",'']))
