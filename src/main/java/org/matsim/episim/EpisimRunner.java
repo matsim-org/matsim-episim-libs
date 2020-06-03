@@ -30,6 +30,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
+import org.matsim.episim.model.ProgressionModel;
 
 import java.io.Externalizable;
 import java.io.IOException;
@@ -54,15 +55,17 @@ public final class EpisimRunner {
 	private final Provider<InfectionEventHandler> handlerProvider;
 	private final Provider<ReplayHandler> replayProvider;
 	private final Provider<EpisimReporting> reportingProvider;
+	private final Provider<ProgressionModel> progressionProvider;
 
 	@Inject
-	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider,
-						Provider<ReplayHandler> replay, Provider<EpisimReporting> reportingProvider) {
+	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider, Provider<ReplayHandler> replay,
+						Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
 		this.replayProvider = replay;
 		this.reportingProvider = reportingProvider;
+		this.progressionProvider = progressionProvider;
 	}
 
 	/**
@@ -143,6 +146,7 @@ public final class EpisimRunner {
 
 		InfectionEventHandler handler = handlerProvider.get();
 		EpisimReporting reporting = reportingProvider.get();
+		ProgressionModel progressionModel = progressionProvider.get();
 
 		Path path = output.resolve(String.format("episim-snapshot-%03d.zip", iteration));
 
@@ -165,6 +169,9 @@ public final class EpisimRunner {
 			writeObject(handler, "state", archive);
 			writeObject(reporting, "reporting", archive);
 
+			if (progressionModel instanceof Externalizable)
+				writeObject((Externalizable) progressionModel, "progression", archive);
+
 			archive.finish();
 			archive.close();
 
@@ -184,6 +191,7 @@ public final class EpisimRunner {
 
 		InfectionEventHandler handler = handlerProvider.get();
 		EpisimReporting reporting = reportingProvider.get();
+		ProgressionModel progressionModel = progressionProvider.get();
 
 		int iteration = -1;
 		try (var in = Files.newInputStream(path)) {
@@ -215,13 +223,21 @@ public final class EpisimRunner {
 					ObjectInputStream ois = new ObjectInputStream(archive);
 					reporting.readExternal(ois);
 				}
+
+				if (name.equals("progression")) {
+					ObjectInputStream ois = new ObjectInputStream(archive);
+					if (progressionModel instanceof Externalizable)
+						((Externalizable) progressionModel).readExternal(ois);
+					else
+						log.warn("Progression state present, but model is not Externalizable");
+				}
 			}
 
 			archive.close();
 
 			return iteration;
 
-		} catch (IOException | ArchiveException e) {
+		} catch (IOException | ArchiveException | ClassNotFoundException e) {
 			throw new IllegalStateException("Could not read snapshot", e);
 		}
 

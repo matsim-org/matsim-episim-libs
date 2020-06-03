@@ -8,13 +8,17 @@ import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 
 import javax.inject.Inject;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.SplittableRandom;
 
 /**
  * Abstract base implementation for a progression model that stores and updates state transitions.
  * It does *not* contain any decision logic when and to which state the disease will progress.
  */
-abstract class AbstractProgressionModel implements ProgressionModel {
+abstract class AbstractProgressionModel implements ProgressionModel, Externalizable {
 
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
@@ -113,4 +117,15 @@ abstract class AbstractProgressionModel implements ProgressionModel {
 		return report.nTotalInfected > 0 || report.nInQuarantine > 0;
 	}
 
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+		((Externalizable) nextStates).writeExternal(out);
+		((Externalizable) transitionDays).writeExternal(out);
+	}
+
+	@Override
+	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
+		((Externalizable) nextStates).readExternal(in);
+		((Externalizable) transitionDays).readExternal(in);
+	}
 }
