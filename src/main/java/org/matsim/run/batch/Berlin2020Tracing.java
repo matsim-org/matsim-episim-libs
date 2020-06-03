@@ -138,7 +138,37 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 				// Sommerferien
 				.restrict("2020-06-25", 0.3, "educ_primary")
 				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-06-25", 0.3, "educ_kiga");
+				.restrict("2020-06-25", 0.3, "educ_kiga")
+				
+				// Ende der Sommerferien
+				.restrict("2020-08-10", params.remainingFractionPrima, "educ_primary")
+				.restrict("2020-08-10", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2020-08-10", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2020-08-10", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				
+				// Herbstferien
+				.restrict("2020-10-10", 0.3, "educ_primary")
+				.restrict("2020-10-10", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-10-10", 0.3, "educ_kiga")
+				
+				// Ende der Herbstferien
+				.restrict("2020-10-26", params.remainingFractionPrima, "educ_primary")
+				.restrict("2020-10-26", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2020-10-26", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2020-10-26", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				
+				// Weihnachtsferien
+				.restrict("2020-12-19", 0.3, "educ_primary")
+				.restrict("2020-12-19", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-12-19", 0.3, "educ_kiga")
+				
+				// Ende der Weihnachtsferien
+				.restrict("2021-01-04", params.remainingFractionPrima, "educ_primary")
+				.restrict("2021-01-04", params.remainingFractionKiga, "educ_kiga")
+				.restrict("2021-01-04", params.remainingFractionSecondary, "educ_secondary")
+				.restrict("2021-01-04", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				
+				;
 
 		String policyFileName = "input/policy" + id + ".conf";
 		episimConfig.setOverwritePolicyLocation(policyFileName);
