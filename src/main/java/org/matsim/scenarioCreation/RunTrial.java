@@ -12,6 +12,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunEpisim;
@@ -111,7 +112,7 @@ public final class RunTrial implements Callable<Integer> {
 			if (alpha > -1) {
 				episimConfig.setPolicy(FixedPolicy.class,
 						SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200524.csv"),
-								alpha, correction, correctionStart, 1. / 3., 1. / 6.).build());
+								alpha, correction, correctionStart, EpisimUtils.Extrapolation.linear).build());
 			} else if (correctionStart != null) {
 				FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 				log.info("Setting ci correction at {} to {}", correctionStart, correction);
