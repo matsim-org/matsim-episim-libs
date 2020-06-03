@@ -51,6 +51,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
+	private static final String MAX_INTERACTIONS = "maxInteractions";
 	private static final String SAMPLE_SIZE = "sampleSize";
 	private static final String START_DATE = "startDate";
 
@@ -293,6 +294,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
+	@StringGetter(MAX_INTERACTIONS)
+	public int getMaxInteractions() {
+		return maxInteractions;
+	}
+
+	@StringSetter(MAX_INTERACTIONS)
+	public void setMaxInteractions(int maxInteractions) {
+		this.maxInteractions = maxInteractions;
+	}
+
 	/**
 	 * Create a configured instance of the desired policy.
 	 */
@@ -446,14 +457,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Collection<InfectionParams> getInfectionParams() {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
-	}
-
-	public int getMaxInteractions() {
-		return maxInteractions;
-	}
-
-	public void setMaxInteractions(int maxInteractions) {
-		this.maxInteractions = maxInteractions;
 	}
 
 	/**

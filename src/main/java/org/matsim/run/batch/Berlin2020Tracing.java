@@ -58,7 +58,8 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 					.measure("Going to secondary", "remainingFractionSecondary")
 					.measure("Going to Higher/other", "remainingFractionHigherOther"),
 
-			Option.of("Seed")
+			Option.of("Options")
+					.measure("Max. interactions", "maxInteractions")
 					.measure("Seed", "seed")
 
 	);
@@ -70,7 +71,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "tracing");
+		return Metadata.of("berlin", "moreTracing");
 	}
 
 	@Override
@@ -108,6 +109,11 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		LocalDate startDate = LocalDate.parse("2020-02-10");
+
+		episimConfig.setMaxInteractions(params.maxInteractions);
+		if (params.maxInteractions == 10) {
+			episimConfig.setCalibrationParameter(0.000_001);
+		}
 
 		// +1 because end date is exclusive
 		int offset = (int) (ChronoUnit.DAYS.between(startDate, LocalDate.parse("2020-04-27")) + 1);
@@ -218,7 +224,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 	public static final class Params {
 
-		@IntParameter({4711, 577771864, 302099372})
+		@IntParameter({4711})
 		int seed;
 
 		@Parameter({0.3, 0.5, 1.0})
@@ -247,6 +253,9 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		@StringParameter({"linear", "exponential"})
 		String extrapolation;
+
+		@IntParameter({10})
+		int maxInteractions;
 
 	}
 
