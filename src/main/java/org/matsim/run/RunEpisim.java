@@ -96,6 +96,9 @@ public class RunEpisim implements Callable<Integer> {
 	@CommandLine.Option(names = "--log", description = "Enable logging to output directory.", defaultValue = "false")
 	private boolean logToOutput;
 
+	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "500")
+	private int maxIterations;
+
 	@CommandLine.Parameters(hidden = true)
 	private String[] remainder;
 
@@ -223,7 +226,7 @@ public class RunEpisim implements Callable<Integer> {
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(500);
+		runner.run(maxIterations);
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
