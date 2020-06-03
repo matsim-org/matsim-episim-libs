@@ -103,13 +103,17 @@ public class NewProgressionModel extends AbstractProgressionModel {
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 		}
 
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
+
 		// Delay 0 is already handled
 		if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
 				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingDelay) {
-			double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 
 			performTracing(person, now - tracingDelay * DAY, day);
 		}
+
+		// clear tracing if not relevant anymore
+		person.clearTraceableContractPersons(now - (tracingConfig.getTracingDelay() + tracingConfig.getTracingDayDistance() + 1) * DAY);
 	}
 
 	@Override
