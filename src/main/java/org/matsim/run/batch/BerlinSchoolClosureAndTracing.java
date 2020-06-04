@@ -98,7 +98,7 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 		// should be day 67
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		tracingConfig.setTracingProbability(params.tracingProbability);
-		tracingConfig.setTracingMemory_days(params.tracingDayDistance );
+		tracingConfig.setTracingPeriod_days(params.tracingDayDistance );
 
 		com.typesafe.config.Config policyConf = SnzBerlinScenario.basePolicy()
 				// Google mobility data currently stops at day 58 (18.04.2020)

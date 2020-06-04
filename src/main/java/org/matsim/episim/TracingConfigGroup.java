@@ -70,6 +70,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 
 	@StringSetter(PUT_TRACEABLE_PERSONS_IN_QUARANTINE)
 	public void setPutTraceablePersonsInQuarantineAfterDay(int putTraceablePersonsInQuarantineAfterDay) {
+		// yyyy change argument to date.  kai, jun'20
 		this.putTraceablePersonsInQuarantineAfterDay = putTraceablePersonsInQuarantineAfterDay;
 	}
 
@@ -79,7 +80,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(TRACING_DAYS_DISTANCE)
-	public void setTracingMemory_days( int tracingDayDistance ) {
+	public void setTracingPeriod_days( int tracingDayDistance ) {
 		this.tracingDayDistance = tracingDayDistance;
 	}
 

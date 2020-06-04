@@ -105,7 +105,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		int offset = (int) (ChronoUnit.DAYS.between(startDate, LocalDate.parse("2020-04-27")) + 1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		tracingConfig.setTracingProbability(params.tracingProbability);
-		tracingConfig.setTracingMemory_days(params.tracingDayDistance );
+		tracingConfig.setTracingPeriod_days(params.tracingDayDistance );
 		tracingConfig.setMinContactDuration_sec(15 * 60. );
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);

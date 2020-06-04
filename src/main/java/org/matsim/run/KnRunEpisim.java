@@ -62,6 +62,7 @@ import java.util.SplittableRandom;
 import static java.lang.Math.max;
 import static org.matsim.episim.EpisimConfigGroup.*;
 import static org.matsim.episim.EpisimPerson.*;
+import static org.matsim.episim.EpisimUtils.*;
 
 public class KnRunEpisim {
 	public static final String SUSCEPTIBILITY = "susceptibility";
@@ -129,9 +130,9 @@ public class KnRunEpisim {
 
 				SplittableRandom rnd = new SplittableRandom( 4715 );
 				for( Person person : scenario.getPopulation().getPersons().values() ){
-					person.getAttributes().putAttribute( VIRAL_LOAD, EpisimUtils.nextLogNormalFromMeanAndSigma( rnd, 1,
+					person.getAttributes().putAttribute( VIRAL_LOAD, nextLogNormalFromMeanAndSigma( rnd, 1,
 							sigmaInfectiousness ) );
-					person.getAttributes().putAttribute( SUSCEPTIBILITY, EpisimUtils.nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
+					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
 				}
 
 				return scenario;
@@ -208,7 +209,8 @@ public class KnRunEpisim {
 			@Provides
 			@Singleton
 			public Config config() throws IOException{
-				Config config = ConfigUtils.createConfig(new EpisimConfigGroup() );
+//				Config config = ConfigUtils.createConfig(new EpisimConfigGroup() );
+				Config config = new SnzBerlinScenario25pct2020().config();
 
 				config.global().setRandomSeed( 4713 );
 
@@ -219,29 +221,13 @@ public class KnRunEpisim {
 
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
-				int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01" ) ) + 1);
-				tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-				double tracingProbability = 0.75;
-				tracingConfig.setTracingProbability(tracingProbability);
-				tracingConfig.setTracingMemory_days(14 );
-				tracingConfig.setMinContactDuration_sec(15 * 60. );
-				tracingConfig.setQuarantineHouseholdMembers(true);
-				tracingConfig.setEquipmentRate(1.);
-				tracingConfig.setTracingDelay_days(2 );
-				tracingConfig.setTracingCapacity_pers_per_day(30 );
+				tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE );
+				// wirt auf diesem Branch erst ab 1.6., vorher ist es "30".
 
+				// NOTE: tracingCapacity wirkt auf diesem Branch erst am 1.6., ist sonst "30".  die "afterDay" Einstellung hat aber in jedem
+				// Fall Wirkung, und steht im Snz Scen auf 1.4.
 
 				episimConfig.setWriteEvents( WriteEvents.episim );
-
-				episimConfig.setFacilitiesHandling( FacilitiesHandling.snz );
-
-				episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz" );
-				config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz" );
-				episimConfig.setSampleSize(0.25);
-
-				SnzBerlinScenario25pct2020.addParams(episimConfig );
-				SnzBerlinScenario25pct2020.setContactIntensities(episimConfig );
-				episimConfig.setProgressionConfig( SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config() ).build() );
 
 //				episimConfig.setMaxInteractions( 3 );
 //				episimConfig.setCalibrationParameter(0.000_002_3);
@@ -273,11 +259,12 @@ public class KnRunEpisim {
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
 				strb.append( "__" ).append( restrictionsType.name() );
-				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() );
-				strb.append( "@" ).append( episimConfig.getMaxInteractions() );
+				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxInteractions() );
 				strb.append( "__pWSymp" ).append( probaInfectWSymptoms );
 				strb.append( "__sInfct" ).append( sigmaInfectiousness );
 				strb.append( "__sSusc" ).append( sigmaSusc );
+				strb.append( "__trStrt" ).append( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() );
+				strb.append("_trCapSncJune").append( tracingConfig.getTracingCapacity() );
 
 				if ( restrictionsType==RestrictionsType.triang ) {
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
@@ -354,11 +341,10 @@ public class KnRunEpisim {
 
 					double alpha = 1.4;
 					double ciCorrection = 0.3;
-
-					File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
 					String dateOfCiChange = "2020-03-08";
 
-					FixedPolicy.ConfigBuilder restrictions = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear );
+					File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+					FixedPolicy.ConfigBuilder restrictions = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, Extrapolation.linear );
 
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
@@ -366,6 +352,7 @@ public class KnRunEpisim {
 					strb.append( "_alpha" ).append( alpha );
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					episimConfig.setStartDate( LocalDate.of( 2020, 2, 15 ) );
+					episimConfig.setPolicy( FixedPolicy.class, FixedPolicy.config().build() ); // overwrite snz policy with "null"
 				}
 
 				strb.append( "_startDate" ).append( episimConfig.getStartDate() );
@@ -395,8 +382,11 @@ public class KnRunEpisim {
 			throw new UncheckedIOException(e);
 		}
 
-		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(365);
+		ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "just before calling run" );
+		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
+		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
+
+		injector.getInstance(EpisimRunner.class).run(365 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 

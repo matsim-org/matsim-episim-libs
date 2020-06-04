@@ -181,9 +181,13 @@ public class NewProgressionModel extends AbstractProgressionModel {
 	 */
 	private void performTracing(EpisimPerson person, double now, int day) {
 
-		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
+		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
+			return;
+		}
 
-		if (tracingCapacity <= 0) return;
+		if (tracingCapacity <= 0) {
+			return;
+		}
 
 		String homeId = null;
 
@@ -202,13 +206,17 @@ public class NewProgressionModel extends AbstractProgressionModel {
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability())
-
-				quarantinePerson(pw, day);
+					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability()){
+				quarantinePerson( pw, day );
+				log.info("sending person=" + pw.getPersonId() + " into quarantine because of contact to person=" + person.getPersonId() );
+			}
 
 		}
 
 		tracingCapacity--;
+		if ( tracingCapacity==0 ) {
+			log.info( "tracing capacity exhausted for day=" + now );
+		}
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {

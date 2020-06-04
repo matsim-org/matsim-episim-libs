@@ -130,7 +130,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		double tracingProbability = 0.75;
 		tracingConfig.setTracingProbability(tracingProbability);
-		tracingConfig.setTracingMemory_days(14 );
+		tracingConfig.setTracingPeriod_days(14 );
 		tracingConfig.setMinContactDuration_sec(15 * 60. );
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
