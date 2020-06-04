@@ -34,7 +34,7 @@ import java.util.Map;
 public final class EpisimPersonStatusEvent extends Event implements HasPersonId {
 	private static final String EVENT_TYPE = "episimPersonStatus";
 	private static final String DISEASE_STATUS = "diseaseStatus";
-	private static final String QUARANTINE_STATUS = "diseaseStatus";
+	private static final String QUARANTINE_STATUS = "quarantineStatus";
 
 	private final Id<Person> personId;
 	private final EpisimPerson.DiseaseStatus diseaseStatus;

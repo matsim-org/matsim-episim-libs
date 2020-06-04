@@ -22,6 +22,7 @@ package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
 import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
+import org.eclipse.collections.api.tuple.primitive.ObjectDoublePair;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
@@ -29,11 +30,7 @@ import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
  * Persons current state in the simulation.
@@ -191,10 +188,10 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Get all traced contacts that happened after certain time.
 	 */
-	public Set<EpisimPerson> getTraceableContactPersons(double after) {
-		return traceableContactPersons.keySet()
-				.stream().filter(k -> traceableContactPersons.get(k) >= after)
-				.collect(Collectors.toSet());
+	public List<EpisimPerson> getTraceableContactPersons(double after) {
+		return traceableContactPersons.keyValuesView()
+				.collectIf(kv -> kv.getTwo() >= after, ObjectDoublePair::getOne)
+				.toSortedList(Comparator.comparing(EpisimPerson::getPersonId));
 	}
 
 	/**
@@ -298,6 +295,19 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public MutableObjectDoubleMap<String> getSpentTime() {
 		return spentTime;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		EpisimPerson person = (EpisimPerson) o;
+		return personId.equals(person.personId);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(personId);
 	}
 
 	/**

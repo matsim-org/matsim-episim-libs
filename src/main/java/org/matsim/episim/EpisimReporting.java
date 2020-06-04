@@ -140,11 +140,23 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
 					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
+							.setFormatted(true)
+							.setComments(false)
 							.setOriginComments(false)
 							.setJson(false)));
+
+			Files.writeString(Paths.get(base + "progression.conf"),
+					episimConfig.getProgressionConfig().root().render(ConfigRenderOptions.defaults()
+							.setFormatted(true)
+							.setComments(false)
+							.setOriginComments(false)
+							.setJson(false)));
+
 		} catch (IOException e) {
 			log.error("Could not write policy config", e);
 		}
+
+		ConfigUtils.writeConfig(config, base + "config.xml");
 	}
 
 	/**
