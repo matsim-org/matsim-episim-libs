@@ -44,7 +44,7 @@ public final class EpisimPerson implements Attributable {
 	private final EpisimReporting reporting;
 	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
-	private final MutableObjectDoubleMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
+	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<Activity> trajectory = new ArrayList<>();
 
 	/**
@@ -181,9 +181,11 @@ public final class EpisimPerson implements Attributable {
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
-		if (isTraceable() && personWrapper.isTraceable())
+		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
 			traceableContactPersons.put(personWrapper, now);
+			reporting.reportTracing(now, this, personWrapper);
+		}
 	}
 
 	/**
@@ -199,7 +201,18 @@ public final class EpisimPerson implements Attributable {
 	 * Remove old contact tracing data before a certain date.
 	 */
 	public void clearTraceableContractPersons(double before) {
+
+		int oldSize = traceableContactPersons.size();
+
+		if (oldSize == 0) return;
+
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+
+		int newSize = traceableContactPersons.size();
+		// Compact traced persons to retain memory
+		// don't compact every time since it is a bit expensive
+		if (oldSize != newSize && newSize == 0 || oldSize < newSize - 10)
+			traceableContactPersons.compact();
 	}
 
 	/**

@@ -37,6 +37,7 @@ import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.events.EpisimContactEvent;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.events.EpisimTracingEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.EpisimWriter;
 
@@ -134,6 +135,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.contagious, new ObjectIntHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new ObjectIntHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new ObjectIntHashMap<>());
+		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new ObjectIntHashMap<>());
 
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
@@ -225,15 +227,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 			int nContagious = cumulativeCases.get(EpisimPerson.DiseaseStatus.contagious).get(district);
 			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).get(district);
 			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).get(district);
+			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).get(district);
 
 			reports.get(district).nContagiousCumulative = nContagious;
 			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;
 			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;
+			reports.get(district).nCriticalCumulative = nCritical;
 
 			// Sum for total report
 			report.nContagiousCumulative += nContagious;
 			report.nShowingSymptomsCumulative += nShowingSymptoms;
 			report.nSeriouslySickCumulative += nSeriouslySick;
+			report.nCriticalCumulative += nCritical;
 		}
 
 		reports.forEach((k, v) -> v.scale(1 / sampleSize));
@@ -243,7 +248,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	/**
 	 * Writes the infection report to csv.
-	 * @param date 
+	 *
+	 * @param date
 	 */
 	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 		if (iteration == 0) return;
@@ -284,6 +290,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 			array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);
 			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);
 			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
+			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
 			writer.append(infectionReport, array);
@@ -334,6 +341,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 					actType.toString(), duration, infectionProb));
 		}
 
+	}
+
+
+	/**
+	 * Report the successful tracing between two persons.
+	 */
+	void reportTracing(double now, EpisimPerson person, EpisimPerson contactPerson) {
+
+		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
+			manager.processEvent(new EpisimTracingEvent(now, person.getPersonId(), contactPerson.getPersonId()));
+		}
 	}
 
 	void reportRestrictions(Map<String, Restriction> restrictions, long iteration, String date) {
@@ -414,6 +432,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 		// Crucial episim events are always written, others only if enabled
 		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent
+				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 
 			writer.append(events, event);
@@ -447,7 +466,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 
 	enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
-		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative,
+		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
 		nRecovered, nInQuarantine, district
 	}
 
@@ -473,6 +492,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 		public long nSeriouslySick = 0;
 		public long nSeriouslySickCumulative = 0;
 		public long nCritical = 0;
+		public long nCriticalCumulative = 0;
 		public long nTotalInfected = 0;
 		public long nRecovered = 0;
 		public long nInQuarantine = 0;
@@ -504,6 +524,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable {
 			nSeriouslySick *= factor;
 			nSeriouslySickCumulative *= factor;
 			nCritical *= factor;
+			nCriticalCumulative *= factor;
 			nTotalInfected *= factor;
 			nRecovered *= factor;
 			nInQuarantine *= factor;
