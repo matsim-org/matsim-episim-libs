@@ -26,6 +26,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.gbl.Gbl;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -74,6 +75,9 @@ public final class EpisimRunner {
 		handler.init(replay.getEvents());
 
 		for (int iteration = 1; iteration <= maxIterations; iteration++) {
+
+			if (iteration % 10 == 0)
+				Gbl.printMemoryUsage();
 
 			if (!doStep(replay, handler, iteration))
 				break;
