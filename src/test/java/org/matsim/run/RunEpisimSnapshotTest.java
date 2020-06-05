@@ -38,14 +38,15 @@ public class RunEpisimSnapshotTest {
 		runner = injector.getInstance(EpisimRunner.class);
 		episimConfig.setPolicyConfig(FixedPolicy.config()
 				.shutdown(1, "freight")
-				.shutdown(6, "leisure", "edu", "business")
+				.restrict(6, 0.2,"leisure", "edu", "business")
 				.restrict(6, 0.2, "work", "other")
 				.restrict(6, 0.3, "shop", "errands")
 				.build()
 		);
 
 		TracingConfigGroup tracingConfig = injector.getInstance(TracingConfigGroup.class);
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(10);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(5);
+		tracingConfig.setTracingProbability(0.75);
 
 	}
 
