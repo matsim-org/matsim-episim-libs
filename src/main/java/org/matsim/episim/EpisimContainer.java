@@ -28,9 +28,15 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.readChars;
 
 /**
  * Wrapper class for a specific location that keeps track of currently contained agents and entering times.
@@ -56,6 +62,37 @@ public class EpisimContainer<T> {
 		this.containerId = containerId;
 	}
 
+	/**
+	 * Reads containers state from stream.
+	 */
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) throws IOException {
+
+		this.persons.clear();
+		this.personsAsList.clear();
+		this.containerEnterTimes.clear();
+
+		int n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			this.persons.add(id.index());
+			personsAsList.add(persons.get(id));
+			containerEnterTimes.put(id.index(), in.readDouble());
+		}
+
+	}
+
+	/**
+	 * Writes state to stream.
+	 */
+	void write(ObjectOutput out) throws IOException {
+
+		out.writeInt(containerEnterTimes.size());
+		for (EpisimPerson p : personsAsList) {
+			writeChars(out, p.getPersonId().toString());
+			out.writeDouble(containerEnterTimes.get(p.getPersonId().index()));
+		}
+	}
+
 	void addPerson(EpisimPerson person, double now) {
 		final int index = person.getPersonId().index();
 
@@ -70,6 +107,7 @@ public class EpisimContainer<T> {
 
 	/**
 	 * Removes a person from this container.
+	 *
 	 * @throws RuntimeException if the person was not in the container.
 	 */
 	void removePerson(EpisimPerson person) {

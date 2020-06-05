@@ -23,9 +23,12 @@ package org.matsim.episim;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
 import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
 import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
@@ -45,10 +48,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -111,6 +112,76 @@ public final class EpisimUtils {
 			}
 		}
 		config.controler().setOutputDirectory(outdir.toString());
+	}
+
+	/**
+	 * Extracts the current state of a {@link SplittableRandom} instance.
+	 */
+	public static long getSeed(SplittableRandom rnd) {
+		try {
+			Field field = rnd.getClass().getDeclaredField("seed");
+			field.setAccessible(true);
+			return (long) field.get(rnd);
+		} catch (ReflectiveOperationException e) {
+			throw new IllegalStateException("Could not extract seed", e);
+		}
+	}
+
+	/**
+	 * Sets current seed of {@link SplittableRandom} instance.
+	 */
+	public static void setSeed(SplittableRandom rnd, long seed) {
+		try {
+			Field field = rnd.getClass().getDeclaredField("seed");
+			field.setAccessible(true);
+			field.set(rnd, seed);
+		} catch (ReflectiveOperationException e) {
+			throw new IllegalStateException("Could not extract seed", e);
+		}
+	}
+
+
+	/**
+	 * Compress directory recursively.
+	 */
+	public static void compressDirectory(String rootDir, String sourceDir, ArchiveOutputStream out) throws IOException {
+		File[] fileList = new File(sourceDir).listFiles();
+		if (fileList == null) return;
+		for (File file : fileList) {
+			// Zip files (i.e. other snapshots) are not added
+			if (file.getName().endsWith(".zip"))
+				continue;
+
+			if (file.isDirectory()) {
+				compressDirectory(rootDir, sourceDir + "/" + file.getName(), out);
+			} else {
+				ArchiveEntry entry = out.createArchiveEntry(file, "output" + sourceDir.replace(rootDir, "") + "/" + file.getName());
+				out.putArchiveEntry(entry);
+				FileUtils.copyFile(file, out);
+				out.closeArchiveEntry();
+			}
+		}
+	}
+
+	/**
+	 * Writes characters to output in null-terminated format.
+	 */
+	public static void writeChars(DataOutput out, String value) throws IOException {
+		if (value == null) throw new IllegalArgumentException("Can not write null values!");
+
+		byte[] bytes = value.getBytes(StandardCharsets.ISO_8859_1);
+		out.writeInt(bytes.length);
+		out.write(bytes);
+	}
+
+	/**
+	 * Read null-terminated strings from input stream.
+	 */
+	public static String readChars(DataInput in) throws IOException {
+		int length = in.readInt();
+		byte[] content = new byte[length];
+		in.readFully(content, 0, length);
+		return new String(content, 0, length, StandardCharsets.ISO_8859_1);
 	}
 
 	/**

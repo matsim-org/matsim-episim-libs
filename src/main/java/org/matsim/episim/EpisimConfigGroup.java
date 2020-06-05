@@ -54,6 +54,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String MAX_INTERACTIONS = "maxInteractions";
 	private static final String SAMPLE_SIZE = "sampleSize";
 	private static final String START_DATE = "startDate";
+	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
+	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -84,6 +86,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Offset of start date in unix epoch seconds.
 	 */
 	private long startOffset = 0;
+	/**
+	 * Write snapshot every x days.
+	 */
+	private int snapshotInterval = 0;
+	/**
+	 * Path to snapshot file.
+	 */
+	private String startFromSnapshot = null;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -172,6 +182,26 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setStartDate(LocalDate startDate) {
 		this.startDate = startDate;
 		this.startOffset = EpisimUtils.getStartOffset(startDate);
+	}
+
+	@StringGetter(SNAPSHOT_INTERVAL)
+	public int getSnapshotInterval() {
+		return snapshotInterval;
+	}
+
+	@StringSetter(SNAPSHOT_INTERVAL)
+	public void setSnapshotInterval(int snapshotInterval) {
+		this.snapshotInterval = snapshotInterval;
+	}
+
+	@StringGetter(START_FROM_SNAPSHOT)
+	public String getStartFromSnapshot() {
+		return startFromSnapshot;
+	}
+
+	@StringSetter(START_FROM_SNAPSHOT)
+	public void setStartFromSnapshot(String startFromSnapshot) {
+		this.startFromSnapshot = startFromSnapshot;
 	}
 
 	public long getStartOffset() {

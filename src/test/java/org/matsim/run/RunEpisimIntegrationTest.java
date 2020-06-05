@@ -48,6 +48,18 @@ public class RunEpisimIntegrationTest {
 		return Arrays.asList(10, 100);
 	}
 
+	/**
+	 * Checks whether output of simulation matches expectation.
+	 */
+	static void assertSimulationOutput(MatsimTestUtils utils) {
+		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
+			File input = new File(utils.getInputDirectory(), name);
+			// events will be ignored if not existent
+			if (input.exists() || !name.equals("infectionEvents.txt"))
+				assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
+		}
+	}
+
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
@@ -60,20 +72,7 @@ public class RunEpisimIntegrationTest {
 
 	@After
 	public void tearDown() {
-		assertSimulationOutput();
-	}
-
-
-	/**
-	 * Checks whether output of simulation matches expectation.
-	 */
-	private void assertSimulationOutput() {
-		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
-			File input = new File(utils.getInputDirectory(), name);
-			// events will be ignored if not existent
-			if (input.exists() || !name.equals("infectionEvents.txt"))
-				assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
-		}
+		assertSimulationOutput(utils);
 	}
 
 	@Test
@@ -121,7 +120,7 @@ public class RunEpisimIntegrationTest {
 		);
 
 		runner.run(it);
-		assertSimulationOutput();
+		assertSimulationOutput(utils);
 
 
 		// re-test with fixed date config, which should be the same result
@@ -151,11 +150,11 @@ public class RunEpisimIntegrationTest {
 		runner.run(it);
 	}
 
-	private static class TestScenario extends AbstractModule {
+	static class TestScenario extends AbstractModule {
 
 		private final MatsimTestUtils utils;
 
-		private TestScenario(MatsimTestUtils utils) {
+		TestScenario(MatsimTestUtils utils) {
 			this.utils = utils;
 		}
 

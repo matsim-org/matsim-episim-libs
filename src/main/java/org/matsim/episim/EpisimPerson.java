@@ -27,10 +27,19 @@ import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.vehicles.Vehicle;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 
 /**
  * Persons current state in the simulation.
@@ -41,8 +50,12 @@ public final class EpisimPerson implements Attributable {
 	private final EpisimReporting reporting;
 	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
-	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 	private final List<Activity> trajectory = new ArrayList<>();
+
+	/**
+	 * Traced contacts with other persons.
+	 */
+	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -93,6 +106,130 @@ public final class EpisimPerson implements Attributable {
 		this.attributes = attrs;
 		this.traceable = traceable;
 		this.reporting = reporting;
+	}
+
+	/**
+	 * Reads persons state from stream.
+	 *
+	 * @param persons map of all persons in the simulation
+	 */
+	void read(ObjectInput in, Map<String, Activity> params, Map<Id<Person>, EpisimPerson> persons,
+			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
+			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
+
+		int n = in.readInt();
+		trajectory.clear();
+		for (int i = 0; i < n; i++) {
+			String name = readChars(in).intern();
+			Activity e = params.get(name);
+			if (e == null)
+				throw new IllegalStateException("Could not reconstruct param: " + name);
+
+			trajectory.add(e);
+		}
+
+
+		n = in.readInt();
+		traceableContactPersons.clear();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			traceableContactPersons.put(persons.get(id), in.readDouble());
+		}
+
+		n = in.readInt();
+		statusChanges.clear();
+		for (int i = 0; i < n; i++) {
+			int status = in.readInt();
+			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());
+		}
+
+		// Current container is set
+		if (in.readBoolean()) {
+			boolean isVehicle = in.readBoolean();
+			String name = readChars(in);
+			if (isVehicle) {
+				currentContainer = vehicles.get(Id.create(name, Vehicle.class));
+			} else
+				currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
+
+			if (currentContainer == null)
+				throw new IllegalStateException("Could not reconstruct container: " + name);
+		} else
+			currentContainer = null;
+
+		n = in.readInt();
+		spentTime.clear();
+		for (int i = 0; i < n; i++) {
+			String act = readChars(in);
+			spentTime.put(act, in.readDouble());
+		}
+
+		status = DiseaseStatus.values()[in.readInt()];
+		quarantineStatus = QuarantineStatus.values()[in.readInt()];
+		quarantineDate = in.readInt();
+		currentPositionInTrajectory = in.readInt();
+		if (in.readBoolean()) {
+			firstFacilityId = readChars(in);
+		} else
+			firstFacilityId = null;
+
+		if (in.readBoolean()) {
+			lastFacilityId = readChars(in);
+		} else
+			lastFacilityId = null;
+
+		traceable = in.readBoolean();
+	}
+
+	/**
+	 * Writes person state to stream.
+	 */
+	void write(ObjectOutput out) throws IOException {
+
+		out.writeInt(trajectory.size());
+		for (Activity act : trajectory) {
+			writeChars(out, act.actType);
+		}
+
+		out.writeInt(traceableContactPersons.size());
+		for (ObjectDoublePair<EpisimPerson> kv : traceableContactPersons.keyValuesView()) {
+			writeChars(out, kv.getOne().getPersonId().toString());
+			out.writeDouble(kv.getTwo());
+		}
+
+		out.writeInt(statusChanges.size());
+		for (Map.Entry<DiseaseStatus, Double> e : statusChanges.entrySet()) {
+			out.writeInt(e.getKey().ordinal());
+			out.writeDouble(e.getValue());
+		}
+
+		out.writeBoolean(currentContainer != null);
+		if (currentContainer != null) {
+			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
+			writeChars(out, currentContainer.getContainerId().toString());
+		}
+
+		out.writeInt(spentTime.size());
+		for (ObjectDoublePair<String> kv : spentTime.keyValuesView()) {
+			writeChars(out, kv.getOne());
+			out.writeDouble(kv.getTwo());
+		}
+
+		out.writeInt(status.ordinal());
+		out.writeInt(quarantineStatus.ordinal());
+		out.writeInt(quarantineDate);
+		out.writeInt(currentPositionInTrajectory);
+
+		out.writeBoolean(firstFacilityId != null);
+		// null strings can not be written
+		if (firstFacilityId != null)
+			writeChars(out, firstFacilityId);
+
+		out.writeBoolean(lastFacilityId != null);
+		if (lastFacilityId != null)
+			writeChars(out, lastFacilityId);
+
+		out.writeBoolean(traceable);
 	}
 
 	public Id<Person> getPersonId() {

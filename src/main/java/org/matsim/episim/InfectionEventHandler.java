@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.typesafe.config.ConfigFactory;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -49,8 +50,15 @@ import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 
 /**
  * Main event handler of episim.
@@ -58,7 +66,8 @@ import java.util.stream.Collectors;
  * At the end of activities an {@link InfectionModel} is executed and also a {@link ProgressionModel} at the end of the day.
  * See {@link EpisimModule} for which components may be substituted.
  */
-public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler {
+public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler,
+		Externalizable {
 	// Some notes:
 
 	// * Especially if we repeat the same events file, then we do not have complete mixing.  So it may happen that only some subpopulations gets infected.
@@ -264,7 +273,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void handleEvent(ActivityStartEvent activityStartEvent) {
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
-
 
 		if (!shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType())) {
 			return;
@@ -514,8 +522,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (iteration <= 0)
 			throw new IllegalArgumentException("Iteration must be larger 1!");
 		if (paramsMap.size() > 1000)
-			log.warn("Params map contains many entries. Activity types maybe not .intern() Strings");
-
+			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
 		progressionModel.setIteration(iteration);
 		for (EpisimPerson person : personMap.values()) {
@@ -579,6 +586,73 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	public Collection<EpisimPerson> getPersons() {
 		return Collections.unmodifiableCollection(personMap.values());
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+
+		out.writeLong(EpisimUtils.getSeed(rnd));
+		out.writeInt(initialInfectionsLeft);
+		out.writeInt(initialStartInfectionsLeft);
+		out.writeInt(iteration);
+
+		out.writeInt(restrictions.size());
+		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
+			writeChars(out, e.getKey());
+			writeChars(out, e.getValue().asMap().toString());
+		}
+
+		out.writeInt(personMap.size());
+		for (Map.Entry<Id<Person>, EpisimPerson> e : personMap.entrySet()) {
+			writeChars(out, e.getKey().toString());
+			e.getValue().write(out);
+		}
+
+		out.writeInt(vehicleMap.size());
+		for (Map.Entry<Id<Vehicle>, EpisimVehicle> e : vehicleMap.entrySet()) {
+			writeChars(out, e.getKey().toString());
+			e.getValue().write(out);
+		}
+
+		out.writeInt(pseudoFacilityMap.size());
+		for (Map.Entry<Id<ActivityFacility>, EpisimFacility> e : pseudoFacilityMap.entrySet()) {
+			writeChars(out, e.getKey().toString());
+			e.getValue().write(out);
+		}
+
+	}
+
+	@Override
+	public void readExternal(ObjectInput in) throws IOException {
+
+		EpisimUtils.setSeed(rnd, in.readLong());
+		initialInfectionsLeft = in.readInt();
+		initialStartInfectionsLeft = in.readInt();
+		iteration = in.readInt();
+
+		int r = in.readInt();
+		for (int i = 0; i < r; i++) {
+			String act = readChars(in);
+			restrictions.put(act, Restriction.fromConfig(ConfigFactory.parseString(readChars(in))));
+		}
+
+		int persons = in.readInt();
+		for (int i = 0; i < persons; i++) {
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			personMap.get(id).read(in, paramsMap, personMap, pseudoFacilityMap, vehicleMap);
+		}
+
+		int vehicles = in.readInt();
+		for (int i = 0; i < vehicles; i++) {
+			Id<Vehicle> id = Id.create(readChars(in), Vehicle.class);
+			vehicleMap.get(id).read(in, personMap);
+		}
+
+		int container = in.readInt();
+		for (int i = 0; i < container; i++) {
+			Id<ActivityFacility> id = Id.create(readChars(in), ActivityFacility.class);
+			pseudoFacilityMap.get(id).read(in, personMap);
+		}
 	}
 
 	/**

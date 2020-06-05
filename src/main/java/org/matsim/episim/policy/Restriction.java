@@ -277,7 +277,10 @@ public final class Restriction {
 		maskUsage = null;
 	}
 
-	Map<String, Object> asMap() {
+	/**
+	 * Attributes of this restriction as map.
+	 */
+	public Map<String, Object> asMap() {
 		Map<String, Object> map = new HashMap<>();
 		map.put("fraction", remainingFraction);
 		map.put("ciCorrection", ciCorrection);
