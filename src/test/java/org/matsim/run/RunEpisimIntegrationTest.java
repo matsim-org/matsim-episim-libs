@@ -88,6 +88,7 @@ public class RunEpisimIntegrationTest {
 		int tDay = it / 2;
 
 		tracingConfig.setTracingDelay(1);
+		tracingConfig.setTracingProbability(0.75);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(tDay);
 
 		runner.run(it);
