@@ -201,7 +201,7 @@ public final class Restriction {
 	 */
 	@Override
 	public String toString() {
-		return String.format("%.2f_%.2f_%s", remainingFraction, ciCorrection, maskUsage);
+		return String.format(Locale.ENGLISH,"%.2f_%.2f_%s", remainingFraction, ciCorrection, maskUsage);
 	}
 
 	/**

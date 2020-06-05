@@ -1,6 +1,8 @@
 language: java
 
-jdk: openjdk11
+jdk:
+  - openjdk11
+  - oraclejdk13
 
 # The trusty build environment allows for more memory, see https://docs.travis-ci.com/user/reference/overview/
 dist: trusty

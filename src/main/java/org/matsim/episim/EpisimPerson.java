@@ -55,7 +55,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Traced contacts with other persons.
 	 */
-	private final MutableObjectDoubleMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
+	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -315,25 +315,38 @@ public final class EpisimPerson implements Attributable {
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
-		if (isTraceable() && personWrapper.isTraceable())
+		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
 			traceableContactPersons.put(personWrapper, now);
+			reporting.reportTracing(now, this, personWrapper);
+		}
 	}
 
 	/**
 	 * Get all traced contacts that happened after certain time.
 	 */
-	public Set<EpisimPerson> getTraceableContactPersons(double after) {
-		return traceableContactPersons.keySet()
-				.stream().filter(k -> traceableContactPersons.get(k) >= after)
-				.collect(Collectors.toSet());
+	public List<EpisimPerson> getTraceableContactPersons(double after) {
+		return traceableContactPersons.keyValuesView()
+				.collectIf(kv -> kv.getTwo() >= after, ObjectDoublePair::getOne)
+				.toSortedList(Comparator.comparing(EpisimPerson::getPersonId));
 	}
 
 	/**
 	 * Remove old contact tracing data before a certain date.
 	 */
 	public void clearTraceableContractPersons(double before) {
+
+		int oldSize = traceableContactPersons.size();
+
+		if (oldSize == 0) return;
+
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+
+		int newSize = traceableContactPersons.size();
+		// Compact traced persons to retain memory
+		// don't compact every time since it is a bit expensive
+		if (oldSize != newSize && newSize == 0 || oldSize < newSize - 10)
+			traceableContactPersons.compact();
 	}
 
 	/**
@@ -419,6 +432,19 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public MutableObjectDoubleMap<String> getSpentTime() {
 		return spentTime;
+	}
+
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		EpisimPerson person = (EpisimPerson) o;
+		return personId.equals(person.personId);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(personId);
 	}
 
 	/**

@@ -39,6 +39,7 @@ import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import org.matsim.core.gbl.Gbl;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -108,6 +109,9 @@ public final class EpisimRunner {
 
 			if (episimConfig.getSnapshotInterval() > 0 && iteration % episimConfig.getSnapshotInterval() == 0)
 				writeSnapshot(output, iteration);
+
+			if (iteration % 10 == 0)
+				Gbl.printMemoryUsage();
 
 			if (!doStep(replay, handler, iteration))
 				break;

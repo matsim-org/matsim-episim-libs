@@ -41,8 +41,8 @@ public class BenchmarkIteration {
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzBerlinScenario25pct2020()));
 
-		//injector.getInstance(EpisimConfigGroup.class).setWriteEvents(EpisimConfigGroup.WriteEvents.all);
-		//injector.getInstance(TracingConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(0);
+		//injector.getInstance(EpisimConfigGroup.class).setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
+		// injector.getInstance(TracingConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(0);
 
 		runner = injector.getInstance(EpisimRunner.class);
 		replay = injector.getInstance(ReplayHandler.class);
@@ -51,7 +51,7 @@ public class BenchmarkIteration {
 		injector.getInstance(EventsManager.class).addHandler(handler);
 
 		// benchmark with event writing
-		//injector.getInstance(EventsManager.class).addHandler(injector.getInstance(EpisimReporting.class));
+		// injector.getInstance(EventsManager.class).addHandler(injector.getInstance(EpisimReporting.class));
 
 		handler.init(replay.getEvents());
 	}

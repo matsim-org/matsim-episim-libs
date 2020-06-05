@@ -34,7 +34,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -52,15 +51,13 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 			Option.of("Activity Participation Trend")
 					.measure("Extrapolation type", "extrapolation"),
 
-			Option.of("Reopening of educational facilities", "Students returning (%)", 119)
-					.measure("Going to primary school", "remainingFractionPrima")
-					.measure("Going to kindergarten", "remainingFractionKiga")
-					.measure("Going to secondary", "remainingFractionSecondary")
-					.measure("Going to Higher/other", "remainingFractionHigherOther"),
+			Option.of("Reopening of educational facilities", "Operational mode", 119)
+					.measure("Before summer holidays", "eduBeforeHolidays")
+					.measure("After summer holidays", "eduAfterHolidays"),
 
-			Option.of("Seed")
+			Option.of("Options")
+					.measure("Max. interactions", "maxInteractions")
 					.measure("Seed", "seed")
-
 	);
 
 	@Override
@@ -70,7 +67,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "tracing");
+		return Metadata.of("berlin", "tracing2");
 	}
 
 	@Override
@@ -107,16 +104,13 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
-		LocalDate startDate = LocalDate.parse("2020-02-10");
+		episimConfig.setMaxInteractions(params.maxInteractions);
+		if (params.maxInteractions == 10) {
+			episimConfig.setCalibrationParameter(0.000_001);
+		}
 
-		// +1 because end date is exclusive
-		int offset = (int) (ChronoUnit.DAYS.between(startDate, LocalDate.parse("2020-04-27")) + 1);
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		tracingConfig.setTracingProbability(params.tracingProbability);
 		tracingConfig.setTracingDayDistance(params.tracingPeriod);
-		tracingConfig.setMinDuration(15 * 60.);
-		tracingConfig.setQuarantineHouseholdMembers(true);
-		tracingConfig.setEquipmentRate(1.);
 		tracingConfig.setTracingCapacity(params.tracingCapacity);
 		tracingConfig.setTracingDelay(params.tracingDelay);
 
@@ -134,46 +128,55 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 			throw new UncheckedIOException(e);
 		}
 
-		policyConf
-				.restrict("2020-06-08", params.remainingFractionPrima, "educ_primary")
-				.restrict("2020-06-08", params.remainingFractionKiga, "educ_kiga")
-				.restrict("2020-06-08", params.remainingFractionSecondary, "educ_secondary")
-				.restrict("2020-06-08", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+		double remainingPrimaKiga;
+		double remainingOther;
+		if (params.eduBeforeHolidays.equals("limitedOperation")) {
+			remainingPrimaKiga = 0.3;
+			remainingOther = 0.2;
+		} else if (params.eduBeforeHolidays.equals("fullOpening")) {
+			remainingPrimaKiga = 1;
+			remainingOther = 1;
+		} else throw new IllegalArgumentException("Unknown operation type");
 
+		double remainingPrimaKigaAfterHoliday;
+		double remainingOtherAfterHoliday;
+		if (params.eduAfterHolidays.equals("limitedOperation")) {
+			remainingPrimaKigaAfterHoliday = 0.3;
+			remainingOtherAfterHoliday = 0.2;
+		} else if (params.eduAfterHolidays.equals("fullOpening")) {
+			remainingPrimaKigaAfterHoliday = 1;
+			remainingOtherAfterHoliday = 1;
+		} else throw new IllegalStateException("Unknown operation type");
+
+		policyConf
+				.restrict("2020-06-08", remainingPrimaKiga, "educ_primary", "educ_kiga")
+				.restrict("2020-06-08", remainingOther, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
 				// Sommerferien
-				.restrict("2020-06-25", 0.3, "educ_primary")
+				.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
 				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-06-25", 0.3, "educ_kiga")
 
 				// Ende der Sommerferien
-				.restrict("2020-08-10", params.remainingFractionPrima, "educ_primary")
-				.restrict("2020-08-10", params.remainingFractionKiga, "educ_kiga")
-				.restrict("2020-08-10", params.remainingFractionSecondary, "educ_secondary")
-				.restrict("2020-08-10", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-08-10", remainingPrimaKigaAfterHoliday, "educ_primary", "educ_kiga")
+				.restrict("2020-08-10", remainingOtherAfterHoliday, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
 				// Herbstferien
-				.restrict("2020-10-10", 0.3, "educ_primary")
+				.restrict("2020-10-10", 0.3, "educ_primary", "educ_kiga")
 				.restrict("2020-10-10", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-10-10", 0.3, "educ_kiga")
 
 				// Ende der Herbstferien
-				.restrict("2020-10-26", params.remainingFractionPrima, "educ_primary")
-				.restrict("2020-10-26", params.remainingFractionKiga, "educ_kiga")
-				.restrict("2020-10-26", params.remainingFractionSecondary, "educ_secondary")
-				.restrict("2020-10-26", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-10-26", remainingPrimaKigaAfterHoliday, "educ_primary", "educ_kiga")
+				.restrict("2020-10-26", remainingOtherAfterHoliday, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
 				// Weihnachtsferien
-				.restrict("2020-12-19", 0.3, "educ_primary")
+				.restrict("2020-12-19", 0.3, "educ_primary", "educ_kiga")
 				.restrict("2020-12-19", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-12-19", 0.3, "educ_kiga")
 
 				// Ende der Weihnachtsferien
-				.restrict("2021-01-04", params.remainingFractionPrima, "educ_primary")
-				.restrict("2021-01-04", params.remainingFractionKiga, "educ_kiga")
-				.restrict("2021-01-04", params.remainingFractionSecondary, "educ_secondary")
-				.restrict("2021-01-04", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2021-01-04", remainingPrimaKigaAfterHoliday, "educ_primary", "educ_kiga")
+				.restrict("2021-01-04", remainingOtherAfterHoliday, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
+				/*
 				// Winterferien
 				.restrict("2021-01-30", 0.3, "educ_primary")
 				.restrict("2021-01-30", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
@@ -206,7 +209,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 				.restrict("2021-08-09", params.remainingFractionKiga, "educ_kiga")
 				.restrict("2021-08-09", params.remainingFractionSecondary, "educ_secondary")
 				.restrict("2021-08-09", params.remainingFractionHigherOther, "educ_higher", "educ_tertiary", "educ_other")
-
+*/
 		;
 
 		String policyFileName = "input/policy" + id + ".conf";
@@ -221,17 +224,11 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		@IntParameter({4711, 577771864, 302099372})
 		int seed;
 
-		@Parameter({0.3, 0.5, 1.0})
-		double remainingFractionKiga;
+		@StringParameter({"limitedOperation", "fullOpening"})
+		String eduBeforeHolidays;
 
-		@Parameter({0.3, 0.5, 1.0})
-		double remainingFractionPrima;
-
-		@Parameter({0.2, 0.5, 1.0})
-		double remainingFractionSecondary;
-
-		@Parameter({0.2, 0.5, 1.0})
-		double remainingFractionHigherOther;
+		@StringParameter({"limitedOperation", "fullOpening"})
+		String eduAfterHolidays;
 
 		@IntParameter({14})
 		int tracingPeriod;
@@ -239,7 +236,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		@IntParameter({2})
 		int tracingDelay;
 
-		@IntParameter({30, Integer.MAX_VALUE})
+		@IntParameter({30, 50, Integer.MAX_VALUE})
 		int tracingCapacity;
 
 		@Parameter({0.75})
@@ -247,6 +244,9 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		@StringParameter({"linear", "exponential"})
 		String extrapolation;
+
+		@IntParameter({3, 10})
+		int maxInteractions;
 
 	}
 
