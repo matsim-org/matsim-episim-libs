@@ -55,7 +55,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Traced contacts with other persons.
 	 */
-	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
+	private final Map<EpisimPerson, Double> traceableContactPersons = new LinkedHashMap<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -192,9 +192,9 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(traceableContactPersons.size());
-		for (ObjectDoublePair<EpisimPerson> kv : traceableContactPersons.keyValuesView()) {
-			writeChars(out, kv.getOne().getPersonId().toString());
-			out.writeDouble(kv.getTwo());
+		for (Map.Entry<EpisimPerson, Double> kv : traceableContactPersons.entrySet()) {
+			writeChars(out, kv.getKey().getPersonId().toString());
+			out.writeDouble(kv.getValue());
 		}
 
 		out.writeInt(statusChanges.size());
@@ -326,9 +326,11 @@ public final class EpisimPerson implements Attributable {
 	 * Get all traced contacts that happened after certain time.
 	 */
 	public List<EpisimPerson> getTraceableContactPersons(double after) {
-		return traceableContactPersons.keyValuesView()
-				.collectIf(kv -> kv.getTwo() >= after, ObjectDoublePair::getOne)
-				.toSortedList(Comparator.comparing(EpisimPerson::getPersonId));
+		return traceableContactPersons.entrySet()
+				.stream().filter(p -> p.getValue() >= after)
+				.map(Map.Entry::getKey)
+				.collect(Collectors.toList());
+
 		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
 		// would argue that it is not a problem to have a person in there multiple times.  kai, may'20
 
@@ -345,11 +347,13 @@ public final class EpisimPerson implements Attributable {
 
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
 
+		/*
 		int newSize = traceableContactPersons.size();
 		// Compact traced persons to retain memory
 		// don't compact every time since it is a bit expensive
 		if (oldSize != newSize && newSize == 0 || oldSize < newSize - 10)
 			traceableContactPersons.compact();
+		*/
 	}
 
 	/**
@@ -435,19 +439,6 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public MutableObjectDoubleMap<String> getSpentTime() {
 		return spentTime;
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		if (this == o) return true;
-		if (o == null || getClass() != o.getClass()) return false;
-		EpisimPerson person = (EpisimPerson) o;
-		return personId.equals(person.personId);
-	}
-
-	@Override
-	public int hashCode() {
-		return Objects.hash(personId);
 	}
 
 	/**
