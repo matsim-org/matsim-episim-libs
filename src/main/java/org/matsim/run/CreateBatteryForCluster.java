@@ -129,7 +129,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		Map<String, Object> metadata = new LinkedHashMap<>();
 
-		metadata.put("city", meta.region);
 		metadata.put("readme", runVersion + "-notes.md");
 		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
 		metadata.put("info", runVersion + "-info-" + runName + ".txt");
@@ -143,7 +142,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
-			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
+			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
 			run.config.controler().setOutputDirectory(outputPath);
 			run.config.controler().setRunId(runName + run.id);
 

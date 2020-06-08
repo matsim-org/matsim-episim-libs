@@ -130,7 +130,7 @@ public class RunParallel<T> implements Callable<Integer> {
 				return 1;
 			}
 
-			String outputPath = output + "/" + prepare.setup.getOutputName(run);
+			String outputPath = output + "/" + prepare.getOutputName(run);
 			Path out = Paths.get(outputPath);
 			if (!Files.exists(out)) Files.createDirectories(out);
 			run.config.controler().setOutputDirectory(outputPath);

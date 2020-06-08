@@ -20,12 +20,15 @@
  */
 package org.matsim.episim;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Streams;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Class holding the result of {@link BatchRun#prepare(Class, Class)} with all information of the run.
@@ -74,7 +77,9 @@ public final class PreparedRun {
 
 		int index = parameter.indexOf("startDate");
 
+		data.put("city", setup.getMetadata().region);
 		data.put("defaultStartDate", setup.getDefaultStartDate());
+		data.put("endDate", setup.getMetadata().endDate);
 
 		if (index > -1) {
 			data.put("startDates", parameterValues.get(index));
@@ -129,6 +134,15 @@ public final class PreparedRun {
 		data.put("optionGroups", opts);
 
 		return data;
+	}
+
+	/**
+	 * Creates the output name of a run.
+	 */
+	public Object getOutputName(Run run) {
+		return Joiner.on("-").join(
+				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -> p + "_" + v.toString()).collect(Collectors.toList())
+		);
 	}
 
 	/**

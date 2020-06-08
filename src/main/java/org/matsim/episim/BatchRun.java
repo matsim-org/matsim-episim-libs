@@ -186,14 +186,6 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * Desired output name.
-	 */
-	default String getOutputName(PreparedRun.Run run) {
-		return Joiner.on("-").join(run.params);
-	}
-
-
-	/**
 	 * This declares a field as parameter for a batch run.
 	 */
 	@Target(ElementType.FIELD)
@@ -258,9 +250,10 @@ public interface BatchRun<T> {
 
 		/**
 		 * Creates a new option group.
-		 * @param heading header shown in ui
+		 *
+		 * @param heading    header shown in ui
 		 * @param subheading description shown ui
-		 * @param day day when it will be in effect
+		 * @param day        day when it will be in effect
 		 */
 		public static Option of(String heading, String subheading, int day) {
 			return new Option(heading, subheading, day);
@@ -282,6 +275,7 @@ public interface BatchRun<T> {
 
 		/**
 		 * Adds an measure to this option.
+		 *
 		 * @param title title shown in ui
 		 * @param param name of the parameter in code
 		 */
@@ -299,6 +293,11 @@ public interface BatchRun<T> {
 		public final String region;
 		public final String name;
 
+		/**
+		 * End date for the ui.
+		 */
+		String endDate = null;
+
 		public Metadata(String region, String name) {
 			this.region = region;
 			this.name = name;
@@ -309,6 +308,14 @@ public interface BatchRun<T> {
 		 */
 		public static Metadata of(String region, String name) {
 			return new Metadata(region, name);
+		}
+
+		/**
+		 * Sets the end date and returns the same instance.
+		 */
+		public Metadata withEndDate(String date) {
+			this.endDate = endDate;
+			return this;
 		}
 
 	}
