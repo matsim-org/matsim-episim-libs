@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash --login
 #$ -l h_rt=86400
 #$ -o ./logfile_$JOB_NAME.log
 #$ -j y
@@ -21,7 +21,7 @@ echo "***"
 main="org.matsim.run.RunEpisim"
 
 # arguments
-arguments="--config input/config_$JOB_NAME.xml --config:controler.runId $JOB_NAME"
+arguments="--config input/config_$JOB_NAME.xml"
 
 command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
 

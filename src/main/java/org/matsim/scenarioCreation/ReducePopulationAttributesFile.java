@@ -24,7 +24,13 @@ import java.io.*;
 import java.util.ArrayList;
 
 
-public class ReducePopulationAttributesFile {
+/**
+ * this class aimt to reduce a population attributes file in a way that only persons contained in a specified set of id's are contained in the result...
+ */
+public final class ReducePopulationAttributesFile {
+
+	private ReducePopulationAttributesFile() {
+	}
 
 	public static void main(String[] args) throws IOException {
 

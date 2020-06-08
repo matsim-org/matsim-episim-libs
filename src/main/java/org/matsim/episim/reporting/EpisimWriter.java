@@ -56,11 +56,22 @@ public class EpisimWriter {
 	}
 
 	/**
+	 * Create a writer for appending to existing file and does not write anything initially.
+	 */
+	public static BufferedWriter prepare(String filename) {
+		return IOUtils.getBufferedWriter(IOUtils.getFileUrl(filename), IOUtils.CHARSET_UTF8, true);
+	}
+
+	/**
 	 * Writes an event as xml representation to {@code out}.
 	 */
-	public static void writeEvent(final Appendable out, final Event event) throws IOException {
+	protected static void writeEvent(final Appendable out, final Event event, final double correctedTime) throws IOException {
 		out.append("\t<event ");
 		Map<String, String> attr = event.getAttributes();
+
+		if (correctedTime >= 0)
+			attr.put(Event.ATTRIBUTE_TIME, Double.toString(correctedTime));
+
 		for (Map.Entry<String, String> entry : attr.entrySet()) {
 			out.append(entry.getKey());
 			out.append("=\"");
@@ -74,7 +85,7 @@ public class EpisimWriter {
 
 	/**
 	 * Same logic as in {@link org.matsim.core.events.algorithms.EventWriterXML}. But we need to ability to write directly
-	 * to he target {@code out} without creating an intermediate representation.
+	 * to the target {@code out} without creating an intermediate representation.
 	 */
 	private static void writeAttributeValue(final Appendable out, final String attributeValue) throws IOException {
 		if (attributeValue == null) {
@@ -149,7 +160,21 @@ public class EpisimWriter {
 	 */
 	public void append(BufferedWriter writer, Event event) {
 		try {
-			writeEvent(writer, event);
+			writeEvent(writer, event, -1);
+		} catch (IOException e) {
+			log.error("Could not write event");
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	/**
+	 * Writes an event with corrected time attribute.
+	 *
+	 * @see #append(BufferedWriter, Event)
+	 */
+	public void append(BufferedWriter writer, Event event, double correctedTime) {
+		try {
+			writeEvent(writer, event, correctedTime);
 		} catch (IOException e) {
 			log.error("Could not write event");
 			throw new UncheckedIOException(e);

@@ -20,14 +20,14 @@
  */
 package org.matsim.scenarioCreation;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.utils.geometry.CoordUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.geotools.MGC;
-import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
@@ -48,17 +48,20 @@ import java.util.List;
  * @author rewert
  */
 
-public class FilterEducFacilitiesForCertainArea {
+public final class FilterEducFacilitiesForCertainArea {
 
-	static final Logger log = Logger.getLogger(FilterEducFacilitiesForCertainArea.class);
+	private static final Logger log = LogManager.getLogger(FilterEducFacilitiesForCertainArea.class);
 
 	private static final String workingDir = "../../svn/shared-svn/projects/episim/matsim-files/snz/";
 	private static final String pathOfEduFacilitiesGER = workingDir + "Deutschland/de_facilities.education.xy";
 	private static final String ShapeFile = workingDir + "Heinsberg/Heinsberg_smallerArea/Shape-File/dilutionArea.shp";
 	private static final String outputEducFileDir = workingDir + "Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_educationFacilities.txt";
-	private static List<EducFacility> educList = new ArrayList<>();
-	private static List<EducFacility> educListNewArea = new ArrayList<>();
-	private static List<EducFacility> educListNewAreaForOutput = new ArrayList<>();
+	private static final List<EducFacility> educList = new ArrayList<>();
+	private static final List<EducFacility> educListNewArea = new ArrayList<>();
+	private static final List<EducFacility> educListNewAreaForOutput = new ArrayList<>();
+
+	private FilterEducFacilitiesForCertainArea() {
+	}
 
 	public static void main(String[] args) throws IOException {
 
@@ -71,9 +74,9 @@ public class FilterEducFacilitiesForCertainArea {
 //		CoordinateTransformation transformation = TransformationFactory.getCoordinateTransformation("EPSG:25832", TransformationFactory.DHDN_GK4);
 
 		//new shape input (original-data/berlin_umland.shp) is also in UTM32N
-		CoordinateTransformation transformation= null;
+		CoordinateTransformation transformation = null;
 
-		educList.addAll(EducFacilities.readEducFacilites(pathOfEduFacilitiesGER, transformation));
+		educList.addAll(EducFacility.readEducFacilities(pathOfEduFacilitiesGER, transformation));
 
 		Collection<SimpleFeature> shapefileCertainArea = ShapeFileReader.getAllFeatures(ShapeFile);
 

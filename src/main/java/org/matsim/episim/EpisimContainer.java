@@ -21,16 +21,22 @@
 package org.matsim.episim;
 
 import org.eclipse.collections.api.map.primitive.MutableIntDoubleMap;
-import org.eclipse.collections.api.map.primitive.MutableIntObjectMap;
+import org.eclipse.collections.api.set.primitive.MutableIntSet;
 import org.eclipse.collections.impl.map.mutable.primitive.IntDoubleHashMap;
-import org.eclipse.collections.impl.map.mutable.primitive.IntObjectHashMap;
+import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
+import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.readChars;
 
 /**
  * Wrapper class for a specific location that keeps track of currently contained agents and entering times.
@@ -41,9 +47,9 @@ public class EpisimContainer<T> {
 	private final Id<T> containerId;
 
 	/**
-	 * Persons currently in this container.
+	 * Persons currently in this container. Stored only as Ids.
 	 */
-	private final MutableIntObjectMap<EpisimPerson> persons = new IntObjectHashMap<>(4);
+	private final MutableIntSet persons = new IntHashSet(4);
 
 	/**
 	 * Person list needed to draw random persons within container.
@@ -56,28 +62,62 @@ public class EpisimContainer<T> {
 		this.containerId = containerId;
 	}
 
+	/**
+	 * Reads containers state from stream.
+	 */
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) throws IOException {
+
+		this.persons.clear();
+		this.personsAsList.clear();
+		this.containerEnterTimes.clear();
+
+		int n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			this.persons.add(id.index());
+			personsAsList.add(persons.get(id));
+			containerEnterTimes.put(id.index(), in.readDouble());
+		}
+
+	}
+
+	/**
+	 * Writes state to stream.
+	 */
+	void write(ObjectOutput out) throws IOException {
+
+		out.writeInt(containerEnterTimes.size());
+		for (EpisimPerson p : personsAsList) {
+			writeChars(out, p.getPersonId().toString());
+			out.writeDouble(containerEnterTimes.get(p.getPersonId().index()));
+		}
+	}
+
 	void addPerson(EpisimPerson person, double now) {
-		if (persons.containsKey(person.getPersonId().index()))
+		final int index = person.getPersonId().index();
+
+		if (persons.contains(index))
 			throw new IllegalStateException("Person already contained in this container.");
 
-		persons.put(person.getPersonId().index(), person);
+		persons.add(index);
 		personsAsList.add(person);
-		containerEnterTimes.put(person.getPersonId().index(), now);
+		containerEnterTimes.put(index, now);
 		person.setCurrentContainer(this);
 	}
 
 	/**
 	 * Removes a person from this container.
+	 *
 	 * @throws RuntimeException if the person was not in the container.
-	 * @noinspection UnusedReturnValue
 	 */
-	EpisimPerson removePerson(Id<Person> personId) {
-		containerEnterTimes.remove(personId.index());
-		EpisimPerson personWrapper = persons.remove(personId.index());
-		personWrapper.removeCurrentContainer(this);
-		boolean wasRemoved = personsAsList.remove(personWrapper);
+	void removePerson(EpisimPerson person) {
+		int index = person.getPersonId().index();
+
+		containerEnterTimes.remove(index);
+		persons.remove(index);
+		person.removeCurrentContainer(this);
+		boolean wasRemoved = personsAsList.remove(person);
 		Gbl.assertIf(wasRemoved);
-		return personWrapper;
 	}
 
 	public Id<T> getContainerId() {
@@ -95,10 +135,6 @@ public class EpisimContainer<T> {
 	 */
 	public double getContainerEnteringTime(Id<Person> personId) {
 		return containerEnterTimes.getIfAbsent(personId.index(), Double.NEGATIVE_INFINITY);
-	}
-
-	EpisimPerson getPerson(Id<Person> personId) {
-		return persons.get(personId.index());
 	}
 
 	public List<EpisimPerson> getPersons() {

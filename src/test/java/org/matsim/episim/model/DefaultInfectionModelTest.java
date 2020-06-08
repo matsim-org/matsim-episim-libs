@@ -27,6 +27,7 @@ public class DefaultInfectionModelTest {
 
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
+	private EpisimConfigGroup config;
 	private DefaultInfectionModel model;
 	private DefaultFaceMaskModel maskModel;
 	private Map<String, Restriction> restrictions;
@@ -35,11 +36,11 @@ public class DefaultInfectionModelTest {
 	@Before
 	public void setup() {
 		EpisimReporting reporting = mock(EpisimReporting.class);
-		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
 		SplittableRandom rnd = new SplittableRandom(1);
 
+		config = EpisimTestUtils.createTestConfig();
 		maskModel = new DefaultFaceMaskModel(config, rnd);
-		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE);
+		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE, 0);
 		restrictions = config.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -124,6 +125,16 @@ public class DefaultInfectionModelTest {
 	}
 
 	@Test
+	public void showingSymptoms() {
+
+		double rate = sampleInfectionRate(Duration.ofMinutes(10), "c10",
+				() -> EpisimTestUtils.createFacility(2, "c10", EpisimTestUtils.SYMPTOMS),
+				(f) -> EpisimTestUtils.createPerson("c10", f)
+		);
+		assertThat(rate).isCloseTo(1, OFFSET);
+	}
+
+	@Test
 	public void noInfection() {
 		double now = 0d;
 
@@ -150,6 +161,15 @@ public class DefaultInfectionModelTest {
 				(f) -> EpisimTestUtils.createPerson("c00", f)
 		);
 		assertThat(rate).isCloseTo(0, OFFSET);
+
+		// no infections without contact intensity
+		restrictions.put("c10", Restriction.of(1.0, 0.0));
+		rate = sampleInfectionRate(Duration.ofHours(2), "c10",
+				() -> EpisimTestUtils.createFacility(1, "c10", EpisimTestUtils.CONTAGIOUS),
+				(f) -> EpisimTestUtils.createPerson("c10", f)
+		);
+		assertThat(rate).isCloseTo(0, OFFSET);
+
 	}
 
 	@Test
@@ -224,6 +244,33 @@ public class DefaultInfectionModelTest {
 	}
 
 	@Test
+	public void homeQuarantineContact() {
+
+		Function<InfectionEventHandler.EpisimFacility, EpisimPerson> createPerson = (f) -> {
+			EpisimPerson p = EpisimTestUtils.createPerson("home", f);
+			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, 0);
+			return p;
+		};
+
+		double rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
+				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
+				createPerson
+		);
+
+		assertThat(rate).isCloseTo(1, OFFSET);
+
+		// no contact between home quarantined persons
+		config.getOrAddContainerParams("quarantine_home").setContactIntensity(0);
+
+		rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
+				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
+				createPerson
+		);
+
+		assertThat(rate).isCloseTo(0, OFFSET);
+	}
+
+	@Test
 	public void sameWithOrWithoutTracking() {
 		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
 
@@ -241,14 +288,14 @@ public class DefaultInfectionModelTest {
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, maskModel, Integer.MAX_VALUE);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, maskModel, Integer.MAX_VALUE, 0);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, maskModel, 0);
+		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, maskModel, 0, 0);
 		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
@@ -286,7 +333,7 @@ public class DefaultInfectionModelTest {
 				})
 		);
 
-		restrictions.put(type, Restriction.of(0.5));
+		restrictions.put(type, Restriction.of(0.5, 1.0));
 
 		double rateRestricted = sampleTotalInfectionRate(20_000, Duration.ofMinutes(30), type,
 				() -> EpisimTestUtils.addPersons(EpisimTestUtils.createFacility(5, type, EpisimTestUtils.CONTAGIOUS), 15, type, p -> {

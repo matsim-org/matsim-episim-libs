@@ -22,6 +22,11 @@ package org.matsim.run;
 
 import com.google.inject.Module;
 import com.google.inject.*;
+import com.google.inject.internal.BindingImpl;
+import com.google.inject.spi.ConstructorBinding;
+import com.google.inject.spi.InstanceBinding;
+import com.google.inject.spi.LinkedKeyBinding;
+import com.google.inject.spi.ProviderInstanceBinding;
 import com.google.inject.util.Modules;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -91,6 +96,9 @@ public class RunEpisim implements Callable<Integer> {
 	@CommandLine.Option(names = "--log", description = "Enable logging to output directory.", defaultValue = "false")
 	private boolean logToOutput;
 
+	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "500")
+	private int maxIterations;
+
 	@CommandLine.Parameters(hidden = true)
 	private String[] remainder;
 
@@ -102,12 +110,41 @@ public class RunEpisim implements Callable<Integer> {
 		// (the "execute" will run "RunEpisim#call()")
 	}
 
+	/**
+	 * Prints defined bindings to log.
+	 */
 	static void printBindings(Injector injector) {
 		StringBuilder bindings = new StringBuilder();
 
 		for (Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
-			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ")
-					.append(e.getValue().getProvider()).append(" }");
+			BindingImpl<?> binding = (BindingImpl<?>) e.getValue();
+			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ");
+
+			// Guice toString methods are very inconsistent
+			// we only re-use some of them
+			if (binding instanceof ConstructorBinding) {
+				bindings.append("constructor from ").
+						append(binding.getSource())
+						.append("[").append(binding.getScoping()).append("]");
+
+			} else if (binding instanceof LinkedKeyBinding) {
+				Key<?> target = ((LinkedKeyBinding<?>) binding).getLinkedKey();
+
+				bindings.append(target.getTypeLiteral()).append(" from ")
+						.append(binding.getSource())
+						.append("[").append(binding.getScoping()).append("]");
+
+
+			} else if (binding instanceof ProviderInstanceBinding || binding instanceof InstanceBinding)
+				bindings.append(binding.getProvider());
+
+			else {
+				bindings.append(binding.getProvider()).append(" from ").
+						append(binding.getSource())
+						.append("[").append(binding.getScoping()).append("]");
+			}
+
+			bindings.append(" }");
 		}
 
 		log.info("Defined Bindings: {}", bindings.toString());
@@ -189,7 +226,7 @@ public class RunEpisim implements Callable<Integer> {
 		if (logToOutput) OutputDirectoryLogging.initLoggingWithOutputDirectory(config.controler().getOutputDirectory());
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(200);
+		runner.run(maxIterations);
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 

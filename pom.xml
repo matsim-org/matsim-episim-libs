@@ -22,6 +22,7 @@
     <properties>
         <matsim.version>12.0-SNAPSHOT</matsim.version>
         <!--<matsim.version>12.0-2020w09-SNAPSHOT</matsim.version>-->
+        <mainClass>org.matsim.run.RunEpisim</mainClass>
     </properties>
 
     <repositories>
@@ -66,6 +67,11 @@
             <url>http://mvn.slimjars.com</url>
         </repository>
 
+        <repository>
+            <id>tablesaw</id>
+            <url>https://mvnrepository.com/artifact/tech.tablesaw/tablesaw-core</url>
+        </repository>
+
     </repositories>
 
     <dependencies>
@@ -88,7 +94,7 @@
         <dependency>
             <groupId>info.picocli</groupId>
             <artifactId>picocli</artifactId>
-            <version>4.2.0</version>
+            <version>4.3.2</version>
         </dependency>
 
         <!-- Needed for high-throughput logging -->
@@ -107,6 +113,11 @@
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.6</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-math3</artifactId>
+            <version>3.6.1</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.collections</groupId>
@@ -182,6 +193,22 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>tech.tablesaw</groupId>
+            <artifactId>tablesaw-core</artifactId>
+            <version>0.38.1</version>
+        </dependency>
+        <dependency>
+            <groupId>tech.tablesaw</groupId>
+            <artifactId>tablesaw-jsplot</artifactId>
+            <version>0.38.1</version>
+        </dependency>
+        <!--        <dependency>-->
+        <!--            <groupId>tech.tablesaw</groupId>-->
+        <!--            <artifactId>tablesaw-html</artifactId>-->
+        <!--            <version>LATEST</version>-->
+        <!--        </dependency>-->
+
     </dependencies>
 
     <build>
@@ -237,7 +264,7 @@
                             <outputFile>${project.basedir}/${project.build.finalName}.jar</outputFile>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>org.matsim.run.RunEpisim</mainClass>
+                                    <mainClass>${mainClass}</mainClass>
                                 </transformer>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
                             </transformers>
@@ -251,7 +278,33 @@
                                         <exclude>META-INF/*.RSA</exclude>
                                     </excludes>
                                 </filter>
+                                <!-- Force some inclusion because of minimizing -->
+                                <filter>
+                                    <artifact>org.apache.logging.log4j:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>xerces:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.hibernate.validator:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.glassfish:*</artifact>
+                                    <includes>
+                                        <include>**</include>
+                                    </includes>
+                                </filter>
                             </filters>
+                            <minimizeJar>true</minimizeJar>
                         </configuration>
                     </execution>
                 </executions>
@@ -287,10 +340,19 @@
                 <configuration>
                     <configLocation>checkstyle.xml</configLocation>
                     <encoding>UTF-8</encoding>
-                    <consoleOutput>true</consoleOutput>
-                    <failsOnError>true</failsOnError>
+                    <failsOnError>false</failsOnError>
+                    <failOnViolation>false</failOnViolation>
                     <linkXRef>false</linkXRef>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>checkstyle</id>
+                        <phase>process-sources</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -321,7 +383,7 @@
                         <argument>--force</argument><!-- overwrite if exists -->
                         <argument>--completionScript</argument>
                         <argument>${project.build.directory}/episim_auto_completion.bash</argument>
-                        <argument>org.matsim.run.RunEpisim</argument>
+                        <argument>${mainClass}</argument>
                     </arguments>
                 </configuration>
                 <executions>
@@ -352,6 +414,10 @@
                         <plugin>
                             <groupId>org.apache.maven.plugins</groupId>
                             <artifactId>maven-checkstyle-plugin</artifactId>
+                            <configuration>
+                                <failOnViolation>true</failOnViolation>
+                                <failsOnError>true</failsOnError>
+                            </configuration>
                             <executions>
                                 <execution>
                                     <id>checkstyle</id>

@@ -20,7 +20,8 @@
  */
 package org.matsim.scenarioCreation;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.locationtech.jts.geom.Geometry;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
@@ -66,7 +67,7 @@ import java.util.stream.Collectors;
  *
  * @author tschlenther
  */
-class CutSchoolPopulationFitting2UseCaseAdultPopulation {
+final class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 
 	private static final String INPUT_SCHOOL_POPULATION_GER = "../../svn/shared-svn/projects/episim/matsim-files/snz/Deutschland/de_populationU14_fromPopulationAttributes.xml.gz";
 	private static final String INPUT_ADULT_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_adults_emptyPlans.xml.gz";
@@ -77,7 +78,10 @@ class CutSchoolPopulationFitting2UseCaseAdultPopulation {
 	private static final String OUTPUT_SCHOOL_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_emptyPlans.xml.gz";
 	private static final String OUTPUT_ENTIRE_POPULATION_USECASE = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_entirePopulation_emptyPlans.xml.gz";
 
-	private static Logger log = Logger.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
+	private static Logger log = LogManager.getLogger(CutSchoolPopulationFitting2UseCaseAdultPopulation.class);
+
+	private CutSchoolPopulationFitting2UseCaseAdultPopulation() {
+	}
 
 	public static void main(String[] args) {
 

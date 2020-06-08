@@ -37,6 +37,7 @@ import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -50,8 +51,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
-	private static final String MASK_COMPLIANCE = "maskCompliance";
+	private static final String MAX_INTERACTIONS = "maxInteractions";
 	private static final String SAMPLE_SIZE = "sampleSize";
+	private static final String START_DATE = "startDate";
+	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
+	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -69,17 +73,34 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double calibrationParameter = 0.000002;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
-	private double maskCompliance = 1d;
 	private int initialStartInfections = 0;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
 	private String initialInfectionDistrict = null;
+	/**
+	 * Start date of the simulation (Day 1).
+	 */
+	private LocalDate startDate = LocalDate.of(1970, 1, 1);
+	/**
+	 * Offset of start date in unix epoch seconds.
+	 */
+	private long startOffset = 0;
+	/**
+	 * Write snapshot every x days.
+	 */
+	private int snapshotInterval = 0;
+	/**
+	 * Path to snapshot file.
+	 */
+	private String startFromSnapshot = null;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
+	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
+	private int maxInteractions = 3;
 
 	/**
 	 * Default constructor.
@@ -148,14 +169,43 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.initialStartInfections = initialStartInfections;
 	}
 
-	@StringGetter(MASK_COMPLIANCE)
-	public double getMaskCompliance() {
-		return maskCompliance;
+	@StringGetter(START_DATE)
+	public LocalDate getStartDate() {
+		return startDate;
 	}
 
-	@StringSetter(MASK_COMPLIANCE)
-	public void setMaskCompliance(double maskCompliance) {
-		this.maskCompliance = maskCompliance;
+	@StringSetter(START_DATE)
+	public void setStartDate(String startDate) {
+		setStartDate(LocalDate.parse(startDate));
+	}
+
+	public void setStartDate(LocalDate startDate) {
+		this.startDate = startDate;
+		this.startOffset = EpisimUtils.getStartOffset(startDate);
+	}
+
+	@StringGetter(SNAPSHOT_INTERVAL)
+	public int getSnapshotInterval() {
+		return snapshotInterval;
+	}
+
+	@StringSetter(SNAPSHOT_INTERVAL)
+	public void setSnapshotInterval(int snapshotInterval) {
+		this.snapshotInterval = snapshotInterval;
+	}
+
+	@StringGetter(START_FROM_SNAPSHOT)
+	public String getStartFromSnapshot() {
+		return startFromSnapshot;
+	}
+
+	@StringSetter(START_FROM_SNAPSHOT)
+	public void setStartFromSnapshot(String startFromSnapshot) {
+		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	public long getStartOffset() {
+		return startOffset;
 	}
 
 	/**
@@ -240,6 +290,50 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.policyConfig = config;
 	}
 
+	@StringGetter("progressionConfig")
+	public String getProgressionConfigName() {
+		if (progressionConfig.origin().filename() != null)
+			return progressionConfig.origin().filename();
+
+		return progressionConfig.origin().description();
+	}
+
+	/**
+	 * Gets the progression config configuration.
+	 */
+	public Config getProgressionConfig() {
+		return progressionConfig;
+	}
+
+	public void setProgressionConfig(Config progressionConfig) {
+		this.progressionConfig = progressionConfig;
+	}
+
+	/**
+	 * Sets the progression config location as file name.
+	 */
+	@StringSetter("progressionConfig")
+	public void setProgressionConfig(String progressionConfig) {
+		if (progressionConfig == null)
+			this.progressionConfig = ConfigFactory.empty();
+		else {
+			File file = new File(progressionConfig);
+			if (!progressionConfig.equals("null") && !file.exists())
+				throw new IllegalArgumentException("Progression config does not exist: " + progressionConfig);
+			this.progressionConfig = ConfigFactory.parseFileAnySyntax(file);
+		}
+	}
+
+	@StringGetter(MAX_INTERACTIONS)
+	public int getMaxInteractions() {
+		return maxInteractions;
+	}
+
+	@StringSetter(MAX_INTERACTIONS)
+	public void setMaxInteractions(int maxInteractions) {
+		this.maxInteractions = maxInteractions;
+	}
+
 	/**
 	 * Create a configured instance of the desired policy.
 	 */
@@ -312,6 +406,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void addContainerParams(final InfectionParams params) {
 		final InfectionParams previous = this.getContainerParams().get(params.getContainerName());
 
+		Optional<String> match = params.mappedNames.stream().filter(s -> paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();
+		if (match.isPresent()) {
+			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params.");
+		}
+
 		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
 
 		if (previous != null) {
@@ -366,14 +465,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * @return matched infection param
 	 * @throws NoSuchElementException when no param could be matched
 	 */
-	public @NotNull
-	InfectionParams selectInfectionParams(String activity) {
+	@NotNull
+	public InfectionParams selectInfectionParams(String activity) {
 
 		InfectionParams params = paramsTrie.get(activity, TrieMatch.STARTS_WITH);
 		if (params != null)
 			return params;
 
 		throw new NoSuchElementException(String.format("No params known for activity %s. Please add prefix to one infection parameter.", activity));
+	}
+
+	/**
+	 * Get the {@link InfectionParams} of a container by its name.
+	 */
+	public InfectionParams getInfectionParam(String containerName) {
+		return this.getContainerParams().get(containerName);
 	}
 
 	/**
@@ -450,8 +556,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		/**
 		 * Constructor.
+		 *
 		 * @param containerName name name of this activity type
-		 * @param mappedNames activity prefixes that will also be mapped to this container
+		 * @param mappedNames   activity prefixes that will also be mapped to this container
 		 */
 		public InfectionParams(final String containerName, String... mappedNames) {
 			this();
@@ -512,5 +619,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 	}
+
 
 }

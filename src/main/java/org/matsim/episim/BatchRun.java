@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 /**
  * Interface for defining the setup procedure of a batch run and the corresponding parameter class.
@@ -71,6 +72,14 @@ public interface BatchRun<T> {
 			Parameter param = field.getAnnotation(Parameter.class);
 			if (param != null) {
 				allParams.add(DoubleStream.of(param.value()).boxed().collect(Collectors.toList()));
+				fields.add(field);
+			}
+			StartDates dateParam = field.getAnnotation(StartDates.class);
+			if (dateParam != null) {
+				if (!field.getName().equals("startDate"))
+					throw new IllegalArgumentException("StartDates field must be called 'startDate'");
+
+				allParams.add(Stream.of(dateParam.value()).map(LocalDate::parse).collect(Collectors.toList()));
 				fields.add(field);
 			}
 			IntParameter intParam = field.getAnnotation(IntParameter.class);
@@ -125,10 +134,17 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * The start of the scenario as day in real world.
+	 * The default start of the scenario as day in real world. Only needed if there are multiple start dates in the batch run.
 	 */
-	default LocalDate startDate() {
+	default LocalDate getDefaultStartDate() {
 		return LocalDate.now();
+	}
+
+	/**
+	 * Returns name of the region.
+	 */
+	default Metadata getMetadata() {
+		return Metadata.of("region", "default");
 	}
 
 	/**
@@ -163,13 +179,10 @@ public interface BatchRun<T> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		if (episimConfig.getPolicyConfig() != null)
 			Files.writeString(directory.resolve(episimConfig.getPolicyConfig()), episimConfig.getPolicy().root().render());
-	}
 
-	/**
-	 * Desired output name.
-	 */
-	default String getOutputName(PreparedRun.Run run) {
-		return Joiner.on("-").join(run.params);
+		if (!episimConfig.getProgressionConfig().isEmpty())
+			Files.writeString(directory.resolve(episimConfig.getProgressionConfigName()), episimConfig.getProgressionConfig().root().render());
+
 	}
 
 	/**
@@ -182,6 +195,18 @@ public interface BatchRun<T> {
 		 * All values this parameter should attain.
 		 */
 		double[] value();
+	}
+
+	/**
+	 * Declares parameter as dates. Receiver must be {@link LocalDate} and named {@code startDate}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface StartDates {
+		/**
+		 * Desired start dates in the form yyyy-mm-dd.
+		 */
+		String[] value();
 	}
 
 	/**
@@ -225,9 +250,10 @@ public interface BatchRun<T> {
 
 		/**
 		 * Creates a new option group.
-		 * @param heading header shown in ui
+		 *
+		 * @param heading    header shown in ui
 		 * @param subheading description shown ui
-		 * @param day day when it will be in effect
+		 * @param day        day when it will be in effect
 		 */
 		public static Option of(String heading, String subheading, int day) {
 			return new Option(heading, subheading, day);
@@ -249,6 +275,7 @@ public interface BatchRun<T> {
 
 		/**
 		 * Adds an measure to this option.
+		 *
 		 * @param title title shown in ui
 		 * @param param name of the parameter in code
 		 */
@@ -256,6 +283,41 @@ public interface BatchRun<T> {
 			measures.add(Pair.of(title, param));
 			return this;
 		}
+	}
+
+	/**
+	 * Contains the metadata of a batch run.
+	 */
+	final class Metadata {
+
+		public final String region;
+		public final String name;
+
+		/**
+		 * End date for the ui.
+		 */
+		String endDate = null;
+
+		public Metadata(String region, String name) {
+			this.region = region;
+			this.name = name;
+		}
+
+		/**
+		 * Creates new metadata instance.
+		 */
+		public static Metadata of(String region, String name) {
+			return new Metadata(region, name);
+		}
+
+		/**
+		 * Sets the end date and returns the same instance.
+		 */
+		public Metadata withEndDate(String date) {
+			this.endDate = endDate;
+			return this;
+		}
+
 	}
 
 }

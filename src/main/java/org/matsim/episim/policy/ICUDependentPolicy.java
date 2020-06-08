@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -27,6 +27,7 @@ import com.typesafe.config.ConfigFactory;
 import com.typesafe.config.ConfigValue;
 import org.matsim.episim.EpisimReporting;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +68,9 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 	 */
 	private final Map<String, Double> reopenTrigger = new HashMap<>();
 
+	/**
+	 * Constructor from config.
+	 */
 	public ICUDependentPolicy(Config config) {
 		super(config.withFallback(ConfigFactory.load("icu")));
 		this.beds = this.config.getInt("beds");
@@ -80,8 +84,16 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 		);
 	}
 
+	/**
+	 * Create a config builder for {@link ICUDependentPolicy}.
+	 */
 	public static ConfigBuilder config() {
 		return new ConfigBuilder();
+	}
+
+	@Override
+	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
+		// Nothing to init
 	}
 
 	@Override
@@ -117,11 +129,14 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 		}
 	}
 
+	/**
+	 * Config builder for {@link ICUDependentPolicy}.
+	 */
 	@SuppressWarnings("unchecked")
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
 
 		/**
-		 * @see ICUDependentPolicy#beds
+		 * See {@link ICUDependentPolicy#beds}.
 		 */
 		public ConfigBuilder beds(int n) {
 			params.put("beds", n);
@@ -129,7 +144,7 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * @see ICUDependentPolicy#shutdownTrigger
+		 * See {@link ICUDependentPolicy#shutdownTrigger}.
 		 */
 		public ConfigBuilder shutdownAt(double fraction) {
 			params.put("shutdown-trigger", fraction);
@@ -137,7 +152,7 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * @see ICUDependentPolicy#openAllTrigger
+		 * See {@link ICUDependentPolicy#openAllTrigger}.
 		 */
 		public ConfigBuilder openAt(double proportion) {
 			params.put("open-all", proportion);
@@ -145,15 +160,7 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * @see ICUDependentPolicy#shutdownDays
-		 */
-		public ConfigBuilder shutDownDays(int from, int to) {
-			params.put("shutdown-days", Lists.newArrayList(from, to));
-			return this;
-		}
-
-		/**
-		 * @see ICUDependentPolicy#reopenTrigger
+		 * See {@link ICUDependentPolicy#reopenTrigger}.
 		 */
 		public ConfigBuilder openAt(double proportion, String... activities) {
 			Map<String, Double> map = (Map<String, Double>) params.computeIfAbsent("open-activities", k -> new HashMap<>());
@@ -164,7 +171,15 @@ public class ICUDependentPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * @see ICUDependentPolicy#rConfig
+		 * See {@link ICUDependentPolicy#shutdownDays}.
+		 */
+		public ConfigBuilder shutDownDays(int from, int to) {
+			params.put("shutdown-days", Lists.newArrayList(from, to));
+			return this;
+		}
+
+		/**
+		 * See {@link ICUDependentPolicy#rConfig}.
 		 */
 		public ConfigBuilder restrict(double fraction, String... activities) {
 			Map<String, Double> map = (Map<String, Double>) params.computeIfAbsent("restrictions", k -> new HashMap<>());

@@ -277,3 +277,11 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/java,linux,macos,maven,windows,eclipse,intellij
+
+# beginnings of output dir names that kn has used (bad style to put such things here, need to find better way):
+piecewise*
+zz_archive*
+testoutput*
+theta*
+2020-*
+triang*

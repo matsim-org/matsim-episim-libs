@@ -61,8 +61,8 @@ public class FilterEvents implements Callable<Integer> {
 	@Option(names = "--output", description = "Output file", defaultValue = "output/eventsFilteredBerlin.xml.gz")
 	private Path output;
 
-	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_snz_educationFacilities.txt")
-	private Path facilities;
+//	@Option(names = "--educationFacilities", description = "Path to aggregated facilities file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_snz_educationFacilities.txt")
+//	private Path facilities;
 
 
 	public static void main(String[] args) {
@@ -70,7 +70,7 @@ public class FilterEvents implements Callable<Integer> {
 	}
 
 	private static Map<Id<ActivityFacility>, Id<ActivityFacility>> readAndMapMergedFacilities(String path) throws IOException {
-		Set<EducFacility> remainingFacilities = EducFacilities.readEducFacilites(path, null);
+		Set<EducFacility> remainingFacilities = EducFacility.readEducFacilities(path, null);
 		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityReplacements = new HashMap<>();
 		for (EducFacility remainingFacility : remainingFacilities) {
 			for (Id<ActivityFacility> containedFacility : remainingFacility.getContainedFacilities()) {
@@ -99,9 +99,9 @@ public class FilterEvents implements Callable<Integer> {
 		EventsManager manager = EventsUtils.createEventsManager();
 
 		Map<Id<ActivityFacility>, Id<ActivityFacility>> facilityreplacements = null;
-		if (Files.exists(facilities)) {
-			facilityreplacements = readAndMapMergedFacilities(facilities.toString());
-		}
+//		if (Files.exists(facilities)) {
+//			facilityreplacements = readAndMapMergedFacilities(facilities.toString());
+//		}
 
 		FilterHandler handler = new FilterHandler(null, filterIds, facilityreplacements);
 		manager.addHandler(handler);

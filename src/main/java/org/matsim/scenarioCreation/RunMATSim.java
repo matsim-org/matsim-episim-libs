@@ -20,29 +20,31 @@
  */
 package org.matsim.scenarioCreation;
 
+import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
 import org.matsim.core.controler.Controler;
 import org.matsim.core.controler.OutputDirectoryHierarchy.OverwriteFileSetting;
 import org.matsim.core.scenario.ScenarioUtils;
 
-import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorModule;
-
-import org.matsim.core.config.groups.PlanCalcScoreConfigGroup.ActivityParams;
-
 /**
+ * Runs one iteration of MATSim to create an event file.
+ *
  * @author smueller
  */
-public class RunMATSim {
+public final class RunMATSim {
 
-	private static final String INPUT_SCHOOL_PLANS =  "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_schoolPlans.xml.gz";
+	private static final String INPUT_SCHOOL_PLANS = "../../svn/shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/processed-data/he_small_snz_u14population_schoolPlans.xml.gz";
 
+	private RunMATSim() {
+	}
 
 	public static void main(String[] args) {
 		String plansfile = INPUT_SCHOOL_PLANS;
 
-		if(args.length > 0){
+		if (args.length > 0) {
 			plansfile = args[1];
 		}
 
@@ -56,7 +58,7 @@ public class RunMATSim {
 	private static void prepareConfig(Config config, String plansFile) {
 		config.controler().setLastIteration(0);
 		config.controler().setOverwriteFileSetting(OverwriteFileSetting.failIfDirectoryExists);
-		config.controler().setOutputDirectory( "./outputU14");
+		config.controler().setOutputDirectory("./outputU14");
 
 		config.qsim().setStartTime(0);
 		config.qsim().setEndTime(36. * 3600);

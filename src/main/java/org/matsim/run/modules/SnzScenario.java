@@ -26,12 +26,15 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import javax.inject.Singleton;
 
 /**
  * Scenario based on data provided by snz. Please note that this data is not publicly available.
+ * @deprecated Please move scenarios into separate modules and extend from {@link AbstractSnzScenario}.
  */
+@Deprecated
 public class SnzScenario extends AbstractModule {
 
 	public static final String[] DEFAULT_ACTIVITIES = {
@@ -40,8 +43,6 @@ public class SnzScenario extends AbstractModule {
 
 	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
 		episimConfig.getOrAddContainerParams("pt")
-				.setContactIntensity(10.0);
-		episimConfig.getOrAddContainerParams("tr")
 				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("leisure")
 				.setContactIntensity(5.0);
@@ -149,11 +150,11 @@ public class SnzScenario extends AbstractModule {
 	}
 
 	private com.typesafe.config.Config buildPolicyHeinsberg(int offset) {
-		
+
 		return FixedPolicy.config()
 				.restrict(11 - offset, 0.90, "work")
 				.restrict(30 - offset, 0.40, "work")
-				
+
 				.restrict(11 - offset, 0., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher")
 				.restrict(24 - offset, 0.1, "educ_secondary")
 				.restrict(30 - offset, 0.0, "educ_secondary")
@@ -165,12 +166,16 @@ public class SnzScenario extends AbstractModule {
 				.restrict(30 - offset, 0.40, "leisure")
 				.restrict(37 - offset, 0.10, "leisure")
 
-				
+
 				.restrict(11 - offset, 0.90, "shopping", "errands", "business")
 				.restrict(32 - offset, 0.70, "shopping", "errands", "business")
 				.build();
 	}
 
+	/**
+	 * Use newer {@link FixedPolicy.ConfigBuilder#interpolate(String, String, Restriction, double, String...)} instead.
+	 */
+	@Deprecated
 	public static class LinearInterpolation{
 		private final long firstDay;
 		private final double firstValue;

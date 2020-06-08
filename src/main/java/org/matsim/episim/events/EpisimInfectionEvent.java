@@ -15,10 +15,10 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 
 	// TODO: hasLink or hasCoord?
 
-	private static final String EVENT_TYPE = "episimInfection";
-	private static final String INFECTOR = "infector";
-	private static final String CONTAINER = "container";
-	private static final String INFECTION_TYPE = "infectionType";
+	static final String EVENT_TYPE = "episimInfection";
+	static final String INFECTOR = "infector";
+	static final String CONTAINER = "container";
+	static final String INFECTION_TYPE = "infectionType";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;

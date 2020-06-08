@@ -1,1 +1,1 @@
-time	infector	infected	infectionType
+time	infector	infected	infectionType	date	groupSize	facility

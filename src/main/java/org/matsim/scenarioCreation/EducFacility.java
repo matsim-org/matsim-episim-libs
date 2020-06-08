@@ -20,7 +20,8 @@
  */
 package org.matsim.scenarioCreation;
 
-import org.apache.log4j.Logger;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.utils.geometry.CoordUtils;
@@ -33,12 +34,30 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
+final class EducFacility {
 
-class EducFacilities {
+	private static Logger log = LogManager.getLogger(EducFacility.class);
 
-	private static Logger log = Logger.getLogger(EducFacilities.class);
+	private Id<ActivityFacility> id;
+	private Coord coord;
+	private boolean isEducKiga;
+	private boolean isEducPrimary;
+	private boolean isEducSecondary;
+	private double noOfPupils = 0;
 
-	static Set<EducFacility> readEducFacilites(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
+	//contains id s of other EducFacilities which are deleted in the process of aggregation
+	private Set<Id<ActivityFacility>> containedFacilities = new HashSet<>();
+
+	EducFacility(Id<ActivityFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary,
+				 boolean isEducSecondary) {
+		this.setId(id);
+		this.setCoord(coord);
+		this.setEducKiga(isEducKiga);
+		this.setEducPrimary(isEducPrimary);
+		this.setEducSecondary(isEducSecondary);
+	}
+
+	static Set<EducFacility> readEducFacilities(String educFacilitiesFile, CoordinateTransformation transformation) throws IOException {
 		log.info("Start to read educFacilities file " + educFacilitiesFile);
 
 		Set<EducFacility> educFacilities = new HashSet<>();
@@ -63,26 +82,25 @@ class EducFacilities {
 
 				int count = 0;
 
-				while(count<parts.length) {
-					if(parts[count].equals("id"))
+				while (count < parts.length) {
+					if (parts[count].equals("id"))
 						positionId = count;
-					if(parts[count].equals("x"))
+					if (parts[count].equals("x"))
 						positionX = count;
-					if(parts[count].equals("y"))
+					if (parts[count].equals("y"))
 						positionY = count;
-					if(parts[count].equals("educ_kiga"))
+					if (parts[count].equals("educ_kiga"))
 						positionKiga = count;
-					if(parts[count].equals("educ_primary"))
+					if (parts[count].equals("educ_primary"))
 						positionPrimary = count;
-					if(parts[count].equals("educ_secondary"))
+					if (parts[count].equals("educ_secondary"))
 						positionSecondary = count;
-					if(parts[count].equals("mergedFacilityIds"))
+					if (parts[count].equals("mergedFacilityIds"))
 						positionMergedFacilities = count;
 					count++;
 				}
 				continue;
 			}
-
 
 
 			Id<ActivityFacility> id = Id.create(parts[positionId], ActivityFacility.class);
@@ -112,16 +130,16 @@ class EducFacilities {
 			if (transformation != null) {
 				coord = transformation.transform(coord);
 			}
-			if(isEducKiga || isEducPrimary || isEducSecondary) {
+			if (isEducKiga || isEducPrimary || isEducSecondary) {
 				EducFacility educFacility = new EducFacility(id, coord, isEducKiga, isEducPrimary, isEducSecondary);
 
-					if (positionMergedFacilities<Integer.MAX_VALUE && positionMergedFacilities < parts.length) {
-						String[] containedFacilities;
-						containedFacilities = parts[positionMergedFacilities].split(";");
-						for (String containedFacility : containedFacilities) {
-							educFacility.addContainedEducFacility(Id.create(containedFacility, ActivityFacility.class));
-						}
+				if (positionMergedFacilities < Integer.MAX_VALUE && positionMergedFacilities < parts.length) {
+					String[] containedFacilities;
+					containedFacilities = parts[positionMergedFacilities].split(";");
+					for (String containedFacility : containedFacilities) {
+						educFacility.addContainedEducFacility(Id.create(containedFacility, ActivityFacility.class));
 					}
+				}
 
 				educFacilities.add(educFacility);
 			}
@@ -133,28 +151,6 @@ class EducFacilities {
 		log.info("Done with reading...");
 		log.info("number of EducFacilities = " + educFacilities.size());
 		return educFacilities;
-	}
-
-}
-
-class EducFacility {
-	private Id<ActivityFacility> id;
-	private Coord coord;
-	private boolean isEducKiga;
-	private boolean isEducPrimary;
-	private boolean isEducSecondary;
-	private double noOfPupils = 0;
-
-	//contains id s of other EducFacilities which are deleted in the process of aggregation
-	private Set<Id<ActivityFacility>> containedFacilities = new HashSet<>();
-
-	EducFacility(Id<ActivityFacility> id, Coord coord, boolean isEducKiga, boolean isEducPrimary,
-				 boolean isEducSecondary) {
-		this.setId(id);
-		this.setCoord(coord);
-		this.setEducKiga(isEducKiga);
-		this.setEducPrimary(isEducPrimary);
-		this.setEducSecondary(isEducSecondary);
 	}
 
 	boolean isEducKiga() {

@@ -24,8 +24,10 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -33,6 +35,8 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import picocli.CommandLine;
 
+import java.io.File;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -91,6 +95,13 @@ public class RunParallel<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
+		Configurator.setLevel("org.matsim.core.config", Level.WARN);
+		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
+		Configurator.setLevel("org.matsim.core.events", Level.WARN);
+
+		// Same context as if would be run from config
+		URL context = new File("./input").toURI().toURL();
+
 		ExecutorService executor = Executors.newFixedThreadPool(threads);
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
@@ -100,6 +111,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		// All config need to have the same base config (population, events, etc..)
 		Config baseConfig = prepare.runs.get(0).config;
+		baseConfig.setContext(context);
 		EpisimConfigGroup episimBase = ConfigUtils.addOrGetModule(baseConfig, EpisimConfigGroup.class);
 
 		Scenario scenario = ScenarioUtils.loadScenario(baseConfig);
@@ -118,10 +130,12 @@ public class RunParallel<T> implements Callable<Integer> {
 				return 1;
 			}
 
-			String outputPath = output + "/" + prepare.setup.getOutputName(run);
+			String outputPath = output + "/" + prepare.getOutputName(run);
 			Path out = Paths.get(outputPath);
 			if (!Files.exists(out)) Files.createDirectories(out);
 			run.config.controler().setOutputDirectory(outputPath);
+			run.config.controler().setRunId(prepare.setup.getMetadata().name + run.id);
+			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(new Task(new ParallelModule(scenario, run.config, replay)), executor));
 		}

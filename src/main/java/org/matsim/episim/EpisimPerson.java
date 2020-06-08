@@ -22,34 +22,40 @@ package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
 import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
+import org.eclipse.collections.api.tuple.primitive.ObjectDoublePair;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.matsim.vehicles.Vehicle;
 
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Set;
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 
 /**
  * Persons current state in the simulation.
  */
 public final class EpisimPerson implements Attributable {
 
-	/**
-	 * Attribute for the ability to be traced.
-	 */
-	public static final String TRACING_ATTR = "hasTracing";
-
 	private final Id<Person> personId;
 	private final EpisimReporting reporting;
+	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
-	private final ObjectDoubleHashMap<EpisimPerson> traceableContactPersons = new ObjectDoubleHashMap<>();
-	private final List<String> trajectory = new ArrayList<>();
+	private final List<Activity> trajectory = new ArrayList<>();
+
+	/**
+	 * Traced contacts with other persons.
+	 */
+	private final Map<EpisimPerson, Double> traceableContactPersons = new LinkedHashMap<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -79,16 +85,151 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private int quarantineDate = -1;
 	private int currentPositionInTrajectory;
+
 	/**
 	 * The last visited {@link org.matsim.facilities.ActivityFacility}.
 	 */
 	private String lastFacilityId;
 	private String firstFacilityId;
 
+	/**
+	 * Whether this person can be traced.
+	 */
+	private boolean traceable;
+
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
+		this(personId, attrs, true, reporting);
+	}
+
+	EpisimPerson(Id<Person> personId, Attributes attrs, boolean traceable, EpisimReporting reporting) {
 		this.personId = personId;
 		this.attributes = attrs;
+		this.traceable = traceable;
 		this.reporting = reporting;
+	}
+
+	/**
+	 * Reads persons state from stream.
+	 *
+	 * @param persons map of all persons in the simulation
+	 */
+	void read(ObjectInput in, Map<String, Activity> params, Map<Id<Person>, EpisimPerson> persons,
+			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
+			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
+
+		int n = in.readInt();
+		trajectory.clear();
+		for (int i = 0; i < n; i++) {
+			String name = readChars(in).intern();
+			Activity e = params.get(name);
+			if (e == null)
+				throw new IllegalStateException("Could not reconstruct param: " + name);
+
+			trajectory.add(e);
+		}
+
+
+		n = in.readInt();
+		traceableContactPersons.clear();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.create(readChars(in), Person.class);
+			traceableContactPersons.put(persons.get(id), in.readDouble());
+		}
+
+		n = in.readInt();
+		statusChanges.clear();
+		for (int i = 0; i < n; i++) {
+			int status = in.readInt();
+			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());
+		}
+
+		// Current container is set
+		if (in.readBoolean()) {
+			boolean isVehicle = in.readBoolean();
+			String name = readChars(in);
+			if (isVehicle) {
+				currentContainer = vehicles.get(Id.create(name, Vehicle.class));
+			} else
+				currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
+
+			if (currentContainer == null)
+				throw new IllegalStateException("Could not reconstruct container: " + name);
+		} else
+			currentContainer = null;
+
+		n = in.readInt();
+		spentTime.clear();
+		for (int i = 0; i < n; i++) {
+			String act = readChars(in);
+			spentTime.put(act, in.readDouble());
+		}
+
+		status = DiseaseStatus.values()[in.readInt()];
+		quarantineStatus = QuarantineStatus.values()[in.readInt()];
+		quarantineDate = in.readInt();
+		currentPositionInTrajectory = in.readInt();
+		if (in.readBoolean()) {
+			firstFacilityId = readChars(in);
+		} else
+			firstFacilityId = null;
+
+		if (in.readBoolean()) {
+			lastFacilityId = readChars(in);
+		} else
+			lastFacilityId = null;
+
+		traceable = in.readBoolean();
+	}
+
+	/**
+	 * Writes person state to stream.
+	 */
+	void write(ObjectOutput out) throws IOException {
+
+		out.writeInt(trajectory.size());
+		for (Activity act : trajectory) {
+			writeChars(out, act.actType);
+		}
+
+		out.writeInt(traceableContactPersons.size());
+		for (Map.Entry<EpisimPerson, Double> kv : traceableContactPersons.entrySet()) {
+			writeChars(out, kv.getKey().getPersonId().toString());
+			out.writeDouble(kv.getValue());
+		}
+
+		out.writeInt(statusChanges.size());
+		for (Map.Entry<DiseaseStatus, Double> e : statusChanges.entrySet()) {
+			out.writeInt(e.getKey().ordinal());
+			out.writeDouble(e.getValue());
+		}
+
+		out.writeBoolean(currentContainer != null);
+		if (currentContainer != null) {
+			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
+			writeChars(out, currentContainer.getContainerId().toString());
+		}
+
+		out.writeInt(spentTime.size());
+		for (ObjectDoublePair<String> kv : spentTime.keyValuesView()) {
+			writeChars(out, kv.getOne());
+			out.writeDouble(kv.getTwo());
+		}
+
+		out.writeInt(status.ordinal());
+		out.writeInt(quarantineStatus.ordinal());
+		out.writeInt(quarantineDate);
+		out.writeInt(currentPositionInTrajectory);
+
+		out.writeBoolean(firstFacilityId != null);
+		// null strings can not be written
+		if (firstFacilityId != null)
+			writeChars(out, firstFacilityId);
+
+		out.writeBoolean(lastFacilityId != null);
+		if (lastFacilityId != null)
+			writeChars(out, lastFacilityId);
+
+		out.writeBoolean(traceable);
 	}
 
 	public Id<Person> getPersonId() {
@@ -114,6 +255,10 @@ public final class EpisimPerson implements Attributable {
 	public void setQuarantineStatus(QuarantineStatus quarantineStatus, int iteration) {
 		this.quarantineStatus = quarantineStatus;
 		this.quarantineDate = iteration;
+
+		// this function should receive now instead of iteration
+		// only for testing currently
+		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
 	}
 
 
@@ -131,6 +276,13 @@ public final class EpisimPerson implements Attributable {
 		double day = Math.floor(statusChanges.get(status) / 86400d);
 
 		return currentDay - (int) day;
+	}
+
+	/**
+	 * Return whether a person had (or currently has) a certain disease status.
+	 */
+	public boolean hadDiseaseStatus(DiseaseStatus status) {
+		return statusChanges.containsKey(status);
 	}
 
 	/**
@@ -163,42 +315,63 @@ public final class EpisimPerson implements Attributable {
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
-		if (isTraceable() && personWrapper.isTraceable())
+		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
 			traceableContactPersons.put(personWrapper, now);
+			reporting.reportTracing(now, this, personWrapper);
+		}
 	}
 
 	/**
 	 * Get all traced contacts that happened after certain time.
 	 */
-	public Set<EpisimPerson> getTraceableContactPersons(double after) {
-		return traceableContactPersons.keySet()
-				.stream().filter(k -> traceableContactPersons.get(k) >= after)
-				.collect(Collectors.toSet());
+	public List<EpisimPerson> getTraceableContactPersons(double after) {
+		return traceableContactPersons.entrySet()
+				.stream().filter(p -> p.getValue() >= after)
+				.map(Map.Entry::getKey)
+				.collect(Collectors.toList());
+
+		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
+		// would argue that it is not a problem to have a person in there multiple times.  kai, may'20
+
 	}
 
 	/**
 	 * Remove old contact tracing data before a certain date.
 	 */
 	public void clearTraceableContractPersons(double before) {
-		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
-	}
 
+		int oldSize = traceableContactPersons.size();
+
+		if (oldSize == 0) return;
+
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+
+		/*
+		int newSize = traceableContactPersons.size();
+		// Compact traced persons to retain memory
+		// don't compact every time since it is a bit expensive
+		if (oldSize != newSize && newSize == 0 || oldSize < newSize - 10)
+			traceableContactPersons.compact();
+		*/
+	}
 
 	/**
-	 * Returns whether the person can be traced. When {@link #TRACING_ATTR} is not set it is always true.
+	 * Returns whether the person can be traced.
 	 */
 	public boolean isTraceable() {
-		Boolean tracing = (Boolean) attributes.getAttribute(TRACING_ATTR);
-		if (tracing ==  null) return true;
-		return tracing;
+		return traceable;
 	}
 
-	void addToTrajectory(String trajectoryElement) {
+	public void setTraceable(boolean traceable) {
+		this.traceable = traceable;
+	}
+
+	void addToTrajectory(Activity trajectoryElement) {
 		trajectory.add(trajectoryElement);
 	}
 
-	public List<String> getTrajectory() {
+	public List<Activity> getTrajectory() {
 		return trajectory;
 	}
 
@@ -277,4 +450,21 @@ public final class EpisimPerson implements Attributable {
 	 * Quarantine status of a person.
 	 */
 	public enum QuarantineStatus {full, atHome, no}
+
+	/**
+	 * Activity performed by a person. Holds the type and its infection params.
+	 */
+	public static final class Activity {
+
+		public final String actType;
+		public final EpisimConfigGroup.InfectionParams params;
+
+		/**
+		 * Constructor.
+		 */
+		public Activity(String actType, EpisimConfigGroup.InfectionParams params) {
+			this.actType = actType;
+			this.params = params;
+		}
+	}
 }

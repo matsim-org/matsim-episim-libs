@@ -37,10 +37,10 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
  * Default infection model executed, when a person ends his activity.
  * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
  * <pre>
- *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * exposure)
+ *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * ci_correction)
  * </pre>
  */
-public final class DefaultInfectionModel extends AbstractInfectionModel {
+public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 
 	private static final Logger log = LogManager.getLogger(DefaultInfectionModel.class);
 
@@ -48,6 +48,11 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	 * Flag to enable tracking, which is considerably slower.
 	 */
 	private final int trackingAfterDay;
+
+	/**
+	 * See {@link TracingConfigGroup#getMinDuration()}
+	 */
+	private final double trackingMinDuration;
 
 	/**
 	 * Face mask model, which decides which masks the persons are wearing.
@@ -66,13 +71,19 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 	@Inject
 	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
 								 EpisimReporting reporting, FaceMaskModel maskModel) {
-		this(rnd, episimConfig, reporting, maskModel, tracingConfig.getPutTraceablePersonsInQuarantineAfterDay());
+		this(rnd, episimConfig, reporting, maskModel,
+				tracingConfig.getPutTraceablePersonsInQuarantineAfterDay(), tracingConfig.getMinDuration());
 	}
 
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel, int trackingAfterDay) {
+	/**
+	 * Constructor when no injection is used.
+	 */
+	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel,
+								 int trackingAfterDay, double trackingMinDuration) {
 		super(rnd, episimConfig, reporting);
 		this.maskModel = maskModel;
 		this.trackingAfterDay = trackingAfterDay;
+		this.trackingMinDuration = trackingMinDuration;
 	}
 
 	/**
@@ -131,7 +142,8 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 		// shuffle, those are 10 different persons every day.
 
 		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
-		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+//		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+		int contactWith = Math.min(otherPersonsInContainer.size(), episimConfig.getMaxInteractions() );
 		for (int ii = 0; ii < contactWith; ii++) {
 
 			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
@@ -159,10 +171,14 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				}
 			}
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory());
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory());
+			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
+			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
+
+			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
+			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
+			double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
@@ -175,16 +191,13 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, now);
+					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer,infectionType);
 				}
 			}
 
 			if (!AbstractInfectionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
 				continue;
 			}
-
-			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
-			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
 			// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
@@ -195,7 +208,6 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				// container from the beginning.  ????  kai, mar'20
 			}
 
-			double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 			if (jointTimeInContainer < 0 || jointTimeInContainer > 86400) {
 				log.warn(containerEnterTimeOfPersonLeaving);
 				log.warn(containerEnterTimeOfOtherPerson);
@@ -207,10 +219,10 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 			// Parameter will only be retrieved one time
 			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, leavingPersonsActivity);
+				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
@@ -221,14 +233,14 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer, prob);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(personLeavingContainer, contactPerson, now, infectionType);
+					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container );
 
 			} else {
 				double prob = calcInfectionProbability(contactPerson, personLeavingContainer, contactParams, leavingParams, jointTimeInContainer);
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer, prob);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(contactPerson, personLeavingContainer, now, infectionType);
+					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container );
 			}
 		}
 
@@ -252,33 +264,52 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 
 		Map<String, Restriction> r = getRestrictions();
 
-		double exposure = Math.max(r.get(act1.getContainerName()).getExposure(), r.get(act2.getContainerName()).getExposure());
-		double contactIntensity = Math.max(act1.getContactIntensity(), act2.getContactIntensity());
+		// ci corr can not be null, because sim is initialized with non null value
+		double ciCorrection = Math.min(r.get(act1.getContainerName()).getCiCorrection(), r.get(act2.getContainerName()).getCiCorrection());
+		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * exposure
+		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, iteration, r.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, iteration, r.get(act1.getContainerName())).intake
 		);
 	}
 
 	/**
-	 * Get the relevant infection parameter based on container and activity.
+	 * Get the relevant infection parameter based on container and activity and person.
 	 */
-	private EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, String activity) {
+	private EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
 			return episimConfig.selectInfectionParams(container.getContainerId().toString());
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
-			return episimConfig.selectInfectionParams(activity);
+			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
+
+			// Select different infection params for home quarantined persons
+			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && params.getContainerName().equals("home")) {
+				return qhParams.params;
+			}
+
+			return params;
 		} else
 			throw new IllegalStateException("Don't know how to deal with container " + container);
 
 	}
 
-	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now) {
+	private void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, double jointTimeInContainer, StringBuilder infectionType) {
+
+		// Don't track certain activities
+		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
+			return;
+		}
+
+		// don't track below threshold
+		if (jointTimeInContainer < trackingMinDuration) {
+			return;
+		}
+
 		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
 		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
 	}

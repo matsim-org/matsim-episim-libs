@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.scenarioCreation;
+package org.matsim.episim.analysis;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
@@ -35,11 +35,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class AnalyzeHomeFacilities {
+/**
+ * This class aims to analyze the age distribution within home facilities of the input population. It classifies the inhabitants of each home facility into age groups and dumps
+ * out a csv containing the number of people belonging to every age group, for every home facility.
+ */
+final class AnalyzeHomeFacilities {
 
 	private static final String INPUT_POPULATION = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/episim-input/be_entirePopulation_noPlans.xml.gz";
 	private static final String OUTPUT_CSV = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans_homeIdCounts.csv";
 	private static final String OUTPUT_FACILITIES = "D:/svn/shared-svn/projects/episim/matsim-files/snz/Berlin/processed-data/be_entirePopulation_noPlans_homeFacilities.xml";
+
+	private AnalyzeHomeFacilities() {
+	}
 
 	public static void main(String[] args) {
 

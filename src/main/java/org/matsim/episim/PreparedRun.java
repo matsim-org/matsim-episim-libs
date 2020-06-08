@@ -20,12 +20,15 @@
  */
 package org.matsim.episim;
 
+import com.google.common.base.Joiner;
+import com.google.common.collect.Streams;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Class holding the result of {@link BatchRun#prepare(Class, Class)} with all information of the run.
@@ -72,11 +75,22 @@ public final class PreparedRun {
 
 		Map<String, Object> data = new LinkedHashMap<>();
 
-		data.put("startDate", setup.startDate());
+		int index = parameter.indexOf("startDate");
 
-		int index = parameter.indexOf("offset");
-		if (index > -1)
-			data.put("offset", parameterValues.get(index));
+		data.put("city", setup.getMetadata().region);
+		data.put("defaultStartDate", setup.getDefaultStartDate());
+		data.put("endDate", setup.getMetadata().endDate);
+
+		if (index > -1) {
+			data.put("startDates", parameterValues.get(index));
+		} else {
+			data.put("startDates", List.of(setup.getDefaultStartDate()));
+		}
+
+		// Newer runs should not need to use the offset parameter anymore
+		int indexOffset = parameter.indexOf("offset");
+		if (indexOffset > -1)
+			data.put("offset", parameterValues.get(indexOffset));
 
 		List<Object> opts = new ArrayList<>();
 
@@ -111,7 +125,7 @@ public final class PreparedRun {
 		}
 
 		for (String param : parameter) {
-			if (param.equals("offset")) continue;
+			if (param.equals("startDate") || param.equals("offset")) continue;
 
 			if (!describedParams.contains(param))
 				log.warn("Parameter '{}' is not in any measure in .getOptions()", param);
@@ -123,6 +137,15 @@ public final class PreparedRun {
 	}
 
 	/**
+	 * Creates the output name of a run.
+	 */
+	public Object getOutputName(Run run) {
+		return Joiner.on("-").join(
+				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -> p + "_" + v.toString()).collect(Collectors.toList())
+		);
+	}
+
+	/**
 	 * One individual parameter set of a run.
 	 */
 	public static final class Run {
@@ -131,6 +154,9 @@ public final class PreparedRun {
 		public final List<Object> params;
 		public final Config config;
 
+		/**
+		 * Constructor.
+		 */
 		public Run(int id, List<Object> params, Config config) {
 			this.id = id;
 			this.params = params;

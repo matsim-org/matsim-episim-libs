@@ -8,12 +8,12 @@
  * it under the terms of the GNU Affero General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
@@ -25,7 +25,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.*;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
+import org.matsim.api.core.v01.events.ActivityStartEvent;
+import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
@@ -34,6 +36,7 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
+
 
 /**
  * Handler that replays events from {@link EpisimConfigGroup#getInputEventsFile()} with corrected time and attributes.
@@ -66,36 +69,15 @@ public final class ReplayHandler {
 	 */
 	public void replayEvents(final EventsManager manager, final int iteration) {
 		for (final Event e : events) {
-
-			if (e instanceof ActivityStartEvent) {
-				ActivityStartEvent ev = (ActivityStartEvent) e;
-				manager.processEvent(
-						new ActivityStartEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-								ev.getLinkId(), ev.getFacilityId(), ev.getActType(), ev.getCoord())
-				);
-
-			} else if (e instanceof ActivityEndEvent) {
-				ActivityEndEvent ev = (ActivityEndEvent) e;
-				manager.processEvent(
-						new ActivityEndEvent(EpisimUtils.getCorrectedTime(ev.getTime(), iteration), ev.getPersonId(),
-								ev.getLinkId(), ev.getFacilityId(), ev.getActType())
-				);
-
-			} else if (e instanceof PersonEntersVehicleEvent) {
-				PersonEntersVehicleEvent ev = (PersonEntersVehicleEvent) e;
-				manager.processEvent(
-						new PersonEntersVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
-				);
-
-			} else if (e instanceof PersonLeavesVehicleEvent) {
-				PersonLeavesVehicleEvent ev = (PersonLeavesVehicleEvent) e;
-				manager.processEvent(
-						new PersonLeavesVehicleEvent(EpisimUtils.getCorrectedTime(e.getTime(), iteration), ev.getPersonId(), ev.getVehicleId())
-				);
-
-			} else
-				manager.processEvent(e);
+			manager.processEvent(e);
 		}
+	}
+
+	/**
+	 * All available events.
+	 */
+	public List<Event> getEvents() {
+		return events;
 	}
 
 	/**
@@ -114,7 +96,10 @@ public final class ReplayHandler {
 					coord = link.getToNode().getCoord();
 				}
 
-				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType(), coord);
+				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern(), coord);
+			} else if (event instanceof ActivityEndEvent) {
+				ActivityEndEvent e = (ActivityEndEvent) event;
+				event = new ActivityEndEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern());
 			}
 
 			events.add(event);

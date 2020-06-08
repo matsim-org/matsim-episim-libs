@@ -61,13 +61,13 @@ public class DistrictLookup implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(DistrictLookup.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path input;
 
-	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "landkreise-in-germany.shp")
+	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "populationWithDistrict.xml.gz")
+	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts.xml.gz")
 	private Path output;
 
 	@CommandLine.Option(names = "--attr", description = "Attribute name in the shapefile, which contains the district name", defaultValue = "name_2")
@@ -78,7 +78,7 @@ public class DistrictLookup implements Callable<Integer> {
 	private String inputCRS;
 
 	// because of the own transformation classes of matsim, the crs can not be easily read from the shapefile, but has to be explicitly defined
-	@CommandLine.Option(names = "--crs", description = "CRS of the shapefile.", defaultValue = "WGS84")
+	@CommandLine.Option(names = "--crs", description = "CRS of the shapefile.", defaultValue = "EPSG:25832")
 	private String shapeCRS;
 
 	public static void main(String[] args) {

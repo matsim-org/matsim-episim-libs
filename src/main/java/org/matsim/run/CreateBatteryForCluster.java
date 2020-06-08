@@ -74,10 +74,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--name", description = "Run name", defaultValue = "sz")
-	private String runName;
-
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v8")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v10")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "70")
@@ -86,10 +83,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4600m -Xmx4600m")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.MunichSchoolClosureAndMasks")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.Berlin2020Tracing")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.MunichSchoolClosureAndMasks$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.Berlin2020Tracing$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -100,7 +97,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Path dir = output.resolve(runVersion + "-" + StringUtils.uncapitalize(runName));
+		PreparedRun prepare = BatchRun.prepare(setup, params);
+
+		BatchRun.Metadata meta = prepare.setup.getMetadata();
+		String runName = meta.name;
+		Path dir = output.resolve(runVersion).resolve(meta.name).resolve(meta.region);
 		Path input = dir.resolve("input");
 
 		Files.createDirectories(input);
@@ -113,8 +114,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
 		BufferedWriter yamlWriter = new BufferedWriter(new FileWriter(dir.resolve("metadata.yaml").toFile()));
-
-		PreparedRun prepare = BatchRun.prepare(setup, params);
 
 
 		List<String> header = Lists.newArrayList("RunScript", "Config", "RunId", "Output");
@@ -130,7 +129,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		Map<String, Object> metadata = new LinkedHashMap<>();
 
-		metadata.put("city", StringUtils.capitalize(runName));
 		metadata.put("readme", runVersion + "-notes.md");
 		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
 		metadata.put("info", runVersion + "-info-" + runName + ".txt");
@@ -144,8 +142,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
-			String outputPath = batchOutput + "/" + prepare.setup.getOutputName(run);
+			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
 			run.config.controler().setOutputDirectory(outputPath);
+			run.config.controler().setRunId(runName + run.id);
 
 			prepare.setup.writeAuxiliaryFiles(dir, run.config);
 			ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());

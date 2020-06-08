@@ -18,7 +18,7 @@
  *                                                                         *
  * *********************************************************************** */
 
-package org.matsim.scenarioCreation;
+package org.matsim.episim.analysis;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -42,13 +42,24 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class PopulationEventsChecker {
+/**
+ * This class analyzes the amount of times a person described in {@code INPUT_POPULATION_FILE} performs an activity that is relevant for episim.
+ * This can help to determine whether the population contains persons that do not occur in the events file (e.g. because they perform a stay-home-plan).
+ * 2 files are dumped out: <br>
+ * 1) a csv file containing a a dataset per person in the population showing the amount of events for each relevant event type<br>
+ * 2) a population file containing the same information, but as person attributes 'glued' to the corresponding person
+ *
+ */
+final class PopulationEventsChecker {
 
 
 	private static final String INPUT_POPULATION_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans.xml.gz";
 	private static final String INPUT_EVENTS_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_adults_eventsFiltered.xml.gz";
 	private static final String OUTPUT_POPULATION_FILE = "D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans_eventAttributes.xml.gz";
 	private static final String OUTPUT_CSV_FILE ="D:/svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/processed-data/be_v2_snz_population_adults_noPlans_eventsAnalysis.csv";
+
+	private PopulationEventsChecker() {
+	}
 
 	public static void main(String[] args) {
 

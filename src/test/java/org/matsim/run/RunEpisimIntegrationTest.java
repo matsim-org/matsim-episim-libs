@@ -2,6 +2,7 @@ package org.matsim.run;
 
 import com.google.common.collect.Lists;
 import com.google.inject.*;
+import com.google.inject.util.Modules;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -15,14 +16,18 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.model.ConfigurableProgressionModel;
+import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.Module;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
 
@@ -47,10 +52,22 @@ public class RunEpisimIntegrationTest {
 		return Arrays.asList(10, 100);
 	}
 
+	/**
+	 * Checks whether output of simulation matches expectation.
+	 */
+	static void assertSimulationOutput(MatsimTestUtils utils) {
+		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
+			File input = new File(utils.getInputDirectory(), name);
+			// events will be ignored if not existent
+			if (input.exists() || !name.equals("infectionEvents.txt"))
+				assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
+		}
+	}
+
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-		Injector injector = Guice.createInjector(new EpisimModule(), new TestScenario(utils));
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils)));
 
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
@@ -59,20 +76,7 @@ public class RunEpisimIntegrationTest {
 
 	@After
 	public void tearDown() {
-		assertSimulationOutput();
-	}
-
-
-	/**
-	 * Checks whether output of simulation matches expectation.
-	 */
-	private void assertSimulationOutput() {
-		for (String name : Lists.newArrayList("infections.txt", "infectionEvents.txt")) {
-			File input = new File(utils.getInputDirectory(), name);
-			// events will be ignored if not existent
-			if (input.exists() || !name.equals("infectionEvents.txt"))
-				assertThat(new File(utils.getOutputDirectory(), name)).hasSameTextualContentAs(input);
-		}
+		assertSimulationOutput(utils);
 	}
 
 	@Test
@@ -86,7 +90,8 @@ public class RunEpisimIntegrationTest {
 		// day when tracing starts
 		int tDay = it / 2;
 
-		tracingConfig.setTracingDelay(1);
+		tracingConfig.setTracingDelay_days(1 );
+		tracingConfig.setTracingProbability(0.75);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(tDay);
 
 		runner.run(it);
@@ -103,30 +108,39 @@ public class RunEpisimIntegrationTest {
 				.isNotEqualTo(cmpLines.subList(tDay, Math.min(it, cmpLines.size())));
 	}
 
-	@Test
-	public void testNoPt() throws IOException {
 
+	@Test
+	public void testPlausibleShutdown() {
+
+		LocalDate start = LocalDate.of(2020, 2, 1);
+
+		episimConfig.setStartDate(start);
 		episimConfig.setPolicyConfig(FixedPolicy.config()
-				.shutdown(5, "pt")
+				.shutdown(1, "freight")
+				.shutdown(6, "leisure", "edu", "business")
+				.restrict(6, 0.2, "work", "other")
+				.restrict(6, 0.3, "shop", "errands")
+				.build()
+		);
+
+		runner.run(it);
+		assertSimulationOutput(utils);
+
+
+		// re-test with fixed date config, which should be the same result
+		setup();
+		episimConfig.setStartDate(start);
+		episimConfig.setPolicyConfig(FixedPolicy.config()
+				.restrict(start, 0.0, "freight")
+				.restrict(start.withDayOfMonth(6), 0.0, "leisure", "edu", "business")
+				.restrict(start.withDayOfMonth(6), 0.2, "work", "other")
+				.restrict(start.withDayOfMonth(6), 0.3, "shop", "errands")
 				.build()
 		);
 
 		runner.run(it);
 	}
 
-	@Test
-	public void testPlausibleShutdown() throws IOException {
-
-		episimConfig.setPolicyConfig(FixedPolicy.config()
-				.shutdown(0, "freight")
-				.shutdown(it, "leisure", "edu", "business")
-				.restrict(it, 0.2, "work", "other")
-				.restrict(it, 0.3, "shop", "errands")
-				.build()
-		);
-
-		runner.run(it);
-	}
 
 	@Test
 	public void testTotalShutdown() throws IOException {
@@ -140,12 +154,17 @@ public class RunEpisimIntegrationTest {
 		runner.run(it);
 	}
 
-	private static class TestScenario extends AbstractModule {
+	static class TestScenario extends AbstractModule {
 
 		private final MatsimTestUtils utils;
 
-		private TestScenario(MatsimTestUtils utils) {
+		TestScenario(MatsimTestUtils utils) {
 			this.utils = utils;
+		}
+
+		@Override
+		protected void configure() {
+			bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		}
 
 		@Provides
