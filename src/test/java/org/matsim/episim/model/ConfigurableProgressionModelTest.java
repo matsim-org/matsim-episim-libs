@@ -1,6 +1,7 @@
 package org.matsim.episim.model;
 
 import com.google.common.primitives.Doubles;
+import com.typesafe.config.Config;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.assertj.core.data.Percentage;
 import org.junit.Before;
@@ -16,7 +17,27 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.matsim.episim.model.Transition.to;
 import static org.mockito.Mockito.mock;
 
-public class DefaultProgressionModelTest {
+public class ConfigurableProgressionModelTest {
+
+	private static final Config TEST_CONFIG = Transition.config()
+			.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
+					to(EpisimPerson.DiseaseStatus.contagious, Transition.fixed(4)))
+
+			.from(EpisimPerson.DiseaseStatus.contagious,
+					to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.fixed(2)),
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(12)))
+
+			.from(EpisimPerson.DiseaseStatus.showingSymptoms,
+					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.fixed(4)),
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(10)))
+
+			.from(EpisimPerson.DiseaseStatus.seriouslySick,
+					to(EpisimPerson.DiseaseStatus.critical, Transition.fixed(1)),
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(13)))
+
+			.from(EpisimPerson.DiseaseStatus.critical,
+					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.fixed(9)))
+			.build();
 
 	private EpisimReporting reporting;
 	private ProgressionModel model;
@@ -28,6 +49,8 @@ public class DefaultProgressionModelTest {
 		reporting = mock(EpisimReporting.class);
 		tracingConfig = new TracingConfigGroup();
 		episimConfig = new EpisimConfigGroup();
+		episimConfig.setProgressionConfig(TEST_CONFIG);
+
 		model = new ConfigurableProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig);
 	}
 
