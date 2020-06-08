@@ -53,7 +53,6 @@ public class RunEpisimSnapshotTest {
 	}
 
 	@Test
-	@Ignore("TODO")
 	public void compareSnapshots() {
 
 		episimConfig.setSnapshotInterval(15);

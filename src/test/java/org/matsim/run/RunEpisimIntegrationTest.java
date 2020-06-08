@@ -164,7 +164,7 @@ public class RunEpisimIntegrationTest {
 
 		@Override
 		protected void configure() {
-			bind(ProgressionModel.class).to(ConfigurableProgressionModel.class);
+			bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		}
 
 		@Provides
