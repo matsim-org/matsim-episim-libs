@@ -86,15 +86,17 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	@Override
 	public void setIteration(int day) {
 
-		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
-
 		// Hardcoded capacity before 06-01
-		if (date.isBefore(LocalDate.parse("2020-06-01"))) {
-			tracingCapacity = (int) (30 * episimConfig.getSampleSize());
-		} else {
-			tracingCapacity = (int) (tracingConfig.getTracingCapacity() * episimConfig.getSampleSize());
-		}
+		// LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+		//if (date.isBefore(LocalDate.parse("2020-06-01"))) {
+		//	tracingCapacity = (int) (30 * episimConfig.getSampleSize());
+		//} else {
+		//}
 
+		if (tracingConfig.getTracingCapacity() == Integer.MAX_VALUE)
+			tracingCapacity = Integer.MAX_VALUE;
+		else
+			tracingCapacity = (int) (tracingConfig.getTracingCapacity() * episimConfig.getSampleSize());
 	}
 
 	@Override
