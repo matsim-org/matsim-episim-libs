@@ -28,7 +28,7 @@ public class DefaultProgressionModelTest {
 		reporting = mock(EpisimReporting.class);
 		tracingConfig = new TracingConfigGroup();
 		episimConfig = new EpisimConfigGroup();
-		model = new NewProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig);
+		model = new ConfigurableProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig);
 	}
 
 	@Test
@@ -254,7 +254,7 @@ public class DefaultProgressionModelTest {
 						to(DiseaseStatus.seriouslySick, Transition.fixed(0)))
 				.build());
 
-		model = new NewProgressionModel(new SplittableRandom(1), config, tracingConfig);
+		model = new ConfigurableProgressionModel(new SplittableRandom(1), config, tracingConfig);
 
 		List<Double> recoveredDays = new ArrayList<>();
 

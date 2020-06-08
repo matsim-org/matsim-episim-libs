@@ -15,35 +15,42 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.model.Transition.to;
 
 /**
- * Default progression model with configurable state transitions.
+ * Progression model with configurable state transitions.
  * This class in designed to for subclassing to support defining different transition probabilities.
  */
-public class NewProgressionModel extends AbstractProgressionModel {
+public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	/**
 	 * Default config of the progression model.
 	 */
 	public static final Config DEFAULT_CONFIG = Transition.config()
+			// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
 			.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-					to(EpisimPerson.DiseaseStatus.contagious, Transition.fixed(4)))
+					to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
 
+// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
+// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
 			.from(EpisimPerson.DiseaseStatus.contagious,
-					to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.fixed(2)),
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(12)))
+					to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
 
+// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
 			.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.fixed(4)),
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(10)))
+					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
 
+// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
 			.from(EpisimPerson.DiseaseStatus.seriouslySick,
-					to(EpisimPerson.DiseaseStatus.critical, Transition.fixed(1)),
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(13)))
+					to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
 
+// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
 			.from(EpisimPerson.DiseaseStatus.critical,
-					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.fixed(9)))
+					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)))
 			.build();
 
-	private static final Logger log = LogManager.getLogger(NewProgressionModel.class);
+
+	private static final Logger log = LogManager.getLogger(ConfigurableProgressionModel.class);
 
 	private static final double DAY = 24. * 3600;
 
@@ -60,7 +67,7 @@ public class NewProgressionModel extends AbstractProgressionModel {
 	private int tracingCapacity = Integer.MAX_VALUE;
 
 	@Inject
-	public NewProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
+	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		super(rnd, episimConfig);
 		this.tracingConfig = tracingConfig;
 

@@ -31,7 +31,7 @@ import java.util.SplittableRandom;
 /**
  * Works exactly as the {@link DefaultProgressionModel}, but with age dependent transitions.
  */
-public final class AgeDependentProgressionModel extends NewProgressionModel {
+public final class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 
 	/**
 	 * Constructor as in {@link DefaultProgressionModel}.
@@ -45,9 +45,9 @@ public final class AgeDependentProgressionModel extends NewProgressionModel {
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
 
 		double proba = -1;
-		
+
 		int age = -1;
-		
+
 		for (String attr : person.getAttributes().getAsMap().keySet()) {
 			if (attr.contains("age")) {
 				age = (int) person.getAttributes().getAttribute(attr);
@@ -91,9 +91,9 @@ public final class AgeDependentProgressionModel extends NewProgressionModel {
 	@Override
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
 		double proba = -1;
-		
+
 		int age = -1;
-		
+
 		for (String attr : person.getAttributes().getAsMap().keySet()) {
 			if (attr.contains("age")) {
 				age = (int) person.getAttributes().getAttribute(attr);

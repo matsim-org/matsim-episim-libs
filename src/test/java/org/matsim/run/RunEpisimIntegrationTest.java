@@ -2,6 +2,7 @@ package org.matsim.run;
 
 import com.google.common.collect.Lists;
 import com.google.inject.*;
+import com.google.inject.util.Modules;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -15,12 +16,15 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.model.ConfigurableProgressionModel;
+import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.Module;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -63,7 +67,7 @@ public class RunEpisimIntegrationTest {
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-		Injector injector = Guice.createInjector(new EpisimModule(), new TestScenario(utils));
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils)));
 
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
@@ -156,6 +160,11 @@ public class RunEpisimIntegrationTest {
 
 		TestScenario(MatsimTestUtils utils) {
 			this.utils = utils;
+		}
+
+		@Override
+		protected void configure() {
+			bind(ProgressionModel.class).to(ConfigurableProgressionModel.class);
 		}
 
 		@Provides
