@@ -329,6 +329,9 @@ public final class EpisimPerson implements Attributable {
 		return traceableContactPersons.keyValuesView()
 				.collectIf(kv -> kv.getTwo() >= after, ObjectDoublePair::getOne)
 				.toSortedList(Comparator.comparing(EpisimPerson::getPersonId));
+		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
+		// would argue that it is not a problem to have a person in there multiple times.  kai, may'20
+
 	}
 
 	/**

@@ -48,52 +48,56 @@ class TSInfectionClusterAnalysis {
 
 	static Logger log = Logger.getLogger(TSInfectionClusterAnalysis.class);
 
-	private static final String INPUT_INFECTION_EVENTS_DIR = "../../svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/events";
 	private static final String INPUT_MATSIM_EVENTS = "../../svn/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_episim_events.xml.gz";
 
-	private static final String OUTPUTDIR = "../../svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/";
+//	private static final String INPUT_INFECTION_EVENTS_DIR = "/Users/kainagel/git/svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/events";
+//	private static final String INPUT_INFECTION_EVENTS_DIR="2020-05-31-16:31:45_unrestr_theta1.4E-6__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15/events";
+	private static final String INPUT_INFECTION_EVENTS_DIR = "2020-05-31-17:52:22_unrestr_theta2.0E-6__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1" +
+										 ".5__sShed0.0__sSusc0.0_exclHome_startDate2020-02-15/events";
+
+//	private static final String OUTPUTDIR = "../../svn/public-svn/matsim/scenarios/countries/de/episim/battery/v9/masks/berlin/analysis/baseCase/";
+	private static final String OUTPUTDIR = ".";
 
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws IOException{
 
-		try {
+		File eventsDir = new File(INPUT_INFECTION_EVENTS_DIR);
+		if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
+		EventsManager manager = EventsUtils.createEventsManager();
+		ActivityClusterHandler activityClusterHandler = new ActivityClusterHandler();
 
-			File eventsDir = new File(INPUT_INFECTION_EVENTS_DIR);
-			if( ! eventsDir.exists() || ! eventsDir.isDirectory()) throw new IllegalArgumentException();
-			EventsManager manager = EventsUtils.createEventsManager();
-			ActivityClusterHandler activityClusterHandler = new ActivityClusterHandler();
-			manager.addHandler(activityClusterHandler);
+		// first read the input events (one day).  This will, I think, give (maximum) group sizes:
+		{
+			manager.addHandler( activityClusterHandler );
 
 
-			log.info("start reading matsim events");
-			EventsUtils.readEvents(manager, INPUT_MATSIM_EVENTS);
-
-			log.info("start writing maximum cluster sizes to " + OUTPUTDIR + "maximumClusterSizes.csv");
-			CSVWriter maxClusterWriter = new CSVWriter(Files.newBufferedWriter(Paths.get(OUTPUTDIR + "maximumClusterSizes.csv")));
-			maxClusterWriter.writeNext(new String[]{"actType", "containerId", "maxAmountOfAgentsAtTheSameTime"});
-			for (String actType : activityClusterHandler.maxAmountOfPeopleInContainerPerActType.keySet()){
-				activityClusterHandler.maxAmountOfPeopleInContainerPerActType.get(actType).forEach((activityFacilityId, value) ->
-						maxClusterWriter.writeNext(new String[]{actType, activityFacilityId.toString(), "" + value}));
+			log.info( "start reading matsim events" );
+			EventsUtils.readEvents( manager, INPUT_MATSIM_EVENTS );
+			log.info( "start writing maximum cluster sizes to " + OUTPUTDIR + "maximumClusterSizes.csv" );
+			CSVWriter maxClusterWriter = new CSVWriter( Files.newBufferedWriter( Paths.get( OUTPUTDIR + "maximumClusterSizes.csv" ) ) );
+			maxClusterWriter.writeNext( new String[]{"actType", "containerId", "maxAmountOfAgentsAtTheSameTime"} );
+			for( String actType : activityClusterHandler.maxAmountOfPeopleInContainerPerActType.keySet() ){
+				activityClusterHandler.maxAmountOfPeopleInContainerPerActType.get( actType ).forEach(
+						( activityFacilityId, value ) ->
+								maxClusterWriter.writeNext( new String[]{actType, activityFacilityId.toString(), value.toString()} )
+														    );
 			}
 			maxClusterWriter.close();
 
-			manager.removeHandler(activityClusterHandler);
-			CSVWriter infectionWriter = new CSVWriter(Files.newBufferedWriter(Paths.get(OUTPUTDIR + "leisure_leisure_InfectionGroups.csv")));
-			InfectionGroupSizeHandler handler = new InfectionGroupSizeHandler(activityClusterHandler, infectionWriter);
-			manager.addHandler(handler);
+			manager.removeHandler( activityClusterHandler );
+		}
 
-			log.info("start reading infection events");
-			log.info("will write infection group size analysis to " + OUTPUTDIR + "leisureInfectionGroups.csv");
-			List<File> fileList = new ArrayList(FileUtils.listFiles(eventsDir, new String[]{"gz"}, false));
-			Counter counter = new Counter("reading events file nr ");
-			fileList.forEach(file -> {
-				new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
-			});
+		// then read the output events (all days). This will, I think, give actual group sizes, and probabilities of infection there:
+		{
+			CSVWriter infectionWriter = new CSVWriter( Files.newBufferedWriter( Paths.get( OUTPUTDIR + "leisure_leisure_InfectionGroups.csv" ) ) );
+			manager.addHandler( new InfectionGroupSizeHandler( activityClusterHandler, infectionWriter ) );
+
+			log.info( "start reading infection events" );
+			log.info( "will write infection group size analysis to " + OUTPUTDIR + "leisureInfectionGroups.csv" );
+			List<File> fileList = new ArrayList<>( FileUtils.listFiles( eventsDir, new String[]{"gz"}, false ) );
+			fileList.forEach( file -> new EpisimEventsReader( manager ).readFile( file.getAbsolutePath() ) );
 
 			infectionWriter.close();
-
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 
 	}
@@ -116,7 +120,7 @@ class ActivityClusterHandler implements ActivityStartEventHandler, ActivityEndEv
 		Map<Id<ActivityFacility>, ArrayList<Tuple<Double, Integer>>> timeLineMap = timeLineOfPeopleInContainerPerActType.computeIfAbsent(actType, m -> new HashMap<>());
 
 		ArrayList<Tuple<Double, Integer>> timeLine = timeLineMap.computeIfAbsent(facility, l -> new ArrayList<>(Arrays.asList(new Tuple<>(0.0d,0)))
-		);
+											);
 		Tuple<Double, Integer> lastTimeLineEntry = timeLine.get(timeLine.size() - 1);
 
 		int newValue = lastTimeLineEntry.getSecond() + 1;
@@ -165,7 +169,7 @@ class ActivityClusterHandler implements ActivityStartEventHandler, ActivityEndEv
 class InfectionGroupSizeHandler implements EpisimInfectionEventHandler{
 
 	private final ActivityClusterHandler activityClusterHandler;
-	private CSVWriter infectionWriter;
+	private final CSVWriter infectionWriter;
 
 	InfectionGroupSizeHandler(@NotNull ActivityClusterHandler activityClusterHandler, CSVWriter infectionWriter) {
 		this.activityClusterHandler = activityClusterHandler;

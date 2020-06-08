@@ -67,14 +67,14 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
-				
+
 				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				
+
 //				//Sommerferien //TODO
 				.restrict("2020-07-25", 0.3, "educ_primary", "educ_kiga")
 				.restrict("2020-07-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				
-				//Ende der Sommerferien //TODO 
+
+				//Ende der Sommerferien //TODO
 				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
 
@@ -138,12 +138,12 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		double tracingProbability = 0.75;
 		tracingConfig.setTracingProbability(tracingProbability);
-		tracingConfig.setTracingDayDistance(14);
-		tracingConfig.setMinDuration(15 * 60.);
+		tracingConfig.setTracingMemory_days(14);
+		tracingConfig.setMinContactDuration_sec(15 * 60.);
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
-		tracingConfig.setTracingDelay(2);
-		tracingConfig.setTracingCapacity(Integer.MAX_VALUE); //TODO 
+		tracingConfig.setTracingDelay_days(2);
+		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE); //TODO
 
 		double alpha = 1.4;
 		double ciCorrection = 0.3;

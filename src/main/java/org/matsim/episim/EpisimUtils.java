@@ -214,6 +214,10 @@ public final class EpisimUtils {
 
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
 	}
+	public static double nextLogNormalFromMeanAndSigma( SplittableRandom rnd, double mean, double sigma ) {
+		double mu = Math.log( mean ) - sigma*sigma/2;
+		return nextLogNormal( rnd, mu, sigma );
+	}
 
 	/**
 	 * Creates restrictions from csv from Senozon data.

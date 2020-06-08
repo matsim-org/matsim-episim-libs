@@ -59,7 +59,7 @@ public class ConfigurableProgressionModelTest {
 
 		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay(0);
+		tracingConfig.setTracingDelay_days(0 );
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
@@ -78,8 +78,8 @@ public class ConfigurableProgressionModelTest {
 
 		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay(0);
-		tracingConfig.setTracingCapacity(500);
+		tracingConfig.setTracingDelay_days(0 );
+		tracingConfig.setTracingCapacity_pers_per_day(500 );
 
 		episimConfig.setStartDate("2020-06-01");
 		episimConfig.setSampleSize(1);
@@ -126,7 +126,7 @@ public class ConfigurableProgressionModelTest {
 
 		// test with delay
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay(2);
+		tracingConfig.setTracingDelay_days(2 );
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
@@ -153,8 +153,8 @@ public class ConfigurableProgressionModelTest {
 	public void tracingDistance() {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay(2);
-		tracingConfig.setTracingDayDistance(1);
+		tracingConfig.setTracingDelay_days(2 );
+		tracingConfig.setTracingMemory_days(1 );
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
@@ -182,7 +182,7 @@ public class ConfigurableProgressionModelTest {
 	public void traceHome() {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay(0);
+		tracingConfig.setTracingDelay_days(0 );
 		tracingConfig.setTracingProbability(0);
 		tracingConfig.setQuarantineHouseholdMembers(false);
 
@@ -205,7 +205,7 @@ public class ConfigurableProgressionModelTest {
 		// person is traced one day later when activated
 
 		tracingConfig.setQuarantineHouseholdMembers(true);
-		tracingConfig.setTracingDelay(1);
+		tracingConfig.setTracingDelay_days(1 );
 
 		model.updateState(p, 7);
 		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome);

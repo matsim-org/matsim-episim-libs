@@ -29,6 +29,7 @@ import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
 import org.eclipse.collections.api.tuple.primitive.ObjectIntPair;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
 import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -92,6 +93,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter infectionEvents;
 	private BufferedWriter restrictionReport;
 	private BufferedWriter timeUse;
+
+	private String memorizedDate = null;
 
 
 	@Inject
@@ -274,6 +277,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @param date
 	 */
 	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
+
+		memorizedDate = date ;
+
 		if (iteration == 0) return;
 
 		InfectionReport t = reports.get("total");
@@ -321,12 +327,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	/**
 	 * Report the occurrence of an infection.
-	 *
-	 * @param personWrapper infected person
+	 *  @param personWrapper infected person
 	 * @param infector      infector
 	 * @param infectionType activities of both persons
 	 */
-	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType) {
+	public void reportInfection( EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType, EpisimContainer<?> container ) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -345,6 +350,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
 		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
 		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
+		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;
+		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString( container.getPersons().size() );
+		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
 
 		writer.append(infectionEvents, array);
 	}
@@ -523,7 +531,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		nRecovered, nInQuarantine, district
 	}
 
-	enum InfectionEventsWriterFields {time, infector, infected, infectionType}
+	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility}
 
 	/**
 	 * Detailed infection report for the end of a day.

@@ -40,7 +40,7 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
  *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * ci_correction)
  * </pre>
  */
-public final class DefaultInfectionModel extends AbstractInfectionModel {
+public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 
 	private static final Logger log = LogManager.getLogger(DefaultInfectionModel.class);
 
@@ -233,14 +233,14 @@ public final class DefaultInfectionModel extends AbstractInfectionModel {
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer, prob);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(personLeavingContainer, contactPerson, now, infectionType);
+					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container );
 
 			} else {
 				double prob = calcInfectionProbability(contactPerson, personLeavingContainer, contactParams, leavingParams, jointTimeInContainer);
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer, prob);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(contactPerson, personLeavingContainer, now, infectionType);
+					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container );
 			}
 		}
 
