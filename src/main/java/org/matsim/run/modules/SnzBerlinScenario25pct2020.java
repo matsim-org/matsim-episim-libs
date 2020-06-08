@@ -67,7 +67,15 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
-//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				
+				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				
+				//Sommerferien
+				.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
+				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				
+				//Ende der Sommerferien
+				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
 
 		return builder;
@@ -153,7 +161,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-200init-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-500init-schools-nn-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
 
