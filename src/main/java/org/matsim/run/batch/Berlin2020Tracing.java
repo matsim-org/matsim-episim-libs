@@ -221,8 +221,8 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 	public static final class Params {
 
-		@IntParameter({4711, 577771864, 302099372})
-		int seed;
+		@GenerateSeeds(3)
+		long seed;
 
 		@StringParameter({"limitedOperation", "fullOpening"})
 		String eduBeforeHolidays;

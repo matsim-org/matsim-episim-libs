@@ -83,6 +83,9 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--worker-index", defaultValue = "0", description = "Index of this worker process")
 	private int workerIndex;
 
+	@CommandLine.Option(names = "--min-job", defaultValue = "${env:EPISIM_MIN_JOB:-0}", description = "Job to start at (skip first n jobs).")
+	private int minJob;
+
 	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
 	private int maxJobs;
 
@@ -120,6 +123,9 @@ public class RunParallel<T> implements Callable<Integer> {
 		int i = 0;
 		for (PreparedRun.Run run : prepare.runs) {
 			if (i++ % totalWorker != workerIndex)
+				continue;
+
+			if (i < minJob)
 				continue;
 
 			if (maxJobs > 0 && i >= maxJobs) break;

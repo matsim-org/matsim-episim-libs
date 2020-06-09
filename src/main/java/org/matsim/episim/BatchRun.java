@@ -20,7 +20,6 @@
  */
 package org.matsim.episim;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -41,6 +40,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -90,6 +90,15 @@ public interface BatchRun<T> {
 			StringParameter stringParam = field.getAnnotation(StringParameter.class);
 			if (stringParam != null) {
 				allParams.add(Arrays.asList(stringParam.value()));
+				fields.add(field);
+			}
+			GenerateSeeds seed = field.getAnnotation(GenerateSeeds.class);
+			if (seed != null) {
+				Random rnd = new Random(seed.seed());
+				Object[] seeds = IntStream.range(0, seed.value()).mapToLong(i -> rnd.nextLong()).boxed().toArray();
+				seeds[0] = seed.first();
+
+				allParams.add(Arrays.asList(seeds));
 				fields.add(field);
 			}
 		}
@@ -229,6 +238,29 @@ public interface BatchRun<T> {
 
 
 	/**
+	 * Generates desired number of seeds by using a different random number generator.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface GenerateSeeds {
+		/**
+		 * Number of seeds to generate.
+		 */
+		int value();
+
+		/**
+		 * The first seed, which is fixed and not generated.
+		 */
+		long first() default 4711L;
+
+		/**
+		 * Starting seed to feed into the first rng.
+		 */
+		int seed() default 1;
+	}
+
+
+	/**
 	 * Describes one option group of parameters with multiple measures.
 	 */
 	final class Option {
@@ -314,7 +346,7 @@ public interface BatchRun<T> {
 		 * Sets the end date and returns the same instance.
 		 */
 		public Metadata withEndDate(String date) {
-			this.endDate = endDate;
+			this.endDate = date;
 			return this;
 		}
 
