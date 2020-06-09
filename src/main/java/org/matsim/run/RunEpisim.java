@@ -96,7 +96,7 @@ public class RunEpisim implements Callable<Integer> {
 	@CommandLine.Option(names = "--log", description = "Enable logging to output directory.", defaultValue = "false")
 	private boolean logToOutput;
 
-	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "500")
+	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "360")
 	private int maxIterations;
 
 	@CommandLine.Parameters(hidden = true)
