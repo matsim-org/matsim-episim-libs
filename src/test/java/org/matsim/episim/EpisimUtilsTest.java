@@ -100,7 +100,7 @@ public class EpisimUtilsTest {
 
 		SnzBerlinScenario25pct2020.addParams(episimConfig);
 
-		File f = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+		File f = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200531.csv");
 
 		Assume.assumeTrue("Input must exist", f.exists());
 

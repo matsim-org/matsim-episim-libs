@@ -67,13 +67,13 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
-				
+
 				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				
+
 				//Sommerferien
 				.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
 				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				
+
 				//Ende der Sommerferien
 				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
@@ -148,7 +148,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		double alpha = 1.4;
 		double ciCorrection = 0.3;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200531.csv");
 		String dateOfCiChange = "2020-03-08";
 
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());

@@ -117,7 +117,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		double alpha = 1.4;
 		double ciCorrection = 0.3;
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200531.csv");
 		String dateOfCiChange = "2020-03-08";
 
 		FixedPolicy.ConfigBuilder policyConf;
