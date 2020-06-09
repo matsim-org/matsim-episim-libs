@@ -21,9 +21,9 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
-import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
-import org.eclipse.collections.api.tuple.primitive.ObjectDoublePair;
-import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
@@ -55,7 +55,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Traced contacts with other persons.
 	 */
-	private final Map<EpisimPerson, Double> traceableContactPersons = new LinkedHashMap<>();
+	private final Object2DoubleMap<EpisimPerson> traceableContactPersons = new Object2DoubleLinkedOpenHashMap<>();
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -65,7 +65,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Total spent time during activities.
 	 */
-	private final MutableObjectDoubleMap<String> spentTime = new ObjectDoubleHashMap<>();
+	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
 
 	/**
 	 * The {@link EpisimContainer} the person is currently located in.
@@ -210,9 +210,10 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(spentTime.size());
-		for (ObjectDoublePair<String> kv : spentTime.keyValuesView()) {
-			writeChars(out, kv.getOne());
-			out.writeDouble(kv.getTwo());
+
+		for (Object2DoubleMap.Entry<String> kv : spentTime.object2DoubleEntrySet()) {
+			writeChars(out, kv.getKey());
+			out.writeDouble(kv.getDoubleValue());
 		}
 
 		out.writeInt(status.ordinal());
@@ -326,8 +327,8 @@ public final class EpisimPerson implements Attributable {
 	 * Get all traced contacts that happened after certain time.
 	 */
 	public List<EpisimPerson> getTraceableContactPersons(double after) {
-		return traceableContactPersons.entrySet()
-				.stream().filter(p -> p.getValue() >= after)
+		return traceableContactPersons.object2DoubleEntrySet()
+				.stream().filter(p -> p.getDoubleValue() >= after)
 				.map(Map.Entry::getKey)
 				.collect(Collectors.toList());
 
@@ -346,14 +347,6 @@ public final class EpisimPerson implements Attributable {
 		if (oldSize == 0) return;
 
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
-
-		/*
-		int newSize = traceableContactPersons.size();
-		// Compact traced persons to retain memory
-		// don't compact every time since it is a bit expensive
-		if (oldSize != newSize && newSize == 0 || oldSize < newSize - 10)
-			traceableContactPersons.compact();
-		*/
 	}
 
 	/**
@@ -431,13 +424,13 @@ public final class EpisimPerson implements Attributable {
 	 * Add amount of time to spent time for an activity.
 	 */
 	public void addSpentTime(String actType, double timeSpent) {
-		spentTime.addToValue(actType, timeSpent);
+		spentTime.mergeDouble(actType, timeSpent, Double::sum);
 	}
 
 	/**
 	 * Spent time of this person by activity.
 	 */
-	public MutableObjectDoubleMap<String> getSpentTime() {
+	public Object2DoubleMap<String> getSpentTime() {
 		return spentTime;
 	}
 

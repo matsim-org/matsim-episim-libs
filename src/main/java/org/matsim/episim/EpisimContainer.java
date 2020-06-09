@@ -20,10 +20,10 @@
  */
 package org.matsim.episim;
 
-import org.eclipse.collections.api.map.primitive.MutableIntDoubleMap;
-import org.eclipse.collections.api.set.primitive.MutableIntSet;
-import org.eclipse.collections.impl.map.mutable.primitive.IntDoubleHashMap;
-import org.eclipse.collections.impl.set.mutable.primitive.IntHashSet;
+import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
@@ -35,8 +35,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static org.matsim.episim.EpisimUtils.writeChars;
 import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 
 /**
  * Wrapper class for a specific location that keeps track of currently contained agents and entering times.
@@ -49,14 +49,14 @@ public class EpisimContainer<T> {
 	/**
 	 * Persons currently in this container. Stored only as Ids.
 	 */
-	private final MutableIntSet persons = new IntHashSet(4);
+	private final IntSet persons = new IntOpenHashSet(4);
 
 	/**
 	 * Person list needed to draw random persons within container.
 	 */
 	private final List<EpisimPerson> personsAsList = new ArrayList<>();
 
-	private final MutableIntDoubleMap containerEnterTimes = new IntDoubleHashMap(4);
+	private final Int2DoubleMap containerEnterTimes = new Int2DoubleOpenHashMap(4);
 
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
@@ -134,7 +134,7 @@ public class EpisimContainer<T> {
 	 * Returns the time the person entered the container, or {@link Double#NEGATIVE_INFINITY} if it never entered.
 	 */
 	public double getContainerEnteringTime(Id<Person> personId) {
-		return containerEnterTimes.getIfAbsent(personId.index(), Double.NEGATIVE_INFINITY);
+		return containerEnterTimes.getOrDefault(personId.index(), Double.NEGATIVE_INFINITY);
 	}
 
 	public List<EpisimPerson> getPersons() {

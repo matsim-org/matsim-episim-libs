@@ -40,8 +40,7 @@ import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
-import org.eclipse.collections.api.tuple.primitive.IntDoublePair;
-import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
+import org.apache.commons.math3.util.Pair;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
@@ -351,12 +350,12 @@ public final class EpisimUtils {
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
 
 		// Activity types to supporting points (x, y)
-		Map<String, List<IntDoublePair>> points = new HashMap<>();
+		Map<String, List<Pair<Integer, Double>>> points = new HashMap<>();
 
 		// Init activity types
 		for (EpisimConfigGroup.InfectionParams param : episimConfig.getInfectionParams()) {
 			if (parser.getHeaderNames().contains(param.getContainerName()) && !param.getContainerName().equals("home"))
-				points.put(param.getContainerName(), Lists.newArrayList(PrimitiveTuples.pair(0, 1d)));
+				points.put(param.getContainerName(), Lists.newArrayList(Pair.create(0, 1d)));
 		}
 
 		// day index
@@ -375,13 +374,13 @@ public final class EpisimUtils {
 			if (date.getDayOfWeek() == DayOfWeek.THURSDAY) {
 
 				// thursdays value will be the support value at saturday
-				for (Map.Entry<String, List<IntDoublePair>> e : points.entrySet()) {
+				for (Map.Entry<String, List<Pair<Integer, Double>>> e : points.entrySet()) {
 
 					double remainingFraction = 1. + (Integer.parseInt(record.get(e.getKey())) / 100.);
 					// modulate reduction with alpha
 					double reduction = Math.min(1., alpha * (1. - remainingFraction));
 
-					e.getValue().add(PrimitiveTuples.pair(day + 2, 1 - reduction));
+					e.getValue().add(Pair.create(day + 2, 1 - reduction));
 
 					last = day + 2;
 				}
@@ -394,11 +393,11 @@ public final class EpisimUtils {
 
 		LinearInterpolator p = new LinearInterpolator();
 
-		for (Map.Entry<String, List<IntDoublePair>> e : points.entrySet()) {
+		for (Map.Entry<String, List<Pair<Integer, Double>>> e : points.entrySet()) {
 
 			PolynomialSplineFunction f = p.interpolate(
-					e.getValue().stream().mapToDouble(IntDoublePair::getOne).toArray(),
-					e.getValue().stream().mapToDouble(IntDoublePair::getTwo).toArray()
+					e.getValue().stream().mapToDouble(Pair::getFirst).toArray(),
+					e.getValue().stream().mapToDouble(Pair::getSecond).toArray()
 			);
 
 			// Interpolate for each day

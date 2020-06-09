@@ -1,7 +1,7 @@
 package org.matsim.episim.model;
 
-import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
-import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
@@ -26,12 +26,12 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	/**
 	 * Stores the next state a person will attain.
 	 */
-	private final MutableIntIntMap nextStates = new IntIntHashMap();
+	private final Int2IntMap nextStates = new Int2IntOpenHashMap();
 
 	/**
 	 * The day at which a transition to {@link #nextStates} happens.
 	 */
-	private final MutableIntIntMap transitionDays = new IntIntHashMap();
+	private final Int2IntMap transitionDays = new Int2IntOpenHashMap();
 
 	@Inject
 	AbstractProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
@@ -60,7 +60,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			return;
 		}
 
-		int transitionDay = transitionDays.getIfAbsent(index, -1);
+		int transitionDay = transitionDays.getOrDefault(index, -1);
 		if (transitionDay > -1) {
 			int nextState = nextStates.get(index);
 			int daysSince = person.daysSince(status, day);

@@ -22,8 +22,8 @@ package org.matsim.episim.model;
 
 import com.google.common.annotations.Beta;
 import com.google.inject.Inject;
-import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
-import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 
@@ -53,7 +53,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	/**
 	 * Maps person id to the day of next state transition.
 	 */
-	private final MutableIntIntMap transitions = new IntIntHashMap();
+	private final Int2IntMap transitions = new Int2IntOpenHashMap();
 
 	@Inject
 	public DefaultProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
@@ -191,7 +191,7 @@ public class DefaultProgressionModel implements ProgressionModel {
 	private boolean shouldTransition(EpisimPerson person, DiseaseStatus status, int day) {
 		int index = person.getPersonId().index();
 		int daysSince = person.daysSince(status, day);
-		int transitionDay = transitions.getIfAbsent(index, -1);
+		int transitionDay = transitions.getOrDefault(index, -1);
 
 		if (transitionDay > -1 && transitionDay == daysSince) {
 			transitions.remove(index);

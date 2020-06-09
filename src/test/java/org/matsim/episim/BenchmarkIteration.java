@@ -42,7 +42,7 @@ public class BenchmarkIteration {
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzBerlinScenario25pct2020()));
 
 		//injector.getInstance(EpisimConfigGroup.class).setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
-		// injector.getInstance(TracingConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(0);
+		//injector.getInstance(TracingConfigGroup.class).setPutTraceablePersonsInQuarantineAfterDay(0);
 
 		runner = injector.getInstance(EpisimRunner.class);
 		replay = injector.getInstance(ReplayHandler.class);

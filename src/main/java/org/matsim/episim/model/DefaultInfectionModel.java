@@ -193,6 +193,10 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 				if (trackingEnabled) {
 					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer,infectionType);
 				}
+
+				// Only a subset of contacts are reported at the moment
+				// tracking has to be enabled to report more contacts
+				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
 			}
 
 			if (!AbstractInfectionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
@@ -228,16 +232,11 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
 				double prob = calcInfectionProbability(personLeavingContainer, contactPerson, leavingParams, contactParams, jointTimeInContainer);
-				// Only a subset of contacts are reported at the moment
-				// TODO: should be invoked earlier if performance penalty is not too high
-				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer, prob);
-
 				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container );
 
 			} else {
 				double prob = calcInfectionProbability(contactPerson, personLeavingContainer, contactParams, leavingParams, jointTimeInContainer);
-				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer, prob);
 
 				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container );
