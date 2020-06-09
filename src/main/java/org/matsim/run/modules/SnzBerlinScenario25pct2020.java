@@ -36,6 +36,7 @@ import org.matsim.episim.policy.Restriction;
 import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -48,6 +49,12 @@ import static org.matsim.episim.model.Transition.to;
  * @see AbstractSnzScenario
  */
 public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
+
+
+	/**
+	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
+	 */
+	public static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
@@ -120,9 +127,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz");
+		episimConfig.setInputEventsFile(INPUT.resolve("be_2020_snz_episim_events_25pt.xml.gz").toString());
 
-		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
+		config.plans().setInputFile(INPUT.resolve("be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz").toString());
 
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("Berlin");
@@ -138,24 +145,24 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		double tracingProbability = 0.75;
 		tracingConfig.setTracingProbability(tracingProbability);
-		tracingConfig.setTracingMemory_days(14 );
-		tracingConfig.setMinContactDuration_sec(15 * 60. );
+		tracingConfig.setTracingMemory_days(14);
+		tracingConfig.setMinContactDuration_sec(15 * 60.);
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
-		tracingConfig.setTracingDelay_days(2 );
-		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE );
+		tracingConfig.setTracingDelay_days(2);
+		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE);
 
 		double alpha = 1.4;
 		double ciCorrection = 0.3;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200531.csv");
+		Path csv =  INPUT.resolve("BerlinSnzData_daily_until20200531.csv");
 		String dateOfCiChange = "2020-03-08";
 
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
 
 		ConfigBuilder configBuilder = null;
 		try {
-			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
+			configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

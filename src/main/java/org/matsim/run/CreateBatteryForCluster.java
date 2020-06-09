@@ -97,6 +97,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
+		// Set property for BatchRun resolve to build the correct path
+		System.setProperty("EPISIM_ON_CLUSTER", "true");
+
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
 		BatchRun.Metadata meta = prepare.setup.getMetadata();
@@ -191,6 +194,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				// Dollar signs must be escaped
 				"export EPISIM_SETUP='" + setup.getName() + "'",
 				"export EPISIM_PARAMS='" + params.getName() + "'",
+				"export EPISIM_INPUT='/scratch/usr/bebchrak/episim/episim-input'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
 				String.format("sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh",

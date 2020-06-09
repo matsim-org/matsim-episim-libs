@@ -142,6 +142,22 @@ public interface BatchRun<T> {
 		return new PreparedRun(setup, fields.stream().map(Field::getName).collect(Collectors.toList()), allParams, runs);
 	}
 
+
+	/**
+	 * Resolve input path automatically using given input, or cluster input directory.
+	 *
+	 * @param input input path to resolve for
+	 * @param name  file name
+	 * @return resolved input file name
+	 */
+	static String resolveForCluster(Path input, String name) {
+		if (System.getProperty("EPISIM_ON_CLUSTER", "false").equals("true"))
+			input = Path.of("/scratch/usr/bebchrak/episim/episim-input");
+
+		// convert windows path separators
+		return input.resolve(name).toString().replace("\\", "/");
+	}
+
 	/**
 	 * The default start of the scenario as day in real world. Only needed if there are multiple start dates in the batch run.
 	 */

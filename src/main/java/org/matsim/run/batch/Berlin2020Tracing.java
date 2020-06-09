@@ -30,9 +30,9 @@ import org.matsim.episim.model.Transition;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -76,11 +76,13 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 		Config config = module.config();
 
-		config.plans().setInputFile("../../../../episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
+		config.plans().setInputFile(BatchRun.resolveForCluster(SnzBerlinScenario25pct2020.INPUT,
+				"be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz"));
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile("../../../episim-input/be_2020_snz_episim_events_25pt.xml.gz");
+		episimConfig.setInputEventsFile(BatchRun.resolveForCluster(SnzBerlinScenario25pct2020.INPUT,
+				"be_2020_snz_episim_events_25pt.xml.gz"));
 
 		episimConfig.setProgressionConfig(
 				SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config("input/progression" + id + ".conf")).build()
@@ -117,12 +119,12 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		double alpha = 1.4;
 		double ciCorrection = 0.3;
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200531.csv");
+		Path csv = SnzBerlinScenario25pct2020.INPUT.resolve("BerlinSnzData_daily_until20200531.csv");
 		String dateOfCiChange = "2020-03-08";
 
 		FixedPolicy.ConfigBuilder policyConf;
 		try {
-			policyConf = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange,
+			policyConf = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange,
 					EpisimUtils.Extrapolation.valueOf(params.extrapolation));
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);

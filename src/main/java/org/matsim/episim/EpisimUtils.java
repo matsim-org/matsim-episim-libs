@@ -50,6 +50,7 @@ import org.matsim.episim.policy.Restriction;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -213,9 +214,10 @@ public final class EpisimUtils {
 
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
 	}
-	public static double nextLogNormalFromMeanAndSigma( SplittableRandom rnd, double mean, double sigma ) {
-		double mu = Math.log( mean ) - sigma*sigma/2;
-		return nextLogNormal( rnd, mu, sigma );
+
+	public static double nextLogNormalFromMeanAndSigma(SplittableRandom rnd, double mean, double sigma) {
+		double mu = Math.log(mean) - sigma * sigma / 2;
+		return nextLogNormal(rnd, mu, sigma);
 	}
 
 	/**
@@ -528,6 +530,18 @@ public final class EpisimUtils {
 		return builder;
 	}
 
+	/**
+	 * Resolves an input path that can be configured with the environment variable EPISIM_INPUT.
+	 * Also check if this input should be used on the cluster using EPISIM_ON_CLUSTER.
+	 *
+	 * @param defaultPath default path if nothing else is set
+	 * @return path to input directory
+	 */
+	public static Path resolveInputPath(String defaultPath) {
+		String input = System.getenv("EPISIM_INPUT");
+		return Path.of(input != null ? input : defaultPath).toAbsolutePath().normalize();
+	}
+
 
 	/**
 	 * Type of interpolation of activity pattern.
@@ -587,7 +601,7 @@ public final class EpisimUtils {
 		@Override
 		public double[] gradient(double x, double... parameters) {
 			double exb = Math.exp(-x / parameters[1]);
-			return new double[]{-exb, - parameters[0] * x * exb / (parameters[1] * parameters[1])};
+			return new double[]{-exb, -parameters[0] * x * exb / (parameters[1] * parameters[1])};
 		}
 	}
 
