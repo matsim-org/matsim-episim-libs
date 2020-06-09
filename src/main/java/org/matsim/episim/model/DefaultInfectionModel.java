@@ -143,7 +143,7 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 
 		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
 //		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
-		int contactWith = Math.min(otherPersonsInContainer.size(), episimConfig.getMaxInteractions() );
+		int contactWith = Math.min(otherPersonsInContainer.size(), episimConfig.getMaxInteractions());
 		for (int ii = 0; ii < contactWith; ii++) {
 
 			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
@@ -191,7 +191,7 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 					continue;
 				}
 				if (trackingEnabled) {
-					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer,infectionType);
+					trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer, infectionType);
 				}
 
 				// Only a subset of contacts are reported at the moment
@@ -202,6 +202,13 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 			if (!AbstractInfectionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
 				continue;
 			}
+
+			// person can only infect 1 day after showing symptoms
+			if ((personLeavingContainer.getDiseaseStatus() == DiseaseStatus.showingSymptoms &&
+					personLeavingContainer.daysSince(DiseaseStatus.showingSymptoms, iteration) > 1)
+					|| (contactPerson.getDiseaseStatus() == DiseaseStatus.showingSymptoms &&
+					contactPerson.daysSince(DiseaseStatus.showingSymptoms, iteration) > 1))
+				continue;
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
 			// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
@@ -220,7 +227,6 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 			}
 
 
-
 			// Parameter will only be retrieved one time
 			if (leavingParams == null)
 				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
@@ -233,13 +239,13 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 
 				double prob = calcInfectionProbability(personLeavingContainer, contactPerson, leavingParams, contactParams, jointTimeInContainer);
 				if (rnd.nextDouble() < prob)
-					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container );
+					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
 
 			} else {
 				double prob = calcInfectionProbability(contactPerson, personLeavingContainer, contactParams, leavingParams, jointTimeInContainer);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container );
+					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
 			}
 		}
 
