@@ -56,6 +56,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
+	private static final String SNAPSHOT_SEED = "snapshotSeed";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -94,6 +95,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Path to snapshot file.
 	 */
 	private String startFromSnapshot = null;
+	/**
+	 * How the internal rng state should be handled.
+	 */
+	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
@@ -202,6 +207,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(START_FROM_SNAPSHOT)
 	public void setStartFromSnapshot(String startFromSnapshot) {
 		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	@StringSetter(SNAPSHOT_SEED)
+	public void setSnapshotSeed(SnapshotSeed snapshotSeed) {
+		this.snapshotSeed = snapshotSeed;
+	}
+
+	@StringGetter(SNAPSHOT_SEED)
+	public SnapshotSeed getSnapshotSeed() {
+		return snapshotSeed;
 	}
 
 	public long getStartOffset() {
@@ -523,6 +538,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Write all, including input events.
 		 */
 		all
+	}
+
+	/**
+	 * Defines how the snapshot seed should be processed.
+	 */
+	public enum SnapshotSeed {
+		/**
+		 * Restore rng state from the snapshot and continue as before.
+		 */
+		restore,
+
+		/**
+		 * Overwrite the rng state with a new seed taken from config.
+		 */
+		reseed,
 	}
 
 	/**

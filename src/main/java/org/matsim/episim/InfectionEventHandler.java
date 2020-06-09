@@ -122,6 +122,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	 */
 	private final Scenario scenario;
 
+	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
 	private final EpisimReporting reporting;
@@ -145,6 +146,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	@Inject
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel,
 								 EpisimReporting reporting, InfectionModel infectionModel, SplittableRandom rnd) {
+		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.scenario = scenario;
@@ -625,7 +627,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	@Override
 	public void readExternal(ObjectInput in) throws IOException {
 
-		EpisimUtils.setSeed(rnd, in.readLong());
+		long storedSeed = in.readLong();
+		if (episimConfig.getSnapshotSeed() == EpisimConfigGroup.SnapshotSeed.restore) {
+			EpisimUtils.setSeed(rnd, storedSeed);
+		} else if (episimConfig.getSnapshotSeed() == EpisimConfigGroup.SnapshotSeed.reseed) {
+			log.info("Reseeding snapshot with {}", config.global().getRandomSeed());
+			EpisimUtils.setSeed(rnd, config.global().getRandomSeed());
+		}
+
 		initialInfectionsLeft = in.readInt();
 		initialStartInfectionsLeft = in.readInt();
 		iteration = in.readInt();
