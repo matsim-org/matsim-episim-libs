@@ -183,6 +183,8 @@ public final class EpisimRunner {
 			log.error("Could not write snapshot", e);
 		}
 
+		log.info("Snapshot for day {} written successfully", iteration);
+
 	}
 
 	/**
