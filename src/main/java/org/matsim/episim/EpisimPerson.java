@@ -55,7 +55,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Traced contacts with other persons.
 	 */
-	private final Object2DoubleMap<EpisimPerson> traceableContactPersons = new Object2DoubleLinkedOpenHashMap<>();
+	private final Object2DoubleMap<EpisimPerson> traceableContactPersons = new Object2DoubleLinkedOpenHashMap<>(4);
 
 	/**
 	 * Stores first time of status changes to specific type.

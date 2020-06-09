@@ -35,7 +35,8 @@ public class DefaultInfectionModelTest {
 
 	@Before
 	public void setup() {
-		EpisimReporting reporting = mock(EpisimReporting.class);
+		// No verification, since it results in oom error
+		EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 		SplittableRandom rnd = new SplittableRandom(1);
 
 		config = EpisimTestUtils.createTestConfig();
