@@ -203,11 +203,11 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 				continue;
 			}
 
-			// person can only infect 1 day after showing symptoms
-			if ((personLeavingContainer.getDiseaseStatus() == DiseaseStatus.showingSymptoms &&
-					personLeavingContainer.daysSince(DiseaseStatus.showingSymptoms, iteration) > 1)
-					|| (contactPerson.getDiseaseStatus() == DiseaseStatus.showingSymptoms &&
-					contactPerson.daysSince(DiseaseStatus.showingSymptoms, iteration) > 1))
+			// person can only infect others 4 days after being contagious
+			if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &&
+					personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) > 4)
+					|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &&
+					contactPerson.daysSince(DiseaseStatus.contagious, iteration) > 4))
 				continue;
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
