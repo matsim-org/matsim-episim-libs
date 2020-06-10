@@ -99,7 +99,12 @@ public final class EpisimRunner {
 		if (episimConfig.getStartFromSnapshot() != null) {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
-			reporting.append();
+			try {
+				reporting.append();
+			} catch (IOException e) {
+				log.error("Snapshot output could not be created", e);
+				return;
+			}
 		}
 
 

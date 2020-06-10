@@ -46,6 +46,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
@@ -66,6 +67,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private final EventsManager manager;
 
 	private final String base;
+	private final String outDir;
+
 	/**
 	 * Base path for event files.
 	 */
@@ -98,7 +101,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	@Inject
 	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {
-		String outDir = config.controler().getOutputDirectory();
+		outDir = config.controler().getOutputDirectory();
 
 		// file names depend on the run name
 		if (config.controler().getRunId() != null) {
@@ -164,7 +167,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Opens files for output in append mode.
 	 */
-	void append() {
+	void append() throws IOException {
+
+		// Copy non prefixed files to base output
+		if (!base.equals(outDir))
+			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt")) {
+				Path path = Path.of(outDir, file);
+				if (Files.exists(path)) {
+					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
+				}
+			}
+
 		infectionReport = EpisimWriter.prepare(base + "infections.txt");
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
@@ -277,7 +290,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 
-		memorizedDate = date ;
+		memorizedDate = date;
 
 		if (iteration == 0) return;
 
@@ -326,11 +339,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	/**
 	 * Report the occurrence of an infection.
-	 *  @param personWrapper infected person
+	 *
+	 * @param personWrapper infected person
 	 * @param infector      infector
 	 * @param infectionType activities of both persons
 	 */
-	public void reportInfection( EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType, EpisimContainer<?> container ) {
+	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType, EpisimContainer<?> container) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -350,7 +364,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
 		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
 		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;
-		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString( container.getPersons().size() );
+		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(container.getPersons().size());
 		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
 
 		writer.append(infectionEvents, array);
