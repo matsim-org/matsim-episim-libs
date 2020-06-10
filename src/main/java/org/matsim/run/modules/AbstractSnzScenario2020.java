@@ -46,6 +46,41 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.getOrAddContainerParams("quarantine_home")
 				.setContactIntensity(0.01);
 	}
+	
+	private static void setContactIntensities2(EpisimConfigGroup episimConfig, double factor) {
+		episimConfig.getOrAddContainerParams("pt")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("work")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("leisure")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("educ_kiga")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("educ_primary")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("educ_secondary")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("educ_tertiary")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("educ_higher")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("educ_other")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("shop_daily")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("shop_other")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("visit")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("errands")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("business")
+				.setContactIntensity(1. * factor);
+		episimConfig.getOrAddContainerParams("home")
+				.setContactIntensity(3.);
+		episimConfig.getOrAddContainerParams("quarantine_home")
+				.setContactIntensity(1.);
+	}
 
 	public static void addParams(EpisimConfigGroup episimConfig) {
 
@@ -95,7 +130,8 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		addParams(episimConfig);
-		setContactIntensities(episimConfig);
+		
+		setContactIntensities2(episimConfig, 1.);
 
 		return config;
 	}
