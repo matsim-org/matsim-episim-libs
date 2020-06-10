@@ -197,6 +197,9 @@ public class SplitHomeFacilities implements Callable<Integer> {
 				manager.processEvent(event);
 		}
 
+		// Close event file
+		manager.resetHandlers(0);
+
 		return 0;
 	}
 
