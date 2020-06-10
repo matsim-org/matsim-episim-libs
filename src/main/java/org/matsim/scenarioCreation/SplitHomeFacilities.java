@@ -151,6 +151,8 @@ public class SplitHomeFacilities implements Callable<Integer> {
 					it.remove();
 				}
 
+				// TODO: split rest of the groups to new id
+
 				groups.put(id, removed);
 
 				split++;
@@ -172,10 +174,13 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		ReplayHandler replay = new ReplayHandler(episimConfig, null);
 
 		EventsManager manager = EventsUtils.createEventsManager();
-		manager.addHandler(new EventWriterXML(output.resolve("events-split.xml.gz").toString()));
+		EventWriterXML writer = new EventWriterXML(output.resolve("events-split.xml.gz").toString());
+		manager.addHandler(writer);
 
 		// create new events if the activity id has changed
 		for (Event event : replay.getEvents()) {
+
+			// TODO reasign visit
 			if (event instanceof HasPersonId && newHomes.containsKey(((HasPersonId) event).getPersonId())) {
 				if (event instanceof ActivityStartEvent) {
 					ActivityStartEvent ev = (ActivityStartEvent) event;
@@ -199,6 +204,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 		// Close event file
 		manager.resetHandlers(0);
+		writer.closeFile();
 
 		return 0;
 	}
