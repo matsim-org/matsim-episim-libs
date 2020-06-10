@@ -26,6 +26,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.EpisimUtils.Extrapolation;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
@@ -134,10 +135,14 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_002_6);
+		episimConfig.setCalibrationParameter(0.000_004_5);
 		episimConfig.setMaxInteractions(3);
-		String startDate = "2020-02-10";
+		String startDate = "2020-02-16";
 		episimConfig.setStartDate(startDate);
+		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
+		
+//		double ciFactor = 1.;
+//		setContactIntensities2(episimConfig, ciFactor);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
@@ -157,19 +162,20 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		Path csv =  INPUT.resolve("BerlinSnzData_daily_until20200531.csv");
 		String dateOfCiChange = "2020-03-08";
-
-		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
+		
+		Extrapolation extrapolation = EpisimUtils.Extrapolation.linear;
 
 		ConfigBuilder configBuilder = null;
 		try {
-			configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
+			configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, extrapolation);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-500init-schools-nn-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
-//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
+		
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-alpha-"+ alpha + "-extrapolation-" + extrapolation + "-ciCorrection-" + ciCorrection + "-dateOfCiChange-" + dateOfCiChange + "-startDate-" + episimConfig.getStartDate() + "-calibrParam-" + episimConfig.getCalibrationParameter());
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-20-" + episimConfig.getCalibrationParameter());
 
 
 		return config;
