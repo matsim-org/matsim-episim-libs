@@ -62,9 +62,10 @@ public class SplitHomeFacilities implements Callable<Integer> {
 	private Map<Id<Person>, Id<ActivityFacility>> newHomes = new HashMap<>();
 	// list of ids a facility was split into
 	private Map<Id<ActivityFacility>, List<Id<ActivityFacility>>> splitHomes = new HashMap<>();
-
 	// set of old valid home ids that have been converted
 	private Set<String> oldHomeIds = new HashSet<>();
+	// store visits of a person
+	private Map<Id<Person>, Id<ActivityFacility>> visits = new HashMap<>();
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new SplitHomeFacilities()).execute(args));
@@ -234,8 +235,11 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 			// choose a visit randomly
 			if (splitHomes.containsKey(homeId)) {
-				List<Id<ActivityFacility>> split = splitHomes.get(homeId);
-				return split.get(rnd.nextInt(split.size()));
+				return visits.computeIfAbsent(personId, p -> {
+					List<Id<ActivityFacility>> split = splitHomes.get(homeId);
+					return split.get(rnd.nextInt(split.size()));
+				});
+
 			}
 
 			return homeId;
