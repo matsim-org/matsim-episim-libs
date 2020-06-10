@@ -10,7 +10,6 @@ import org.matsim.api.core.v01.events.ActivityStartEvent;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.EventsUtils;
@@ -58,6 +57,15 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			defaultValue = "41.9 33.8 11.9 9.1 3.4", split = " ")
 	private List<Double> target;
 
+	private SplittableRandom rnd = new SplittableRandom(0);
+	// new homes of persons if they have been reassigned
+	private Map<Id<Person>, Id<ActivityFacility>> newHomes = new HashMap<>();
+	// list of ids a facility was split into
+	private Map<Id<ActivityFacility>, List<Id<ActivityFacility>>> splitHomes = new HashMap<>();
+
+	// set of old valid home ids that have been converted
+	private Set<String> oldHomeIds = new HashSet<>();
+
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new SplitHomeFacilities()).execute(args));
 	}
@@ -89,10 +97,16 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 		for (Person p : scenario.getPopulation().getPersons().values()) {
 			Attributes attr = p.getAttributes();
+
+			oldHomeIds.add((String) attr.getAttribute("homeId"));
+
+			// Prefix all home facilities, so they don't interact with others anymore
+			Id<ActivityFacility> id = Id.create("home_" + attr.getAttribute("homeId"), ActivityFacility.class);
+			attr.putAttribute("homeId", id.toString());
+
 			if (!district.equals(attr.getAttribute("district")))
 				continue;
 
-			Id<ActivityFacility> id = Id.create((String) attr.getAttribute("homeId"), ActivityFacility.class);
 			groups.computeIfAbsent(id, f -> new HashSet<>())
 					.add((p.getId()));
 		}
@@ -112,9 +126,6 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		int n = 0;
 		EnumeratedIntegerDistribution error = calcError(groups, target);
 
-		// new homes of persons if they have been reassigned
-		Map<Id<Person>, Id<ActivityFacility>> newHomes = new HashMap<>();
-
 		for (Map.Entry<Id<ActivityFacility>, Set<Id<Person>>> e : sorted) {
 
 			// update error distribution
@@ -129,18 +140,21 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 			Set<Id<Person>> member = e.getValue();
 
-			int sample;
+			int sample = error.sample();
 			int split = 0;
-			while ((sample = error.sample()) < member.size()) {
+			while (!member.isEmpty()) {
 
 				Set<Id<Person>> removed = new HashSet<>();
 
-				// Put the new splitted group
-				String homeId = e.getKey().toString() + "split" + split;
+				// Put the new split group
+				String homeId = e.getKey().toString() + "_split" + split;
 				Id<ActivityFacility> id = Id.create(homeId, ActivityFacility.class);
 
 				Iterator<Id<Person>> it = member.iterator();
 				for (int i = 0; i < sample; i++) {
+					if (!it.hasNext())
+						break;
+
 					Id<Person> p = it.next();
 					removed.add(p);
 					scenario.getPopulation().getPersons().get(p).getAttributes()
@@ -151,18 +165,18 @@ public class SplitHomeFacilities implements Callable<Integer> {
 					it.remove();
 				}
 
-				// TODO: split rest of the groups to new id
-
+				splitHomes.computeIfAbsent(e.getKey(), k -> new ArrayList<>()).add(id);
 				groups.put(id, removed);
 
 				split++;
+				sample = error.sample();
 			}
+
 
 			n++;
 		}
 
 		log.info("Distribution after step {}", n);
-
 
 		int now = groups.size() - before;
 		log.info("Created {} new households", now);
@@ -180,33 +194,54 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		// create new events if the activity id has changed
 		for (Event event : replay.getEvents()) {
 
-			// TODO reasign visit
-			if (event instanceof HasPersonId && newHomes.containsKey(((HasPersonId) event).getPersonId())) {
-				if (event instanceof ActivityStartEvent) {
-					ActivityStartEvent ev = (ActivityStartEvent) event;
-					if (ev.getActType().equals("home"))
-						manager.processEvent(new ActivityStartEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
-								newHomes.get(ev.getPersonId()), ev.getActType(), ev.getCoord()));
-					else
-						manager.processEvent(ev);
+			if (event instanceof ActivityStartEvent) {
+				ActivityStartEvent ev = (ActivityStartEvent) event;
+				manager.processEvent(new ActivityStartEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
+						getNewFacilityId(ev.getPersonId(), ev.getFacilityId(), ev.getActType()), ev.getActType(), ev.getCoord()));
 
-				} else if (event instanceof ActivityEndEvent) {
-					ActivityEndEvent ev = (ActivityEndEvent) event;
-					if (ev.getActType().equals("home"))
-						manager.processEvent(new ActivityEndEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
-								newHomes.get(ev.getPersonId()), ev.getActType()));
-					else
-						manager.processEvent(ev);
-				}
+			} else if (event instanceof ActivityEndEvent) {
+				ActivityEndEvent ev = (ActivityEndEvent) event;
+				manager.processEvent(new ActivityEndEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
+						getNewFacilityId(ev.getPersonId(), ev.getFacilityId(), ev.getActType()), ev.getActType()));
 			} else
 				manager.processEvent(event);
 		}
 
 		// Close event file
-		manager.resetHandlers(0);
 		writer.closeFile();
 
 		return 0;
+	}
+
+	/**
+	 * Computes the facility id an event should have.
+	 */
+	private Id<ActivityFacility> getNewFacilityId(Id<Person> personId, Id<ActivityFacility> oldFacility, String actType) {
+
+		Id<ActivityFacility> homeId = Id.create("home_" + oldFacility.toString(), ActivityFacility.class);
+
+		// Check if id was ever handled
+		if (!oldHomeIds.contains(oldFacility.toString()))
+			return oldFacility;
+
+		if (actType.equals("home")) {
+			if (newHomes.containsKey(personId))
+				return newHomes.get(personId);
+
+			return homeId;
+
+		} else if (actType.equals("visit")) {
+
+			// choose a visit randomly
+			if (splitHomes.containsKey(homeId)) {
+				List<Id<ActivityFacility>> split = splitHomes.get(homeId);
+				return split.get(rnd.nextInt(split.size()));
+			}
+
+			return homeId;
+
+		} else
+			return oldFacility;
 	}
 
 	/**
@@ -262,6 +297,8 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		int[] hist = new int[target.size()];
 
 		for (Map.Entry<Id<ActivityFacility>, Set<Id<Person>>> e : groups.entrySet()) {
+			if (e.getValue().size() == 0) continue;
+
 			hist[Math.min(e.getValue().size(), target.size()) - 1] += 1;
 		}
 
