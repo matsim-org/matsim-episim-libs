@@ -62,30 +62,30 @@ public final class AgeDependentProgressionModel extends ConfigurableProgressionM
 			}
 
 			if (age < 10) {
-				proba = 0.06 / 100;
+				proba = 0.1 / 100;
 			} else if (age < 20) {
-				proba = 0.19 / 100;
+				proba = 0.3 / 100;
 			} else if (age < 30) {
-				proba = 0.77 / 100;
+				proba = 1.2 / 100;
 			} else if (age < 40) {
-				proba = 2.06 / 100;
+				proba = 3.2 / 100;
 			} else if (age < 50) {
-				proba = 3.16 / 100;
+				proba = 4.9 / 100;
 			} else if (age < 60) {
-				proba = 6.57 / 100;
+				proba = 10.2 / 100;
 			} else if (age < 70) {
-				proba = 10.69 / 100;
+				proba = 16.6 / 100;
 			} else if (age < 80) {
-				proba = 15.65 / 100;
+				proba = 24.3 / 100;
 			} else {
-				proba = 17.58 / 100;
+				proba = 27.3 / 100;
 			}
 
 		} else {
 			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
 		}
 
-		return proba;
+		return proba * episimConfig.getHospitalFactor();
 	}
 
 	@Override
