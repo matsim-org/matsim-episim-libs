@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import com.google.common.collect.Lists;
+import com.google.inject.AbstractModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -177,6 +178,14 @@ public interface BatchRun<T> {
 	 */
 	default List<Option> getOptions() {
 		return List.of();
+	}
+
+	/**
+	 * Return the module that should be used for configuring custom guice bindings.
+	 */
+	@Nullable
+	default AbstractModule getBindings() {
+		return null;
 	}
 
 	/**

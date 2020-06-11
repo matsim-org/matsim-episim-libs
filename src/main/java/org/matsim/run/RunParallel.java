@@ -23,6 +23,7 @@ package org.matsim.run;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -35,6 +36,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import picocli.CommandLine;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Files;
@@ -46,6 +48,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Execute one {@link BatchRun} run in parallel. The work can also be distributed across multiple runners,
@@ -102,6 +105,8 @@ public class RunParallel<T> implements Callable<Integer> {
 		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
 		Configurator.setLevel("org.matsim.core.events", Level.WARN);
 
+		if (!Files.exists(output)) Files.createDirectories(output);
+
 		// Same context as if would be run from config
 		URL context = new File("./input").toURI().toURL();
 
@@ -137,13 +142,12 @@ public class RunParallel<T> implements Callable<Integer> {
 			}
 
 			String outputPath = output + "/" + prepare.getOutputName(run);
-			Path out = Paths.get(outputPath);
-			if (!Files.exists(out)) Files.createDirectories(out);
 			run.config.controler().setOutputDirectory(outputPath);
 			run.config.controler().setRunId(prepare.setup.getMetadata().name + run.id);
 			run.config.setContext(context);
 
-			futures.add(CompletableFuture.runAsync(new Task(new ParallelModule(scenario, run.config, replay)), executor));
+			futures.add(CompletableFuture.runAsync(new Task(prepare.setup.getBindings(),
+					new ParallelModule(scenario, run.config, replay)), executor));
 		}
 
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
@@ -179,22 +183,41 @@ public class RunParallel<T> implements Callable<Integer> {
 
 	private static final class Task implements Runnable {
 
+		private static final AtomicInteger i = new AtomicInteger(0);
+
+		@Nullable
+		private final AbstractModule bindings;
 		private final ParallelModule module;
 
-		private Task(ParallelModule module) {
+		private Task(@Nullable AbstractModule bindings, ParallelModule module) {
+			this.bindings = bindings;
 			this.module = module;
 		}
 
 		@Override
 		public void run() {
 
+			Module base;
+			if (bindings == null)
+				base = new EpisimModule();
+			else
+				base = Modules.override(new EpisimModule()).with(bindings);
+
+
 			// overwrite the scenario definition
-			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(module));
+			Injector injector = Guice.createInjector(Modules.override(base).with(this.module));
+
+			if (i.getAndIncrement() == 0) {
+				RunEpisim.printBindings(injector);
+			}
+
+			log.info("Starting task: {}", this.module.config.controler().getOutputDirectory());
+
 			EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 
 			runner.run(360);
 
-			log.info("Task finished: {}", module.config.controler().getOutputDirectory());
+			log.info("Task finished: {}", this.module.config.controler().getOutputDirectory());
 		}
 	}
 

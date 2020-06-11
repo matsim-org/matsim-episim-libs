@@ -29,7 +29,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
@@ -102,6 +101,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
+		boolean hasBindings = prepare.setup.getBindings() != null;
 		BatchRun.Metadata meta = prepare.setup.getMetadata();
 		String runName = meta.name;
 		Path dir = output.resolve(runVersion).resolve(meta.name).resolve(meta.region);
@@ -146,11 +146,13 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String configFileName = "config_" + runName + run.id + ".xml";
 
 			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
-			run.config.controler().setOutputDirectory(outputPath);
-			run.config.controler().setRunId(runName + run.id);
+			if (!hasBindings) {
+				run.config.controler().setOutputDirectory(outputPath);
+				run.config.controler().setRunId(runName + run.id);
 
-			prepare.setup.writeAuxiliaryFiles(dir, run.config);
-			ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
+				prepare.setup.writeAuxiliaryFiles(dir, run.config);
+				ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
+			}
 
 			bashScriptWriter.write("qsub -N " + runId + " run.sh");
 			bashScriptWriter.newLine();
@@ -184,7 +186,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			);
 		}
 
-		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
+		if (!hasBindings)
+			FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
 
 		// Target system has 4 numa nodes
 		int perSocket = (stepSize / 4);
@@ -210,6 +213,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		bashScriptWriter.close();
 		infoWriter.close();
+
+		if (hasBindings) {
+			log.warn("This run defines custom bindings. Run from config will not be available.");
+		}
 
 		return 0;
 	}

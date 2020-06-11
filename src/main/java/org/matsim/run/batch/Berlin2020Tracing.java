@@ -20,6 +20,7 @@
  */
 package org.matsim.run.batch;
 
+import com.google.inject.AbstractModule;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
@@ -68,6 +69,11 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 	@Override
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "tracing2");
+	}
+
+	@Override
+	public AbstractModule getBindings() {
+		return new SnzBerlinScenario25pct2020();
 	}
 
 	@Override
