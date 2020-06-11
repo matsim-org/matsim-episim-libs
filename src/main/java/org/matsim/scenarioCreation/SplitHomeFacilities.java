@@ -3,6 +3,9 @@ package org.matsim.scenarioCreation;
 import org.apache.commons.math3.distribution.EnumeratedIntegerDistribution;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.Point;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -16,10 +19,13 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.algorithms.EventWriterXML;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.geometry.geotools.MGC;
+import org.matsim.core.utils.gis.ShapeFileReader;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.ReplayHandler;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
+import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
 
 import java.nio.file.Files;
@@ -50,29 +56,30 @@ public class SplitHomeFacilities implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", description = "Output folder", defaultValue = "")
 	private Path output;
 
-	@CommandLine.Option(names = "--district", description = "Target district", defaultValue = "Berlin")
-	private String district;
+	@CommandLine.Option(names = "--shape-file", description = "Shape-file for households to split.",
+			defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/shape-File/dilutionArea.shp")
+	private Path shapeFile;
 
 	@CommandLine.Option(names = "--target", description = "Target distribution with increasing facility sizes",
 			defaultValue = "41.9 33.8 11.9 9.1 3.4", split = " ")
 	private List<Double> target;
 
-	private SplittableRandom rnd = new SplittableRandom(0);
+	private final SplittableRandom rnd = new SplittableRandom(0);
 	// new homes of persons if they have been reassigned
-	private Map<Id<Person>, Id<ActivityFacility>> newHomes = new HashMap<>();
+	private final Map<Id<Person>, Id<ActivityFacility>> newHomes = new HashMap<>();
 	// list of ids a facility was split into
-	private Map<Id<ActivityFacility>, List<Id<ActivityFacility>>> splitHomes = new HashMap<>();
+	private final Map<Id<ActivityFacility>, List<Id<ActivityFacility>>> splitHomes = new HashMap<>();
 	// set of old valid home ids that have been converted
-	private Set<String> oldHomeIds = new HashSet<>();
+	private final Set<String> oldHomeIds = new HashSet<>();
 	// store visits of a person
-	private Map<Id<Person>, Id<ActivityFacility>> visits = new HashMap<>();
+	private final Map<Id<Person>, Id<ActivityFacility>> visits = new HashMap<>();
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new SplitHomeFacilities()).execute(args));
 	}
 
 	@Override
-	public Integer call() throws Exception {
+	public Integer call() {
 
 		Config config = ConfigUtils.createConfig();
 		config.plans().setInputFile(population.toString());
@@ -88,6 +95,12 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			log.error("Input events file {} does not exists", events);
 			return 1;
 		}
+
+		if (!Files.exists(shapeFile)) {
+			log.error("Shape file {} does not exists", shapeFile);
+		}
+
+		Collection<SimpleFeature> shapeFileAreas = ShapeFileReader.getAllFeatures(shapeFile.toString());
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 
@@ -105,7 +118,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			Id<ActivityFacility> id = Id.create("home_" + attr.getAttribute("homeId"), ActivityFacility.class);
 			attr.putAttribute("homeId", id.toString());
 
-			if (!district.equals(attr.getAttribute("district")))
+			if (!featuresContainHome(attr, shapeFileAreas))
 				continue;
 
 			groups.computeIfAbsent(id, f -> new HashSet<>())
@@ -116,7 +129,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		int before = groups.size();
 
 		log.info("Targeting distribution: {}", target);
-		log.info("Distribution before splitting:");
+		log.info("Distribution before splitting ({} total):", groups.size());
 		int[] hist = calcHist(groups, target);
 		printHist(hist, target);
 
@@ -260,6 +273,9 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		for (int i = 0; i < hist.length; i++) {
 			double current = (hist[i] * 100) / total;
 			error[i] = current - target.get(i);
+			// Only negative errors are considered
+			// positive errors indicate there are too much groups, which would mean they
+			// would need to be joined and not split
 			error[i] = Math.min(0, error[i]);
 		}
 
@@ -307,5 +323,21 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		}
 
 		return hist;
+	}
+
+
+	/**
+	 * Check if the home coordinates are contained by any of the features.
+	 */
+	protected boolean featuresContainHome(Attributes attrs, Collection<SimpleFeature> areas) {
+		for (SimpleFeature singleFeature : areas) {
+			Geometry geometryOfCertainArea = (Geometry) singleFeature.getDefaultGeometry();
+			Point p = MGC.coord2Point(new Coord((double) attrs.getAttribute("homeX"), (double) attrs.getAttribute("homeY")));
+
+			if (geometryOfCertainArea.contains(p))
+				return true;
+		}
+
+		return false;
 	}
 }
