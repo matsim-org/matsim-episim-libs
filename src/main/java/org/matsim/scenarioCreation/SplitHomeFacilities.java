@@ -47,10 +47,10 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(SplitHomeFacilities.class);
 
-	@CommandLine.Parameters(arity = "1", description = "Path to population file")
+	@CommandLine.Parameters(arity = "1", description = "Path to population file", defaultValue= "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz")
 	private Path population;
 
-	@CommandLine.Option(names = "--events", description = "Path to event file", required = true)
+	@CommandLine.Option(names = "--events", description = "Path to event file", required = true, defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz")
 	private Path events;
 
 	@CommandLine.Option(names = "--output", description = "Output folder", defaultValue = "")
