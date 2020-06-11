@@ -48,6 +48,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
 	private static final String WRITE_EVENTS = "writeEvents";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
+	private static final String HOSPITAL_FACTOR = "hospitalFactor";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
@@ -72,6 +73,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	// this is current default for 25% scenarios
 	private double calibrationParameter = 0.000002;
+	private double hospitalFactor = 1.;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
 	private int initialStartInfections = 0;
@@ -142,6 +144,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(CALIBRATION_PARAMETER)
 	public void setCalibrationParameter(double calibrationParameter) {
 		this.calibrationParameter = calibrationParameter;
+	}
+	/**
+	 * Is multiplied with probability to transition to seriously sick in age dependent progression model
+	 */
+	@StringGetter(HOSPITAL_FACTOR)
+	public double getHospitalFactor() {
+		return this.hospitalFactor;
+	}
+
+	@StringSetter(HOSPITAL_FACTOR)
+	public void setHospitalFactor(double hospitalFactor) {
+		this.hospitalFactor = hospitalFactor;
 	}
 
 	@StringGetter(INITIAL_INFECTIONS)
