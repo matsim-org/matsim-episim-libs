@@ -75,6 +75,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			case recovered:
 			case seriouslySick: // assume is in hospital
 			case critical:
+			case seriouslySickAfterCritical:
 				return false;
 
 			default:
