@@ -32,10 +32,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.episim.model.ProgressionModel;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -199,6 +196,9 @@ public final class EpisimRunner {
 	 * @return starting iteration
 	 */
 	private int readSnapshot(Path output, Path path) {
+
+		if (!Files.exists(path))
+			throw new IllegalArgumentException("Snapshot " + path + " does not exist.");
 
 		InfectionEventHandler handler = handlerProvider.get();
 		EpisimReporting reporting = reportingProvider.get();

@@ -41,7 +41,6 @@ import java.io.File;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -70,10 +69,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.Berlin2020Tracing}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.StabilityRun}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.Berlin2020Tracing$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.StabilityRun$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
@@ -146,8 +145,12 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.controler().setRunId(prepare.setup.getMetadata().name + run.id);
 			run.config.setContext(context);
 
-			futures.add(CompletableFuture.runAsync(new Task(prepare.setup.getBindings(),
-					new ParallelModule(scenario, run.config, replay)), executor));
+			futures.add(CompletableFuture.runAsync(
+					new Task(prepare.setup.getBindings(), new ParallelModule(scenario, run.config, replay)), executor)
+					.exceptionally(t -> {
+						log.error("Task {} failed", outputPath, t);
+						return null;
+					}));
 		}
 
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
