@@ -97,7 +97,7 @@ public class KnRunEpisim {
 				binder().requireExplicitBindings();
 
 				// Main model classes regarding progression / infection etc..
-				bind( InfectionModel.class ).to(MyInfectionModel.class ).in( Singleton.class );
+				bind( InteractionModel.class ).to(MyInfectionModel.class ).in( Singleton.class );
 				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
 				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
 
@@ -390,7 +390,7 @@ public class KnRunEpisim {
 
 	enum RestrictionsType {unrestr, triang, frmSnz }
 
-	private static class MyInfectionModel extends DefaultInfectionModel {
+	private static class MyInfectionModel extends DefaultInteractionModel {
 		private final FaceMaskModel maskModel;
 		@Inject MyInfectionModel( SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel ) {
 			super( rnd,  config, reporting, maskModel );

@@ -29,7 +29,7 @@ import java.util.Map;
 /**
  * This class models the infection dynamics of persons staying in the same place for a certain time.
  */
-public interface InfectionModel {
+public interface InteractionModel {
 
 	/**
 	 * This method is called when a persons leave a vehicle at {@code now}.

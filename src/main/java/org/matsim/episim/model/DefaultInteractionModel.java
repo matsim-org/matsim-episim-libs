@@ -42,9 +42,9 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
  *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * ci_correction)
  * </pre>
  */
-public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
+public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel {
 
-	private static final Logger log = LogManager.getLogger(DefaultInfectionModel.class);
+	private static final Logger log = LogManager.getLogger(DefaultInteractionModel.class);
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -71,8 +71,8 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
-	/* package */ DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-								 EpisimReporting reporting, FaceMaskModel maskModel) {
+	/* package */ DefaultInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+										  EpisimReporting reporting, FaceMaskModel maskModel) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 
 
@@ -85,7 +85,7 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 	/**
 	 * Constructor when no injection is used.
 	 */
-	public DefaultInfectionModel( SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel ) {
+	public DefaultInteractionModel(SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel ) {
 		// (make public constructor more general (full config as argument) so that argument changes are reduced.  also, do not pass multiple number
 		// types in sequence since they can get confused (as I just did). pass full config so that we do not have to retrofit constructor every
 		// time additional config info is needed.  kai, jun'20)
@@ -208,7 +208,7 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
 			}
 
-			if (!AbstractInfectionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
+			if (!AbstractInteractionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
 				continue;
 			}
 
