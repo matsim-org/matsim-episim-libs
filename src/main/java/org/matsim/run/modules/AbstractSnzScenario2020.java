@@ -77,7 +77,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.getOrAddContainerParams("business")
 				.setContactIntensity(1. * factor);
 		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(3.);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("quarantine_home")
 				.setContactIntensity(1.);
 	}
