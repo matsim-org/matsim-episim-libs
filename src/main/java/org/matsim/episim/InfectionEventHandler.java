@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigFactory;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -205,6 +207,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		iteration = 0;
 
+		Object2IntMap<EpisimFacility> groupSize = new Object2IntOpenHashMap<>();
+		Object2IntMap<EpisimFacility> maxGroupSize = new Object2IntOpenHashMap<>();
+
 		for (Event event : events) {
 
 			EpisimPerson person = null;
@@ -228,6 +233,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					continue;
 
 				paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
+				maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
+
 				handleEvent((ActivityStartEvent) event);
 			} else if (event instanceof ActivityEndEvent) {
 				String actType = ((ActivityEndEvent) event).getActType();
@@ -235,6 +242,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					continue;
 
 				paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
+				groupSize.mergeInt(facility, -1, Integer::sum);
 
 				// Add person to container if it starts its day with end activity
 				if (person.getFirstFacilityId() == null) {
@@ -262,6 +270,10 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		insertStationaryAgents();
+
+		for (Object2IntMap.Entry<EpisimFacility> kv : maxGroupSize.object2IntEntrySet()) {
+			kv.getKey().setMaxGroupSize(kv.getIntValue());
+		}
 
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
 

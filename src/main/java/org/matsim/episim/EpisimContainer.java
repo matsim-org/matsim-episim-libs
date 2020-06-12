@@ -58,6 +58,11 @@ public class EpisimContainer<T> {
 
 	private final Int2DoubleMap containerEnterTimes = new Int2DoubleOpenHashMap(4);
 
+	/**
+	 * The maximum number of persons simultaneously in this container. Negative if unknown.
+	 */
+	private int maxGroupSize = -1;
+
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
 	}
@@ -78,7 +83,6 @@ public class EpisimContainer<T> {
 			personsAsList.add(persons.get(id));
 			containerEnterTimes.put(id.index(), in.readDouble());
 		}
-
 	}
 
 	/**
@@ -122,6 +126,19 @@ public class EpisimContainer<T> {
 
 	public Id<T> getContainerId() {
 		return containerId;
+	}
+
+	public int getMaxGroupSize() {
+		return maxGroupSize;
+	}
+
+	/**
+	 * Sets the max group size this container has during a day.
+	 *
+	 * @param num number of persons
+	 */
+	void setMaxGroupSize(int num) {
+		maxGroupSize = num;
 	}
 
 	void clearPersons() {
