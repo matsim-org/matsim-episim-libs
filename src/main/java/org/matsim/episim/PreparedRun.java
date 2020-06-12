@@ -155,12 +155,18 @@ public final class PreparedRun {
 		public final Config config;
 
 		/**
+		 * Params as argument for the {@link BatchRun}.
+		 */
+		public final Object args;
+
+		/**
 		 * Constructor.
 		 */
-		public Run(int id, List<Object> params, Config config) {
+		public Run(int id, List<Object> params, Config config, Object args) {
 			this.id = id;
 			this.params = params;
 			this.config = config;
+			this.args = args;
 		}
 	}
 

@@ -101,7 +101,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
-		boolean hasBindings = prepare.setup.getBindings() != null;
+		boolean noBindings = true;
 		BatchRun.Metadata meta = prepare.setup.getMetadata();
 		String runName = meta.name;
 		Path dir = output.resolve(runVersion).resolve(meta.name).resolve(meta.region);
@@ -145,8 +145,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
+			noBindings &= prepare.setup.getBindings(run.id, run.args) == null;
+
 			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
-			if (!hasBindings) {
+			if (noBindings) {
 				run.config.controler().setOutputDirectory(outputPath);
 				run.config.controler().setRunId(runName + run.id);
 
@@ -186,7 +188,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			);
 		}
 
-		if (!hasBindings)
+		if (noBindings)
 			FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
 
 		// Target system has 4 numa nodes
@@ -214,7 +216,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		bashScriptWriter.close();
 		infoWriter.close();
 
-		if (hasBindings) {
+		if (!noBindings) {
 			log.warn("This run defines custom bindings. Run from config will not be available.");
 		}
 

@@ -115,7 +115,7 @@ public interface BatchRun<T> {
 
 		Config base = setup.baseCase(0);
 		if (base != null)
-			runs.add(new PreparedRun.Run(0, Lists.newArrayList("base"), base));
+			runs.add(new PreparedRun.Run(0, Lists.newArrayList("base"), base, null));
 
 		List<List<Object>> combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));
 
@@ -130,7 +130,7 @@ public interface BatchRun<T> {
 				}
 
 				Config config = setup.prepareConfig(++id, inst);
-				runs.add(new PreparedRun.Run(id, params, config));
+				runs.add(new PreparedRun.Run(id, params, config, inst));
 
 			} catch (ReflectiveOperationException e) {
 				log.error("Could not create param class", e);
@@ -181,10 +181,14 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * Return the module that should be used for configuring custom guice bindings.
+	 * Return the module that should be used for configuring custom guice bindings. May also be parametrized.
+	 *
+	 * @param id     task id
+	 * @param params parameters to use, will be null for the base case, but always of type {@code T}
+	 * @return module with additional bindings, or null if not needed
 	 */
 	@Nullable
-	default AbstractModule getBindings() {
+	default AbstractModule getBindings(int id, @Nullable Object params) {
 		return null;
 	}
 

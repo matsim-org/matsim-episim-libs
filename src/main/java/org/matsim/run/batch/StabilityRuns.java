@@ -7,14 +7,17 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
+import javax.annotation.Nullable;
+
 
 /**
  * This batch run explores different random seeds via different snapshot times.
  */
 public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
+
 	@Override
-	public AbstractModule getBindings() {
+	public AbstractModule getBindings(int id, @Nullable Object params) {
 		return new SnzBerlinScenario25pct2020();
 	}
 

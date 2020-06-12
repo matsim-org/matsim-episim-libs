@@ -91,6 +91,9 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
 	private int maxJobs;
 
+	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
+	private boolean noReuse;
+
 
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
@@ -114,15 +117,21 @@ public class RunParallel<T> implements Callable<Integer> {
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-		log.info("Reading base scenario...");
-
 		// All config need to have the same base config (population, events, etc..)
 		Config baseConfig = prepare.runs.get(0).config;
 		baseConfig.setContext(context);
 		EpisimConfigGroup episimBase = ConfigUtils.addOrGetModule(baseConfig, EpisimConfigGroup.class);
 
-		Scenario scenario = ScenarioUtils.loadScenario(baseConfig);
-		ReplayHandler replay = new ReplayHandler(episimBase, scenario);
+		Scenario scenario = null;
+		ReplayHandler replay = null;
+
+		if (noReuse) {
+			log.info("Reusing scenario and events is disabled.");
+		} else {
+			log.info("Reading base scenario...");
+			scenario = ScenarioUtils.loadScenario(baseConfig);
+			replay = new ReplayHandler(episimBase, scenario);
+		}
 
 		int i = 0;
 		for (PreparedRun.Run run : prepare.runs) {
@@ -135,7 +144,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			if (maxJobs > 0 && i >= maxJobs) break;
 
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
-			if (!episimBase.getInputEventsFile().equals(episimConfig.getInputEventsFile())) {
+			if (!noReuse && !episimBase.getInputEventsFile().equals(episimConfig.getInputEventsFile())) {
 				log.error("Input files differs for run {}", run.id);
 				return 1;
 			}
@@ -146,7 +155,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(
-					new Task(prepare.setup.getBindings(), new ParallelModule(scenario, run.config, replay)), executor)
+					new Task(prepare.setup.getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay)), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
@@ -166,11 +175,11 @@ public class RunParallel<T> implements Callable<Integer> {
 
 	private static final class ParallelModule extends AbstractModule {
 
-		private final Scenario scenario;
 		private final Config config;
+		private final Scenario scenario;
 		private final ReplayHandler replay;
 
-		private ParallelModule(Scenario scenario, Config config, ReplayHandler replay) {
+		private ParallelModule(Config config, @Nullable Scenario scenario, ReplayHandler replay) {
 			this.scenario = scenario;
 			this.config = config;
 			this.replay = replay;
@@ -178,9 +187,12 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		@Override
 		protected void configure() {
-			bind(Scenario.class).toInstance(scenario);
 			bind(Config.class).toInstance(config);
-			bind(ReplayHandler.class).toInstance(replay);
+
+			if (scenario != null) {
+				bind(Scenario.class).toInstance(scenario);
+				bind(ReplayHandler.class).toInstance(replay);
+			}
 		}
 	}
 
