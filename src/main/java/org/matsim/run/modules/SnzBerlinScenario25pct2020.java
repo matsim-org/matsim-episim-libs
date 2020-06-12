@@ -64,8 +64,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 													   double ciCorrection, String dateOfCiChange, EpisimUtils.Extrapolation extrapolation) throws IOException {
 
 		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
-
+		
 		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
 		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
 
 		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
@@ -96,7 +97,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		return builder
 				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
 				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-						to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
+						to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.)))
 
 // Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
 // Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
@@ -128,17 +129,18 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile(INPUT.resolve("be_2020_snz_episim_events_25pt.xml.gz").toString());
+		episimConfig.setInputEventsFile(INPUT.resolve("split_be_2020_snz_episim_events_25pt.xml.gz").toString());
 
-		config.plans().setInputFile(INPUT.resolve("be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz").toString());
+		config.plans().setInputFile(INPUT.resolve("split_be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz").toString());
 
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_004_5);
+		episimConfig.setCalibrationParameter(0.000_009_2); //5.5
 		episimConfig.setMaxInteractions(3);
-		String startDate = "2020-02-16";
+		String startDate = "2020-02-13";
 		episimConfig.setStartDate(startDate);
+		episimConfig.setHospitalFactor(2.0);
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
 		
 //		double ciFactor = 1.;
@@ -157,11 +159,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setTracingDelay_days(2);
 		tracingConfig.setTracingCapacity_pers_per_day(30);
 
-		double alpha = 1.4;
+		double alpha = 1.0;
 		double ciCorrection = 0.3;
 
-		Path csv =  INPUT.resolve("BerlinSnzData_daily_until20200531.csv");
-		String dateOfCiChange = "2020-03-08";
+		Path csv =  INPUT.resolve("BerlinSnzData_daily_until20200607.csv");
+		String dateOfCiChange = "2020-03-04";
 		
 		Extrapolation extrapolation = EpisimUtils.Extrapolation.linear;
 
@@ -174,8 +176,16 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
 		
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-alpha-"+ alpha + "-extrapolation-" + extrapolation + "-ciCorrection-" + ciCorrection + "-dateOfCiChange-" + dateOfCiChange + "-startDate-" + episimConfig.getStartDate() + "-calibrParam-" + episimConfig.getCalibrationParameter());
-//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-20-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-"+ alpha + "-extrapolation-" + extrapolation + "-ciCorrection-" + ciCorrection + "-dateOfCiChange-" + dateOfCiChange + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter());
+		
+//		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
+//				.restrict("2020-03-24", Restriction.ofCiCorrection(0.0), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+//				.restrict("2020-03-24", Restriction.ofCiCorrection(0.0), "pt")
+//				.build()
+//		);
+		
+		
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-split-sd-" + episimConfig.getCalibrationParameter());
 
 
 		return config;
