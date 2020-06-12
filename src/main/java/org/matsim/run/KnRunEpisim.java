@@ -166,44 +166,6 @@ public class KnRunEpisim {
 			public SplittableRandom splittableRandom( Config config ) {
 				return new SplittableRandom(config.global().getRandomSeed());
 			}
-		} );
-
-		/*
-		 * 2020-05-20 RKI:
-		 *
-		 * Inkubationszeit 5-6 Tage (da wir im Mittel bei 0.5 anstecken und bei Übergang 5 -> 6 Symptome entwickeln, hätten wir das genau)
-		 *
-		 * Serielles Intervall 4 Tage.  Daraus folgt eigentlich fast zwangsläufig, dass die meisten Ansteckungen zwischen Tag 3 und Tag 5 nach
-		 * Ansteckung stattfinden.
-		 *
-		 * Symptome bis Hospitalisierung: 4 bis 7
-		 *
-		 * Symptome bis Intensiv:
-		 *
-		 * ---
-		 *
-		 * Moduls is left of median: median = exp(mu); mode = exp(mu - sigma^2).  In consequence, the dynamically relevant times are shortened by
-		 * increasing sigma, without having to touch the median.
-		 */
-		/*
-		final double infectedToContag = 3.; // orig 4
-		final double infectedBNCStd = infectedToContag/1.;
-
-		final double contagToSymptoms = 1.5; // orig 2
-		final double contagiousStd = contagToSymptoms/1.;
-
-		// ---
-
-		final double SymptomsToSSick = 8.; // orig 4; RKI 7; DAe 4;
-		final double withSymptomsStd = 0.;
-
-		final double sStickToCritical = 2.; // 3.; // orig 1; RKI ?; DAe 5
-		final double seriouslySickStd = 0.;
-
-		final double criticalToBetter = 10.; // orig 9
-		final double criticalStd = 0.;
-		*/
-		modules.add( new AbstractModule(){
 			@Provides
 			@Singleton
 			public Config config() throws IOException{
