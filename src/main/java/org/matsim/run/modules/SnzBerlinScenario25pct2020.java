@@ -129,9 +129,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInputEventsFile(INPUT.resolve("split_be_2020_snz_episim_events_25pt.xml.gz").toString());
+		episimConfig.setInputEventsFile(INPUT.resolve("be_2020_snz_episim_events_25pt_split.xml.gz").toString());
 
-		config.plans().setInputFile(INPUT.resolve("split_be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz").toString());
+		config.plans().setInputFile(INPUT.resolve("be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz").toString());
 
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("Berlin");
