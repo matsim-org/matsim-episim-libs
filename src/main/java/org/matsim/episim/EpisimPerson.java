@@ -437,7 +437,8 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Disease status of a person.
 	 */
-	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms, seriouslySick, critical, recovered}
+	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms,
+		seriouslySick, critical, seriouslySickAfterCritical, recovered}
 
 	/**
 	 * Quarantine status of a person.

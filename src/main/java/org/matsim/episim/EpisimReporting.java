@@ -227,6 +227,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					district.nTotalInfected++;
 					break;
 				case seriouslySick:
+				case seriouslySickAfterCritical:
 					report.nSeriouslySick++;
 					district.nSeriouslySick++;
 					report.nTotalInfected++;

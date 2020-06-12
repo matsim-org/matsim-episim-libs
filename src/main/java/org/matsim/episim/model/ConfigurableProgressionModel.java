@@ -46,7 +46,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
 			.from(EpisimPerson.DiseaseStatus.critical,
-					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)))
+					to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
+
+			.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
+				to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+
 			.build();
 
 
@@ -165,7 +169,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 					return EpisimPerson.DiseaseStatus.recovered;
 
 			case critical:
-				return EpisimPerson.DiseaseStatus.seriouslySick;
+				return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
+
+			case seriouslySickAfterCritical:
+				return EpisimPerson.DiseaseStatus.recovered;
 
 
 			default:
