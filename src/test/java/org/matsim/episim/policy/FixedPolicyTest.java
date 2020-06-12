@@ -7,6 +7,8 @@ import org.assertj.core.data.Offset;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.EpisimUtils;
@@ -146,8 +148,8 @@ public class FixedPolicyTest {
 
 		Assume.assumeTrue("Input must exist", f.exists());
 
-		String content = SnzBerlinScenario25pct2020.basePolicy(
-				EpisimTestUtils.createTestConfig(), f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
+		String content = SnzBerlinScenario25pct2020.basePolicy(ConfigUtils.addOrGetModule(EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class),
+				f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
 		).build().root().render();
 
 		Config config = ConfigFactory.parseString(content);
