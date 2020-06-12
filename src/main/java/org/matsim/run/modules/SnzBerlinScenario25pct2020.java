@@ -106,53 +106,55 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 	@Provides
 	@Singleton
-	public Config config() {
+	public Config config(){
 
 		Config config = getBaseConfig();
 
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz");
+		episimConfig.setInputEventsFile( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz" );
 
-		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
+		config.plans().setInputFile(
+				"../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz" );
 
-		episimConfig.setInitialInfections(200);
-		episimConfig.setInitialInfectionDistrict("Berlin");
-		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_002_6);
-		episimConfig.setMaxInteractions(3);
+		episimConfig.setInitialInfections( 200 );
+		episimConfig.setInitialInfectionDistrict( "Berlin" );
+		episimConfig.setSampleSize( 0.25 );
+		episimConfig.setCalibrationParameter( 0.000_002_6 );
+		episimConfig.setMaxInteractions( 3 );
 		String startDate = "2020-02-10";
-		episimConfig.setStartDate(startDate);
+		episimConfig.setStartDate( startDate );
 
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-
-		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		double tracingProbability = 0.75;
-		tracingConfig.setTracingProbability(tracingProbability);
-		tracingConfig.setTracingPeriod_days(14 );
-		tracingConfig.setMinContactDuration_sec(15 * 60. );
-		tracingConfig.setQuarantineHouseholdMembers(true);
-		tracingConfig.setEquipmentRate(1.);
-		tracingConfig.setTracingDelay_days(2 );
-		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE );
+		{
+			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule( config, TracingConfigGroup.class );
 
+			int offset = (int) (ChronoUnit.DAYS.between( episimConfig.getStartDate(), LocalDate.parse( "2020-04-01" ) ) + 1);
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( offset );
+			tracingConfig.setTracingProbability( tracingProbability );
+			tracingConfig.setTracingPeriod_days( 14 );
+			tracingConfig.setMinContactDuration_sec( 15 * 60. );
+			tracingConfig.setQuarantineHouseholdMembers( true );
+			tracingConfig.setEquipmentRate( 1. );
+			tracingConfig.setTracingDelay_days( 2 );
+			tracingConfig.setTracingCapacity_pers_per_day( Integer.MAX_VALUE );
+		}
 		double alpha = 1.4;
 		double ciCorrection = 0.3;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
 		String dateOfCiChange = "2020-03-08";
 
-		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
-
-		ConfigBuilder configBuilder = null;
-		try {
-			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
-		} catch (IOException e) {
-			e.printStackTrace();
+		episimConfig.setProgressionConfig( baseProgressionConfig( Transition.config() ).build() );
+		{
+			ConfigBuilder configBuilder = null;
+			try{
+				File csv = new File( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv" );
+				configBuilder = basePolicy( episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear );
+			} catch( IOException e ){
+				throw new RuntimeException( e );
+			}
+			episimConfig.setPolicy( FixedPolicy.class, configBuilder.build() );
 		}
-
-		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
 		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-200init-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter());
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 

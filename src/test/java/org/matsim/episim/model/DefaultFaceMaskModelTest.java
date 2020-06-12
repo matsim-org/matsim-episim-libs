@@ -3,11 +3,13 @@ package org.matsim.episim.model;
 import org.assertj.core.data.Percentage;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.policy.Restriction;
 
+import java.io.ObjectInputFilter;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -20,7 +22,7 @@ public class DefaultFaceMaskModelTest {
 
 	@Before
 	public void setUp() throws Exception {
-		config = EpisimTestUtils.createTestConfig();
+		config = ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class );
 		model = new DefaultFaceMaskModel(config, new SplittableRandom(1));
 	}
 
