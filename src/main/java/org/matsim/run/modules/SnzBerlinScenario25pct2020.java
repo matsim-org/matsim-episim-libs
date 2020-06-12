@@ -71,17 +71,16 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
-				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other")
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
 
-				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-
-				//Sommerferien
-				.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
-				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+//
+//				//Sommerferien
+//				.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
+//				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
 				//Ende der Sommerferien
 				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
@@ -117,7 +116,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
 				.from(EpisimPerson.DiseaseStatus.critical,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)));
+						to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
+				
+				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+				;
 
 	}
 
@@ -136,21 +139,17 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
-		episimConfig.setCalibrationParameter(0.000_009_2); //5.5
+		episimConfig.setCalibrationParameter(0.000_010_0);
 		episimConfig.setMaxInteractions(3);
 		String startDate = "2020-02-13";
 		episimConfig.setStartDate(startDate);
-		episimConfig.setHospitalFactor(2.0);
+		episimConfig.setHospitalFactor(2.);
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
 
-//		double ciFactor = 1.;
-//		setContactIntensities2(episimConfig, ciFactor);
-
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-
 		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-		double tracingProbability = 0.75;
+		double tracingProbability = 0.5;
 		tracingConfig.setTracingProbability(tracingProbability);
 		tracingConfig.setTracingPeriod_days(14);
 		tracingConfig.setMinContactDuration_sec(15 * 60.);
@@ -163,7 +162,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		double ciCorrection = 0.3;
 
 		Path csv =  INPUT.resolve("BerlinSnzData_daily_until20200607.csv");
-		String dateOfCiChange = "2020-03-04";
+		String dateOfCiChange = "2020-03-08";
 
 		Extrapolation extrapolation = EpisimUtils.Extrapolation.linear;
 
@@ -176,17 +175,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
 
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-"+ alpha + "-extrapolation-" + extrapolation + "-ciCorrection-" + ciCorrection + "-dateOfCiChange-" + dateOfCiChange + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-"+ alpha + "-extrapolation-" + extrapolation + "-ciCorrection-" + ciCorrection + "-dateOfCiChange-" + dateOfCiChange + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
 
-//		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-//				.restrict("2020-03-24", Restriction.ofCiCorrection(0.0), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
-//				.restrict("2020-03-24", Restriction.ofCiCorrection(0.0), "pt")
-//				.build()
-//		);
-
-
-//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-split-sd-" + episimConfig.getCalibrationParameter());
-
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
 		return config;
 	}
