@@ -38,7 +38,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 		if (params.startFrom > 0)
 			episimConfig.setStartFromSnapshot(BatchRun.resolveForCluster(SnzBerlinScenario25pct2020.INPUT,
-					"TODO"));
+					String.format("episim-snapshot-%d.zip", params.startFrom)));
 
 		config.global().setRandomSeed(params.seed);
 
