@@ -211,15 +211,15 @@ public class KnRunEpisim {
 
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-				episimConfig.setInitialInfections(200);
-				episimConfig.setInitialInfectionDistrict("Berlin");
+//				episimConfig.setInitialInfections(200);
+//				episimConfig.setInitialInfectionDistrict("Berlin");
 				episimConfig.setWriteEvents( WriteEvents.episim );
 
 				// ---
 
-				config.global().setRandomSeed( 4719 );
+//				config.global().setRandomSeed( 4711 );
 
-				tracingConfig.setTracingCapacity_pers_per_day( Integer.MAX_VALUE );
+//				tracingConfig.setTracingCapacity_pers_per_day( Integer.MAX_VALUE );
 				// wirkt auf diesem Branch erst ab 1.6., vorher ist es "30".
 
 				// NOTE: tracingCapacity wirkt auf diesem Branch erst am 1.6., ist sonst "30".  die "afterDay" Einstellung hat aber in jedem
@@ -228,7 +228,7 @@ public class KnRunEpisim {
 				episimConfig.setMaxInteractions( 3 );
 				if ( episimConfig.getMaxInteractions()==3 ){
 					if( sigmaInfect == 0. ){
-						episimConfig.setCalibrationParameter( 0.000_002_6 );
+//						episimConfig.setCalibrationParameter( 0.000_002_6 );
 						if( config.global().getRandomSeed() == 4711 ){
 							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
 						} else if( config.global().getRandomSeed() == 4713 ){
@@ -362,27 +362,27 @@ public class KnRunEpisim {
 					strb.append( "_ciCorrB" + ciCorrB + "@" ).append( dateOfCiCorrB ).append( "over" + nDays + "days" );
 
 				} else if ( restrictionsType==RestrictionsType.frmSnz ){
-					double alpha = 1.4;
-					double ciCorrection = 0.3;
-					String dateOfCiChange = "2020-03-08";
-					double reopenFraction = 1.;
-
-					File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
-					FixedPolicy.ConfigBuilder restrictions = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, Extrapolation.linear );
-
-					restrictions
-					//Sommerferien
-//					.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
-//					.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-
-					//Ende der Sommerferien
-					.restrict("2020-08-10", reopenFraction, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
-
-					strb.append( "_ciCorr" ).append( ciCorrection ).append( "_@" ).append( dateOfCiChange );
-					strb.append( "_alph" ).append( alpha );
-					strb.append( "_reopFr" ).append( reopenFraction );
+//					double alpha = 1.4;
+//					double ciCorrection = 0.3;
+//					String dateOfCiChange = "2020-03-08";
+//					double reopenFraction = 1.;
+//
+//					File csv = new File("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200524.csv");
+//					FixedPolicy.ConfigBuilder restrictions = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, Extrapolation.linear );
+//
+//					restrictions
+//					//Sommerferien
+////					.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
+////					.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+//
+//					//Ende der Sommerferien
+//					.restrict("2020-08-10", reopenFraction, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+//
+//					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
+//
+//					strb.append( "_ciCorr" ).append( ciCorrection ).append( "_@" ).append( dateOfCiChange );
+//					strb.append( "_alph" ).append( alpha );
+//					strb.append( "_reopFr" ).append( reopenFraction );
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					episimConfig.setPolicy( FixedPolicy.class, FixedPolicy.config().build() ); // overwrite snz policy with "null"
 				}

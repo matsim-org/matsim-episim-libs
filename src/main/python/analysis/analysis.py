@@ -72,8 +72,9 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # w/ reop & inf trac:
 # base = '2020-06-05_08-19-22__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4711_strtDt2020-02-12/'
-base = '2020-06-05_08-19-09__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4713_strtDt2020-02-12/'
+# base = '2020-06-05_08-19-09__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4713_strtDt2020-02-12/'
 
+base = '2020-06-12_18-03-07__frmSnz__theta1.0E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-12_trCap30/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -94,8 +95,8 @@ fit2.index = pd.date_range(start="2020-03-01", periods=30)
 fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
 fit3.index = pd.date_range(start="2020-03-01", periods=80)
 
-# rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
-rr3 = pd.concat([cc['cases']])
+rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
+# rr3 = pd.concat([cc['cases']])
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
@@ -104,8 +105,8 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
                   cycler(marker=['.','','.','','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-axes.set_ylim(0,10000)
-# axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
+# axes.set_ylim(0,10000)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
 # pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
