@@ -154,7 +154,7 @@ public class ConfigurableProgressionModelTest {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		tracingConfig.setTracingDelay_days(2 );
-		tracingConfig.setTracingMemory_days(1 );
+		tracingConfig.setTracingPeriod_days(1 );
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);

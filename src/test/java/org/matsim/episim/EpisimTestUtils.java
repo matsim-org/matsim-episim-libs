@@ -29,7 +29,7 @@ public class EpisimTestUtils {
 	private static final AtomicLong ID = new AtomicLong(0);
 	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 
-	public static final EpisimConfigGroup TEST_CONFIG = createTestConfig();
+	public static final EpisimConfigGroup TEST_CONFIG = ConfigUtils.addOrGetModule( createTestConfig(), EpisimConfigGroup.class );
 
 	/**
 	 * Reset the person id counter.
@@ -40,8 +40,9 @@ public class EpisimTestUtils {
 
 	/**
 	 * Creates test config with some default interactions.
+	 * @return
 	 */
-	public static EpisimConfigGroup createTestConfig() {
+	public static Config createTestConfig() {
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -63,7 +64,7 @@ public class EpisimTestUtils {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1));
 
-		return episimConfig;
+		return config;
 	}
 
 	public static InfectionEventHandler.EpisimFacility createFacility() {

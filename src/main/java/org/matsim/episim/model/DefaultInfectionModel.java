@@ -23,6 +23,8 @@ package org.matsim.episim.model;
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
@@ -69,21 +71,28 @@ public /*final*/ class DefaultInfectionModel extends AbstractInfectionModel {
 	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	/* package */ DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
 								 EpisimReporting reporting, FaceMaskModel maskModel) {
-		this(rnd, episimConfig, reporting, maskModel,
-				tracingConfig.getPutTraceablePersonsInQuarantineAfterDay(), tracingConfig.getMinDuration());
+		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
+
+
+		super(rnd, episimConfig, reporting );
+		this.maskModel = maskModel;
+		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
+		this.trackingMinDuration = tracingConfig.getMinDuration();
 	}
 
 	/**
 	 * Constructor when no injection is used.
 	 */
-	public DefaultInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting, FaceMaskModel maskModel,
-								 int trackingAfterDay, double trackingMinDuration) {
-		super(rnd, episimConfig, reporting);
-		this.maskModel = maskModel;
-		this.trackingAfterDay = trackingAfterDay;
-		this.trackingMinDuration = trackingMinDuration;
+	public DefaultInfectionModel( SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel ) {
+		// (make public constructor more general (full config as argument) so that argument changes are reduced.  also, do not pass multiple number
+		// types in sequence since they can get confused (as I just did). pass full config so that we do not have to retrofit constructor every
+		// time additional config info is needed.  kai, jun'20)
+
+		// (use injected constructor from here since args can be adapted. kai, jun'20)
+		this( rnd, ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class ), ConfigUtils.addOrGetModule( config, TracingConfigGroup.class ),
+				reporting, maskModel);
 	}
 
 	/**

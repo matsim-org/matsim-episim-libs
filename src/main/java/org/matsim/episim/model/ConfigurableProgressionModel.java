@@ -9,7 +9,6 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 
-import java.time.LocalDate;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.model.Transition.to;
@@ -207,9 +206,13 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private void performTracing(EpisimPerson person, double now, int day) {
 
-		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
+		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
+			return;
+		}
 
-		if (tracingCapacity <= 0) return;
+		if (tracingCapacity <= 0) {
+			return;
+		}
 
 		String homeId = null;
 
@@ -228,13 +231,17 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability())
-
+					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability()) {
 				quarantinePerson(pw, day);
+				log.debug("sending person={} into quarantine because of contact to person={}", pw.getPersonId(), person.getPersonId());
+			}
 
 		}
 
 		tracingCapacity--;
+		if (tracingCapacity == 0) {
+			log.debug("tracing capacity exhausted for day={}", now);
+		}
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
