@@ -133,7 +133,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		if (to == EpisimPerson.DiseaseStatus.showingSymptoms) {
 
-			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
 			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
 			if (tracingConfig.getTracingDelay() == 0) {
 				performTracing(person, now, day);
