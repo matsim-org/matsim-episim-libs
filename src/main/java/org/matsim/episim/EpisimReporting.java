@@ -440,11 +440,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	public void reportPersonStatus(EpisimPerson person, EpisimPersonStatusEvent event) {
 
-		if (event.getDiseaseStatus() == EpisimPerson.DiseaseStatus.seriouslySick ||
-				event.getDiseaseStatus() == EpisimPerson.DiseaseStatus.contagious ||
-				event.getDiseaseStatus() == EpisimPerson.DiseaseStatus.showingSymptoms) {
+		EpisimPerson.DiseaseStatus newStatus = event.getDiseaseStatus();
+
+		if (newStatus == EpisimPerson.DiseaseStatus.seriouslySick || newStatus == EpisimPerson.DiseaseStatus.contagious ||
+				newStatus == EpisimPerson.DiseaseStatus.showingSymptoms || newStatus == EpisimPerson.DiseaseStatus.critical) {
 			String districtName = (String) person.getAttributes().getAttribute("district");
-			cumulativeCases.get(event.getDiseaseStatus()).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
+			cumulativeCases.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
 		}
 
 		manager.processEvent(event);
