@@ -64,7 +64,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private String dateOfCiChange = "2020-03-08";
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200607.csv" );
-		private long introductionPeriod = 0;
+		private long introductionPeriod = 1;
 		private double clothFinalFraction = 0.5;
 		private double surgicalFinalFraction = 0.1;
 		public void setIntroductionPeriod( long introductionPeriod ){
@@ -191,7 +191,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
 				.from(EpisimPerson.DiseaseStatus.critical,
 						to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
-				
+
 				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 				;

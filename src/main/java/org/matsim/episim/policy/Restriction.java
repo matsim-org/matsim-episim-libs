@@ -62,6 +62,9 @@ public final class Restriction {
 			for (FaceMask m : FaceMask.values()) {
 				if (maskUsage.containsKey(m)) {
 					sum += maskUsage.get(m);
+					if (Double.isNaN(sum))
+						throw new IllegalArgumentException("Mask usage contains NaN value!");
+
 					this.maskUsage.put(m, sum);
 				}
 			}

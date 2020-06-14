@@ -164,7 +164,7 @@ public final class EpisimRunner {
 					.createArchiveOutputStream("zip", out);
 
 			// Copy whole output to the snapshot
-			EpisimUtils.compressDirectory(output.toString(), output.toString(), archive);
+			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controler().getRunId(), archive);
 
 			archive.putArchiveEntry(new ZipArchiveEntry("iteration"));
 			ObjectOutputStream oos = new ObjectOutputStream(archive);
