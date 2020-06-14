@@ -110,9 +110,26 @@ public final class RunTrial implements Callable<Integer> {
 		} else {
 
 			if (alpha > -1) {
-				episimConfig.setPolicy(FixedPolicy.class,
-						SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200524.csv"),
-								alpha, correction, correctionStart, EpisimUtils.Extrapolation.linear).build());
+//				episimConfig.setPolicy(FixedPolicy.class,
+//						SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200524.csv"),
+//								alpha, correction, correctionStart, EpisimUtils.Extrapolation.linear).build());
+
+				if ( true ) {
+					throw new RuntimeException( "I reconstructed what is below from what was above after I made the basePolicy method private.  It is, " +
+										    "however, not clear to me if not instead (some of) the default values " +
+										    "should be used.  kai, jun'20" );
+				}
+
+				SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
+				builder.setAlpha( alpha );
+				builder.setCiCorrection( correction );
+				builder.setCsv( SnzBerlinScenario25pct2020.INPUT.resolve("BerlinSnzData_daily_until20200524.csv") );
+				builder.setDateOfCiChange( correctionStart );
+				builder.setExtrapolation( EpisimUtils.Extrapolation.linear );
+				FixedPolicy.ConfigBuilder policyConf = builder.build();
+
+				episimConfig.setPolicy( FixedPolicy.class, policyConf.build() );
+
 			} else if (correctionStart != null) {
 				FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 				log.info("Setting ci correction at {} to {}", correctionStart, correction);

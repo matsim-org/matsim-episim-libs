@@ -57,21 +57,83 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	 */
 	public static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
+	public static class BasePolicyBuilder{
+		private final EpisimConfigGroup episimConfig;
+		private double alpha = 1.0;
+		private double ciCorrection = 0.3;
+		private String dateOfCiChange = "2020-03-08";
+		private Extrapolation extrapolation = Extrapolation.linear;
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200607.csv" );
+		private long introductionPeriod = 0;
+		private double clothFinalFraction = 0.5;
+		private double surgicalFinalFraction = 0.1;
+		public void setIntroductionPeriod( long introductionPeriod ){
+			this.introductionPeriod = introductionPeriod;
+		}
+		public void setClothFinalFraction( double clothFinalFraction ){
+			this.clothFinalFraction = clothFinalFraction;
+		}
+		public void setSurgicalFinalFraction( double surgicalFinalFraction ){
+			this.surgicalFinalFraction = surgicalFinalFraction;
+		}
+		public BasePolicyBuilder( EpisimConfigGroup episimConfig ){
+			this.episimConfig = episimConfig;
+		}
+		public void setCsv( Path csv ){
+			this.csv = csv;
+		}
+		public double getAlpha(){
+			return alpha;
+		}
+		public void setAlpha( double alpha ){
+			this.alpha = alpha;
+		}
+		public double getCiCorrection(){
+			return ciCorrection;
+		}
+		public void setCiCorrection( double ciCorrection ){
+			this.ciCorrection = ciCorrection;
+		}
+		public String getDateOfCiChange(){
+			return dateOfCiChange;
+		}
+		public void setDateOfCiChange( String dateOfCiChange ){
+			this.dateOfCiChange = dateOfCiChange;
+		}
+		public Extrapolation getExtrapolation(){
+			return extrapolation;
+		}
+		public void setExtrapolation( Extrapolation extrapolation ){
+			this.extrapolation = extrapolation;
+		}
+		public ConfigBuilder build(){
+			ConfigBuilder configBuilder = null;
+			try {
+				configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, extrapolation, introductionPeriod,
+						clothFinalFraction, surgicalFinalFraction );
+			} catch ( IOException e) {
+				throw new RuntimeException( e );
+			}
+			return configBuilder;
+		}
+	}
+
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	public static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
-													   double ciCorrection, String dateOfCiChange, EpisimUtils.Extrapolation extrapolation) throws IOException {
+	private static FixedPolicy.ConfigBuilder basePolicy( EpisimConfigGroup episimConfig, File csv, double alpha,
+							     double ciCorrection, String dateOfCiChange, Extrapolation extrapolation,
+							     long introductionPeriod, Double clothFinalFraction, Double surgicalFinalFraction ) throws IOException {
 
-		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
+		ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
 
-		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
-		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
+		restrictions.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		restrictions.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
+		restrictions.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
 
-		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+		restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other")
+//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other")
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
@@ -86,7 +148,19 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
 
-		return builder;
+
+		LocalDate masksCenterDate = LocalDate.of( 2020, 4,27);
+		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
+		// in MUC and elsewhere!
+
+		for ( int ii=0 ; ii<=introductionPeriod ; ii++ ) {
+			LocalDate date = masksCenterDate.plusDays( -introductionPeriod/2+ii );
+			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFinalFraction*ii/introductionPeriod,
+					FaceMask.SURGICAL,	surgicalFinalFraction*ii/introductionPeriod)), "pt", "shop_daily", "shop_other");
+		}
+
+
+		return restrictions;
 	}
 
 	/**
@@ -106,7 +180,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 // Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
 				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
+						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(5., 5.)),
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
 
 // Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
@@ -156,26 +230,13 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
 		tracingConfig.setTracingDelay_days(2);
-		tracingConfig.setTracingCapacity_pers_per_day(30);
+		tracingConfig.setTracingCapacity_per_day(30 );
 
-		double alpha = 1.0;
-		double ciCorrection = 0.3;
+		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder( episimConfig );
 
-		Path csv =  INPUT.resolve("BerlinSnzData_daily_until20200607.csv");
-		String dateOfCiChange = "2020-03-08";
+		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build() );
 
-		Extrapolation extrapolation = EpisimUtils.Extrapolation.linear;
-
-		ConfigBuilder configBuilder = null;
-		try {
-			configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, extrapolation);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
-
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-"+ alpha + "-extrapolation-" + extrapolation + "-ciCorrection-" + ciCorrection + "-dateOfCiChange-" + dateOfCiChange + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
+		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-"+ basePolicyBuilder.getAlpha() + "-extrapolation-" + basePolicyBuilder.getExtrapolation() + "-ciCorrection-" + basePolicyBuilder.getCiCorrection() + "-dateOfCiChange-" + basePolicyBuilder.getDateOfCiChange() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability );
 
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 

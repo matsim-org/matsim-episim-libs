@@ -83,7 +83,7 @@ public class ConfigurableProgressionModelTest {
 		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		tracingConfig.setTracingDelay_days(0 );
-		tracingConfig.setTracingCapacity_pers_per_day(500 );
+		tracingConfig.setTracingCapacity_per_day(500 );
 
 		episimConfig.setStartDate("2020-06-01");
 		episimConfig.setSampleSize(1);

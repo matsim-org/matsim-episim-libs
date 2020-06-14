@@ -105,7 +105,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(CAPACITY)
-	public void setTracingCapacity_pers_per_day( int tracingCapacity ) {
+	public void setTracingCapacity_per_day( int tracingCapacity ) {
 		this.tracingCapacity = tracingCapacity;
 	}
 
