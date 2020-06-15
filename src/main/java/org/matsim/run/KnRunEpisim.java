@@ -165,7 +165,7 @@ public class KnRunEpisim {
 
 //				config.global().setRandomSeed( 4711 );
 
-//				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
+				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
 
 				episimConfig.setMaxInteractions( 3 );
 				if ( episimConfig.getMaxInteractions()==3 ){

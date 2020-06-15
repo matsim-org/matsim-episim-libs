@@ -93,12 +93,20 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # andere Maskenwerte:
 # base = '2020-06-13_13-55-28__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_seed4711_strtDt2020-02-18_trCap30/'
 
-base = '2020-06-13_20-29-54__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-18_trCap30/'
+# base = '2020-06-13_20-29-54__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-18_trCap30/'
 # base = '2020-06-13_20-24-45__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-19_trCap30/'
 
 # these two can't be used (infinite tracing capacity from early on)
 # base = '2020-06-13_21-55-24__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-18_trCap2147483647/'
 # base = '2020-06-13_21-55-35__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-19_trCap2147483647/'
+
+# base = '2020-06-14_11-01-58__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.1_seed4711_strtDt2020-02-18_trCap30/'
+
+# base = '2020-06-14_12-17-53__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-18_trCap30/'
+# base = '2020-06-14_12-17-59__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap30/'
+
+# base = '2020-06-14_13-21-25__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-18_trCap2147483647/'
+base = '2020-06-14_13-21-33__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap2147483647/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
