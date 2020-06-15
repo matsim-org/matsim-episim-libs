@@ -9,6 +9,8 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.model.Transition.to;
@@ -89,17 +91,23 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	@Override
 	public void setIteration(int day) {
 
-		// Hardcoded capacity before 06-01
-		// LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
-		//if (date.isBefore(LocalDate.parse("2020-06-01"))) {
-		//	tracingCapacity = (int) (30 * episimConfig.getSampleSize());
-		//} else {
-		//}
+		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
-		if (tracingConfig.getTracingCapacity() == Integer.MAX_VALUE)
-			tracingCapacity = Integer.MAX_VALUE;
-		else
-			tracingCapacity = (int) (tracingConfig.getTracingCapacity() * episimConfig.getSampleSize());
+		// Default capacity if none is set
+		tracingCapacity = Integer.MAX_VALUE;
+
+		for (Map.Entry<LocalDate, Integer> kv : tracingConfig.getTracingCapacity().entrySet()) {
+			LocalDate key = kv.getKey();
+			if (key.isBefore(date) || key.isEqual(date)) {
+
+				Integer value = kv.getValue();
+				if (value == Integer.MAX_VALUE)
+					tracingCapacity = Integer.MAX_VALUE;
+				else
+					tracingCapacity = (int) (value * episimConfig.getSampleSize());
+
+			}
+		}
 	}
 
 	@Override

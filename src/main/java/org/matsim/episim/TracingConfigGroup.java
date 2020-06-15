@@ -1,11 +1,21 @@
 package org.matsim.episim;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import org.matsim.core.config.ReflectiveConfigGroup;
+
+import java.time.LocalDate;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 /**
  * Config option specific to contact tracing and measures performed in {@link org.matsim.episim.model.ProgressionModel}.
  */
 public class TracingConfigGroup extends ReflectiveConfigGroup {
+
+	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
+	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
 	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
@@ -16,7 +26,10 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String CAPACITY = "tracingCapacity";
 	private static final String GROUPNAME = "episimTracing";
-
+	/**
+	 * Amount of persons traceable der day.
+	 */
+	private final Map<LocalDate, Integer> tracingCapacity = new TreeMap<>();
 	/**
 	 * Day after which tracing starts and puts persons into quarantine.
 	 */
@@ -25,17 +38,10 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * How many days the tracing works back.
 	 */
 	private int tracingDayDistance = 4;
-
 	/**
 	 * Amount of days after the person showing symptoms.
 	 */
 	private int tracingDelay = 0;
-
-	/**
-	 * Amount of persons traceable der day.
-	 */
-	private int tracingCapacity = Integer.MAX_VALUE;
-
 	/**
 	 * Probability of successfully tracing a person.
 	 */
@@ -80,7 +86,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(TRACING_DAYS_DISTANCE)
-	public void setTracingPeriod_days( int tracingDayDistance ) {
+	public void setTracingPeriod_days(int tracingDayDistance) {
 		this.tracingDayDistance = tracingDayDistance;
 	}
 
@@ -90,7 +96,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(TRACING_DELAY)
-	public void setTracingDelay_days( int tracingDelay ) {
+	public void setTracingDelay_days(int tracingDelay) {
 		this.tracingDelay = tracingDelay;
 	}
 
@@ -104,14 +110,42 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.tracingProbability = tracingProbability;
 	}
 
+	/**
+	 * Sets the tracing capacity for the whole simulation period.
+	 *
+	 * @param capacity number of persons to trace per day.
+	 * @see #setTracingCapacity_pers_per_day(Map)
+	 */
+	public void setTracingCapacity_pers_per_day(int capacity) {
+		setTracingCapacity_pers_per_day(Map.of(LocalDate.of(1970, 1, 1), capacity));
+	}
+
+	/**
+	 * Sets the tracing capacity for individual days. If a day has no entry the previous will be still valid.
+	 *
+	 * @param capacity map of dates to changes in capacity.
+	 */
+	public void setTracingCapacity_pers_per_day(Map<LocalDate, Integer> capacity) {
+		tracingCapacity.clear();
+		tracingCapacity.putAll(capacity);
+	}
+
+	public Map<LocalDate, Integer> getTracingCapacity() {
+		return tracingCapacity;
+	}
+
 	@StringSetter(CAPACITY)
-	public void setTracingCapacity_pers_per_day( int tracingCapacity ) {
-		this.tracingCapacity = tracingCapacity;
+	void setTracingCapacity(String capacity) {
+
+		Map<String, String> map = SPLITTER.split(capacity);
+		setTracingCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+		)));
 	}
 
 	@StringGetter(CAPACITY)
-	public int getTracingCapacity() {
-		return tracingCapacity;
+	String getTracingCapacityString() {
+		return JOINER.join(tracingCapacity);
 	}
 
 	@StringGetter(EQUIPMENT_RATE)
@@ -130,7 +164,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(MIN_DURATION)
-	public void setMinContactDuration_sec( double minDuration ) {
+	public void setMinContactDuration_sec(double minDuration) {
 		this.minDuration = minDuration;
 	}
 
