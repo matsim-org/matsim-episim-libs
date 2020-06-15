@@ -67,8 +67,8 @@ class AnalyzeSnzData {
 		List<Integer> zipCodesHeinsberg = Arrays.asList(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844);
 
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
-//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
-//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
+		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
+		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
 
 		log.info("Done!");
 	}
@@ -107,7 +107,7 @@ class AnalyzeSnzData {
 
 		log.info("Analyze data for " + area);
 		String outputFile = null;
-		outputFile = "output/" + area + "SnzData_daily_until20200517.csv";
+		outputFile = "output/" + area + "SnzData_daily_until20200607.csv";
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile);
 		try {
 			writer.write(

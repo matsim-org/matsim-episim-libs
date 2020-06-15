@@ -57,16 +57,16 @@ public class DownSampleScenario implements Callable<Integer> {
 
 	private static Logger log = LogManager.getLogger(DownSampleScenario.class);
 
-	@Parameters(paramLabel = "sampleSize", arity = "1", description = "Desired percentage of the sample between (0, 1)")
+	@Parameters(paramLabel = "sampleSize", arity = "1", description = "Desired percentage of the sample between (0, 1)", defaultValue = "0.25")
 	private double sampleSize;
 
-	@Option(names = "--population", required = true, description = "Population xml file")
+	@Option(names = "--population", required = true, description = "Population xml file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
 	private Path population;
 
 	@Option(names = "--output", description = "Output folder", defaultValue = "output/scenario")
 	private Path output;
 
-	@Option(names = "--events", required = true, description = "Path to events file")
+	@Option(names = "--events", required = true, description = "Path to events file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_episim_events_100pt.xml.gz")
 	private Path events;
 
 	@Option(names = "--facilities", description = "Path to facility file")

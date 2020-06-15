@@ -67,18 +67,18 @@ public class DistrictLookup implements Callable<Integer> {
 	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts.xml.gz")
+	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
 	private Path output;
 
 	@CommandLine.Option(names = "--attr", description = "Attribute name in the shapefile, which contains the district name", defaultValue = "name_2")
 	private String attr;
 
 	@CommandLine.Option(names = "--input-crs", description = "Overwrite CRS of the population home coordinates. " +
-			"If not given it will be read from the population attributes.", defaultValue = "null")
+			"If not given it will be read from the population attributes.", defaultValue = "EPSG:25832")
 	private String inputCRS;
 
 	// because of the own transformation classes of matsim, the crs can not be easily read from the shapefile, but has to be explicitly defined
-	@CommandLine.Option(names = "--crs", description = "CRS of the shapefile.", defaultValue = "EPSG:25832")
+	@CommandLine.Option(names = "--crs", description = "CRS of the shapefile.", defaultValue = "EPSG:4326")
 	private String shapeCRS;
 
 	public static void main(String[] args) {
