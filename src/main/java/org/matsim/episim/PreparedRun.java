@@ -78,6 +78,7 @@ public final class PreparedRun {
 		int index = parameter.indexOf("startDate");
 
 		data.put("city", setup.getMetadata().region);
+		data.put("runName", setup.getMetadata().name);
 		data.put("defaultStartDate", setup.getDefaultStartDate());
 		data.put("endDate", setup.getMetadata().endDate);
 
