@@ -157,22 +157,21 @@ public class KnRunEpisim {
 
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-//				episimConfig.setInitialInfections(200);
-//				episimConfig.setInitialInfectionDistrict("Berlin");
 				episimConfig.setWriteEvents( WriteEvents.episim );
 
 				// ---
 
 //				config.global().setRandomSeed( 4711 );
 
-				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
+//				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
 
+				/*
 				episimConfig.setMaxInteractions( 3 );
 				if ( episimConfig.getMaxInteractions()==3 ){
 					if( sigmaInfect == 0. ){
 						episimConfig.setCalibrationParameter( 0.000_011 );
 						if( config.global().getRandomSeed() == 4711 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 19 ) );
+							episimConfig.setStartDate( LocalDate.of( 2020, 2, 18 ) );
 						} else if( config.global().getRandomSeed() == 4713 ){
 							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
 						} else if( config.global().getRandomSeed() == 4715 ){
@@ -201,6 +200,7 @@ public class KnRunEpisim {
 				} else {
 					throw new RuntimeException("not calibrated");
 				}
+				 */
 
 				// ---
 
@@ -210,8 +210,8 @@ public class KnRunEpisim {
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
 				strb.append( "__" ).append( restrictionsType.name() );
 				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxInteractions() );
-				strb.append( "__sInfct" ).append( sigmaInfect );
-				strb.append( "__sSusc" ).append( sigmaSusc );
+				if ( sigmaInfect!=0. ) strb.append( "__sInfct" ).append( sigmaInfect );
+				if ( sigmaSusc!=0. ) strb.append( "__sSusc" ).append( sigmaSusc );
 				strb.append( "__trStrt" ).append( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() );
 
 				if ( restrictionsType==RestrictionsType.triang ) {
@@ -284,19 +284,13 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.frmSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
-					int nDays = 14;
-					basePolicyBuilder.setIntroductionPeriod( nDays );
-					double clothFinalFraction = 0.5;
-					double surgicalFinalFraction = 0.1;
-					basePolicyBuilder.setClothFinalFraction( clothFinalFraction );
-					basePolicyBuilder.setSurgicalFinalFraction( surgicalFinalFraction );
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
 					strb.append( "_ciCorr" ).append( basePolicyBuilder.getCiCorrection() ).append( "_@" ).append( basePolicyBuilder.getDateOfCiChange() );
 					strb.append( "_alph" ).append( basePolicyBuilder.getAlpha() );
-					strb.append("_masksPeriod").append( nDays );
-					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );
+//					strb.append("_masksPeriod").append( nDays );
+//					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					episimConfig.setPolicy( FixedPolicy.class, FixedPolicy.config().build() ); // overwrite snz policy with "null"
@@ -305,7 +299,7 @@ public class KnRunEpisim {
 				strb.append( "_seed" ).append( config.global().getRandomSeed() );
 				strb.append( "_strtDt" ).append( episimConfig.getStartDate() );
 				strb.append("_trCap" ).append( tracingConfig.getTracingCapacity() );
-				config.controler().setOutputDirectory( strb.toString() );
+				config.controler().setOutputDirectory( "output/" + strb.toString() );
 
 				return config;
 			}

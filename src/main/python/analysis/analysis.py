@@ -106,7 +106,9 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = '2020-06-14_12-17-59__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap30/'
 
 # base = '2020-06-14_13-21-25__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-18_trCap2147483647/'
-base = '2020-06-14_13-21-33__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap2147483647/'
+# base = '2020-06-14_13-21-33__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap2147483647/'
+
+base = 'output/2020-06-15_19-47-18__frmSnz__theta1.1E-5@3__trStrt44_ciCorr0.32_@2020-03-08_alph1.0_seed4711_strtDt2020-02-18_trCap30/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -139,7 +141,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 # axes.set_ylim(0,10000)
-axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-10-15'))
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2021-02-15'))
 # pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
