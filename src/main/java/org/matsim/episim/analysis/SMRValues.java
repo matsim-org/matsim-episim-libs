@@ -37,26 +37,36 @@ import java.util.LinkedHashSet;
  */
 
 public class SMRValues {
+	
+	private static final String WORKINGDIR = "../shared-svn/projects/episim/matsim-files/bmbf6/20200615-runs/runs/";
 
 	public static void main(String[] args) throws IOException {
 		
+		
 		HashSet<String> scenarios = new LinkedHashSet<String>(); 
-		scenarios.add("output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-bmbf6-schools1-2-1.0-extrapolation-linear-ciCorrection-0.32-dateOfCiChange-2020-03-08-startDate-2020-02-18-hospitalFactor-1.8-calibrParam-1.1E-5-tracingProba-0.5");
-		scenarios.add("output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-bmbf6-schools1-masks0108-1.0-extrapolation-linear-ciCorrection-0.32-dateOfCiChange-2020-03-08-startDate-2020-02-18-hospitalFactor-1.8-calibrParam-1.1E-5-tracingProba-0.5");
-		scenarios.add("output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-bmbf6-schools1-noTracing-1.0-extrapolation-linear-ciCorrection-0.32-dateOfCiChange-2020-03-08-startDate-2020-02-18-hospitalFactor-1.8-calibrParam-1.1E-5-tracingProba-0.5");
+		scenarios.add("tracing-30-noSchools");
+		scenarios.add("tracing-30-noSchools-masks0108");
+		scenarios.add("tracing-30-noSchools-notracingAfter0106");
+		scenarios.add("tracing-30-SchoolsAfterSummer");
+		scenarios.add("tracing-inf-noSchools");
 
+	    FileWriter fw = new FileWriter(new File(WORKINGDIR + "rValues.txt"));
+	    BufferedWriter bw = new BufferedWriter(fw);
+	    bw.write("day\tdate\trValue\tscenario\tnewInfections");
+	    
 		for (String scenario : scenarios) {
-			HashMap<LocalDate, Double> rvalues = readInfectionEvents(scenario);
+			HashMap<LocalDate, Double> rvalues = readInfectionEvents(scenario, bw);
+			bw.flush();
 		}
 		
-
+		bw.close();
 	}
 	
-	private static HashMap<LocalDate, Double> readInfectionEvents(String scenario) throws IOException {
+	private static HashMap<LocalDate, Double> readInfectionEvents(String scenario, BufferedWriter bw2) throws IOException {
 				
 		HashMap<String, InfectedPerson> infectedPersons = new LinkedHashMap<String, InfectedPerson>();
 		
-		BufferedReader reader = new BufferedReader(new FileReader("./" + scenario + "/infectionEvents.txt"));
+		BufferedReader reader = new BufferedReader(new FileReader(WORKINGDIR + scenario + "/infectionEvents.txt"));
 	    String line;
 	    int lineNo = 0;
 	    while ((line = reader.readLine()) != null) {
@@ -76,12 +86,12 @@ public class SMRValues {
 
 	    }
 	    	    
-	    System.out.println("processed " + lineNo + " line numbers in scenario " + scenario);
+	    System.out.println("processed " + lineNo + " lines in scenario " + scenario);
 	    reader.close();
 	    
-	    FileWriter fw = new FileWriter(new File("./" + scenario + "/rValues.txt"));
+	    FileWriter fw = new FileWriter(new File(WORKINGDIR + scenario + "/rValues.txt"));
 	    BufferedWriter bw = new BufferedWriter(fw);
-	    bw.write("date;rValue");
+	    bw.write("day\tdate\trValue\tnewInfections");
 	    
 	    HashMap<LocalDate, Double> rValues = new LinkedHashMap<LocalDate, Double>();
 	    
@@ -96,12 +106,19 @@ public class SMRValues {
 	    			noOfInfected = noOfInfected + ip.getNoOfInfected();
 	    		}
 	    	}
-	    	double r = (double) noOfInfected / noOfInfectors;
+
+	    	if (noOfInfectors != 0) {
+		    	bw.newLine();
+		    	bw2.newLine();
+	    		double r = (double) noOfInfected / noOfInfectors;
+		    	bw.write(i + "\t" + date.toString() + "\t" + r + "\t" + noOfInfectors);
+		    	bw2.write(i + "\t" + date.toString() + "\t" + r + "\t" + scenario + "\t" + noOfInfectors);
+		    	rValues.put(date, r);
+	    		
+	    	}
 	    	
-	    	bw.newLine();
-	    	bw.write(date.toString() + ";" + r);
 	    	bw.flush();
-	    	rValues.put(date, r);
+	    	
 	    }
 	    bw.close();
 	    return rValues;
