@@ -25,6 +25,6 @@ done
 
 echo "Creating zip file..."
 
-zip --junk-paths summaries.zip tmp/*.csv
+zip --junk-paths summaries.zip _info.txt metadata.yaml tmp/*.csv
 
 rm -r tmp

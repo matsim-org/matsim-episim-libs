@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import javax.annotation.Nullable;
@@ -23,7 +24,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("experimental", "stability");
+		return Metadata.of("experimental", "stability3");
 	}
 
 	@Override
@@ -32,7 +33,10 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 		Config config = module.config();
 
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		tracingConfig.setTracingCapacity_per_day(Integer.MAX_VALUE);
 
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
@@ -42,16 +46,15 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 		config.global().setRandomSeed(params.seed);
 
-
 		return config;
 	}
 
 	public static final class Params {
 
-		@GenerateSeeds(300)
+		@GenerateSeeds(400)
 		long seed;
 
-		@IntParameter({0, 30, 60, 120})
+		@IntParameter({0, 120})
 		int startFrom;
 
 	}
