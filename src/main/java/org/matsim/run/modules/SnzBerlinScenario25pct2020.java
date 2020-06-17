@@ -219,7 +219,6 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setStartDate(startDate);
 		episimConfig.setHospitalFactor(1.6);
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
-		episimConfig.setSnapshotInterval(7);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
