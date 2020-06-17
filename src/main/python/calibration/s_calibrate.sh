@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=60
+#SBATCH --ntasks-per-node=40
 #SBATCH -A bzz0020
 
 date

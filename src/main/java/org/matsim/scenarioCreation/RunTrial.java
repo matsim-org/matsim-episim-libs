@@ -116,6 +116,8 @@ public final class RunTrial implements Callable<Integer> {
 				builder.setDateOfCiChange(correctionStart);
 				FixedPolicy.ConfigBuilder policyConf = builder.build();
 
+				log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
+
 				episimConfig.setPolicy(FixedPolicy.class, policyConf.build());
 
 			} else if (correctionStart != null) {
@@ -139,7 +141,7 @@ public final class RunTrial implements Callable<Integer> {
 		int iterations = days;
 
 		if (correctionStart != null) {
-			log.info("Using start date {} to calculate new number of iterations", correctionStart);
+			log.info("Using correction date {} to calculate new number of iterations", correctionStart);
 			LocalDate endDate = LocalDate.parse(correctionStart).plusDays(days);
 			iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
 		}
@@ -149,7 +151,7 @@ public final class RunTrial implements Callable<Integer> {
 			episimConfig.setStartFromSnapshot(snapshot.toString());
 		}
 
-		log.info("Starting run number {} with {}", number, iterations);
+		log.info("Starting run number {} at {} with {} iterations", number, episimConfig.getStartDate(), iterations);
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(iterations);

@@ -78,10 +78,9 @@ def calc_multi_error(f, district, start, end, hospital="berlin-hospital.csv", rk
     error_sick = mean_squared_log_error(hospital["Stationäre Behandlung"], df.nSeriouslySick)
     error_critical = mean_squared_log_error(hospital["Intensivmedizin"], df.nCritical)
 
-    # Assume Dunkelziffer of factor 8
-    # error_cases = mean_squared_log_error(cmp["Gemeldete Fälle"].diff(1).dropna() * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
-    # error_cases = mean_squared_log_error(rki.drop(rki.index[0]).cases * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
-    error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
+    # Assume fixed Dunkelziffer
+    error_cases = mean_squared_log_error(rki.casesSmoothed * 2, df.casesSmoothed)
+    # error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
 
     # Dunkelziffer
     dz = float(df.nContagiousCumulative.tail(1) / rki.casesCumulative.tail(1))
@@ -93,7 +92,7 @@ def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
     n = trial.number
-    c = trial.suggest_uniform("calibrationParameter", 1e-06, 4e-06)
+    c = trial.suggest_uniform("calibrationParameter", 0.5e-5, 1.5e-5)
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
@@ -123,7 +122,7 @@ def objective_ci_correction(trial):
         end=trial.study.user_attrs["end"]
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 14" \
+    cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 14" \
           " --number %(number)d --correction %(correction).3f" \
           "--start %(start)s" % params
 
@@ -155,22 +154,20 @@ def objective_multi(trial):
         number=n,
         # Parameter to calibrate
         #c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
-        # offset=trial.suggest_int('offset', -8, 4),
-        # ci_homeq=trial.suggest_loguniform("home_quarantine", 0.1, 1),
-        # ci_homeq=1,
-        alpha=trial.suggest_uniform("alpha", 1, 2),
+        offset=trial.suggest_int('offset', -5, 5),
+        alpha=trial.suggest_uniform("alpha", 0.8, 2),
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 75" \
-          " --number %(number)d --alpha %(alpha).3f" \
-          " --correction %(correction).3f --start \"2020-03-08\"" % params
+    cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 90" \
+          " --number %(number)d --alpha %(alpha).3f --offset %(offset)d" \
+          " --correction %(correction).3f --start \"2020-03-07\"" % params
 
     print("Running multi objective with params: %s" % params)
     print("Running calibration command: %s" % cmd)
     subprocess.run(cmd, shell=True)
     e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n, params["district"],
-                                                             start="2020-03-08", end="2020-04-07")
+                                                             start="2020-03-01", end="2020-06-01")
 
     trial.set_user_attr("error_cases", e_cases)
     trial.set_user_attr("error_sick", e_sick)
@@ -178,7 +175,7 @@ def objective_multi(trial):
     trial.set_user_attr("peak", peak)
     trial.set_user_attr("dz", dz)
 
-    return e_cases, e_sick, e_critical
+    return e_cases, e_sick + e_critical
 
 
 if __name__ == "__main__":
