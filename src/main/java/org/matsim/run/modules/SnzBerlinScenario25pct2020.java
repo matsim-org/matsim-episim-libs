@@ -61,12 +61,12 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private final EpisimConfigGroup episimConfig;
 		private double alpha = 1.0;
 		private double ciCorrection = 0.32;
-		private String dateOfCiChange = "2020-03-08";
+		private String dateOfCiChange = "2020-03-07";
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200607.csv" );
 		private long introductionPeriod = 14;
 		private double clothFinalFraction = 0.5;
-		private double surgicalFinalFraction = 0.1;
+		private double surgicalFinalFraction = 0.3;
 		public void setIntroductionPeriod( long introductionPeriod ){
 			this.introductionPeriod = introductionPeriod;
 		}
@@ -215,10 +215,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_011_0);
 		episimConfig.setMaxInteractions(3);
-		String startDate = "2020-02-18";
+		String startDate = "2020-02-16";
 		episimConfig.setStartDate(startDate);
-		episimConfig.setHospitalFactor(1.8);
+		episimConfig.setHospitalFactor(1.6);
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
+		episimConfig.setSnapshotInterval(7);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
@@ -236,7 +237,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build() );
 
-		config.controler().setOutputDirectory("./output-berlin-25pct-SNZrestrictsFromCSV-split-alpha-bmbf6-schools1-22-"+ basePolicyBuilder.getAlpha() + "-extrapolation-" + basePolicyBuilder.getExtrapolation() + "-ciCorrection-" + basePolicyBuilder.getCiCorrection() + "-dateOfCiChange-" + basePolicyBuilder.getDateOfCiChange() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability );
+		config.controler().setOutputDirectory("./output-berlin-25pct-alpha-"+ basePolicyBuilder.getAlpha() + "-extrapolation-" + basePolicyBuilder.getExtrapolation() + "-ciCorrection-" + basePolicyBuilder.getCiCorrection() + "-dateOfCiChange-" + basePolicyBuilder.getDateOfCiChange() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-"+ episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability );
 
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
