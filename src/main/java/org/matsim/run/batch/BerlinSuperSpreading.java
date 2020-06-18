@@ -7,6 +7,7 @@ import com.google.inject.Singleton;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -97,23 +98,24 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 		}
 	}
 
-	private static class CustomInfectionModel extends DefaultInfectionModel {
+	private static class CustomInfectionModel implements InfectionModel {
 
 		private final FaceMaskModel maskModel;
+		private final EpisimConfigGroup episimConfig;
 
 		@Inject
-		CustomInfectionModel(SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel) {
-			super(rnd, config, reporting, maskModel);
+		CustomInfectionModel(Config config, FaceMaskModel maskModel) {
 			this.maskModel = maskModel;
+			this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		}
 
 		@Override
-		protected double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, EpisimConfigGroup.InfectionParams act1,
-												  EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer) {
+		public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
+											   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer) {
 
 			double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
-			Map<String, Restriction> r = getRestrictions();
+			Map<String, Restriction> r = restrictions;
 			// ci corr can not be null, because sim is initialized with non null value
 			double ciCorrection = Math.min(r.get(act1.getContainerName()).getCiCorrection(), r.get(act2.getContainerName()).getCiCorrection());
 
@@ -124,8 +126,8 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 			double infectability = (double) infector.getAttributes().getAttribute(VIRAL_LOAD);
 
 			return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer * ciCorrection
-					* maskModel.getWornMask(infector, act2, iteration, r.get(act2.getContainerName())).shedding
-					* maskModel.getWornMask(target, act1, iteration, r.get(act1.getContainerName())).intake
+					* maskModel.getWornMask(infector, act2, r.get(act2.getContainerName())).shedding
+					* maskModel.getWornMask(target, act1, r.get(act1.getContainerName())).intake
 			);
 		}
 
