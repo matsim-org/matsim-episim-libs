@@ -54,7 +54,9 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 		// increase calib parameter
 		episimConfig.setCalibrationParameter(params.calib);
 
-		// evtl. 1-2 Tage früher starten
+		// start a bit earlier
+		episimConfig.setStartDate("2020-02-16");
+
 		// evtl. Ci correction auf 0.35
 
 		return config;
@@ -65,7 +67,7 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 		//@GenerateSeeds(200)
 		//private long seed;
 
-		@Parameter({0.000_011_5, 0.000_012_0})
+		@Parameter({0.000_012_5, 0.000_013_0})
 		private double calib;
 
 		@Parameter({0.75})

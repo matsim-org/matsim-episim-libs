@@ -59,9 +59,10 @@ def read_run(f, district=None, window=5):
 
     if district is not None:
         df = df[df.district == district]
-        df['cases'] = df.nShowingSymptomsCumulative.diff(1)
-        df['casesSmoothed'] = df.cases.rolling(window).mean()
-        df['casesNorm'] = df.casesSmoothed / df.casesSmoothed.mean()
+
+    df['cases'] = df.nShowingSymptomsCumulative.diff(1)
+    df['casesSmoothed'] = df.cases.rolling(window).mean()
+    df['casesNorm'] = df.casesSmoothed / df.casesSmoothed.mean()
 
     return df
 
