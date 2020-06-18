@@ -36,13 +36,10 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
- * Default infection model executed, when a person ends his activity.
- * This infection model calculates the joint time two persons have been at the same place and calculates a infection probability according to:
- * <pre>
- *    1 - e^(calibParam * contactIntensity * jointTimeInContainer * intake * shedding * ci_correction)
- * </pre>
+ * Default interaction model executed, when a person ends his activity.
+ * Infections probabilities calculations are delegated to a {@link InfectionModel}.
  */
-public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel {
+public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 	private static final Logger log = LogManager.getLogger(DefaultInteractionModel.class);
 
@@ -59,7 +56,7 @@ public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel 
 	/**
 	 * Face mask model, which decides which masks the persons are wearing.
 	 */
-	private final FaceMaskModel maskModel;
+	private final InfectionModel infectionModel;
 
 	/**
 	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
@@ -71,13 +68,14 @@ public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel 
 	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
-	/* package */ DefaultInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-										  EpisimReporting reporting, FaceMaskModel maskModel) {
+	/* package */
+	DefaultInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+											  EpisimReporting reporting, InfectionModel infectionModel) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 
 
-		super(rnd, episimConfig, reporting );
-		this.maskModel = maskModel;
+		super(rnd, episimConfig, reporting);
+		this.infectionModel = infectionModel;
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.trackingMinDuration = tracingConfig.getMinDuration();
 	}
@@ -85,14 +83,14 @@ public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel 
 	/**
 	 * Constructor when no injection is used.
 	 */
-	public DefaultInteractionModel(SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel ) {
+	public DefaultInteractionModel(SplittableRandom rnd, Config config, EpisimReporting reporting, InfectionModel infectionModel) {
 		// (make public constructor more general (full config as argument) so that argument changes are reduced.  also, do not pass multiple number
 		// types in sequence since they can get confused (as I just did). pass full config so that we do not have to retrofit constructor every
 		// time additional config info is needed.  kai, jun'20)
 
 		// (use injected constructor from here since args can be adapted. kai, jun'20)
-		this( rnd, ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class ), ConfigUtils.addOrGetModule( config, TracingConfigGroup.class ),
-				reporting, maskModel);
+		this(rnd, ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class), ConfigUtils.addOrGetModule(config, TracingConfigGroup.class),
+				reporting, infectionModel);
 	}
 
 	/**
@@ -125,7 +123,6 @@ public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel 
 	@Override
 	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
 		super.setRestrictionsForIteration(iteration, restrictions);
-		maskModel.setIteration(iteration);
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
@@ -246,12 +243,14 @@ public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
-				double prob = calcInfectionProbability(personLeavingContainer, contactPerson, leavingParams, contactParams, jointTimeInContainer);
+				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
+						leavingParams, contactParams, jointTimeInContainer);
 				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
 
 			} else {
-				double prob = calcInfectionProbability(contactPerson, personLeavingContainer, contactParams, leavingParams, jointTimeInContainer);
+				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
+						contactParams, leavingParams, jointTimeInContainer);
 
 				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
@@ -262,35 +261,6 @@ public /*final*/ class DefaultInteractionModel extends AbstractInteractionModel 
 		otherPersonsInContainer.clear();
 	}
 
-	/**
-	 * Calculates the probability that person {@code infector} infects {@code target}.
-	 *
-	 * @param target               The potentially infected person
-	 * @param infector             The infectious person
-	 * @param act1                 Activity of target
-	 * @param act2                 Activity of infector
-	 * @param jointTimeInContainer joint time doing these activity in seconds
-	 * @return probability between 0 and 1
-	 */
-	protected double calcInfectionProbability(EpisimPerson target, EpisimPerson infector,
-											  EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
-											  double jointTimeInContainer) {
-
-		Map<String, Restriction> r = getRestrictions();
-
-		// ci corr can not be null, because sim is initialized with non null value
-		double ciCorrection = Math.min(r.get(act1.getContainerName()).getCiCorrection(), r.get(act2.getContainerName()).getCiCorrection());
-		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
-
-		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
-		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
-		// no effect.  kai, mar'20
-
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
-				* maskModel.getWornMask(infector, act2, iteration, r.get(act2.getContainerName())).shedding
-				* maskModel.getWornMask(target, act1, iteration, r.get(act1.getContainerName())).intake
-		);
-	}
 
 	/**
 	 * Get the relevant infection parameter based on container and activity and person.

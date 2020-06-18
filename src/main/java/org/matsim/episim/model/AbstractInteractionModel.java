@@ -32,7 +32,7 @@ import java.util.SplittableRandom;
 
 
 /**
- * Base implementation for infection dynamics.
+ * Base implementation for interactions of persons during activities.
  */
 public abstract class AbstractInteractionModel implements InteractionModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";

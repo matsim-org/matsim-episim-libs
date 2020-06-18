@@ -27,7 +27,7 @@ import org.matsim.episim.policy.Restriction;
 import java.util.Map;
 
 /**
- * This class models the infection dynamics of persons staying in the same place for a certain time.
+ * This class models the interaction of persons staying in the same place for a certain time.
  */
 public interface InteractionModel {
 

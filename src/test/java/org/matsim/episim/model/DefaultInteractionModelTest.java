@@ -31,7 +31,7 @@ public class DefaultInteractionModelTest {
 
 	private Config config;
 	private DefaultInteractionModel model;
-	private DefaultFaceMaskModel maskModel;
+	private InfectionModel infectionModel;
 	private Map<String, Restriction> restrictions;
 
 
@@ -43,9 +43,8 @@ public class DefaultInteractionModelTest {
 
 		config = EpisimTestUtils.createTestConfig();
 		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-		maskModel = new DefaultFaceMaskModel(episimConfig, rnd);
-//		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE, 0);
-		model = new DefaultInteractionModel(rnd, config, reporting, maskModel ) ;
+		infectionModel = new DefaultInfectionModel(new DefaultFaceMaskModel(rnd), config);
+		model = new DefaultInteractionModel(rnd, config, reporting, infectionModel ) ;
 		restrictions = episimConfig.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -299,7 +298,7 @@ public class DefaultInteractionModelTest {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( Integer.MAX_VALUE );
 		tracingConfig.setMinContactDuration_sec( 0 );
-		model = new DefaultInteractionModel(new SplittableRandom(1), config, rNoTracking, maskModel ) ;
+		model = new DefaultInteractionModel(new SplittableRandom(1), config, rNoTracking, infectionModel ) ;
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
@@ -308,7 +307,7 @@ public class DefaultInteractionModelTest {
 		EpisimReporting rTracking = mock(EpisimReporting.class);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( 0 );
 		tracingConfig.setMinContactDuration_sec( 0 );
-		model = new DefaultInteractionModel(new SplittableRandom(1), config, rTracking, maskModel );
+		model = new DefaultInteractionModel(new SplittableRandom(1), config, rTracking, infectionModel );
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
