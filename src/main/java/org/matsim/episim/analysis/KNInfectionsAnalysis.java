@@ -4,95 +4,126 @@ import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.api.core.v01.IdMap;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.facilities.Facility;
-import org.matsim.households.Household;
-import tech.tablesaw.api.DoubleColumn;
-import tech.tablesaw.api.StringColumn;
-import tech.tablesaw.api.Table;
-import tech.tablesaw.joining.DataFrameJoiner;
+import tech.tablesaw.api.*;
+import tech.tablesaw.columns.numbers.NumberRollingColumn;
 import tech.tablesaw.plotly.Plot;
-import tech.tablesaw.plotly.api.VerticalBarPlot;
+import tech.tablesaw.plotly.components.Axis;
 import tech.tablesaw.plotly.components.Figure;
 import tech.tablesaw.plotly.components.Layout;
+import tech.tablesaw.plotly.traces.ScatterTrace;
+import tech.tablesaw.plotly.traces.Trace;
 
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 class KNInfectionsAnalysis{
 	private static final Logger log = Logger.getLogger( KNInfectionsAnalysis.class );
 
-//	private static final String base = "piecewise__theta2.8E-6__startDate_2020-02-20__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
-//	private static final String base = "piecewise__theta2.8E-6__ciHome0.1__ciQHome0.01__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0" +
-//							   ".1__eduHigher_0.0__other0.2/";
-	static String base = "piecewise__theta2.8E-6__ciHome0.3__ciQHome0.1__startDate_2020-02-18__unrestricted/";
-//	static String base = "piecewise__theta2.8E-6__ciHome0.3__ciQHome0.1__startDate_2020-02-18__work_0.75_0.45__leis_0.7_0.1__eduLower_0.1__eduHigher_0.0__other0.2/";
-	private static class MyHousehold {
-		private final String id;
-		public Set<Person> otherInfecteds = new LinkedHashSet<>();
-		Person firstInfected;
-		Set<Person> persons = new LinkedHashSet<>( );
-		MyHousehold( String id ) {
-			this.id = id;
+	private static final String base = "../shared-svn/projects/episim/matsim-files/bmbf6/20200615-runs//tracing-inf-noSchools/";
+
+	private static class PersonInfo{
+		private final LocalDate infectionDay;
+		private final List<LocalDate> infections = new ArrayList<>();
+		PersonInfo( LocalDate infectionDay ) {
+			this.infectionDay = infectionDay;
 		}
-		void addPerson( Person person ){
-			persons.add(person );
+		void addInfection( LocalDate day ) {
+			infections.add( day );
+		}
+		LocalDate getInfectionDay(){
+			return infectionDay;
 		}
 	}
 
 	public static void main( String[] args ) throws IOException{
 		Config config = ConfigUtils.createConfig();
-		config.plans().setInputFile( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
-		Scenario scenario = ScenarioUtils.loadScenario( config );
+//		config.plans().setInputFile( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz");
+//		Scenario scenario = ScenarioUtils.loadScenario( config );
 
-		// --- households:
-		Map<String, MyHousehold> households = new LinkedHashMap<>();
-		for( Person person : scenario.getPopulation().getPersons().values() ) {
-			String homeId = (String) person.getAttributes().getAttribute( "homeId" );
-			MyHousehold household = households.computeIfAbsent( homeId, MyHousehold::new ) ;
-			household.addPerson( person );
-		}
+//		for ( Iterator<? extends Person> it = scenario.getPopulation().getPersons().values().iterator() ; it.hasNext() ; ) {
+//			Person person = it.next();
+//			final String district = (String) person.getAttributes().getAttribute( "district" );
+//			if ( district==null || !district.equals( "Berlin" ) ) {
+//				it.remove();
+//			}
+//		}
 
 		// ---
 		Reader in = new FileReader( base + "infectionEvents.txt" );
 		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter( '\t' ).parse( in );
+		Map<String, PersonInfo> map = new LinkedHashMap<>();
 		for( CSVRecord record : records ){
-			// check if person is first person in hh to get infected; if so, memorize:
-			final Person infectedPerson = scenario.getPopulation().getPersons().get( Id.createPersonId( record.get( "infected" ) ) );
-			final String infectedHomeId = (String) infectedPerson.getAttributes().getAttribute( "homeId" );
-			final MyHousehold household = households.get( infectedHomeId );
-			if( household.firstInfected == null ){
-				household.firstInfected = infectedPerson;
+			LocalDate date = LocalDate.parse( record.get("date") );
+			map.put( record.get( "infected" ), new PersonInfo( date ) );
+
+			PersonInfo info = map.get( record.get("infector") );
+			if ( info != null ){
+				info.addInfection( date );
+			}
+		}
+
+		// ---
+		Map<LocalDate,Long> sums = new TreeMap<>();
+		Map<LocalDate,Long> cnts = new TreeMap<>();
+		for( PersonInfo personInfo : map.values() ){
+			Long sum = sums.get( personInfo.getInfectionDay() );
+			Long cnt = cnts.get( personInfo.getInfectionDay() );
+			if  ( sum==null ) {
+				sums.put( personInfo.getInfectionDay(), (long) personInfo.infections.size() );
+				cnts.put( personInfo.getInfectionDay(), 1L );
 			} else{
-				if( record.get( "infectionType" ).equals( "home_home" ) ){
-					household.otherInfecteds.add( infectedPerson );
-					Person infector = scenario.getPopulation().getPersons().get( Id.createPersonId( record.get( "infector" ) ) );
-					String infectorHomeId = (String) infector.getAttributes().getAttribute( "homeId" );
-					MyHousehold infectorHousehold = households.get( infectorHomeId );
-					Gbl.assertIf( household.equals( infectorHousehold ) );
-				}
+				sums.put( personInfo.getInfectionDay(), sum + personInfo.infections.size() );
+				cnts.put( personInfo.getInfectionDay(), cnt + 1 ) ;
 			}
 		}
-		// ---
-		double nInfectedHouseholds = 0.;
-		double nSecondaryHHInfections = 0.;
-		double nOtherPersonsInInfectedHouseholds = 0.;
-		for( MyHousehold household : households.values() ) {
-			if ( household.firstInfected!=null ) {
-				nInfectedHouseholds++;
-				nSecondaryHHInfections += household.otherInfecteds.size();
-				nOtherPersonsInInfectedHouseholds += household.persons.size()-1;
-			}
-		}
-		// ---
-		log.info("percentage of secondary persons in HHs that had at least one infection = " + nSecondaryHHInfections/nOtherPersonsInInfectedHouseholds );
+
+//		Map<LocalDate,Double> average = new TreeMap<>();
+//		double ssum = 0; ;
+//		double ccnt = 0;
+//		LocalDate firstDate = null ;
+//		for( Map.Entry<LocalDate, Long> entry : sums.entrySet() ){
+//			final LocalDate day = entry.getKey();
+//			if ( firstDate==null ) {
+//				firstDate = day;
+//			}
+//			ccnt += cnts.get( day );
+//			ssum += entry.getValue();
+//			if ( firstDate.until( day, ChronoUnit.DAYS ) % 14 == 0 ) {
+//				average.put( day, ssum/ccnt );
+//				ssum=0;
+//				ccnt=0;
+//			}
+//		}
+
+//		DateColumn xx = DateColumn.create( "day", average.keySet() );
+//		DoubleColumn yy = DoubleColumn.create( "sums", average.values() );
+//		Trace trace = ScatterTrace.builder( xx, yy ).name( "av" ).build();
+
+		DateColumn xx2 = DateColumn.create( "day", sums.keySet() );
+		DoubleColumn sss = DoubleColumn.create( "sss", sums.values() );
+		DoubleColumn ccc = DoubleColumn.create( "ccc", cnts.values() );
+		DoubleColumn yy2 = sss.divide( ccc ).rolling( 28 ).mean();
+		Trace trace2 = ScatterTrace.builder( xx2,yy2 ).name("rolling").build();
+
+		Figure figure = Figure.builder().addTraces( trace2 ).build();
+
+		figure.setLayout( Layout.builder().xAxis(
+				Axis.builder().type( Axis.Type.DATE ).range( LocalDate.of(2020,2,15),LocalDate.of( 2021, 2, 15) ).build()
+							).yAxis(
+				Axis.builder().type( Axis.Type.LINEAR ).range( 0.5, 1.6 ).build()
+							       ).width( 1000 ).build() );
+
+		Plot.show(figure, "dada", new File("output3.html") );
+
 	}
 }

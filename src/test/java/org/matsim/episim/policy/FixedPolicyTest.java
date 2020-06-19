@@ -148,9 +148,18 @@ public class FixedPolicyTest {
 
 		Assume.assumeTrue("Input must exist", f.exists());
 
-		String content = SnzBerlinScenario25pct2020.basePolicy(ConfigUtils.addOrGetModule(EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class),
-				f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
-		).build().root().render();
+//		String content = SnzBerlinScenario25pct2020.basePolicy(ConfigUtils.addOrGetModule(EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class),
+//				f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
+
+
+		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(
+				ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class ) );
+		builder.setCsv( f.toPath() );
+		builder.setAlpha( 1. );
+		builder.setCiCorrection( 1. );
+		builder.setDateOfCiChange( "2020-03-10" );
+
+		String content = builder.build().build().root().render();
 
 		Config config = ConfigFactory.parseString(content);
 		LocalDate start = LocalDate.parse("2020-03-05");

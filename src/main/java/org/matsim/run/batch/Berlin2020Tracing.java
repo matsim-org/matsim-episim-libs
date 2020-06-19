@@ -119,22 +119,35 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		tracingConfig.setTracingProbability(params.tracingProbability);
 		tracingConfig.setTracingPeriod_days(params.tracingPeriod);
-		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
+		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity );
 		tracingConfig.setTracingDelay_days(params.tracingDelay);
 
 
-		double alpha = 1.4;
-		double ciCorrection = 0.3;
-		Path csv = SnzBerlinScenario25pct2020.INPUT.resolve("BerlinSnzData_daily_until20200531.csv");
-		String dateOfCiChange = "2020-03-08";
+//		double alpha = 1.4;
+//		double ciCorrection = 0.3;
+//		Path csv = SnzBerlinScenario25pct2020.INPUT.resolve("BerlinSnzData_daily_until20200531.csv");
+//		String dateOfCiChange = "2020-03-08";
+//
+//		FixedPolicy.ConfigBuilder policyConf;
+//		try {
+//			policyConf = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange,
+//					EpisimUtils.Extrapolation.valueOf(params.extrapolation));
+//		} catch (IOException e) {
+//			throw new UncheckedIOException(e);
+//		}
 
-		FixedPolicy.ConfigBuilder policyConf;
-		try {
-			policyConf = SnzBerlinScenario25pct2020.basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange,
-					EpisimUtils.Extrapolation.valueOf(params.extrapolation));
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
+		if ( true ) {
+			throw new RuntimeException( "I reconstructed what is below from what was above after I made the basePolicy method private.  It is, " +
+								    "however, not clear to me if not instead the default values should be used.  kai, jun'20" );
 		}
+
+		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
+		builder.setAlpha( 1.4 );
+		builder.setCiCorrection( 0.3 );
+		builder.setCsv( SnzBerlinScenario25pct2020.INPUT.resolve("BerlinSnzData_daily_until20200531.csv") );
+		builder.setDateOfCiChange( "2020-03-08" );
+		builder.setExtrapolation( EpisimUtils.Extrapolation.valueOf( params.extrapolation ) );
+		FixedPolicy.ConfigBuilder policyConf = builder.build();
 
 		double remainingPrimaKiga;
 		double remainingOther;

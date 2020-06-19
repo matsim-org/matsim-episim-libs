@@ -69,10 +69,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.StabilityRuns}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.BerlinSuperSpreading}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.StabilityRuns$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.BerlinSuperSpreading$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
@@ -90,6 +90,9 @@ public class RunParallel<T> implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
 	private int maxJobs;
+
+	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "360")
+	private int maxIterations;
 
 	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
 	private boolean noReuse;
@@ -155,7 +158,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(
-					new Task(prepare.setup.getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay)), executor)
+					new Task(prepare.setup.getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
@@ -203,10 +206,12 @@ public class RunParallel<T> implements Callable<Integer> {
 		@Nullable
 		private final AbstractModule bindings;
 		private final ParallelModule module;
+		private final int maxIterations;
 
-		private Task(@Nullable AbstractModule bindings, ParallelModule module) {
+		private Task(@Nullable AbstractModule bindings, ParallelModule module, int maxIterations) {
 			this.bindings = bindings;
 			this.module = module;
+			this.maxIterations = maxIterations;
 		}
 
 		@Override
@@ -230,7 +235,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 			EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 
-			runner.run(360);
+			runner.run(maxIterations);
 
 			log.info("Task finished: {}", this.module.config.controler().getOutputDirectory());
 		}

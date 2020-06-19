@@ -110,7 +110,7 @@ def get_contour_plot(study, x_param, y_param):
         x=x_values, y=y_values, marker={"color": "black"}, mode="markers", showlegend=False
     )
 
-    layout = go.Layout(title="Contour Plot", )
+    layout = go.Layout(title="Contour Plot", xaxis_title=x_param, yaxis_title=y_param)
 
     return go.Figure(data=[contour, scatter], layout=layout)
 
@@ -127,7 +127,7 @@ def get_parallel_coordinate_plot(study, params=None):
             continue
 
         value = t.user_attrs["error_cases"]
-        if value <= 0.1:
+        if value <= 2:
             trials.append(t)
 
     # trials = [t for trial in trials if trial.state == TrialState.COMPLETE]

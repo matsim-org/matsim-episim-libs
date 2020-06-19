@@ -144,7 +144,7 @@ public final class EpisimUtils {
 	/**
 	 * Compress directory recursively.
 	 */
-	public static void compressDirectory(String rootDir, String sourceDir, ArchiveOutputStream out) throws IOException {
+	public static void compressDirectory(String rootDir, String sourceDir, String runId, ArchiveOutputStream out) throws IOException {
 		File[] fileList = new File(sourceDir).listFiles();
 		if (fileList == null) return;
 		for (File file : fileList) {
@@ -153,9 +153,11 @@ public final class EpisimUtils {
 				continue;
 
 			if (file.isDirectory()) {
-				compressDirectory(rootDir, sourceDir + "/" + file.getName(), out);
+				compressDirectory(rootDir, sourceDir + "/" + file.getName(), runId, out);
 			} else {
-				ArchiveEntry entry = out.createArchiveEntry(file, "output" + sourceDir.replace(rootDir, "") + "/" + file.getName());
+				// Remove runId from the output name
+				String name = file.getName().replace(runId + ".", "");
+				ArchiveEntry entry = out.createArchiveEntry(file, "output" + sourceDir.replace(rootDir, "") + "/" + name);
 				out.putArchiveEntry(entry);
 				FileUtils.copyFile(file, out);
 				out.closeArchiveEntry();
@@ -414,13 +416,6 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Same as {@link #createRestrictionsFromCSV2(EpisimConfigGroup, File, double, Extrapolation)} with no extrapolation.
-	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
-		return createRestrictionsFromCSV2(episimConfig, input, alpha, Extrapolation.none);
-	}
-
-	/**
 	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
 	 *
 	 * @param alpha modulate the amount reduction
@@ -532,7 +527,6 @@ public final class EpisimUtils {
 
 	/**
 	 * Resolves an input path that can be configured with the environment variable EPISIM_INPUT.
-	 * Also check if this input should be used on the cluster using EPISIM_ON_CLUSTER.
 	 *
 	 * @param defaultPath default path if nothing else is set
 	 * @return path to input directory

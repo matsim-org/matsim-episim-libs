@@ -62,6 +62,9 @@ public final class Restriction {
 			for (FaceMask m : FaceMask.values()) {
 				if (maskUsage.containsKey(m)) {
 					sum += maskUsage.get(m);
+					if (Double.isNaN(sum))
+						throw new IllegalArgumentException("Mask usage contains NaN value!");
+
 					this.maskUsage.put(m, sum);
 				}
 			}
@@ -226,13 +229,13 @@ public final class Restriction {
 	 *
 	 * @see #asMap()
 	 */
-	void merge(Map<String, Object> r) {
+	void merge(Map<String, Object> restriction) {
 
-		Double otherRf = (Double) r.get("fraction");
-		Double otherE = (Double) r.get("ciCorrection");
+		Double otherRf = (Double) restriction.get("fraction");
+		Double otherE = (Double) restriction.get("ciCorrection");
 
 		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
-		((Map<String, Double>) r.get("masks"))
+		((Map<String, Double>) restriction.get("masks"))
 				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
 
 		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf))
@@ -245,9 +248,10 @@ public final class Restriction {
 		else if (ciCorrection == null)
 			ciCorrection = otherE;
 
-		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks))
-			log.warn("Duplicated mask usage " + maskUsage + " and " + otherMasks);
-		else if (maskUsage.isEmpty())
+		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks)){
+			log.warn( "Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value." );
+			log.warn("(full new restriction=" + restriction + ")");
+		} else if (maskUsage.isEmpty())
 			maskUsage.putAll(otherMasks);
 
 	}
