@@ -272,7 +272,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		insertStationaryAgents();
 
 		for (Object2IntMap.Entry<EpisimFacility> kv : maxGroupSize.object2IntEntrySet()) {
-			kv.getKey().setMaxGroupSize(kv.getIntValue());
+			kv.getKey().setMaxGroupSize((int) (kv.getIntValue() * (1/episimConfig.getSampleSize())));
 		}
 
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));

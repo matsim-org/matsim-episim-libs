@@ -60,6 +60,7 @@ public class EpisimContainer<T> {
 
 	/**
 	 * The maximum number of persons simultaneously in this container. Negative if unknown.
+	 * Already scaled with sampleSize.
 	 */
 	private int maxGroupSize = -1;
 
