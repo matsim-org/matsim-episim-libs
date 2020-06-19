@@ -197,7 +197,7 @@ if __name__ == "__main__":
     if args.objective == "multi":
         study = optuna.multi_objective.create_study(
             study_name=args.objective, storage="sqlite:///calibration.db", load_if_exists=True,
-            directions=["minimize"] * 3
+            directions=["minimize"] * 2
         )
 
         district = args.district
