@@ -7,6 +7,7 @@ import com.google.inject.Singleton;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
@@ -33,7 +34,7 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "superSpreader");
+		return Metadata.of("berlin", "superSpreading3");
 	}
 
 	@Override
@@ -46,15 +47,33 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 
 		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 
-		return module.config();
+		Config config = module.config();
+
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		// increase calib parameter
+		episimConfig.setCalibrationParameter(params.calib);
+
+		// start a bit earlier
+		episimConfig.setStartDate("2020-02-16");
+
+		// evtl. Ci correction auf 0.35
+
+		return config;
 	}
 
 	public static final class Params {
 
-		@Parameter({0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2})
+		//@GenerateSeeds(200)
+		//private long seed;
+
+		@Parameter({0.000_012_5, 0.000_013_0})
+		private double calib;
+
+		@Parameter({0.75})
 		private double sigmaInfect;
 
-		@Parameter({0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2})
+		@Parameter({0.75})
 		private double sigmaSusc;
 	}
 

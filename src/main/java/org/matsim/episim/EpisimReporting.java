@@ -85,6 +85,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	/**
 	 * Current day / iteration.
@@ -123,6 +124,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			throw new UncheckedIOException(e);
 		}
 
+		this.config = config;
 		this.writer = writer;
 		this.manager = manager;
 
@@ -142,6 +144,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
 
+		writeConfigFiles();
+	}
+
+	private void writeConfigFiles() {
 		try {
 			Files.writeString(Paths.get(base + "policy.conf"),
 					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
@@ -182,6 +188,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
+
+		// Write config files again to overwrite these from snapshot
+		writeConfigFiles();
 	}
 
 	/**

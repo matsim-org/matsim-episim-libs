@@ -12,14 +12,13 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
-import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunEpisim;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import picocli.CommandLine;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -62,13 +61,17 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--alpha", description = "Alpha parameter for restrictions", defaultValue = "-1")
 	private double alpha;
 
+	@CommandLine.Option(names = "--hospitalFactor", description = "Hospital factor", defaultValue = "-1")
+	private double hospitalFactor;
+
 	@CommandLine.Option(names = "--correction", description = "Contact intensity correction", defaultValue = "1")
 	private double correction;
 
 	@CommandLine.Option(names = "--start", description = "Start day of the correction")
 	private String correctionStart;
 
-	// TODO: start from snapshot
+	@CommandLine.Option(names = "--snapshot", description = "Path to snapshot to start from")
+	private Path snapshot;
 
 	@CommandLine.Option(names = "--unconstrained",
 			description = "Removes the restrictions completely in order to calibrate for unconstrained exponential growth.",
@@ -110,9 +113,16 @@ public final class RunTrial implements Callable<Integer> {
 		} else {
 
 			if (alpha > -1) {
-				episimConfig.setPolicy(FixedPolicy.class,
-						SnzBerlinScenario25pct2020.basePolicy(episimConfig, new File("BerlinSnzData_daily_until20200524.csv"),
-								alpha, correction, correctionStart, EpisimUtils.Extrapolation.linear).build());
+				SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+				builder.setAlpha(alpha);
+				builder.setCiCorrection(correction);
+				builder.setDateOfCiChange(correctionStart);
+				FixedPolicy.ConfigBuilder policyConf = builder.build();
+
+				log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
+
+				episimConfig.setPolicy(FixedPolicy.class, policyConf.build());
+
 			} else if (correctionStart != null) {
 				FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 				log.info("Setting ci correction at {} to {}", correctionStart, correction);
@@ -134,12 +144,22 @@ public final class RunTrial implements Callable<Integer> {
 		int iterations = days;
 
 		if (correctionStart != null) {
-			log.info("Using start date {} to calculate new number of iterations", correctionStart);
+			log.info("Using correction date {} to calculate new number of iterations", correctionStart);
 			LocalDate endDate = LocalDate.parse(correctionStart).plusDays(days);
 			iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
 		}
 
-		log.info("Starting run number {} with {}", number, iterations);
+		if (snapshot != null) {
+			log.info("Starting from snapshot {}", snapshot);
+			episimConfig.setStartFromSnapshot(snapshot.toString());
+		}
+
+		if (hospitalFactor > -1) {
+			log.info("Setting hospital factor to {}", hospitalFactor);
+			episimConfig.setHospitalFactor(hospitalFactor);
+		}
+
+		log.info("Starting run number {} at {} with {} iterations", number, episimConfig.getStartDate(), iterations);
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(iterations);
