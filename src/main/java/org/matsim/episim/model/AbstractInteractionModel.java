@@ -94,11 +94,18 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 		return (hasDiseaseStatusRelevantForInfectionDynamics(person1) && hasDiseaseStatusRelevantForInfectionDynamics(person2));
 	}
 
-	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
+	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		EpisimPerson.Activity act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 
 		// Check if person is home quarantined
 		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && !act.actType.startsWith("home"))
+			return false;
+
+
+		// enforce max group sizes
+		Restriction r = restrictions.get(act.params.getContainerName());
+		if (r.getMaxGroupSize() != null && container.getMaxGroupSize() > -1 &&
+				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
 		return actIsRelevant(act, restrictions, rnd);
@@ -117,8 +124,7 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 
 	}
 
-	private boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-													 Map<String, Restriction> restrictions, SplittableRandom rnd) {
+	private boolean tripRelevantForInfectionDynamics(EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		EpisimPerson.Activity lastAct = null;
 		if (person.getCurrentPositionInTrajectory() != 0) {
 			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
@@ -138,7 +144,7 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 	 *
 	 * @noinspection BooleanMethodIsAlwaysInverted
 	 */
-	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
+	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container,
 																		 Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
 		// Infected but not contagious persons are considered additionally
@@ -150,10 +156,10 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 			return false;
 		}
 
-		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, restrictions, rnd)) {
+		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {
 			return true;
 		}
-		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd);
+		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
 	}
 
 	/**

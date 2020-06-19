@@ -10,6 +10,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.RestrictionTest;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -269,6 +270,18 @@ public class DefaultInteractionModelTest {
 		rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
 				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
 				createPerson
+		);
+
+		assertThat(rate).isCloseTo(0, OFFSET);
+	}
+
+	@Test
+	public void groupSizes() {
+
+		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.ofGroupSize(20)));
+		double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
+				() -> EpisimTestUtils.createFacility(10, "c10", 21, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c10", f)
 		);
 
 		assertThat(rate).isCloseTo(0, OFFSET);

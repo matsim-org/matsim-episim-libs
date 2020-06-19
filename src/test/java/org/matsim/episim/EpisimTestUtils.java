@@ -80,6 +80,15 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create a facility with certain group size.
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, int groupSize, Consumer<EpisimPerson> init) {
+		InfectionEventHandler.EpisimFacility container = createFacility();
+		container.setMaxGroupSize(groupSize);
+		return addPersons(container, n, act, init);
+	}
+
+	/**
 	 * Create a person and add to container.
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {

@@ -132,7 +132,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, episimConfig, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
 			return;
 		}
 
@@ -160,7 +160,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 			EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
 
-			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, episimConfig, getRestrictions(), rnd)) {
+			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
 			}
 
