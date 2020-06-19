@@ -13,23 +13,15 @@ import java.util.SplittableRandom;
  */
 public class DefaultFaceMaskModel implements FaceMaskModel {
 
-	private final EpisimConfigGroup episimConfig;
 	private final SplittableRandom rnd;
 
 	@Inject
-	public DefaultFaceMaskModel(EpisimConfigGroup episimConfig, SplittableRandom rnd) {
-		this.episimConfig = episimConfig;
+	public DefaultFaceMaskModel(SplittableRandom rnd) {
 		this.rnd = rnd;
 	}
 
-
 	@Override
-	public void setIteration(int iteration) {
-		// nothing to do
-	}
-
-	@Override
-	public FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, int currentDay, Restriction restriction) {
+	public FaceMask getWornMask(EpisimPerson person, EpisimConfigGroup.InfectionParams act, Restriction restriction) {
 		return restriction.determineMask(rnd);
 	}
 }

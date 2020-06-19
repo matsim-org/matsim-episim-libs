@@ -22,14 +22,14 @@ public class DefaultFaceMaskModelTest {
 	@Before
 	public void setUp() throws Exception {
 		config = ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class );
-		model = new DefaultFaceMaskModel(config, new SplittableRandom(1));
+		model = new DefaultFaceMaskModel(new SplittableRandom(1));
 	}
 
 	private double sample(Restriction r, FaceMask type) {
 		double worn = 0;
 		for (int i = 0; i < 30_000; i++) {
 			EpisimPerson p = EpisimTestUtils.createPerson("work", null);
-			FaceMask mask = model.getWornMask(p, config.selectInfectionParams("work"), 0, r);
+			FaceMask mask = model.getWornMask(p, config.selectInfectionParams("work"),  r);
 			if (mask == type) worn++;
 		}
 

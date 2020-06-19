@@ -95,7 +95,8 @@ public class KnRunEpisim {
 				binder().requireExplicitBindings();
 
 				// Main model classes regarding progression / infection etc..
-				bind( InfectionModel.class ).to(MyInfectionModel.class ).in( Singleton.class );
+				bind( InteractionModel.class ).to( DefaultInteractionModel.class ).in( Singleton.class );
+				bind( InfectionModel.class).to( MyInfectionModel.class ).in( Singleton.class );
 				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
 				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
 
@@ -337,19 +338,23 @@ public class KnRunEpisim {
 
 	enum RestrictionsType {unrestr, triang, frmSnz }
 
-	private static class MyInfectionModel extends DefaultInfectionModel {
+	private static class MyInfectionModel implements InfectionModel {
+
 		private final FaceMaskModel maskModel;
-		@Inject MyInfectionModel( SplittableRandom rnd, Config config, EpisimReporting reporting, FaceMaskModel maskModel ) {
-			super( rnd,  config, reporting, maskModel );
+		private final EpisimConfigGroup episimConfig;
+
+		@Inject MyInfectionModel(Config config, FaceMaskModel maskModel ) {
 			this.maskModel = maskModel;
+			this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		}
-		@Override protected double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, InfectionParams act1, InfectionParams act2, double jointTimeInContainer) {
+
+
+		@Override
+		public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, InfectionParams act1, InfectionParams act2, double jointTimeInContainer) {
 
 			double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
-
-			Map<String, Restriction> r = getRestrictions();
 			// ci corr can not be null, because sim is initialized with non null value
-			double ciCorrection = Math.min(r.get(act1.getContainerName()).getCiCorrection(), r.get(act2.getContainerName()).getCiCorrection());
+			double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
 			// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more, exp( - 1 * 1 * 100 ) \approx 0, and
 			// thus the infection proba becomes 1.  Which also means that changes in contactIntensity has no effect.  kai, mar'20
@@ -358,11 +363,10 @@ public class KnRunEpisim {
 			double infectability = (double) infector.getAttributes().getAttribute( VIRAL_LOAD );
 
 			return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer * ciCorrection
-							    * maskModel.getWornMask(infector, act2, iteration, r.get(act2.getContainerName())).shedding
-							    * maskModel.getWornMask(target, act1, iteration, r.get(act1.getContainerName())).intake
-					   );
+					* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
+					* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
+			);
 		}
-
 	}
 
 }

@@ -20,7 +20,6 @@
  */
 package org.matsim.episim.model;
 
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.population.PopulationUtils;
@@ -33,9 +32,9 @@ import java.util.SplittableRandom;
 
 
 /**
- * Base implementation for infection dynamics.
+ * Base implementation for interactions of persons during activities.
  */
-public abstract class AbstractInfectionModel implements InfectionModel {
+public abstract class AbstractInteractionModel implements InteractionModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";
 
 	protected final Scenario scenario = null;
@@ -56,7 +55,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	private Map<String, Restriction> restrictions;
 
 
-	AbstractInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+	AbstractInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.reporting = reporting;
