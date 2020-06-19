@@ -61,6 +61,9 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--alpha", description = "Alpha parameter for restrictions", defaultValue = "-1")
 	private double alpha;
 
+	@CommandLine.Option(names = "--hospitalFactor", description = "Hospital factor", defaultValue = "-1")
+	private double hospitalFactor;
+
 	@CommandLine.Option(names = "--correction", description = "Contact intensity correction", defaultValue = "1")
 	private double correction;
 
@@ -149,6 +152,11 @@ public final class RunTrial implements Callable<Integer> {
 		if (snapshot != null) {
 			log.info("Starting from snapshot {}", snapshot);
 			episimConfig.setStartFromSnapshot(snapshot.toString());
+		}
+
+		if (hospitalFactor > -1) {
+			log.info("Setting hospital factor to {}", hospitalFactor);
+			episimConfig.setHospitalFactor(hospitalFactor);
 		}
 
 		log.info("Starting run number {} at {} with {} iterations", number, episimConfig.getStartDate(), iterations);

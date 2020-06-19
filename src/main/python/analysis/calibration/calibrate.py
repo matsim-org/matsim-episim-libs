@@ -154,13 +154,14 @@ def objective_multi(trial):
         number=n,
         # Parameter to calibrate
         #c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
-        offset=trial.suggest_int('offset', -5, 5),
-        alpha=trial.suggest_uniform("alpha", 0.8, 2),
+        offset=trial.suggest_int('offset', -3, 3),
+        alpha=1,
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
+        hospital=trial.suggest_uniform('hospital', 1, 2)
     )
 
     cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 90" \
-          " --number %(number)d --alpha %(alpha).3f --offset %(offset)d" \
+          " --number %(number)d --alpha %(alpha).3f --offset %(offset)d --hospitalFactor %(hospital).3f" \
           " --correction %(correction).3f --start \"2020-03-07\"" % params
 
     print("Running multi objective with params: %s" % params)
