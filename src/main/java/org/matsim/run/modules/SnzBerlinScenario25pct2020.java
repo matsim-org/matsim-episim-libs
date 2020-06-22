@@ -62,7 +62,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	 */
 	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
 														double ciCorrection, String dateOfCiChange, Extrapolation extrapolation,
-														long introductionPeriod, Double clothFinalFraction, Double surgicalFinalFraction) throws IOException {
+														long introductionPeriod, Double maskCompliance) throws IOException {
 
 		ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
 
@@ -76,12 +76,8 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
-
-//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-//
-//				//Sommerferien
-//				.restrict("2020-06-25", 0.3, "educ_primary", "educ_kiga")
-//				.restrict("2020-06-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-05-25", 0.5, "educ_kiga")
+				.restrict("2020-06-22", 1., "educ_kiga")
 
 				//Ende der Sommerferien
 				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
@@ -89,16 +85,19 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 
 		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
+		double clothFraction = maskCompliance * 0.9;
+		double surgicalFraction = maskCompliance * 0.1;
 		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
 		// in MUC and elsewhere!
 
 		for (int ii = 0; ii <= introductionPeriod; ii++) {
 			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
-			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFinalFraction * ii / introductionPeriod,
-					FaceMask.SURGICAL, surgicalFinalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
+			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
 		}
 
-
+		// mask compliance hase gone down in Berlin (now 80%)
+		restrictions.restrict("2020-06-04", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
 		return restrictions;
 	}
 
@@ -192,8 +191,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200607.csv");
 		private long introductionPeriod = 14;
-		private double clothFinalFraction = 0.5;
-		private double surgicalFinalFraction = 0.3;
+		private double maskCompliance = 0.9;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
@@ -203,12 +201,8 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.introductionPeriod = introductionPeriod;
 		}
 
-		public void setClothFinalFraction(double clothFinalFraction) {
-			this.clothFinalFraction = clothFinalFraction;
-		}
-
-		public void setSurgicalFinalFraction(double surgicalFinalFraction) {
-			this.surgicalFinalFraction = surgicalFinalFraction;
+		public void setMaskCompliance(double maskCompliance) {
+			this.maskCompliance = maskCompliance;
 		}
 
 		public void setCsv(Path csv) {
@@ -251,7 +245,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			ConfigBuilder configBuilder = null;
 			try {
 				configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, extrapolation, introductionPeriod,
-						clothFinalFraction, surgicalFinalFraction);
+						maskCompliance);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}
