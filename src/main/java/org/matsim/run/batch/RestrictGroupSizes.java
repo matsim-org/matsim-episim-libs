@@ -38,6 +38,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		builder.restrict("2020-03-07", Restriction.ofGroupSize(params.maxGroupSize), "leisure");
+		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 
 		return config;

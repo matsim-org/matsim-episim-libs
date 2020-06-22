@@ -69,10 +69,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.BerlinSuperSpreading}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.RestrictGroupSizes}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.BerlinSuperSpreading$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.RestrictGroupSizes$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
