@@ -189,7 +189,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private double ciCorrection = 0.32;
 		private String dateOfCiChange = "2020-03-07";
 		private Extrapolation extrapolation = Extrapolation.linear;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200607.csv");
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200614.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.9;
 
