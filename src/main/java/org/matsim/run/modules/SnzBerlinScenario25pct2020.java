@@ -96,7 +96,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
 		}
 
-		// mask compliance hase gone down in Berlin (now 80%)
+		// mask compliance has gone down in Berlin (now 80%)
 		restrictions.restrict("2020-06-04", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
 		return restrictions;
 	}
@@ -191,7 +191,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200614.csv");
 		private long introductionPeriod = 14;
-		private double maskCompliance = 0.9;
+		private double maskCompliance = 0.95;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
