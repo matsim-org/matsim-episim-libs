@@ -94,16 +94,20 @@ public class Interventions implements BatchRun<Interventions.Params> {
 				builder.restrict(referenceDate, 0.5, DEFAULT_ACTIVITIES);
 				break;
 
-			case "clothMasks":
-				// TODO
+			case "masks0.6@pt&shop":
+				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other");
 				break;
 
-			case "n95masks":
-				// TODO
+			case "masks0.6@work":
+				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "work");
 				break;
-
-			case "n95masksAll":
-				// TODO
+				
+			case "masks0.9@pt&shop":
+				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "pt", "shop_daily", "shop_other");
+				break;
+				
+			case "masks0.9@work":
+				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "work");
 				break;
 
 			case "contactTracing":
@@ -149,7 +153,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		String referenceDate;
 
 		@StringParameter({"none", "ci0.32", "ci0.5", "edu0", "edu50", "leisure50", "shopping50", "work50", "outOfHome50",
-				"clothMasks", "n95masks", "n95masksAll", "contactTracing"})
+				"masks0.6@pt&shop", "masks0.6@work", "masks0.9@pt&shop", "masks0.9@work", "contactTracing"})
 		String intervention;
 
 	}
