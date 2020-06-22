@@ -3,6 +3,7 @@
 
 import argparse
 import subprocess
+from datetime import date, timedelta
 
 import numpy as np
 import optuna
@@ -102,7 +103,7 @@ def objective_unconstrained(trial):
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
     subprocess.run(cmd, shell=True)
 
-    rate, error = infection_rate("output-calibration-unconstrained/%d/infections.txt" % n, district)
+    rate, error = infection_rate("output-calibration-unconstrained/%d/run0/infections.txt" % n, district)
     trial.set_user_attr("mean_infection_rate", rate)
 
     return error
@@ -116,30 +117,37 @@ def objective_ci_correction(trial):
         number=n,
         scenario=trial.study.user_attrs["scenario"],
         district=trial.study.user_attrs["district"],
+        alpha=1,
         # Parameter to calibrate
+        offset=trial.suggest_int('offset', -3, 3),
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
-        start=trial.study.user_attrs["start"],
-        end=trial.study.user_attrs["end"]
+        start=date.fromisoformat("2020-03-06") + timedelta(days=trial.suggest_int('ciOffset', -3, 3))
     )
 
-    cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 14" \
-          " --number %(number)d --correction %(correction).3f" \
-          "--start %(start)s" % params
+    results = []
 
-    print("Running ci correction with params: %s" % params)
-    print("Running calibration command: %s" % cmd)
-    subprocess.run(cmd, shell=True)
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 10" \
+              f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
+              " --correction %(correction).3f --start \"%(start)s\"" % params
 
-    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n,
-                                                             params["district"], start=params["start"], end=params["end"])
+        print("Running ci correction with params: %s" % params)
+        print("Running calibration command: %s" % cmd)
+        subprocess.run(cmd, shell=True)
+        res = calc_multi_error("output-calibration/%d/run%d/infections.txt" % (n, i), params["district"],
+                               start="2020-03-01", end="2020-03-15")
 
-    trial.set_user_attr("error_cases", e_cases)
-    trial.set_user_attr("error_sick", e_sick)
-    trial.set_user_attr("error_critical", e_critical)
-    trial.set_user_attr("peak", peak)
-    trial.set_user_attr("dz", dz)
+        results.append(res)
 
-    return e_cases
+    df = pd.DataFrame(results, columns=["error_cases", "error_sick", "error_critical", "peak", "dz"])
+    print(df)
+
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
+
+    trial.set_user_attr("df", df.to_json())
+
+    return df.error_cases.mean()
 
 
 def objective_multi(trial):
@@ -153,7 +161,7 @@ def objective_multi(trial):
         district=district,
         number=n,
         # Parameter to calibrate
-        #c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
+        # c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
         offset=trial.suggest_int('offset', -3, 3),
         alpha=1,
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
@@ -162,12 +170,12 @@ def objective_multi(trial):
 
     cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 90" \
           " --number %(number)d --alpha %(alpha).3f --offset %(offset)d --hospitalFactor %(hospital).3f" \
-          " --correction %(correction).3f --start \"2020-03-07\"" % params
+          " --correction %(correction).3f" % params
 
     print("Running multi objective with params: %s" % params)
     print("Running calibration command: %s" % cmd)
     subprocess.run(cmd, shell=True)
-    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n, params["district"],
+    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/run0/infections.txt" % n, params["district"],
                                                              start="2020-03-01", end="2020-06-01")
 
     trial.set_user_attr("error_cases", e_cases)
@@ -187,8 +195,7 @@ if __name__ == "__main__":
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
-    parser.add_argument("--start", help="Start date of comparison", type=str, default="2020-03-10")
-    parser.add_argument("--end", help="End date of comparison", type=str, default="2020-05-20")
+    parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
     parser.add_argument("--snapshot", type=str, default=None)
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
 
@@ -213,6 +220,12 @@ if __name__ == "__main__":
     for k, v in args.__dict__.items():
         study.set_user_attr(k, v)
 
-    objective = objective_multi if args.objective == "multi" else objective_unconstrained
+    objectives = {
+        "multi": objective_multi,
+        "unconstrained": objective_unconstrained,
+        "ci_correction": objective_ci_correction
+    }
+
+    objective = objectives[args.objective]
 
     study.optimize(objective, n_trials=args.n_trials)

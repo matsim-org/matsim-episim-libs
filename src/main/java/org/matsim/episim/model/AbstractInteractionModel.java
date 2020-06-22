@@ -104,7 +104,7 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 
 		// enforce max group sizes
 		Restriction r = restrictions.get(act.params.getContainerName());
-		if (r.getMaxGroupSize() != null && container.getMaxGroupSize() > -1 &&
+		if (r.getMaxGroupSize() != null && container.getMaxGroupSize() > 0 &&
 				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
@@ -129,6 +129,9 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 		if (person.getCurrentPositionInTrajectory() != 0) {
 			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
 		}
+
+		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+			return false;
 
 		EpisimPerson.Activity nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 

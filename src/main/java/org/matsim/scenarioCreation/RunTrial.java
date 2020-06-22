@@ -13,7 +13,6 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunEpisim;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import picocli.CommandLine;
@@ -21,10 +20,7 @@ import picocli.CommandLine;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 /**
@@ -45,6 +41,9 @@ public final class RunTrial implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--number", description = "Trial number", required = true)
 	private int number;
+
+	@CommandLine.Option(names = "--run", description = "Run number", defaultValue = "0")
+	private int run;
 
 	@CommandLine.Option(names = "--calibParameter", description = "Calibration parameter", defaultValue = "-1")
 	private double calibParameter;
@@ -96,7 +95,7 @@ public final class RunTrial implements Callable<Integer> {
 
 		String name = unconstrained ? "calibration-unconstrained" : "calibration";
 
-		config.controler().setOutputDirectory(String.format("output-%s/%d/", name, number));
+		config.controler().setOutputDirectory(String.format("output-%s/%d/run%d/", name, number, run));
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -110,26 +109,20 @@ public final class RunTrial implements Callable<Integer> {
 		if (unconstrained) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
 			log.info("Cleared all restrictions");
-		} else {
+		} else if (alpha > -1) {
 
-			if (alpha > -1) {
-				SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
-				builder.setAlpha(alpha);
-				builder.setCiCorrection(correction);
-				builder.setDateOfCiChange(correctionStart);
-				FixedPolicy.ConfigBuilder policyConf = builder.build();
+			SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+			builder.setAlpha(alpha);
+			builder.setCiCorrection(correction);
+			builder.setDateOfCiChange(correctionStart);
+			FixedPolicy.ConfigBuilder policyConf = builder.build();
 
-				log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
+			log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
 
-				episimConfig.setPolicy(FixedPolicy.class, policyConf.build());
+			episimConfig.setPolicy(FixedPolicy.class, policyConf.build());
 
-			} else if (correctionStart != null) {
-				FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-				log.info("Setting ci correction at {} to {}", correctionStart, correction);
-				builder.restrict(correctionStart, Restriction.ofCiCorrection(correction), SnzBerlinScenario25pct2020.DEFAULT_ACTIVITIES);
-				episimConfig.setPolicy(FixedPolicy.class, builder.build());
-			}
 		}
+
 
 		for (Map.Entry<String, Double> e : ci.entrySet()) {
 			log.info("Setting contact intensity {}={}", e.getKey(), e.getValue());
@@ -159,7 +152,14 @@ public final class RunTrial implements Callable<Integer> {
 			episimConfig.setHospitalFactor(hospitalFactor);
 		}
 
-		log.info("Starting run number {} at {} with {} iterations", number, episimConfig.getStartDate(), iterations);
+		if (run > 0) {
+			Random rnd = new Random(run);
+			long seed = rnd.nextLong();
+			log.info("Setting seed for run {} to {}", run, seed);
+			config.global().setRandomSeed(seed);
+		}
+
+		log.info("Starting trial number {} (run {}) at {} with {} iterations", number, run, episimConfig.getStartDate(), iterations);
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 		runner.run(iterations);

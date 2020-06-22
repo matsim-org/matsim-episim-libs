@@ -242,6 +242,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					continue;
 
 				paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
+
+				// Prevent negative group size for persons starting with end activity
+				if (groupSize.getOrDefault(facility, 0) == 0)
+					groupSize.put(facility, 1);
+
 				groupSize.mergeInt(facility, -1, Integer::sum);
 
 				// Add person to container if it starts its day with end activity
