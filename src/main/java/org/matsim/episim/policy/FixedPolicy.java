@@ -28,6 +28,7 @@ import org.matsim.episim.EpisimReporting;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -119,6 +120,30 @@ public class FixedPolicy extends ShutdownPolicy {
 				Object value = config.getValue(e.getKey()).unwrapped();
 				params.put(e.getKey(), value);
 			}
+		}
+
+		/**
+		 * Removes all specified restrictions after {@code date}. Restriction before are sill valid and will be continued if not
+		 * overwritten explicitly!.
+		 */
+		public ConfigBuilder clearAfter(String date) {
+
+			LocalDate ref = LocalDate.parse(date);
+
+			for (Object act : params.values()) {
+				Map<String, Object> map = (Map<String, Object>) act;
+				Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
+				while (it.hasNext()) {
+					Map.Entry<String, Object> e = it.next();
+					LocalDate other = LocalDate.parse(e.getKey());
+					if (other.isEqual(ref) || other.isAfter(ref))
+						it.remove();
+
+				}
+
+			}
+
+			return this;
 		}
 
 		/**
