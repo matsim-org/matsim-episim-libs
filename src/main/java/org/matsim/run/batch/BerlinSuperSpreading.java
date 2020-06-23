@@ -129,7 +129,7 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 
 		@Override
 		public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
-											   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer) {
+											   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer, double indoorOutdoorFactor) {
 
 			double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 

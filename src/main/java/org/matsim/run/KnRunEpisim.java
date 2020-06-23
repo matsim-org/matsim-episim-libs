@@ -350,7 +350,7 @@ public class KnRunEpisim {
 
 
 		@Override
-		public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, InfectionParams act1, InfectionParams act2, double jointTimeInContainer) {
+		public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, InfectionParams act1, InfectionParams act2, double jointTimeInContainer, double indoorOutdoorFactor) {
 
 			double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 			// ci corr can not be null, because sim is initialized with non null value
