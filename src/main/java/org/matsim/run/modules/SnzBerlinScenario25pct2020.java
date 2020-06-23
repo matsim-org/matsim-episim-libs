@@ -153,7 +153,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_011_0);
 		episimConfig.setMaxInteractions(3);
-		String startDate = "2020-02-16";
+		String startDate = "2020-02-15";
 		episimConfig.setStartDate(startDate);
 		episimConfig.setHospitalFactor(1.6);
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
@@ -185,9 +185,10 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 	public static class BasePolicyBuilder {
 		private final EpisimConfigGroup episimConfig;
-		private double alpha = 1.0;
-		private double ciCorrection = 0.32;
-		private String dateOfCiChange = "2020-03-07";
+		private double alpha = 1.2;
+		// Results of calibration from 2020-06-23
+		private double ciCorrection =  0.363406;
+		private String dateOfCiChange = "2020-03-05";
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200614.csv");
 		private long introductionPeriod = 14;
