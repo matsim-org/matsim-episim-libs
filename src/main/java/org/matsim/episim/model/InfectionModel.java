@@ -17,10 +17,11 @@ public interface InfectionModel {
 	 * @param act1                 Activity of target
 	 * @param act2                 Activity of infector
 	 * @param jointTimeInContainer joint time doing these activity in seconds
+	 * @param indoorOutdoorFactor 
 	 * @return probability between 0 and 1
 	 */
 	double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 									EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
-									double jointTimeInContainer);
+									double jointTimeInContainer, double indoorOutdoorFactor);
 
 }

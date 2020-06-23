@@ -239,18 +239,20 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 			// activity params of the contact person and leaving person
 			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
+			
+			//determines whether activity is inside or outside. For now we assume that only leisure activities can occur outside
+			double indoorOutdoorFactor = getIndoorOutdoorFactor(infectionType);
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
-
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-						leavingParams, contactParams, jointTimeInContainer);
+						leavingParams, contactParams, jointTimeInContainer, indoorOutdoorFactor);
 				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-						contactParams, leavingParams, jointTimeInContainer);
+						contactParams, leavingParams, jointTimeInContainer, indoorOutdoorFactor);
 
 				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
@@ -296,6 +298,34 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
 		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
+	}
+	
+	private double getIndoorOutdoorFactor(StringBuilder infectionType) {
+		if (!(infectionType.indexOf("leisure_leisure") >= 0)) return 1.;
+		java.time.LocalDate date = episimConfig.getStartDate().plusDays(iteration);
+		int dayOfYear = date.getDayOfYear();
+		double proba = -1;
+		if (dayOfYear < 365./4.) {
+			proba = 14.09 / 100.;
+		}
+		else if (dayOfYear < 2*365./4.) {
+			proba = 26.28 / 100.;
+		}
+		else if (dayOfYear < 3*365./4.) {
+			proba = 31.64 / 100.;
+		}
+		else if (dayOfYear <= 366) {
+			proba = 23.64 / 100.;
+		}
+		else {
+			throw new RuntimeException("Something went wrong. The day of the year is =" + dayOfYear);
+		}
+		double indoorOutdoorFactor = 1.;
+		if (rnd.nextDouble() < proba) {
+			indoorOutdoorFactor = 1./20.;
+		}
+		return indoorOutdoorFactor;
+		
 	}
 
 }
