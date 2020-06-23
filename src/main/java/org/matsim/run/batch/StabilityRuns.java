@@ -5,7 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import javax.annotation.Nullable;
@@ -24,7 +24,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("experimental", "stability6");
+		return Metadata.of("paper-3.3", "stability");
 	}
 
 	@Override
@@ -33,18 +33,18 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 		Config config = module.config();
 
-
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
-		tracingConfig.setTracingCapacity_pers_per_day(params.tracing);
+		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 
-		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-		//episimConfig.setCalibrationParameter(params.calibParameter);
+		basePolicyBuilder.setAlpha(params.alpha);
+		basePolicyBuilder.setCiCorrection(params.ci);
 
-		if (params.startFrom > 0)
-			episimConfig.setStartFromSnapshot(BatchRun.resolveForCluster(SnzBerlinScenario25pct2020.INPUT,
-					String.format("episim-snapshot5-%03d.zip", params.startFrom)));
+		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+
+
+		//	episimConfig.setStartFromSnapshot(BatchRun.resolveForCluster(SnzBerlinScenario25pct2020.INPUT,
+		//			String.format("episim-snapshot5-%03d.zip", params.startFrom)));
 
 		config.global().setRandomSeed(params.seed);
 
@@ -53,14 +53,14 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(400)
+		@GenerateSeeds(300)
 		long seed;
 
-		@IntParameter({120})
-		int startFrom;
+		@Parameter({1, 1.2})
+		double alpha;
 
-		@IntParameter({0, Integer.MAX_VALUE})
-		int tracing;
+		@Parameter({1, 0.363406})
+		double ci;
 
 	}
 

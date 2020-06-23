@@ -127,7 +127,7 @@ def objective_ci_correction(trial):
     results = []
 
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 105" \
+        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 115" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
               " --correction %(correction).3f --start \"%(start)s\"" % params
 
@@ -135,7 +135,7 @@ def objective_ci_correction(trial):
         print("Running calibration command: %s" % cmd)
         subprocess.run(cmd, shell=True)
         res = calc_multi_error("output-calibration/%d/run%d/infections.txt" % (n, i), params["district"],
-                               start="2020-03-01", end="2020-06-10")
+                               start="2020-03-01", end="2020-06-20")
 
         results.append(res)
 
