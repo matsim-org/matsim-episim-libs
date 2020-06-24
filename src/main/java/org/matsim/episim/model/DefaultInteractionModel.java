@@ -306,16 +306,16 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 		int dayOfYear = date.getDayOfYear();
 		double proba = -1;
 		if (dayOfYear < 365./4.) {
-			proba = 14.09 / 100.;
+			proba = 12.44 / 100.;
 		}
 		else if (dayOfYear < 2*365./4.) {
-			proba = 26.28 / 100.;
+			proba = 23.60 / 100.;
 		}
 		else if (dayOfYear < 3*365./4.) {
-			proba = 31.64 / 100.;
+			proba = 28.63 / 100.;
 		}
 		else if (dayOfYear <= 366) {
-			proba = 23.64 / 100.;
+			proba = 21.15 / 100.;
 		}
 		else {
 			throw new RuntimeException("Something went wrong. The day of the year is =" + dayOfYear);
