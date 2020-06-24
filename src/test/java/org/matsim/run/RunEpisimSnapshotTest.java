@@ -61,7 +61,7 @@ public class RunEpisimSnapshotTest {
 		setup();
 
 		String fromSnapshot = utils.getOutputDirectory().replace(utils.getMethodName(), "fromSnapshot");
-		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + "episim-snapshot-015.zip");
+		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + "episim-snapshot-015-1970-01-15.zip");
 		config.controler().setOutputDirectory(fromSnapshot);
 
 		runner.run(30);

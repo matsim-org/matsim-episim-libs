@@ -20,6 +20,7 @@
  */
 package org.matsim.run;
 
+import com.google.common.base.Joiner;
 import com.google.inject.Module;
 import com.google.inject.*;
 import org.apache.logging.log4j.Level;
@@ -288,7 +289,7 @@ public class KnRunEpisim {
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
-					strb.append( "_ciCorr" ).append( basePolicyBuilder.getCiCorrection() ).append( "_@" ).append( basePolicyBuilder.getDateOfCiChange() );
+					strb.append( "_ciCorr" ).append(Joiner.on("_").withKeyValueSeparator("@").join(basePolicyBuilder.getCiCorrections()));
 					strb.append( "_alph" ).append( basePolicyBuilder.getAlpha() );
 //					strb.append("_masksPeriod").append( nDays );
 //					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );

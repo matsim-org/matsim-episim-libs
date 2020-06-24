@@ -61,14 +61,20 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
 	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
-														double ciCorrection, String dateOfCiChange, Extrapolation extrapolation,
+														Map<String, Double> ciCorrections, Extrapolation extrapolation,
 														long introductionPeriod, Double maskCompliance) throws IOException {
 
 		ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
 
-		restrictions.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		restrictions.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
-		restrictions.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
+		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
+
+			String date = e.getKey();
+			Double ciCorrection = e.getValue();
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "pt");
+		}
+
 
 		restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
@@ -153,7 +159,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_011_0);
 		episimConfig.setMaxInteractions(3);
-		String startDate = "2020-02-15";
+		String startDate = "2020-02-16";
 		episimConfig.setStartDate(startDate);
 		episimConfig.setHospitalFactor(1.6);
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
@@ -176,7 +182,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
 
-		config.controler().setOutputDirectory("./output-berlin-25pct-alpha-" + basePolicyBuilder.getAlpha() + "-extrapolation-" + basePolicyBuilder.getExtrapolation() + "-ciCorrection-" + basePolicyBuilder.getCiCorrection() + "-dateOfCiChange-" + basePolicyBuilder.getDateOfCiChange() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-" + episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
+		episimConfig.setSnapshotInterval(22);
+
+		config.controler().setOutputDirectory("./output-berlin-25pct-alpha-" + basePolicyBuilder.getAlpha() + "-extrapolation-" + basePolicyBuilder.getExtrapolation() + "-ciCorrections-" + basePolicyBuilder.getCiCorrections() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-" + episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
 
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
@@ -185,10 +193,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 	public static class BasePolicyBuilder {
 		private final EpisimConfigGroup episimConfig;
-		private double alpha = 1.2;
 		// Results of calibration from 2020-06-23
-		private double ciCorrection =  0.363406;
-		private String dateOfCiChange = "2020-03-05";
+		private Map<String, Double> ciCorrections = Map.of("2020-03-05", 0.363406);
+		private double alpha = 1;
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200614.csv");
 		private long introductionPeriod = 14;
@@ -218,20 +225,12 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.alpha = alpha;
 		}
 
-		public double getCiCorrection() {
-			return ciCorrection;
+		public void setCiCorrections(Map<String, Double> ciCorrections) {
+			this.ciCorrections = ciCorrections;
 		}
 
-		public void setCiCorrection(double ciCorrection) {
-			this.ciCorrection = ciCorrection;
-		}
-
-		public String getDateOfCiChange() {
-			return dateOfCiChange;
-		}
-
-		public void setDateOfCiChange(String dateOfCiChange) {
-			this.dateOfCiChange = dateOfCiChange;
+		public Map<String, Double> getCiCorrections() {
+			return ciCorrections;
 		}
 
 		public Extrapolation getExtrapolation() {
@@ -245,7 +244,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		public ConfigBuilder build() {
 			ConfigBuilder configBuilder = null;
 			try {
-				configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrection, dateOfCiChange, extrapolation, introductionPeriod,
+				configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrections, extrapolation, introductionPeriod,
 						maskCompliance);
 			} catch (IOException e) {
 				throw new RuntimeException(e);

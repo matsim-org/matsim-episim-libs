@@ -9,6 +9,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 
 /**
@@ -38,7 +39,8 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 
 		basePolicyBuilder.setAlpha(params.alpha);
-		basePolicyBuilder.setCiCorrection(params.ci);
+
+		basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", params.ci));
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
 
@@ -56,10 +58,10 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		@GenerateSeeds(300)
 		long seed;
 
-		@Parameter({1, 1.2})
+		@Parameter({1.7})
 		double alpha;
 
-		@Parameter({1, 0.363406})
+		@Parameter({1})
 		double ci;
 
 	}
