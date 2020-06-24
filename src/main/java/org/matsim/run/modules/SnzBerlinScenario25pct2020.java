@@ -193,8 +193,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 	public static class BasePolicyBuilder {
 		private final EpisimConfigGroup episimConfig;
-		// Results of calibration from 2020-06-23
-		private Map<String, Double> ciCorrections = Map.of("2020-03-05", 0.363406);
+		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1;
 		private Extrapolation extrapolation = Extrapolation.linear;
 		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200614.csv");
