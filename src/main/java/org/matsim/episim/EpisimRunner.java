@@ -36,6 +36,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.temporal.ChronoUnit;
+
 import org.matsim.core.gbl.Gbl;
 
 /**
@@ -154,7 +156,11 @@ public final class EpisimRunner {
 		EpisimReporting reporting = reportingProvider.get();
 		ProgressionModel progressionModel = progressionProvider.get();
 
-		Path path = output.resolve(String.format("episim-snapshot-%03d.zip", iteration));
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+
+		Path path = output.resolve(String.format("episim-snapshot-%03d-%s.zip", iteration, date));
 
 		log.info("Writing snapshot to {}", path);
 

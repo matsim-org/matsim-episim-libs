@@ -95,6 +95,9 @@ public final class RunTrial implements Callable<Integer> {
 
 		String name = unconstrained ? "calibration-unconstrained" : "calibration";
 
+		if (correctionStart != null)
+			name += "-" + correctionStart;
+
 		config.controler().setOutputDirectory(String.format("output-%s/%d/run%d/", name, number, run));
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -113,8 +116,12 @@ public final class RunTrial implements Callable<Integer> {
 
 			SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 			builder.setAlpha(alpha);
-			builder.setCiCorrection(correction);
-			builder.setDateOfCiChange(correctionStart);
+
+			HashMap<String, Double> original = new HashMap<>(builder.getCiCorrections());
+			original.put(correctionStart, correction);
+
+			builder.setCiCorrections(original);
+
 			FixedPolicy.ConfigBuilder policyConf = builder.build();
 
 			log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
@@ -140,6 +147,11 @@ public final class RunTrial implements Callable<Integer> {
 			log.info("Using correction date {} to calculate new number of iterations", correctionStart);
 			LocalDate endDate = LocalDate.parse(correctionStart).plusDays(days);
 			iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
+
+			// Write a new snapshot
+			if (run == 0) {
+				episimConfig.setSnapshotInterval(iterations);
+			}
 		}
 
 		if (snapshot != null) {
@@ -157,6 +169,7 @@ public final class RunTrial implements Callable<Integer> {
 			long seed = rnd.nextLong();
 			log.info("Setting seed for run {} to {}", run, seed);
 			config.global().setRandomSeed(seed);
+			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		}
 
 		log.info("Starting trial number {} (run {}) at {} with {} iterations", number, run, episimConfig.getStartDate(), iterations);

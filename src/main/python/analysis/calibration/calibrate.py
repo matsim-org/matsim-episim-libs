@@ -117,25 +117,27 @@ def objective_ci_correction(trial):
         number=n,
         scenario=trial.study.user_attrs["scenario"],
         district=trial.study.user_attrs["district"],
-        alpha=1.2,
+        alpha=1,
+        offset=0,
         # Parameter to calibrate
-        offset=trial.suggest_int('offset', -3, 3),
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
-        start=date.fromisoformat("2020-03-06") + timedelta(days=trial.suggest_int('ciOffset', -3, 3))
+        start=trial.study.user_attrs["start"],
     )
+
+    end = date.fromisoformat(params["start"]) + timedelta(days=21)
 
     results = []
 
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 115" \
+        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 21" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
-              " --correction %(correction).3f --start \"%(start)s\"" % params
+              " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
 
         print("Running ci correction with params: %s" % params)
         print("Running calibration command: %s" % cmd)
         subprocess.run(cmd, shell=True)
-        res = calc_multi_error("output-calibration/%d/run%d/infections.txt" % (n, i), params["district"],
-                               start="2020-03-01", end="2020-06-20")
+        res = calc_multi_error("output-calibration-%s/%d/run%d/infections.txt" % (params["start"], n, i), params["district"],
+                               start=params["start"], end=str(end))
 
         results.append(res)
 
@@ -196,7 +198,7 @@ if __name__ == "__main__":
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
-    parser.add_argument("--snapshot", type=str, default=None)
+    parser.add_argument("--start", type=str, default="", help="Start date for ci correction")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
 
     args = parser.parse_args()
@@ -212,7 +214,7 @@ if __name__ == "__main__":
 
     else:
         study = optuna.create_study(
-            study_name=args.objective, storage="sqlite:///calibration.db", load_if_exists=True,
+            study_name=args.objective + ("_" if args.start else "") + args.start, storage="sqlite:///calibration.db", load_if_exists=True,
             direction="minimize"
         )
 

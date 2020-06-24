@@ -27,6 +27,7 @@ rki, hospital = read_case_data("berlin-cases.csv", "berlin-hospital.csv")
 #%%
 
 df = read_batch_run("data/section3-3.zip")
+df2 = read_batch_run("data/section3-3-part2.zip")
 
 #%%
 
@@ -37,15 +38,18 @@ ci = datetime.fromisoformat("2020-03-07")
 plt.axvline(ci, color="gray", linewidth=1, linestyle="--", alpha=0.8)
 plt.text(ci, 1.2, ' Date of ci change', color="gray")
 
-rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color="red", ax=ax, logy=True)
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color="purple", ax=ax, logy=True)
 sns.lineplot(x="date", y="cases", estimator="mean", ci="sd", ax=ax,
-             label="Uncalibrated", data=df[(df.ci==1) & (df.alpha==1)])
+             label=r"Uncalibrated $(\alpha=ci=1)$", data=df[(df.ci==1) & (df.alpha==1)])
 
 sns.lineplot(x="date", y="cases", estimator="mean", ci="sd", ax=ax,
-             label=r"Calibrated ci", data=df[(df.ci!=1) & (df.alpha==1)])
+             label=r"$\alpha=1.2, ci=1$", data=df[(df.ci==1) & (df.alpha==1.2)])
 
 sns.lineplot(x="date", y="cases", estimator="mean", ci="sd", ax=ax,
-             label=r"Calibrated $\alpha$ & ci", data=df[(df.ci!=1) & (df.alpha==1.2)])
+             label=r"$\alpha=1.7, ci=1$", data=df2)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="sd", ax=ax,
+             label=r"$\alpha=1.2, ci$ calib.", data=df[(df.ci!=1) & (df.alpha==1.2)])
 
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())

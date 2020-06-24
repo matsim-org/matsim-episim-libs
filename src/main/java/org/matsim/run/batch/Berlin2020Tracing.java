@@ -36,6 +36,7 @@ import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Batch run for {@link org.matsim.run.modules.SnzBerlinScenario25pct2020} and different tracing options.
@@ -143,9 +144,8 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 
 		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
 		builder.setAlpha( 1.4 );
-		builder.setCiCorrection( 0.3 );
+		builder.setCiCorrections(Map.of("2020-03-08", 0.3));
 		builder.setCsv( SnzBerlinScenario25pct2020.INPUT.resolve("BerlinSnzData_daily_until20200531.csv") );
-		builder.setDateOfCiChange( "2020-03-08" );
 		builder.setExtrapolation( EpisimUtils.Extrapolation.valueOf( params.extrapolation ) );
 		FixedPolicy.ConfigBuilder policyConf = builder.build();
 
