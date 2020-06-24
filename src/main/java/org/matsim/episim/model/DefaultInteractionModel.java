@@ -28,6 +28,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -302,28 +303,56 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	
 	private double getIndoorOutdoorFactor(StringBuilder infectionType) {
 		if (!(infectionType.indexOf("leisure_leisure") >= 0)) return 1.;
-		java.time.LocalDate date = episimConfig.getStartDate().plusDays(iteration);
+		
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration);
+		
+		//anchor dates
+		int daysOfYear = 365;
+		int winter = 15; //15.01.
+		int spring = 105; //15.04.
+		int summer = 196; //15.07.
+		int autumn = 288; //15.10.
+		
+		if (date.isLeapYear()) {
+			daysOfYear++;
+			spring++;
+			summer++;
+			autumn++;
+		}
+	
+		double probaWinter = 12.44 / 100.;
+		double probaSpring = 23.60 / 100.;
+		double probaSummer = 28.63 / 100.;
+		double probaAutumn = 21.15 / 100.;
+		
+		double proba = 1;
+					
 		int dayOfYear = date.getDayOfYear();
-		double proba = -1;
-		if (dayOfYear < 365./4.) {
-			proba = 12.44 / 100.;
+		
+		if (dayOfYear <= winter) {
+			proba = probaAutumn + (probaWinter - probaAutumn) * (dayOfYear + daysOfYear - autumn) / (winter + daysOfYear - autumn);
 		}
-		else if (dayOfYear < 2*365./4.) {
-			proba = 23.60 / 100.;
+		else if (dayOfYear <= spring) {
+			proba = probaWinter + (probaSpring - probaWinter) * (dayOfYear - winter) / (spring - winter);
 		}
-		else if (dayOfYear < 3*365./4.) {
-			proba = 28.63 / 100.;
+		else if (dayOfYear <= summer) {
+			proba = probaSpring + (probaSummer - probaSpring) * (dayOfYear - spring) / (summer - spring);
 		}
-		else if (dayOfYear <= 366) {
-			proba = 21.15 / 100.;
+		else if (dayOfYear <= autumn) {
+			proba = probaSummer + (probaAutumn - probaSummer) * (dayOfYear - summer) / (autumn - summer);
+		}
+		else if (dayOfYear <= daysOfYear) {
+			proba = probaAutumn + (probaWinter - probaAutumn) * (dayOfYear - autumn) / (daysOfYear - autumn + winter);
 		}
 		else {
 			throw new RuntimeException("Something went wrong. The day of the year is =" + dayOfYear);
 		}
+		
 		double indoorOutdoorFactor = 1.;
 		if (rnd.nextDouble() < proba) {
 			indoorOutdoorFactor = 1./20.;
 		}
+		
 		return indoorOutdoorFactor;
 		
 	}
