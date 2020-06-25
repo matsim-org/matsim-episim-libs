@@ -123,23 +123,28 @@ public class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * Removes all specified restrictions after {@code date}. Restriction before are sill valid and will be continued if not
+		 * Removes all specified restrictions after or equal to {@code date}. Restriction before are sill valid and will be continued if not
 		 * overwritten explicitly!.
 		 */
 		public ConfigBuilder clearAfter(String date) {
+			params.keySet().forEach(k -> this.clearAfter(date, k));
+			return this;
+		}
+
+		/**
+		 * See {@link #clearAfter(String)}, but for one activity.
+		 */
+		public ConfigBuilder clearAfter(String date, String activity) {
 
 			LocalDate ref = LocalDate.parse(date);
 
-			for (Object act : params.values()) {
-				Map<String, Object> map = (Map<String, Object>) act;
-				Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
-				while (it.hasNext()) {
-					Map.Entry<String, Object> e = it.next();
-					LocalDate other = LocalDate.parse(e.getKey());
-					if (other.isEqual(ref) || other.isAfter(ref))
-						it.remove();
-
-				}
+			Map<String, Object> map = (Map<String, Object>) params.get(activity);
+			Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
+			while (it.hasNext()) {
+				Map.Entry<String, Object> e = it.next();
+				LocalDate other = LocalDate.parse(e.getKey());
+				if (other.isEqual(ref) || other.isAfter(ref))
+					it.remove();
 
 			}
 
