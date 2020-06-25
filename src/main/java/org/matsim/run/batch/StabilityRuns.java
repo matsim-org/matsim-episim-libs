@@ -40,7 +40,19 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 		basePolicyBuilder.setAlpha(params.alpha);
 
-		basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", params.ci));
+		double ci;
+		if (params.alpha == 1.0) {
+			ci = 0.323;
+		} else if (params.alpha == 1.2) {
+			ci = 0.360;
+		} else if (params.alpha == 1.4) {
+			ci = 0.437;
+		} else if (params.alpha == 1.7) {
+			ci = 1;
+		} else
+			throw new IllegalArgumentException("No ci known for alpha: " + params.alpha);
+
+		basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", ci));
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
 
@@ -58,11 +70,11 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		@GenerateSeeds(300)
 		long seed;
 
-		@Parameter({1.7})
+		@Parameter({1, 1.2, 1.4, 1.7})
 		double alpha;
 
-		@Parameter({1})
-		double ci;
+		//@Parameter({1})
+		//double ci;
 
 	}
 

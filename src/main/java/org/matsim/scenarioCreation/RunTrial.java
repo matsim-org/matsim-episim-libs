@@ -150,7 +150,7 @@ public final class RunTrial implements Callable<Integer> {
 
 			// Write a new snapshot
 			if (run == 0) {
-				episimConfig.setSnapshotInterval(iterations);
+				episimConfig.setSnapshotInterval(iterations - 7);
 			}
 		}
 

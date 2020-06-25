@@ -182,8 +182,6 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
 
-		episimConfig.setSnapshotInterval(22);
-
 		config.controler().setOutputDirectory("./output-berlin-25pct-alpha-" + basePolicyBuilder.getAlpha() + "-extrapolation-" + basePolicyBuilder.getExtrapolation() + "-ciCorrections-" + basePolicyBuilder.getCiCorrections() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-" + episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
 
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
@@ -193,6 +191,12 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 	public static class BasePolicyBuilder {
 		private final EpisimConfigGroup episimConfig;
+
+		/*
+		 *  alpha = 1 -> ci=0.323
+		 *  alpha = 1.2 -> ci=0.360
+		 *  alpha = 1.4 -> ci=0.437
+		 */
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1;
 		private Extrapolation extrapolation = Extrapolation.linear;

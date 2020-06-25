@@ -117,6 +117,7 @@ def objective_ci_correction(trial):
         number=n,
         scenario=trial.study.user_attrs["scenario"],
         district=trial.study.user_attrs["district"],
+        days=trial.study.user_attrs["days"],
         alpha=1,
         offset=0,
         # Parameter to calibrate
@@ -129,7 +130,7 @@ def objective_ci_correction(trial):
     results = []
 
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 21" \
+        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
               " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
 
@@ -199,6 +200,7 @@ if __name__ == "__main__":
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="", help="Start date for ci correction")
+    parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
 
     args = parser.parse_args()
