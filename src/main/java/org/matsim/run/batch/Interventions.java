@@ -121,7 +121,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 				tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 						warmUp, 0,
-						referenceDate, 30
+						referenceDate, Integer.MAX_VALUE
 				));
 
 
@@ -154,7 +154,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		@GenerateSeeds(30)
 		long seed;
 
-		@StringParameter({"2020-03-08", "2020-04-20"})
+		@StringParameter({"2020-03-07", "2020-04-20"})
 		String referenceDate;
 
 		@StringParameter({"none", "ci0.32", "ci0.5", "edu0", "edu50", "leisure50", "shopping50", "work50", "outOfHome50",
