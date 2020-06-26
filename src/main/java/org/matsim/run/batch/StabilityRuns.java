@@ -25,7 +25,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("paper-3.3", "stability");
+		return Metadata.of("paper-3.1", "stability");
 	}
 
 	@Override
@@ -53,13 +53,19 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 			// special case with no correction
 			basePolicyBuilder.setAlpha(1);
 			ci = 1;
+		} else if (params.alpha == -1) {
+			ci = Double.NaN;
 		} else
 			throw new IllegalArgumentException("No ci known for alpha: " + params.alpha);
 
 		basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", ci));
 
-		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
-
+		if (params.alpha > -1) {
+			episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+		} else {
+			// Set unrestricted configuration
+			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
+		}
 
 		//	episimConfig.setStartFromSnapshot(BatchRun.resolveForCluster(SnzBerlinScenario25pct2020.INPUT,
 		//			String.format("episim-snapshot5-%03d.zip", params.startFrom)));
@@ -74,7 +80,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		@GenerateSeeds(300)
 		long seed;
 
-		@Parameter({0, 1, 1.7})
+		@Parameter({-1})
 		double alpha;
 
 		//@Parameter({1})

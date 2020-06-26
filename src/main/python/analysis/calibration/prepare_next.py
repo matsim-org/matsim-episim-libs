@@ -51,6 +51,8 @@ if __name__ == "__main__":
     best = params[3]
     print("Best Trial: " + str(best))
 
+    print("Best params: %s" % [x[1][3] for x in params])
+
     n = best[0][1]
     value = best[1][3]
 

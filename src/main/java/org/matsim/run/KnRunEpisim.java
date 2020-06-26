@@ -168,7 +168,7 @@ public class KnRunEpisim {
 //				config.global().setRandomSeed( 4711 );
 
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
-				tracingConfig.setTracingCapacity_per_day( 0 );
+				tracingConfig.setTracingCapacity_pers_per_day( 0 );
 
 				// ---
 
@@ -252,12 +252,17 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.frmSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
-					basePolicyBuilder.setCiCorrection( 0.3 );
+					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.3 ));
 					basePolicyBuilder.setAlpha( 1.0 );
 					double clothFinalFraction=0.;
 					double surgicalFinalFraction=0.;
-					basePolicyBuilder.setClothFinalFraction( clothFinalFraction );
-					basePolicyBuilder.setSurgicalFinalFraction( surgicalFinalFraction );
+
+					// This was hardcoded and not configurable at the moment
+					if (true)
+						throw new RuntimeException("Cloth and surgical final fraction are fixed at the moment.");
+//					basePolicyBuilder.setClothFinalFraction( clothFinalFraction );
+//					basePolicyBuilder.setSurgicalFinalFraction( surgicalFinalFraction );
+
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
