@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     print("Found snapshot " + snapshot)
 
-    copy(path.join(folder, snapshot), " episim-snapshot-%s.zip" % next_date)
+    copy(path.join(folder, snapshot), "episim-snapshot-%s.zip" % next_date)
 
     script = open(SCRIPT).read()
 
