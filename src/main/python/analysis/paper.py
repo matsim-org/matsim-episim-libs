@@ -54,8 +54,8 @@ plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-06-0
 #%%
 
 
-df = read_batch_run("data/section3-3-new.zip")
-dfOld = read_batch_run("data/section3-3.zip")
+df = read_batch_run("data/section3-3-data.zip")
+#dfOld = read_batch_run("data/section3-3.zip")
 
 baseCase = df[df.alpha==1.0]
 
@@ -72,8 +72,10 @@ plt.axvline(ci, color="gray", linewidth=1, linestyle="--", alpha=0.8)
 plt.text(ci, 1.2, ' Date of ci change', color="gray")
 
 rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+
+# In the data alpha=0 is a special case
 sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
-             label=r"$\alpha=1.0$", data=dfOld[(dfOld.ci==1) & (dfOld.alpha==1)])
+             label=r"$\alpha=1.0$", data=df[(df.alpha==0)])
 
 sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
              label=r"$\alpha=1.7$", data=df[df.alpha==1.7])
@@ -93,10 +95,8 @@ plt.legend(loc="upper left")
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
-
 hospital.plot.scatter(x="Datum", y=["Stationäre Behandlung"], label=["Hospital treatment"], color=palette[4], logy=True, ax=ax)
 hospital.plot.scatter(x="Datum", y=["Intensivmedizin"], label=["Intensive care"], color=palette[5], logy=True, ax=ax)
-
 
 baseCase["inHospital"] =  baseCase.nSeriouslySick + baseCase.nCritical
 

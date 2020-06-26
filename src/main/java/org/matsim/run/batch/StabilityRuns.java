@@ -49,6 +49,10 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 			ci = 0.437;
 		} else if (params.alpha == 1.7) {
 			ci = 1;
+		} else if (params.alpha == 0) {
+			// special case with no correction
+			basePolicyBuilder.setAlpha(1);
+			ci = 1;
 		} else
 			throw new IllegalArgumentException("No ci known for alpha: " + params.alpha);
 
@@ -70,7 +74,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		@GenerateSeeds(300)
 		long seed;
 
-		@Parameter({1, 1.2, 1.4, 1.7})
+		@Parameter({0, 1, 1.7})
 		double alpha;
 
 		//@Parameter({1})
