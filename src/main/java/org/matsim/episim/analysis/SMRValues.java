@@ -38,17 +38,20 @@ import java.util.LinkedHashSet;
 
 public class SMRValues {
 	
-	private static final String WORKINGDIR = "../shared-svn/projects/episim/matsim-files/bmbf6/20200615-runs/runs/";
+	private static final String WORKINGDIR = "./output-indoorOutdoor/";
 
 	public static void main(String[] args) throws IOException {
 		
 		
 		HashSet<String> scenarios = new LinkedHashSet<String>(); 
-		scenarios.add("tracing-30-noSchools");
-		scenarios.add("tracing-30-noSchools-masks0108");
-		scenarios.add("tracing-30-noSchools-notracingAfter0106");
-		scenarios.add("tracing-30-SchoolsAfterSummer");
-		scenarios.add("tracing-inf-noSchools");
+		
+		 File[] files = new File(WORKINGDIR).listFiles();
+		 
+		 for (File file : files) {
+		        if (file.isDirectory()) {
+		        	scenarios.add(file.getName());
+		        }
+		 }
 
 	    FileWriter fw = new FileWriter(new File(WORKINGDIR + "rValues.txt"));
 	    BufferedWriter bw = new BufferedWriter(fw);

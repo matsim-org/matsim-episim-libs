@@ -65,7 +65,7 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     return rates.mean(), np.square(rates - target_rate).mean()
 
 
-def calc_multi_error(f, district, start, end, hospital="berlin-hospital.csv", rki="berlin-cases.csv"):
+def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hospital.csv", rki="berlin-cases.csv"):
     """ Compares hospitalization rate """
 
     df, hospital, rki = read_data(f, district, hospital, rki)
@@ -80,7 +80,7 @@ def calc_multi_error(f, district, start, end, hospital="berlin-hospital.csv", rk
     error_critical = mean_squared_log_error(hospital["Intensivmedizin"], df.nCritical)
 
     # Assume fixed Dunkelziffer
-    error_cases = mean_squared_log_error(rki.casesSmoothed * 2, df.casesSmoothed)
+    error_cases = mean_squared_log_error(rki.casesSmoothed * assumed_dz, df.casesSmoothed)
     # error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
 
     # Dunkelziffer
@@ -117,6 +117,8 @@ def objective_ci_correction(trial):
         number=n,
         scenario=trial.study.user_attrs["scenario"],
         district=trial.study.user_attrs["district"],
+        days=trial.study.user_attrs["days"],
+        dz=trial.study.user_attrs["dz"],
         alpha=1,
         offset=0,
         # Parameter to calibrate
@@ -129,7 +131,7 @@ def objective_ci_correction(trial):
     results = []
 
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 21" \
+        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
               " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
 
@@ -137,7 +139,7 @@ def objective_ci_correction(trial):
         print("Running calibration command: %s" % cmd)
         subprocess.run(cmd, shell=True)
         res = calc_multi_error("output-calibration-%s/%d/run%d/infections.txt" % (params["start"], n, i), params["district"],
-                               start=params["start"], end=str(end))
+                               start=params["start"], end=str(end), assumed_dz=params["dz"])
 
         results.append(res)
 
@@ -199,6 +201,8 @@ if __name__ == "__main__":
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="", help="Start date for ci correction")
+    parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
+    parser.add_argument("--dz", type=float, default="2", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
 
     args = parser.parse_args()

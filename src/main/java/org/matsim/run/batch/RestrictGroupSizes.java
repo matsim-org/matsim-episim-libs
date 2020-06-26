@@ -10,6 +10,7 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import javax.annotation.Nullable;
+import java.util.Map;
 
 
 /**
@@ -37,17 +38,40 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		builder.restrict("2020-03-07", Restriction.ofGroupSize(params.maxGroupSize), "leisure");
-		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
+		builder.clearAfter("2020-03-07", "leisure");
+
+
+		if (params.bySize.equals("yes")) {
+
+			Map<Double, Integer> sizes = Map.of(
+					0.10, 32,
+					0.25, 60,
+					0.50, 104,
+					0.75, 196,
+					0.90, 396
+			);
+
+			builder.restrict("2020-03-07", Restriction.ofGroupSize(sizes.get(params.remaining)), "leisure");
+
+		} else {
+
+			builder.restrict("2020-03-07", Restriction.of(params.remaining), "leisure");
+
+		}
+
+		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		return config;
 	}
 
 	public static final class Params {
 
-		@IntParameter({-1, 5, 10, 15, 20, 25, 30})
-		int maxGroupSize;
+		@Parameter({0.1, 0.25, 0.5, 0.75, 0.9})
+		double remaining;
+
+		@StringParameter({"yes", "no"})
+		String bySize;
 
 	}
 
