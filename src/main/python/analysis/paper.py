@@ -50,6 +50,25 @@ plt.legend(loc="best")
 
 plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-06-01"))
 
+#%% Section 3-1
+
+df31 = read_batch_run("data/section-3-1.zip")
+
+#%%
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+             label=r"Calibrated $\theta$", data=df31)
+
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
+
+plt.ylim(bottom=1)
+plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
+plt.legend(loc="upper left")
 
 #%%
 
