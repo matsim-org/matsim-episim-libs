@@ -20,95 +20,19 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-######## maxIA=10
+# base = 'output/2020-06-19_19-48-41__unrestr__theta1.1E-5@3__trStrt46_seed4711_strtDt2020-02-16_trCap0/'
 
-###### sInfct=0:
-
-### unrestr:
-
-### snz:
-
-##### sInfct=1:
-
-### unrestr:
-
-### snz:
+# base = 'output/2020-06-19_23-29-07__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-19_23-29-15__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.5upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_15-36-11__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.7upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_15-36-04__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.8upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_15-35-46__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.9upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_08-19-21__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph2.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
 
 
-########## maxIA=3
-######## sInfct=0:
-##### unrestr:
-##### snz:
-
-### std:
-# base = '2020-06-04_21-58-07__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_seed4711_strtDt2020-02-12/'
-# base = '2020-06-04_22-14-19__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_seed4713_strtDt2020-02-12/'
-
-### w/ re-op:
-# base = '2020-06-05_20-21-33__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4711_strtDt2020-02-12/'
-# base = '2020-06-05_20-21-22__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4713_strtDt2020-02-12/'
-# base = '2020-06-05_23-54-24__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4715_strtDt2020-02-12_trCap30/'
-# base = '2020-06-05_23-54-35__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4717_strtDt2020-02-12_trCap30/'
-# base = '2020-06-06_09-43-26__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4719_strtDt2020-02-12_trCap30/'
-# base = '2020-06-06_09-43-39__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4721_strtDt2020-02-12_trCap30/'
-
-### w/ re-op & inf tracing:
-# base = '2020-06-05_19-34-58__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4711_strtDt2020-02-12/'
-# base = '2020-06-05_19-35-15__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4713_strtDt2020-02-12/'
-
-# base = '2020-06-06_17-36-29__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4719_strtDt2020-02-12_trCap2147483647/'
-# base = '2020-06-06_17-36-20__frmSnz__theta2.6E-6@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt52_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4721_strtDt2020-02-12_trCap2147483647/'
-
-####### sInfct=1:
-##### unrestr:
-##### snz:
-### std:
-# base = '2020-06-04_23-01-09__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_seed4711_strtDt2020-02-12/'
-# base = '2020-06-04_23-41-20__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_seed4713_strtDt2020-02-12/'
-
-### w/ reop:
-# base = '2020-06-04_23-46-39__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4711_strtDt2020-02-12/'
-# base = '2020-06-04_23-50-26__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_30_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4713_strtDt2020-02-12/'
-
-# w/ reop & inf trac:
-# base = '2020-06-05_08-19-22__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4711_strtDt2020-02-12/'
-# base = '2020-06-05_08-19-09__frmSnz__theta3.0E-6@3__pWSymp1.0__sInfct1.0__sSusc0.0__trStrt52_trCpJn_2147483647_ciCorr0.3_@2020-03-08_alph1.4_reopFr1.0_seed4713_strtDt2020-02-12/'
-
-# ---
-
-# base = '2020-06-12_18-03-07__frmSnz__theta1.0E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-12_trCap30/'
-# base = '2020-06-12_23-26-14__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-12_trCap30/'
-# base = '2020-06-12_23-26-21__frmSnz__theta1.2E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-12_trCap30/'
-
-# base = '2020-06-12_23-26-14__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-12_trCap30/'
-# base = '2020-06-13_08-04-16__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-13_trCap30/'
-# base = '2020-06-13_08-04-25__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-14_trCap30/'
-# base = '2020-06-13_08-04-36__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-15_trCap30/'
-# base = '2020-06-13_09-02-33__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-16_trCap30/'
-# base = '2020-06-13_09-36-44__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-17_trCap30/'
-# base = '2020-06-13_11-03-39__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-18_trCap30/'
-# base = '2020-06-13_11-03-14__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-19_trCap30/'
-# base = '2020-06-13_11-04-06__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_seed4711_strtDt2020-02-20_trCap30/'
-
-# andere Maskenwerte:
-# base = '2020-06-13_13-55-28__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_seed4711_strtDt2020-02-18_trCap30/'
-
-# base = '2020-06-13_20-29-54__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-18_trCap30/'
-# base = '2020-06-13_20-24-45__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-19_trCap30/'
-
-# these two can't be used (infinite tracing capacity from early on)
-# base = '2020-06-13_21-55-24__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-18_trCap2147483647/'
-# base = '2020-06-13_21-55-35__frmSnz__theta1.1E-5@3__pWSymp1.0__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.2_seed4711_strtDt2020-02-19_trCap2147483647/'
-
-# base = '2020-06-14_11-01-58__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksOffset14_masksDay2020-05-04@0.5_0.1_seed4711_strtDt2020-02-18_trCap30/'
-
-# base = '2020-06-14_12-17-53__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-18_trCap30/'
-# base = '2020-06-14_12-17-59__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap30/'
-
-# base = '2020-06-14_13-21-25__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-18_trCap2147483647/'
-# base = '2020-06-14_13-21-33__frmSnz__theta1.1E-5@3__sInfct0.0__sSusc0.0__trStrt49_ciCorr0.3_@2020-03-08_alph1.0_masksPeriod14upto0.5_0.1_seed4711_strtDt2020-02-19_trCap2147483647/'
-
-base = 'output/2020-06-15_19-47-18__frmSnz__theta1.1E-5@3__trStrt44_ciCorr0.32_@2020-03-08_alph1.0_seed4711_strtDt2020-02-18_trCap30/'
+# base = 'output/2020-06-20_09-48-46__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+base = 'output/2020-06-21_13-06-35__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-18_trCap0/'
+# base = 'output/2020-06-21_13-06-44__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-20_trCap0/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -137,11 +61,11 @@ pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
                   cycler(linestyle=['', '', '', '','-','-','-']) +
-                  cycler(marker=['.','','.','','','','']))
+                  cycler(marker=['.','','','.','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,10000)
-axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2021-02-15'))
+axes.set_ylim(0.9,1000)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
 # pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
@@ -165,7 +89,9 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '', '', '','-','']) +
                   cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-rr3.plot(logy=True,grid=True)
+axes = rr3.plot(logy=True,grid=True)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
+axes.set_ylim(0.9,1000)
 pyplot.show()
 
 # In[]:
@@ -185,8 +111,9 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['-', '-', '-', '-','-','']) +
                   cycler(marker=['','','','',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-rr3.plot(logy=True,grid=True)
 pyplot.axvline(23, color='y', linestyle='-', lw=1)
+axes = rr3.plot(logy=True,grid=True)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
 pyplot.show()
 
 # ln[]:

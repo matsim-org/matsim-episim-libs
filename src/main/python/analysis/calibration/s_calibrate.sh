@@ -9,7 +9,7 @@ hostname
 
 cd $SLURM_SUBMIT_DIR
 
-command="python calibrate.py --objective multi"
+command="python calibrate.py 5 --runs 3 --objective ci_correction --start 2020-03-07"
 
 echo ""
 echo "command is $command"

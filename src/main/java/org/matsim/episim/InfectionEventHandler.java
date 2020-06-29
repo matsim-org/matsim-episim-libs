@@ -210,6 +210,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		Object2IntMap<EpisimFacility> groupSize = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimFacility> maxGroupSize = new Object2IntOpenHashMap<>();
 
+		Map<EpisimFacility, Object2IntMap<String>> activityUsage = new HashMap<>();
+
 		for (Event event : events) {
 
 			EpisimPerson person = null;
@@ -248,6 +250,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					groupSize.put(facility, 1);
 
 				groupSize.mergeInt(facility, -1, Integer::sum);
+				activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
 				// Add person to container if it starts its day with end activity
 				if (person.getFirstFacilityId() == null) {
@@ -276,8 +279,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		insertStationaryAgents();
 
+		reporting.reportFacilityUsage(maxGroupSize, activityUsage);
+
 		for (Object2IntMap.Entry<EpisimFacility> kv : maxGroupSize.object2IntEntrySet()) {
-			kv.getKey().setMaxGroupSize((int) (kv.getIntValue() * (1/episimConfig.getSampleSize())));
+			int scaledSize = (int) (kv.getIntValue() * (1 / episimConfig.getSampleSize()));
+			kv.getKey().setMaxGroupSize(scaledSize);
 		}
 
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));

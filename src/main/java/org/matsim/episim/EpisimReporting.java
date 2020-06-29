@@ -460,6 +460,28 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		manager.processEvent(event);
 	}
 
+	/**
+	 * Writes the max group sizes and number of activities for each facility.
+	 */
+	void reportFacilityUsage(Object2IntMap<InfectionEventHandler.EpisimFacility> maxGroupSize,
+							 Map<InfectionEventHandler.EpisimFacility, Object2IntMap<String>> activityUsage) {
+
+		BufferedWriter out = EpisimWriter.prepare(base + "facilityUsage.txt", "id", "types", "size");
+
+		for (Object2IntMap.Entry<InfectionEventHandler.EpisimFacility> kv : maxGroupSize.object2IntEntrySet()) {
+
+			int scaledSize = (int) (kv.getIntValue() * (1 / episimConfig.getSampleSize()));
+
+			this.writer.append(out, new String[]{
+					kv.getKey().getContainerId().toString(),
+					String.valueOf(activityUsage.get(kv.getKey())),
+					String.valueOf(scaledSize)
+			});
+		}
+
+		this.writer.close(out);
+	}
+
 	@Override
 	public void close() {
 

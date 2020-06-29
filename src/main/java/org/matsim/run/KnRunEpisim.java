@@ -161,48 +161,14 @@ public class KnRunEpisim {
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 				episimConfig.setWriteEvents( WriteEvents.episim );
 
+				episimConfig.setStartDate( "2020-02-20" );
+
 				// ---
 
 //				config.global().setRandomSeed( 4711 );
 
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
-
-				/*
-				episimConfig.setMaxInteractions( 3 );
-				if ( episimConfig.getMaxInteractions()==3 ){
-					if( sigmaInfect == 0. ){
-						episimConfig.setCalibrationParameter( 0.000_011 );
-						if( config.global().getRandomSeed() == 4711 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 18 ) );
-						} else if( config.global().getRandomSeed() == 4713 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else if( config.global().getRandomSeed() == 4715 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else if( config.global().getRandomSeed() == 4717 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else if( config.global().getRandomSeed() == 4719 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else if( config.global().getRandomSeed() == 4721 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else{
-							throw new RuntimeException( "not calibrated" );
-						}
-					} else if( sigmaInfect == 1. ){
-						episimConfig.setCalibrationParameter( 0.000_003 );
-						if( config.global().getRandomSeed() == 4711 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else if( config.global().getRandomSeed() == 4713 ){
-							episimConfig.setStartDate( LocalDate.of( 2020, 2, 12 ) );
-						} else{
-							throw new RuntimeException( "not calibrated" );
-						}
-					} else{
-						throw new RuntimeException( "not calibrated" );
-					}
-				} else {
-					throw new RuntimeException("not calibrated");
-				}
-				 */
+				tracingConfig.setTracingCapacity_pers_per_day( 0 );
 
 				// ---
 
@@ -286,13 +252,24 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.frmSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
+					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.3 ));
+					basePolicyBuilder.setAlpha( 1.0 );
+					double clothFinalFraction=0.;
+					double surgicalFinalFraction=0.;
+
+					// This was hardcoded and not configurable at the moment
+					if (true)
+						throw new RuntimeException("Cloth and surgical final fraction are fixed at the moment.");
+//					basePolicyBuilder.setClothFinalFraction( clothFinalFraction );
+//					basePolicyBuilder.setSurgicalFinalFraction( surgicalFinalFraction );
+
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
 					strb.append( "_ciCorr" ).append(Joiner.on("_").withKeyValueSeparator("@").join(basePolicyBuilder.getCiCorrections()));
 					strb.append( "_alph" ).append( basePolicyBuilder.getAlpha() );
 //					strb.append("_masksPeriod").append( nDays );
-//					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );
+					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					episimConfig.setPolicy( FixedPolicy.class, FixedPolicy.config().build() ); // overwrite snz policy with "null"

@@ -37,10 +37,11 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+		config.global().setRandomSeed(params.seed);
+
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		builder.clearAfter("2020-03-07", "leisure");
-
 
 		if (params.bySize.equals("yes")) {
 
@@ -67,7 +68,10 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	public static final class Params {
 
-		@Parameter({0.1, 0.25, 0.5, 0.75, 0.9})
+		@GenerateSeeds(200)
+		long seed;
+
+		@Parameter({0.25, 0.5, 0.75})
 		double remaining;
 
 		@StringParameter({"yes", "no"})
