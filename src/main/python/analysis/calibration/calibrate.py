@@ -98,15 +98,24 @@ def objective_unconstrained(trial):
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
 
-    cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --unconstrained --calibParameter %.12f" % (scenario, n, c)
+    results = []
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" % (scenario, n, i, c)
+    
+        print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
+        subprocess.run(cmd, shell=True)
+    
+        res = infection_rate("output-calibration-unconstrained/%d/run%d/infections.txt" % (n, i), district)
+        results.append(res)
 
-    print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
-    subprocess.run(cmd, shell=True)
+    df = pd.DataFrame(results, columns=["rate", "error"])
+    print(df)
 
-    rate, error = infection_rate("output-calibration-unconstrained/%d/run0/infections.txt" % n, district)
-    trial.set_user_attr("mean_infection_rate", rate)
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
 
-    return error
+    trial.set_user_attr("df", df.to_json())
+    return df.error.mean()
 
 
 def objective_ci_correction(trial):
