@@ -350,7 +350,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 		
 		double indoorOutdoorFactor = 1.;
 		if (rnd.nextDouble() < proba) {
-			indoorOutdoorFactor = 1./20.;
+			indoorOutdoorFactor = 1./10.;
 		}
 		
 		return indoorOutdoorFactor;
