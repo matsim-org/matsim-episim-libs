@@ -93,7 +93,7 @@ def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
     n = trial.number
-    c = trial.suggest_uniform("calibrationParameter", 0.5e-5, 1.5e-5)
+    c = trial.suggest_uniform("calibrationParameter", 0.6e-5, 1.6e-5)
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
