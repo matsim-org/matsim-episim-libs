@@ -22,13 +22,12 @@ package org.matsim.episim.events;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.contrib.dvrp.fleet.DvrpVehicle;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsReaderXMLv1;
 import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.episim.EpisimContainer;
-import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
@@ -42,8 +41,8 @@ public class EpisimEventsReader extends MatsimXmlParser {
 	private EventsReaderXMLv1 delegate;
 
 	/**
-	 * EventsReader for EpisimEvents. Currently, only EpisimInfectionEvents are supported.
-	 * TODO: read other episimevents (EpisimContactEvent, EpisimPersonStatusEvent)
+	 * EventsReader for EpisimEvents. Currently, only EpisimInfectionEvents and EpisimPersonStatusEvents are supported.
+	 * TODO: read other episimevents (EpisimContactEvent)
 	 *
 	 * @param events
 	 */
@@ -51,6 +50,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		delegate = new EventsReaderXMLv1(events);
 		this.setValidating(false);
 		delegate.addCustomEventMapper(EVENT_TYPE, getEpisimInfectionEventMapper());
+		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());
 	}
 
 	public void characters(char[] ch, int start, int length) throws SAXException {
@@ -69,6 +69,19 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			String type = attributes.get(INFECTION_TYPE);
 
 			return new EpisimInfectionEvent(time,person,infector,container,type);
+		};
+	}
+	
+	private MatsimEventsReader.CustomEventMapper<EpisimPersonStatusEvent> getEpisimPersonStatusEventMapper() {
+		return event -> {
+
+			Map<String, String> attributes = event.getAttributes();
+
+			double time = Double.parseDouble(attributes.get(ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(ATTRIBUTE_PERSON));
+			DiseaseStatus diseaseStatus = DiseaseStatus.valueOf(attributes.get(EpisimPersonStatusEvent.DISEASE_STATUS));
+
+			return new EpisimPersonStatusEvent(time,person,diseaseStatus);
 		};
 	}
 
