@@ -22,6 +22,8 @@ package org.matsim.episim.model;
 
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
@@ -50,17 +52,57 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 	 * Home quarantine infection param.
 	 */
 	protected final EpisimPerson.Activity qhParams;
+	/**
+	 * See {@link TracingConfigGroup#getMinDuration()}
+	 */
+	protected final double trackingMinDuration;
 	protected int iteration;
 
 	private Map<String, Restriction> restrictions;
 
 
-	AbstractInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+	AbstractInteractionModel( SplittableRandom rnd, Config config, EpisimReporting reporting ) {
 		this.rnd = rnd;
-		this.episimConfig = episimConfig;
+		this.episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 		this.reporting = reporting;
-		this.trParams = new EpisimPerson.Activity("tr", episimConfig.selectInfectionParams("tr"));
+		this.trParams = new EpisimPerson.Activity("tr", episimConfig.selectInfectionParams("tr" ));
 		this.qhParams = new EpisimPerson.Activity( QUARANTINE_HOME, episimConfig.selectInfectionParams( QUARANTINE_HOME ));
+		this.trackingMinDuration = ConfigUtils.addOrGetModule( config, TracingConfigGroup.class ).getMinDuration();
+	}
+	/**
+	 * Get the relevant infection parameter based on container and activity and person.
+	 */
+	protected EpisimConfigGroup.InfectionParams getInfectionParams( EpisimContainer<?> container, EpisimPerson person, String activity ) {
+		if (container instanceof InfectionEventHandler.EpisimVehicle) {
+			return episimConfig.selectInfectionParams(container.getContainerId().toString());
+		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
+			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
+
+			// Select different infection params for home quarantined persons
+			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && params.getContainerName().equals("home")) {
+				return qhParams.params;
+			}
+
+			return params;
+		} else
+			throw new IllegalStateException("Don't know how to deal with container " + container);
+
+	}
+	protected void trackContactPerson( EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, double jointTimeInContainer,
+					   StringBuilder infectionType ) {
+
+		// Don't track certain activities
+		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
+			return;
+		}
+
+		// don't track below threshold
+		if (jointTimeInContainer < trackingMinDuration) {
+			return;
+		}
+
+		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
+		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
 	}
 
 	private static boolean hasDiseaseStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
@@ -165,6 +207,23 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
 	}
 
+	/**
+	 * Attention: In order to re-use the underlying object, this function returns a buffer.
+	 * Be aware that the old result will be overwritten, when the function is called multiple times.
+	 */
+	protected static StringBuilder getInfectionType( StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity,
+							 String otherPersonsActivity ) {
+		buffer.setLength(0);
+		if (container instanceof InfectionEventHandler.EpisimFacility) {
+			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
+			return buffer;
+		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+			buffer.append("pt");
+			return buffer;
+		} else {
+			throw new RuntimeException("Infection situation is unknown");
+		}
+	}
 	/**
 	 * Set the iteration number and restrictions that are in place.
 	 */

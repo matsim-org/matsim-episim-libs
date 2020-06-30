@@ -25,12 +25,11 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
-import org.matsim.episim.policy.Restriction;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -39,9 +38,9 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
  * Default interaction model executed, when a person ends his activity.
  * Infections probabilities calculations are delegated to a {@link InfectionModel}.
  */
-public final class DefaultInteractionModel extends AbstractInteractionModel {
+public final class SymmetricInteractionModel extends AbstractInteractionModel {
 
-	private static final Logger log = LogManager.getLogger(DefaultInteractionModel.class);
+	private static final Logger log = LogManager.getLogger( SymmetricInteractionModel.class );
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -64,8 +63,8 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 	@Inject
 	/* package */
-	DefaultInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-											  EpisimReporting reporting, InfectionModel infectionModel) {
+	SymmetricInteractionModel( SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+				   EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 
 
@@ -77,7 +76,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	/**
 	 * Constructor when no injection is used.
 	 */
-	public DefaultInteractionModel(SplittableRandom rnd, Config config, EpisimReporting reporting, InfectionModel infectionModel) {
+	public SymmetricInteractionModel( SplittableRandom rnd, Config config, EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make public constructor more general (full config as argument) so that argument changes are reduced.  also, do not pass multiple number
 		// types in sequence since they can get confused (as I just did). pass full config so that we do not have to retrofit constructor every
 		// time additional config info is needed.  kai, jun'20)
@@ -113,24 +112,17 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 		EpisimConfigGroup.InfectionParams leavingParams = null;
 
-		otherPersonsInContainer.addAll(container.getPersons());
-		otherPersonsInContainer.remove(personLeavingContainer);
+		for( EpisimPerson contactPerson : container.getPersons() ){
 
-		// For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
-		// shuffle, those are 10 different persons every day.
+			int maxPersonsInContainer = container.getMaxGroupSize();
+			Gbl.assertIf( maxPersonsInContainer>1 );
+			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
-		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
-//		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
-		int contactWith = Math.min(otherPersonsInContainer.size(), episimConfig.getMaxInteractions());
-		for (int ii = 0; ii < contactWith; ii++) {
-
-			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
-			// already left the container were treated then.  In consequence, we have some "circle of persons around us" (yyyy which should
-			//  depend on the density), and then a probability of infection in either direction.
-
-			// Draw the contact person and remove it -> we don't want to draw it multiple times
-			EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
-
+			if ( rnd.nextDouble() >= 1.*episimConfig.getMaxInteractions()/(maxPersonsInContainer-1) ) {
+				continue;
+			}
+			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
+			// if we want superspreading events, then maxInteractions needs to be much larger than 3 or 10.
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
