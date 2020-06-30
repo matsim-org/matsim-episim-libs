@@ -5,6 +5,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinSuperSpreaderScenario;
 
@@ -15,46 +17,51 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "superSpreading3");
+		return Metadata.of("berlin", "superSpreading");
 	}
 
 	@Override
 	public AbstractModule getBindings(int id, Object params) {
-		return new SnzBerlinSuperSpreaderScenario();
+		Params p = (Params) params;
+
+		if (p.superSpreading.equals("yes")) {
+			return new SnzBerlinSuperSpreaderScenario();
+		} else {
+			return new SnzBerlinScenario25pct2020();
+		}
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
-
-		Config config = module.config();
+		Config config;
+		if (params.superSpreading.equals("yes")) {
+			config = new SnzBerlinSuperSpreaderScenario().config();
+		} else {
+			config = new SnzBerlinScenario25pct2020().config();
+		}
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		// increase calib parameter
-		episimConfig.setCalibrationParameter(params.calib);
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy())
+				.clearAfter("2020-03-07")
+				.restrict("2020-03-07", Restriction.ofGroupSize(params.groupSize), "work", "leisure", "shop_daily", "business");
 
-		// start a bit earlier
-		episimConfig.setStartDate("2020-02-16");
-
-		// evtl. Ci correction auf 0.35
+		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		return config;
 	}
 
 	public static final class Params {
 
-		//@GenerateSeeds(200)
-		//private long seed;
+		@GenerateSeeds(5)
+		private long seed;
 
-		@Parameter({0.000_012_5, 0.000_013_0})
-		private double calib;
+		@IntParameter({42, 80, 154})
+		private int groupSize;
 
-		@Parameter({0.75})
-		private double sigmaInfect;
+		@StringParameter({"yes", "no"})
+		private String superSpreading;
 
-		@Parameter({0.75})
-		private double sigmaSusc;
 	}
 }
