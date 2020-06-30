@@ -8,6 +8,8 @@ output-*
 t.gpl
 .idea/
 *.iml
+*.gz
+*.db
 
 # Created by https://www.gitignore.io/api/java,linux,macos,maven,windows,eclipse,intellij
 # Edit at https://www.gitignore.io/?templates=java,linux,macos,maven,windows,eclipse,intellij

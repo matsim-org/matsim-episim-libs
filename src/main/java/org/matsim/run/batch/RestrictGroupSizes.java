@@ -46,11 +46,11 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 		if (params.bySize.equals("yes")) {
 
 			Map<Double, Integer> sizes = Map.of(
-					0.10, 32,
-					0.25, 60,
-					0.50, 104,
-					0.75, 196,
-					0.90, 396
+					0.10, 22,
+					0.25, 42,
+					0.50, 80,
+					0.75, 154,
+					0.90, 322
 			);
 
 			builder.restrict("2020-03-07", Restriction.ofGroupSize(sizes.get(params.remaining)), "leisure");
@@ -68,10 +68,10 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(200)
-		long seed;
+		//@GenerateSeeds(200)
+		long seed = 4711;
 
-		@Parameter({0.25, 0.5, 0.75})
+		@Parameter({0.25, 0.5})
 		double remaining;
 
 		@StringParameter({"yes", "no"})

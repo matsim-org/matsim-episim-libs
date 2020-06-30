@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 from matplotlib.ticker import ScalarFormatter
 from scipy import stats
+from matsim import event_reader
 
 from utils import read_batch_run, read_case_data, read_run, infection_rate
 from plot import comparison_plots
@@ -28,38 +29,70 @@ pattern = re.compile(r"leisure=>([0-9]+)")
 
 for row in f_leisure.itertuples():
     n = int(pattern.findall(row.types)[0])
-    scaled.extend([row.size] * n)
+    # small facilities don't have interactions
+    if (row.size > 4):
+        scaled.extend([row.size] * n)
 
 
-groups = pd.DataFrame(scaled, columns=["size"])
+l_bound = pd.DataFrame(scaled, columns=["size"])
 
-print(groups['size'].quantile([0.1, 0.25, 0.5, 0.75, 0.9]))
+p = np.array([0.1, 0.25, 0.5, 0.75, 0.9])
 
-#%%
+# Effect of remaining fraction is quadratic
 
-print(f.loc["110000001960500003"])
-
-
-#%%
-
-events_y = pd.read_csv("data/output/remaining_0.5-bySize_yes/groupSizes5.infectionEvents.txt", sep="\t")
-events_y = events_y[events_y.infectionType.str.contains("leisure")]
-
-events_n = pd.read_csv("data/output/remaining_0.5-bySize_no/groupSizes6.infectionEvents.txt", sep="\t")
-events_n = events_n[events_n.infectionType.str.contains("leisure")]
+print(l_bound['size'].quantile(p ** 1.6))
 
 #%%
 
-df = read_batch_run("data/groupSizes.zip")
+def read_leisure_events(f):
+    data = []
+
+    for ev in event_reader(f, types=["episimContact"]):
+        if "leisure" in ev["actType"]:
+            data.append(ev)
+    
+    return pd.DataFrame(data)
+
+ev_un = read_leisure_events("data/day_unrestricted.xml.gz")
+
+#%%
+
+scaled = []
+
+for row in ev_un.itertuples():
+    try:
+        container = f.loc[row.container]
+        scaled.append(container["size"])
+    except:
+        pass
+
+h_bound = pd.DataFrame(scaled, columns=["size"])
+
+#%%
+
+p = np.array([0.1, 0.25, 0.5, 0.75, 0.9])
+
+# Effect of remaining fraction is roughly quadratic
+
+print(h_bound['size'].quantile(p ** 1.6))    
+
+#%%
+
+ev_g154 = read_leisure_events("data/day_leisureG154.xml.gz")
+
+
+#%%
+
+df = read_batch_run("data/summaries.zip")
 
 #%%
 
 fig, ax = plt.subplots(dpi=250)
 
-palette = sns.color_palette(n_colors=5)
+palette = sns.color_palette(n_colors=2)
 
 rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], ax=ax, logy=True)
-sns.lineplot(x="date", y="cases", hue="remaining", style="bySize", palette=palette, estimator=None, ci=None, data=df, ax=ax)
+sns.lineplot(x="date", y="cases", hue="remaining", style="bySize", palette=palette, ci=None, data=df, ax=ax)
 
 plt.ylim(bottom=1)
 plt.legend(loc="upper left")

@@ -92,6 +92,9 @@ plt.text(ci, 1.2, ' Date of ci change', color="gray")
 
 rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
 
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+             label=r"Unrestricted", data=df31)
+
 # In the data alpha=0 is a special case
 sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
              label=r"$\alpha=1.0$", data=df[(df.alpha==0)])
