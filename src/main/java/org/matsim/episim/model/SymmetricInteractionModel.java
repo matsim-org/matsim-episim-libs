@@ -48,10 +48,6 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 	private final int trackingAfterDay;
 
 	/**
-	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
-	 */
-	private final List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
-	/**
 	 * This buffer is used to store the infection type.
 	 */
 	private final StringBuilder buffer = new StringBuilder();
@@ -199,10 +195,6 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
 			}
 		}
-
-		// Clear cached container
-		otherPersonsInContainer.clear();
 	}
-
 
 }
