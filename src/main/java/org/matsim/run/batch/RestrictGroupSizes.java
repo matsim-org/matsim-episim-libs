@@ -68,10 +68,10 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	public static final class Params {
 
-		//@GenerateSeeds(200)
+		@GenerateSeeds(5)
 		long seed = 4711;
 
-		@Parameter({0.25, 0.5})
+		@Parameter({0.25, 0.5, 0.75})
 		double remaining;
 
 		@StringParameter({"yes", "no"})

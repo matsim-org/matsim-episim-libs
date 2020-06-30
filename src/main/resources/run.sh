@@ -6,7 +6,7 @@
 #$ -M mueller@vsp.tu-berlin.de
 #$ -cwd
 #$ -pe mp 4
-#$ -l mem_free=4G
+#$ -l mem_free=28G
 
 date
 hostname
@@ -18,13 +18,15 @@ echo "classpath: $classpath"
 echo "***"
 
 # main
-main="org.matsim.run.RunEpisim"
+main="org.matsim.run.RunParallel"
 
 # arguments
-arguments="--config input/config_$JOB_NAME.xml"
+arguments="--threads 4 --total-worker 1 --worker-index 0"
 
-command="java -cp $classpath $JAVA_OPTS @jvm.options $main $arguments"
+command="java -cp $classpath $JAVA_OPTS @jvm.options -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector $main $arguments"
 
+
+echo "setup=$EPISIM_SETUP, params=$EPISIM_PARAMS"
 echo ""
 echo "command is $command"
 
