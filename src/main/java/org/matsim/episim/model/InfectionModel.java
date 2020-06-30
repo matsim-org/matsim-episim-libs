@@ -8,6 +8,13 @@ import java.util.Map;
 
 public interface InfectionModel {
 
+
+	/**
+	 * Called at the start of an iteration.
+	 * @param iteration current iteration / day
+	 */
+	default void setIteration(int iteration) {}
+
 	/**
 	 * Calculates the probability that person {@code infector} infects {@code target}.
 	 *
@@ -17,11 +24,10 @@ public interface InfectionModel {
 	 * @param act1                 Activity of target
 	 * @param act2                 Activity of infector
 	 * @param jointTimeInContainer joint time doing these activity in seconds
-	 * @param indoorOutdoorFactor 
 	 * @return probability between 0 and 1
 	 */
 	double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 									EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
-									double jointTimeInContainer, double indoorOutdoorFactor);
+									double jointTimeInContainer);
 
 }

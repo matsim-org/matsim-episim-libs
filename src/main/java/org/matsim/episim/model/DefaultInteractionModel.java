@@ -28,7 +28,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -124,6 +123,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	@Override
 	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
 		super.setRestrictionsForIteration(iteration, restrictions);
+		this.infectionModel.setIteration(iteration);
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
@@ -240,20 +240,18 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 			// activity params of the contact person and leaving person
 			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
-			
-			//determines whether activity is inside or outside. For now we assume that only leisure activities can occur outside
-			double indoorOutdoorFactor = getIndoorOutdoorFactor(infectionType);
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
+
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-						leavingParams, contactParams, jointTimeInContainer, indoorOutdoorFactor);
+						leavingParams, contactParams, jointTimeInContainer);
 				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-						contactParams, leavingParams, jointTimeInContainer, indoorOutdoorFactor);
+						contactParams, leavingParams, jointTimeInContainer);
 
 				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
@@ -299,62 +297,6 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
 		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
-	}
-	
-	private double getIndoorOutdoorFactor(StringBuilder infectionType) {
-		if (!(infectionType.indexOf("leisure_leisure") >= 0)) return 1.;
-		
-		LocalDate date = episimConfig.getStartDate().plusDays(iteration);
-		
-		//anchor dates
-		int daysOfYear = 365;
-		int winter = 15; //15.01.
-		int spring = 105; //15.04.
-		int summer = 196; //15.07.
-		int autumn = 288; //15.10.
-		
-		if (date.isLeapYear()) {
-			daysOfYear++;
-			spring++;
-			summer++;
-			autumn++;
-		}
-	
-		double probaWinter = 12.44 / 100.;
-		double probaSpring = 23.60 / 100.;
-		double probaSummer = 28.63 / 100.;
-		double probaAutumn = 21.15 / 100.;
-		
-		double proba = 1;
-					
-		int dayOfYear = date.getDayOfYear();
-		
-		if (dayOfYear <= winter) {
-			proba = probaAutumn + (probaWinter - probaAutumn) * (dayOfYear + daysOfYear - autumn) / (winter + daysOfYear - autumn);
-		}
-		else if (dayOfYear <= spring) {
-			proba = probaWinter + (probaSpring - probaWinter) * (dayOfYear - winter) / (spring - winter);
-		}
-		else if (dayOfYear <= summer) {
-			proba = probaSpring + (probaSummer - probaSpring) * (dayOfYear - spring) / (summer - spring);
-		}
-		else if (dayOfYear <= autumn) {
-			proba = probaSummer + (probaAutumn - probaSummer) * (dayOfYear - summer) / (autumn - summer);
-		}
-		else if (dayOfYear <= daysOfYear) {
-			proba = probaAutumn + (probaWinter - probaAutumn) * (dayOfYear - autumn) / (daysOfYear - autumn + winter);
-		}
-		else {
-			throw new RuntimeException("Something went wrong. The day of the year is =" + dayOfYear);
-		}
-		
-		double indoorOutdoorFactor = 1.;
-		if (rnd.nextDouble() < proba) {
-			indoorOutdoorFactor = 1./10.;
-		}
-		
-		return indoorOutdoorFactor;
-		
 	}
 
 }
