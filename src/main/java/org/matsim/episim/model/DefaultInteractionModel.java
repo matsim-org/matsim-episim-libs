@@ -123,6 +123,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	@Override
 	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
 		super.setRestrictionsForIteration(iteration, restrictions);
+		this.infectionModel.setIteration(iteration);
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
