@@ -26,11 +26,9 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.policy.Restriction;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -49,11 +47,6 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	private final int trackingAfterDay;
 
 	/**
-	 * Face mask model, which decides which masks the persons are wearing.
-	 */
-	private final InfectionModel infectionModel;
-
-	/**
 	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
 	 */
 	private final List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
@@ -67,8 +60,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	DefaultInteractionModel(SplittableRandom rnd, Config config,
 											  EpisimReporting reporting, InfectionModel infectionModel) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
-		super(rnd, config, reporting);
-		this.infectionModel = infectionModel;
+		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getPutTraceablePersonsInQuarantineAfterDay();
 	}
 
@@ -80,12 +72,6 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	@Override
 	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
 		infectionDynamicsGeneralized(personLeavingFacility, facility, now);
-	}
-
-	@Override
-	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
-		super.setRestrictionsForIteration(iteration, restrictions);
-		this.infectionModel.setIteration(iteration);
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {

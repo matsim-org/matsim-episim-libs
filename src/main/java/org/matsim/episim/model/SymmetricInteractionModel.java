@@ -48,11 +48,6 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 	private final int trackingAfterDay;
 
 	/**
-	 * Face mask model, which decides which masks the persons are wearing.
-	 */
-	private final InfectionModel infectionModel;
-
-	/**
 	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
 	 */
 	private final List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
@@ -66,8 +61,7 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 	SymmetricInteractionModel( SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
 				   EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
-		super(rnd, config, reporting);
-		this.infectionModel = infectionModel;
+		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 	}
 
