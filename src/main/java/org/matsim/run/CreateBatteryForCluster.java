@@ -114,7 +114,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
-		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
 		BufferedWriter yamlWriter = new BufferedWriter(new FileWriter(dir.resolve("metadata.yaml").toFile()));
 
@@ -155,9 +154,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				prepare.setup.writeAuxiliaryFiles(dir, run.config);
 				ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
 			}
-
-			bashScriptWriter.write("qsub -N " + runId + " run.sh");
-			bashScriptWriter.newLine();
 
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
 			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
@@ -206,6 +202,18 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName)
 		), "\n");
 
+		FileUtils.writeLines(dir.resolve("start_qsub.sh").toFile(), Lists.newArrayList(
+				"#!/bin/bash\n", jvmOpts,
+				// Dollar signs must be escaped
+				"export EPISIM_SETUP='" + setup.getName() + "'",
+				"export EPISIM_PARAMS='" + params.getName() + "'",
+				"export EPISIM_INPUT='<PUT INPUT DIR HERE>'",
+				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
+				"",
+				String.format("qsub -V -N %s run.sh", runName)
+		), "\n");
+
+
 		FileUtils.writeLines(dir.resolve("test.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n", jvmOpts,
 				"export JOB_NAME=" + runName + 1,
@@ -213,7 +221,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"./run.sh"
 		), "\n");
 
-		bashScriptWriter.close();
 		infoWriter.close();
 
 		if (!noBindings) {
