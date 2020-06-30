@@ -8,6 +8,13 @@ import java.util.Map;
 
 public interface InfectionModel {
 
+
+	/**
+	 * Called at the start of an iteration.
+	 * @param iteration current iteration / day
+	 */
+	default void setIteration(int iteration) {}
+
 	/**
 	 * Calculates the probability that person {@code infector} infects {@code target}.
 	 *

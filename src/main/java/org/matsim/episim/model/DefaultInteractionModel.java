@@ -64,27 +64,12 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 	@Inject
 	/* package */
-	DefaultInteractionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	DefaultInteractionModel(SplittableRandom rnd, Config config,
 											  EpisimReporting reporting, InfectionModel infectionModel) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
-
-
-		super(rnd, episimConfig, reporting);
+		super(rnd, config, reporting);
 		this.infectionModel = infectionModel;
-		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
-	}
-
-	/**
-	 * Constructor when no injection is used.
-	 */
-	public DefaultInteractionModel(SplittableRandom rnd, Config config, EpisimReporting reporting, InfectionModel infectionModel) {
-		// (make public constructor more general (full config as argument) so that argument changes are reduced.  also, do not pass multiple number
-		// types in sequence since they can get confused (as I just did). pass full config so that we do not have to retrofit constructor every
-		// time additional config info is needed.  kai, jun'20)
-
-		// (use injected constructor from here since args can be adapted. kai, jun'20)
-		this(rnd, ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class), ConfigUtils.addOrGetModule(config, TracingConfigGroup.class),
-				reporting, infectionModel);
+		this.trackingAfterDay = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getPutTraceablePersonsInQuarantineAfterDay();
 	}
 
 	@Override
@@ -95,6 +80,12 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 	@Override
 	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
 		infectionDynamicsGeneralized(personLeavingFacility, facility, now);
+	}
+
+	@Override
+	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
+		super.setRestrictionsForIteration(iteration, restrictions);
+		this.infectionModel.setIteration(iteration);
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {

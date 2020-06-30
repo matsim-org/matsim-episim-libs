@@ -42,7 +42,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 		double ci;
 		if (params.alpha == 1.0) {
-			ci = 0.323;
+			ci = 0.32;
 		} else if (params.alpha == 1.2) {
 			ci = 0.360;
 		} else if (params.alpha == 1.4) {

@@ -207,10 +207,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		iteration = 0;
 
-		Object2IntMap<EpisimFacility> groupSize = new Object2IntOpenHashMap<>();
-		Object2IntMap<EpisimFacility> maxGroupSize = new Object2IntOpenHashMap<>();
+		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
+		Object2IntMap<EpisimContainer<?>> containerSize = new Object2IntOpenHashMap<>();
+		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
 
-		Map<EpisimFacility, Object2IntMap<String>> activityUsage = new HashMap<>();
+		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
 		for (Event event : events) {
 
@@ -236,6 +237,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 				paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
 				maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
+				containerSize.mergeInt(facility, 1, Integer::sum);
 
 				handleEvent((ActivityStartEvent) event);
 			} else if (event instanceof ActivityEndEvent) {
@@ -263,15 +265,21 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			if (event instanceof PersonEntersVehicleEvent) {
 				if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
 
+				EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 
-				this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
+				maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
+				containerSize.mergeInt(vehicle, 1, Integer::sum);
+
 				handleEvent((PersonEntersVehicleEvent) event);
 
 			} else if (event instanceof PersonLeavesVehicleEvent) {
 				if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
 
+				EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
+				groupSize.mergeInt(vehicle, -1, Integer::sum);
+				activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
 
-				this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
+
 				handleEvent((PersonLeavesVehicleEvent) event);
 			}
 
@@ -279,11 +287,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		insertStationaryAgents();
 
-		reporting.reportFacilityUsage(maxGroupSize, activityUsage);
+		reporting.reportContainerUsage(maxGroupSize, containerSize, activityUsage);
 
-		for (Object2IntMap.Entry<EpisimFacility> kv : maxGroupSize.object2IntEntrySet()) {
-			int scaledSize = (int) (kv.getIntValue() * (1 / episimConfig.getSampleSize()));
-			kv.getKey().setMaxGroupSize(scaledSize);
+		for (Object2IntMap.Entry<EpisimContainer<?>> kv : maxGroupSize.object2IntEntrySet()) {
+			double scale =  1 / episimConfig.getSampleSize();
+			kv.getKey().setMaxGroupSize((int) (kv.getIntValue() * scale));
+			kv.getKey().setSize((int) (containerSize.getInt(kv.getKey()) * scale));
 		}
 
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
