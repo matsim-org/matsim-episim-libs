@@ -67,7 +67,7 @@ public class RunEpisimSnapshotTest {
 		runner.run(30);
 
 		for (File file : Objects.requireNonNull(new File(utils.getOutputDirectory()).listFiles())) {
-			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml")) continue;
+			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")) continue;
 
 			assertThat(file)
 					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
