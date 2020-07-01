@@ -51,7 +51,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 	private Path population;
 
 	@CommandLine.Option(names = "--events", description = "Path to event file", required = true, defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_25pt.xml.gz")
-	private Path events;
+	private List<Path> eventFiles;
 
 	@CommandLine.Option(names = "--output", description = "Output folder", defaultValue = "")
 	private Path output;
@@ -87,12 +87,12 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		if (!Files.exists(population)) {
-			log.error("Input population file {} does not exists", events);
+			log.error("Input population file {} does not exists", population);
 			return 1;
 		}
 
-		if (!Files.exists(events)) {
-			log.error("Input events file {} does not exists", events);
+		if (!eventFiles.stream().allMatch(Files::exists)) {
+			log.error("Input events file {} does not exists", eventFiles);
 			return 1;
 		}
 
@@ -103,8 +103,6 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		Collection<SimpleFeature> shapeFileAreas = ShapeFileReader.getAllFeatures(shapeFile.toString());
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
-
-		episimConfig.setInputEventsFile(events.toString());
 
 		// Maps facilities to the contained person ids
 		Map<Id<ActivityFacility>, Set<Id<Person>>> groups = new HashMap<>();
@@ -197,32 +195,40 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		hist = calcHist(groups, target);
 		printHist(hist, target);
 
-		PopulationUtils.writePopulation(scenario.getPopulation(), output.resolve("population-split.xml.gz").toString());
+		String name = population.getFileName().toString().replace(".xml.gz", "") + "_split.xml.gz";
+		PopulationUtils.writePopulation(scenario.getPopulation(), output.resolve(name).toString());
 
-		ReplayHandler replay = new ReplayHandler(episimConfig, null);
+		for (Path events : eventFiles) {
 
-		EventsManager manager = EventsUtils.createEventsManager();
-		EventWriterXML writer = new EventWriterXML(output.resolve("events-split.xml.gz").toString());
-		manager.addHandler(writer);
+			log.info("Processing event file {}", events);
 
-		// create new events if the activity id has changed
-		for (Event event : replay.getEvents()) {
+			episimConfig.setInputEventsFile(events.toString());
+			ReplayHandler replay = new ReplayHandler(episimConfig, null);
+			EventsManager manager = EventsUtils.createEventsManager();
 
-			if (event instanceof ActivityStartEvent) {
-				ActivityStartEvent ev = (ActivityStartEvent) event;
-				manager.processEvent(new ActivityStartEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
-						getNewFacilityId(ev.getPersonId(), ev.getFacilityId(), ev.getActType()), ev.getActType(), ev.getCoord()));
+			String eventName = events.getFileName().toString().replace(".xml.gz", "") + "_split.xml.gz";
+			EventWriterXML writer = new EventWriterXML(output.resolve(eventName).toString());
+			manager.addHandler(writer);
 
-			} else if (event instanceof ActivityEndEvent) {
-				ActivityEndEvent ev = (ActivityEndEvent) event;
-				manager.processEvent(new ActivityEndEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
-						getNewFacilityId(ev.getPersonId(), ev.getFacilityId(), ev.getActType()), ev.getActType()));
-			} else
-				manager.processEvent(event);
+			// create new events if the activity id has changed
+			for (Event event : replay.getEvents()) {
+
+				if (event instanceof ActivityStartEvent) {
+					ActivityStartEvent ev = (ActivityStartEvent) event;
+					manager.processEvent(new ActivityStartEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
+							getNewFacilityId(ev.getPersonId(), ev.getFacilityId(), ev.getActType()), ev.getActType(), ev.getCoord()));
+
+				} else if (event instanceof ActivityEndEvent) {
+					ActivityEndEvent ev = (ActivityEndEvent) event;
+					manager.processEvent(new ActivityEndEvent(ev.getTime(), ev.getPersonId(), ev.getLinkId(),
+							getNewFacilityId(ev.getPersonId(), ev.getFacilityId(), ev.getActType()), ev.getActType()));
+				} else
+					manager.processEvent(event);
+			}
+
+			// Close event file
+			writer.closeFile();
 		}
-
-		// Close event file
-		writer.closeFile();
 
 		return 0;
 	}
