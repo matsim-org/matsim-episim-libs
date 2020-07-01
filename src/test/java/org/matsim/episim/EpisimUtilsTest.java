@@ -13,6 +13,8 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.SplittableRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -22,6 +24,12 @@ public class EpisimUtilsTest {
 
 	private static final Percentage OFFSET = Percentage.withPercentage(1.5);
 
+	@Test
+	public void dayOfWeek() {
+
+		assertThat(EpisimUtils.getDayOfWeek(LocalDate.of(2020, 7, 1), 1))
+				.isEqualTo(DayOfWeek.WEDNESDAY);
+	}
 
 	@Test
 	public void seed() {

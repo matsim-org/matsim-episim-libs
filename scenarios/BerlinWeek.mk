@@ -39,4 +39,4 @@ $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(
 	 --events $(out)/be_2020-week_snz_episim_events_sa_25pt.xml.gz\
 	 --events $(out)/be_2020-week_snz_episim_events_so_25pt.xml.gz\
 	 --shape-file $(out)/../shape-File/dilutionArea.shp\
-	 --output $(tmp)
+	 --output $(out)

@@ -34,8 +34,8 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.List;
+import java.time.DayOfWeek;
+import java.util.*;
 
 
 /**
@@ -46,7 +46,8 @@ public final class ReplayHandler {
 	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
 	private final Scenario scenario;
-	private final List<Event> events = new ArrayList<>();
+	private final EpisimConfigGroup config;
+	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
 
 	/**
 	 * Constructor with optional scenario.
@@ -54,21 +55,42 @@ public final class ReplayHandler {
 	@Inject
 	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
 		this.scenario = scenario;
+		this.config = config;
 
-		EventsManager manager = EventsUtils.createEventsManager();
-		manager.addHandler(new EventReader());
-		EventsUtils.readEvents(manager, config.getInputEventsFile());
-		manager.finishProcessing();
+		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
 
-		log.info("Read in {} events, with time range {} - {}", events.size(), events.get(0).getTime(),
-				events.get(events.size() - 1).getTime());
+			List<Event> eventsForDay = new ArrayList<>();
+
+			EventsManager manager = EventsUtils.createEventsManager();
+			manager.addHandler(new EventReader(eventsForDay));
+			EventsUtils.readEvents(manager, input.getPath());
+			manager.finishProcessing();
+
+			log.info("Read in {} events for {}, with time range {} - {}", eventsForDay.size(), input.getDays(), eventsForDay.get(0).getTime(),
+					eventsForDay.get(eventsForDay.size() - 1).getTime());
+
+			for (DayOfWeek day : input.getDays()) {
+				if (events.containsKey(day))
+					throw new IllegalStateException("Events for day " + day + " already defined!");
+
+				events.put(day, eventsForDay);
+			}
+		}
+
+		if (events.size() != 7) {
+			EnumSet<DayOfWeek> missing = EnumSet.complementOf(EnumSet.copyOf(events.keySet()));
+			throw new IllegalStateException("Event definition missing for days: " + missing);
+		}
 	}
 
 	/**
 	 * Replays event add modifies attributes based on current iteration.
 	 */
 	public void replayEvents(final EventsManager manager, final int iteration) {
-		for (final Event e : events) {
+
+		DayOfWeek day = EpisimUtils.getDayOfWeek(config.getStartDate(), iteration);
+
+		for (final Event e : events.get(day)) {
 			manager.processEvent(e);
 		}
 	}
@@ -77,13 +99,31 @@ public final class ReplayHandler {
 	 * All available events.
 	 */
 	public List<Event> getEvents() {
-		return events;
+
+		List<List<Event>> unique = new ArrayList<>();
+		// only take event days
+		for (List<Event> value : events.values()) {
+			if (!unique.contains(value))
+				unique.add(value);
+		}
+
+		List<Event> all = new ArrayList<>(unique.get(0).size() * unique.size());
+		unique.forEach(all::addAll);
+
+		return all;
 	}
 
 	/**
 	 * Helper class to read events one time.
 	 */
 	private final class EventReader implements BasicEventHandler {
+
+		private final List<Event> events;
+
+		private EventReader(List<Event> events) {
+			this.events = events;
+		}
+
 		@Override
 		public void handleEvent(Event event) {
 

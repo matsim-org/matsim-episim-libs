@@ -34,7 +34,7 @@ import picocli.CommandLine;
 		mixinStandardHelpOptions = true,
 		usageHelpWidth = 120,
 		subcommands = {CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class, RunTrial.class,
-				DistrictLookup.class,
+				DistrictLookup.class, SplitHomeFacilities.class,
 				ConvertPersonAttributes.class, FilterEvents.class, MergeEvents.class, DownSampleScenario.class}
 )
 public class ScenarioCreation implements Runnable {
