@@ -275,7 +275,16 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 					// Add person to container if it starts its day with end activity
 					if (person.getFirstFacilityId(day) == null) {
-						facility.addPerson(person, 0);
+						// person may already be there because of previous day
+						if (person.getCurrentContainer() != facility) {
+
+							// remove from old
+							if (person.getCurrentContainer() != null)
+								person.getCurrentContainer().removePerson(person);
+
+							facility.addPerson(person, 0);
+						}
+
 						person.setFirstFacilityId(facility.getContainerId(), day);
 					}
 
@@ -302,6 +311,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 					handleEvent((PersonLeavesVehicleEvent) event);
 				}
+			}
+
+			// Person that did't move get the last trajectory element for the whole day
+			for (EpisimPerson person : this.personMap.values()) {
+				List<EpisimPerson.Activity> tj = person.getTrajectory();
+				if (tj.size() == person.getCurrentPositionInTrajectory())
+					person.addToTrajectory(tj.get(tj.size() - 1));
 			}
 
 			sameDay.put(eventsForDay, day);
@@ -604,8 +620,17 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	}
 
+	/**
+	 * Handle with "holes" in their trajectory.
+	 *
+	 * @param day day that is about to start
+	 */
 	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day) {
-		Id<ActivityFacility> firstFacilityId = Id.create(person.getFirstFacilityId(day), ActivityFacility.class);
+		Id<ActivityFacility> firstFacilityId = person.getFirstFacilityId(day);
+
+		// person has no activities for the whole day
+		if (firstFacilityId == null)
+			return;
 
 		// now is the next day
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration + 1);
@@ -616,7 +641,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
 				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-				String actType = person.getTrajectory().get(person.getTrajectory().size() - 1).actType;
+
+				int pos = person.getPositionInTrajectory(day.plus(1));
+				// index of last activity at current day
+				int index = pos == 0 ? person.getTrajectory().size() - 1 : pos - 1;
+				String actType = person.getTrajectory().get(index).actType;
 
 				interactionModel.infectionDynamicsFacility(person, lastFacility, now, actType);
 				person.addSpentTime(actType, now - lastFacility.getContainerEnteringTime(person.getPersonId()));

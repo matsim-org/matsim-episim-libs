@@ -226,7 +226,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 				// container from the beginning.  ????  kai, mar'20
 			}
 
-			if (jointTimeInContainer < 0 || jointTimeInContainer > 86400) {
+			if (jointTimeInContainer < 0 || jointTimeInContainer > 86400 * 7) {
 				log.warn(containerEnterTimeOfPersonLeaving);
 				log.warn(containerEnterTimeOfOtherPerson);
 				log.warn(now);

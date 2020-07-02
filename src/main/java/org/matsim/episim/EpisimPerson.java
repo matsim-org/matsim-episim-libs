@@ -349,6 +349,8 @@ public final class EpisimPerson implements Attributable {
 		currentPositionInTrajectory = startOfDay[day.getValue() - 1];
 	}
 
+	int getPositionInTrajectory(DayOfWeek day) {return startOfDay[day.getValue() -1];}
+
 	void setStartOfDay(DayOfWeek day, int position) {
 		startOfDay[day.getValue() - 1] = position;
 	}
