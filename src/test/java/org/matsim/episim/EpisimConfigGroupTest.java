@@ -1,8 +1,11 @@
 package org.matsim.episim;
 
 import org.junit.Test;
+import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.DayOfWeek;
 import java.util.NoSuchElementException;
 
@@ -46,9 +49,11 @@ public class EpisimConfigGroupTest {
 	}
 
 	@Test
-	public void input() {
+	public void input() throws IOException {
 
-		EpisimConfigGroup config = new EpisimConfigGroup();
+		Config root = ConfigUtils.createConfig();
+
+		EpisimConfigGroup config = ConfigUtils.addOrGetModule(root, EpisimConfigGroup.class);
 		config.setInputEventsFile("test_input.xml.gz");
 
 		assertThat(config.getInputEventsFile()).isEqualTo("test_input.xml.gz");
@@ -63,6 +68,14 @@ public class EpisimConfigGroupTest {
 		assertThat(config.getInputEventsFiles())
 				.anyMatch(ev -> ev.getDays().size() == 1)
 				.hasSize(2);
+
+
+		File tmp = File.createTempFile("config", "xml");
+		tmp.deleteOnExit();
+
+		ConfigUtils.writeConfig(root, tmp.toString());
+		Config root2 = ConfigUtils.loadConfig(tmp.toString());
+
 	}
 
 }

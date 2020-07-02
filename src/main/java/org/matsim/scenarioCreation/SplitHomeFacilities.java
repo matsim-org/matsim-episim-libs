@@ -30,6 +30,7 @@ import picocli.CommandLine;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DayOfWeek;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -211,7 +212,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			manager.addHandler(writer);
 
 			// create new events if the activity id has changed
-			for (Event event : replay.getEvents()) {
+			for (Event event : replay.getEvents().get(DayOfWeek.MONDAY)) {
 
 				if (event instanceof ActivityStartEvent) {
 					ActivityStartEvent ev = (ActivityStartEvent) event;

@@ -41,6 +41,7 @@ import java.io.File;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Main config for episim.
@@ -753,8 +754,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		@StringSetter(DAYS)
 		public void setDays(String days) {
-			System.out.println(days);
-//			this.days = days;
+			String str = days.replace("[", "").replace(" ", "").replace("]", "");
+
+			this.days.addAll(
+					Arrays.stream(str.split(",")).map(DayOfWeek::valueOf).collect(Collectors.toSet())
+			);
 		}
 
 		@StringGetter(DAYS)

@@ -98,19 +98,8 @@ public final class ReplayHandler {
 	/**
 	 * All available events.
 	 */
-	public List<Event> getEvents() {
-
-		List<List<Event>> unique = new ArrayList<>();
-		// only take event days
-		for (List<Event> value : events.values()) {
-			if (!unique.contains(value))
-				unique.add(value);
-		}
-
-		List<Event> all = new ArrayList<>(unique.get(0).size() * unique.size());
-		unique.forEach(all::addAll);
-
-		return all;
+	public Map<DayOfWeek, List<Event>> getEvents() {
+		return new EnumMap<>(events);
 	}
 
 	/**

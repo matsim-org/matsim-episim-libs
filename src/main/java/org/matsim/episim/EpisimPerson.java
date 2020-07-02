@@ -87,9 +87,8 @@ public final class EpisimPerson implements Attributable {
 	private int currentPositionInTrajectory;
 
 	/**
-	 * The last visited {@link org.matsim.facilities.ActivityFacility}.
+	 * The first visited {@link org.matsim.facilities.ActivityFacility}.
 	 */
-	private String lastFacilityId;
 	private String firstFacilityId;
 
 	/**
@@ -173,11 +172,6 @@ public final class EpisimPerson implements Attributable {
 		} else
 			firstFacilityId = null;
 
-		if (in.readBoolean()) {
-			lastFacilityId = readChars(in);
-		} else
-			lastFacilityId = null;
-
 		traceable = in.readBoolean();
 	}
 
@@ -225,10 +219,6 @@ public final class EpisimPerson implements Attributable {
 		// null strings can not be written
 		if (firstFacilityId != null)
 			writeChars(out, firstFacilityId);
-
-		out.writeBoolean(lastFacilityId != null);
-		if (lastFacilityId != null)
-			writeChars(out, lastFacilityId);
 
 		out.writeBoolean(traceable);
 	}
@@ -304,14 +294,6 @@ public final class EpisimPerson implements Attributable {
 
 	int getQuarantineDate() {
 		return this.quarantineDate;
-	}
-
-	String getLastFacilityId() {
-		return this.lastFacilityId;
-	}
-
-	void setLastFacilityId(String lastFacilityId) {
-		this.lastFacilityId = lastFacilityId;
 	}
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {

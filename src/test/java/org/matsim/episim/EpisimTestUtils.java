@@ -98,7 +98,6 @@ public class EpisimTestUtils {
 
 		if (container != null) {
 			container.addPerson(p, 0);
-			p.setLastFacilityId(container.getContainerId().toString());
 		}
 
 		return p;

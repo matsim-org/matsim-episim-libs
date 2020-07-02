@@ -56,6 +56,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.time.DayOfWeek;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -203,7 +204,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	 *
 	 * @param events All events in the simulation
 	 */
-	public void init(List<Event> events) {
+	public void init(Map<DayOfWeek, List<Event>> events) {
 
 		iteration = 0;
 
@@ -213,7 +214,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
-		for (Event event : events) {
+		// TODO
+		for (Event event : events.get(DayOfWeek.MONDAY)) {
 
 			EpisimPerson person = null;
 			EpisimFacility facility = null;
@@ -323,8 +325,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		// add person to facility
 		episimFacility.addPerson(episimPerson, now);
-
-		episimPerson.setLastFacilityId(episimFacilityId.toString());
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
 
@@ -530,7 +530,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					EpisimPerson episimPerson = personMap.computeIfAbsent(p.getId(), this::createPerson);
 
 					episimPerson.setFirstFacilityId(facilityId.toString());
-					episimPerson.setLastFacilityId(facilityId.toString());
 					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", episimConfig.selectInfectionParams("home")));
 
 					facility.addPerson(episimPerson, 0);
