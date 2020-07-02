@@ -483,11 +483,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	@Override
 	public void close() {
 
-		if (events != null) {
-			writer.append(events, "</events>");
-			writer.close(events);
-		}
-
 		writer.close(infectionReport);
 		writer.close(infectionEvents);
 		writer.close(restrictionReport);

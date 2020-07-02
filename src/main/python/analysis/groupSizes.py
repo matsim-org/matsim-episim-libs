@@ -44,16 +44,17 @@ print(l_bound['size'].quantile(p ** 1.6))
 
 #%%
 
-def read_leisure_events(f):
+def read_events(f, act=None):
     data = []
 
     for ev in event_reader(f, types=["episimContact"]):
-        if "leisure" in ev["actType"]:
+        if not act or any(x in ev["actType"] for x in act):
             data.append(ev)
     
-    return pd.DataFrame(data)
+    return pd.DataFrame(data).astype(dtype={"duration": "float", "groupSize": "int",
+                                     "type": "str", "actType": "str", "container": "str"})
 
-ev_un = read_leisure_events("data/day_unrestricted.xml.gz")
+ev_un = read_events("data/day_unrestricted.xml.gz")
 
 #%%
 
@@ -83,16 +84,24 @@ ev_g154 = read_leisure_events("data/day_leisureG154.xml.gz")
 
 #%%
 
-df = read_batch_run("data/summaries.zip")
+df = read_batch_run("data/summaries-groupSizes.zip")
+df2 = read_batch_run("data/summaries-superSpreading.zip")
 
 #%%
 
 fig, ax = plt.subplots(dpi=250)
 
-palette = sns.color_palette(n_colors=2)
+palette = sns.color_palette(n_colors=3)
 
 rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], ax=ax, logy=True)
-sns.lineplot(x="date", y="cases", hue="remaining", style="bySize", palette=palette, ci=None, data=df, ax=ax)
+
+#sns.lineplot(x="date", y="cases", hue="remaining", style="bySize", palette=palette, ci=None, data=df, ax=ax)
+sns.lineplot(x="date", y="cases", hue="groupSize", style="superSpreading", palette=palette, ci=None, data=df2, ax=ax)
+
 
 plt.ylim(bottom=1)
 plt.legend(loc="upper left")
+
+#%%
+
+
