@@ -632,7 +632,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (firstFacilityId == null)
 			return;
 
-		// now is the next day
+		// now is the start of current day, when this is called iteration still has the value of the last day
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration + 1);
 
 		if (person.isInContainer()) {
