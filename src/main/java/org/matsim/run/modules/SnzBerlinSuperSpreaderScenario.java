@@ -58,7 +58,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	public Config config() {
 
 
-		Config config = new SnzBerlinScenario25pct2020().config();
+		Config config = new SnzBerlinWeekScenario25pct2020().config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 

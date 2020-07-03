@@ -723,7 +723,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		static final String SET_TYPE = "eventFiles";
 
 		private String path;
-		private Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
+		private final Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
 
 		EventFileParams(String path) {
 			this();
@@ -764,6 +764,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		@StringGetter(DAYS)
 		public Set<DayOfWeek> getDays() {
 			return days;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			EventFileParams that = (EventFileParams) o;
+			return path.equals(that.path) &&
+					days.equals(that.days);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(path, days);
 		}
 	}
 }

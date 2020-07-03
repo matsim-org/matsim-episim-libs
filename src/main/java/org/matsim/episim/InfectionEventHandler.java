@@ -505,7 +505,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		if (initialInfectionsLeft == 0) return;
 
-		// TODO: initial infections now have to be one day later?
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		String district = episimConfig.getInitialInfectionDistrict();

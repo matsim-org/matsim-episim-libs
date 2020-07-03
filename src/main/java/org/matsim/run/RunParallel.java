@@ -147,7 +147,10 @@ public class RunParallel<T> implements Callable<Integer> {
 			if (maxJobs > 0 && i >= maxJobs) break;
 
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
-			if (!noReuse && !episimBase.getInputEventsFile().equals(episimConfig.getInputEventsFile())) {
+
+			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
+								episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+			if (!noReuse && !sameInput) {
 				log.error("Input files differs for run {}", run.id);
 				return 1;
 			}

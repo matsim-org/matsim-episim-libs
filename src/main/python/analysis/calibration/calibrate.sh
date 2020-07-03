@@ -6,12 +6,12 @@
 #$ -M mueller@vsp.tu-berlin.de
 #$ -cwd
 #$ -pe mp 3
-#$ -l mem_free=16G
+#$ -l mem_free=20G
 
 date
 hostname
 
-command="python calibrate.py"
+command="python calibrate.py 5 --runs 3 --objective ci_correction --start 2020-03-07"
 
 echo ""
 echo "command is $command"

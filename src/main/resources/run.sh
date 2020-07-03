@@ -21,7 +21,7 @@ echo "***"
 main="org.matsim.run.RunParallel"
 
 # arguments
-arguments="--threads 4 --total-worker 1 --worker-index 0"
+arguments="--threads 4 --total-worker 1 --worker-index ${PBS_ARRAY_INDEX:0}"
 
 command="java -cp $classpath $JAVA_OPTS @jvm.options -Dlog4j2.contextSelector=org.apache.logging.log4j.core.async.AsyncLoggerContextSelector $main $arguments"
 
