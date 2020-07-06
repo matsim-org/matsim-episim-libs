@@ -3,13 +3,19 @@
 
 import argparse
 import subprocess
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 
 import numpy as np
 import optuna
 import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
+if not hasattr(date, 'fromisoformat'):
+    # python 3.6 backwards compatibility
+    def parse(date_string):
+        return datetime.strptime(date_string, "%Y-%m-%d").date()
+
+    date.fromisoformat = parse
 
 def read_data(f, district, hospital, rki, window=5):
     """   Reads in three csv files """
