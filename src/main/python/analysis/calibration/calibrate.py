@@ -10,12 +10,16 @@ import optuna
 import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
+
 if not hasattr(date, 'fromisoformat'):
     # python 3.6 backwards compatibility
     def parse(date_string):
         return datetime.strptime(date_string, "%Y-%m-%d").date()
 
-    date.fromisoformat = parse
+    fromisoformat = parse
+
+else:
+    fromisoformat = date.fromisoformat
 
 def read_data(f, district, hospital, rki, window=5):
     """   Reads in three csv files """
@@ -141,7 +145,7 @@ def objective_ci_correction(trial):
         start=trial.study.user_attrs["start"],
     )
 
-    end = date.fromisoformat(params["start"]) + timedelta(days=21)
+    end = fromisoformat(params["start"]) + timedelta(days=21)
 
     results = []
 
