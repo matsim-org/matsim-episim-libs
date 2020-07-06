@@ -75,7 +75,7 @@ public class SnzBerlinWeekScenario25pct2020 extends AbstractSnzScenario2020 {
 				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.20e-5);
-
+		episimConfig.setStartDate("2020-02-15");
 
 		config.controler().setOutputDirectory(config.controler().getOutputDirectory() + "-week");
 
