@@ -63,12 +63,8 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 			case "ci0.32":
 				builder.restrict(referenceDate, Restriction.ofCiCorrection(0.32), DEFAULT_ACTIVITIES)
-						.restrict(referenceDate, Restriction.ofCiCorrection(0.32), "pt");
-				break;
-
-			case "ci0.5":
-				builder.restrict(referenceDate, Restriction.ofCiCorrection(0.5), DEFAULT_ACTIVITIES)
-						.restrict(referenceDate, Restriction.ofCiCorrection(0.5), "pt");
+						.restrict(referenceDate, Restriction.ofCiCorrection(0.32), "pt")
+						.restrict(referenceDate, Restriction.ofCiCorrection(0.32), "quarantine_home");
 				break;
 
 			case "edu0":
@@ -100,10 +96,6 @@ public class Interventions implements BatchRun<Interventions.Params> {
 				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other");
 				break;
 
-			case "masks0.6@work":
-				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "work");
-				break;
-
 			case "masks0.9@pt&shop":
 				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "pt", "shop_daily", "shop_other");
 				break;
@@ -112,19 +104,36 @@ public class Interventions implements BatchRun<Interventions.Params> {
 				builder.restrict(referenceDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "work");
 				break;
 
-			case "contactTracing":
-
+			case "contactTracing50":
+			{
 				LocalDate warmUp = referenceDate.minusDays(14);
 				long offset = ChronoUnit.DAYS.between(episimConfig.getStartDate(), warmUp) + 1;
 
 				tracingConfig.setPutTraceablePersonsInQuarantineAfterDay((int) Math.max(1, offset));
+				tracingConfig.setTracingProbability(0.5);
+				
+				tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+						warmUp, 0,
+						referenceDate, Integer.MAX_VALUE
+				));
+
+			}
+				break;
+				
+			case "contactTracing75":
+			{
+				LocalDate warmUp = referenceDate.minusDays(14);
+				long offset = ChronoUnit.DAYS.between(episimConfig.getStartDate(), warmUp) + 1;
+
+				tracingConfig.setPutTraceablePersonsInQuarantineAfterDay((int) Math.max(1, offset));
+				tracingConfig.setTracingProbability(0.75);
 
 				tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 						warmUp, 0,
 						referenceDate, Integer.MAX_VALUE
 				));
 
-
+			}
 				break;
 
 			default:
@@ -151,14 +160,14 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(10)
 		long seed;
 
 		@StringParameter({"2020-03-07", "2020-04-20"})
 		String referenceDate;
 
-		@StringParameter({"none", "ci0.32", "ci0.5", "edu0", "edu50", "leisure50", "shopping50", "work50", "outOfHome50",
-				"masks0.6@pt&shop", "masks0.6@work", "masks0.9@pt&shop", "masks0.9@work", "contactTracing"})
+		@StringParameter({"none", "ci0.32", "edu0", "edu50", "leisure50", "shopping50", "work50", "outOfHome50",
+				"masks0.6@pt&shop", "masks0.9@pt&shop", "masks0.9@work", "contactTracing50", "contactTracing75"})
 		String intervention;
 
 	}
