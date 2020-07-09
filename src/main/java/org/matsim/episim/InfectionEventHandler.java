@@ -56,6 +56,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.time.DayOfWeek;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -203,7 +204,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	 *
 	 * @param events All events in the simulation
 	 */
-	public void init(List<Event> events) {
+	public void init(Map<DayOfWeek, List<Event>> events) {
 
 		iteration = 0;
 
@@ -213,80 +214,117 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
-		for (Event event : events) {
+		Map<List<Event>, DayOfWeek> sameDay = new IdentityHashMap<>(7);
 
-			EpisimPerson person = null;
-			EpisimFacility facility = null;
+		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
 
-			// Add all person and facilities
-			if (event instanceof HasPersonId) {
-				if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
+			DayOfWeek day = entry.getKey();
+			List<Event> eventsForDay = entry.getValue();
 
-				person = this.personMap.computeIfAbsent(((HasPersonId) event).getPersonId(), this::createPerson);
-			}
-			if (event instanceof HasFacilityId) {
-				Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
-				facility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
+			if (sameDay.containsKey(eventsForDay)) {
+				DayOfWeek same = sameDay.get(eventsForDay);
+				log.info("Init Day {} same as {}", day, same);
+				this.personMap.values().forEach(p -> p.duplicateDay(day, same));
+				continue;
 			}
 
-			if (event instanceof ActivityStartEvent) {
+			log.info("Init day {}", day);
 
-				String actType = ((ActivityStartEvent) event).getActType();
-				if (!shouldHandleActivityEvent((HasPersonId) event, actType))
-					continue;
+			this.personMap.values().forEach(p -> p.setStartOfDay(day, p.getCurrentPositionInTrajectory()));
 
-				paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
-				maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
-				containerSize.mergeInt(facility, 1, Integer::sum);
+			for (Event event : eventsForDay) {
 
-				handleEvent((ActivityStartEvent) event);
-			} else if (event instanceof ActivityEndEvent) {
-				String actType = ((ActivityEndEvent) event).getActType();
-				if (!shouldHandleActivityEvent((HasPersonId) event, actType))
-					continue;
+				EpisimPerson person = null;
+				EpisimFacility facility = null;
 
-				paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
+				// Add all person and facilities
+				if (event instanceof HasPersonId) {
+					if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
 
-				// Prevent negative group size for persons starting with end activity
-				if (groupSize.getOrDefault(facility, 0) == 0) {
-					groupSize.put(facility, 1);
-					// add one to maximum group size
-					maxGroupSize.mergeInt(facility, 1, Integer::sum);
-
+					person = this.personMap.computeIfAbsent(((HasPersonId) event).getPersonId(), this::createPerson);
+				}
+				if (event instanceof HasFacilityId) {
+					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
+					facility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
 				}
 
-				groupSize.mergeInt(facility, -1, Integer::sum);
-				activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
+				if (event instanceof ActivityStartEvent) {
 
-				// Add person to container if it starts its day with end activity
-				if (person.getFirstFacilityId() == null) {
-					facility.addPerson(person, 0);
+					String actType = ((ActivityStartEvent) event).getActType();
+					if (!shouldHandleActivityEvent((HasPersonId) event, actType))
+						continue;
+
+					paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
+					maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
+					containerSize.mergeInt(facility, 1, Integer::sum);
+
+					handleEvent((ActivityStartEvent) event);
+				} else if (event instanceof ActivityEndEvent) {
+					String actType = ((ActivityEndEvent) event).getActType();
+					if (!shouldHandleActivityEvent((HasPersonId) event, actType))
+						continue;
+
+					paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
+
+					// Prevent negative group size for persons starting with end activity
+					if (groupSize.getOrDefault(facility, 0) == 0) {
+						groupSize.put(facility, 1);
+						// add one to maximum group size
+						maxGroupSize.mergeInt(facility, 1, Integer::sum);
+					}
+
+
+					groupSize.mergeInt(facility, -1, Integer::sum);
+					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
+
+					// Add person to container if it starts its day with end activity
+					if (person.getFirstFacilityId(day) == null) {
+						// person may already be there because of previous day
+						if (person.getCurrentContainer() != facility) {
+
+							// remove from old
+							if (person.getCurrentContainer() != null)
+								person.getCurrentContainer().removePerson(person);
+
+							facility.addPerson(person, 0);
+						}
+
+						person.setFirstFacilityId(facility.getContainerId(), day);
+					}
+
+					handleEvent((ActivityEndEvent) event);
 				}
 
-				handleEvent((ActivityEndEvent) event);
+				if (event instanceof PersonEntersVehicleEvent) {
+					if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
+
+					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
+
+					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
+					containerSize.mergeInt(vehicle, 1, Integer::sum);
+
+					handleEvent((PersonEntersVehicleEvent) event);
+
+				} else if (event instanceof PersonLeavesVehicleEvent) {
+					if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
+
+					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
+					groupSize.mergeInt(vehicle, -1, Integer::sum);
+					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
+
+
+					handleEvent((PersonLeavesVehicleEvent) event);
+				}
 			}
 
-			if (event instanceof PersonEntersVehicleEvent) {
-				if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
-
-				EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
-
-				maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
-				containerSize.mergeInt(vehicle, 1, Integer::sum);
-
-				handleEvent((PersonEntersVehicleEvent) event);
-
-			} else if (event instanceof PersonLeavesVehicleEvent) {
-				if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
-
-				EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
-				groupSize.mergeInt(vehicle, -1, Integer::sum);
-				activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
-
-
-				handleEvent((PersonLeavesVehicleEvent) event);
+			// Person that did't move get the last trajectory element for the whole day
+			for (EpisimPerson person : this.personMap.values()) {
+				List<EpisimPerson.Activity> tj = person.getTrajectory();
+				if (tj.size() == person.getCurrentPositionInTrajectory())
+					person.addToTrajectory(tj.get(tj.size() - 1));
 			}
 
+			sameDay.put(eventsForDay, day);
 		}
 
 		insertStationaryAgents();
@@ -343,8 +381,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// add person to facility
 		episimFacility.addPerson(episimPerson, now);
 
-		episimPerson.setLastFacilityId(episimFacilityId.toString());
-
 		handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
 
 	}
@@ -372,9 +408,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 
 		episimFacility.removePerson(episimPerson);
-		if (episimPerson.getCurrentPositionInTrajectory() == 0) {
-			episimPerson.setFirstFacilityId(episimFacilityId.toString());
-		}
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
 
@@ -475,7 +508,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (person.getCurrentPositionInTrajectory() + 1 == person.getTrajectory().size()) {
 			return;
 		}
-		person.setCurrentPositionInTrajectory(person.getCurrentPositionInTrajectory() + 1);
+		person.incrementCurrentPositionInTrajectory();
 		if (iteration > 0) {
 			return;
 		}
@@ -491,7 +524,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		if (initialInfectionsLeft == 0) return;
 
-		// TODO: initial infections now have to be one day later?
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		String district = episimConfig.getInitialInfectionDistrict();
@@ -548,8 +580,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					EpisimFacility facility = pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
 					EpisimPerson episimPerson = personMap.computeIfAbsent(p.getId(), this::createPerson);
 
-					episimPerson.setFirstFacilityId(facilityId.toString());
-					episimPerson.setLastFacilityId(facilityId.toString());
+					// Person stays here the whole week
+					for (DayOfWeek day : DayOfWeek.values()) {
+						episimPerson.setFirstFacilityId(facilityId, day);
+					}
+
 					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", episimConfig.selectInfectionParams("home")));
 
 					facility.addPerson(episimPerson, 0);
@@ -577,10 +612,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (paramsMap.size() > 1000)
 			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig.getStartDate(), iteration);
+
 		progressionModel.setIteration(iteration);
 		for (EpisimPerson person : personMap.values()) {
-			checkAndHandleEndOfNonCircularTrajectory(person);
-			person.setCurrentPositionInTrajectory(0);
+			checkAndHandleEndOfNonCircularTrajectory(person, day);
+			person.resetCurrentPositionInTrajectory(day);
 			progressionModel.updateState(person, iteration);
 		}
 
@@ -601,10 +638,19 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	}
 
-	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person) {
-		Id<ActivityFacility> firstFacilityId = Id.create(person.getFirstFacilityId(), ActivityFacility.class);
+	/**
+	 * Handle with "holes" in their trajectory.
+	 *
+	 * @param day day that is about to start
+	 */
+	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day) {
+		Id<ActivityFacility> firstFacilityId = person.getFirstFacilityId(day);
 
-		// now is the next day
+		// person has no activities for the whole day
+		if (firstFacilityId == null)
+			return;
+
+		// now is the start of current day, when this is called iteration still has the value of the last day
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration + 1);
 
 		if (person.isInContainer()) {
@@ -613,7 +659,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
 				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-				String actType = person.getTrajectory().get(person.getTrajectory().size() - 1).actType;
+
+				int pos = person.getPositionInTrajectory(day.plus(1));
+				// index of last activity at current day
+				int index = pos == 0 ? person.getTrajectory().size() - 1 : pos - 1;
+				String actType = person.getTrajectory().get(index).actType;
 
 				interactionModel.infectionDynamicsFacility(person, lastFacility, now, actType);
 				person.addSpentTime(actType, now - lastFacility.getContainerEnteringTime(person.getPersonId()));
@@ -699,7 +749,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		int persons = in.readInt();
 		for (int i = 0; i < persons; i++) {
 			Id<Person> id = Id.create(readChars(in), Person.class);
-			personMap.get(id).read(in, paramsMap, personMap, pseudoFacilityMap, vehicleMap);
+			personMap.get(id).read(in, personMap, pseudoFacilityMap, vehicleMap);
 		}
 
 		int vehicles = in.readInt();

@@ -99,8 +99,8 @@ sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
 sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
              label=r"$\alpha=1.0$", data=df[(df.alpha==0)])
 
-sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
-             label=r"$\alpha=1.7$", data=df[df.alpha==1.7])
+#sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+#             label=r"$\alpha=1.7$", data=df[df.alpha==1.7])
 
 sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
              label=r"$\alpha=1.0$, ci adaptation 7-mar", data=baseCase)

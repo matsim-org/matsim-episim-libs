@@ -35,7 +35,11 @@ import org.matsim.vehicles.Vehicle;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.*;
+import java.time.DayOfWeek;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -50,7 +54,23 @@ public final class EpisimPerson implements Attributable {
 	private final EpisimReporting reporting;
 	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
+
+	/**
+	 * Whole trajectory over all days of the week.
+	 */
 	private final List<Activity> trajectory = new ArrayList<>();
+
+	/**
+	 * The position in the trajectory at the start for each day of the week.
+	 */
+	private final int[] startOfDay = new int[7];
+
+	/**
+	 * The first visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 */
+	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
+
+	// Fields above are initialized from the sim and not persisted
 
 	/**
 	 * Traced contacts with other persons.
@@ -87,12 +107,6 @@ public final class EpisimPerson implements Attributable {
 	private int currentPositionInTrajectory;
 
 	/**
-	 * The last visited {@link org.matsim.facilities.ActivityFacility}.
-	 */
-	private String lastFacilityId;
-	private String firstFacilityId;
-
-	/**
 	 * Whether this person can be traced.
 	 */
 	private boolean traceable;
@@ -113,23 +127,11 @@ public final class EpisimPerson implements Attributable {
 	 *
 	 * @param persons map of all persons in the simulation
 	 */
-	void read(ObjectInput in, Map<String, Activity> params, Map<Id<Person>, EpisimPerson> persons,
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons,
 			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
 			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
 
 		int n = in.readInt();
-		trajectory.clear();
-		for (int i = 0; i < n; i++) {
-			String name = readChars(in).intern();
-			Activity e = params.get(name);
-			if (e == null)
-				throw new IllegalStateException("Could not reconstruct param: " + name);
-
-			trajectory.add(e);
-		}
-
-
-		n = in.readInt();
 		traceableContactPersons.clear();
 		for (int i = 0; i < n; i++) {
 			Id<Person> id = Id.create(readChars(in), Person.class);
@@ -168,16 +170,6 @@ public final class EpisimPerson implements Attributable {
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
-		if (in.readBoolean()) {
-			firstFacilityId = readChars(in);
-		} else
-			firstFacilityId = null;
-
-		if (in.readBoolean()) {
-			lastFacilityId = readChars(in);
-		} else
-			lastFacilityId = null;
-
 		traceable = in.readBoolean();
 	}
 
@@ -185,11 +177,6 @@ public final class EpisimPerson implements Attributable {
 	 * Writes person state to stream.
 	 */
 	void write(ObjectOutput out) throws IOException {
-
-		out.writeInt(trajectory.size());
-		for (Activity act : trajectory) {
-			writeChars(out, act.actType);
-		}
 
 		out.writeInt(traceableContactPersons.size());
 		for (Map.Entry<EpisimPerson, Double> kv : traceableContactPersons.entrySet()) {
@@ -220,16 +207,6 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(currentPositionInTrajectory);
-
-		out.writeBoolean(firstFacilityId != null);
-		// null strings can not be written
-		if (firstFacilityId != null)
-			writeChars(out, firstFacilityId);
-
-		out.writeBoolean(lastFacilityId != null);
-		if (lastFacilityId != null)
-			writeChars(out, lastFacilityId);
-
 		out.writeBoolean(traceable);
 	}
 
@@ -306,14 +283,6 @@ public final class EpisimPerson implements Attributable {
 		return this.quarantineDate;
 	}
 
-	String getLastFacilityId() {
-		return this.lastFacilityId;
-	}
-
-	void setLastFacilityId(String lastFacilityId) {
-		this.lastFacilityId = lastFacilityId;
-	}
-
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
@@ -372,8 +341,26 @@ public final class EpisimPerson implements Attributable {
 		return this.currentPositionInTrajectory;
 	}
 
-	void setCurrentPositionInTrajectory(int currentPositionInTrajectory) {
-		this.currentPositionInTrajectory = currentPositionInTrajectory;
+	void incrementCurrentPositionInTrajectory() {
+		this.currentPositionInTrajectory++;
+	}
+
+	void resetCurrentPositionInTrajectory(DayOfWeek day) {
+		currentPositionInTrajectory = startOfDay[day.getValue() - 1];
+	}
+
+	int getPositionInTrajectory(DayOfWeek day) {return startOfDay[day.getValue() -1];}
+
+	void setStartOfDay(DayOfWeek day, int position) {
+		startOfDay[day.getValue() - 1] = position;
+	}
+
+	/**
+	 * Defines that day {@code target} has the same trajectory as {@code source}.
+	 */
+	void duplicateDay(DayOfWeek target, DayOfWeek source) {
+		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];
+		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 	}
 
 	public EpisimContainer<?> getCurrentContainer() {
@@ -412,12 +399,12 @@ public final class EpisimPerson implements Attributable {
 		this.currentContainer = null;
 	}
 
-	String getFirstFacilityId() {
-		return firstFacilityId;
+	Id<ActivityFacility> getFirstFacilityId(DayOfWeek day) {
+		return firstFacilityId[day.getValue() - 1];
 	}
 
-	void setFirstFacilityId(String firstFacilityId) {
-		this.firstFacilityId = firstFacilityId;
+	void setFirstFacilityId(Id<ActivityFacility> firstFacilityId, DayOfWeek day) {
+		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;
 	}
 
 	/**
@@ -437,8 +424,10 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Disease status of a person.
 	 */
-	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms,
-		seriouslySick, critical, seriouslySickAfterCritical, recovered}
+	public enum DiseaseStatus {
+		susceptible, infectedButNotContagious, contagious, showingSymptoms,
+		seriouslySick, critical, seriouslySickAfterCritical, recovered
+	}
 
 	/**
 	 * Quarantine status of a person.

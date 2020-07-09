@@ -26,7 +26,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.modules.SnzBerlinScenario;
+import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -66,7 +66,7 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 	@Override
 	public Config baseCase(int id) {
 
-		SnzBerlinScenario module = new SnzBerlinScenario();
+		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 
 		Config config = module.config();
 		config.plans().setInputFile("../be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
@@ -100,7 +100,7 @@ public final class BerlinSchoolClosureAndTracing implements BatchRun<BerlinSchoo
 		tracingConfig.setTracingProbability(params.tracingProbability);
 		tracingConfig.setTracingPeriod_days(params.tracingDayDistance );
 
-		com.typesafe.config.Config policyConf = SnzBerlinScenario.basePolicy()
+		com.typesafe.config.Config policyConf = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig).build()
 				// Google mobility data currently stops at day 58 (18.04.2020)
 //				.restrict(58 - offset, params.remainingFractionWork, "work")
 //				.restrict(58 - offset, params.remainingFractionShoppingBusinessErrands, "shopping", "errands", "business")

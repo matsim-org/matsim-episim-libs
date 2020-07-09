@@ -3,13 +3,23 @@
 
 import argparse
 import subprocess
-from datetime import date, timedelta
+from datetime import datetime, date, timedelta
 
 import numpy as np
 import optuna
 import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
+
+if not hasattr(date, 'fromisoformat'):
+    # python 3.6 backwards compatibility
+    def parse(date_string):
+        return datetime.strptime(date_string, "%Y-%m-%d").date()
+
+    fromisoformat = parse
+
+else:
+    fromisoformat = date.fromisoformat
 
 def read_data(f, district, hospital, rki, window=5):
     """   Reads in three csv files """
@@ -93,7 +103,7 @@ def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
     n = trial.number
-    c = trial.suggest_uniform("calibrationParameter", 0.6e-5, 1.6e-5)
+    c = trial.suggest_uniform("calibrationParameter", 0.7e-5, 1.7e-5)
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
@@ -128,6 +138,7 @@ def objective_ci_correction(trial):
         district=trial.study.user_attrs["district"],
         days=trial.study.user_attrs["days"],
         dz=trial.study.user_attrs["dz"],
+        jvm=trial.study.user_attrs["jvm_opts"],
         alpha=1,
         offset=0,
         # Parameter to calibrate
@@ -135,12 +146,12 @@ def objective_ci_correction(trial):
         start=trial.study.user_attrs["start"],
     )
 
-    end = date.fromisoformat(params["start"]) + timedelta(days=21)
+    end = fromisoformat(params["start"]) + timedelta(days=21)
 
     results = []
 
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
+        cmd = "java %(jvm)s -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
               " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
 
@@ -213,6 +224,7 @@ if __name__ == "__main__":
     parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="2", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
+    parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
 
     args = parser.parse_args()
 

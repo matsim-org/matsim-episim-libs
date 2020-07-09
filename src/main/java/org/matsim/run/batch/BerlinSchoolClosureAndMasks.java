@@ -27,7 +27,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinScenario;
+import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -66,7 +66,7 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 	@Override
 	public Config baseCase(int id) {
 
-		SnzBerlinScenario module = new SnzBerlinScenario();
+		SnzBerlinScenario25pct2020 module = new SnzBerlinScenario25pct2020();
 
 		Config config = module.config();
 		config.plans().setInputFile("../../../../episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz");
@@ -93,7 +93,7 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 		episimConfig.setStartDate(params.startDate);
 
 
-		com.typesafe.config.Config policyConf = SnzBerlinScenario.basePolicy()
+		com.typesafe.config.Config policyConf = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig).build()
 
 				// Google mobility data currently stops at day 58 (18.04.2020)
 //				.restrict(58 - offset, params.remainingFractionWork, "work")

@@ -83,13 +83,10 @@ public class EpisimPersonTest {
 
 		bout.flush();
 
-		Map<String, EpisimPerson.Activity> params = new HashMap<>();
-		params.put("work", new EpisimPerson.Activity("work", null));
-
 		Map<Id<Person>, EpisimPerson> persons = new HashMap<>();
 
 		EpisimPerson p2 = EpisimTestUtils.createPerson("c1.0", null);
-		p2.read(new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())), params, persons, null, null);
+		p2.read(new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())), persons, null, null);
 
 		assertThat(p2.getDiseaseStatus())
 				.isEqualTo(EpisimPerson.DiseaseStatus.showingSymptoms);

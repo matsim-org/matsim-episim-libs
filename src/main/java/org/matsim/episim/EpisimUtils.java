@@ -68,6 +68,13 @@ public final class EpisimUtils {
 	}
 
 	/**
+	 * Gets the day of a week for a certain start day and current iteration.
+	 */
+	public static DayOfWeek getDayOfWeek(LocalDate startDate, long iteration) {
+		return startDate.plusDays(iteration -1).getDayOfWeek();
+	}
+
+	/**
 	 * Calculates the relative time based on iteration. Only used internally because start offset
 	 * has to be added too.
 	 */
@@ -95,7 +102,6 @@ public final class EpisimUtils {
 	public static long getStartOffset(LocalDate startDate) {
 		return startDate.atTime(LocalTime.MIDNIGHT).atZone(ZoneOffset.UTC).toEpochSecond();
 	}
-
 
 	/**
 	 * Creates an output directory, with a name based on current config and contact intensity..

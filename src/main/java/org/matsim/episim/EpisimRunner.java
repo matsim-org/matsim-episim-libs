@@ -80,13 +80,14 @@ public final class EpisimRunner {
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
 
-		manager.addHandler(handler);
-
 		// reporting will write events if necessary
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
 			manager.addHandler(reporting);
+
+		// needs to be after reporting
+		manager.addHandler(handler);
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
@@ -117,7 +118,7 @@ public final class EpisimRunner {
 			if (iteration % 10 == 0)
 				Gbl.printMemoryUsage();
 
-			if (!doStep(replay, handler, iteration))
+			if (!doStep(replay, handler, reporting, iteration))
 				break;
 
 		}
@@ -130,15 +131,16 @@ public final class EpisimRunner {
 	 *
 	 * @return false, when the simulation should end
 	 */
-	boolean doStep(final ReplayHandler replay, InfectionEventHandler handler, int iteration) {
+	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
 
 		manager.resetHandlers(iteration);
 		if (handler.isFinished())
 			return false;
 
-
 		// Process all events
 		replay.replayEvents(manager, iteration);
+
+		reporting.flushEvents();
 
 		return true;
 	}

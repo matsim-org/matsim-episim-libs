@@ -38,6 +38,8 @@ import picocli.CommandLine;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -60,14 +62,14 @@ public class DownSampleScenario implements Callable<Integer> {
 	@Parameters(paramLabel = "sampleSize", arity = "1", description = "Desired percentage of the sample between (0, 1)", defaultValue = "0.25")
 	private double sampleSize;
 
-	@Option(names = "--population", required = true, description = "Population xml file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
+	@Option(names = "--population", required = true, description = "Population xml file")
 	private Path population;
 
 	@Option(names = "--output", description = "Output folder", defaultValue = "output/scenario")
 	private Path output;
 
-	@Option(names = "--events", required = true, description = "Path to events file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_episim_events_100pt.xml.gz")
-	private Path events;
+	@Option(names = "--events", required = true, description = "Path to events file")
+	private List<Path> eventFiles;
 
 	@Option(names = "--facilities", description = "Path to facility file")
 	private Path facilities;
@@ -99,27 +101,36 @@ public class DownSampleScenario implements Callable<Integer> {
 
 		PopulationUtils.writePopulation(population, output.resolve("population" + sampleSize + ".xml.gz").toString());
 
-		if (!Files.exists(events)) {
-			log.error("Event file {} does not exists", events);
+		if (!eventFiles.stream().allMatch(Files::exists)) {
+			log.error("Event files {} do not exists", eventFiles);
 			return 2;
 		}
 
-		EventsManager manager = EventsUtils.createEventsManager();
+		Set<Id<ActivityFacility>> filterFacilities = new HashSet<>();
 
-		FilterHandler handler = new FilterHandler(population, null, null);
-		manager.addHandler(handler);
-		EventsUtils.readEvents(manager, events.toString());
+		for (Path events : eventFiles) {
 
-		EventWriterXML writer = new EventWriterXML(
-				IOUtils.getOutputStream(IOUtils.getFileUrl(output.resolve("events" + sampleSize + ".xml.gz").toString()), false)
-		);
+			log.info("Reading event file {}", events);
 
-		log.info("Filtered {} out of {} events = {}%", handler.getEvents().size(), handler.getCounter(), handler.getEvents().size() / handler.getCounter());
+			EventsManager manager = EventsUtils.createEventsManager();
+			FilterHandler handler = new FilterHandler(population, null, null);
+			manager.addHandler(handler);
+			EventsUtils.readEvents(manager, events.toString());
 
-		handler.getEvents().forEach( (time, eventsList) -> eventsList.forEach(writer::handleEvent));
-		writer.closeFile();
+			String name = events.getFileName().toString().replace(".xml.gz", "-");
+			EventWriterXML writer = new EventWriterXML(
+					IOUtils.getOutputStream(IOUtils.getFileUrl(output.resolve(name + sampleSize + ".xml.gz").toString()), false)
+			);
 
-		if (!Files.exists(facilities)) {
+			log.info("Filtered {} out of {} events = {}%", handler.getEvents().size(), handler.getCounter(), handler.getEvents().size() / handler.getCounter());
+
+			handler.getEvents().forEach( (time, eventsList) -> eventsList.forEach(writer::handleEvent));
+			writer.closeFile();
+
+			filterFacilities.addAll(handler.facilities);
+		}
+
+		if (facilities == null || !Files.exists(facilities)) {
 			log.warn("Facilities file {} does not exist", facilities);
 			return 0;
 		}
@@ -133,7 +144,7 @@ public class DownSampleScenario implements Callable<Integer> {
 		int n = facilities.getFacilities().size();
 
 		Set<Id<ActivityFacility>> toRemove = facilities.getFacilities().keySet()
-				.stream().filter(k -> !handler.getFacilities().contains(k)).collect(Collectors.toSet());
+				.stream().filter(k -> !filterFacilities.contains(k)).collect(Collectors.toSet());
 
 		toRemove.forEach(k -> facilities.getFacilities().remove(k));
 

@@ -483,11 +483,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	@Override
 	public void close() {
 
-		if (events != null) {
-			writer.append(events, "</events>");
-			writer.close(events);
-		}
-
 		writer.close(infectionReport);
 		writer.close(infectionEvents);
 		writer.close(restrictionReport);
@@ -523,20 +518,26 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	@Override
 	public void reset(int iteration) {
-
 		this.iteration = iteration;
 
 		if (iteration == 0 || writeEvents == EpisimConfigGroup.WriteEvents.none)
 			return;
 
+		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
+	}
+
+
+	/**
+	 * Flush written events.
+	 */
+	void flushEvents() {
 		if (events != null) {
 			writer.append(events, "</events>");
 			writer.close(events);
 		}
-
-		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
-		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
 	}
+
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {

@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -37,15 +38,16 @@ import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Main config for episim.
  */
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
-	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
 	private static final String WRITE_EVENTS = "writeEvents";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String HOSPITAL_FACTOR = "hospitalFactor";
@@ -63,8 +65,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String GROUPNAME = "episim";
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
-
-	private String inputEventsFile = null;
 
 	/**
 	 * Which events to write in the output.
@@ -116,14 +116,24 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		super(GROUPNAME);
 	}
 
-	@StringGetter(INPUT_EVENTS_FILE)
 	public String getInputEventsFile() {
-		return this.inputEventsFile;
+		List<EventFileParams> list = Lists.newArrayList(getInputEventsFiles());
+
+		if (list.size() != 1) {
+			throw new IllegalStateException("There is not exactly one input event file. Use .getEventFileParams() instead.");
+		}
+
+		return list.get(0).path;
 	}
 
-	@StringSetter(INPUT_EVENTS_FILE)
+	/**
+	 * Adds one single input event file for all days of the week.
+	 */
 	public void setInputEventsFile(String inputEventsFile) {
-		this.inputEventsFile = inputEventsFile;
+
+		clearParameterSetsForType(EventFileParams.SET_TYPE);
+		addInputEventsFile(inputEventsFile)
+				.addDays(DayOfWeek.values());
 	}
 
 	@StringGetter(WRITE_EVENTS)
@@ -145,6 +155,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setCalibrationParameter(double calibrationParameter) {
 		this.calibrationParameter = calibrationParameter;
 	}
+
 	/**
 	 * Is multiplied with probability to transition to seriously sick in age dependent progression model
 	 */
@@ -223,14 +234,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.startFromSnapshot = startFromSnapshot;
 	}
 
-	@StringSetter(SNAPSHOT_SEED)
-	public void setSnapshotSeed(SnapshotSeed snapshotSeed) {
-		this.snapshotSeed = snapshotSeed;
-	}
-
 	@StringGetter(SNAPSHOT_SEED)
 	public SnapshotSeed getSnapshotSeed() {
 		return snapshotSeed;
+	}
+
+	@StringSetter(SNAPSHOT_SEED)
+	public void setSnapshotSeed(SnapshotSeed snapshotSeed) {
+		this.snapshotSeed = snapshotSeed;
 	}
 
 	public long getStartOffset() {
@@ -401,6 +412,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			case InfectionParams.SET_TYPE:
 				addContainerParams((InfectionParams) set);
 				break;
+			case EventFileParams.SET_TYPE:
+				super.addParameterSet(set);
+				break;
 			default:
 				throw new IllegalArgumentException(set.getName());
 		}
@@ -411,6 +425,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		switch (type) {
 			case InfectionParams.SET_TYPE:
 				return new InfectionParams();
+			case EventFileParams.SET_TYPE:
+				return new EventFileParams();
 			default:
 				throw new IllegalArgumentException(type);
 		}
@@ -421,6 +437,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		switch (module.getName()) {
 			case InfectionParams.SET_TYPE:
 				if (!(module instanceof InfectionParams)) {
+					throw new IllegalArgumentException("unexpected class for module " + module);
+				}
+				break;
+			case EventFileParams.SET_TYPE:
+				if (!(module instanceof EventFileParams)) {
 					throw new IllegalArgumentException("unexpected class for module " + module);
 				}
 				break;
@@ -471,6 +492,27 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Adds an event file to the config.
+	 */
+	public EventFileParams addInputEventsFile(final String path) {
+
+		for (EventFileParams f : getInputEventsFiles()) {
+			if (f.path.equals(path)) throw new IllegalArgumentException("Input file already defined: " + path);
+		}
+
+		EventFileParams params = new EventFileParams(path);
+		addParameterSet(params);
+		return params;
+	}
+
+	/**
+	 * Removes all defined input files.
+	 */
+	public void clearInputEventsFiles() {
+		clearParameterSetsForType(EventFileParams.SET_TYPE);
+	}
+
+	/**
 	 * Get a copy of container params. Don't use this heavily, it is slow because a new map is created every time.
 	 */
 	Map<String, InfectionParams> getContainerParams() {
@@ -516,6 +558,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Collection<InfectionParams> getInfectionParams() {
 		return (Collection<InfectionParams>) getParameterSets(InfectionParams.SET_TYPE);
+	}
+
+	/**
+	 * All defined input event files.
+	 */
+	public Collection<EventFileParams> getInputEventsFiles() {
+		return (Collection<EventFileParams>) getParameterSets(EventFileParams.SET_TYPE);
 	}
 
 	/**
@@ -664,5 +713,71 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	}
 
+	/**
+	 * Event file configuration for certain weekdays.
+	 */
+	public static final class EventFileParams extends ReflectiveConfigGroup {
 
+		public static final String DAYS = "days";
+		public static final String PATH = "path";
+		static final String SET_TYPE = "eventFiles";
+
+		private String path;
+		private final Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
+
+		EventFileParams(String path) {
+			this();
+			this.path = path;
+		}
+
+		private EventFileParams() {
+			super(SET_TYPE);
+		}
+
+
+		@StringSetter(PATH)
+		void setPath(String path) {
+			this.path = path;
+		}
+
+		@StringGetter(PATH)
+		public String getPath() {
+			return path;
+		}
+
+		/**
+		 * Adds week days when this event file should be used.
+		 */
+		public void addDays(DayOfWeek... days) {
+			this.days.addAll(Arrays.asList(days));
+		}
+
+		@StringSetter(DAYS)
+		public void setDays(String days) {
+			String str = days.replace("[", "").replace(" ", "").replace("]", "");
+
+			this.days.addAll(
+					Arrays.stream(str.split(",")).map(DayOfWeek::valueOf).collect(Collectors.toSet())
+			);
+		}
+
+		@StringGetter(DAYS)
+		public Set<DayOfWeek> getDays() {
+			return days;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			EventFileParams that = (EventFileParams) o;
+			return path.equals(that.path) &&
+					days.equals(that.days);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(path, days);
+		}
+	}
 }

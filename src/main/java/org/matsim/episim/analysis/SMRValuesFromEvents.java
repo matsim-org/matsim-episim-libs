@@ -52,7 +52,7 @@ import org.matsim.episim.events.EpisimPersonStatusEventHandler;
 
 public class SMRValuesFromEvents {
 	
-	private static final String WORKINGDIR = "./output-unrestrictedRuns/";
+	private static final String WORKINGDIR = "output/";
 	private static final LocalDate startDate = LocalDate.parse("2020-02-16");
 
 	private static HashMap<String, InfectedPerson> infectedPersons = new LinkedHashMap<String, InfectedPerson>();
