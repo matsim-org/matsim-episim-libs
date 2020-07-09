@@ -96,7 +96,7 @@ public class KnRunEpisim {
 				binder().requireExplicitBindings();
 
 				// Main model classes regarding progression / infection etc..
-				bind( InteractionModel.class ).to( DefaultInteractionModel.class ).in( Singleton.class );
+				bind( InteractionModel.class ).to( SymmetricInteractionModel.class ).in( Singleton.class );
 				bind( InfectionModel.class).to( MyInfectionModel.class ).in( Singleton.class );
 				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
 				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
@@ -161,18 +161,20 @@ public class KnRunEpisim {
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 				episimConfig.setWriteEvents( WriteEvents.episim );
 
-				episimConfig.setStartDate( "2020-02-20" );
+//				episimConfig.setStartDate( "2020-02-20" );
 
 				// ---
 
-//				config.global().setRandomSeed( 4711 );
+				config.global().setRandomSeed( 4711 );
+
+				episimConfig.setMaxInteractions( 100 );
 
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
 				tracingConfig.setTracingCapacity_pers_per_day( 0 );
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.frmSnz;
+				RestrictionsType restrictionsType = RestrictionsType.unrestr;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
@@ -272,7 +274,12 @@ public class KnRunEpisim {
 					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
-					episimConfig.setPolicy( FixedPolicy.class, FixedPolicy.config().build() ); // overwrite snz policy with "null"
+					final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
+//					final double ciEdu = 0.;
+//					restrictions.restrict( LocalDate.of(2020, 3, 7), Restriction.ofCiCorrection( ciEdu ), "educ_kiga", "educ_primary",
+//							"educ_secondary", "educ_higher", "educ_tertiary", "educ_other" );
+//					strb.append( "__ciEdu" ).append( ciEdu );
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() ); // overwrite snz policy
 				}
 
 				strb.append( "_seed" ).append( config.global().getRandomSeed() );
@@ -308,7 +315,7 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run(365 );
+		injector.getInstance(EpisimRunner.class).run(60 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 

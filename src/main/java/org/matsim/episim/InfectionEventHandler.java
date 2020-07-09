@@ -267,8 +267,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					paramsMap.computeIfAbsent(actType, k -> new EpisimPerson.Activity(k, episimConfig.selectInfectionParams(k)));
 
 					// Prevent negative group size for persons starting with end activity
-					if (groupSize.getOrDefault(facility, 0) == 0)
+					if (groupSize.getOrDefault(facility, 0) == 0) {
 						groupSize.put(facility, 1);
+						// add one to maximum group size
+						maxGroupSize.mergeInt(facility, 1, Integer::sum);
+					}
+
 
 					groupSize.mergeInt(facility, -1, Integer::sum);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
@@ -324,6 +328,21 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		insertStationaryAgents();
+
+		// Add missing facilities, with only stationary agents
+		for (EpisimFacility facility : pseudoFacilityMap.values()) {
+			if (!maxGroupSize.containsKey(facility)) {
+				containerSize.put(facility, facility.getPersons().size());
+				maxGroupSize.put(facility, facility.getPersons().size());
+
+				// there may be facilities with only "end" events, thus no group size, but correct activity usage
+				if (!activityUsage.containsKey(facility)) {
+					Object2IntOpenHashMap<String> act = new Object2IntOpenHashMap<>();
+					act.put("home", facility.getPersons().size());
+					activityUsage.put(facility, act);
+				}
+			}
+		}
 
 		reporting.reportContainerUsage(maxGroupSize, containerSize, activityUsage);
 
