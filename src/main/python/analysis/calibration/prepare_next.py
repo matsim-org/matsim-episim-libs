@@ -17,12 +17,13 @@ if __name__ == "__main__":
     parser.add_argument("--study", type=str, default="ci_correction_", help="Objective name")
     parser.add_argument("--param", type=str, default="ciCorrection", help="Name of parameter to retrieve")
     parser.add_argument("--script", type=str, default="s_calibrate.sh", help="Name of the start script to parse for the date")
+    parser.add_argument("--date", type=str, default="", help="Date of the study (needed for some)")
     parser.add_argument("--db", type=str, default="calibration.db", help="Path to database")
     parser.add_argument("--top", type=int, default=5, help="Compute median from the best top N trials")
 
     args = parser.parse_args()
 
-    current_date = ""
+    current_date = args.date
     if path.exists(args.script):
         with open(args.script) as f:
             match = PATTERN.findall(f.read())

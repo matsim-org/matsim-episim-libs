@@ -138,6 +138,7 @@ def objective_ci_correction(trial):
         district=trial.study.user_attrs["district"],
         days=trial.study.user_attrs["days"],
         dz=trial.study.user_attrs["dz"],
+        jvm=trial.study.user_attrs["jvm_opts"],
         alpha=1,
         offset=0,
         # Parameter to calibrate
@@ -150,7 +151,7 @@ def objective_ci_correction(trial):
     results = []
 
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
+        cmd = "java %(jvm)s -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
               " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
 
@@ -223,6 +224,7 @@ if __name__ == "__main__":
     parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="2", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
+    parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
 
     args = parser.parse_args()
 
