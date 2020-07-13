@@ -16,7 +16,7 @@ echo "command is $command"
 
 echo ""
 echo "using alternative java"
-module load java/11.0.6
+module load java/11.0.7
 module load anaconda3/2019.10
 java -version
 

@@ -25,7 +25,7 @@ echo "***"
 # main
 main="org.matsim.run.RunEpisim"
 
-module load java/11.0.6
+module load java/11.0.7
 java -version
 
 # First wait to avoid file inconsistency due to syncing

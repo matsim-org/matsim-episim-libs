@@ -67,6 +67,9 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.")
 	private List<Path> personIds;
 
+	@CommandLine.Option(names = "--requireAttribute", description = "Names of attributes a person must have")
+	private List<String> requiredAttributes;
+
 	@CommandLine.Option(names = "--output", description = "Output population file", required = true)
 	private Path output;
 
@@ -106,7 +109,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		}
 
 		FilteredObjectAttributes attributes = readAndFilterAttributes(input, personIds);
-		Population populationFromAttributes = buildPopulationFromAttributes(attributes, personIds);
+		Population populationFromAttributes = buildPopulationFromAttributes(attributes);
 
 		PopulationUtils.writePopulation(populationFromAttributes, output.toString());
 
@@ -116,7 +119,6 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 			attributesFileForConversion = outputPath.substring(0, outputPath.lastIndexOf('\\')) + "/filtered_" + input.getFileName();
 			new ObjectAttributesXmlWriter(attributes).writeFile(attributesFileForConversion);
 		}
-
 
 //			includeMissingAgentsIntoOrigPopulation(populationFromAttributes);
 
@@ -130,12 +132,34 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		config.plans().setInsistingOnUsingDeprecatedPersonAttributeFile(true);
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		if (requiredAttributes != null && !requiredAttributes.isEmpty()) {
+
+			log.info("Filter persons without: {}", requiredAttributes);
+
+			int missing = 0;
+
+			for (Person person : scenario.getPopulation().getPersons().values()) {
+				Map<String, Object> attr = person.getAttributes().getAsMap();
+
+				if (!requiredAttributes.stream().allMatch(attr::containsKey)) {
+					scenario.getPopulation().removePerson(person.getId());
+					missing++;
+				}
+			}
+
+			if (missing > 0)
+				log.warn("Removed {} persons because of missing attributes", missing);
+			else
+				log.info("No missing attributes");
+		}
+
 		PopulationUtils.writePopulation(scenario.getPopulation(), output.toString());
 
 		return 0;
 	}
 
-	private Population buildPopulationFromAttributes(FilteredObjectAttributes attributes, Set<String> personIds) {
+	private Population buildPopulationFromAttributes(FilteredObjectAttributes attributes) {
 
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Population population = scenario.getPopulation();

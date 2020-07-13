@@ -8,9 +8,8 @@ BerlinWeek: $(JAR) $(out)/be_2020-week_snz_episim_events_wt_25pt_split.xml.gz $(
 
 $(out)/be_2020-week_snz_entirePopulation_emptyPlans_100pt.xml.gz:
 	$(sc) convertPersonAttributes $(in)/populationAttributes.xml.gz\
-   --ids $(in)/berlin_umland_wt\personIds.diluted.txt.gz\
-   --ids $(in)/berlin_umland_sa\personIds.diluted.txt.gz\
-   --ids $(in)/berlin_umland_so\personIds.diluted.txt.gz\
+   --ids $(in)/berlin_umland_wt/personIds.diluted.txt.gz\
+   --requireAttribute "microm:modeled:age"\
    --output $@
 
 $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz: $(out)/be_2020-week_snz_entirePopulation_emptyPlans_100pt.xml.gz

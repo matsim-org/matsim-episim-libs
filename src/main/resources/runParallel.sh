@@ -18,7 +18,7 @@ echo "***"
 # main
 main="org.matsim.run.RunParallel"
 
-module load java/11.0.6
+module load java/11.0.7
 java -version
 #
 # Start & pin multiple processes on different physical cores of a node

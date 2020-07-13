@@ -68,14 +68,19 @@ if __name__ == "__main__":
     best = params[int((args.top - 1) / 2)]
     print("Best Trial: " + str(best))
 
-    print("Best candidates")
+    print("Best candidates:")
     for x in params:
-        print("%s=%s, error=%s" % (args.param, x[1][3], x[0][4]))
+        print("\t%s=%s, error=%s" % (args.param, x[1][3], x[0][4]))
 
     n = best[0][1]
     value = best[1][3]
 
     print(f"Trial n={n} with error={best[0][4]} and {args.param}={value}")
+    
+    attrs = db.execute("SELECT key, value_json FROM trial_user_attributes WHERE trial_id=?", (best[0][0],)).fetchall()
+    print("Attributes:")
+    for k, v in attrs:
+        print("\t", k, "=", v)
 
     if not current_date:
         exit(0)

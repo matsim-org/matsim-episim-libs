@@ -22,7 +22,7 @@ else:
     fromisoformat = date.fromisoformat
 
 def read_data(f, district, hospital, rki, window=5):
-    """   Reads in three csv files """
+    """Reads in three csv files"""
     # Simulation output
     df = pd.read_csv(f, sep="\t", parse_dates=[2])
     df = df[df.district == district]
@@ -107,10 +107,12 @@ def objective_unconstrained(trial):
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
+    jvm = trial.study.user_attrs["jvm_opts"]
 
     results = []
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" % (scenario, n, i, c)
+        cmd = "java -jar %(jvm)s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
+              % (jvm, scenario, n, i, c)
     
         print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
         subprocess.run(cmd, shell=True)
@@ -146,7 +148,7 @@ def objective_ci_correction(trial):
         start=trial.study.user_attrs["start"],
     )
 
-    end = fromisoformat(params["start"]) + timedelta(days=21)
+    end = fromisoformat(params["start"]) + timedelta(days=params["days"])
 
     results = []
 
