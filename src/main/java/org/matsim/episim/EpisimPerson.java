@@ -421,6 +421,13 @@ public final class EpisimPerson implements Attributable {
 		return spentTime;
 	}
 
+	@Override
+	public String toString() {
+		return "EpisimPerson{" +
+				"personId=" + personId +
+				'}';
+	}
+
 	/**
 	 * Disease status of a person.
 	 */
@@ -448,6 +455,13 @@ public final class EpisimPerson implements Attributable {
 		public Activity(String actType, EpisimConfigGroup.InfectionParams params) {
 			this.actType = actType;
 			this.params = params;
+		}
+
+		@Override
+		public String toString() {
+			return "Activity{" +
+					"actType='" + actType + '\'' +
+					'}';
 		}
 	}
 }

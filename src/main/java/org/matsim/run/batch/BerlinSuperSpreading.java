@@ -7,8 +7,8 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinSuperSpreaderScenario;
+import org.matsim.run.modules.SnzBerlinWeekScenario25pct2020;
 
 /**
  * Run to analyze different viral load and susceptibility for persons.
@@ -27,7 +27,7 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 		if (p.superSpreading.equals("yes")) {
 			return new SnzBerlinSuperSpreaderScenario();
 		} else {
-			return new SnzBerlinScenario25pct2020();
+			return new SnzBerlinWeekScenario25pct2020();
 		}
 	}
 
@@ -38,7 +38,7 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 		if (params.superSpreading.equals("yes")) {
 			config = new SnzBerlinSuperSpreaderScenario().config();
 		} else {
-			config = new SnzBerlinScenario25pct2020().config();
+			config = new SnzBerlinWeekScenario25pct2020().config();
 		}
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -54,10 +54,10 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 
 	public static final class Params {
 
-		@GenerateSeeds(5)
+		@GenerateSeeds(50)
 		private long seed;
 
-		@IntParameter({42, 80, 154})
+		@IntParameter({1, 42, 80, 154})
 		private int groupSize;
 
 		@StringParameter({"yes", "no"})
