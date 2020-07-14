@@ -29,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.Map.Entry;
 
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -52,11 +53,14 @@ import org.matsim.episim.events.EpisimPersonStatusEventHandler;
 
 public class SMRValuesFromEvents {
 	
+//	private static final String WORKINGDIR = "./output-PtInterventions/";
 	private static final String WORKINGDIR = "output/";
 	private static final LocalDate startDate = LocalDate.parse("2020-02-16");
 
 	private static HashMap<String, InfectedPerson> infectedPersons = new LinkedHashMap<String, InfectedPerson>();
 	private static final Logger log = LogManager.getLogger(SMRValuesFromEvents.class);
+	
+	private static HashMap<String, HashMap<Integer, Integer>> infectionsPerActivity = new LinkedHashMap<String, HashMap<Integer, Integer>>();
 	
 	public static void main(String[] args) throws IOException {
 		Configurator.setLevel("org.matsim.core.config", Level.WARN);
@@ -65,15 +69,55 @@ public class SMRValuesFromEvents {
 		Configurator.setLevel("org.matsim.core.utils", Level.WARN);
 		
 		HashSet<String> scenarios = new LinkedHashSet<String>(); 
-		
 		File[] files = new File(WORKINGDIR).listFiles();
-		 
-		 for (File file : files) {
-		        if (file.isDirectory()) {
-		        	scenarios.add(file.getName());
-		        }
+		for (File file : files) {
+	        if (file.isDirectory()) {
+	        	scenarios.add(file.getName());
+	        }
+		}
+		
+		log.info("Read " + scenarios.size() + " files");
+		log.info(scenarios);
+		
+		calcInfectionsPerAct(scenarios);
+
+		calcRValues(scenarios);
+		
+	}
+
+	private static void calcInfectionsPerAct(HashSet<String> scenarios) throws IOException {
+		FileWriter fw = new FileWriter(new File(WORKINGDIR + "infectionsPerActivity.txt"));
+		BufferedWriter bw = new BufferedWriter(fw);
+		bw.write("day\tdate\tactivity\tinfections\tscenario");
+
+		 EventsManager manager = EventsUtils.createEventsManager();
+		 InfectionsHandler iHandler = new InfectionsHandler();
+		 manager.addHandler(iHandler);
+		 for (String scenario : scenarios) {
+			 infectionsPerActivity.clear();
+			 File[] eventFiles = new File(WORKINGDIR + scenario + "/events").listFiles();
+			 for (File file : eventFiles) {
+				 if (file.getName().contains("xml.gz")) new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+			 }
+
+			 for(int i = 0; i <= eventFiles.length; i++) {
+				 for (Entry<String, HashMap<Integer, Integer>> e : infectionsPerActivity.entrySet()) {
+					 if (e.getKey().equals("pt") || e.getKey().equals("total")) {
+						 int infections = 0;
+						 if (e.getValue().get(i) != null) infections = e.getValue().get(i);
+						 bw.newLine();
+						 bw.write(i+ "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario);
+					 }
+				 }
+			 }
+			 bw.flush();
+			 log.info("calculated infections per activity in scenario " + scenario);
 		 }
-		 
+		bw.close();
+	}
+
+	private static void calcRValues(HashSet<String> scenarios) throws IOException {
+
 		 FileWriter fw = new FileWriter(new File(WORKINGDIR + "rValues.txt"));
 		 BufferedWriter bw = new BufferedWriter(fw);
 		 bw.write("day\tdate\trValue\tscenario\tnewContagious");
@@ -81,9 +125,6 @@ public class SMRValuesFromEvents {
 		 EventsManager manager = EventsUtils.createEventsManager();
 		 RHandler rHandler = new RHandler(); 
 		 manager.addHandler(rHandler);
-
-		 log.info("Reading " + scenarios.size() + " files");
-		 log.info(scenarios);
 		
 		 for (String scenario : scenarios) {
 			 infectedPersons.clear();
@@ -108,7 +149,7 @@ public class SMRValuesFromEvents {
 				}
 			 }				 
 			 bw.flush();
-			 log.info("processed scenario " + scenario);
+			 log.info("calculated r values in scenario " + scenario);
 			}
 		 bw.close();
 	}
@@ -165,6 +206,31 @@ public class SMRValuesFromEvents {
 			}
 		}
 	}
+	
+	private static class InfectionsHandler implements EpisimInfectionEventHandler {
+		@Override
+		public void handleEvent(EpisimInfectionEvent event) {
+			String infectionType = event.getInfectionType();
+			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new HashMap<Integer, Integer>());
+			if (!infectionsPerActivity.containsKey(infectionType)) infectionsPerActivity.put(infectionType, new HashMap<Integer, Integer>());
+			
+			HashMap<Integer, Integer> infectionsPerDay = infectionsPerActivity.get(infectionType);
+			HashMap<Integer, Integer> infectionsPerDayTotal = infectionsPerActivity.get("total");
+
+			int day = (int) event.getTime() / 86400;
+			
+			if (!infectionsPerDay.containsKey(day)) infectionsPerDay.put(day, 1);
+			else infectionsPerDay.replace(day, infectionsPerDay.get(day) + 1);
+			
+			if (!infectionsPerDayTotal.containsKey(day)) infectionsPerDayTotal.put(day, 1);
+			else infectionsPerDayTotal.replace(day, infectionsPerDayTotal.get(day) + 1);
+			
+		}
+	}
+	
+	
+	
+	
 }
 
 
