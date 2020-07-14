@@ -426,10 +426,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			// Average += (NewValue - Average) / NewSampleCount;
 			for (String act : activities) {
 				// Compute incremental avg.
-//				avg.mergeDouble(act, (person.getSpentTime().getDouble(act) - avg.getDouble(act)) / i, Double::sum);
+				avg.mergeDouble(act, (person.getSpentTime().getDouble(act) - avg.getDouble(act)) / i, Double::sum);
 
 				// Compute total instead
-				avg.mergeDouble(act, person.getSpentTime().getDouble(act), Double::sum);
+//				avg.mergeDouble(act, person.getSpentTime().getDouble(act), Double::sum);
 			}
 
 			person.getSpentTime().clear();

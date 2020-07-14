@@ -62,11 +62,11 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		// calibrated for sigma=1, and week scenario
-		episimConfig.setCalibrationParameter(1.64e-05);
+		// calibrated for sigma=1, and week scenario (large variation 1.60 - 1.69)
+		episimConfig.setCalibrationParameter(1.65e-05);
 
-		// earlier start
-		episimConfig.setStartDate("2020-02-13");
+		// set start
+		episimConfig.setStartDate("2020-02-16");
 
 		// maybe ci calibration needed
 		config.controler().setOutputDirectory("./output-berlin-25pct-superSpreader-calibrParam-" + episimConfig.getCalibrationParameter());

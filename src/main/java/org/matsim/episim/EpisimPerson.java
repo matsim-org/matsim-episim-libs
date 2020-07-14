@@ -66,6 +66,11 @@ public final class EpisimPerson implements Attributable {
 	private final int[] startOfDay = new int[7];
 
 	/**
+	 * The position in the trajectory for the end of the day.
+	 */
+	private final int[] endOfDay = new int[7];
+
+	/**
 	 * The first visited {@link org.matsim.facilities.ActivityFacility} for each day.
 	 */
 	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
@@ -349,10 +354,20 @@ public final class EpisimPerson implements Attributable {
 		currentPositionInTrajectory = startOfDay[day.getValue() - 1];
 	}
 
-	int getPositionInTrajectory(DayOfWeek day) {return startOfDay[day.getValue() -1];}
-
 	void setStartOfDay(DayOfWeek day, int position) {
 		startOfDay[day.getValue() - 1] = position;
+	}
+
+	int getStartOfDay(DayOfWeek day) {
+		return startOfDay[day.getValue() - 1];
+	}
+
+	void setEndOfDay(DayOfWeek day, int position) {
+		endOfDay[day.getValue() - 1] = position;
+	}
+
+	int getEndOfDay(DayOfWeek day) {
+		return endOfDay[day.getValue() - 1];
 	}
 
 	/**
@@ -360,6 +375,7 @@ public final class EpisimPerson implements Attributable {
 	 */
 	void duplicateDay(DayOfWeek target, DayOfWeek source) {
 		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];
+		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 	}
 
