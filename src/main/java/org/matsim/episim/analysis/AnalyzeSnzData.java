@@ -20,285 +20,214 @@
 
 package org.matsim.episim.analysis;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.zip.GZIPInputStream;
-
+import com.google.common.base.Joiner;
+import com.google.common.io.Resources;
+import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.utils.io.IOUtils;
+import picocli.CommandLine;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * This class reads the SENEZON data for every day. The data is filtered by the
  * zip codes of every area. The base line is always the first day. The results
  * for every day are the percentile of the changes compared to the base.
  */
-
-class AnalyzeSnzData {
+@CommandLine.Command(
+		name = "analyzeSnzData",
+		description = "Aggregate snz mobility data."
+)
+class AnalyzeSnzData implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
-	public static void main(String[] args) throws FileNotFoundException, IOException {
+	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+	private static final Joiner JOIN = Joiner.on("\t");
 
-		String inputFolder = "../shared-svn/projects/episim/data/Bewegungsdaten/";
-		log.info("Searching for files in the folder: " + inputFolder);
-		ArrayList<File> filesWithData = findInputFiles(inputFolder);
-		log.info("Amount of found files: " + filesWithData.size());
+	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
+	private Path inputFolder;
 
-		// zip codes for Berlin
-		List<Integer> zipCodesBerlin = new ArrayList<Integer>();
-		for (int i = 10115; i <= 14199; i++)
-			zipCodesBerlin.add(i);
+	@CommandLine.Option(names = "--output", defaultValue = "output")
+	private Path outputFolder;
 
-		// zip codes for Munich
-		List<Integer> zipCodesMunich = new ArrayList<Integer>();
-		for (int i = 80331; i <= 81929; i++)
-			zipCodesMunich.add(i);
-
-		// zip codes for the district "Kreis Heinsberg"
-		List<Integer> zipCodesHeinsberg = Arrays.asList(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844);
-
-		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
-		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
-		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
-
-		log.info("Done!");
+	public static void main(String[] args) {
+		System.exit(new CommandLine(new AnalyzeSnzData()).execute(args));
 	}
 
 	/**
 	 * This method searches all files with an certain name in a given folder.
 	 */
-	private static ArrayList<File> findInputFiles(String inputFolder) {
-		File[] fileArray = readFile(inputFolder);
-		ArrayList<File> fileData = new ArrayList<File>();
-		if (fileArray != null) {
-			for (int i = 0; i < fileArray.length; i++) {
-				if (fileArray[i].isDirectory()) {
-					File[] fileArrayFolder = readFile(fileArray[i].getAbsolutePath());
-					for (File file : fileArrayFolder) {
-						if (file.getName().contains("_zipCode.csv.gz"))
-							fileData.add(file);
-					}
+	private static List<File> findInputFiles(File inputFolder) {
+		List<File> fileData = new ArrayList<File>();
+
+		for (File folder : Objects.requireNonNull(inputFolder.listFiles())) {
+			if (folder.isDirectory()) {
+				for (File file : Objects.requireNonNull(folder.listFiles())) {
+					if (file.getName().contains("_zipCode.csv.gz"))
+						fileData.add(file);
 				}
 			}
 		}
 		return fileData;
 	}
 
-	/**
-	 * This method reads a folder and gives back a list of files in this folder.
-	 */
-	private static File[] readFile(String inputFolder) {
-		File f = new File(inputFolder);
-		File[] fileArray = f.listFiles();
-		return fileArray;
+	@Override
+	public Integer call() throws Exception {
+
+		log.info("Searching for files in the folder: " + inputFolder);
+		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+		log.info("Amount of found files: " + filesWithData.size());
+
+		// zip codes for Berlin
+		IntSet zipCodesBerlin = new IntOpenHashSet();
+		for (int i = 10115; i <= 14199; i++)
+			zipCodesBerlin.add(i);
+
+		// zip codes for Munich
+		IntSet zipCodesMunich = new IntOpenHashSet();
+		for (int i = 80331; i <= 81929; i++)
+			zipCodesMunich.add(i);
+
+		// zip codes for the district "Kreis Heinsberg"
+		IntSet zipCodesHeinsberg = new IntOpenHashSet(List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
+
+		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
+		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
+		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
+
+		log.info("Done!");
+
+		return 0;
 	}
 
-	private static void analyzeDataForCertainArea(List<Integer> listZipCodes, String area,
-			ArrayList<File> filesWithData) throws IOException, FileNotFoundException {
+	private void analyzeDataForCertainArea(IntSet zipCodes, String area, List<File> filesWithData) throws IOException {
 
 		log.info("Analyze data for " + area);
-		String outputFile = null;
-		outputFile = "output/" + area + "SnzData_daily_until20200607.csv";
-		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile);
-		try {
-			writer.write(
-					"date\taccomp\tbusiness\teducation\terrands\thome\tleisure\tshop_daily\tshop_other\ttraveling\tundefined\tvisit\twork\tnotAtHome\tnotAtHomeExceptLeisureAndEdu"
-							+ "\n");
-			String line;
-			int dateLocation = 0;
-			int zipCodeLocation = 1;
-			int actTypeLocation = 2;
-			int durationLocation = 12;
 
-			double sumAccomp = 0;
-			double accompBase = 0;
-			double sumBusiness = 0;
-			double businessBase = 0;
-			double sumEducation = 0;
-			double educationBase = 0;
-			double sumErrands = 0;
-			double errandsBase = 0;
-			double sumHome = 0;
-			double homeBase = 0;
-			double sumLeisure = 0;
-			double leisureBase = 0;
-			double sumShopDaily = 0;
-			double shopDailyBase = 0;
-			double sumShopOther = 0;
-			double shopOtherBase = 0;
-			double sumTraveling = 0;
-			double travelingBase = 0;
-			double sumUndefined = 0;
-			double undefinedBase = 0;
-			double sumVisit = 0;
-			double visitBase = 0;
-			double sumWork = 0;
-			double workBase = 0;
-			double sumNotAtHome = 0;
-			double notAtHomeBase = 0;
-			double sumNotAtHomeExceptLeisureAndEdu = 0;
-			double notAtHomeExceptLeisureAndEduBase = 0;
-			String currantDate = null;
-			int countingDays = 0;
+		Path outputFile = outputFolder.resolve(area + "SnzData_daily_until.csv");
+
+		Set<LocalDate> holidays = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
+				.stream().map(LocalDate::parse).collect(Collectors.toSet());
+
+		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
+		try {
+
+			JOIN.appendTo(writer, Types.values());
+			writer.write("\n");
+
+			// base activity level for different days
+			Object2DoubleMap<String> wd = new Object2DoubleOpenHashMap<>();
+			Object2DoubleMap<String> sa = new Object2DoubleOpenHashMap<>();
+			Object2DoubleMap<String> so = new Object2DoubleOpenHashMap<>();
+
+			Map<DayOfWeek, Object2DoubleMap<String>> base = new EnumMap<>(DayOfWeek.class);
+
+			// working days share the same base
+			base.put(DayOfWeek.MONDAY, wd);
+			base.put(DayOfWeek.TUESDAY, wd);
+			base.put(DayOfWeek.WEDNESDAY, wd);
+			base.put(DayOfWeek.THURSDAY, wd);
+			base.put(DayOfWeek.FRIDAY, wd);
+			base.put(DayOfWeek.SATURDAY, sa);
+			base.put(DayOfWeek.SUNDAY, so);
+
+			int countingDays = 1;
+
+			// will contain the last parsed date
+			String dateString = "";
 
 			for (File file : filesWithData) {
 
-				countingDays++;
+				Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
 
-				try (BufferedReader br = new BufferedReader(
-						new InputStreamReader(new GZIPInputStream(new FileInputStream(file.getAbsolutePath()))))) {
+				dateString = file.getName().split("_")[0];
+				LocalDate date = LocalDate.parse(dateString, FMT);
 
-					sumAccomp = 0;
-					sumBusiness = 0;
-					sumEducation = 0;
-					sumErrands = 0;
-					sumHome = 0;
-					sumLeisure = 0;
-					sumShopDaily = 0;
-					sumShopOther = 0;
-					sumTraveling = 0;
-					sumUndefined = 0;
-					sumVisit = 0;
-					sumWork = 0;
-					sumNotAtHome = 0;
-					sumNotAtHomeExceptLeisureAndEdu = 0;
+				CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(IOUtils.getBufferedReader(file.toString()));
 
-					while ((line = br.readLine()) != null) {
-						String[] parts = line.split(",");
-						if (parts[dateLocation].contains("date") || parts.length < 2)
-							continue;
+				for (CSVRecord record : parse) {
 
-						currantDate = parts[dateLocation];
-						if (listZipCodes.contains(Integer.parseInt(parts[zipCodeLocation]))) {
+					int zipCode = Integer.parseInt(record.get("zipCode"));
+					if (zipCodes.contains(zipCode)) {
 
-							if (parts[actTypeLocation].contains("accomp")) {
-								sumAccomp = sumAccomp + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("business")) {
-								sumBusiness = sumBusiness + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("education")) {
-								sumEducation = sumEducation + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("errands")) {
-								sumErrands = sumErrands + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("home")) {
-								sumHome = sumHome + Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("leisure")) {
-								sumLeisure = sumLeisure + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("shop_daily")) {
-								sumShopDaily = sumShopDaily + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("shop_other")) {
-								sumShopOther = sumShopOther + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("traveling")) {
-								sumTraveling = sumTraveling + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("undefined")) {
-								sumUndefined = sumUndefined + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("visit")) {
-								sumVisit = sumVisit + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
-							}
-							if (parts[actTypeLocation].contains("work")) {
-								sumWork = sumWork + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHome = sumNotAtHome + Double.parseDouble(parts[durationLocation]);
-								sumNotAtHomeExceptLeisureAndEdu = sumNotAtHomeExceptLeisureAndEdu
-										+ Double.parseDouble(parts[durationLocation]);
-								continue;
+						double duration = Double.parseDouble(record.get("durationSum"));
+						String actType = record.get("actType");
+
+						sums.mergeDouble(actType, duration, Double::sum);
+
+						if (!actType.equals("home")) {
+
+							sums.mergeDouble("notAtHome", duration, Double::sum);
+
+							if (!actType.equals("education") && !actType.equals("leisure")) {
+								sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
 							}
 						}
 					}
-					// sets the base
-					if (homeBase == 0) {
-						accompBase = sumAccomp;
-						businessBase = sumBusiness;
-						educationBase = sumEducation;
-						errandsBase = sumErrands;
-						homeBase = sumHome;
-						leisureBase = sumLeisure;
-						shopDailyBase = sumShopDaily;
-						shopOtherBase = sumShopOther;
-						travelingBase = sumTraveling;
-						undefinedBase = sumUndefined;
-						visitBase = sumVisit;
-						workBase = sumWork;
-						notAtHomeBase = sumNotAtHome;
-						notAtHomeExceptLeisureAndEduBase = sumNotAtHomeExceptLeisureAndEdu;
+				}
+
+				DayOfWeek day = date.getDayOfWeek();
+
+				// week days are compared to weekends if they are holidays
+				if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
+					if (holidays.contains(date)) {
+						day = DayOfWeek.SATURDAY;
 					}
 				}
-				writer.write(currantDate + "\t" + Math.round((sumAccomp / accompBase - 1) * 100) + "\t"
-						+ Math.round((sumBusiness / businessBase - 1) * 100) + "\t"
-						+ Math.round((sumEducation / educationBase - 1) * 100) + "\t"
-						+ Math.round((sumErrands / errandsBase - 1) * 100) + "\t"
-						+ Math.round((sumHome / homeBase - 1) * 100) + "\t"
-						+ Math.round((sumLeisure / leisureBase - 1) * 100) + "\t"
-						+ Math.round((sumShopDaily / shopDailyBase - 1) * 100) + "\t"
-						+ Math.round((sumShopOther / shopOtherBase - 1) * 100) + "\t"
-						+ Math.round((sumTraveling / travelingBase - 1) * 100) + "\t"
-						+ Math.round((sumUndefined / undefinedBase - 1) * 100) + "\t"
-						+ Math.round((sumVisit / visitBase - 1) * 100) + "\t"
-						+ Math.round((sumWork / workBase - 1) * 100) + "\t"
-						+ Math.round((sumNotAtHome / notAtHomeBase - 1) * 100) + "\t"
-						+ Math.round((sumNotAtHomeExceptLeisureAndEdu / notAtHomeExceptLeisureAndEduBase - 1) * 100)
-						+ "\n");
+
+				// set base
+				if (base.get(day).isEmpty())
+					base.get(day).putAll(sums);
+
+				List<String> row = new ArrayList<>();
+				row.add(dateString);
+
+				for (int i = 1; i < Types.values().length; i++) {
+
+					String actType = Types.values()[i].toString();
+					row.add(String.valueOf(Math.round((sums.getDouble(actType) / base.get(day).getDouble(actType) - 1) * 100)));
+				}
+
+				JOIN.appendTo(writer, row);
+				writer.write("\n");
+
 				if (countingDays == 1 || countingDays % 5 == 0)
 					log.info("Finished day " + countingDays);
+
+				countingDays++;
 			}
 			writer.close();
-			log.info("Write analyze of " + countingDays + " is writen to " + outputFile);
+
+			Path finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
+			Files.move(outputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
+
+			log.info("Write analyze of " + countingDays + " is writen to " + finalPath);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private enum Types {
+		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit, work, notAtHome, notAtHomeExceptLeisureAndEdu
 	}
 }

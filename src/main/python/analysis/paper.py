@@ -32,23 +32,25 @@ from pandas.tseries.offsets import BDay
 
 isBusinessDay = BDay().onOffset
 
-act = pd.read_csv("../../../../../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200614.csv",
+act = pd.read_csv("C:/home/Development/matsim-org/matsim-episim/output/BerlinSnzData_daily_until20200705.csv",
                   sep="\t", parse_dates=[0])
 
 act_week = act[act.date.map(isBusinessDay)]
+act_wend = act[act.date.map(lambda *args: not isBusinessDay(*args))]
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
 
-ax = sns.scatterplot(x="date", y="home", label="home", s=40, data=act_week, ax=ax)
-sns.scatterplot(x="date", y="notAtHome", label= "notAtHome", s=40, data=act_week, ax=ax)
+ax = sns.scatterplot(x="date", y="home", label="home", s=40, data=act, ax=ax)
+sns.scatterplot(x="date", y="notAtHomeExceptLeisureAndEdu", label="notAtHome", s=40, data=act_week, ax=ax)
+sns.scatterplot(x="date", y="notAtHomeExceptLeisureAndEdu", label="notAtHome (Weekend)", s=40, data=act_wend, ax=ax)
 
 ax.xaxis.set_major_formatter(dateFormater)
 
 plt.ylabel("activity participation in %")
 plt.legend(loc="best")
 
-plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-06-01"))
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-07-01"))
 
 #%% Section 3-1
 
