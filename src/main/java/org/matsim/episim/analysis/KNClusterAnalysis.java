@@ -49,7 +49,9 @@ class KNClusterAnalysis{
 //		base = "2020-06-01-14:34:34_unrestr_theta1.0E-7__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_startDate2020-02-15/";
 		// useful base case with mxIA=100 (I think)
 
-		base = "2020-06-01_23-40-52__unrestr__theta1.0E-6@10__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sInfct1.0__sSusc0.0_startDate2020-02-15/";
+		base = "output/zz_archive-2020-06-04/2020-06-01_23-40-52__unrestr__theta1.0E-6@10__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sInfct1" +
+				       ".0__sSusc0" +
+				       ".0_startDate2020-02-15/";
 		// useful base cased with mxIA=10 & sInfct=1
 
 		// ---

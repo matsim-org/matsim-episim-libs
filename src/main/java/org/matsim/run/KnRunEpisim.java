@@ -51,10 +51,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -62,7 +62,6 @@ import java.util.SplittableRandom;
 
 import static java.lang.Math.max;
 import static org.matsim.episim.EpisimConfigGroup.*;
-import static org.matsim.episim.EpisimPerson.*;
 import static org.matsim.episim.EpisimUtils.*;
 
 public class KnRunEpisim {
@@ -78,6 +77,9 @@ public class KnRunEpisim {
 	// 2 leads to dynamics so unstable that it does not look plausible w.r.t. reality.  kai, jun'20
 
 	private static final double sigmaSusc = 0.;
+
+	private enum WeekendHandling{ weekdaysOnly, inclWeekends }
+	private static final WeekendHandling runType = WeekendHandling.inclWeekends;
 
 	public static void main(String[] args) throws IOException{
 
@@ -154,14 +156,38 @@ public class KnRunEpisim {
 			@Provides @Singleton public SplittableRandom splittableRandom( Config config ) {
 				return new SplittableRandom(config.global().getRandomSeed());
 			}
-			@Provides @Singleton public Config config() throws IOException{
+			@Provides @Singleton public Config config(){
 				Config config = new SnzBerlinScenario25pct2020().config();
 
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-				episimConfig.setWriteEvents( WriteEvents.episim );
 
-//				episimConfig.setStartDate( "2020-02-20" );
+				switch( runType ) {
+					case weekdaysOnly:
+						break;
+					case inclWeekends:
+						episimConfig.clearInputEventsFiles();
+
+						config.plans().setInputFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz").toString());
+
+						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_wt_25pt_split.xml.gz").toString())
+							    .addDays( DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY );
+
+						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_sa_25pt_split.xml.gz").toString())
+							    .addDays(DayOfWeek.SATURDAY);
+
+						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_so_25pt_split.xml.gz").toString())
+							    .addDays(DayOfWeek.SUNDAY);
+
+						episimConfig.setCalibrationParameter(1.13e-5);
+						episimConfig.setStartDate("2020-02-15");
+						break;
+					default:
+						throw new IllegalStateException( "Unexpected value: " + runType );
+				}
+
+
+				episimConfig.setWriteEvents( WriteEvents.episim );
 
 				// ---
 
@@ -174,7 +200,7 @@ public class KnRunEpisim {
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.unrestr;
+				RestrictionsType restrictionsType = RestrictionsType.fromSnz;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
@@ -184,7 +210,9 @@ public class KnRunEpisim {
 				if ( sigmaSusc!=0. ) strb.append( "__sSusc" ).append( sigmaSusc );
 				strb.append( "__trStrt" ).append( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() );
 
-				if ( restrictionsType==RestrictionsType.triang ) {
+				if ( restrictionsType==RestrictionsType.fromConfig ) {
+					// do nothing
+				} else if ( restrictionsType==RestrictionsType.triang ) {
 					List<String> allActivitiesExceptHomeList = new ArrayList<>();
 					List<String> allActivitiesExceptHomeAndEduList = new ArrayList<>();
 					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
@@ -252,26 +280,16 @@ public class KnRunEpisim {
 
 					strb.append( "_ciCorrB" + ciCorrB + "@" ).append( dateOfCiCorrB ).append( "over" + nDays + "days" );
 
-				} else if ( restrictionsType==RestrictionsType.frmSnz ){
+				} else if ( restrictionsType==RestrictionsType.fromSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
-					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.3 ));
-					basePolicyBuilder.setAlpha( 1.0 );
-					double clothFinalFraction=0.;
-					double surgicalFinalFraction=0.;
-
-					// This was hardcoded and not configurable at the moment
-					if (true)
-						throw new RuntimeException("Cloth and surgical final fraction are fixed at the moment.");
-//					basePolicyBuilder.setClothFinalFraction( clothFinalFraction );
-//					basePolicyBuilder.setSurgicalFinalFraction( surgicalFinalFraction );
+					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.2 ));
+					basePolicyBuilder.setAlpha( 1.6 );
 
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
 					strb.append( "_ciCorr" ).append(Joiner.on("_").withKeyValueSeparator("@").join(basePolicyBuilder.getCiCorrections()));
 					strb.append( "_alph" ).append( basePolicyBuilder.getAlpha() );
-//					strb.append("_masksPeriod").append( nDays );
-					strb.append( "upto" ).append( clothFinalFraction ).append( "_" ).append( surgicalFinalFraction );
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
@@ -315,13 +333,13 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run(60 );
+		injector.getInstance(EpisimRunner.class).run(100 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
 
-	enum RestrictionsType {unrestr, triang, frmSnz }
+	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
 
 	private static class MyInfectionModel implements InfectionModel {
 
