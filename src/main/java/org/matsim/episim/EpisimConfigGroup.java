@@ -107,7 +107,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
-	private int maxInteractions = 3;
+	private double maxInteractions = 3.;
 
 	/**
 	 * Default constructor.
@@ -365,12 +365,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringGetter(MAX_INTERACTIONS)
-	public int getMaxInteractions() {
+	public double getMaxInteractions() {
 		return maxInteractions;
 	}
 
 	@StringSetter(MAX_INTERACTIONS)
-	public void setMaxInteractions(int maxInteractions) {
+	public void setMaxInteractions(double maxInteractions) {
 		this.maxInteractions = maxInteractions;
 	}
 
