@@ -32,6 +32,8 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.InfectionModelWithViralLoad;
+import org.matsim.episim.model.InteractionModel;
+import org.matsim.episim.model.SymmetricInteractionModel;
 
 import java.util.SplittableRandom;
 
@@ -46,11 +48,27 @@ import static org.matsim.episim.model.InfectionModelWithViralLoad.VIRAL_LOAD;
  */
 public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
+	private final double sigmaInf;
+	private final double sigmaSusp;
+
+	/**
+	 * Constructor with default values.
+	 */
+	public SnzBerlinSuperSpreaderScenario() {
+		this(0.75, 0.75);
+	}
+
+	public SnzBerlinSuperSpreaderScenario(double sigmaInf, double sigmaSusp) {
+		this.sigmaInf = sigmaInf;
+		this.sigmaSusp = sigmaSusp;
+	}
+
 	@Override
 	protected void configure() {
 		super.configure();
 
 		bind(InfectionModel.class).to(InfectionModelWithViralLoad.class).in(Singleton.class);
+		bind(InteractionModel.class).to(SymmetricInteractionModel.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -61,6 +79,8 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 		Config config = new SnzBerlinWeekScenario25pct2020().config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		episimConfig.setMaxInteractions(20);
 
 		// calibrated for sigma=1, and week scenario (large variation 1.60 - 1.69)
 		episimConfig.setCalibrationParameter(1.65e-05);
@@ -90,8 +110,8 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 		SplittableRandom rnd = new SplittableRandom(4715);
 		for (Person person : scenario.getPopulation().getPersons().values()) {
-			person.getAttributes().putAttribute(VIRAL_LOAD, nextLogNormalFromMeanAndSigma(rnd, 1, 1));
-			person.getAttributes().putAttribute(SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma(rnd, 1, 1));
+			person.getAttributes().putAttribute(VIRAL_LOAD, nextLogNormalFromMeanAndSigma(rnd, 1, sigmaInf));
+			person.getAttributes().putAttribute(SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma(rnd, 1, sigmaSusp));
 		}
 
 		return scenario;
