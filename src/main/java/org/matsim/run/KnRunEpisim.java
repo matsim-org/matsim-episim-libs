@@ -193,14 +193,14 @@ public class KnRunEpisim {
 
 				config.global().setRandomSeed( 4711 );
 
-				episimConfig.setMaxInteractions( 100 );
+				episimConfig.setMaxInteractions( 25. );
 
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
 				tracingConfig.setTracingCapacity_pers_per_day( 0 );
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.fromSnz;
+				RestrictionsType restrictionsType = RestrictionsType.fromConfig;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );

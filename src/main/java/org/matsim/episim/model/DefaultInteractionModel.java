@@ -98,7 +98,7 @@ public final class DefaultInteractionModel extends AbstractInteractionModel {
 
 		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
 //		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
-		int contactWith = Math.min(otherPersonsInContainer.size(), episimConfig.getMaxInteractions());
+		int contactWith = Math.min(otherPersonsInContainer.size(), (int)episimConfig.getMaxInteractions());
 		for (int ii = 0; ii < contactWith; ii++) {
 
 			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
