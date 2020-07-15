@@ -20,26 +20,26 @@ public final class EpisimContactEvent extends Event implements HasPersonId {
 	private static final String DURATION = "duration";
 	private static final String CONTAINER = "container";
 	private static final String INFECTION_PROB = "infectionProb";
+	private static final String GROUP_SIZE = "groupSize";
 
 	private final Id<Person> personId;
 	private final Id<Person> contactPersonId;
 	private final Id<?> containerId;
 	private final String actType;
 	private final double duration;
-	private final double infectionProb;
+	private final int groupSize;
 
 	/**
 	 * Constructor.
 	 */
-	public EpisimContactEvent(double time, Id<Person> personId, Id<Person> contactPersonId, Id<?> containerId, String actType, double duration,
-							  double infectionProb) {
+	public EpisimContactEvent(double time, Id<Person> personId, Id<Person> contactPersonId, Id<?> containerId, String actType, double duration, int groupSize) {
 		super(time);
 		this.personId = personId;
 		this.contactPersonId = contactPersonId;
 		this.containerId = containerId;
 		this.actType = actType;
 		this.duration = duration;
-		this.infectionProb = infectionProb;
+		this.groupSize = groupSize;
 	}
 
 	@Override
@@ -66,13 +66,6 @@ public final class EpisimContactEvent extends Event implements HasPersonId {
 		return duration;
 	}
 
-	/**
-	 * Infection probability if infection is possible, -1 otherwise.
-	 */
-	public double getInfectionProb() {
-		return infectionProb;
-	}
-
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
@@ -81,7 +74,7 @@ public final class EpisimContactEvent extends Event implements HasPersonId {
 		attr.put(CONTACT_PERSON, contactPersonId.toString());
 		attr.put(DURATION, String.valueOf(duration));
 		attr.put(CONTAINER, containerId.toString());
-		attr.put(INFECTION_PROB, String.valueOf(infectionProb));
+		attr.put(GROUP_SIZE, String.valueOf(groupSize));
 
 		return attr;
 	}

@@ -29,7 +29,6 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
@@ -74,19 +73,19 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v10")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v12")
 	private String runVersion;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "70")
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "44")
 	private int stepSize;
 
-	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms4600m -Xmx4600m")
+	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms80G -Xmx80G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.Berlin2020Tracing")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.BerlinSuperSpreading")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.Berlin2020Tracing$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.BerlinSuperSpreading$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -97,8 +96,12 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
+		// Set property for BatchRun resolve to build the correct path
+		System.setProperty("EPISIM_ON_CLUSTER", "true");
+
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 
+		boolean noBindings = true;
 		BatchRun.Metadata meta = prepare.setup.getMetadata();
 		String runName = meta.name;
 		Path dir = output.resolve(runVersion).resolve(meta.name).resolve(meta.region);
@@ -111,7 +114,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
-		BufferedWriter bashScriptWriter = new BufferedWriter(new FileWriter(dir.resolve("start_qsub.sh").toFile()));
 		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
 		BufferedWriter yamlWriter = new BufferedWriter(new FileWriter(dir.resolve("metadata.yaml").toFile()));
 
@@ -142,15 +144,16 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
+			noBindings &= prepare.setup.getBindings(run.id, run.args) == null;
+
 			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
-			run.config.controler().setOutputDirectory(outputPath);
-			run.config.controler().setRunId(runName + run.id);
+			if (noBindings) {
+				run.config.controler().setOutputDirectory(outputPath);
+				run.config.controler().setRunId(runName + run.id);
 
-			prepare.setup.writeAuxiliaryFiles(dir, run.config);
-			ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
-
-			bashScriptWriter.write("qsub -N " + runId + " run.sh");
-			bashScriptWriter.newLine();
+				prepare.setup.writeAuxiliaryFiles(dir, run.config);
+				ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
+			}
 
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
 			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
@@ -181,7 +184,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			);
 		}
 
-		FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
+		if (noBindings)
+			FileUtils.writeLines(dir.resolve("start_slurm.sh").toFile(), lines, "\n");
 
 		// Target system has 4 numa nodes
 		int perSocket = (stepSize / 4);
@@ -191,11 +195,24 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				// Dollar signs must be escaped
 				"export EPISIM_SETUP='" + setup.getName() + "'",
 				"export EPISIM_PARAMS='" + params.getName() + "'",
+				"export EPISIM_INPUT='/scratch/usr/bebchrak/episim/episim-input'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
 				String.format("sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh",
 						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName)
 		), "\n");
+
+		FileUtils.writeLines(dir.resolve("start_qsub.sh").toFile(), Lists.newArrayList(
+				"#!/bin/bash\n", jvmOpts,
+				// Dollar signs must be escaped
+				"export EPISIM_SETUP='" + setup.getName() + "'",
+				"export EPISIM_PARAMS='" + params.getName() + "'",
+				"export EPISIM_INPUT='<PUT INPUT DIR HERE>'",
+				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
+				"",
+				String.format("qsub -V -N %s run.sh", runName)
+		), "\n");
+
 
 		FileUtils.writeLines(dir.resolve("test.sh").toFile(), Lists.newArrayList(
 				"#!/bin/bash\n", jvmOpts,
@@ -204,8 +221,11 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"./run.sh"
 		), "\n");
 
-		bashScriptWriter.close();
 		infoWriter.close();
+
+		if (!noBindings) {
+			log.warn("This run defines custom bindings. Run from config will not be available.");
+		}
 
 		return 0;
 	}

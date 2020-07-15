@@ -20,68 +20,45 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
-# base = '2020-05-28-21:45:02_triang_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
+# base = 'output/2020-06-19_19-48-41__unrestr__theta1.1E-5@3__trStrt46_seed4711_strtDt2020-02-16_trCap0/'
 
-# base = '2020-05-28-22:19:14_triang_theta1.4E-6__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-
-# base = '2020-05-28-22:30:30_triang_theta5.0E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-
-# base = '2020-05-28-22:36:20_triang_theta5.0E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-28-22:43:51_triang_theta5.0E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-28-23:10:32_triang_theta2.0E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-29-08:18:49_triang_theta4.0E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-29-08:18:55_triang_theta3.0E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-29-08:40:58_triang_theta3.5E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-29-10:36:41_triang_theta3.2E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-29-15:17:43_triang_theta3.2E-8__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-
-# base = '2020-05-29-23:05:17_triang_theta8.0E-10__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-29-23:14:00_triang_theta2.0E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-30-00:00:50_triang_theta3.0E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-30-00:35:40_triang_theta4.0E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-
-# base = '2020-05-30-08:18:11_triang_theta4.5E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-30-15:01:38_triang_theta4.5E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-30-21:31:26_triang_theta4.5E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-
-# base = '2020-05-30-00:01:03_triang_theta5.0E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-# base = '2020-05-30-00:01:11_triang_theta6.0E-9__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15_ciCorrA0.55@2020-03-08_triangStrt2020-03-08_alpha1.2_ciCorrB0.15@2020-04-15over14days/'
-
-# base = '2020-05-31-16:31:45_unrestr_theta1.4E-6__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-16:43:43_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-16:50:07_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed1.0__sSusc0.0_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-16:51:16_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-16:51:03_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed3.0__sSusc0.0_exclHome_startDate2020-02-15/'
-
-# base = '2020-05-31-16:51:16_unrestr_theta6.9E-7__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-17:07:42_unrestr_theta2.0E-6__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_exclHome_startDate2020-02-15/'
-
-# base = '2020-05-31-17:52:22_unrestr_theta2.0E-6__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-18:13:30_unrestr_theta1.0E-5__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-18:24:23_unrestr_theta1.0E-6__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_exclHome_startDate2020-02-15/'
-
-# base = '2020-05-31-19:02:27_unrestr_theta8.0E-7__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_exclHome_startDate2020-02-15/'
-# base = '2020-05-31-19:02:46_unrestr_theta7.0E-7__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_exclHome_startDate2020-02-15/'
-
-# base = '2020-06-01-14:34:27_unrestr_theta3.0E-7__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_startDate2020-02-15/'
-# base = '2020-06-01-14:34:34_unrestr_theta1.0E-7__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_startDate2020-02-15/'
-
-# base = '2020-06-01-18:38:53__unrestr__theta2.3E-6@3__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_startDate2020-02-15/'
-
-# base = '2020-06-01_21-02-43__unrestr__theta6.9E-7@10__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed0.0__sSusc0.0_startDate2020-02-15/'
+# base = 'output/2020-06-19_23-29-07__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-19_23-29-15__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.5upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_15-36-11__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.7upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_15-36-04__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.8upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_15-35-46__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.9upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-20_08-19-21__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph2.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
 
 
-# base = '2020-06-01_22-08-20__unrestr__theta2.3E-6@3__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_startDate2020-02-15/'
-# base = '2020-06-01_22-08-32__unrestr__theta6.9E-7@10__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_startDate2020-02-15/'
-# base = '2020-06-01_22-08-44__unrestr__theta1.0E-7@100__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sShed2.0__sSusc0.0_startDate2020-02-15/'
+# base = 'output/2020-06-20_09-48-46__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
+# base = 'output/2020-06-21_13-06-35__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-18_trCap0/'
+# base = 'output/2020-06-21_13-06-44__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-20_trCap0/'
 
-# base = '2020-06-01_23-40-52__unrestr__theta1.0E-6@10__pWSymp0.0__infectedBNC3.0_3.0__contag1.5_1.5__sInfct1.0__sSusc0.0_startDate2020-02-15/'
+#base = 'output/2020-07-13_21-35-41__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 1.
+# base = 'output/2020-07-13_21-45-54__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.5
+# base = 'output/2020-07-13_22-59-01__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.3333
+# base = 'output/2020-07-14_07-52-40__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.3
+# base = 'output/2020-07-14_07-54-42__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.29
+# base = 'output/2020-07-14_07-55-34__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.28 # zu wenig steil
+# base = 'output/2020-07-13_23-04-14__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.25
+# base = 'output/2020-07-13_21-53-16__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.2
+# base = 'output/2020-07-13_21-54-07__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.1
 
-# base = '2020-06-02_20-49-43__unrestr__theta6.9E-7@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
-# base = '2020-06-02_21-30-45__unrestr__theta8.0E-7@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
-# base = '2020-06-02_21-30-53__unrestr__theta9.0E-7@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
-# base = '2020-06-02_21-31-01__unrestr__theta1.0E-6@10__pWSymp0.0__sInfct0.0__sSusc0.0_startDate2020-02-15/'
-base = '2020-06-03_08-08-35__frmSnz__theta1.0E-6@10__pWSymp0.0__sInfct0.0__sSusc0.0_ciCorr0.3_@2020-03-08_alpha1.4_startDate2020-02-15_startDate2020-02-15/'
+# base = 'output/2020-07-14_08-26-47__fromConfig__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.3
+# base = 'output/2020-07-14_23-03-24__fromConfig__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' #0.29
+# base = 'output/2020-07-14_20-26-08__fromConfig__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.28
+
+# base = 'output/2020-07-14_23-18-55__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.3_alph1.0_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+# base = 'output/2020-07-14_23-17-36__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+
+# base = 'output/2020-07-14_23-19-07__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.0_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+
+# base = 'output/2020-07-15_08-05-53__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.2_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+# base = 'output/2020-07-15_08-05-46__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.4_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+# base = 'output/2020-07-15_08-06-02__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.6_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+
+# ===
+
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -102,20 +79,23 @@ fit2.index = pd.date_range(start="2020-03-01", periods=30)
 fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
 fit3.index = pd.date_range(start="2020-03-01", periods=80)
 
-rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
+rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+# rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
+# rr3 = pd.concat([cc['cases']])
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
                   cycler(linestyle=['', '', '', '','-','-','-']) +
-                  cycler(marker=['.','','.','','','','']))
+                  cycler(marker=['.','.','','.','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-# axes.set_ylim(0,250)
+axes.set_ylim(0.9,1000)
 axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
-pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
-pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
+pyplot.axhline(32,color='gray',linestyle='dotted')
 pyplot.show()
 
 # In[]:
@@ -135,7 +115,9 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['', '', '', '','-','']) +
                   cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-rr3.plot(logy=True,grid=True)
+axes = rr3.plot(logy=True,grid=True)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
+axes.set_ylim(0.9,1000)
 pyplot.show()
 
 # In[]:
@@ -155,8 +137,9 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['-', '-', '-', '-','-','']) +
                   cycler(marker=['','','','',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-rr3.plot(logy=True,grid=True)
 pyplot.axvline(23, color='y', linestyle='-', lw=1)
+axes = rr3.plot(logy=True,grid=True)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
 pyplot.show()
 
 # ln[]:

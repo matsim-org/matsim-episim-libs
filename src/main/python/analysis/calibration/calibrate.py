@@ -3,6 +3,7 @@
 
 import argparse
 import subprocess
+from datetime import datetime, date, timedelta
 
 import numpy as np
 import optuna
@@ -10,8 +11,18 @@ import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
 
+if not hasattr(date, 'fromisoformat'):
+    # python 3.6 backwards compatibility
+    def parse(date_string):
+        return datetime.strptime(date_string, "%Y-%m-%d").date()
+
+    fromisoformat = parse
+
+else:
+    fromisoformat = date.fromisoformat
+
 def read_data(f, district, hospital, rki, window=5):
-    """   Reads in three csv files """
+    """Reads in three csv files"""
     # Simulation output
     df = pd.read_csv(f, sep="\t", parse_dates=[2])
     df = df[df.district == district]
@@ -64,7 +75,7 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     return rates.mean(), np.square(rates - target_rate).mean()
 
 
-def calc_multi_error(f, district, start, end, hospital="berlin-hospital.csv", rki="berlin-cases.csv"):
+def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hospital.csv", rki="berlin-cases.csv"):
     """ Compares hospitalization rate """
 
     df, hospital, rki = read_data(f, district, hospital, rki)
@@ -78,10 +89,9 @@ def calc_multi_error(f, district, start, end, hospital="berlin-hospital.csv", rk
     error_sick = mean_squared_log_error(hospital["Stationäre Behandlung"], df.nSeriouslySick)
     error_critical = mean_squared_log_error(hospital["Intensivmedizin"], df.nCritical)
 
-    # Assume Dunkelziffer of factor 8
-    # error_cases = mean_squared_log_error(cmp["Gemeldete Fälle"].diff(1).dropna() * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
-    # error_cases = mean_squared_log_error(rki.drop(rki.index[0]).cases * 8, df.nShowingSymptomsCumulative.diff(1).dropna())
-    error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
+    # Assume fixed Dunkelziffer
+    error_cases = mean_squared_log_error(rki.casesSmoothed * assumed_dz, df.casesSmoothed)
+    # error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
 
     # Dunkelziffer
     dz = float(df.nContagiousCumulative.tail(1) / rki.casesCumulative.tail(1))
@@ -93,20 +103,31 @@ def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
     n = trial.number
-    c = trial.suggest_uniform("calibrationParameter", 1e-06, 4e-06)
+    c = trial.suggest_uniform("calibrationParameter", 0.7e-5, 1.7e-5)
 
     scenario = trial.study.user_attrs["scenario"]
     district = trial.study.user_attrs["district"]
+    jvm = trial.study.user_attrs["jvm_opts"]
 
-    cmd = "java -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --unconstrained --calibParameter %.12f" % (scenario, n, c)
+    results = []
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java -jar %(jvm)s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
+              % (jvm, scenario, n, i, c)
+    
+        print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
+        subprocess.run(cmd, shell=True)
+    
+        res = infection_rate("output-calibration-unconstrained/%d/run%d/infections.txt" % (n, i), district)
+        results.append(res)
 
-    print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
-    subprocess.run(cmd, shell=True)
+    df = pd.DataFrame(results, columns=["rate", "error"])
+    print(df)
 
-    rate, error = infection_rate("output-calibration-unconstrained/%d/infections.txt" % n, district)
-    trial.set_user_attr("mean_infection_rate", rate)
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
 
-    return error
+    trial.set_user_attr("df", df.to_json())
+    return df.error.mean()
 
 
 def objective_ci_correction(trial):
@@ -117,30 +138,42 @@ def objective_ci_correction(trial):
         number=n,
         scenario=trial.study.user_attrs["scenario"],
         district=trial.study.user_attrs["district"],
+        days=trial.study.user_attrs["days"],
+        dz=trial.study.user_attrs["dz"],
+        jvm=trial.study.user_attrs["jvm_opts"],
+        alpha=1,
+        offset=0,
         # Parameter to calibrate
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
         start=trial.study.user_attrs["start"],
-        end=trial.study.user_attrs["end"]
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 14" \
-          " --number %(number)d --correction %(correction).3f" \
-          "--start %(start)s" % params
+    end = fromisoformat(params["start"]) + timedelta(days=params["days"])
 
-    print("Running ci correction with params: %s" % params)
-    print("Running calibration command: %s" % cmd)
-    subprocess.run(cmd, shell=True)
+    results = []
 
-    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n,
-                                                             params["district"], start=params["start"], end=params["end"])
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java %(jvm)s -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
+              f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
+              " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
 
-    trial.set_user_attr("error_cases", e_cases)
-    trial.set_user_attr("error_sick", e_sick)
-    trial.set_user_attr("error_critical", e_critical)
-    trial.set_user_attr("peak", peak)
-    trial.set_user_attr("dz", dz)
+        print("Running ci correction with params: %s" % params)
+        print("Running calibration command: %s" % cmd)
+        subprocess.run(cmd, shell=True)
+        res = calc_multi_error("output-calibration-%s/%d/run%d/infections.txt" % (params["start"], n, i), params["district"],
+                               start=params["start"], end=str(end), assumed_dz=params["dz"])
 
-    return e_cases
+        results.append(res)
+
+    df = pd.DataFrame(results, columns=["error_cases", "error_sick", "error_critical", "peak", "dz"])
+    print(df)
+
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
+
+    trial.set_user_attr("df", df.to_json())
+
+    return df.error_cases.mean()
 
 
 def objective_multi(trial):
@@ -154,23 +187,22 @@ def objective_multi(trial):
         district=district,
         number=n,
         # Parameter to calibrate
-        #c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
-        # offset=trial.suggest_int('offset', -8, 4),
-        # ci_homeq=trial.suggest_loguniform("home_quarantine", 0.1, 1),
-        # ci_homeq=1,
-        alpha=trial.suggest_uniform("alpha", 1, 2),
+        # c=trial.suggest_uniform("calibrationParameter", 0.5e-06, 3e-06),
+        offset=trial.suggest_int('offset', -3, 3),
+        alpha=1,
         correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
+        hospital=trial.suggest_uniform('hospital', 1, 2)
     )
 
-    cmd = "java -Xmx5G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 75" \
-          " --number %(number)d --alpha %(alpha).3f" \
-          " --correction %(correction).3f --start \"2020-03-08\"" % params
+    cmd = "java -Xmx7G -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days 90" \
+          " --number %(number)d --alpha %(alpha).3f --offset %(offset)d --hospitalFactor %(hospital).3f" \
+          " --correction %(correction).3f" % params
 
     print("Running multi objective with params: %s" % params)
     print("Running calibration command: %s" % cmd)
     subprocess.run(cmd, shell=True)
-    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/infections.txt" % n, params["district"],
-                                                             start="2020-03-08", end="2020-04-07")
+    e_cases, e_sick, e_critical, peak, dz = calc_multi_error("output-calibration/%d/run0/infections.txt" % n, params["district"],
+                                                             start="2020-03-01", end="2020-06-01")
 
     trial.set_user_attr("error_cases", e_cases)
     trial.set_user_attr("error_sick", e_sick)
@@ -178,7 +210,7 @@ def objective_multi(trial):
     trial.set_user_attr("peak", peak)
     trial.set_user_attr("dz", dz)
 
-    return e_cases, e_sick, e_critical
+    return e_cases, e_sick + e_critical
 
 
 if __name__ == "__main__":
@@ -189,17 +221,19 @@ if __name__ == "__main__":
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
-    parser.add_argument("--start", help="Start date of comparison", type=str, default="2020-03-10")
-    parser.add_argument("--end", help="End date of comparison", type=str, default="2020-05-20")
-    parser.add_argument("--snapshot", type=str, default=None)
+    parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
+    parser.add_argument("--start", type=str, default="", help="Start date for ci correction")
+    parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
+    parser.add_argument("--dz", type=float, default="2", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
+    parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
 
     args = parser.parse_args()
 
     if args.objective == "multi":
         study = optuna.multi_objective.create_study(
             study_name=args.objective, storage="sqlite:///calibration.db", load_if_exists=True,
-            directions=["minimize"] * 3
+            directions=["minimize"] * 2
         )
 
         district = args.district
@@ -207,7 +241,7 @@ if __name__ == "__main__":
 
     else:
         study = optuna.create_study(
-            study_name=args.objective, storage="sqlite:///calibration.db", load_if_exists=True,
+            study_name=args.objective + ("_" if args.start else "") + args.start, storage="sqlite:///calibration.db", load_if_exists=True,
             direction="minimize"
         )
 
@@ -215,6 +249,12 @@ if __name__ == "__main__":
     for k, v in args.__dict__.items():
         study.set_user_attr(k, v)
 
-    objective = objective_multi if args.objective == "multi" else objective_unconstrained
+    objectives = {
+        "multi": objective_multi,
+        "unconstrained": objective_unconstrained,
+        "ci_correction": objective_ci_correction
+    }
+
+    objective = objectives[args.objective]
 
     study.optimize(objective, n_trials=args.n_trials)

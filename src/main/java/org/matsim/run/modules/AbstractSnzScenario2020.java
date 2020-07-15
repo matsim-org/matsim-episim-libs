@@ -20,31 +20,66 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 			"pt", "work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other", "shop_daily", "shop_other", "visit", "errands", "business"
 	};
 
-	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
+//	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
+//		episimConfig.getOrAddContainerParams("pt")
+//				.setContactIntensity(10.0);
+//		episimConfig.getOrAddContainerParams("work")
+//				.setContactIntensity(3.0);
+//		episimConfig.getOrAddContainerParams("leisure")
+//				.setContactIntensity(5.0);
+//		episimConfig.getOrAddContainerParams("visit")
+//				.setContactIntensity(5.0);
+//		episimConfig.getOrAddContainerParams("educ_kiga")
+//				.setContactIntensity(10.0);
+//		episimConfig.getOrAddContainerParams("educ_primary")
+//				.setContactIntensity(6.0);
+//		episimConfig.getOrAddContainerParams("educ_secondary")
+//				.setContactIntensity(4.0);
+//		episimConfig.getOrAddContainerParams("educ_tertiary")
+//				.setContactIntensity(3.0);
+//		episimConfig.getOrAddContainerParams("educ_higher")
+//				.setContactIntensity(3.0);
+//		episimConfig.getOrAddContainerParams("educ_other")
+//				.setContactIntensity(3.0);
+//		episimConfig.getOrAddContainerParams("home")
+//				.setContactIntensity(3.0 / 4.);
+//		episimConfig.getOrAddContainerParams("quarantine_home")
+//				.setContactIntensity(0.01);
+//	}
+	
+	private static void setContactIntensities(EpisimConfigGroup episimConfig) {
 		episimConfig.getOrAddContainerParams("pt")
-				.setContactIntensity(10.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("work")
-				.setContactIntensity(3.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("leisure")
-				.setContactIntensity(5.0);
-		episimConfig.getOrAddContainerParams("visit")
-				.setContactIntensity(5.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("educ_kiga")
-				.setContactIntensity(10.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("educ_primary")
-				.setContactIntensity(6.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("educ_secondary")
-				.setContactIntensity(4.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("educ_tertiary")
-				.setContactIntensity(3.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("educ_higher")
-				.setContactIntensity(3.0);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("educ_other")
-				.setContactIntensity(3.0);
+				.setContactIntensity(1.);
+		episimConfig.getOrAddContainerParams("shop_daily")
+				.setContactIntensity(1.);
+		episimConfig.getOrAddContainerParams("shop_other")
+				.setContactIntensity(1.);
+		episimConfig.getOrAddContainerParams("visit")
+				.setContactIntensity(1.);
+		episimConfig.getOrAddContainerParams("errands")
+				.setContactIntensity(1.);
+		episimConfig.getOrAddContainerParams("business")
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(3.0 / 4.);
+				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("quarantine_home")
-				.setContactIntensity(0.01);
+				.setContactIntensity(1.);
 	}
 
 	public static void addParams(EpisimConfigGroup episimConfig) {
@@ -95,6 +130,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		addParams(episimConfig);
+		
 		setContactIntensities(episimConfig);
 
 		return config;

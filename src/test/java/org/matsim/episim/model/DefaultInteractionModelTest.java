@@ -6,8 +6,11 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.RestrictionTest;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
@@ -23,25 +26,27 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-public class DefaultInfectionModelTest {
+public class DefaultInteractionModelTest {
 
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
-	private EpisimConfigGroup config;
-	private DefaultInfectionModel model;
-	private DefaultFaceMaskModel maskModel;
+	private Config config;
+	private DefaultInteractionModel model;
+	private InfectionModel infectionModel;
 	private Map<String, Restriction> restrictions;
 
 
 	@Before
 	public void setup() {
-		EpisimReporting reporting = mock(EpisimReporting.class);
+		// No verification, since it results in oom error
+		EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 		SplittableRandom rnd = new SplittableRandom(1);
 
 		config = EpisimTestUtils.createTestConfig();
-		maskModel = new DefaultFaceMaskModel(config, rnd);
-		model = new DefaultInfectionModel(rnd, config, reporting, maskModel, Integer.MAX_VALUE, 0);
-		restrictions = config.createInitialRestrictions();
+		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+		infectionModel = new DefaultInfectionModel(new DefaultFaceMaskModel(rnd), config);
+		model = new DefaultInteractionModel(rnd, config, reporting, infectionModel ) ;
+		restrictions = episimConfig.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
 	}
@@ -260,7 +265,7 @@ public class DefaultInfectionModelTest {
 		assertThat(rate).isCloseTo(1, OFFSET);
 
 		// no contact between home quarantined persons
-		config.getOrAddContainerParams("quarantine_home").setContactIntensity(0);
+		ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class ).getOrAddContainerParams("quarantine_home").setContactIntensity(0);
 
 		rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
 				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
@@ -271,8 +276,22 @@ public class DefaultInfectionModelTest {
 	}
 
 	@Test
+	public void groupSizes() {
+
+		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.ofGroupSize(20)));
+		double rate = sampleInfectionRate(Duration.ofMinutes(30), "c10",
+				() -> EpisimTestUtils.createFacility(10, "c10", 21, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c10", f)
+		);
+
+		assertThat(rate).isCloseTo(0, OFFSET);
+	}
+
+	@Test
 	public void sameWithOrWithoutTracking() {
-		EpisimConfigGroup config = EpisimTestUtils.createTestConfig();
+		Config config = EpisimTestUtils.createTestConfig();
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule( config, TracingConfigGroup.class );
 
 		// Container with persons of different state
 		Supplier<InfectionEventHandler.EpisimFacility> container = () -> {
@@ -288,15 +307,21 @@ public class DefaultInfectionModelTest {
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rNoTracking, maskModel, Integer.MAX_VALUE, 0);
-		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
+
+
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( Integer.MAX_VALUE );
+		tracingConfig.setMinContactDuration_sec( 0 );
+		model = new DefaultInteractionModel(new SplittableRandom(1), config, rNoTracking, infectionModel ) ;
+		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		model = new DefaultInfectionModel(new SplittableRandom(1), config, rTracking, maskModel, 0, 0);
-		model.setRestrictionsForIteration(1, config.createInitialRestrictions());
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( 0 );
+		tracingConfig.setMinContactDuration_sec( 0 );
+		model = new DefaultInteractionModel(new SplittableRandom(1), config, rTracking, infectionModel );
+		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 

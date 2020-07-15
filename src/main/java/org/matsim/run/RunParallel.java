@@ -23,6 +23,7 @@ package org.matsim.run;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
@@ -35,17 +36,18 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import picocli.CommandLine;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Execute one {@link BatchRun} run in parallel. The work can also be distributed across multiple runners,
@@ -67,10 +69,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.BerlinSchoolClosureAndMasks}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.RestrictGroupSizes}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.BerlinSchoolClosureAndMasks$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.RestrictGroupSizes$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
@@ -83,8 +85,17 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--worker-index", defaultValue = "0", description = "Index of this worker process")
 	private int workerIndex;
 
+	@CommandLine.Option(names = "--min-job", defaultValue = "${env:EPISIM_MIN_JOB:-0}", description = "Job to start at (skip first n jobs).")
+	private int minJob;
+
 	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
 	private int maxJobs;
+
+	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "360")
+	private int maxIterations;
+
+	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
+	private boolean noReuse;
 
 
 	@SuppressWarnings("rawtypes")
@@ -99,6 +110,8 @@ public class RunParallel<T> implements Callable<Integer> {
 		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
 		Configurator.setLevel("org.matsim.core.events", Level.WARN);
 
+		if (!Files.exists(output)) Files.createDirectories(output);
+
 		// Same context as if would be run from config
 		URL context = new File("./input").toURI().toURL();
 
@@ -107,37 +120,52 @@ public class RunParallel<T> implements Callable<Integer> {
 		PreparedRun prepare = BatchRun.prepare(setup, params);
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
 
-		log.info("Reading base scenario...");
-
 		// All config need to have the same base config (population, events, etc..)
 		Config baseConfig = prepare.runs.get(0).config;
 		baseConfig.setContext(context);
 		EpisimConfigGroup episimBase = ConfigUtils.addOrGetModule(baseConfig, EpisimConfigGroup.class);
 
-		Scenario scenario = ScenarioUtils.loadScenario(baseConfig);
-		ReplayHandler replay = new ReplayHandler(episimBase, scenario);
+		Scenario scenario = null;
+		ReplayHandler replay = null;
+
+		if (noReuse) {
+			log.info("Reusing scenario and events is disabled.");
+		} else {
+			log.info("Reading base scenario...");
+			scenario = ScenarioUtils.loadScenario(baseConfig);
+			replay = new ReplayHandler(episimBase, scenario);
+		}
 
 		int i = 0;
 		for (PreparedRun.Run run : prepare.runs) {
 			if (i++ % totalWorker != workerIndex)
 				continue;
 
+			if (i < minJob)
+				continue;
+
 			if (maxJobs > 0 && i >= maxJobs) break;
 
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
-			if (!episimBase.getInputEventsFile().equals(episimConfig.getInputEventsFile())) {
+
+			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
+								episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+			if (!noReuse && !sameInput) {
 				log.error("Input files differs for run {}", run.id);
 				return 1;
 			}
 
 			String outputPath = output + "/" + prepare.getOutputName(run);
-			Path out = Paths.get(outputPath);
-			if (!Files.exists(out)) Files.createDirectories(out);
 			run.config.controler().setOutputDirectory(outputPath);
 			run.config.controler().setRunId(prepare.setup.getMetadata().name + run.id);
 			run.config.setContext(context);
 
-			futures.add(CompletableFuture.runAsync(new Task(new ParallelModule(scenario, run.config, replay)), executor));
+			futures.add(CompletableFuture.runAsync(
+					new Task(prepare.setup.getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
+					.exceptionally(t -> {
+						log.error("Task {} failed", outputPath, t);
+						return null;
+					}));
 		}
 
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
@@ -153,11 +181,11 @@ public class RunParallel<T> implements Callable<Integer> {
 
 	private static final class ParallelModule extends AbstractModule {
 
-		private final Scenario scenario;
 		private final Config config;
+		private final Scenario scenario;
 		private final ReplayHandler replay;
 
-		private ParallelModule(Scenario scenario, Config config, ReplayHandler replay) {
+		private ParallelModule(Config config, @Nullable Scenario scenario, ReplayHandler replay) {
 			this.scenario = scenario;
 			this.config = config;
 			this.replay = replay;
@@ -165,30 +193,54 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		@Override
 		protected void configure() {
-			bind(Scenario.class).toInstance(scenario);
 			bind(Config.class).toInstance(config);
-			bind(ReplayHandler.class).toInstance(replay);
+
+			if (scenario != null) {
+				bind(Scenario.class).toInstance(scenario);
+				bind(ReplayHandler.class).toInstance(replay);
+			}
 		}
 	}
 
 	private static final class Task implements Runnable {
 
-		private final ParallelModule module;
+		private static final AtomicInteger i = new AtomicInteger(0);
 
-		private Task(ParallelModule module) {
+		@Nullable
+		private final AbstractModule bindings;
+		private final ParallelModule module;
+		private final int maxIterations;
+
+		private Task(@Nullable AbstractModule bindings, ParallelModule module, int maxIterations) {
+			this.bindings = bindings;
 			this.module = module;
+			this.maxIterations = maxIterations;
 		}
 
 		@Override
 		public void run() {
 
+			Module base;
+			if (bindings == null)
+				base = new EpisimModule();
+			else
+				base = Modules.override(new EpisimModule()).with(bindings);
+
+
 			// overwrite the scenario definition
-			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(module));
+			Injector injector = Guice.createInjector(Modules.override(base).with(this.module));
+
+			if (i.getAndIncrement() == 0) {
+				RunEpisim.printBindings(injector);
+			}
+
+			log.info("Starting task: {}", this.module.config.controler().getOutputDirectory());
+
 			EpisimRunner runner = injector.getInstance(EpisimRunner.class);
 
-			runner.run(200);
+			runner.run(maxIterations);
 
-			log.info("Task finished: {}", module.config.controler().getOutputDirectory());
+			log.info("Task finished: {}", this.module.config.controler().getOutputDirectory());
 		}
 	}
 

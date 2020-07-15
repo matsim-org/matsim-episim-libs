@@ -21,9 +21,9 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
-import org.eclipse.collections.api.map.primitive.MutableObjectDoubleMap;
-import org.eclipse.collections.api.tuple.primitive.ObjectDoublePair;
-import org.eclipse.collections.impl.map.mutable.primitive.ObjectDoubleHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
@@ -35,7 +35,11 @@ import org.matsim.vehicles.Vehicle;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.util.*;
+import java.time.DayOfWeek;
+import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -50,12 +54,33 @@ public final class EpisimPerson implements Attributable {
 	private final EpisimReporting reporting;
 	// This data structure is quite slow: log n costs, which should be constant...
 	private final Attributes attributes;
+
+	/**
+	 * Whole trajectory over all days of the week.
+	 */
 	private final List<Activity> trajectory = new ArrayList<>();
+
+	/**
+	 * The position in the trajectory at the start for each day of the week.
+	 */
+	private final int[] startOfDay = new int[7];
+
+	/**
+	 * The position in the trajectory for the end of the day.
+	 */
+	private final int[] endOfDay = new int[7];
+
+	/**
+	 * The first visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 */
+	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
+
+	// Fields above are initialized from the sim and not persisted
 
 	/**
 	 * Traced contacts with other persons.
 	 */
-	private final Map<EpisimPerson, Double> traceableContactPersons = new LinkedHashMap<>();
+	private final Object2DoubleMap<EpisimPerson> traceableContactPersons = new Object2DoubleLinkedOpenHashMap<>(4);
 
 	/**
 	 * Stores first time of status changes to specific type.
@@ -65,7 +90,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Total spent time during activities.
 	 */
-	private final MutableObjectDoubleMap<String> spentTime = new ObjectDoubleHashMap<>();
+	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
 
 	/**
 	 * The {@link EpisimContainer} the person is currently located in.
@@ -85,12 +110,6 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private int quarantineDate = -1;
 	private int currentPositionInTrajectory;
-
-	/**
-	 * The last visited {@link org.matsim.facilities.ActivityFacility}.
-	 */
-	private String lastFacilityId;
-	private String firstFacilityId;
 
 	/**
 	 * Whether this person can be traced.
@@ -113,23 +132,11 @@ public final class EpisimPerson implements Attributable {
 	 *
 	 * @param persons map of all persons in the simulation
 	 */
-	void read(ObjectInput in, Map<String, Activity> params, Map<Id<Person>, EpisimPerson> persons,
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons,
 			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
 			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
 
 		int n = in.readInt();
-		trajectory.clear();
-		for (int i = 0; i < n; i++) {
-			String name = readChars(in).intern();
-			Activity e = params.get(name);
-			if (e == null)
-				throw new IllegalStateException("Could not reconstruct param: " + name);
-
-			trajectory.add(e);
-		}
-
-
-		n = in.readInt();
 		traceableContactPersons.clear();
 		for (int i = 0; i < n; i++) {
 			Id<Person> id = Id.create(readChars(in), Person.class);
@@ -168,16 +175,6 @@ public final class EpisimPerson implements Attributable {
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
-		if (in.readBoolean()) {
-			firstFacilityId = readChars(in);
-		} else
-			firstFacilityId = null;
-
-		if (in.readBoolean()) {
-			lastFacilityId = readChars(in);
-		} else
-			lastFacilityId = null;
-
 		traceable = in.readBoolean();
 	}
 
@@ -185,11 +182,6 @@ public final class EpisimPerson implements Attributable {
 	 * Writes person state to stream.
 	 */
 	void write(ObjectOutput out) throws IOException {
-
-		out.writeInt(trajectory.size());
-		for (Activity act : trajectory) {
-			writeChars(out, act.actType);
-		}
 
 		out.writeInt(traceableContactPersons.size());
 		for (Map.Entry<EpisimPerson, Double> kv : traceableContactPersons.entrySet()) {
@@ -210,25 +202,16 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(spentTime.size());
-		for (ObjectDoublePair<String> kv : spentTime.keyValuesView()) {
-			writeChars(out, kv.getOne());
-			out.writeDouble(kv.getTwo());
+
+		for (Object2DoubleMap.Entry<String> kv : spentTime.object2DoubleEntrySet()) {
+			writeChars(out, kv.getKey());
+			out.writeDouble(kv.getDoubleValue());
 		}
 
 		out.writeInt(status.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(currentPositionInTrajectory);
-
-		out.writeBoolean(firstFacilityId != null);
-		// null strings can not be written
-		if (firstFacilityId != null)
-			writeChars(out, firstFacilityId);
-
-		out.writeBoolean(lastFacilityId != null);
-		if (lastFacilityId != null)
-			writeChars(out, lastFacilityId);
-
 		out.writeBoolean(traceable);
 	}
 
@@ -305,14 +288,6 @@ public final class EpisimPerson implements Attributable {
 		return this.quarantineDate;
 	}
 
-	String getLastFacilityId() {
-		return this.lastFacilityId;
-	}
-
-	void setLastFacilityId(String lastFacilityId) {
-		this.lastFacilityId = lastFacilityId;
-	}
-
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
@@ -326,8 +301,8 @@ public final class EpisimPerson implements Attributable {
 	 * Get all traced contacts that happened after certain time.
 	 */
 	public List<EpisimPerson> getTraceableContactPersons(double after) {
-		return traceableContactPersons.entrySet()
-				.stream().filter(p -> p.getValue() >= after)
+		return traceableContactPersons.object2DoubleEntrySet()
+				.stream().filter(p -> p.getDoubleValue() >= after)
 				.map(Map.Entry::getKey)
 				.collect(Collectors.toList());
 
@@ -346,14 +321,6 @@ public final class EpisimPerson implements Attributable {
 		if (oldSize == 0) return;
 
 		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
-
-		/*
-		int newSize = traceableContactPersons.size();
-		// Compact traced persons to retain memory
-		// don't compact every time since it is a bit expensive
-		if (oldSize != newSize && newSize == 0 || oldSize < newSize - 10)
-			traceableContactPersons.compact();
-		*/
 	}
 
 	/**
@@ -379,8 +346,37 @@ public final class EpisimPerson implements Attributable {
 		return this.currentPositionInTrajectory;
 	}
 
-	void setCurrentPositionInTrajectory(int currentPositionInTrajectory) {
-		this.currentPositionInTrajectory = currentPositionInTrajectory;
+	void incrementCurrentPositionInTrajectory() {
+		this.currentPositionInTrajectory++;
+	}
+
+	void resetCurrentPositionInTrajectory(DayOfWeek day) {
+		currentPositionInTrajectory = startOfDay[day.getValue() - 1];
+	}
+
+	void setStartOfDay(DayOfWeek day, int position) {
+		startOfDay[day.getValue() - 1] = position;
+	}
+
+	int getStartOfDay(DayOfWeek day) {
+		return startOfDay[day.getValue() - 1];
+	}
+
+	void setEndOfDay(DayOfWeek day, int position) {
+		endOfDay[day.getValue() - 1] = position;
+	}
+
+	int getEndOfDay(DayOfWeek day) {
+		return endOfDay[day.getValue() - 1];
+	}
+
+	/**
+	 * Defines that day {@code target} has the same trajectory as {@code source}.
+	 */
+	void duplicateDay(DayOfWeek target, DayOfWeek source) {
+		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];
+		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];
+		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 	}
 
 	public EpisimContainer<?> getCurrentContainer() {
@@ -419,32 +415,42 @@ public final class EpisimPerson implements Attributable {
 		this.currentContainer = null;
 	}
 
-	String getFirstFacilityId() {
-		return firstFacilityId;
+	Id<ActivityFacility> getFirstFacilityId(DayOfWeek day) {
+		return firstFacilityId[day.getValue() - 1];
 	}
 
-	void setFirstFacilityId(String firstFacilityId) {
-		this.firstFacilityId = firstFacilityId;
+	void setFirstFacilityId(Id<ActivityFacility> firstFacilityId, DayOfWeek day) {
+		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;
 	}
 
 	/**
 	 * Add amount of time to spent time for an activity.
 	 */
 	public void addSpentTime(String actType, double timeSpent) {
-		spentTime.addToValue(actType, timeSpent);
+		spentTime.mergeDouble(actType, timeSpent, Double::sum);
 	}
 
 	/**
 	 * Spent time of this person by activity.
 	 */
-	public MutableObjectDoubleMap<String> getSpentTime() {
+	public Object2DoubleMap<String> getSpentTime() {
 		return spentTime;
+	}
+
+	@Override
+	public String toString() {
+		return "EpisimPerson{" +
+				"personId=" + personId +
+				'}';
 	}
 
 	/**
 	 * Disease status of a person.
 	 */
-	public enum DiseaseStatus {susceptible, infectedButNotContagious, contagious, showingSymptoms, seriouslySick, critical, recovered}
+	public enum DiseaseStatus {
+		susceptible, infectedButNotContagious, contagious, showingSymptoms,
+		seriouslySick, critical, seriouslySickAfterCritical, recovered
+	}
 
 	/**
 	 * Quarantine status of a person.
@@ -465,6 +471,13 @@ public final class EpisimPerson implements Attributable {
 		public Activity(String actType, EpisimConfigGroup.InfectionParams params) {
 			this.actType = actType;
 			this.params = params;
+		}
+
+		@Override
+		public String toString() {
+			return "Activity{" +
+					"actType='" + actType + '\'' +
+					'}';
 		}
 	}
 }

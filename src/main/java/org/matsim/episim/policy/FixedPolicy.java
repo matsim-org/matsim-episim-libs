@@ -28,6 +28,7 @@ import org.matsim.episim.EpisimReporting;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -119,6 +120,35 @@ public class FixedPolicy extends ShutdownPolicy {
 				Object value = config.getValue(e.getKey()).unwrapped();
 				params.put(e.getKey(), value);
 			}
+		}
+
+		/**
+		 * Removes all specified restrictions after or equal to {@code date}. Restriction before are sill valid and will be continued if not
+		 * overwritten explicitly!.
+		 */
+		public ConfigBuilder clearAfter(String date) {
+			params.keySet().forEach(k -> this.clearAfter(date, k));
+			return this;
+		}
+
+		/**
+		 * See {@link #clearAfter(String)}, but for one activity.
+		 */
+		public ConfigBuilder clearAfter(String date, String activity) {
+
+			LocalDate ref = LocalDate.parse(date);
+
+			Map<String, Object> map = (Map<String, Object>) params.get(activity);
+			Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
+			while (it.hasNext()) {
+				Map.Entry<String, Object> e = it.next();
+				LocalDate other = LocalDate.parse(e.getKey());
+				if (other.isEqual(ref) || other.isAfter(ref))
+					it.remove();
+
+			}
+
+			return this;
 		}
 
 		/**
@@ -234,7 +264,7 @@ public class FixedPolicy extends ShutdownPolicy {
 				if (Double.isNaN(r) && Double.isNaN(e))
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
-				restrict(today.toString(), new Restriction(r, e, null, restriction), activities);
+				restrict(today.toString(), new Restriction(r, e, null, null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}

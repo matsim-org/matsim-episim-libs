@@ -25,7 +25,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.modules.SnzScenario;
+import org.matsim.run.modules.AbstractSnzScenario;
 
 /**
  * Older scenario with now outdated information.
@@ -48,8 +48,8 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		episimConfig.setCalibrationParameter(0.000002);
 		episimConfig.setInitialInfections(5);
 
-		SnzScenario.addParams(episimConfig);
-		SnzScenario.setContactIntensities(episimConfig);
+		AbstractSnzScenario.addParams(episimConfig);
+		AbstractSnzScenario.setContactIntensities(episimConfig);
 
 		return config;
 	}

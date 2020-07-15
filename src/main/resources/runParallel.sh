@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --time=02:00:00
+#SBATCH --time=12:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-socket=20
 #SBATCH -A bzz0020
@@ -18,7 +18,7 @@ echo "***"
 # main
 main="org.matsim.run.RunParallel"
 
-module load java/11.0.6
+module load java/11.0.7
 java -version
 #
 # Start & pin multiple processes on different physical cores of a node

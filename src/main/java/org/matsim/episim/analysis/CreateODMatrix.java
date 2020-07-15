@@ -1,14 +1,13 @@
 package org.matsim.episim.analysis;
 
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
-import org.eclipse.collections.api.map.primitive.MutableObjectIntMap;
-import org.eclipse.collections.api.tuple.primitive.ObjectIntPair;
-import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
-import org.eclipse.collections.impl.map.mutable.primitive.ObjectIntHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -32,6 +31,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * Util to create an origin destination matrix.
@@ -74,16 +74,16 @@ class CreateODMatrix implements Callable<Integer> {
 		log.info("Read {} facilities", scenario.getActivityFacilities().getFacilities().size());
 
 		// map region name to its index
-		MutableObjectIntMap<String> regions = new ObjectIntHashMap<>();
+		Object2IntMap<String> regions = new Object2IntOpenHashMap<>();
 
 		// Map facility id to region index
-		MutableIntIntMap facilities = new IntIntHashMap();
+		Int2IntMap facilities = new Int2IntOpenHashMap();
 
 		int warn = 0;
 		for (Map.Entry<Id<ActivityFacility>, ? extends ActivityFacility> e : scenario.getActivityFacilities().getFacilities().entrySet()) {
 			try {
 				String target = index.query(e.getValue().getCoord().getX(), e.getValue().getCoord().getY()).intern();
-				int region = regions.getIfAbsentPut(target, regions::size);
+				int region = regions.computeIntIfAbsent(target, k -> regions.size());
 
 				log.trace("Matched {} to {}", e.getKey(), target);
 
@@ -99,7 +99,7 @@ class CreateODMatrix implements Callable<Integer> {
 
 		EventsManager manager = EventsUtils.createEventsManager();
 
-		MutableIntIntMap lastRegion = new IntIntHashMap();
+		Int2IntMap lastRegion = new Int2IntOpenHashMap();
 
 		RealMatrix m = MatrixUtils.createRealMatrix(regions.size(), regions.size());
 
@@ -111,11 +111,11 @@ class CreateODMatrix implements Callable<Integer> {
 
 				int person = ((HasPersonId) event).getPersonId().index();
 				int facility = ((HasFacilityId) event).getFacilityId().index();
-				int region = facilities.getIfAbsent(facility, -1);
+				int region = facilities.getOrDefault(facility, -1);
 
 				if (region == -1) return;
 
-				int last = lastRegion.getIfAbsent(person, -1);
+				int last = lastRegion.getOrDefault(person, -1);
 
 				if (last != region) {
 					lastRegion.put(person, region);
@@ -134,7 +134,10 @@ class CreateODMatrix implements Callable<Integer> {
 		log.info("Finished reading events");
 
 		Files.write(Path.of(output.toString() + ".index"),
-				regions.keyValuesView().toSortedList(Comparator.comparingInt(ObjectIntPair::getTwo)).collect(ObjectIntPair::getOne));
+				regions.object2IntEntrySet().stream()
+						.sorted(Comparator.comparingInt(Object2IntMap.Entry::getIntValue))
+						.map(Map.Entry::getKey)
+						.collect(Collectors.toList()));
 
 		BufferedWriter out = Files.newBufferedWriter(output);
 		for (int i = 0; i < regions.size(); i++) {

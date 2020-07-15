@@ -28,6 +28,12 @@ public final class Restriction {
 	private Double ciCorrection;
 
 	/**
+	 * Maximum allowed group size of activities.
+	 */
+	@Nullable
+	private Integer maxGroupSize;
+
+	/**
 	 * Maps mask type to percentage of persons wearing it.
 	 */
 	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
@@ -35,7 +41,8 @@ public final class Restriction {
 	/**
 	 * Constructor.
 	 */
-	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Map<FaceMask, Double> maskUsage) {
+	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
+						@Nullable Map<FaceMask, Double> maskUsage) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -46,6 +53,7 @@ public final class Restriction {
 
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
+		this.maxGroupSize = maxGroupSize;
 
 		// Compute cumulative probabilities
 		if (maskUsage != null && !maskUsage.isEmpty()) {
@@ -62,6 +70,9 @@ public final class Restriction {
 			for (FaceMask m : FaceMask.values()) {
 				if (maskUsage.containsKey(m)) {
 					sum += maskUsage.get(m);
+					if (Double.isNaN(sum))
+						throw new IllegalArgumentException("Mask usage contains NaN value!");
+
 					this.maskUsage.put(m, sum);
 				}
 			}
@@ -73,9 +84,11 @@ public final class Restriction {
 	 *
 	 * @param maskUsage will only be used of other is null
 	 */
-	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
+	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
+				@Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
+		this.maxGroupSize = maxGroupSize;
 		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
 	}
 
@@ -83,28 +96,28 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, null);
+		return new Restriction(1d, 1d, Integer.MAX_VALUE, Map.of());
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null);
+		return new Restriction(remainingFraction, null, null, null);
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-		return new Restriction(remainingFraction, ciCorrection, null);
+		return new Restriction(remainingFraction, ciCorrection, null, null);
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
-		return new Restriction(remainingFraction, ciCorrection, maskUsage);
+		return new Restriction(remainingFraction, ciCorrection, null, maskUsage);
 	}
 
 	/**
@@ -112,7 +125,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-		return new Restriction(remainingFraction, null, Map.of(mask, maskCompliance));
+		return new Restriction(remainingFraction, null, null, Map.of(mask, maskCompliance));
 	}
 
 	/**
@@ -121,7 +134,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, Map.of(mask, complianceRate));
+		return new Restriction(null, null, null, Map.of(mask, complianceRate));
 	}
 
 	/**
@@ -129,11 +142,12 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
-		return new Restriction(null, null, maskUsage);
+		return new Restriction(null, null, null, maskUsage);
 	}
 
 	/**
 	 * Renamed to ci correction.
+	 *
 	 * @deprecated Use {@link #ofCiCorrection(double)}.
 	 */
 	@Deprecated
@@ -145,7 +159,14 @@ public final class Restriction {
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null);
+		return new Restriction(null, ciCorrection, null, null);
+	}
+
+	/**
+	 * Creates a restriction with limited maximum group size of activities.
+	 */
+	public static Restriction ofGroupSize(int maxGroupSize) {
+		return new Restriction(null, null, maxGroupSize, null);
 	}
 
 	/**
@@ -163,6 +184,7 @@ public final class Restriction {
 		return new Restriction(
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
 				config.getIsNull("ciCorrection") ? null : config.getDouble("ciCorrection"),
+				config.getIsNull("maxGroupSize") ? null : config.getInt("maxGroupSize"),
 				enumMap, null
 		);
 	}
@@ -171,7 +193,7 @@ public final class Restriction {
 	 * Creates a copy of a restriction.
 	 */
 	static Restriction clone(Restriction restriction) {
-		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, null, restriction);
+		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.maxGroupSize,null, restriction);
 	}
 
 	/**
@@ -201,7 +223,7 @@ public final class Restriction {
 	 */
 	@Override
 	public String toString() {
-		return String.format(Locale.ENGLISH,"%.2f_%.2f_%s", remainingFraction, ciCorrection, maskUsage);
+		return String.format(Locale.ENGLISH, "%.2f_%.2f_%s", remainingFraction, ciCorrection, maskUsage);
 	}
 
 	/**
@@ -215,6 +237,9 @@ public final class Restriction {
 		if (r.getCiCorrection() != null)
 			ciCorrection = r.getCiCorrection();
 
+		if (r.getMaxGroupSize() != null)
+			maxGroupSize = r.getMaxGroupSize();
+
 		if (!r.maskUsage.isEmpty()) {
 			maskUsage.clear();
 			maskUsage.putAll(r.maskUsage);
@@ -226,13 +251,14 @@ public final class Restriction {
 	 *
 	 * @see #asMap()
 	 */
-	void merge(Map<String, Object> r) {
+	void merge(Map<String, Object> restriction) {
 
-		Double otherRf = (Double) r.get("fraction");
-		Double otherE = (Double) r.get("ciCorrection");
+		Double otherRf = (Double) restriction.get("fraction");
+		Double otherE = (Double) restriction.get("ciCorrection");
+		Integer otherGroup = (Integer) restriction.get("maxGroupSize");
 
 		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
-		((Map<String, Double>) r.get("masks"))
+		((Map<String, Double>) restriction.get("masks"))
 				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
 
 		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf))
@@ -245,9 +271,15 @@ public final class Restriction {
 		else if (ciCorrection == null)
 			ciCorrection = otherE;
 
-		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks))
-			log.warn("Duplicated mask usage " + maskUsage + " and " + otherMasks);
-		else if (maskUsage.isEmpty())
+		if (maxGroupSize != null && otherGroup != null && !maxGroupSize.equals(otherGroup))
+			log.warn("Duplicated max group size " + maxGroupSize + " and " + otherGroup);
+		else if (maxGroupSize == null)
+			maxGroupSize = otherGroup;
+
+		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks)) {
+			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value.");
+			log.warn("(full new restriction=" + restriction + ")");
+		} else if (maskUsage.isEmpty())
 			maskUsage.putAll(otherMasks);
 
 	}
@@ -262,6 +294,11 @@ public final class Restriction {
 
 	public Double getCiCorrection() {
 		return ciCorrection;
+	}
+
+	@Nullable
+	public Integer getMaxGroupSize() {
+		return maxGroupSize;
 	}
 
 	Map<FaceMask, Double> getMaskUsage() {
@@ -284,6 +321,7 @@ public final class Restriction {
 		Map<String, Object> map = new HashMap<>();
 		map.put("fraction", remainingFraction);
 		map.put("ciCorrection", ciCorrection);
+		map.put("maxGroupSize", maxGroupSize);
 
 		// Must be converted to map with strings
 		Map<String, Double> nameMap = new LinkedHashMap<>();

@@ -10,6 +10,7 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.model.Transition.to;
@@ -46,7 +47,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
 			.from(EpisimPerson.DiseaseStatus.critical,
-					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)))
+					to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
+
+			.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
+				to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+
 			.build();
 
 
@@ -86,17 +91,23 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	@Override
 	public void setIteration(int day) {
 
-		// Hardcoded capacity before 06-01
-		// LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
-		//if (date.isBefore(LocalDate.parse("2020-06-01"))) {
-		//	tracingCapacity = (int) (30 * episimConfig.getSampleSize());
-		//} else {
-		//}
+		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
-		if (tracingConfig.getTracingCapacity() == Integer.MAX_VALUE)
-			tracingCapacity = Integer.MAX_VALUE;
-		else
-			tracingCapacity = (int) (tracingConfig.getTracingCapacity() * episimConfig.getSampleSize());
+		// Default capacity if none is set
+		tracingCapacity = Integer.MAX_VALUE;
+
+		for (Map.Entry<LocalDate, Integer> kv : tracingConfig.getTracingCapacity().entrySet()) {
+			LocalDate key = kv.getKey();
+			if (key.isBefore(date) || key.isEqual(date)) {
+
+				Integer value = kv.getValue();
+				if (value == Integer.MAX_VALUE)
+					tracingCapacity = Integer.MAX_VALUE;
+				else
+					tracingCapacity = (int) (value * episimConfig.getSampleSize());
+
+			}
+		}
 	}
 
 	@Override
@@ -130,7 +141,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		if (to == EpisimPerson.DiseaseStatus.showingSymptoms) {
 
-			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
 			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
 			if (tracingConfig.getTracingDelay() == 0) {
 				performTracing(person, now, day);
@@ -165,7 +176,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 					return EpisimPerson.DiseaseStatus.recovered;
 
 			case critical:
-				return EpisimPerson.DiseaseStatus.seriouslySick;
+				return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
+
+			case seriouslySickAfterCritical:
+				return EpisimPerson.DiseaseStatus.recovered;
 
 
 			default:
@@ -200,9 +214,13 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private void performTracing(EpisimPerson person, double now, int day) {
 
-		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) return;
+		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
+			return;
+		}
 
-		if (tracingCapacity <= 0) return;
+		if (tracingCapacity <= 0) {
+			return;
+		}
 
 		String homeId = null;
 
@@ -221,13 +239,17 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability())
-
+					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability()) {
 				quarantinePerson(pw, day);
+				log.debug("sending person={} into quarantine because of contact to person={}", pw.getPersonId(), person.getPersonId());
+			}
 
 		}
 
 		tracingCapacity--;
+		if (tracingCapacity == 0) {
+			log.debug("tracing capacity exhausted for day={}", now);
+		}
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {

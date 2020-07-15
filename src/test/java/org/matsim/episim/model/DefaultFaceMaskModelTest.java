@@ -3,6 +3,7 @@ package org.matsim.episim.model;
 import org.assertj.core.data.Percentage;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
@@ -20,15 +21,15 @@ public class DefaultFaceMaskModelTest {
 
 	@Before
 	public void setUp() throws Exception {
-		config = EpisimTestUtils.createTestConfig();
-		model = new DefaultFaceMaskModel(config, new SplittableRandom(1));
+		config = ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class );
+		model = new DefaultFaceMaskModel(new SplittableRandom(1));
 	}
 
 	private double sample(Restriction r, FaceMask type) {
 		double worn = 0;
 		for (int i = 0; i < 30_000; i++) {
 			EpisimPerson p = EpisimTestUtils.createPerson("work", null);
-			FaceMask mask = model.getWornMask(p, config.selectInfectionParams("work"), 0, r);
+			FaceMask mask = model.getWornMask(p, config.selectInfectionParams("work"),  r);
 			if (mask == type) worn++;
 		}
 

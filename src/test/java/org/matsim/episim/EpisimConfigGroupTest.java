@@ -1,7 +1,12 @@
 package org.matsim.episim;
 
 import org.junit.Test;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 
+import java.io.File;
+import java.io.IOException;
+import java.time.DayOfWeek;
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +45,36 @@ public class EpisimConfigGroupTest {
 
 		assertThatExceptionOfType(NoSuchElementException.class)
 				.isThrownBy(() -> config.selectInfectionParams("edu"));
+
+	}
+
+	@Test
+	public void input() throws IOException {
+
+		Config root = ConfigUtils.createConfig();
+
+		EpisimConfigGroup config = ConfigUtils.addOrGetModule(root, EpisimConfigGroup.class);
+		config.setInputEventsFile("test_input.xml.gz");
+
+		assertThat(config.getInputEventsFile()).isEqualTo("test_input.xml.gz");
+		assertThat(config.getInputEventsFiles())
+				.hasSize(1)
+				.allMatch(ev -> ev.getPath().equals("test_input.xml.gz"))
+				.allMatch(ev -> ev.getDays().size() == 7);
+
+		config.addInputEventsFile("second.xml.gz")
+				.addDays(DayOfWeek.MONDAY);
+
+		assertThat(config.getInputEventsFiles())
+				.anyMatch(ev -> ev.getDays().size() == 1)
+				.hasSize(2);
+
+
+		File tmp = File.createTempFile("config", "xml");
+		tmp.deleteOnExit();
+
+		ConfigUtils.writeConfig(root, tmp.toString());
+		Config root2 = ConfigUtils.loadConfig(tmp.toString());
 
 	}
 

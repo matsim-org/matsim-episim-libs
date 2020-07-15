@@ -20,9 +20,10 @@
  */
 package org.matsim.episim.model;
 
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
@@ -33,9 +34,9 @@ import java.util.SplittableRandom;
 
 
 /**
- * Base implementation for infection dynamics.
+ * Base implementation for interactions of persons during activities.
  */
-public abstract class AbstractInfectionModel implements InfectionModel {
+public abstract class AbstractInteractionModel implements InteractionModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";
 
 	protected final Scenario scenario = null;
@@ -51,17 +52,28 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 * Home quarantine infection param.
 	 */
 	protected final EpisimPerson.Activity qhParams;
-	protected int iteration;
+	/**
+	 * See {@link TracingConfigGroup#getMinDuration()}
+	 */
+	protected final double trackingMinDuration;
 
+	/**
+	 * Infection probability calculation.
+	 */
+	protected final InfectionModel infectionModel;
+
+	protected int iteration;
 	private Map<String, Restriction> restrictions;
 
 
-	AbstractInfectionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, EpisimReporting reporting) {
+	AbstractInteractionModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
 		this.rnd = rnd;
-		this.episimConfig = episimConfig;
+		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.infectionModel = infectionModel;
 		this.reporting = reporting;
 		this.trParams = new EpisimPerson.Activity("tr", episimConfig.selectInfectionParams("tr"));
-		this.qhParams = new EpisimPerson.Activity( QUARANTINE_HOME, episimConfig.selectInfectionParams( QUARANTINE_HOME ));
+		this.qhParams = new EpisimPerson.Activity(QUARANTINE_HOME, episimConfig.selectInfectionParams(QUARANTINE_HOME));
+		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();
 	}
 
 	private static boolean hasDiseaseStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
@@ -75,6 +87,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			case recovered:
 			case seriouslySick: // assume is in hospital
 			case critical:
+			case seriouslySickAfterCritical:
 				return false;
 
 			default:
@@ -94,11 +107,73 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 		return (hasDiseaseStatusRelevantForInfectionDynamics(person1) && hasDiseaseStatusRelevantForInfectionDynamics(person2));
 	}
 
-	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
+	/**
+	 * Attention: In order to re-use the underlying object, this function returns a buffer.
+	 * Be aware that the old result will be overwritten, when the function is called multiple times.
+	 */
+	protected static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity,
+													String otherPersonsActivity) {
+		buffer.setLength(0);
+		if (container instanceof InfectionEventHandler.EpisimFacility) {
+			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
+			return buffer;
+		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+			buffer.append("pt");
+			return buffer;
+		} else {
+			throw new RuntimeException("Infection situation is unknown");
+		}
+	}
+
+	/**
+	 * Get the relevant infection parameter based on container and activity and person.
+	 */
+	protected EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
+		if (container instanceof InfectionEventHandler.EpisimVehicle) {
+			return episimConfig.selectInfectionParams(container.getContainerId().toString());
+		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
+			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
+
+			// Select different infection params for home quarantined persons
+			if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && params.getContainerName().equals("home")) {
+				return qhParams.params;
+			}
+
+			return params;
+		} else
+			throw new IllegalStateException("Don't know how to deal with container " + container);
+
+	}
+
+	protected void trackContactPerson(EpisimPerson personLeavingContainer, EpisimPerson otherPerson, double now, double jointTimeInContainer,
+									  StringBuilder infectionType) {
+
+		// Don't track certain activities
+		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
+			return;
+		}
+
+		// don't track below threshold
+		if (jointTimeInContainer < trackingMinDuration) {
+			return;
+		}
+
+		personLeavingContainer.addTraceableContactPerson(otherPerson, now);
+		otherPerson.addTraceableContactPerson(personLeavingContainer, now);
+	}
+
+	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		EpisimPerson.Activity act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 
 		// Check if person is home quarantined
 		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && !act.actType.startsWith("home"))
+			return false;
+
+
+		// enforce max group sizes
+		Restriction r = restrictions.get(act.params.getContainerName());
+		if (r.getMaxGroupSize() != null && r.getMaxGroupSize() > -1 && container.getMaxGroupSize() > 0 &&
+				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
 		return actIsRelevant(act, restrictions, rnd);
@@ -117,12 +192,14 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 
 	}
 
-	private boolean tripRelevantForInfectionDynamics(EpisimPerson person, EpisimConfigGroup episimConfig,
-													 Map<String, Restriction> restrictions, SplittableRandom rnd) {
+	private boolean tripRelevantForInfectionDynamics(EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		EpisimPerson.Activity lastAct = null;
 		if (person.getCurrentPositionInTrajectory() != 0) {
 			lastAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory() - 1);
 		}
+
+		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+			return false;
 
 		EpisimPerson.Activity nextAct = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 
@@ -138,7 +215,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	 *
 	 * @noinspection BooleanMethodIsAlwaysInverted
 	 */
-	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, EpisimConfigGroup episimConfig,
+	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container,
 																		 Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
 		// Infected but not contagious persons are considered additionally
@@ -150,10 +227,10 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			return false;
 		}
 
-		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, restrictions, rnd)) {
+		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {
 			return true;
 		}
-		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, episimConfig, restrictions, rnd);
+		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
 	}
 
 	/**
@@ -163,13 +240,14 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 	public void setRestrictionsForIteration(int iteration, Map<String, Restriction> restrictions) {
 		this.iteration = iteration;
 		this.restrictions = restrictions;
+		this.infectionModel.setIteration(iteration);
 	}
 
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	protected void infectPerson( EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
-				     EpisimContainer<?> container ) {
+	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
+								EpisimContainer<?> container) {
 
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
@@ -194,7 +272,7 @@ public abstract class AbstractInfectionModel implements InfectionModel {
 			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
 		}
 
-		reporting.reportInfection(personWrapper, infector, now, infectionType.toString(), container );
+		reporting.reportInfection(personWrapper, infector, now, infectionType.toString(), container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
 		// TODO: Currently not in use, is it still needed?

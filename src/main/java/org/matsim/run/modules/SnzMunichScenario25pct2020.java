@@ -138,12 +138,12 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 		double tracingProbability = 0.75;
 		tracingConfig.setTracingProbability(tracingProbability);
-		tracingConfig.setTracingMemory_days(14);
+		tracingConfig.setTracingPeriod_days(14);
 		tracingConfig.setMinContactDuration_sec(15 * 60.);
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setEquipmentRate(1.);
 		tracingConfig.setTracingDelay_days(2);
-		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE); //TODO
+		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE ); //TODO
 
 		double alpha = 1.4;
 		double ciCorrection = 0.3;

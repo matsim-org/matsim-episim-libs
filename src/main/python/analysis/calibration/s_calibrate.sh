@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --time=12:00:00
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=60
+#SBATCH --ntasks-per-node=40
 #SBATCH -A bzz0020
 
 date
@@ -9,14 +9,14 @@ hostname
 
 cd $SLURM_SUBMIT_DIR
 
-command="python calibrate.py --objective multi"
+command="python calibrate.py 5 --runs 3 --objective ci_correction --start 2020-03-07"
 
 echo ""
 echo "command is $command"
 
 echo ""
 echo "using alternative java"
-module load java/11.0.6
+module load java/11.0.7
 module load anaconda3/2019.10
 java -version
 

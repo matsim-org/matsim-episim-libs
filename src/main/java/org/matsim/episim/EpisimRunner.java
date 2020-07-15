@@ -32,13 +32,12 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.episim.model.ProgressionModel;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.time.temporal.ChronoUnit;
+
 import org.matsim.core.gbl.Gbl;
 
 /**
@@ -81,13 +80,14 @@ public final class EpisimRunner {
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
 
-		manager.addHandler(handler);
-
 		// reporting will write events if necessary
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
 			manager.addHandler(reporting);
+
+		// needs to be after reporting
+		manager.addHandler(handler);
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
@@ -99,7 +99,12 @@ public final class EpisimRunner {
 		if (episimConfig.getStartFromSnapshot() != null) {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
-			reporting.append();
+			try {
+				reporting.append();
+			} catch (IOException e) {
+				log.error("Snapshot output could not be created", e);
+				return;
+			}
 		}
 
 
@@ -113,7 +118,7 @@ public final class EpisimRunner {
 			if (iteration % 10 == 0)
 				Gbl.printMemoryUsage();
 
-			if (!doStep(replay, handler, iteration))
+			if (!doStep(replay, handler, reporting, iteration))
 				break;
 
 		}
@@ -126,15 +131,16 @@ public final class EpisimRunner {
 	 *
 	 * @return false, when the simulation should end
 	 */
-	boolean doStep(final ReplayHandler replay, InfectionEventHandler handler, int iteration) {
+	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
 
 		manager.resetHandlers(iteration);
 		if (handler.isFinished())
 			return false;
 
-
 		// Process all events
 		replay.replayEvents(manager, iteration);
+
+		reporting.flushEvents();
 
 		return true;
 	}
@@ -152,7 +158,11 @@ public final class EpisimRunner {
 		EpisimReporting reporting = reportingProvider.get();
 		ProgressionModel progressionModel = progressionProvider.get();
 
-		Path path = output.resolve(String.format("episim-snapshot-%03d.zip", iteration));
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+
+		Path path = output.resolve(String.format("episim-snapshot-%03d-%s.zip", iteration, date));
 
 		log.info("Writing snapshot to {}", path);
 
@@ -162,7 +172,7 @@ public final class EpisimRunner {
 					.createArchiveOutputStream("zip", out);
 
 			// Copy whole output to the snapshot
-			EpisimUtils.compressDirectory(output.toString(), output.toString(), archive);
+			EpisimUtils.compressDirectory(output.toString(), output.toString(), config.controler().getRunId(), archive);
 
 			archive.putArchiveEntry(new ZipArchiveEntry("iteration"));
 			ObjectOutputStream oos = new ObjectOutputStream(archive);
@@ -183,6 +193,8 @@ public final class EpisimRunner {
 			log.error("Could not write snapshot", e);
 		}
 
+		log.info("Snapshot for day {} written successfully", iteration);
+
 	}
 
 	/**
@@ -192,6 +204,9 @@ public final class EpisimRunner {
 	 * @return starting iteration
 	 */
 	private int readSnapshot(Path output, Path path) {
+
+		if (!Files.exists(path))
+			throw new IllegalArgumentException("Snapshot " + path + " does not exist.");
 
 		InfectionEventHandler handler = handlerProvider.get();
 		EpisimReporting reporting = reportingProvider.get();

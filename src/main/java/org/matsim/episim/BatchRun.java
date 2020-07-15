@@ -20,8 +20,8 @@
  */
 package org.matsim.episim;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
+import com.google.inject.AbstractModule;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -41,6 +41,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -92,6 +93,15 @@ public interface BatchRun<T> {
 				allParams.add(Arrays.asList(stringParam.value()));
 				fields.add(field);
 			}
+			GenerateSeeds seed = field.getAnnotation(GenerateSeeds.class);
+			if (seed != null) {
+				Random rnd = new Random(seed.seed());
+				Object[] seeds = IntStream.range(0, seed.value()).mapToLong(i -> rnd.nextLong()).boxed().toArray();
+				seeds[0] = seed.first();
+
+				allParams.add(Arrays.asList(seeds));
+				fields.add(field);
+			}
 		}
 
 		List<PreparedRun.Run> runs = new ArrayList<>();
@@ -105,7 +115,7 @@ public interface BatchRun<T> {
 
 		Config base = setup.baseCase(0);
 		if (base != null)
-			runs.add(new PreparedRun.Run(0, Lists.newArrayList("base"), base));
+			runs.add(new PreparedRun.Run(0, Lists.newArrayList("base"), base, null));
 
 		List<List<Object>> combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));
 
@@ -120,7 +130,7 @@ public interface BatchRun<T> {
 				}
 
 				Config config = setup.prepareConfig(++id, inst);
-				runs.add(new PreparedRun.Run(id, params, config));
+				runs.add(new PreparedRun.Run(id, params, config, inst));
 
 			} catch (ReflectiveOperationException e) {
 				log.error("Could not create param class", e);
@@ -131,6 +141,22 @@ public interface BatchRun<T> {
 		log.info("Prepared {} runs for {} with params {}", runs.size(), clazz.getSimpleName(), paramClazz.getName());
 
 		return new PreparedRun(setup, fields.stream().map(Field::getName).collect(Collectors.toList()), allParams, runs);
+	}
+
+
+	/**
+	 * Resolve input path automatically using given input, or cluster input directory.
+	 *
+	 * @param input input path to resolve for
+	 * @param name  file name
+	 * @return resolved input file name
+	 */
+	static String resolveForCluster(Path input, String name) {
+		if (System.getProperty("EPISIM_ON_CLUSTER", "false").equals("true"))
+			input = Path.of("/scratch/usr/bebchrak/episim/episim-input");
+
+		// convert windows path separators
+		return input.resolve(name).toString().replace("\\", "/");
 	}
 
 	/**
@@ -152,6 +178,18 @@ public interface BatchRun<T> {
 	 */
 	default List<Option> getOptions() {
 		return List.of();
+	}
+
+	/**
+	 * Return the module that should be used for configuring custom guice bindings. May also be parametrized.
+	 *
+	 * @param id     task id
+	 * @param params parameters to use, will be null for the base case, but always of type {@code T}
+	 * @return module with additional bindings, or null if not needed
+	 */
+	@Nullable
+	default AbstractModule getBindings(int id, @Nullable Object params) {
+		return null;
 	}
 
 	/**
@@ -225,6 +263,29 @@ public interface BatchRun<T> {
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface StringParameter {
 		String[] value();
+	}
+
+
+	/**
+	 * Generates desired number of seeds by using a different random number generator.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface GenerateSeeds {
+		/**
+		 * Number of seeds to generate.
+		 */
+		int value();
+
+		/**
+		 * The first seed, which is fixed and not generated.
+		 */
+		long first() default 4711L;
+
+		/**
+		 * Starting seed to feed into the first rng.
+		 */
+		int seed() default 1;
 	}
 
 
@@ -314,7 +375,7 @@ public interface BatchRun<T> {
 		 * Sets the end date and returns the same instance.
 		 */
 		public Metadata withEndDate(String date) {
-			this.endDate = endDate;
+			this.endDate = date;
 			return this;
 		}
 

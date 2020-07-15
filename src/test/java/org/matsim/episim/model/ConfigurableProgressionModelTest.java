@@ -36,7 +36,11 @@ public class ConfigurableProgressionModelTest {
 					to(EpisimPerson.DiseaseStatus.recovered, Transition.fixed(13)))
 
 			.from(EpisimPerson.DiseaseStatus.critical,
-					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.fixed(9)))
+					to(DiseaseStatus.seriouslySickAfterCritical, Transition.fixed(9)))
+
+			.from(DiseaseStatus.seriouslySickAfterCritical,
+					to(DiseaseStatus.recovered, Transition.fixed(1)))
+
 			.build();
 
 	private EpisimReporting reporting;
@@ -154,7 +158,7 @@ public class ConfigurableProgressionModelTest {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		tracingConfig.setTracingDelay_days(2 );
-		tracingConfig.setTracingMemory_days(1 );
+		tracingConfig.setTracingPeriod_days(1 );
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
@@ -274,7 +278,9 @@ public class ConfigurableProgressionModelTest {
 						to(DiseaseStatus.critical, Transition.fixed(0)),
 						to(DiseaseStatus.recovered, Transition.fixed(0)))
 				.from(DiseaseStatus.critical,
-						to(DiseaseStatus.seriouslySick, Transition.fixed(0)))
+						to(DiseaseStatus.seriouslySickAfterCritical, Transition.fixed(0)))
+				.from(DiseaseStatus.seriouslySickAfterCritical,
+						to(DiseaseStatus.recovered, Transition.fixed(0)))
 				.build());
 
 		model = new ConfigurableProgressionModel(new SplittableRandom(1), config, tracingConfig);

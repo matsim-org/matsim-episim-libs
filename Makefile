@@ -4,11 +4,11 @@
 WD := ../shared-svn/projects/episim/matsim-files
 
 # All available Scenarios
-ALL := OpenBerlin Berlin Munich Heinsberg
+ALL := BerlinWeek
 
 JAR := matsim-episim-*.jar
 # Shortcut to the scenario creation tool
-sc = java -cp $(JAR) org.matsim.run.ScenarioCreation
+sc = java -Xmx20G -cp $(JAR) org.matsim.run.ScenarioCreation
 
 .PHONY: all clean battery $(ALL)
 

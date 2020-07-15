@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
@@ -37,17 +38,19 @@ import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.validation.constraints.NotNull;
 import java.io.File;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Main config for episim.
  */
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
-	private static final String INPUT_EVENTS_FILE = "inputEventsFile";
 	private static final String WRITE_EVENTS = "writeEvents";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
+	private static final String HOSPITAL_FACTOR = "hospitalFactor";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
@@ -56,13 +59,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
+	private static final String SNAPSHOT_SEED = "snapshotSeed";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
-
-	private String inputEventsFile = null;
 
 	/**
 	 * Which events to write in the output.
@@ -71,6 +73,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	// this is current default for 25% scenarios
 	private double calibrationParameter = 0.000002;
+	private double hospitalFactor = 1.;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
 	private int initialStartInfections = 0;
@@ -94,13 +97,17 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Path to snapshot file.
 	 */
 	private String startFromSnapshot = null;
+	/**
+	 * How the internal rng state should be handled.
+	 */
+	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
 
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
-	private int maxInteractions = 3;
+	private double maxInteractions = 3.;
 
 	/**
 	 * Default constructor.
@@ -109,14 +116,24 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		super(GROUPNAME);
 	}
 
-	@StringGetter(INPUT_EVENTS_FILE)
 	public String getInputEventsFile() {
-		return this.inputEventsFile;
+		List<EventFileParams> list = Lists.newArrayList(getInputEventsFiles());
+
+		if (list.size() != 1) {
+			throw new IllegalStateException("There is not exactly one input event file. Use .getEventFileParams() instead.");
+		}
+
+		return list.get(0).path;
 	}
 
-	@StringSetter(INPUT_EVENTS_FILE)
+	/**
+	 * Adds one single input event file for all days of the week.
+	 */
 	public void setInputEventsFile(String inputEventsFile) {
-		this.inputEventsFile = inputEventsFile;
+
+		clearParameterSetsForType(EventFileParams.SET_TYPE);
+		addInputEventsFile(inputEventsFile)
+				.addDays(DayOfWeek.values());
 	}
 
 	@StringGetter(WRITE_EVENTS)
@@ -137,6 +154,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(CALIBRATION_PARAMETER)
 	public void setCalibrationParameter(double calibrationParameter) {
 		this.calibrationParameter = calibrationParameter;
+	}
+
+	/**
+	 * Is multiplied with probability to transition to seriously sick in age dependent progression model
+	 */
+	@StringGetter(HOSPITAL_FACTOR)
+	public double getHospitalFactor() {
+		return this.hospitalFactor;
+	}
+
+	@StringSetter(HOSPITAL_FACTOR)
+	public void setHospitalFactor(double hospitalFactor) {
+		this.hospitalFactor = hospitalFactor;
 	}
 
 	@StringGetter(INITIAL_INFECTIONS)
@@ -202,6 +232,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(START_FROM_SNAPSHOT)
 	public void setStartFromSnapshot(String startFromSnapshot) {
 		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	@StringGetter(SNAPSHOT_SEED)
+	public SnapshotSeed getSnapshotSeed() {
+		return snapshotSeed;
+	}
+
+	@StringSetter(SNAPSHOT_SEED)
+	public void setSnapshotSeed(SnapshotSeed snapshotSeed) {
+		this.snapshotSeed = snapshotSeed;
 	}
 
 	public long getStartOffset() {
@@ -325,12 +365,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringGetter(MAX_INTERACTIONS)
-	public int getMaxInteractions() {
+	public double getMaxInteractions() {
 		return maxInteractions;
 	}
 
 	@StringSetter(MAX_INTERACTIONS)
-	public void setMaxInteractions(int maxInteractions) {
+	public void setMaxInteractions(double maxInteractions) {
 		this.maxInteractions = maxInteractions;
 	}
 
@@ -372,6 +412,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			case InfectionParams.SET_TYPE:
 				addContainerParams((InfectionParams) set);
 				break;
+			case EventFileParams.SET_TYPE:
+				super.addParameterSet(set);
+				break;
 			default:
 				throw new IllegalArgumentException(set.getName());
 		}
@@ -382,6 +425,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		switch (type) {
 			case InfectionParams.SET_TYPE:
 				return new InfectionParams();
+			case EventFileParams.SET_TYPE:
+				return new EventFileParams();
 			default:
 				throw new IllegalArgumentException(type);
 		}
@@ -392,6 +437,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		switch (module.getName()) {
 			case InfectionParams.SET_TYPE:
 				if (!(module instanceof InfectionParams)) {
+					throw new IllegalArgumentException("unexpected class for module " + module);
+				}
+				break;
+			case EventFileParams.SET_TYPE:
+				if (!(module instanceof EventFileParams)) {
 					throw new IllegalArgumentException("unexpected class for module " + module);
 				}
 				break;
@@ -439,6 +489,27 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		addParameterSet(params);
 		return params;
+	}
+
+	/**
+	 * Adds an event file to the config.
+	 */
+	public EventFileParams addInputEventsFile(final String path) {
+
+		for (EventFileParams f : getInputEventsFiles()) {
+			if (f.path.equals(path)) throw new IllegalArgumentException("Input file already defined: " + path);
+		}
+
+		EventFileParams params = new EventFileParams(path);
+		addParameterSet(params);
+		return params;
+	}
+
+	/**
+	 * Removes all defined input files.
+	 */
+	public void clearInputEventsFiles() {
+		clearParameterSetsForType(EventFileParams.SET_TYPE);
 	}
 
 	/**
@@ -490,6 +561,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * All defined input event files.
+	 */
+	public Collection<EventFileParams> getInputEventsFiles() {
+		return (Collection<EventFileParams>) getParameterSets(EventFileParams.SET_TYPE);
+	}
+
+	/**
 	 * Defines how facilities should be handled.
 	 */
 	public enum FacilitiesHandling {
@@ -523,6 +601,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Write all, including input events.
 		 */
 		all
+	}
+
+	/**
+	 * Defines how the snapshot seed should be processed.
+	 */
+	public enum SnapshotSeed {
+		/**
+		 * Restore rng state from the snapshot and continue as before.
+		 */
+		restore,
+
+		/**
+		 * Overwrite the rng state with a new seed taken from config.
+		 */
+		reseed,
 	}
 
 	/**
@@ -620,5 +713,71 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	}
 
+	/**
+	 * Event file configuration for certain weekdays.
+	 */
+	public static final class EventFileParams extends ReflectiveConfigGroup {
 
+		public static final String DAYS = "days";
+		public static final String PATH = "path";
+		static final String SET_TYPE = "eventFiles";
+
+		private String path;
+		private final Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
+
+		EventFileParams(String path) {
+			this();
+			this.path = path;
+		}
+
+		private EventFileParams() {
+			super(SET_TYPE);
+		}
+
+
+		@StringSetter(PATH)
+		void setPath(String path) {
+			this.path = path;
+		}
+
+		@StringGetter(PATH)
+		public String getPath() {
+			return path;
+		}
+
+		/**
+		 * Adds week days when this event file should be used.
+		 */
+		public void addDays(DayOfWeek... days) {
+			this.days.addAll(Arrays.asList(days));
+		}
+
+		@StringSetter(DAYS)
+		public void setDays(String days) {
+			String str = days.replace("[", "").replace(" ", "").replace("]", "");
+
+			this.days.addAll(
+					Arrays.stream(str.split(",")).map(DayOfWeek::valueOf).collect(Collectors.toSet())
+			);
+		}
+
+		@StringGetter(DAYS)
+		public Set<DayOfWeek> getDays() {
+			return days;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			EventFileParams that = (EventFileParams) o;
+			return path.equals(that.path) &&
+					days.equals(that.days);
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(path, days);
+		}
+	}
 }

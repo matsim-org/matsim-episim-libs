@@ -7,6 +7,8 @@ import org.assertj.core.data.Offset;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.EpisimUtils;
@@ -146,9 +148,17 @@ public class FixedPolicyTest {
 
 		Assume.assumeTrue("Input must exist", f.exists());
 
-		String content = SnzBerlinScenario25pct2020.basePolicy(
-				EpisimTestUtils.createTestConfig(), f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
-		).build().root().render();
+//		String content = SnzBerlinScenario25pct2020.basePolicy(ConfigUtils.addOrGetModule(EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class),
+//				f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
+
+
+		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(
+				ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class ) );
+		builder.setCsv( f.toPath() );
+		builder.setAlpha( 1. );
+		builder.setCiCorrections(Map.of("2020-03-10", 1.));
+
+		String content = builder.build().build().root().render();
 
 		Config config = ConfigFactory.parseString(content);
 		LocalDate start = LocalDate.parse("2020-03-05");

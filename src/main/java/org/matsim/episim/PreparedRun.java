@@ -78,6 +78,7 @@ public final class PreparedRun {
 		int index = parameter.indexOf("startDate");
 
 		data.put("city", setup.getMetadata().region);
+		data.put("runName", setup.getMetadata().name);
 		data.put("defaultStartDate", setup.getDefaultStartDate());
 		data.put("endDate", setup.getMetadata().endDate);
 
@@ -155,12 +156,18 @@ public final class PreparedRun {
 		public final Config config;
 
 		/**
+		 * Params as argument for the {@link BatchRun}.
+		 */
+		public final Object args;
+
+		/**
 		 * Constructor.
 		 */
-		public Run(int id, List<Object> params, Config config) {
+		public Run(int id, List<Object> params, Config config, Object args) {
 			this.id = id;
 			this.params = params;
 			this.config = config;
+			this.args = args;
 		}
 	}
 

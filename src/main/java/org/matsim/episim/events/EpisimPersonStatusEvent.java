@@ -32,8 +32,8 @@ import java.util.Map;
  * Notifies about the disease status of a person.
  */
 public final class EpisimPersonStatusEvent extends Event implements HasPersonId {
-	private static final String EVENT_TYPE = "episimPersonStatus";
-	private static final String DISEASE_STATUS = "diseaseStatus";
+	public static final String EVENT_TYPE = "episimPersonStatus";
+	public static final String DISEASE_STATUS = "diseaseStatus";
 	private static final String QUARANTINE_STATUS = "quarantineStatus";
 
 	private final Id<Person> personId;

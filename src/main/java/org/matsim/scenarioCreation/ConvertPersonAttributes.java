@@ -41,6 +41,8 @@ import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -59,13 +61,16 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(ConvertPersonAttributes.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file", defaultValue = "../../Desktop/snz/populationAttributes2020.xml.gz")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Path to attribute file")
 	private Path input;
 
-	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/input-data/he_idList_2020_100pt.txt")
-	private Path personIds;
+	@CommandLine.Option(names = "--ids", description = "Optional path to person ids to filter for.")
+	private List<Path> personIds;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
+	@CommandLine.Option(names = "--requireAttribute", description = "Names of attributes a person must have")
+	private List<String> requiredAttributes;
+
+	@CommandLine.Option(names = "--output", description = "Output population file", required = true)
 	private Path output;
 
 	public static void main(String[] args) {
@@ -76,28 +81,44 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		if (!Files.exists(input)) {
-			log.error("Input does not exist.");
+			log.error("Input does not exist: {}", input);
 			return 2;
 		}
 
 		Set<String> personIds = null;
-		if (this.personIds != null && Files.exists(this.personIds)) {
-			log.info("Filtering by person ids: {}", this.personIds);
-			personIds = CreationUtils.readIdFile(this.personIds);
+		if (this.personIds != null && !this.personIds.isEmpty()) {
+
+			personIds = new HashSet<>();
+			for (Path file : this.personIds) {
+
+				if (!Files.exists(file)) {
+					log.info("Id file does not exist: {}", file);
+					return 2;
+				}
+
+				double before = personIds.size();
+
+				log.info("Filtering by person ids: {}", file);
+				Set<String> ids = CreationUtils.readIdFile(file);
+				personIds.addAll(ids);
+
+				log.info("Read {} ids, total now {} (added {} %)", ids.size(), personIds.size(),
+						100 * (personIds.size() - before) / personIds.size());
+
+			}
 		}
 
 		FilteredObjectAttributes attributes = readAndFilterAttributes(input, personIds);
-		Population populationFromAttributes = buildPopulationFromAttributes(attributes, personIds);
+		Population populationFromAttributes = buildPopulationFromAttributes(attributes);
 
 		PopulationUtils.writePopulation(populationFromAttributes, output.toString());
 
 		String attributesFileForConversion = input.toString();
-		if(personIds != null){
+		if (personIds != null) {
 			String outputPath = output.toAbsolutePath().toString();
-			attributesFileForConversion = outputPath.substring(0, outputPath.lastIndexOf('\\')) + "/filtered_" + input.getFileName() ;
+			attributesFileForConversion = outputPath.substring(0, outputPath.lastIndexOf('\\')) + "/filtered_" + input.getFileName();
 			new ObjectAttributesXmlWriter(attributes).writeFile(attributesFileForConversion);
 		}
-
 
 //			includeMissingAgentsIntoOrigPopulation(populationFromAttributes);
 
@@ -111,12 +132,34 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		config.plans().setInsistingOnUsingDeprecatedPersonAttributeFile(true);
 
 		Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		if (requiredAttributes != null && !requiredAttributes.isEmpty()) {
+
+			log.info("Filter persons without: {}", requiredAttributes);
+
+			int missing = 0;
+
+			for (Person person : scenario.getPopulation().getPersons().values()) {
+				Map<String, Object> attr = person.getAttributes().getAsMap();
+
+				if (!requiredAttributes.stream().allMatch(attr::containsKey)) {
+					scenario.getPopulation().removePerson(person.getId());
+					missing++;
+				}
+			}
+
+			if (missing > 0)
+				log.warn("Removed {} persons because of missing attributes", missing);
+			else
+				log.info("No missing attributes");
+		}
+
 		PopulationUtils.writePopulation(scenario.getPopulation(), output.toString());
 
 		return 0;
 	}
 
-	private Population buildPopulationFromAttributes(FilteredObjectAttributes attributes, Set<String> personIds) {
+	private Population buildPopulationFromAttributes(FilteredObjectAttributes attributes) {
 
 		Scenario scenario = ScenarioUtils.createScenario(ConfigUtils.createConfig());
 		Population population = scenario.getPopulation();

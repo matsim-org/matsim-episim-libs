@@ -1,7 +1,11 @@
 package org.matsim.episim.model;
 
-import org.eclipse.collections.api.map.primitive.MutableIntIntMap;
-import org.eclipse.collections.impl.map.mutable.primitive.IntIntHashMap;
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2LongMap;
+import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
@@ -24,14 +28,9 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	protected final EpisimConfigGroup episimConfig;
 
 	/**
-	 * Stores the next state a person will attain.
+	 * Stores the next state and after which day. (int & int) = 64bit
 	 */
-	private final MutableIntIntMap nextStates = new IntIntHashMap();
-
-	/**
-	 * The day at which a transition to {@link #nextStates} happens.
-	 */
-	private final MutableIntIntMap transitionDays = new IntIntHashMap();
+	private final Object2LongMap<Id<Person>> nextStateAndDay = new Object2LongOpenHashMap<>();
 
 	@Inject
 	AbstractProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
@@ -39,6 +38,12 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		this.episimConfig = episimConfig;
 	}
 
+	/**
+	 * Stores two ints in one long value.
+	 */
+	private static long compoundLong(int x, int y) {
+		return (((long) x) << 32) | (y & 0xffffffffL);
+	}
 
 	@Override
 	public void updateState(EpisimPerson person, int day) {
@@ -50,7 +55,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			return;
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
-		int index = person.getPersonId().index();
+		Id<Person> id = person.getPersonId();
 
 		if (status == EpisimPerson.DiseaseStatus.recovered) {
 			// one day after recovering person is released from quarantine
@@ -60,9 +65,15 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			return;
 		}
 
-		int transitionDay = transitionDays.getIfAbsent(index, -1);
-		if (transitionDay > -1) {
-			int nextState = nextStates.get(index);
+		// 0 is empty transition
+		long value = nextStateAndDay.getOrDefault(id, 0);
+
+		if (value != 0) {
+
+			// reverse of compound long
+			int transitionDay = (int) value;
+			int nextState = (int) (value >> 32);
+
 			int daysSince = person.daysSince(status, day);
 			if (daysSince >= transitionDay) {
 				EpisimPerson.DiseaseStatus next = EpisimPerson.DiseaseStatus.values()[nextState];
@@ -70,12 +81,12 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 				onTransition(person, now, day, status, next);
 
 				if (next != EpisimPerson.DiseaseStatus.recovered) {
-					if (updateNext(person, index, next))
+					if (updateNext(person, id, next))
 						updateState(person, day);
 				}
 			}
 		} else {
-			if (updateNext(person, index, status))
+			if (updateNext(person, id, status))
 				updateState(person, day);
 		}
 	}
@@ -85,12 +96,11 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 *
 	 * @return true when there should be an immediate update again
 	 */
-	private boolean updateNext(EpisimPerson person, int index, EpisimPerson.DiseaseStatus from) {
+	private boolean updateNext(EpisimPerson person, Id<Person> id, EpisimPerson.DiseaseStatus from) {
 		EpisimPerson.DiseaseStatus next = decideNextState(person);
 		int nextTransitionDay = decideTransitionDay(person, from, next);
 
-		nextStates.put(index, next.ordinal());
-		transitionDays.put(index, nextTransitionDay);
+		nextStateAndDay.put(id, compoundLong(next.ordinal(), nextTransitionDay));
 
 		// allow multiple updates on the same day
 		return nextTransitionDay == 0;
@@ -119,13 +129,19 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
-		((Externalizable) nextStates).writeExternal(out);
-		((Externalizable) transitionDays).writeExternal(out);
+		out.writeInt(nextStateAndDay.size());
+		for (Object2LongMap.Entry<Id<Person>> entry : nextStateAndDay.object2LongEntrySet()) {
+			EpisimUtils.writeChars(out, entry.getKey().toString());
+			out.writeLong(entry.getLongValue());
+		}
 	}
 
 	@Override
-	public void readExternal(ObjectInput in) throws IOException, ClassNotFoundException {
-		((Externalizable) nextStates).readExternal(in);
-		((Externalizable) transitionDays).readExternal(in);
+	public void readExternal(ObjectInput in) throws IOException {
+		int n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			Id<Person> key = Id.createPersonId(EpisimUtils.readChars(in));
+			nextStateAndDay.put(key, in.readLong());
+		}
 	}
 }

@@ -40,8 +40,7 @@ import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
-import org.eclipse.collections.api.tuple.primitive.IntDoublePair;
-import org.eclipse.collections.impl.tuple.primitive.PrimitiveTuples;
+import org.apache.commons.math3.util.Pair;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
@@ -51,6 +50,7 @@ import org.matsim.episim.policy.Restriction;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -65,6 +65,13 @@ import java.util.stream.Collectors;
 public final class EpisimUtils {
 
 	private EpisimUtils() {
+	}
+
+	/**
+	 * Gets the day of a week for a certain start day and current iteration.
+	 */
+	public static DayOfWeek getDayOfWeek(LocalDate startDate, long iteration) {
+		return startDate.plusDays(iteration -1).getDayOfWeek();
 	}
 
 	/**
@@ -95,7 +102,6 @@ public final class EpisimUtils {
 	public static long getStartOffset(LocalDate startDate) {
 		return startDate.atTime(LocalTime.MIDNIGHT).atZone(ZoneOffset.UTC).toEpochSecond();
 	}
-
 
 	/**
 	 * Creates an output directory, with a name based on current config and contact intensity..
@@ -144,18 +150,20 @@ public final class EpisimUtils {
 	/**
 	 * Compress directory recursively.
 	 */
-	public static void compressDirectory(String rootDir, String sourceDir, ArchiveOutputStream out) throws IOException {
+	public static void compressDirectory(String rootDir, String sourceDir, String runId, ArchiveOutputStream out) throws IOException {
 		File[] fileList = new File(sourceDir).listFiles();
 		if (fileList == null) return;
 		for (File file : fileList) {
-			// Zip files (i.e. other snapshots) are not added
-			if (file.getName().endsWith(".zip"))
+			// Zip files (i.e. other snapshots or large files) are not added
+			if (file.getName().endsWith(".zip") || file.getName().endsWith(".gz"))
 				continue;
 
 			if (file.isDirectory()) {
-				compressDirectory(rootDir, sourceDir + "/" + file.getName(), out);
+				compressDirectory(rootDir, sourceDir + "/" + file.getName(), runId, out);
 			} else {
-				ArchiveEntry entry = out.createArchiveEntry(file, "output" + sourceDir.replace(rootDir, "") + "/" + file.getName());
+				// Remove runId from the output name
+				String name = file.getName().replace(runId + ".", "");
+				ArchiveEntry entry = out.createArchiveEntry(file, "output" + sourceDir.replace(rootDir, "") + "/" + name);
 				out.putArchiveEntry(entry);
 				FileUtils.copyFile(file, out);
 				out.closeArchiveEntry();
@@ -214,9 +222,10 @@ public final class EpisimUtils {
 
 		return Math.exp(sigma * nextGaussian(rnd) + mu);
 	}
-	public static double nextLogNormalFromMeanAndSigma( SplittableRandom rnd, double mean, double sigma ) {
-		double mu = Math.log( mean ) - sigma*sigma/2;
-		return nextLogNormal( rnd, mu, sigma );
+
+	public static double nextLogNormalFromMeanAndSigma(SplittableRandom rnd, double mean, double sigma) {
+		double mu = Math.log(mean) - sigma * sigma / 2;
+		return nextLogNormal(rnd, mu, sigma);
 	}
 
 	/**
@@ -351,12 +360,12 @@ public final class EpisimUtils {
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
 
 		// Activity types to supporting points (x, y)
-		Map<String, List<IntDoublePair>> points = new HashMap<>();
+		Map<String, List<Pair<Integer, Double>>> points = new HashMap<>();
 
 		// Init activity types
 		for (EpisimConfigGroup.InfectionParams param : episimConfig.getInfectionParams()) {
 			if (parser.getHeaderNames().contains(param.getContainerName()) && !param.getContainerName().equals("home"))
-				points.put(param.getContainerName(), Lists.newArrayList(PrimitiveTuples.pair(0, 1d)));
+				points.put(param.getContainerName(), Lists.newArrayList(Pair.create(0, 1d)));
 		}
 
 		// day index
@@ -375,13 +384,13 @@ public final class EpisimUtils {
 			if (date.getDayOfWeek() == DayOfWeek.THURSDAY) {
 
 				// thursdays value will be the support value at saturday
-				for (Map.Entry<String, List<IntDoublePair>> e : points.entrySet()) {
+				for (Map.Entry<String, List<Pair<Integer, Double>>> e : points.entrySet()) {
 
 					double remainingFraction = 1. + (Integer.parseInt(record.get(e.getKey())) / 100.);
 					// modulate reduction with alpha
 					double reduction = Math.min(1., alpha * (1. - remainingFraction));
 
-					e.getValue().add(PrimitiveTuples.pair(day + 2, 1 - reduction));
+					e.getValue().add(Pair.create(day + 2, 1 - reduction));
 
 					last = day + 2;
 				}
@@ -394,11 +403,11 @@ public final class EpisimUtils {
 
 		LinearInterpolator p = new LinearInterpolator();
 
-		for (Map.Entry<String, List<IntDoublePair>> e : points.entrySet()) {
+		for (Map.Entry<String, List<Pair<Integer, Double>>> e : points.entrySet()) {
 
 			PolynomialSplineFunction f = p.interpolate(
-					e.getValue().stream().mapToDouble(IntDoublePair::getOne).toArray(),
-					e.getValue().stream().mapToDouble(IntDoublePair::getTwo).toArray()
+					e.getValue().stream().mapToDouble(Pair::getFirst).toArray(),
+					e.getValue().stream().mapToDouble(Pair::getSecond).toArray()
 			);
 
 			// Interpolate for each day
@@ -410,13 +419,6 @@ public final class EpisimUtils {
 		}
 
 		return builder;
-	}
-
-	/**
-	 * Same as {@link #createRestrictionsFromCSV2(EpisimConfigGroup, File, double, Extrapolation)} with no extrapolation.
-	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
-		return createRestrictionsFromCSV2(episimConfig, input, alpha, Extrapolation.none);
 	}
 
 	/**
@@ -529,6 +531,17 @@ public final class EpisimUtils {
 		return builder;
 	}
 
+	/**
+	 * Resolves an input path that can be configured with the environment variable EPISIM_INPUT.
+	 *
+	 * @param defaultPath default path if nothing else is set
+	 * @return path to input directory
+	 */
+	public static Path resolveInputPath(String defaultPath) {
+		String input = System.getenv("EPISIM_INPUT");
+		return Path.of(input != null ? input : defaultPath).toAbsolutePath().normalize();
+	}
+
 
 	/**
 	 * Type of interpolation of activity pattern.
@@ -588,7 +601,7 @@ public final class EpisimUtils {
 		@Override
 		public double[] gradient(double x, double... parameters) {
 			double exb = Math.exp(-x / parameters[1]);
-			return new double[]{-exb, - parameters[0] * x * exb / (parameters[1] * parameters[1])};
+			return new double[]{-exb, -parameters[0] * x * exb / (parameters[1] * parameters[1])};
 		}
 	}
 
