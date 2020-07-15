@@ -93,7 +93,7 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 			Gbl.assertIf( maxPersonsInContainer>1 );
 			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
-			if ( rnd.nextDouble() >= 0.29*episimConfig.getMaxInteractions()/(maxPersonsInContainer-1) ) {
+			if ( rnd.nextDouble() >= episimConfig.getMaxInteractions()/(maxPersonsInContainer-1) ) {
 				continue;
 			}
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair

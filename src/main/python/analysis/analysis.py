@@ -55,7 +55,10 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # base = 'output/2020-07-15_08-05-53__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.2_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
 # base = 'output/2020-07-15_08-05-46__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.4_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
-base = 'output/2020-07-15_08-06-02__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.6_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+# base = 'output/2020-07-15_08-06-02__fromSnz__theta1.13E-5@100__trStrt46_ciCorr2020-03-07@0.2_alph1.6_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/'
+
+# ===
+
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])

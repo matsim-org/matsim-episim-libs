@@ -282,8 +282,8 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.fromSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
-					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.2 ));
-					basePolicyBuilder.setAlpha( 1.6 );
+					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.32 ));
+					basePolicyBuilder.setAlpha( 1. );
 
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
