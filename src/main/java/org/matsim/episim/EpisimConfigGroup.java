@@ -60,6 +60,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
+	private static final String OUTDOOR_PROBA = "outdoorProba";
+	private static final String OUTDOOR_REDUCTION = "outdoorReduction";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -77,6 +79,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
 	private int initialStartInfections = 0;
+	private double outdoorProba = 0.;
+	private double outdoorReduction = 0.1;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
@@ -282,6 +286,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			return overwritePolicyLocation;
 
 		return policyConfig.origin().filename();
+	}
+	
+		@StringGetter(OUTDOOR_PROBA)
+	public double getOutdoorProba() {
+		return this.outdoorProba;
+	}
+
+	@StringSetter(OUTDOOR_PROBA)
+	public void setOutdoorProba(double outdoorProba) {
+		this.outdoorProba = outdoorProba;
+	}
+	@StringGetter(OUTDOOR_REDUCTION)
+	public double getOutdoorReduction() {
+		return this.outdoorReduction;
+	}
+
+	@StringSetter(OUTDOOR_REDUCTION)
+	public void setOutdoorReduction(double outdoorReduction) {
+		this.outdoorReduction = outdoorReduction;
 	}
 
 	/**
