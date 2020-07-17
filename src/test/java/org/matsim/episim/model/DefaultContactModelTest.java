@@ -26,12 +26,12 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-public class DefaultInteractionModelTest {
+public class DefaultContactModelTest {
 
 	private static final Offset<Double> OFFSET = Offset.offset(0.001);
 
 	private Config config;
-	private DefaultInteractionModel model;
+	private DefaultContactModel model;
 	private InfectionModel infectionModel;
 	private Map<String, Restriction> restrictions;
 
@@ -45,7 +45,7 @@ public class DefaultInteractionModelTest {
 		config = EpisimTestUtils.createTestConfig();
 		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 		infectionModel = new DefaultInfectionModel(new DefaultFaceMaskModel(rnd), config);
-		model = new DefaultInteractionModel(rnd, config, reporting, infectionModel ) ;
+		model = new DefaultContactModel(rnd, config, reporting, infectionModel ) ;
 		restrictions = episimConfig.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -311,7 +311,7 @@ public class DefaultInteractionModelTest {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( Integer.MAX_VALUE );
 		tracingConfig.setMinContactDuration_sec( 0 );
-		model = new DefaultInteractionModel(new SplittableRandom(1), config, rNoTracking, infectionModel ) ;
+		model = new DefaultContactModel(new SplittableRandom(1), config, rNoTracking, infectionModel ) ;
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
@@ -320,7 +320,7 @@ public class DefaultInteractionModelTest {
 		EpisimReporting rTracking = mock(EpisimReporting.class);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( 0 );
 		tracingConfig.setMinContactDuration_sec( 0 );
-		model = new DefaultInteractionModel(new SplittableRandom(1), config, rTracking, infectionModel );
+		model = new DefaultContactModel(new SplittableRandom(1), config, rTracking, infectionModel );
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);

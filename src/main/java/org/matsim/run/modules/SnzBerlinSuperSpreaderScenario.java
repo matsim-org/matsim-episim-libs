@@ -32,8 +32,8 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.InfectionModelWithViralLoad;
-import org.matsim.episim.model.InteractionModel;
-import org.matsim.episim.model.SymmetricInteractionModel;
+import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.model.SymmetricContactModel;
 
 import java.util.SplittableRandom;
 
@@ -68,7 +68,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 		super.configure();
 
 		bind(InfectionModel.class).to(InfectionModelWithViralLoad.class).in(Singleton.class);
-		bind(InteractionModel.class).to(SymmetricInteractionModel.class).in(Singleton.class);
+		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -80,7 +80,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setMaxInteractions(30);
+		episimConfig.setMaxContacts(30);
 
 		episimConfig.setCalibrationParameter(1.25e-5);
 

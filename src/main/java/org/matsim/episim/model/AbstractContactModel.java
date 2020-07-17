@@ -36,7 +36,7 @@ import java.util.SplittableRandom;
 /**
  * Base implementation for interactions of persons during activities.
  */
-public abstract class AbstractInteractionModel implements InteractionModel {
+public abstract class AbstractContactModel implements ContactModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";
 
 	protected final Scenario scenario = null;
@@ -66,7 +66,7 @@ public abstract class AbstractInteractionModel implements InteractionModel {
 	private Map<String, Restriction> restrictions;
 
 
-	AbstractInteractionModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
+	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.infectionModel = infectionModel;

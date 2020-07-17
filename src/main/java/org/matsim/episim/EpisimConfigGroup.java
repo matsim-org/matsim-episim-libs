@@ -54,7 +54,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
-	private static final String MAX_INTERACTIONS = "maxInteractions";
+	private static final String MAX_CONTACTS = "maxContacts";
 	private static final String SAMPLE_SIZE = "sampleSize";
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
@@ -107,7 +107,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
-	private double maxInteractions = 3.;
+	private double maxContacts = 3.;
 
 	/**
 	 * Default constructor.
@@ -364,14 +364,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
-	@StringGetter(MAX_INTERACTIONS)
-	public double getMaxInteractions() {
-		return maxInteractions;
+	@StringGetter(MAX_CONTACTS)
+	public double getMaxContacts() {
+		return maxContacts;
 	}
 
-	@StringSetter(MAX_INTERACTIONS)
-	public void setMaxInteractions(double maxInteractions) {
-		this.maxInteractions = maxInteractions;
+	@StringSetter(MAX_CONTACTS)
+	public void setMaxContacts(double maxContacts) {
+		this.maxContacts = maxContacts;
 	}
 
 	/**
