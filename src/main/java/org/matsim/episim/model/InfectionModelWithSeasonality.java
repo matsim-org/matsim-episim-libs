@@ -58,6 +58,8 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		if (!act1.getContainerName().equals("leisure") && !act2.getContainerName().equals("leisure")) return 1.;
 
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration);
+		
+//		if (date.isBefore(LocalDate.parse("2020-03-07"))) return 1;
 
 		//anchor dates
 		int daysOfYear = 365;
@@ -73,11 +75,19 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 			autumn++;
 		}
 
-		double probaWinter = 12.44 / 100.;
-		double probaSpring = 23.60 / 100.;
-		double probaSummer = 28.63 / 100.;
-		double probaAutumn = 21.15 / 100.;
-
+//		double probaWinter = 12.44 / 100.;
+//		double probaSpring = 23.60 / 100.;
+//		double probaSummer = 28.63 / 100.;
+//		double probaAutumn = 21.15 / 100.;
+		
+		double probaWinter = 80. / 100.;
+		
+		if (date.isAfter(LocalDate.parse("2020-08-01"))) probaWinter = episimConfig.getOutdoorProba();
+		
+		double probaSpring = 80. / 100.;
+		double probaSummer = 80. / 100.;
+		double probaAutumn = 80. / 100.;
+		
 		double proba = 1;
 
 		int dayOfYear = date.getDayOfYear();
@@ -95,12 +105,14 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		} else {
 			throw new RuntimeException("Something went wrong. The day of the year is =" + dayOfYear);
 		}
-
+		
 		double indoorOutdoorFactor = 1.;
+//		if (rnd.nextDouble() < episimConfig.getOutdoorProba()) {
 		if (rnd.nextDouble() < proba) {
-			indoorOutdoorFactor = 1. / 10.;
-		}
 
+			indoorOutdoorFactor = episimConfig.getOutdoorReduction();
+		}
+		
 		return indoorOutdoorFactor;
 
 	}
