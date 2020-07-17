@@ -6,6 +6,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.AgeDependentProgressionModel;
+import org.matsim.episim.model.InfectionModel;
+import org.matsim.episim.model.InfectionModelWithSeasonality;
 import org.matsim.episim.model.ProgressionModel;
 
 import javax.inject.Singleton;
@@ -109,6 +111,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 
 		// Use age dependent progression model
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(Singleton.class);
 		// WARNING: This does not affect runs with --config file, especially batch runs !!
 	}
 
