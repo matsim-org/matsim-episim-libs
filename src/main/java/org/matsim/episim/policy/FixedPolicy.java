@@ -264,7 +264,8 @@ public class FixedPolicy extends ShutdownPolicy {
 				if (Double.isNaN(r) && Double.isNaN(e))
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
-				restrict(today.toString(), new Restriction(r, e, null, null, restriction), activities);
+				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null: r, Double.isNaN(e) ? null : e,
+						null, null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}
