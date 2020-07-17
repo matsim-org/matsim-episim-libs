@@ -79,7 +79,7 @@ public class SnzBerlinWeekScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
 
-		config.controler().setOutputDirectory(config.controler().getOutputDirectory() + "-week");
+		config.controler().setOutputDirectory(config.controler().getOutputDirectory() + "-week-" + episimConfig.getCalibrationParameter());
 
 		return config;
 	}

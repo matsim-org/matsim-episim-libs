@@ -30,15 +30,17 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.ProgressionModel;
 
-import java.io.*;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.temporal.ChronoUnit;
-
-import org.matsim.core.gbl.Gbl;
+import java.time.DayOfWeek;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -137,8 +139,10 @@ public final class EpisimRunner {
 		if (handler.isFinished())
 			return false;
 
+		DayOfWeek day = EpisimUtils.getDayOfWeek(ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).getStartDate(), iteration);
+
 		// Process all events
-		replay.replayEvents(manager, iteration);
+		replay.replayEvents(manager, day);
 
 		reporting.flushEvents();
 

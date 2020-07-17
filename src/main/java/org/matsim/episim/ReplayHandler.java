@@ -46,7 +46,6 @@ public final class ReplayHandler {
 	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
 	private final Scenario scenario;
-	private final EpisimConfigGroup config;
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
 
 	/**
@@ -55,7 +54,6 @@ public final class ReplayHandler {
 	@Inject
 	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
 		this.scenario = scenario;
-		this.config = config;
 
 		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
 
@@ -86,9 +84,7 @@ public final class ReplayHandler {
 	/**
 	 * Replays event add modifies attributes based on current iteration.
 	 */
-	public void replayEvents(final EventsManager manager, final int iteration) {
-
-		DayOfWeek day = EpisimUtils.getDayOfWeek(config.getStartDate(), iteration);
+	public void replayEvents(final EventsManager manager, DayOfWeek day) {
 
 		for (final Event e : events.get(day)) {
 			manager.processEvent(e);
