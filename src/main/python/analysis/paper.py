@@ -138,4 +138,26 @@ plt.ylabel("Hospitalized persons")
 plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
 plt.legend(loc="upper left")
 
+#%%  Graphs for outdoor / indoor runs
 
+outdoor = read_batch_run("data/outdoor.zip")
+
+#%% 
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+hue = sns.color_palette(n_colors=3)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
+             style="tracingCapacity", hue="ciCorrection", palette=hue, 
+             data=outdoor[outdoor.winterOudoorFraction==0.2])
+
+
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
+
+
+plt.ylim(bottom=1)
+plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2021-07-31"))
+plt.legend(loc="upper left")
+plt.title("winterOutdoorFraction=0.2")

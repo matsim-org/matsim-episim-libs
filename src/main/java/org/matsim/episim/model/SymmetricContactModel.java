@@ -85,6 +85,11 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 		for( EpisimPerson contactPerson : container.getPersons() ){
 
+			// no contact with self, especially no tracing
+			if (personLeavingContainer == contactPerson) {
+				continue;
+			}
+
 			int maxPersonsInContainer = container.getMaxGroupSize();
 			Gbl.assertIf( maxPersonsInContainer>1 );
 			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
