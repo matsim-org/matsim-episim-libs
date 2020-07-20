@@ -35,6 +35,7 @@ import org.matsim.episim.model.InfectionModelWithViralLoad;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.SymmetricContactModel;
 
+import java.util.Map;
 import java.util.SplittableRandom;
 
 import static org.matsim.episim.EpisimUtils.nextLogNormalFromMeanAndSigma;
@@ -50,6 +51,13 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 	private final double sigmaInf;
 	private final double sigmaSusp;
+
+	private static final Map<Double, Double> calibration = Map.of(
+			0d, 1.06e-5,
+			0.5, 1.12e-5,
+			0.75, 1.25e-5,
+			1d, 1.55e-5
+	);
 
 	/**
 	 * Constructor with default values.
@@ -82,7 +90,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 		episimConfig.setMaxContacts(30);
 
-		episimConfig.setCalibrationParameter(1.25e-5);
+		episimConfig.setCalibrationParameter(calibration.get(sigmaInf));
 
 		// set start
 		episimConfig.setStartDate("2020-02-16");

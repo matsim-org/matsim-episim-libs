@@ -111,7 +111,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 				tracingConfig.setPutTraceablePersonsInQuarantineAfterDay((int) Math.max(1, offset));
 				tracingConfig.setTracingProbability(0.5);
-				
+
 				tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 						warmUp, 0,
 						referenceDate, Integer.MAX_VALUE
@@ -119,7 +119,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 			}
 				break;
-				
+
 			case "contactTracing75":
 			{
 				LocalDate warmUp = referenceDate.minusDays(14);

@@ -132,20 +132,22 @@ public class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * See {@link #clearAfter(String)}, but for one activity.
+		 * See {@link #clearAfter(String)}, but for specific activities.
 		 */
-		public ConfigBuilder clearAfter(String date, String activity) {
+		public ConfigBuilder clearAfter(String date, String... activities) {
 
 			LocalDate ref = LocalDate.parse(date);
 
-			Map<String, Object> map = (Map<String, Object>) params.get(activity);
-			Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
-			while (it.hasNext()) {
-				Map.Entry<String, Object> e = it.next();
-				LocalDate other = LocalDate.parse(e.getKey());
-				if (other.isEqual(ref) || other.isAfter(ref))
-					it.remove();
+			for (String activity : activities) {
+				Map<String, Object> map = (Map<String, Object>) params.get(activity);
+				Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
+				while (it.hasNext()) {
+					Map.Entry<String, Object> e = it.next();
+					LocalDate other = LocalDate.parse(e.getKey());
+					if (other.isEqual(ref) || other.isAfter(ref))
+						it.remove();
 
+				}
 			}
 
 			return this;
@@ -264,7 +266,7 @@ public class FixedPolicy extends ShutdownPolicy {
 				if (Double.isNaN(r) && Double.isNaN(e))
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
-				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null: r, Double.isNaN(e) ? null : e,
+				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,
 						null, null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
