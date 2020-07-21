@@ -37,6 +37,7 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.events.EpisimEventsReader;
 import org.matsim.episim.events.EpisimInfectionEvent;
@@ -53,7 +54,7 @@ import org.matsim.episim.events.EpisimPersonStatusEventHandler;
 
 public class SMRValuesFromEvents {
 	
-//	private static final String WORKINGDIR = "./output-PtInterventions/";
+//	private static final String WORKINGDIR = "./test-rReader/";
 	private static final String WORKINGDIR = "output/";
 	private static final LocalDate startDate = LocalDate.parse("2020-02-16");
 
@@ -97,7 +98,14 @@ public class SMRValuesFromEvents {
 			 infectionsPerActivity.clear();
 			 File[] eventFiles = new File(WORKINGDIR + scenario + "/events").listFiles();
 			 for (File file : eventFiles) {
-				 if (file.getName().contains("xml.gz")) new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+				 if (file.getName().contains("xml.gz")) { 
+					 try {
+						 new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+				        } catch (UncheckedIOException e) {
+				        	log.warn("Cought UncheckedIOException. Could not read file " + file.getAbsolutePath());
+				        }
+				 }
+				 
 			 }
 
 			 for(int i = 0; i <= eventFiles.length; i++) {
@@ -105,8 +113,10 @@ public class SMRValuesFromEvents {
 					 if (e.getKey().equals("pt") || e.getKey().equals("total")) {
 						 int infections = 0;
 						 if (e.getValue().get(i) != null) infections = e.getValue().get(i);
-						 bw.newLine();
-						 bw.write(i+ "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario);
+						 if (infections != 0) {
+							 bw.newLine();
+							 bw.write(i+ "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario);
+						 }
 					 }
 				 }
 			 }
@@ -130,7 +140,14 @@ public class SMRValuesFromEvents {
 			 infectedPersons.clear();
 			 File[] eventFiles = new File(WORKINGDIR + scenario + "/events").listFiles();
 			 for (File file : eventFiles) {
-				 if (file.getName().contains("xml.gz")) new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+				 if (file.getName().contains("xml.gz")) { 
+					 
+					 try {
+						 new EpisimEventsReader(manager).readFile(file.getAbsolutePath());
+				        } catch (UncheckedIOException e) {
+				        	log.warn("Cought UncheckedIOException. Could not read file " + file.getAbsolutePath());
+				        }					 
+				 }
 			 }
 				 
 			 for(int i = 0; i <= eventFiles.length; i++) {
@@ -227,9 +244,6 @@ public class SMRValuesFromEvents {
 			
 		}
 	}
-	
-	
-	
 	
 }
 
