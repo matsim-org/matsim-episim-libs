@@ -78,7 +78,6 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other")
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
@@ -86,7 +85,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-06-22", 1., "educ_kiga")
 
 				//Ende der Sommerferien
-				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-08-10", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Herbstferien
+				.restrict("2020-10-09", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
 		;
 
 
