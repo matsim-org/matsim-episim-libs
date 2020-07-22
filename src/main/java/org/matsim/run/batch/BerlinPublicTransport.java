@@ -62,13 +62,13 @@ public class BerlinPublicTransport implements BatchRun<BerlinPublicTransport.Par
 
 	public static final class Params {
 
-		@GenerateSeeds(10)
+		@GenerateSeeds(100)
 		long seed;
 		
 		@StringParameter({"CLOTH", "SURGICAL", "N95"})
 		String maskType;
 		
-		@Parameter({0.0, 0.5, 0.9, 1.0})
+		@Parameter({0.0, 0.5, 1.0})
 		double maskCompliance;
 
 	}
