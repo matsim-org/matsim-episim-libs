@@ -15,12 +15,12 @@ import static org.matsim.api.core.v01.events.ActivityEndEvent.ATTRIBUTE_ACTTYPE;
  */
 public final class EpisimContactEvent extends Event implements HasPersonId {
 
-	private static final String EVENT_TYPE = "episimContact";
-	private static final String CONTACT_PERSON = "contactPerson";
-	private static final String DURATION = "duration";
-	private static final String CONTAINER = "container";
+	public static final String EVENT_TYPE = "episimContact";
+	public static final String CONTACT_PERSON = "contactPerson";
+	public static final String DURATION = "duration";
+	public static final String CONTAINER = "container";
 	private static final String INFECTION_PROB = "infectionProb";
-	private static final String GROUP_SIZE = "groupSize";
+	public static final String GROUP_SIZE = "groupSize";
 
 	private final Id<Person> personId;
 	private final Id<Person> contactPersonId;

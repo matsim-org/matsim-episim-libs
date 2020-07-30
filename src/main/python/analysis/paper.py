@@ -41,9 +41,9 @@ act_wend = act[act.date.map(lambda *args: not isBusinessDay(*args))]
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
 
-ax = sns.scatterplot(x="date", y="home", label="home", s=40, data=act, ax=ax)
+ax = sns.scatterplot(x="date", y="home", label="home", s=40, data=act_week, ax=ax)
 sns.scatterplot(x="date", y="notAtHomeExceptLeisureAndEdu", label="notAtHome", s=40, data=act_week, ax=ax)
-sns.scatterplot(x="date", y="notAtHomeExceptLeisureAndEdu", label="notAtHome (Weekend)", s=40, data=act_wend, ax=ax)
+#sns.scatterplot(x="date", y="notAtHomeExceptLeisureAndEdu", label="notAtHome (Weekend)", s=40, data=act_wend, ax=ax)
 
 ax.xaxis.set_major_formatter(dateFormater)
 
@@ -145,14 +145,15 @@ outdoor = read_batch_run("data/outdoor.zip")
 #%% 
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
-hue = sns.color_palette(n_colors=3)
-
-sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
-             style="tracingCapacity", hue="ciCorrection", palette=hue, 
-             data=outdoor[outdoor.winterOudoorFraction==0.2])
-
+hue = sns.color_palette(n_colors=2)
 
 rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+             style="tracingCapacity", hue="furtherMeasuresOnOct1", palette=hue, 
+             data=outdoor)
+
+
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())
 
@@ -160,4 +161,9 @@ ax.yaxis.set_major_formatter(ScalarFormatter())
 plt.ylim(bottom=1)
 plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2021-07-31"))
 plt.legend(loc="upper left")
-plt.title("winterOutdoorFraction=0.2")
+plt.title("Daily new infections aggregated over all random seeds")
+
+current_handles, current_labels = plt.gca().get_legend_handles_labels()
+current_labels[5] = "inf"
+
+plt.legend(current_handles, current_labels)

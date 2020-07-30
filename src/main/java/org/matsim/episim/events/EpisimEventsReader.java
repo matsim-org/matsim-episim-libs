@@ -21,6 +21,7 @@
 package org.matsim.episim.events;
 
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsReaderXMLv1;
@@ -28,29 +29,26 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.episim.EpisimContainer;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.facilities.ActivityFacility;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
 import java.util.Map;
 import java.util.Stack;
 
-import static org.matsim.episim.events.EpisimInfectionEvent.*;
-
 public class EpisimEventsReader extends MatsimXmlParser {
 
 	private EventsReaderXMLv1 delegate;
 
 	/**
-	 * EventsReader for EpisimEvents. Currently, only EpisimInfectionEvents and EpisimPersonStatusEvents are supported.
-	 * TODO: read other episimevents (EpisimContactEvent)
-	 *
-	 * @param events
+	 * EventsReader for EpisimEvents.
 	 */
 	public EpisimEventsReader(EventsManager events) {
 		delegate = new EventsReaderXMLv1(events);
 		this.setValidating(false);
-		delegate.addCustomEventMapper(EVENT_TYPE, getEpisimInfectionEventMapper());
+		delegate.addCustomEventMapper(EpisimInfectionEvent.EVENT_TYPE, getEpisimInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());
+		delegate.addCustomEventMapper(EpisimContactEvent.EVENT_TYPE, getEpisimContactEventMapper());
 	}
 
 	public void characters(char[] ch, int start, int length) throws SAXException {
@@ -62,26 +60,41 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 			Map<String, String> attributes = event.getAttributes();
 
-			double time = Double.parseDouble(attributes.get(ATTRIBUTE_TIME));
-			Id<Person> person = Id.createPersonId(attributes.get(ATTRIBUTE_PERSON));
-			Id<Person> infector = Id.createPersonId(attributes.get(INFECTOR));
-			Id<?> container = Id.create(attributes.get(CONTAINER), EpisimContainer.class);
-			String type = attributes.get(INFECTION_TYPE);
+			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
+			Id<Person> infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));
+			Id<?> container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);
+			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);
 
-			return new EpisimInfectionEvent(time,person,infector,container,type);
+			return new EpisimInfectionEvent(time, person, infector, container, type);
 		};
 	}
-	
+
 	private MatsimEventsReader.CustomEventMapper<EpisimPersonStatusEvent> getEpisimPersonStatusEventMapper() {
 		return event -> {
 
 			Map<String, String> attributes = event.getAttributes();
 
-			double time = Double.parseDouble(attributes.get(ATTRIBUTE_TIME));
-			Id<Person> person = Id.createPersonId(attributes.get(ATTRIBUTE_PERSON));
+			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
 			DiseaseStatus diseaseStatus = DiseaseStatus.valueOf(attributes.get(EpisimPersonStatusEvent.DISEASE_STATUS));
 
-			return new EpisimPersonStatusEvent(time,person,diseaseStatus);
+			return new EpisimPersonStatusEvent(time, person, diseaseStatus);
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper<EpisimContactEvent> getEpisimContactEventMapper() {
+		return event -> {
+
+			Map<String, String> attributes = event.getAttributes();
+
+			double time = Double.parseDouble(attributes.get(EpisimContactEvent.ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(EpisimContactEvent.ATTRIBUTE_PERSON));
+			Id<Person> contactPerson = Id.createPersonId(attributes.get(EpisimContactEvent.CONTACT_PERSON));
+			Id<ActivityFacility> container = Id.create(attributes.get(EpisimContactEvent.CONTAINER), ActivityFacility.class);
+
+			return new EpisimContactEvent(time, person, contactPerson, container, attributes.get(ActivityEndEvent.ATTRIBUTE_ACTTYPE).intern(),
+					Double.parseDouble(attributes.get(EpisimContactEvent.DURATION)), Integer.parseInt(attributes.get(EpisimContactEvent.GROUP_SIZE)));
 		};
 	}
 
