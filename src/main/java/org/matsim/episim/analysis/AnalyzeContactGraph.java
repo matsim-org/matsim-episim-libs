@@ -2,11 +2,10 @@ package org.matsim.episim.analysis;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
-import org.jgrapht.graph.DefaultUndirectedGraph;
+import org.jgrapht.graph.DefaultUndirectedWeightedGraph;
 import org.jgrapht.nio.GraphExporter;
-import org.jgrapht.nio.gexf.GEXFExporter;
+import org.jgrapht.nio.gml.GmlExporter;
 import org.jgrapht.nio.graphml.GraphMLExporter;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
@@ -19,6 +18,7 @@ import org.matsim.episim.events.EpisimContactEvent;
 import org.matsim.episim.events.EpisimEventsReader;
 import picocli.CommandLine;
 
+import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
@@ -41,7 +41,7 @@ class AnalyzeContactGraph implements Callable<Integer>, BasicEventHandler {
 	@CommandLine.Option(names = "--output", defaultValue = "output-graph")
 	private Path outputFolder;
 
-	private Graph<Id<Person>, DefaultEdge> graph;
+	private DefaultUndirectedWeightedGraph<Id<Person>, DefaultEdge> graph;
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new AnalyzeContactGraph()).execute(args));
@@ -54,7 +54,7 @@ class AnalyzeContactGraph implements Callable<Integer>, BasicEventHandler {
 
 		manager.addHandler(this);
 
-		graph = new DefaultUndirectedGraph<>(DefaultEdge.class);
+		graph = new DefaultUndirectedWeightedGraph<>(DefaultEdge.class);
 
 		new EpisimEventsReader(manager).readFile(input.toString());
 
@@ -62,24 +62,26 @@ class AnalyzeContactGraph implements Callable<Integer>, BasicEventHandler {
 
 		Files.createDirectories(outputFolder);
 
-		Map<String , GraphExporter<Id<Person>, DefaultEdge>> exporter = Map.of(
-			//	"s6", new Graph6Sparse6Exporter<>(Graph6Sparse6Exporter.Format.SPARSE6),
+		Map<String, GraphExporter<Id<Person>, DefaultEdge>> exporter = Map.of(
+				//	"s6", new Graph6Sparse6Exporter<>(Graph6Sparse6Exporter.Format.SPARSE6),
 				"graphml", new GraphMLExporter<>(),
-				"gexf", new GEXFExporter<>()
+				"gml", new GmlExporter<>()
+			//	"gexf", new GEXFExporter<>()
 		);
 
 		for (Map.Entry<String, GraphExporter<Id<Person>, DefaultEdge>> e : exporter.entrySet()) {
 
 			try {
 				String filename = outputFolder.resolve("graph." + e.getKey() + ".gz").toString();
-				e.getValue().exportGraph(graph, IOUtils.getBufferedWriter(filename));
+				BufferedWriter writer = IOUtils.getBufferedWriter(filename);
+				e.getValue().exportGraph(graph, writer);
+				writer.close();
 
 				log.info("Written {}", filename);
 
 			} catch (RuntimeException exc) {
 				log.error("Could not export to format " + e.getKey());
 			}
-
 
 
 		}
@@ -95,8 +97,13 @@ class AnalyzeContactGraph implements Callable<Integer>, BasicEventHandler {
 
 			graph.addVertex(ev.getPersonId());
 			graph.addVertex(ev.getContactPersonId());
-			graph.addEdge(ev.getPersonId(), ev.getContactPersonId());
-
+			DefaultEdge edge = graph.getEdge(ev.getPersonId(), ev.getContactPersonId());
+			if (edge == null) {
+				edge = graph.addEdge(ev.getPersonId(), ev.getContactPersonId());
+				graph.setEdgeWeight(edge, ev.getDuration());
+			} else {
+				graph.setEdgeWeight(edge, graph.getEdgeWeight(edge) + ev.getDuration());
+			}
 		}
 	}
 
