@@ -17,7 +17,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
-	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
+	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "putTraceablePersonsInQuarantineAfterDay";
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
@@ -25,7 +25,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
 	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String CAPACITY = "tracingCapacity";
+	private static final String CAPACITY_TYPE = "capacityType";
+	private static final String STRATEGY = "strategy";
+	private static final String LOCATION_THRESHOLD = "locationThreshold";
 	private static final String GROUPNAME = "episimTracing";
+
 	/**
 	 * Amount of persons traceable der day.
 	 */
@@ -61,6 +65,21 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Members of the same household will be put always into quarantine.
 	 */
 	private boolean quarantineHouseholdMembers = false;
+
+	/**
+	 * Defines if the capacity is either per (infected) person or per contact person.
+	 */
+	private CapacityType capacityType = CapacityType.PER_PERSON;
+
+	/**
+	 * Tracing and containment strategy.
+	 */
+	private Strategy strategy = Strategy.INDIVIDUAL_ONLY;
+
+	/**
+	 * How many infections are required for location based tracing to trigger.
+	 */
+	private int locationThreshold = 4;
 
 	/**
 	 * Default constructor.
@@ -177,4 +196,54 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	public boolean getQuarantineHousehold() {
 		return quarantineHouseholdMembers;
 	}
+
+	@StringGetter(CAPACITY_TYPE)
+	public CapacityType getCapacityType() {
+		return capacityType;
+	}
+
+	@StringSetter(CAPACITY_TYPE)
+	public void setCapacityType(CapacityType capacityType) {
+		this.capacityType = capacityType;
+	}
+
+	@StringGetter(STRATEGY)
+	public Strategy getStrategy() {
+		return strategy;
+	}
+
+	@StringSetter(STRATEGY)
+	public void setStrategy(Strategy strategy) {
+		this.strategy = strategy;
+	}
+
+	@StringSetter(LOCATION_THRESHOLD)
+	public void setLocationThreshold(int locationThreshold) {
+		this.locationThreshold = locationThreshold;
+	}
+
+	@StringGetter(LOCATION_THRESHOLD)
+	public int getLocationThreshold() {
+		return locationThreshold;
+	}
+
+	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}
+
+	public enum Strategy {
+
+		/**
+		 * Trace contacts of individual persons.
+		 */
+		INDIVIDUAL_ONLY,
+
+		/**
+		 * Trace contacts of all persons that got infected at specific location.
+		 */
+		LOCATION,
+		/**
+		 * Trace and test all contacts for persons that have been at specific location.
+		 */
+		LOCATION_WITH_TESTING
+	}
+
 }

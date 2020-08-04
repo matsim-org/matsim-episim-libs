@@ -274,6 +274,7 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		reporting.reportInfection(personWrapper, infector, now, infectionType.toString(), container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		personWrapper.setInfectionContainer(container);
 
 		// TODO: Currently not in use, is it still needed?
 		// Necessary for the otfvis visualization (although it is unfortunately not working).  kai, apr'20

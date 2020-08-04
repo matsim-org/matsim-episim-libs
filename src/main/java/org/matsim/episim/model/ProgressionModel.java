@@ -23,6 +23,8 @@ package org.matsim.episim.model;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 
+import java.util.Collection;
+
 /**
  * This class models the {@link org.matsim.episim.EpisimPerson.DiseaseStatus} state transitions at the end of the day.
  * The model should also update the {@link org.matsim.episim.EpisimPerson.QuarantineStatus} of affected persons.
@@ -39,6 +41,11 @@ public interface ProgressionModel {
 	 * Called at the start of the day to update the state of a person.
 	 */
 	void updateState(EpisimPerson person, int day);
+
+	/**
+	 * Called after all state updates for all persons have been done.
+	 */
+	default void beforeStateUpdates(Collection<EpisimPerson> persons, int day) {}
 
 	/**
 	 * Checks whether any state transitions are possible. Otherwise the simulation will end.

@@ -7,6 +7,8 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.matsim.core.config.Config;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.EpisimConfigGroup;
@@ -17,10 +19,12 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@RunWith(Parameterized.class)
 public class RunEpisimSnapshotTest {
 
 	@Rule
@@ -28,6 +32,14 @@ public class RunEpisimSnapshotTest {
 	private Config config;
 	private EpisimConfigGroup episimConfig;
 	private EpisimRunner runner;
+
+	@Parameterized.Parameter
+	public TracingConfigGroup.Strategy strategy;
+
+	@Parameterized.Parameters(name = "tracing-{0}")
+	public static Iterable<TracingConfigGroup.Strategy> parameters() {
+		return Arrays.asList(TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, TracingConfigGroup.Strategy.LOCATION_WITH_TESTING);
+	}
 
 	@Before
 	public void setup() {
@@ -49,6 +61,8 @@ public class RunEpisimSnapshotTest {
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(5);
 		tracingConfig.setTracingProbability(0.75);
 		tracingConfig.setEquipmentRate(0.75);
+		tracingConfig.setStrategy(strategy);
+		tracingConfig.setLocationThreshold(1);
 
 	}
 
@@ -78,7 +92,7 @@ public class RunEpisimSnapshotTest {
 	@Ignore("Snapshot file not checked into git because of its size")
 	public void fixedSnapshot() {
 
-		episimConfig.setStartFromSnapshot(utils.getInputDirectory() + "episim-snapshot-015.zip");
+		episimConfig.setStartFromSnapshot(utils.getInputDirectory() + "episim-snapshot-015-1970-01-15.zip");
 		runner.run(30);
 
 		RunEpisimIntegrationTest.assertSimulationOutput(utils);
