@@ -23,6 +23,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_DELAY = "tracingDelay";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
+	private static final String TRACE_SUSCEPTIBLE = "traceSusceptible";
 	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String CAPACITY = "tracingCapacity";
 	private static final String CAPACITY_TYPE = "capacityType";
@@ -65,6 +66,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Members of the same household will be put always into quarantine.
 	 */
 	private boolean quarantineHouseholdMembers = false;
+
+	/**
+	 * Trace contacts between two susceptible persons. (Uses a lot more RAM)
+	 */
+	private boolean traceSusceptible = true;
 
 	/**
 	 * Defines if the capacity is either per (infected) person or per contact person.
@@ -195,6 +201,16 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(QUARANTINE_HOUSEHOLD)
 	public boolean getQuarantineHousehold() {
 		return quarantineHouseholdMembers;
+	}
+
+	@StringSetter(TRACE_SUSCEPTIBLE)
+	public void setTraceSusceptible(boolean traceSusceptible) {
+		this.traceSusceptible = traceSusceptible;
+	}
+
+	@StringGetter(TRACE_SUSCEPTIBLE)
+	public boolean getTraceSusceptible() {
+		return traceSusceptible;
 	}
 
 	@StringGetter(CAPACITY_TYPE)

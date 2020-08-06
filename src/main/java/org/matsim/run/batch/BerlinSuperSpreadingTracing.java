@@ -56,6 +56,9 @@ public class BerlinSuperSpreadingTracing implements BatchRun<BerlinSuperSpreadin
 		));
 		tracingConfig.setStrategy(TracingConfigGroup.Strategy.valueOf(params.strategy));
 
+		// uses too much RAM otherwise
+		tracingConfig.setTraceSusceptible(false);
+
 
 		return config;
 	}

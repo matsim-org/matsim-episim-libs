@@ -44,6 +44,11 @@ public final class SymmetricContactModel extends AbstractContactModel {
 	private final int trackingAfterDay;
 
 	/**
+	 * Whether to trace susceptible persons.
+	 */
+	private final boolean traceSusceptible;
+
+	/**
 	 * This buffer is used to store the infection type.
 	 */
 	private final StringBuilder buffer = new StringBuilder();
@@ -55,6 +60,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
+		this.traceSusceptible = tracingConfig.getTraceSusceptible();
 	}
 
 	@Override
@@ -115,7 +121,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				if (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus()) {
 					continue;
 				}
-			}
+			} else if (!traceSusceptible && personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible
+					&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
+				continue;
 
 			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
 			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
