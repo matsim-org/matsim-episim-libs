@@ -26,13 +26,13 @@ public class BerlinSuperSpreadingTracing implements BatchRun<BerlinSuperSpreadin
 	@Override
 	public AbstractModule getBindings(int id, Object params) {
 		Params p = (Params) params;
-		return new SnzBerlinSuperSpreaderScenario(p.sigma, p.sigma);
+		return new SnzBerlinSuperSpreaderScenario(25, p.sigma, p.sigma);
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		Config config = new SnzBerlinSuperSpreaderScenario(params.sigma, params.sigma).config();
+		Config config = new SnzBerlinSuperSpreaderScenario(25, params.sigma, params.sigma).config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -65,13 +65,13 @@ public class BerlinSuperSpreadingTracing implements BatchRun<BerlinSuperSpreadin
 
 	public static final class Params {
 
-		@GenerateSeeds(40)
+		@GenerateSeeds(15)
 		private long seed;
 
 		@StringParameter({"2020-03-07"})
 		String referenceDate;
 
-		@Parameter({0, 0.5, 0.75, 1})
+		@Parameter({0, 0.5, 1, 2})
 		private double sigma;
 
 		@IntParameter({0, 30, 60, Integer.MAX_VALUE})

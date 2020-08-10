@@ -50,8 +50,20 @@ import static org.matsim.episim.model.Transition.to;
  *
  * @see AbstractSnzScenario
  */
-public class SnzBerlinWeekScenario25pct2020 extends AbstractSnzScenario2020 {
+public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
+	/**
+	 * Sample size of the scenario (Either 25 or 100)
+	 */
+	private final int sample;
+
+	public SnzBerlinWeekScenario2020() {
+		this(25);
+	}
+
+	public SnzBerlinWeekScenario2020(int sample) {
+		this.sample = sample;
+	}
 
 	@Provides
 	@Singleton
@@ -63,16 +75,25 @@ public class SnzBerlinWeekScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.clearInputEventsFiles();
 
-		config.plans().setInputFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz").toString());
+		config.plans().setInputFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
+				"be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample)).toString());
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_wt_25pt_split.xml.gz").toString())
+		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
+				"be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample)).toString())
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_sa_25pt_split.xml.gz").toString())
+		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
+				"be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample)).toString())
 				.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_so_25pt_split.xml.gz").toString())
+		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(
+				String.format("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample)).toString())
 				.addDays(DayOfWeek.SUNDAY);
+
+		if (sample == 100) {
+			episimConfig.setInitialInfections(4);
+			episimConfig.setSampleSize(1);
+		}
 
 		episimConfig.setCalibrationParameter(1.18e-5);
 		episimConfig.setStartDate("2020-02-18");

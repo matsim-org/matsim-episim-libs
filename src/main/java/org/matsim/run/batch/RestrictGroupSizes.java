@@ -23,7 +23,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 	@Override
 	public AbstractModule getBindings(int id, Object params) {
 		Params p = (Params) params;
-		return new SnzBerlinSuperSpreaderScenario(p.sigma, p.sigma);
+		return new SnzBerlinSuperSpreaderScenario(25, p.sigma, p.sigma);
 	}
 
 	@Override
@@ -34,7 +34,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinSuperSpreaderScenario module = new SnzBerlinSuperSpreaderScenario(params.sigma, params.sigma);
+		SnzBerlinSuperSpreaderScenario module = new SnzBerlinSuperSpreaderScenario(25, params.sigma, params.sigma);
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);

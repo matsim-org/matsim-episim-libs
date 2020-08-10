@@ -23,8 +23,13 @@ for f in output/*/*.restrictions.txt; do
     cp $f tmp/$name.csv
 done
 
+for f in output/*/*.rValues.txt; do
+    name=$(basename "$f")
+    cp $f tmp/$name.csv
+done
+
 echo "Creating zip file..."
 
-zip --junk-paths summaries.zip _info.txt metadata.yaml tmp/*.csv
+zip --junk-paths summaries.zip _info.txt metadata.yaml tmp/*.csv tmp/*.txt
 
 rm -r tmp

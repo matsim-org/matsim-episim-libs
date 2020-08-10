@@ -7,7 +7,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
-import org.matsim.run.modules.SnzBerlinWeekScenario25pct2020;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -21,7 +21,7 @@ public class ParamsBatch implements BatchRun<ParamsBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Object params) {
-		return new SnzBerlinWeekScenario25pct2020();
+		return new SnzBerlinWeekScenario2020();
 	}
 
 	@Override
@@ -32,7 +32,7 @@ public class ParamsBatch implements BatchRun<ParamsBatch.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario25pct2020 module = new SnzBerlinWeekScenario25pct2020();
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
 		Config config = module.config();
 
 		config.global().setRandomSeed(params.seed);

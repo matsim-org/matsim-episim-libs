@@ -5,20 +5,13 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.BatchRun.Parameter;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020;
-import org.matsim.run.modules.SnzBerlinWeekScenario25pct2020;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
-import java.util.Map;
-
-import static org.matsim.run.modules.AbstractSnzScenario2020.DEFAULT_ACTIVITIES;
 
 
 /**
@@ -29,7 +22,7 @@ public class BerlinPublicTransport implements BatchRun<BerlinPublicTransport.Par
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Object params) {
-		return new SnzBerlinWeekScenario25pct2020();
+		return new SnzBerlinWeekScenario2020();
 	}
 
 	@Override
@@ -40,7 +33,7 @@ public class BerlinPublicTransport implements BatchRun<BerlinPublicTransport.Par
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario25pct2020 module = new SnzBerlinWeekScenario25pct2020();
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -64,10 +57,10 @@ public class BerlinPublicTransport implements BatchRun<BerlinPublicTransport.Par
 
 		@GenerateSeeds(100)
 		long seed;
-		
+
 		@StringParameter({"CLOTH", "SURGICAL", "N95"})
 		String maskType;
-		
+
 		@Parameter({0.0, 0.5, 0.9, 1.0})
 		double maskCompliance;
 

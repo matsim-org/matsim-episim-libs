@@ -165,7 +165,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION ||
 					tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
 				// persons with no infection container have been initially infected
-				if (person.getInfectionContainer() != null && !person.getInfectionContainer().toString().startsWith("home")) {
+				if (person.getInfectionContainer() != null && !person.getInfectionContainer().toString().startsWith("home") &&
+						!person.getInfectionContainer().toString().startsWith("tr")) {
 					locations.mergeInt(person.getInfectionContainer(), 1, Integer::sum);
 				}
 			}
@@ -191,15 +192,18 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				for (EpisimPerson p : persons) {
 
 					if (p.getInfectionContainer() == e.getKey()) {
+
+						p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 						performTracing(p, now, day);
 
 						// assumes that all contact persons get tested
-						// then quarantines all of there contacts
+						// then quarantines all of their contacts
 						if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
 
 							for (EpisimPerson pw : p.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {
 
 								if (pw.hadDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)) {
+									p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 									performTracing(p, now, day);
 								}
 							}

@@ -22,7 +22,7 @@ package org.matsim.run.modules;
 
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.jgrapht.alg.util.Pair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
@@ -35,6 +35,7 @@ import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.InfectionModelWithViralLoad;
 import org.matsim.episim.model.SymmetricContactModel;
+import org.matsim.episim.policy.FixedPolicy;
 
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -53,16 +54,28 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	/**
 	 * Calibration parameter for pairs of sigma inf. and sigma susp.
 	 */
-	private static final Map<Pair<Double, Double>, Double> calibration = Map.of(
+	private static final Map<Pair<Double, Double>, Double> calibration25 = Map.of(
 			// Symetric
 			Pair.of(0d, 0d), 1.06e-5,
 			Pair.of(0.5, 0.5), 1.12e-5,
 			Pair.of(0.75, 0.75), 1.25e-5,
-			Pair.of(1d, 1d), 1.55e-5,
+			Pair.of(1d, 1d), 1.69e-5,
+			Pair.of(2d, 2d), 2.40e-5,
+			Pair.of(3d, 3d), 2.70e-5,
 
 			// Only receiving
 			Pair.of(0d, 1d), 1.22e-5
 	);
+
+	/**
+	 * Calibration params for the 100pct scenario.
+	 */
+	private static final Map<Pair<Double, Double>, Double> calibration100 = Map.of(
+			Pair.of(1d, 1d), 1.69e-5
+	);
+
+
+	private final int sample;
 	private final double sigmaInf;
 	private final double sigmaSusp;
 
@@ -70,10 +83,11 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	 * Constructor with default values.
 	 */
 	public SnzBerlinSuperSpreaderScenario() {
-		this(0, 1);
+		this(100, 1, 1);
 	}
 
-	public SnzBerlinSuperSpreaderScenario(double sigmaInf, double sigmaSusp) {
+	public SnzBerlinSuperSpreaderScenario(int sample, double sigmaInf, double sigmaSusp) {
+		this.sample = sample;
 		this.sigmaInf = sigmaInf;
 		this.sigmaSusp = sigmaSusp;
 	}
@@ -91,14 +105,25 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	public Config config() {
 
 
-		Config config = new SnzBerlinWeekScenario25pct2020().config();
+		Config config = new SnzBerlinWeekScenario2020(sample).config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setMaxContacts(30);
 
 		Pair<Double, Double> p = Pair.of(sigmaInf, sigmaSusp);
-		episimConfig.setCalibrationParameter(calibration.get(p));
+
+		double calibration;
+
+		if (sample == 25)
+			calibration = calibration25.get(p);
+		else if (sample == 100)
+			calibration = calibration100.get(p);
+		else
+			throw new IllegalStateException("Sample size has to be either 25 or 100, not" + sample);
+
+
+		episimConfig.setCalibrationParameter(calibration);
 
 		// set start
 		episimConfig.setStartDate("2020-02-16");
