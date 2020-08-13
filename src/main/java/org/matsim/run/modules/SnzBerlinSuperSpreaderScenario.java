@@ -35,7 +35,6 @@ import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.InfectionModelWithViralLoad;
 import org.matsim.episim.model.SymmetricContactModel;
-import org.matsim.episim.policy.FixedPolicy;
 
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -60,8 +59,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 			Pair.of(0.5, 0.5), 1.12e-5,
 			Pair.of(0.75, 0.75), 1.25e-5,
 			Pair.of(1d, 1d), 1.69e-5,
-			Pair.of(2d, 2d), 2.40e-5,
-			Pair.of(3d, 3d), 2.70e-5,
+			Pair.of(1.5d, 1.5d), 2.81e-5,
 
 			// Only receiving
 			Pair.of(0d, 1d), 1.22e-5
@@ -71,7 +69,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	 * Calibration params for the 100pct scenario.
 	 */
 	private static final Map<Pair<Double, Double>, Double> calibration100 = Map.of(
-			Pair.of(1d, 1d), 1.69e-5
+			Pair.of(1d, 1d), Double.NaN // Not Calibrated
 	);
 
 
@@ -83,7 +81,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	 * Constructor with default values.
 	 */
 	public SnzBerlinSuperSpreaderScenario() {
-		this(100, 1, 1);
+		this(25, 1.5, 1.5);
 	}
 
 	public SnzBerlinSuperSpreaderScenario(int sample, double sigmaInf, double sigmaSusp) {

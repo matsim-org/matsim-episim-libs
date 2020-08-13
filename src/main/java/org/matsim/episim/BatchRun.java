@@ -130,7 +130,9 @@ public interface BatchRun<T> {
 				}
 
 				Config config = setup.prepareConfig(++id, inst);
-				runs.add(new PreparedRun.Run(id, params, config, inst));
+
+				if (config != null)
+					runs.add(new PreparedRun.Run(id, params, config, inst));
 
 			} catch (ReflectiveOperationException e) {
 				log.error("Could not create param class", e);
@@ -207,6 +209,7 @@ public interface BatchRun<T> {
 	 * @param params parameters to use
 	 * @return initialized config
 	 */
+	@Nullable
 	Config prepareConfig(int id, T params);
 
 	/**
