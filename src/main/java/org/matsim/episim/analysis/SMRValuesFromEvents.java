@@ -54,8 +54,6 @@ import java.util.stream.Collectors;
 public class SMRValuesFromEvents implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(SMRValuesFromEvents.class);
-	private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
-	private final Map<String, HashMap<Integer, Integer>> infectionsPerActivity = new LinkedHashMap<>();
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
@@ -86,13 +84,16 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 				.filter(p -> Files.isDirectory(p))
 				.forEach(scenarios::add);
 
-
 		log.info("Read " + scenarios.size() + " files");
 		log.info(scenarios);
 
-		for (Path scenario : scenarios) {
-			calcValues(scenario);
-		}
+		scenarios.parallelStream().forEach(scenario -> {
+			try {
+				calcValues(scenario);
+			} catch (IOException e) {
+				log.error("Failed processing {}", scenario, e);
+			}
+		});
 
 		return 0;
 	}
@@ -115,11 +116,12 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		String id = name.substring(0, name.indexOf('.'));
 
 		EventsManager manager = EventsUtils.createEventsManager();
-		manager.addHandler(new InfectionsHandler());
-		manager.addHandler(new RHandler());
+		InfectionsHandler infHandler = new InfectionsHandler();
+		RHandler rHandler = new RHandler();
 
-		infectionsPerActivity.clear();
-		infectedPersons.clear();
+		manager.addHandler(infHandler);
+		manager.addHandler(rHandler);
+
 
 		List<Path> eventFiles = Files.list(eventFolder)
 				.filter(p -> p.getFileName().toString().contains("xml.gz"))
@@ -138,7 +140,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		bw.write("day\tdate\tactivity\tinfections\tscenario");
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
-			for (Entry<String, HashMap<Integer, Integer>> e : infectionsPerActivity.entrySet()) {
+			for (Entry<String, HashMap<Integer, Integer>> e : infHandler.infectionsPerActivity.entrySet()) {
 				if (e.getKey().equals("pt") || e.getKey().equals("total")) {
 					int infections = 0;
 					if (e.getValue().get(i) != null) infections = e.getValue().get(i);
@@ -158,7 +160,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			int noOfInfectors = 0;
 			int noOfInfected = 0;
-			for (InfectedPerson ip : infectedPersons.values()) {
+			for (InfectedPerson ip : rHandler.infectedPersons.values()) {
 				if (ip.getContagiousDay() == i) {
 					noOfInfectors++;
 					noOfInfected = noOfInfected + ip.getNoOfInfected();
@@ -214,7 +216,10 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 
 	}
 
-	private class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
+	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
+
+		private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
+
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectorId = event.getInfectorId().toString();
@@ -234,7 +239,11 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		}
 	}
 
-	private class InfectionsHandler implements EpisimInfectionEventHandler {
+	private static class InfectionsHandler implements EpisimInfectionEventHandler {
+
+		private final Map<String, HashMap<Integer, Integer>> infectionsPerActivity = new LinkedHashMap<>();
+
+
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectionType = event.getInfectionType();
