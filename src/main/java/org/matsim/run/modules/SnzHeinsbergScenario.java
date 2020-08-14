@@ -27,6 +27,8 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 
 import javax.inject.Singleton;
+import java.time.LocalDate;
+import java.util.Map;
 
 /**
  * Snz scenario for Heinsberg.
@@ -76,7 +78,7 @@ public class SnzHeinsbergScenario extends AbstractSnzScenario {
 
 
 		episimConfig.setInitialInfections(50);
-		episimConfig.setInitialStartInfection(10);
+		episimConfig.setInfections_pers_per_day(Map.of(LocalDate.of(1970,1,1),10));
 		episimConfig.setInitialInfectionDistrict("Heinsberg");
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicy(0).build());

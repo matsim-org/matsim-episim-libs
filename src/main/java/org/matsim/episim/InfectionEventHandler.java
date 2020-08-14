@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -139,7 +140,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private boolean init = false;
 	private int iteration = 0;
 	private int initialInfectionsLeft;
-	private int initialStartInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -161,7 +161,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.progressionModel = progressionModel;
 		this.contactModel = contactModel;
 		this.initialInfectionsLeft = episimConfig.getInitialInfections();
-		this.initialStartInfectionsLeft = episimConfig.getInitialStartInfection();
 	}
 
 	/**
@@ -581,6 +580,16 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		String district = episimConfig.getInitialInfectionDistrict();
 
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
+
+		int numInfections = 1;
+		for (Map.Entry<LocalDate, Integer> kv : episimConfig.getInfections_pers_per_day().entrySet()) {
+			LocalDate key = kv.getKey();
+			if (key.isBefore(date) || key.isEqual(date)) {
+				numInfections = kv.getValue();
+			}
+		}
+
 		List<EpisimPerson> candidates = this.personMap.values().stream()
 				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
 				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
@@ -591,25 +600,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			candidates = Lists.newArrayList(this.personMap.values());
 		}
 
-		while (true) {
-			if (initialStartInfectionsLeft > 0) {
-				while (initialStartInfectionsLeft > 0) {
-					EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
-					if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
-						randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
-						log.warn("Person {} has initial infection", randomPerson.getPersonId());
-						initialStartInfectionsLeft--;
-						initialInfectionsLeft--;
-					}
-				}
-				break;
-			}
+		while (numInfections > 0 && initialInfectionsLeft > 0) {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
 				log.warn("Person {} has initial infection", randomPerson.getPersonId());
 				initialInfectionsLeft--;
-				break;
+				numInfections--;
 			}
 		}
 
@@ -750,7 +747,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		out.writeLong(EpisimUtils.getSeed(rnd));
 		out.writeInt(initialInfectionsLeft);
-		out.writeInt(initialStartInfectionsLeft);
 		out.writeInt(iteration);
 
 		out.writeInt(restrictions.size());
@@ -791,7 +787,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		initialInfectionsLeft = in.readInt();
-		initialStartInfectionsLeft = in.readInt();
 		iteration = in.readInt();
 
 		int r = in.readInt();

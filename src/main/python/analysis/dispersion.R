@@ -27,37 +27,49 @@ counts <- function(f) {
   res <- sort(c(rep(0, length(no_inf)), v))
 }
 
-agg_counts <- function(f) {
-  
-  data <- np$load(f)
-  as.numeric(data)
-}
 
-f <- "C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.csv.npy"
-f <- "C:/home/Development/matsim-org/matsim-episim/battery/v13/params/berlin/1.0_0.28_aggr.npy"
+f <- "C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy"
 
 #map(sigma, function(s) { s * 2} )
 
 sigma <- c(0.0, 1.0, 2.0)
 
-s0 <- agg_counts("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/0.0_aggr.csv.npy")
-s1 <- agg_counts("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.csv.npy") 
-s2 <- agg_counts("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/2.0_aggr.csv.npy")
+est_disp <- function(f) {
+  
+  matrix <- np$load(f)
+  
+  est <- list()
+  inf80 <- list()
+  
+  for(row in 1:nrow(matrix)) {
+    
+      sprintf("Processing row %d\n", row)
+      v <- matrix[row,]
+      v <- v[!is.na(v)]
+      
+      fit <- fitdist(v, fix.arg=list(mu=2.5), "nbinom")
+      est <- c(est, as.numeric(fit$estimate))
+      
+      total = sum(v)
+      s80 <- v[0:-length(v) * 0.8]
+      
+      inf80 <- c(inf80, sum(s80) * 100 / total)
+      
+  }
 
+  df <- data.frame(as.numeric(est), as.numeric(inf80))
+  colnames(df) <- c("est", "inf80")
+  
+  return(df)
+}
+
+s0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/0.0_aggr.npy")
+s1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy") 
+s2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.5_aggr.npy")
 
 
 #df <- counts(f)
-
-hist(df, prob=TRUE)
-
-fit <- fitdist(df, fix.arg=list(mu=2.5), "nbinom")
-fit
-
-
-total = sum(df)
-s80 <- df[0:-length(df) * 0.8]
-sprintf("20%% are responsible for %.2f%%", sum(s80) * 100 / total)
-
+#hist(df, prob=TRUE)
 
 
 # Testing the distribution

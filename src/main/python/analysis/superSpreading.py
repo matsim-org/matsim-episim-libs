@@ -39,30 +39,6 @@ def infections(f):
     return pd.DataFrame(res)
 
 
-#%%
-
-susp = read_batch_run("data/superSpreading.zip")
-#%%
-
-fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
-
-df = susp[(susp.ciChange=="no") & (susp.groupSize != 42) & ( (susp.sigma == 0.5) | (susp.sigma == 0.75) )]
-
-hue = sns.color_palette(n_colors=3)
-
-
-sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
-             style="sigma", hue="groupSize", palette=hue,
-             data=df)
-
-plt.yscale("log")
-plt.ylim(bottom=1)
-plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-09-31"))
-
-
-#%%
-
-suspT = read_batch_run("data/suspTracing.zip")
 
 #%%
 
@@ -70,8 +46,8 @@ fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3))
 hue = sns.color_palette(n_colors=3)
 
 
-for i, s in enumerate((0.0, 1.0, 2.0)):
-    counts = np.load("data/dispersion/%s_aggr.csv.npy" % s)
+for i, s in enumerate((0.0, 1.0, 1.5)):
+    counts = np.load("data/dispersion/%s_aggr.npy" % s)
         
     # only select persons that infected others
     #counts = counts[counts!=0]
@@ -92,33 +68,59 @@ ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=1))
 
 #%%
 
-m = 0x7fffffff
-df = suspT[suspT.tracingCapacity==m]
+# max tracing capacity
+m = 2147483647
 
-fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+susp = read_batch_run("data/suspContainment.zip")
 
-hue = sns.color_palette(n_colors=4)
-
-sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
-             hue="sigma", style="strategy", palette=hue, data=df)
-
-plt.yscale("log")
-plt.ylim(bottom=1)
 
 #%%
 
-df = suspT[(suspT.tracingCapacity==30) & (suspT.sigma < 2) & (suspT.strategy != "LOCATION_WITH_TESTING")]
+df = susp[(susp.tracingCapacity==m) & (susp.unrestricted=="yes")]
 #df = suspT
 
-g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95",
-                hue="sigma", col="strategy", row="tracingCapacity",
+hue = sns.color_palette(n_colors=3)
+
+g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95", palette=hue,
+                hue="sigma", col="containment", row="tracingCapacity",
                 kind="line", data=df)
+
+g.fig.set_dpi(250)
+g.fig.set_size_inches((9.5, 3.0))
+
+for ax in g.axes.flat:
+    ax.set_yscale('log')
+    ax.set_ylim(bottom=1000)
+    ax.set_xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-10-01"))
+    
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    
+    
+#ci = datetime.fromisoformat("2020-03-07")
+#plt.axvline(ci, color="gray", linewidth=1, linestyle="--", alpha=0.8, ax=ax)
+#plt.text(ci, 1.2, ' Date of ci change', color="gray")
+
+#%%
+
+
+df = susp[(susp.unrestricted=="yes") & (susp.tracingCapacity==0)]
+#df = suspT
+
+hue = sns.color_palette(n_colors=3)
+
+g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95", palette=hue,
+                hue="sigma", col="containment",
+                kind="line", data=df)
+
+g.fig.set_dpi(250)
+g.fig.set_size_inches((9.5, 3.0))
 
 
 for ax in g.axes.flat:
     ax.set_yscale('log')
-    ax.set_ylim(bottom=10)
-    ax.set_xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-09-01"))
+    ax.set_ylim(bottom=5)
+    ax.set_xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-12-01"))
     
     ax.xaxis.set_major_formatter(dateFormater)
     ax.yaxis.set_major_formatter(ScalarFormatter())
@@ -126,32 +128,28 @@ for ax in g.axes.flat:
 
 #%%
 
-fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+df = susp[(susp.unrestricted=="yes") & (susp.tracingCapacity == 90) & (susp.containment !='GROUP_SIZES')]
+#df = suspT
 
-bins = np.arange(1, 30)
-width = 0.25
-i = 0
+hue = sns.color_palette(n_colors=3)
 
-for (s, n) in ( (0.0, 7), (0.5, 9), (0.75, 11)):
-    f = "data/groupSizes/seed_4711-remaining_0.5-sigma_%s-bySize_yes/groupSizes%d.infectionEvents.txt" % (s, n)
-    d = pd.read_csv(f, sep="\t")    
-    d = d[0:32914]
+g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95", palette=hue,
+                hue="sigma", style="containment", row="tracingCapacity", col="sigma",
+                kind="line", data=df,
+                height=5, aspect=0.5)
+
+g.fig.set_dpi(250)
+g.fig.set_size_inches((9.5, 3.0))
+
+
+for ax in g.axes.flat:
+    ax.set_yscale('log')
+    ax.set_ylim(bottom=5000)
+    ax.set_xlim(datetime.fromisoformat("2020-03-20"), datetime.fromisoformat("2020-06-01"))
     
-    vc = d['infector'].value_counts()
-    
-    if bins is None:
-        heights, bins = np.histogram(vc)
-        width = (bins[1] - bins[0])/4
-    else:
-        heights, _ = np.histogram(vc, bins=bins)
-        
-    ax.bar(bins[:-1] + width*i, heights, width=width, label="sigma=%s"%s)
-    #d['infector'].value_counts().hist(bins=30, label="sigma=%s"%s, alpha=0.5)
-    i += 1
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
 
-plt.ylabel("Secondary infections")
-plt.yscale('log')
-plt.legend()
-
+##%
 
 

@@ -10,7 +10,6 @@ import pandas as pd
 
 # Base folder where the _info is located.
 folder = "."
-folder = "C:/home/Development/matsim-org/matsim-episim/battery/v13/params/berlin"
 
 info = pd.read_csv(path.join(folder, "_info.txt"), sep=";")
 
@@ -47,6 +46,9 @@ def extract(array):
 
 # Example for filtering that needs to be adapted to dataset
 df = info
+
+print("Processing:")
+print(df)
 
 # %%
 
