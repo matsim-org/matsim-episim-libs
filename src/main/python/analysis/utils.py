@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 
-def read_batch_run(run):
+def read_batch_run(run, r_values=False):
     """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file. """
 
     info = None
@@ -37,6 +37,12 @@ def read_batch_run(run):
                 for name, v in info[info.RunId == idx].iteritems():
                     if v.values.shape[0] > 0:
                         df[name] = v.values[0]
+
+                if r_values:
+                    with z.open(idx + ".rValues.txt.csv") as rCSV:
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
+                        df['rValue'] = rv.rValue
+                        df['newContagious'] = rv.newContagious
 
                 frames.append(df)
 

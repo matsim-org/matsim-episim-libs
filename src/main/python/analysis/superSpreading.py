@@ -71,7 +71,7 @@ ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=1))
 # max tracing capacity
 m = 2147483647
 
-susp = read_batch_run("data/suspContainment.zip")
+susp = read_batch_run("data/suspContainment.zip", rValues=True)
 
 
 #%%
@@ -150,6 +150,27 @@ for ax in g.axes.flat:
     ax.xaxis.set_major_formatter(dateFormater)
     ax.yaxis.set_major_formatter(ScalarFormatter())
 
-##%
+#%%
+
+df = susp[(susp.unrestricted=="no")]
+#df = suspT
+
+df["rrValue"] = df.rValue.rolling(5).mean()
+
+df = df[(df.date >= datetime.fromisoformat("2020-03-07")) & (df.date <= datetime.fromisoformat("2020-05-01"))]
+
+aggr = df.groupby(["sigma", "tracingCapacity", "containment"]).agg(rValue=("rrValue", "mean"))
+
+aggr['relR'] = 1
+
+aggr.loc[(0,), 'relR'] = aggr.loc[(0,)].rValue / 2.0786523989217667
+aggr.loc[(1,), 'relR'] = aggr.loc[(1,)].rValue / 2.1065319467944343
+aggr.loc[(1.5,), 'relR'] = aggr.loc[(1.5,)].rValue / 2.0880208369847444
 
 
+#hue = sns.color_palette(n_colors=3)
+
+#g = sns.relplot(x="date", y="rrValue", estimator="mean", ci="q95", palette=hue,
+#                hue="sigma", style="containment", row="tracingCapacity", col="sigma",
+#                kind="line", data=df,
+#                height=5, aspect=0.5)

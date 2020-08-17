@@ -78,8 +78,11 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		episimConfig.setInfections_pers_per_day(Map.of(
-				LocalDate.of(2020, 7, 30), params.infectionsPerDay
+				LocalDate.of(2020, 7, 9), params.infectionsPerDay
 		));
+
+
+		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 
 		config.global().setRandomSeed(params.seed);
 
