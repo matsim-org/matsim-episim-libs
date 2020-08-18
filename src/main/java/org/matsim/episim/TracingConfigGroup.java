@@ -36,6 +36,10 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private final Map<LocalDate, Integer> tracingCapacity = new TreeMap<>();
 	/**
+	 * Probability of successfully tracing a person.
+	 */
+	private final Map<LocalDate, Double> tracingProbability = new TreeMap<>();
+	/**
 	 * Day after which tracing starts and puts persons into quarantine.
 	 */
 	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;
@@ -47,11 +51,6 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of days after the person showing symptoms.
 	 */
 	private int tracingDelay = 0;
-	/**
-	 * Probability of successfully tracing a person.
-	 */
-	private double tracingProbability = 1.0;
-
 	/**
 	 * Probability that a person is equipped with a tracing device.
 	 */
@@ -125,14 +124,33 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.tracingDelay = tracingDelay;
 	}
 
-	@StringGetter(TRACING_PROBABILITY)
-	public double getTracingProbability() {
-		return tracingProbability;
+	@StringSetter(TRACING_PROBABILITY)
+	void setTracingProbability(String capacity) {
+		Map<String, String> map = SPLITTER.split(capacity);
+		setTracingProbability(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
 	}
 
-	@StringSetter(TRACING_PROBABILITY)
+	@StringGetter(TRACING_PROBABILITY)
+	public String getTracingProbabilityString() {
+		return JOINER.join(tracingProbability);
+	}
+
+	public void setTracingProbability(Map<LocalDate, Double> tracingProbability) {
+		this.tracingProbability.clear();
+		this.tracingProbability.putAll(tracingProbability);
+	}
+
+	/**
+	 * Sets one tracing probability valid throughout whole simulation.
+	 */
 	public void setTracingProbability(double tracingProbability) {
-		this.tracingProbability = tracingProbability;
+		setTracingProbability(Map.of(LocalDate.of(1970,1,1), tracingProbability));
+	}
+
+	public Map<LocalDate, Double> getTracingProbability() {
+		return tracingProbability;
 	}
 
 	/**
@@ -203,14 +221,14 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		return quarantineHouseholdMembers;
 	}
 
-	@StringSetter(TRACE_SUSCEPTIBLE)
-	public void setTraceSusceptible(boolean traceSusceptible) {
-		this.traceSusceptible = traceSusceptible;
-	}
-
 	@StringGetter(TRACE_SUSCEPTIBLE)
 	public boolean getTraceSusceptible() {
 		return traceSusceptible;
+	}
+
+	@StringSetter(TRACE_SUSCEPTIBLE)
+	public void setTraceSusceptible(boolean traceSusceptible) {
+		this.traceSusceptible = traceSusceptible;
 	}
 
 	@StringGetter(CAPACITY_TYPE)
@@ -233,14 +251,14 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.strategy = strategy;
 	}
 
-	@StringSetter(LOCATION_THRESHOLD)
-	public void setLocationThreshold(int locationThreshold) {
-		this.locationThreshold = locationThreshold;
-	}
-
 	@StringGetter(LOCATION_THRESHOLD)
 	public int getLocationThreshold() {
 		return locationThreshold;
+	}
+
+	@StringSetter(LOCATION_THRESHOLD)
+	public void setLocationThreshold(int locationThreshold) {
+		this.locationThreshold = locationThreshold;
 	}
 
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}

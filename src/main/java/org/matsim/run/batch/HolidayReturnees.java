@@ -48,6 +48,9 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 		));
 
 
+		Map<LocalDate, Double> prob = tracingConfig.getTracingProbability();
+		prob.put(LocalDate.of(2020, 10, 1), 0.75);
+
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		builder.clearAfter("2020-05-30", "work");

@@ -119,7 +119,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (tracingCapacity != Integer.MAX_VALUE)
 			tracingCapacity *= episimConfig.getSampleSize();
 
-		tracingProb = tracingConfig.getTracingProbability();
+		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
 
 	}
 
