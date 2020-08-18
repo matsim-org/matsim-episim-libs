@@ -71,7 +71,7 @@ public final class EpisimUtils {
 	 * Gets the day of a week for a certain start day and current iteration.
 	 */
 	public static DayOfWeek getDayOfWeek(LocalDate startDate, long iteration) {
-		return startDate.plusDays(iteration -1).getDayOfWeek();
+		return startDate.plusDays(iteration - 1).getDayOfWeek();
 	}
 
 	/**
@@ -146,6 +146,23 @@ public final class EpisimUtils {
 		}
 	}
 
+	/**
+	 * Find the current valid entry from a map of dates and values.
+	 * @param map map of values, assumed to be sorted by date
+	 * @param defaultValue default value
+	 * @param date date to search for
+	 * @return value from the map larger or equal to {@code date}
+	 */
+	public static <T> T findValidEntry(Map<LocalDate, T> map, T defaultValue, LocalDate date) {
+		T result = defaultValue;
+		for (Map.Entry<LocalDate, T> kv : map.entrySet()) {
+			LocalDate key = kv.getKey();
+			if (key.isBefore(date) || key.isEqual(date)) {
+				result = kv.getValue();
+			}
+		}
+		return result;
+	}
 
 	/**
 	 * Compress directory recursively.
@@ -233,6 +250,7 @@ public final class EpisimUtils {
 	 * Restrictions at educational facilites are created manually.
 	 * Weekends and bank holidays in 2020 are interpolated.
 	 */
+	@Deprecated
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha, LocalDate changeDate,
 																	  double changedExposure) throws IOException {
 

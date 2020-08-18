@@ -85,6 +85,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private int tracingCapacity = Integer.MAX_VALUE;
 
+	/**
+	 * Tracing probability for current day.
+	 */
+	private double tracingProb = 1;
+
 	@Inject
 	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
 		super(rnd, episimConfig);
@@ -108,20 +113,14 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
 		// Default capacity if none is set
-		tracingCapacity = Integer.MAX_VALUE;
+		tracingCapacity = EpisimUtils.findValidEntry(tracingConfig.getTracingCapacity(), Integer.MAX_VALUE, date);
 
-		for (Map.Entry<LocalDate, Integer> kv : tracingConfig.getTracingCapacity().entrySet()) {
-			LocalDate key = kv.getKey();
-			if (key.isBefore(date) || key.isEqual(date)) {
+		// scale by sample size
+		if (tracingCapacity != Integer.MAX_VALUE)
+			tracingCapacity *= episimConfig.getSampleSize();
 
-				Integer value = kv.getValue();
-				if (value == Integer.MAX_VALUE)
-					tracingCapacity = Integer.MAX_VALUE;
-				else
-					tracingCapacity = (int) (value * episimConfig.getSampleSize());
+		tracingProb = tracingConfig.getTracingProbability();
 
-			}
-		}
 	}
 
 	@Override
@@ -178,6 +177,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 
+		// perform the location based tracing
 		// there is always a delay of 1 day
 		ObjectIterator<Object2IntMap.Entry<Id<ActivityFacility>>> it = locations.object2IntEntrySet().iterator();
 		while (it.hasNext()) {
@@ -304,12 +304,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			}
 
 			// don't draw random number when tracing is practically off
-			if (tracingConfig.getTracingProbability() == 0 && homeId == null)
+			if (tracingProb == 0 && homeId == null)
 				continue;
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability()) {
+					|| tracingProb == 1d || rnd.nextDouble() < tracingProb) {
 				quarantinePerson(pw, day);
 				log.debug("sending person={} into quarantine because of contact to person={}", pw.getPersonId(), person.getPersonId());
 			}

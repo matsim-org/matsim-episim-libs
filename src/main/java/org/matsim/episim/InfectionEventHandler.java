@@ -582,20 +582,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
-		int numInfections = 1;
-		for (Map.Entry<LocalDate, Integer> kv : episimConfig.getInfections_pers_per_day().entrySet()) {
-			LocalDate key = kv.getKey();
-			if (key.isBefore(date) || key.isEqual(date)) {
-				numInfections = kv.getValue();
-			}
-		}
+		int numInfections = EpisimUtils.findValidEntry(episimConfig.getInfections_pers_per_day(), 1, date);
 
 		List<EpisimPerson> candidates = this.personMap.values().stream()
 				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
 				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
 				.collect(Collectors.toList());
 
-		if (candidates.size() < initialInfectionsLeft) {
+		if (candidates.size() < numInfections) {
 			log.warn("Not enough persons match the initial infection requirement, using whole population...");
 			candidates = Lists.newArrayList(this.personMap.values());
 		}
