@@ -21,6 +21,7 @@
 package org.matsim.episim;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.typesafe.config.Config;
@@ -48,13 +49,16 @@ import java.util.stream.Collectors;
  */
 public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
+	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
+	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
+
 	private static final String WRITE_EVENTS = "writeEvents";
 	private static final String CALIBRATION_PARAMETER = "calibrationParameter";
 	private static final String HOSPITAL_FACTOR = "hospitalFactor";
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
-	private static final String INITIAL_START_INFECTIONS = "initialStartInfections";
-	private static final String MAX_INTERACTIONS = "maxInteractions";
+	private static final String INFECTIONS_PER_DAY = "infectionsPerDay";
+	private static final String MAX_CONTACTS = "maxContacts";
 	private static final String SAMPLE_SIZE = "sampleSize";
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
@@ -76,7 +80,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double hospitalFactor = 1.;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
-	private int initialStartInfections = 0;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
@@ -102,12 +105,17 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
 
+	/**
+	 * Number of initial infections per day.
+	 */
+	private final Map<LocalDate, Integer> infectionsPerDay = new TreeMap<>();
+
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
-	private double maxInteractions = 3.;
+	private double maxContacts = 3.;
 
 	/**
 	 * Default constructor.
@@ -179,6 +187,29 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.initialInfections = initialInfections;
 	}
 
+	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
+		this.infectionsPerDay.clear();
+		this.infectionsPerDay.putAll(infectionsPerDay);
+	}
+
+	public Map<LocalDate, Integer> getInfections_pers_per_day() {
+		return infectionsPerDay;
+	}
+
+	@StringSetter(INFECTIONS_PER_DAY)
+	void setInfectionsPerDay(String capacity) {
+
+		Map<String, String> map = SPLITTER.split(capacity);
+		setInfections_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+		)));
+	}
+
+	@StringGetter(INFECTIONS_PER_DAY)
+	String getInfectionsPerDay() {
+		return JOINER.join(infectionsPerDay);
+	}
+
 	@StringGetter(INITIAL_INFECTION_DISTRICT)
 	public String getInitialInfectionDistrict() {
 		return initialInfectionDistrict;
@@ -187,16 +218,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(INITIAL_INFECTION_DISTRICT)
 	public void setInitialInfectionDistrict(String initialInfectionDistrict) {
 		this.initialInfectionDistrict = initialInfectionDistrict;
-	}
-
-	@StringGetter(INITIAL_START_INFECTIONS)
-	public int getInitialStartInfection() {
-		return initialStartInfections;
-	}
-
-	@StringSetter(INITIAL_START_INFECTIONS)
-	public void setInitialStartInfection(int initialStartInfections) {
-		this.initialStartInfections = initialStartInfections;
 	}
 
 	@StringGetter(START_DATE)
@@ -364,14 +385,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
-	@StringGetter(MAX_INTERACTIONS)
-	public double getMaxInteractions() {
-		return maxInteractions;
+	@StringGetter(MAX_CONTACTS)
+	public double getMaxContacts() {
+		return maxContacts;
 	}
 
-	@StringSetter(MAX_INTERACTIONS)
-	public void setMaxInteractions(double maxInteractions) {
-		this.maxInteractions = maxInteractions;
+	@StringSetter(MAX_CONTACTS)
+	public void setMaxContacts(double maxContacts) {
+		this.maxContacts = maxContacts;
 	}
 
 	/**

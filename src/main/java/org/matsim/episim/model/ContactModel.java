@@ -27,9 +27,9 @@ import org.matsim.episim.policy.Restriction;
 import java.util.Map;
 
 /**
- * This class models the interaction of persons staying in the same place for a certain time.
+ * This class models the contacts of persons staying in the same place for a certain time.
  */
-public interface InteractionModel {
+public interface ContactModel {
 
 	/**
 	 * This method is called when a persons leave a vehicle at {@code now}.

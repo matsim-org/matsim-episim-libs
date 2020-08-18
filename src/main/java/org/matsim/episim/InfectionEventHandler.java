@@ -44,7 +44,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.model.InteractionModel;
+import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -57,6 +57,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -66,7 +67,7 @@ import static org.matsim.episim.EpisimUtils.writeChars;
 /**
  * Main event handler of episim.
  * It consumes the events of a standard MATSim run and puts {@link EpisimPerson}s into {@link EpisimContainer}s during their activity.
- * At the end of activities an {@link InteractionModel} is executed and also a {@link ProgressionModel} at the end of the day.
+ * At the end of activities an {@link ContactModel} is executed and also a {@link ProgressionModel} at the end of the day.
  * See {@link EpisimModule} for which components may be substituted.
  */
 public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler,
@@ -118,7 +119,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	/**
 	 * Models the process of persons infecting each other during activities.
 	 */
-	private final InteractionModel interactionModel;
+	private final ContactModel contactModel;
 
 	/**
 	 * Scenario with population information.
@@ -139,7 +140,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private boolean init = false;
 	private int iteration = 0;
 	private int initialInfectionsLeft;
-	private int initialStartInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -148,7 +148,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	@Inject
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel,
-								 EpisimReporting reporting, InteractionModel interactionModel, SplittableRandom rnd) {
+								 EpisimReporting reporting, ContactModel contactModel, SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -159,9 +159,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.rnd = rnd;
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
 		this.progressionModel = progressionModel;
-		this.interactionModel = interactionModel;
+		this.contactModel = contactModel;
 		this.initialInfectionsLeft = episimConfig.getInitialInfections();
-		this.initialStartInfectionsLeft = episimConfig.getInitialStartInfection();
 	}
 
 	/**
@@ -438,7 +437,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			throw new IllegalStateException("Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" + episimFacilityId + " but actually is at facility=" + episimFacility.getContainerId().toString());
 		}
 
-		interactionModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
+		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 
@@ -484,7 +483,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		EpisimPerson episimPerson = this.personMap.get(leavesVehicleEvent.getPersonId());
 
-		interactionModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
+		contactModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
 
 		double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
 
@@ -581,35 +580,27 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		String district = episimConfig.getInitialInfectionDistrict();
 
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
+
+		int numInfections = EpisimUtils.findValidEntry(episimConfig.getInfections_pers_per_day(), 1, date);
+
 		List<EpisimPerson> candidates = this.personMap.values().stream()
 				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
 				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
 				.collect(Collectors.toList());
 
-		if (candidates.size() < initialInfectionsLeft) {
+		if (candidates.size() < numInfections) {
 			log.warn("Not enough persons match the initial infection requirement, using whole population...");
 			candidates = Lists.newArrayList(this.personMap.values());
 		}
 
-		while (true) {
-			if (initialStartInfectionsLeft > 0) {
-				while (initialStartInfectionsLeft > 0) {
-					EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
-					if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
-						randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
-						log.warn("Person {} has initial infection", randomPerson.getPersonId());
-						initialStartInfectionsLeft--;
-						initialInfectionsLeft--;
-					}
-				}
-				break;
-			}
+		while (numInfections > 0 && initialInfectionsLeft > 0) {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
 				log.warn("Person {} has initial infection", randomPerson.getPersonId());
 				initialInfectionsLeft--;
-				break;
+				numInfections--;
 			}
 		}
 
@@ -668,6 +659,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig.getStartDate(), iteration);
 
 		progressionModel.setIteration(iteration);
+		progressionModel.beforeStateUpdates(personMap.values(), iteration);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);
@@ -686,7 +678,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
-		interactionModel.setRestrictionsForIteration(iteration, im);
+		contactModel.setRestrictionsForIteration(iteration, im);
 		reporting.reportRestrictions(restrictions, iteration, report.date);
 
 	}
@@ -713,7 +705,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				int index = person.getEndOfDay(day.minus(1));
 				String actType = person.getTrajectory().get(index).actType;
 
-				interactionModel.infectionDynamicsFacility(person, lastFacility, now, actType);
+				contactModel.infectionDynamicsFacility(person, lastFacility, now, actType);
 				double timeSpent = now - lastFacility.getContainerEnteringTime(person.getPersonId());
 				person.addSpentTime(actType, timeSpent);
 
@@ -727,7 +719,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				firstFacility.addPerson(person, now);
 			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
 				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
-				interactionModel.infectionDynamicsVehicle(person, lastVehicle, now);
+				contactModel.infectionDynamicsVehicle(person, lastVehicle, now);
 				person.addSpentTime("pt", now - lastVehicle.getContainerEnteringTime(person.getPersonId()));
 
 				lastVehicle.removePerson(person);
@@ -749,7 +741,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		out.writeLong(EpisimUtils.getSeed(rnd));
 		out.writeInt(initialInfectionsLeft);
-		out.writeInt(initialStartInfectionsLeft);
 		out.writeInt(iteration);
 
 		out.writeInt(restrictions.size());
@@ -790,7 +781,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		initialInfectionsLeft = in.readInt();
-		initialStartInfectionsLeft = in.readInt();
 		iteration = in.readInt();
 
 		int r = in.readInt();

@@ -56,6 +56,7 @@ public class ConfigurableProgressionModelTest {
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
 		model = new ConfigurableProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig);
+		model.setIteration(1);
 	}
 
 	@Test
@@ -64,6 +65,8 @@ public class ConfigurableProgressionModelTest {
 		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		tracingConfig.setTracingDelay_days(0 );
+
+		model.setIteration(1);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
@@ -87,6 +90,8 @@ public class ConfigurableProgressionModelTest {
 
 		episimConfig.setStartDate("2020-06-01");
 		episimConfig.setSampleSize(1);
+
+		model.setIteration(1);
 
 		List<EpisimPerson> persons = new ArrayList<>();
 
@@ -189,6 +194,9 @@ public class ConfigurableProgressionModelTest {
 		tracingConfig.setTracingDelay_days(0 );
 		tracingConfig.setTracingProbability(0);
 		tracingConfig.setQuarantineHouseholdMembers(false);
+
+		// needed to update probability
+		model.setIteration(1);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);

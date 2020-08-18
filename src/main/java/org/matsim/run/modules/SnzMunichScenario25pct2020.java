@@ -128,7 +128,7 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setInitialInfectionDistrict("München");//TODO
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_002_6);
-		episimConfig.setMaxInteractions(3);
+		episimConfig.setMaxContacts(3);
 		String startDate = "2020-02-08";
 		episimConfig.setStartDate(startDate);
 

@@ -2,17 +2,28 @@ package org.matsim.episim.model;
 
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.facilities.ActivityFacility;
 
+import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectOutput;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.EpisimUtils.readChars;
+import static org.matsim.episim.EpisimUtils.writeChars;
 import static org.matsim.episim.model.Transition.to;
 
 /**
@@ -50,7 +61,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 					to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
 
 			.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
-				to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 
 			.build();
 
@@ -65,11 +76,19 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
-
+	/**
+	 * Counts how many infections occurred at each location.
+	 */
+	private final Object2IntMap<Id<ActivityFacility>> locations = new Object2IntOpenHashMap<>();
 	/**
 	 * Tracing capacity left for the day.
 	 */
 	private int tracingCapacity = Integer.MAX_VALUE;
+
+	/**
+	 * Tracing probability for current day.
+	 */
+	private double tracingProb = 1;
 
 	@Inject
 	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
@@ -94,20 +113,14 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
 		// Default capacity if none is set
-		tracingCapacity = Integer.MAX_VALUE;
+		tracingCapacity = EpisimUtils.findValidEntry(tracingConfig.getTracingCapacity(), Integer.MAX_VALUE, date);
 
-		for (Map.Entry<LocalDate, Integer> kv : tracingConfig.getTracingCapacity().entrySet()) {
-			LocalDate key = kv.getKey();
-			if (key.isBefore(date) || key.isEqual(date)) {
+		// scale by sample size
+		if (tracingCapacity != Integer.MAX_VALUE)
+			tracingCapacity *= episimConfig.getSampleSize();
 
-				Integer value = kv.getValue();
-				if (value == Integer.MAX_VALUE)
-					tracingCapacity = Integer.MAX_VALUE;
-				else
-					tracingCapacity = (int) (value * episimConfig.getSampleSize());
+		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
 
-			}
-		}
 	}
 
 	@Override
@@ -145,6 +158,60 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
 			if (tracingConfig.getTracingDelay() == 0) {
 				performTracing(person, now, day);
+			}
+
+			// count infections at locations
+			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION ||
+					tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
+				// persons with no infection container have been initially infected
+				if (person.getInfectionContainer() != null && !person.getInfectionContainer().toString().startsWith("home") &&
+						!person.getInfectionContainer().toString().startsWith("tr")) {
+					locations.mergeInt(person.getInfectionContainer(), 1, Integer::sum);
+				}
+			}
+		}
+	}
+
+	@Override
+	public final void beforeStateUpdates(Collection<EpisimPerson> persons, int day) {
+
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
+
+		// perform the location based tracing
+		// there is always a delay of 1 day
+		ObjectIterator<Object2IntMap.Entry<Id<ActivityFacility>>> it = locations.object2IntEntrySet().iterator();
+		while (it.hasNext()) {
+
+			Object2IntMap.Entry<Id<ActivityFacility>> e = it.next();
+
+			// trace facilities that are above the threshold
+			if (e.getIntValue() >= tracingConfig.getLocationThreshold()) {
+
+				log.debug("Trace location {}", e.getKey());
+
+				for (EpisimPerson p : persons) {
+
+					if (p.getInfectionContainer() == e.getKey()) {
+
+						p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+						performTracing(p, now, day);
+
+						// assumes that all contact persons get tested
+						// then quarantines all of their contacts
+						if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
+
+							for (EpisimPerson pw : p.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {
+
+								if (pw.hadDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)) {
+									p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+									performTracing(p, now, day);
+								}
+							}
+						}
+					}
+				}
+
+				it.remove();
 			}
 		}
 	}
@@ -228,25 +295,30 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (tracingConfig.getQuarantineHousehold())
 			homeId = (String) person.getAttributes().getAttribute("homeId");
 
-		// TODO: tracing household members makes always sense, no app or anything needed..
-		// they might not appear as contact persons under certain circumstances
-
 		for (EpisimPerson pw : person.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {
 
+			if (tracingConfig.getCapacityType() == TracingConfigGroup.CapacityType.PER_CONTACT_PERSON) {
+				tracingCapacity--;
+				if (tracingCapacity <= 0)
+					break;
+			}
+
 			// don't draw random number when tracing is practically off
-			if (tracingConfig.getTracingProbability() == 0 && homeId == null)
+			if (tracingProb == 0 && homeId == null)
 				continue;
 
 			// Persons of the same household are always traced successfully
 			if ((homeId != null && homeId.equals(pw.getAttributes().getAttribute("homeId")))
-					|| tracingConfig.getTracingProbability() == 1d || rnd.nextDouble() < tracingConfig.getTracingProbability()) {
+					|| tracingProb == 1d || rnd.nextDouble() < tracingProb) {
 				quarantinePerson(pw, day);
 				log.debug("sending person={} into quarantine because of contact to person={}", pw.getPersonId(), person.getPersonId());
 			}
 
 		}
 
-		tracingCapacity--;
+		if (tracingConfig.getCapacityType() == TracingConfigGroup.CapacityType.PER_PERSON)
+			tracingCapacity--;
+
 		if (tracingCapacity == 0) {
 			log.debug("tracing capacity exhausted for day={}", now);
 		}
@@ -259,4 +331,24 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		}
 	}
 
+	@Override
+	public void readExternal(ObjectInput in) throws IOException {
+		super.readExternal(in);
+
+		int n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			Id<ActivityFacility> id = Id.create(readChars(in), ActivityFacility.class);
+			locations.put(id, in.readInt());
+		}
+	}
+
+	@Override
+	public void writeExternal(ObjectOutput out) throws IOException {
+		super.writeExternal(out);
+		out.writeInt(locations.size());
+		for (Object2IntMap.Entry<Id<ActivityFacility>> e : locations.object2IntEntrySet()) {
+			writeChars(out, e.getKey().toString());
+			out.writeInt(e.getIntValue());
+		}
+	}
 }

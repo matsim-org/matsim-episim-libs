@@ -9,7 +9,7 @@ def comparison_plots(dfs: dict, rki, hospital, logy=True, figsize=(14, 8)):
     """ Creates plot to compare simulations runs with actual case numbers. """
 
     # Find lowest common last date
-    last = min(rki.casesCumulative.tail(1).index, next(iter(dfs.values())).nContagiousCumulative.tail(1).index)
+    last = min(rki.casesCumulative.tail(1).index, min(x.nContagiousCumulative.tail(1).index for x in dfs.values()))
 
     colors = sns.color_palette(n_colors=len(dfs) + 1)
 

@@ -78,15 +78,18 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.5, FaceMask.SURGICAL, 0.1)), "pt", "shop_daily", "shop_other")
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
-				.restrict("2020-06-28", 0.5, "educ_kiga")
+				.restrict("2020-06-08", 0.5, "educ_kiga")
 				.restrict("2020-06-22", 1., "educ_kiga")
 
 				//Ende der Sommerferien
-				.restrict("2020-08-10", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-08-10", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Herbstferien
+				.restrict("2020-10-09", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
 		;
 
 
@@ -158,7 +161,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setSampleSize(0.25);
 		episimConfig.setCalibrationParameter(0.000_011_0);
-		episimConfig.setMaxInteractions(3);
+		episimConfig.setMaxContacts(3);
 		String startDate = "2020-02-16";
 		episimConfig.setStartDate(startDate);
 		episimConfig.setHospitalFactor(1.6);
@@ -200,7 +203,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1;
 		private Extrapolation extrapolation = Extrapolation.linear;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200614.csv");
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200712.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
 

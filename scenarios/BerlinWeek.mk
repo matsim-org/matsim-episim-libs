@@ -3,7 +3,8 @@ in = $(WD)/snz/BerlinV2/original-data
 out = $(WD)/snz/BerlinV2/episim-input
 tmp = $(WD)/snz/BerlinV2/processed-data
 
-BerlinWeek: $(JAR) $(out)/be_2020-week_snz_episim_events_wt_25pt_split.xml.gz $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz
+BerlinWeek: $(JAR) $(out)/be_2020-week_snz_episim_events_wt_25pt_split.xml.gz $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz \
+$(out)/be_2020-week_snz_episim_events_wt_100pt_split.xml.gz $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_split.xml.gz
 	echo "Building Berlin Week scenario"
 
 $(out)/be_2020-week_snz_entirePopulation_emptyPlans_100pt.xml.gz:
@@ -16,6 +17,10 @@ $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz: 
 	$(sc) districtLookup $<\
  	 --output $@\
 	 --shp ../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp
+
+########
+# 25pct
+########
 
 $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(out)/be_2020-week_snz_episim_events_wt_25pt.xml.gz &: \
 $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
@@ -37,5 +42,32 @@ $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(
 	 --events $(out)/be_2020-week_snz_episim_events_wt_25pt.xml.gz\
 	 --events $(out)/be_2020-week_snz_episim_events_sa_25pt.xml.gz\
 	 --events $(out)/be_2020-week_snz_episim_events_so_25pt.xml.gz\
+	 --shape-file $(out)/../shape-File/dilutionArea.shp\
+	 --output $(out)
+
+###########
+# 100 pct
+###########
+
+$(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_filtered.xml.gz $(out)/be_2020-week_snz_episim_events_wt_100pt.xml.gz &: \
+$(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
+	$(sc) downSample 1.0\
+   --population $<\
+   --events $(in)/de2020gsmwt_events_reduced.xml.gz\
+   --events $(in)/de2020gsmsa_events_reduced.xml.gz\
+   --events $(in)/de2020gsmso_events_reduced.xml.gz\
+   --output $(tmp)
+
+	mv $(tmp)/population1.0.xml.gz $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_filtered.xml.gz
+	mv $(tmp)/de2020gsmwt_events_reduced-1.0.xml.gz $(out)/be_2020-week_snz_episim_events_wt_100pt.xml.gz
+	mv $(tmp)/de2020gsmsa_events_reduced-1.0.xml.gz $(out)/be_2020-week_snz_episim_events_sa_100pt.xml.gz
+	mv $(tmp)/de2020gsmso_events_reduced-1.0.xml.gz $(out)/be_2020-week_snz_episim_events_so_100pt.xml.gz
+
+$(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_split.xml.gz $(out)/be_2020-week_snz_episim_events_wt_100pt_split.xml.gz &: \
+$(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_100pt_filtered.xml.gz $(out)/be_2020-week_snz_episim_events_wt_100pt.xml.gz
+	$(sc) splitHomeFacilities $<\
+	 --events $(out)/be_2020-week_snz_episim_events_wt_100pt.xml.gz\
+	 --events $(out)/be_2020-week_snz_episim_events_sa_100pt.xml.gz\
+	 --events $(out)/be_2020-week_snz_episim_events_so_100pt.xml.gz\
 	 --shape-file $(out)/../shape-File/dilutionArea.shp\
 	 --output $(out)

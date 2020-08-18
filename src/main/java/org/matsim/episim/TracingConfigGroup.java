@@ -17,19 +17,28 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
-	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "pubTraceablePersonsInQuarantineAfterDay";
+	private static final String PUT_TRACEABLE_PERSONS_IN_QUARANTINE = "putTraceablePersonsInQuarantineAfterDay";
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
+	private static final String TRACE_SUSCEPTIBLE = "traceSusceptible";
 	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String CAPACITY = "tracingCapacity";
+	private static final String CAPACITY_TYPE = "capacityType";
+	private static final String STRATEGY = "strategy";
+	private static final String LOCATION_THRESHOLD = "locationThreshold";
 	private static final String GROUPNAME = "episimTracing";
+
 	/**
 	 * Amount of persons traceable der day.
 	 */
 	private final Map<LocalDate, Integer> tracingCapacity = new TreeMap<>();
+	/**
+	 * Probability of successfully tracing a person.
+	 */
+	private final Map<LocalDate, Double> tracingProbability = new TreeMap<>();
 	/**
 	 * Day after which tracing starts and puts persons into quarantine.
 	 */
@@ -42,11 +51,6 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of days after the person showing symptoms.
 	 */
 	private int tracingDelay = 0;
-	/**
-	 * Probability of successfully tracing a person.
-	 */
-	private double tracingProbability = 1.0;
-
 	/**
 	 * Probability that a person is equipped with a tracing device.
 	 */
@@ -61,6 +65,26 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Members of the same household will be put always into quarantine.
 	 */
 	private boolean quarantineHouseholdMembers = false;
+
+	/**
+	 * Trace contacts between two susceptible persons. (Uses a lot more RAM)
+	 */
+	private boolean traceSusceptible = true;
+
+	/**
+	 * Defines if the capacity is either per (infected) person or per contact person.
+	 */
+	private CapacityType capacityType = CapacityType.PER_PERSON;
+
+	/**
+	 * Tracing and containment strategy.
+	 */
+	private Strategy strategy = Strategy.INDIVIDUAL_ONLY;
+
+	/**
+	 * How many infections are required for location based tracing to trigger.
+	 */
+	private int locationThreshold = 4;
 
 	/**
 	 * Default constructor.
@@ -100,14 +124,33 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.tracingDelay = tracingDelay;
 	}
 
-	@StringGetter(TRACING_PROBABILITY)
-	public double getTracingProbability() {
-		return tracingProbability;
+	@StringSetter(TRACING_PROBABILITY)
+	void setTracingProbability(String capacity) {
+		Map<String, String> map = SPLITTER.split(capacity);
+		setTracingProbability(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
 	}
 
-	@StringSetter(TRACING_PROBABILITY)
+	@StringGetter(TRACING_PROBABILITY)
+	public String getTracingProbabilityString() {
+		return JOINER.join(tracingProbability);
+	}
+
+	public void setTracingProbability(Map<LocalDate, Double> tracingProbability) {
+		this.tracingProbability.clear();
+		this.tracingProbability.putAll(tracingProbability);
+	}
+
+	/**
+	 * Sets one tracing probability valid throughout whole simulation.
+	 */
 	public void setTracingProbability(double tracingProbability) {
-		this.tracingProbability = tracingProbability;
+		setTracingProbability(Map.of(LocalDate.of(1970,1,1), tracingProbability));
+	}
+
+	public Map<LocalDate, Double> getTracingProbability() {
+		return tracingProbability;
 	}
 
 	/**
@@ -177,4 +220,64 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	public boolean getQuarantineHousehold() {
 		return quarantineHouseholdMembers;
 	}
+
+	@StringGetter(TRACE_SUSCEPTIBLE)
+	public boolean getTraceSusceptible() {
+		return traceSusceptible;
+	}
+
+	@StringSetter(TRACE_SUSCEPTIBLE)
+	public void setTraceSusceptible(boolean traceSusceptible) {
+		this.traceSusceptible = traceSusceptible;
+	}
+
+	@StringGetter(CAPACITY_TYPE)
+	public CapacityType getCapacityType() {
+		return capacityType;
+	}
+
+	@StringSetter(CAPACITY_TYPE)
+	public void setCapacityType(CapacityType capacityType) {
+		this.capacityType = capacityType;
+	}
+
+	@StringGetter(STRATEGY)
+	public Strategy getStrategy() {
+		return strategy;
+	}
+
+	@StringSetter(STRATEGY)
+	public void setStrategy(Strategy strategy) {
+		this.strategy = strategy;
+	}
+
+	@StringGetter(LOCATION_THRESHOLD)
+	public int getLocationThreshold() {
+		return locationThreshold;
+	}
+
+	@StringSetter(LOCATION_THRESHOLD)
+	public void setLocationThreshold(int locationThreshold) {
+		this.locationThreshold = locationThreshold;
+	}
+
+	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}
+
+	public enum Strategy {
+
+		/**
+		 * Trace contacts of individual persons.
+		 */
+		INDIVIDUAL_ONLY,
+
+		/**
+		 * Trace contacts of all persons that got infected at specific location.
+		 */
+		LOCATION,
+		/**
+		 * Trace and test all contacts for persons that have been at specific location.
+		 */
+		LOCATION_WITH_TESTING
+	}
+
 }

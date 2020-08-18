@@ -98,7 +98,7 @@ public class KnRunEpisim {
 				binder().requireExplicitBindings();
 
 				// Main model classes regarding progression / infection etc..
-				bind( InteractionModel.class ).to( SymmetricInteractionModel.class ).in( Singleton.class );
+				bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
 				bind( InfectionModel.class).to( MyInfectionModel.class ).in( Singleton.class );
 				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
 				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
@@ -193,7 +193,7 @@ public class KnRunEpisim {
 
 				config.global().setRandomSeed( 4711 );
 
-				episimConfig.setMaxInteractions( 25. );
+				episimConfig.setMaxContacts( 25. );
 
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
 				tracingConfig.setTracingCapacity_pers_per_day( 0 );
@@ -205,7 +205,7 @@ public class KnRunEpisim {
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
 				strb.append( "__" ).append( restrictionsType.name() );
-				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxInteractions() );
+				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxContacts() );
 				if ( sigmaInfect!=0. ) strb.append( "__sInfct" ).append( sigmaInfect );
 				if ( sigmaSusc!=0. ) strb.append( "__sSusc" ).append( sigmaSusc );
 				strb.append( "__trStrt" ).append( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() );

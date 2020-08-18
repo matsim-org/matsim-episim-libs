@@ -31,9 +31,6 @@ import org.matsim.episim.model.Transition;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
-import java.io.IOException;
-import java.io.UncheckedIOException;
-import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -113,7 +110,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
-		episimConfig.setMaxInteractions(params.maxInteractions);
+		episimConfig.setMaxContacts(params.maxInteractions);
 		if (params.maxInteractions == 10) {
 			episimConfig.setCalibrationParameter(0.000_001);
 		}

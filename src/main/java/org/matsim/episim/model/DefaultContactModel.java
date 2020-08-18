@@ -25,7 +25,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
 
 import java.util.ArrayList;
@@ -35,12 +34,12 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
- * Default interaction model executed, when a person ends his activity.
+ * Default contact model executed, when a person ends his activity.
  * Infections probabilities calculations are delegated to a {@link InfectionModel}.
  */
-public final class SymmetricInteractionModel extends AbstractInteractionModel {
+public final class DefaultContactModel extends AbstractContactModel {
 
-	private static final Logger log = LogManager.getLogger( SymmetricInteractionModel.class );
+	private static final Logger log = LogManager.getLogger(DefaultContactModel.class);
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -48,17 +47,21 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 	private final int trackingAfterDay;
 
 	/**
+	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
+	 */
+	private final List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
+	/**
 	 * This buffer is used to store the infection type.
 	 */
 	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
 	/* package */
-	SymmetricInteractionModel( SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-				   EpisimReporting reporting, InfectionModel infectionModel ) {
+	DefaultContactModel(SplittableRandom rnd, Config config,
+						EpisimReporting reporting, InfectionModel infectionModel) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
-		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
+		this.trackingAfterDay = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getPutTraceablePersonsInQuarantineAfterDay();
 	}
 
 	@Override
@@ -87,17 +90,24 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 
 		EpisimConfigGroup.InfectionParams leavingParams = null;
 
-		for( EpisimPerson contactPerson : container.getPersons() ){
+		otherPersonsInContainer.addAll(container.getPersons());
+		otherPersonsInContainer.remove(personLeavingContainer);
 
-			int maxPersonsInContainer = container.getMaxGroupSize();
-			Gbl.assertIf( maxPersonsInContainer>1 );
-			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
+		// For the time being, will just assume that the first 10 persons are the ones we interact with.  Note that because of
+		// shuffle, those are 10 different persons every day.
 
-			if ( rnd.nextDouble() >= episimConfig.getMaxInteractions()/(maxPersonsInContainer-1) ) {
-				continue;
-			}
-			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
-			// if we want superspreading events, then maxInteractions needs to be much larger than 3 or 10.
+		// persons are scaled to number of agents with sample size, but at least 3 for the small development scenarios
+//		int contactWith = Math.min(otherPersonsInContainer.size(), Math.max((int) (episimConfig.getSampleSize() * 10), 3));
+		int contactWith = Math.min(otherPersonsInContainer.size(), (int)episimConfig.getMaxContacts());
+		for (int ii = 0; ii < contactWith; ii++) {
+
+			// we are essentially looking at the situation when the person leaves the container.  Interactions with other persons who have
+			// already left the container were treated then.  In consequence, we have some "circle of persons around us" (yyyy which should
+			//  depend on the density), and then a probability of infection in either direction.
+
+			// Draw the contact person and remove it -> we don't want to draw it multiple times
+			EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
+
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
@@ -144,7 +154,7 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
 			}
 
-			if (!AbstractInteractionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
+			if (!AbstractContactModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
 				continue;
 			}
 
@@ -195,6 +205,10 @@ public final class SymmetricInteractionModel extends AbstractInteractionModel {
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
 			}
 		}
+
+		// Clear cached container
+		otherPersonsInContainer.clear();
 	}
+
 
 }

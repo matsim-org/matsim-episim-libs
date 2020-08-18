@@ -96,6 +96,12 @@ public final class EpisimPerson implements Attributable {
 	 * The {@link EpisimContainer} the person is currently located in.
 	 */
 	private EpisimContainer<?> currentContainer = null;
+
+	/**
+	 * The facility where the person got infected, null otherwise.
+	 */
+	private Id<ActivityFacility> infectionContainer = null;
+
 	/**
 	 * Current {@link DiseaseStatus}.
 	 */
@@ -164,6 +170,10 @@ public final class EpisimPerson implements Attributable {
 		} else
 			currentContainer = null;
 
+		if (in.readBoolean()){
+			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
+		}
+
 		n = in.readInt();
 		spentTime.clear();
 		for (int i = 0; i < n; i++) {
@@ -199,6 +209,11 @@ public final class EpisimPerson implements Attributable {
 		if (currentContainer != null) {
 			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
 			writeChars(out, currentContainer.getContainerId().toString());
+		}
+
+		out.writeBoolean(infectionContainer != null);
+		if (infectionContainer != null) {
+			writeChars(out, infectionContainer.toString());
 		}
 
 		out.writeInt(spentTime.size());
@@ -421,6 +436,14 @@ public final class EpisimPerson implements Attributable {
 
 	void setFirstFacilityId(Id<ActivityFacility> firstFacilityId, DayOfWeek day) {
 		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;
+	}
+
+	public void setInfectionContainer(EpisimContainer<?> container) {
+		this.infectionContainer = (Id<ActivityFacility>) container.getContainerId();
+	}
+
+	public Id<ActivityFacility> getInfectionContainer() {
+		return infectionContainer;
 	}
 
 	/**
