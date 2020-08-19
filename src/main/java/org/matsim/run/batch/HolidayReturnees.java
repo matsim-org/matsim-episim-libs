@@ -1,12 +1,16 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Singleton;
+import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.InfectionModel;
+import org.matsim.episim.model.InfectionModelWithSeasonality;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.AbstractSnzScenario2020;
@@ -25,7 +29,13 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Object params) {
-		return new SnzBerlinWeekScenario2020();
+		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020())
+				.with(new AbstractModule() {
+					@Override
+					protected void configure() {
+						bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(Singleton.class);
+					}
+				});
 	}
 
 	@Override
@@ -42,14 +52,13 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
+		episimConfig.setCalibrationParameter(1.4e-5);
+
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), 30,
 				LocalDate.of(2020, 6, 1), params.tracingCapacity
 		));
 
-
-		Map<LocalDate, Double> prob = tracingConfig.getTracingProbability();
-		prob.put(LocalDate.of(2020, 10, 1), 0.75);
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
@@ -75,6 +84,8 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 			builder.restrict("2020-10-09", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict("2020-10-25", 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
+			Map<LocalDate, Double> prob = tracingConfig.getTracingProbability();
+			prob.put(LocalDate.of(2020, 10, 1), 0.75);
 
 		}
 
