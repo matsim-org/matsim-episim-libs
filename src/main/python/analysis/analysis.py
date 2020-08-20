@@ -34,7 +34,7 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = 'output/2020-06-21_13-06-35__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-18_trCap0/'
 # base = 'output/2020-06-21_13-06-44__frmSnz__theta1.1E-5@3__trStrt46_ciCorr0.3_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-20_trCap0/'
 
-#base = 'output/2020-07-13_21-35-41__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 1.
+# base = 'output/2020-07-13_21-35-41__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 1.
 # base = 'output/2020-07-13_21-45-54__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.5
 # base = 'output/2020-07-13_22-59-01__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.3333
 # base = 'output/2020-07-14_07-52-40__unrestr__theta1.13E-5@100__trStrt46_seed4711_strtDt2020-02-15_trCap{1970-01-01=0}/' # 0.3
@@ -59,6 +59,47 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # ===
 
+# base = 'output/2020-07-15_13-33-46__fromConfig__theta1.18E-5@3.0__trStrt46_seed4711_strtDt2020-02-18_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-15_20-22-35__fromSnz__theta1.18E-5@3.0__trStrt46_ciCorr2020-03-07@0.32_alph1.0_seed4711_strtDt2020-02-16_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-15_21-00-00__fromSnz__theta1.15E-5@3.0__trStrt46_ciCorr2020-03-07@0.3_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-07-15_22-46-53__fromSnz__theta1.2E-5@3.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-15_22-46-41__fromSnz__theta1.2E-5@3.0__trStrt46_ciCorr2020-03-07@0.2_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+
+# sqrt interaction:
+
+# base = 'output/2020-07-16_09-11-43__symmetric__fromSnz__theta1.2E-5@25.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-07-16_09-12-27__symmetric__fromSnz__theta1.2E-5@2.5__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_17-35-01__symmetric__fromSnz__theta6.0E-6@5.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_17-35-21__symmetric__fromSnz__theta3.0E-6@10.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_18-18-22__symmetric__fromSnz__theta1.0E-6@10.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-07-16_18-18-14__symmetric__fromSnz__theta2.0E-6@10.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_18-48-01__symmetric__fromSnz__theta2.0E-6@10.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-15_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_18-48-14__symmetric__fromSnz__theta2.0E-6@10.0__trStrt46_ciCorr2020-03-07@0.25_alph1.0_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-07-16_19-38-27__symmetric__unrestr__theta2.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_21-01-28__symmetric__unrestr__theta2.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-14_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_19-38-19__symmetric__unrestr__theta2.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-15_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_21-01-35__symmetric__unrestr__theta2.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-16_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_19-38-10__symmetric__unrestr__theta2.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-07-16_21-05-41__symmetric__unrestr__theta1.7E-6@10.0__trStrt46_seed4711_strtDt2020-02-15_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_21-05-35__symmetric__unrestr__theta1.3E-6@10.0__trStrt46_seed4711_strtDt2020-02-15_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_21-05-27__symmetric__unrestr__theta1.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-15_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-07-16_21-45-49__symmetric__unrestr__theta1.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+
+# divN interaction:
+
+
+# base = 'output/2020-07-16_22-48-02__divN__unrestr__theta1.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_23-04-28__divN__unrestr__theta8.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_23-04-15__divN__unrestr__theta1.2E-5@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+base = 'output/2020-07-16_23-04-34__divN__unrestr__theta1.6E-5@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_23-57-53__divN__unrestr__theta1.0E-4@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_23-58-02__divN__unrestr__theta0.001@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -87,14 +128,14 @@ pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
                   cycler(linestyle=['', '', '', '','-','-','-']) +
-                  cycler(marker=['.','.','','.','','','']))
+                  cycler(marker=['.','','','.','','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-axes.set_ylim(0.9,1000)
+axes.set_ylim(0.9,10000)
 axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
-# pyplot.axvline(pd.to_datetime('2020-03-11'), color='red', linestyle='-', lw=1)
-# pyplot.axvline(pd.to_datetime('2020-03-16'), color='red', linestyle='-', lw=1)
-# pyplot.axvline(pd.to_datetime('2020-03-21'), color='red', linestyle='-', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-16'), color='gray', linestyle=':', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
 pyplot.axhline(32,color='gray',linestyle='dotted')
 pyplot.show()
 
@@ -117,7 +158,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
-axes.set_ylim(0.9,1000)
+axes.set_ylim(0.9,10000)
 pyplot.show()
 
 # In[]:

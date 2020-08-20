@@ -81,6 +81,10 @@ public class KnRunEpisim {
 	private enum WeekendHandling{ weekdaysOnly, inclWeekends }
 	private static final WeekendHandling runType = WeekendHandling.inclWeekends;
 
+	private enum InteractionModelType{ original, divN, sqrt }
+	private static final InteractionModelType interactionModelType = InteractionModelType.divN;
+
+
 	public static void main(String[] args) throws IOException{
 
 		OutputDirectoryLogging.catchLogEntries();
@@ -98,7 +102,19 @@ public class KnRunEpisim {
 				binder().requireExplicitBindings();
 
 				// Main model classes regarding progression / infection etc..
-				bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+				switch( interactionModelType ) {
+					case original:
+						bind( ContactModel.class ).to( DefaultContactModel.class ).in( Singleton.class );
+						break;
+					case divN:
+						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+						break;
+					case sqrt:
+						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+						break;
+					default:
+						throw new IllegalStateException( "Unexpected value: " + interactionModelType );
+				}
 				bind( InfectionModel.class).to( MyInfectionModel.class ).in( Singleton.class );
 				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
 				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
@@ -178,8 +194,34 @@ public class KnRunEpisim {
 						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_so_25pt_split.xml.gz").toString())
 							    .addDays(DayOfWeek.SUNDAY);
 
-						episimConfig.setCalibrationParameter(1.13e-5);
-						episimConfig.setStartDate("2020-02-15");
+						episimConfig.setCalibrationParameter( 1.2e-5 );
+						if ( interactionModelType == InteractionModelType.original ){
+//						episimConfig.setCalibrationParameter(1.18e-5); // from CR
+//							episimConfig.setCalibrationParameter( 1.2e-5 );
+//						episimConfig.setStartDate("2020-02-18"); // from CR
+							episimConfig.setStartDate( "2020-02-17" );
+						} else if ( interactionModelType == interactionModelType.divN ) {
+							episimConfig.setStartDate( "2020-02-13" );
+							episimConfig.setCalibrationParameter( 7.e-5 );
+							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
+							// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
+							// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
+							// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
+							// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
+							// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
+						} else if ( interactionModelType == interactionModelType.sqrt ) {
+							episimConfig.setStartDate( "2020-02-13" );
+							episimConfig.setCalibrationParameter( 1.2e-5 );
+							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
+							// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
+							// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
+							// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
+							// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
+							// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
+						} else {
+							throw new RuntimeException( "not implemented for infectionModelType=" + interactionModelType );
+						}
+
 						break;
 					default:
 						throw new IllegalStateException( "Unexpected value: " + runType );
@@ -190,19 +232,20 @@ public class KnRunEpisim {
 
 				// ---
 
-				config.global().setRandomSeed( 4711 );
+//				config.global().setRandomSeed( 4711 );
 
 				episimConfig.setMaxContacts( 25. );
 
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
-				tracingConfig.setTracingCapacity_pers_per_day( 0 );
+//				tracingConfig.setTracingCapacity_pers_per_day( 0 );
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.fromConfig;
+				RestrictionsType restrictionsType = RestrictionsType.unrestr;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
+				strb.append( "__" ).append( interactionModelType );
 				strb.append( "__" ).append( restrictionsType.name() );
 				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxContacts() );
 				if ( sigmaInfect!=0. ) strb.append( "__sInfct" ).append( sigmaInfect );
@@ -281,7 +324,7 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.fromSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
-					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.32 ));
+					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.25 ));
 					basePolicyBuilder.setAlpha( 1. );
 
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
@@ -332,7 +375,7 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run(100 );
+		injector.getInstance(EpisimRunner.class).run(80 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
