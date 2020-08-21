@@ -351,11 +351,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+
+			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)
+				tracingQueue.add(p.getPersonId());
 		}
-
-		if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)
-			tracingQueue.add(p.getPersonId());
-
 	}
 
 	@Override
