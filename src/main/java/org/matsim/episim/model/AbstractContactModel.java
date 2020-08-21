@@ -272,9 +272,12 @@ public abstract class AbstractContactModel implements ContactModel {
 			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
 		}
 
-		reporting.reportInfection(personWrapper, infector, now, infectionType.toString(), container);
+		String infType = infectionType.toString();
+
+		reporting.reportInfection(personWrapper, infector, now, infType, container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 		personWrapper.setInfectionContainer(container);
+		personWrapper.setInfectionType(infType);
 
 		// TODO: Currently not in use, is it still needed?
 		// Necessary for the otfvis visualization (although it is unfortunately not working).  kai, apr'20

@@ -7,10 +7,8 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinSuperSpreaderScenario;
 
-import javax.annotation.Nullable;
 import java.util.Map;
 
 
@@ -43,16 +41,17 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		builder.clearAfter("2020-03-07", "work", "leisure", "visit", "errands");
+		builder.clearAfter(params.referenceDate);
+		//builder.clearAfter(params.referenceDate, "work", "leisure", "visit", "errands");
 
-		if (params.bySize.equals("yes")) {
+		if (params.containment.equals("GROUP_SIZES")) {
 
 			Map<Double, Integer> work = Map.of(
 					0.25, 72,
 					0.50, 204,
 					0.75, 568
 			);
-			builder.restrict("2020-03-07", Restriction.ofGroupSize(work.get(params.remaining)), "work");
+			builder.restrict(params.referenceDate, Restriction.ofGroupSize(work.get(params.remaining)), "work");
 
 
 			Map<Double, Integer> leisure = Map.of(
@@ -60,14 +59,14 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 					0.50, 260,
 					0.75, 500
 			);
-			builder.restrict("2020-03-07", Restriction.ofGroupSize(leisure.get(params.remaining)), "leisure");
+			builder.restrict(params.referenceDate, Restriction.ofGroupSize(leisure.get(params.remaining)), "leisure");
 
 			Map<Double, Integer> visit = Map.of(
 					0.25, 12,
 					0.50, 24,
 					0.75, 80
 			);
-			builder.restrict("2020-03-07", Restriction.ofGroupSize(visit.get(params.remaining)), "visit");
+			builder.restrict(params.referenceDate, Restriction.ofGroupSize(visit.get(params.remaining)), "visit");
 
 
 			Map<Double, Integer> errands = Map.of(
@@ -75,13 +74,14 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 					0.50, 200,
 					0.75, 416
 			);
-			builder.restrict("2020-03-07", Restriction.ofGroupSize(errands.get(params.remaining)), "errands");
+			builder.restrict(params.referenceDate, Restriction.ofGroupSize(errands.get(params.remaining)), "errands");
 
-		} else {
+		} else if (params.containment.equals("UNIFORM")) {
 
-			builder.restrict("2020-03-07", Restriction.of(params.remaining), "work", "leisure", "visit", "errands");
+			builder.restrict(params.referenceDate, Restriction.of(params.remaining), "work", "leisure", "visit", "errands");
 
-		}
+		} else
+			throw new IllegalStateException("Unknown containment");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -90,18 +90,20 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(40)
+		@GenerateSeeds(15)
 		long seed = 4711;
+
+		@Parameter({0, 1, 1.5})
+		double sigma;
 
 		@Parameter({0.25, 0.5, 0.75})
 		double remaining;
 
-		@Parameter({0, 0.5, 0.75})
-		private double sigma;
+		@StringParameter({"GROUP_SIZES", "UNIFORM"})
+		String containment;
 
-		@StringParameter({"yes", "no"})
-		String bySize;
-
+		@StringParameter({"2020-03-07"})
+		String referenceDate;
 
 	}
 

@@ -124,17 +124,21 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.tracingDelay = tracingDelay;
 	}
 
+	@StringGetter(TRACING_PROBABILITY)
+	public String getTracingProbabilityString() {
+		return JOINER.join(tracingProbability);
+	}
+
+	public Map<LocalDate, Double> getTracingProbability() {
+		return tracingProbability;
+	}
+
 	@StringSetter(TRACING_PROBABILITY)
 	void setTracingProbability(String capacity) {
 		Map<String, String> map = SPLITTER.split(capacity);
 		setTracingProbability(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
-	}
-
-	@StringGetter(TRACING_PROBABILITY)
-	public String getTracingProbabilityString() {
-		return JOINER.join(tracingProbability);
 	}
 
 	public void setTracingProbability(Map<LocalDate, Double> tracingProbability) {
@@ -146,11 +150,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Sets one tracing probability valid throughout whole simulation.
 	 */
 	public void setTracingProbability(double tracingProbability) {
-		setTracingProbability(Map.of(LocalDate.of(1970,1,1), tracingProbability));
-	}
-
-	public Map<LocalDate, Double> getTracingProbability() {
-		return tracingProbability;
+		setTracingProbability(Map.of(LocalDate.of(1970, 1, 1), tracingProbability));
 	}
 
 	/**
@@ -271,13 +271,19 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		INDIVIDUAL_ONLY,
 
 		/**
-		 * Trace contacts of all persons that got infected at specific location.
+		 * Put persons at location with lot of infections into quarantine.
 		 */
 		LOCATION,
+
 		/**
 		 * Trace and test all contacts for persons that have been at specific location.
 		 */
-		LOCATION_WITH_TESTING
+		LOCATION_WITH_TESTING,
+
+		/**
+		 * Follow back all contacts of infected persons.
+		 */
+		IDENTIFY_SOURCE
 	}
 
 }

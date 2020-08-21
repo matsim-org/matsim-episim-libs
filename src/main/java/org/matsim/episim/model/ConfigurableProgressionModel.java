@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
@@ -18,9 +19,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.Map;
-import java.util.SplittableRandom;
+import java.util.*;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -80,6 +79,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 * Counts how many infections occurred at each location.
 	 */
 	private final Object2IntMap<Id<ActivityFacility>> locations = new Object2IntOpenHashMap<>();
+
+	/**
+	 * Persons marked for contact tracing.
+	 */
+	private final Set<Id<Person>> tracingQueue = new LinkedHashSet<>();
+
 	/**
 	 * Tracing capacity left for the day.
 	 */
@@ -160,20 +165,24 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				performTracing(person, now, day);
 			}
 
+
 			// count infections at locations
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION ||
 					tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
 				// persons with no infection container have been initially infected
-				if (person.getInfectionContainer() != null && !person.getInfectionContainer().toString().startsWith("home") &&
-						!person.getInfectionContainer().toString().startsWith("tr")) {
-					locations.mergeInt(person.getInfectionContainer(), 1, Integer::sum);
+				if (person.getInfectionContainer() != null && person.getInfectionType() != null) {
+					String container = person.getInfectionContainer().toString();
+					if (!container.startsWith("home") && !container.startsWith("tr") &&
+							!person.getInfectionType().contains("shop") && !person.getInfectionType().contains("pt")) {
+						locations.mergeInt(person.getInfectionContainer(), 1, Integer::sum);
+					}
 				}
 			}
 		}
 	}
 
 	@Override
-	public final void beforeStateUpdates(Collection<EpisimPerson> persons, int day) {
+	public final void beforeStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day) {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 
@@ -189,30 +198,44 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 				log.debug("Trace location {}", e.getKey());
 
-				for (EpisimPerson p : persons) {
+				for (EpisimPerson p : persons.values()) {
 
 					if (p.getInfectionContainer() == e.getKey()) {
 
-						p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-						performTracing(p, now, day);
+						quarantinePerson(p, day);
 
-						// assumes that all contact persons get tested
-						// then quarantines all of their contacts
-						if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
-
-							for (EpisimPerson pw : p.getTraceableContactPersons(now - tracingConfig.getTracingDayDistance() * DAY)) {
-
-								if (pw.hadDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)) {
-									p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
-									performTracing(p, now, day);
-								}
-							}
+						if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION) {
+							tracingCapacity--;
+						} else if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION_WITH_TESTING) {
+							// assumes that all contact persons get tested
+							// then quarantines all of their contacts
+							performTracing(p, now, day);
 						}
 					}
 				}
 
 				it.remove();
 			}
+		}
+
+		if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE) {
+
+			// Persons that will be traced for the day
+			Queue<Id<Person>> queue = new ArrayDeque<>(tracingQueue);
+
+			while (tracingCapacity > 0 && !queue.isEmpty()) {
+
+				Id<Person> id = queue.poll();
+				EpisimPerson person = persons.get(id);
+				tracingQueue.remove(id);
+
+				// Assume that each contact got tested
+				// if the test is positive contacts will be quarantined as well and also tested at the next day
+				if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)) {
+					performTracing(person, now, day);
+				}
+			}
+
 		}
 	}
 
@@ -329,6 +352,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 		}
+
+		if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)
+			tracingQueue.add(p.getPersonId());
+
 	}
 
 	@Override
@@ -340,6 +367,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			Id<ActivityFacility> id = Id.create(readChars(in), ActivityFacility.class);
 			locations.put(id, in.readInt());
 		}
+
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.createPersonId(readChars(in));
+			tracingQueue.add(id);
+		}
 	}
 
 	@Override
@@ -350,5 +383,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			writeChars(out, e.getKey().toString());
 			out.writeInt(e.getIntValue());
 		}
+
+		out.writeInt(tracingQueue.size());
+		for (Id<Person> personId : tracingQueue) {
+			writeChars(out, personId.toString());
+		}
+
 	}
 }

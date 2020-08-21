@@ -659,7 +659,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig.getStartDate(), iteration);
 
 		progressionModel.setIteration(iteration);
-		progressionModel.beforeStateUpdates(personMap.values(), iteration);
+		progressionModel.beforeStateUpdates(personMap, iteration);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);

@@ -111,7 +111,7 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 		@IntParameter({30, Integer.MAX_VALUE})
 		int tracingCapacity;
 
-		@IntParameter({1, 3, 5, 7, 9})
+		@IntParameter({1, 3, 5, 7, 9, 15, 30})
 		int infectionsPerDay;
 
 		@StringParameter({"yes", "no"})
