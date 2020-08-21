@@ -130,7 +130,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	 */
 	protected EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
 		if (container instanceof InfectionEventHandler.EpisimVehicle) {
-			return episimConfig.selectInfectionParams(container.getContainerId().toString());
+			return trParams.params;
 		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
 			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
 
