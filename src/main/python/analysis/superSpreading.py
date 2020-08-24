@@ -11,7 +11,7 @@ from matplotlib.ticker import ScalarFormatter, PercentFormatter
 from matplotlib.dates import AutoDateLocator, AutoDateFormatter, ConciseDateFormatter
 from datetime import datetime
 
-from utils import read_batch_run, read_case_data, read_run, infection_rate
+from utils import read_batch_run, read_case_data, read_run, calc_r_reduction
 from plot import comparison_plots
 
 #%%
@@ -71,7 +71,7 @@ ax.yaxis.set_major_formatter(PercentFormatter(xmax=1, decimals=1))
 # max tracing capacity
 m = 2147483647
 
-susp = read_batch_run("data/suspContainment.zip", r_values=True)
+susp = read_batch_run("data/suspContainment3.zip", r_values=True)
 
 
 #%% Unrestricted
@@ -103,11 +103,11 @@ df = susp[(susp.tracingCapacity==m) & (susp.unrestricted=="yes")]
 hue = sns.color_palette(n_colors=3)
 
 g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95", palette=hue,
-                hue="sigma", col="containment", row="tracingCapacity",
-                kind="line", data=df, aspect=0.8)
+                hue="sigma", col="containment",
+                kind="line", data=df, aspect=0.6, col_wrap=2)
 
 g.fig.set_dpi(250)
-g.fig.set_size_inches((9.5, 3.0))
+g.fig.set_size_inches((9.5, 6.0))
 
 for ax in g.axes.flat:
     ax.set_yscale('log')
@@ -118,8 +118,8 @@ for ax in g.axes.flat:
     ax.yaxis.set_major_formatter(ScalarFormatter())
 
 
-g.axes[0][0].set_title("tracingCapacity = inf | containment = INDIVIDUAL")
-g.axes[0][1].set_title("tracingCapacity = inf | containment = LOCATION")
+#g.axes[0][0].set_title("containment = INDIVIDUAL")
+#g.axes[0][1].set_title("containment = LOCATION")
     
 #ci = datetime.fromisoformat("2020-03-07")
 #plt.axvline(ci, color="gray", linewidth=1, linestyle="--", alpha=0.8, ax=ax)
@@ -153,36 +153,22 @@ for ax in g.axes.flat:
 #%% Reduction of R
 
 df = susp[(susp.unrestricted=="yes") & (susp.containment != 'GROUP_SIZES')]
-#df = suspT
-
-#df["rrValue"] = df.rValue.rolling(5).mean()
 
 df = df[(df.date >= datetime.fromisoformat("2020-03-07")) & (df.date <= datetime.fromisoformat("2020-03-21"))]
-
-baseR = df[df.tracingCapacity == 0].groupby("sigma").agg(rValue=("rValue", "mean"))
-
-
-df['baseR'] = 0
-
-df.loc[df.sigma == 0, 'baseR'] = baseR.loc[0.0][0]
-df.loc[df.sigma == 1, 'baseR'] = baseR.loc[1][0]
-df.loc[df.sigma == 1.5, 'baseR'] = baseR.loc[1.5][0]
-
-
-df['relR'] = 1 -  df.rValue / df.baseR    
-
-
+base_case = df[df.tracingCapacity==0]
 df = df[df.tracingCapacity == m]
 
-aggr = df.groupby(["sigma", "containment"]).agg(reduction=("relR", "mean"))
+reduction = calc_r_reduction(base_case, ["sigma"], df, ["sigma", "containment"])
+
+print(reduction.to_latex(columns=["rReduction", "std", "sem"], float_format="%.2f", col_space=2))
 
 
-#hue = sns.color_palette(n_colors=3)
+#%%
 
-#g = sns.relplot(x="date", y="rrValue", estimator="mean", ci="q95", palette=hue,
-#                hue="sigma", style="containment", row="tracingCapacity", col="sigma",
-#                kind="line", data=df,
-#                height=5, aspect=0.5)
+base_variables = ["sigma"]
+df = df[df.tracingCapacity == m]
+group_by= ["sigma", "containment"]
+
 
 
 #%%

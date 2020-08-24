@@ -101,3 +101,39 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     rates = np.array(rates)
 
     return rates.mean(), np.square(rates - target_rate).mean()
+
+
+def calc_r_reduction(base_case, base_variables, df, group_by=None):
+    """ Calculates the reduction of r
+    
+    :param base_case: data set with the base case
+    :param base_variables: columns to group by in the base case
+    :param df: data set for which to calculate the reductions
+    :param group_by: columns to group by in the result
+    :return: aggregated data frame
+    """
+
+    if group_by is None:
+        group_by = base_variables
+    else:
+        group_by.insert(0, "seed")
+
+    base_variables.insert(0, "seed")
+
+    base_r = base_case.groupby(base_variables).agg(rValue=("rValue", "mean"))
+
+    aggr = df.groupby(group_by).agg(rValue=("rValue", "mean"))
+
+    aggr['baseR'] = 0
+
+    for index, value in base_r.itertuples():
+        aggr.loc[index, "baseR"] = value
+
+    aggr['reduction'] = 1 - aggr.rValue / aggr.baseR
+
+    group_by.remove("seed")
+
+    result = aggr.groupby(group_by).agg(rValue=("rValue", "mean"), rReduction=("reduction", "mean"),
+                                        std=("reduction", "std"), sem=("reduction", "sem"))
+
+    return result
