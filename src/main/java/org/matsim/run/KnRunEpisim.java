@@ -121,7 +121,6 @@ public class KnRunEpisim {
 
 				// save some time for not needed inputs
 				config.facilities().setInputFile(null);
-				config.vehicles().setVehiclesFile(null);
 
 				ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "before loading scenario" );
 

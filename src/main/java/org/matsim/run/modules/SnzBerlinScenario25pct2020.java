@@ -151,6 +151,8 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		Config config = getBaseConfig();
 
+		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setInputEventsFile(INPUT.resolve("be_2020_snz_episim_events_25pt_split.xml.gz").toString());

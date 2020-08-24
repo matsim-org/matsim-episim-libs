@@ -208,7 +208,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		iteration = 0;
 
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
-		Object2IntMap<EpisimContainer<?>> containerSize = new Object2IntOpenHashMap<>();
+		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
 
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
@@ -268,7 +268,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
-					containerSize.mergeInt(facility, 1, Integer::sum);
+					totalUsers.mergeInt(facility, 1, Integer::sum);
 
 					handleEvent((ActivityStartEvent) event);
 
@@ -314,7 +314,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 
 					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
-					containerSize.mergeInt(vehicle, 1, Integer::sum);
+					totalUsers.mergeInt(vehicle, 1, Integer::sum);
 
 					handleEvent((PersonEntersVehicleEvent) event);
 
@@ -366,7 +366,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// Add missing facilities, with only stationary agents
 		for (EpisimFacility facility : pseudoFacilityMap.values()) {
 			if (!maxGroupSize.containsKey(facility)) {
-				containerSize.put(facility, facility.getPersons().size());
+				totalUsers.put(facility, facility.getPersons().size());
 				maxGroupSize.put(facility, facility.getPersons().size());
 
 				// there may be facilities with only "end" events, thus no group size, but correct activity usage
@@ -378,12 +378,34 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			}
 		}
 
-		reporting.reportContainerUsage(maxGroupSize, containerSize, activityUsage);
+		reporting.reportContainerUsage(maxGroupSize, totalUsers, activityUsage);
+
+		boolean useVehicles = !scenario.getVehicles().getVehicles().isEmpty();
+
+		log.info("Using capacity from vehicles file: {}", useVehicles);
 
 		for (Object2IntMap.Entry<EpisimContainer<?>> kv : maxGroupSize.object2IntEntrySet()) {
+
+			EpisimContainer<?> container = kv.getKey();
 			double scale = 1 / episimConfig.getSampleSize();
-			kv.getKey().setMaxGroupSize((int) (kv.getIntValue() * scale));
-			kv.getKey().setSize((int) (containerSize.getInt(kv.getKey()) * scale));
+
+			container.setTotalUsers((int) (totalUsers.getInt(container) * scale));
+			container.setMaxGroupSize((int) (kv.getIntValue() * scale));
+
+
+			if (useVehicles && container instanceof EpisimVehicle) {
+
+				Id<Vehicle> vehicleId = Id.createVehicleId(container.getContainerId().toString());
+				Vehicle vehicle = scenario.getVehicles().getVehicles().get(vehicleId);
+
+				if (vehicle == null) {
+					log.warn("No type found for vehicle {}", vehicleId);
+				} else {
+
+					int capacity = vehicle.getType().getCapacity().getStandingRoom() + vehicle.getType().getCapacity().getSeats();
+					container.setTypicalCapacity(capacity);
+				}
+			}
 		}
 
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
