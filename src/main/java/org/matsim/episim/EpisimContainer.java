@@ -139,10 +139,16 @@ public class EpisimContainer<T> {
 		return containerId;
 	}
 
+	/**
+	 * @return maximum group size in container.
+	 */
 	public int getMaxGroupSize() {
 		return maxGroupSize;
 	}
 
+	/**
+	 * @return number of people using container.  May be larger than {@link #getMaxGroupSize()}.
+	 */
 	public int getTotalUsers() {
 		return totalUsers;
 	}
@@ -161,8 +167,9 @@ public class EpisimContainer<T> {
 	}
 
 	/**
-	 * Sets the total number of users
-	 * @param num number of users
+	 * Sets the total number of persons using this container.
+	 *
+	 * @param num number of persons
 	 */
 	void setTotalUsers(int num) {
 		totalUsers = num;
