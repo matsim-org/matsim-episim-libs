@@ -110,7 +110,7 @@ public class KnRunEpisim {
 						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
 						break;
 					case sqrt:
-						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+						bind( ContactModel.class ).to( SqrtContactModel.class ).in( Singleton.class );
 						break;
 					default:
 						throw new IllegalStateException( "Unexpected value: " + interactionModelType );

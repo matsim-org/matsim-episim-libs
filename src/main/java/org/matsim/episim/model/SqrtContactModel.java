@@ -35,9 +35,9 @@ import static org.matsim.episim.EpisimPerson.DiseaseStatus;
  * Default interaction model executed, when a person ends his activity.
  * Infections probabilities calculations are delegated to a {@link InfectionModel}.
  */
-public final class SqrtInteractionModel extends AbstractInteractionModel {
+public final class SqrtContactModel extends AbstractContactModel {
 
-	private static final Logger log = LogManager.getLogger( SqrtInteractionModel.class );
+	private static final Logger log = LogManager.getLogger( SqrtContactModel.class );
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -51,8 +51,8 @@ public final class SqrtInteractionModel extends AbstractInteractionModel {
 
 	@Inject
 	/* package */
-	SqrtInteractionModel( SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-			      EpisimReporting reporting, InfectionModel infectionModel ) {
+	SqrtContactModel( SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+			  EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
@@ -90,7 +90,7 @@ public final class SqrtInteractionModel extends AbstractInteractionModel {
 			Gbl.assertIf( maxPersonsInContainer>1 );
 			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
-			if ( rnd.nextDouble() >= episimConfig.getMaxInteractions()/Math.sqrt(maxPersonsInContainer-1) ) {
+			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/Math.sqrt(maxPersonsInContainer-1) ) {
 				continue;
 			}
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
@@ -141,7 +141,7 @@ public final class SqrtInteractionModel extends AbstractInteractionModel {
 				reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
 			}
 
-			if (!AbstractInteractionModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
+			if (!AbstractContactModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
 				continue;
 			}
 
