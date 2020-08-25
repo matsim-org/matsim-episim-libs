@@ -75,7 +75,6 @@ public class EpisimModule extends AbstractModule {
 
 		// save some time for not needed inputs
 		config.facilities().setInputFile(null);
-		config.vehicles().setVehiclesFile(null);
 
 		return ScenarioUtils.loadScenario(config);
 	}
