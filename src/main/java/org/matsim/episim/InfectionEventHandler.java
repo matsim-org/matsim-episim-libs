@@ -399,9 +399,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				Vehicle vehicle = scenario.getVehicles().getVehicles().get(vehicleId);
 
 				if (vehicle == null) {
-					log.warn("No type found for vehicle {}", vehicleId);
+					log.warn("No type found for vehicleId={}; using capacity of 150.", vehicleId);
+					container.setTypicalCapacity(150 );
 				} else {
-
 					int capacity = vehicle.getType().getCapacity().getStandingRoom() + vehicle.getType().getCapacity().getSeats();
 					container.setTypicalCapacity(capacity);
 				}
