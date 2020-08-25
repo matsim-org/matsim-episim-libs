@@ -97,6 +97,13 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			}
 
 			int maxPersonsInContainer = container.getMaxGroupSize();
+			if ( container instanceof InfectionEventHandler.EpisimVehicle ) {
+				maxPersonsInContainer = container.getTypicalCapacity();
+				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
+					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
+							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
+				}
+			}
 			Gbl.assertIf( maxPersonsInContainer>1 );
 			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
@@ -139,9 +146,11 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				//home can only interact with home, leisure or work
 				if (infectionType.indexOf("home") >= 0 && infectionType.indexOf("leis") == -1 && infectionType.indexOf("work") == -1
 						&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
+					// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
 					continue;
 				} else if (infectionType.indexOf("edu") >= 0 && infectionType.indexOf("work") == -1 && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
 					//edu can only interact with work or edu
+					// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
 					continue;
 				}
 				if (trackingEnabled) {
