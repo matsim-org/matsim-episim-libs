@@ -96,15 +96,21 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				continue;
 			}
 
-			int maxPersonsInContainer = container.getMaxGroupSize();
+			int maxPersonsInContainer = (int) (container.getMaxGroupSize() * episimConfig.getSampleSize());
 			if ( container instanceof InfectionEventHandler.EpisimVehicle ) {
-				maxPersonsInContainer = container.getTypicalCapacity();
+				maxPersonsInContainer = (int) (container.getTypicalCapacity() * episimConfig.getSampleSize());
 				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
 					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
 							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
 				}
 			}
-			Gbl.assertIf( maxPersonsInContainer>1 );
+			
+			//Quick fix. Needs to be fixed properly. SM, aug'20
+			if (maxPersonsInContainer <= 1) { 
+				log.warn("maxPersonsInContainer is={} even though there are {} persons in container={}",maxPersonsInContainer, container.getPersons().size(), container.getContainerId());
+				maxPersonsInContainer = container.getPersons().size();
+			}
+			//Gbl.assertIf( maxPersonsInContainer>1 );
 			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
 			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
