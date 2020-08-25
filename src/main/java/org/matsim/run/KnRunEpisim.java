@@ -46,6 +46,7 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
+import org.matsim.vehicles.VehicleType;
 
 import java.io.File;
 import java.io.IOException;
@@ -148,12 +149,52 @@ public class KnRunEpisim {
 					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
 				}
 
+				for( VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values() ){
+					switch( vehicleType.getId().toString() ) {
+						case "bus":
+							vehicleType.getCapacity().setSeats( 70 );
+							vehicleType.getCapacity().setStandingRoom( 40 );
+							// https://de.wikipedia.org/wiki/Stadtbus_(Fahrzeug)#Stehpl%C3%A4tze
+							break;
+						case "metro":
+							vehicleType.getCapacity().setSeats( 200 );
+							vehicleType.getCapacity().setStandingRoom( 550 );
+							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
+							break;
+						case "plane":
+							vehicleType.getCapacity().setSeats( 200 );
+							vehicleType.getCapacity().setStandingRoom( 0 );
+							break;
+						case "pt":
+							vehicleType.getCapacity().setSeats( 70 );
+							vehicleType.getCapacity().setStandingRoom( 70 );
+							break;
+						case "ship":
+							vehicleType.getCapacity().setSeats( 150 );
+							vehicleType.getCapacity().setStandingRoom( 150 );
+							// https://www.berlin.de/tourismus/dampferfahrten/faehren/1824948-1824660-faehre-f10-wannsee-altkladow.html
+							break;
+						case "train":
+							vehicleType.getCapacity().setSeats( 250 );
+							vehicleType.getCapacity().setStandingRoom( 750 );
+							// https://de.wikipedia.org/wiki/Stadler_KISS#Technische_Daten_der_Varianten , mehr als ICE (https://inside.bahn.de/ice-baureihen/)
+							break;
+						case "tram":
+							vehicleType.getCapacity().setSeats( 84 );
+							vehicleType.getCapacity().setStandingRoom( 216 );
+							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
+							break;
+						default:
+							throw new IllegalStateException( "Unexpected value=|" + vehicleType.getId().toString() + "|");
+					}
+				}
+
 				return scenario;
 			}
-			@Provides @Singleton public EpisimConfigGroup episimConfigGroup(Config config) {
+			@Provides @Singleton public EpisimConfigGroup epsimConfig( Config config ) {
 				return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 			}
-			@Provides @Singleton public TracingConfigGroup tracingConfigGroup( Config config ) {
+			@Provides @Singleton public TracingConfigGroup tracingConfig( Config config ) {
 				return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			}
 			@Provides @Singleton public EpisimWriter episimWriter( EpisimConfigGroup episimConfig ) {
@@ -176,6 +217,25 @@ public class KnRunEpisim {
 
 				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+				for( InfectionParams params : episimConfig.getInfectionParams() ){
+					if ( params.includesActivity( "home" ) ){
+						params.setContactIntensity( 1. );
+					} else if ( params.includesActivity( "quarantine_home" ) ) {
+						params.setContactIntensity( 0.3 );
+					} else if ( params.includesActivity( "work" ) || params.getContainerName().startsWith( "shop" ) || params.includesActivity(
+							"business" ) || params.includesActivity( "errands" ) ) {
+						params.setContactIntensity( 2. );
+					} else if ( params.getContainerName().startsWith( "edu" ) ) {
+						params.setContactIntensity( 10. );
+					} else if ( params.includesActivity( "pt" ) || params.includesActivity( "tr" )) {
+						params.setContactIntensity( 67 );
+					} else if ( params.includesActivity( "leisure" ) || params.includesActivity( "visit" ) ) {
+						params.setContactIntensity( 17.6 );
+					} else {
+						throw new RuntimeException( "need to define contact intensity for activityType=" + params.getContainerName() );
+					}
+				}
 
 				switch( runType ) {
 					case weekdaysOnly:
