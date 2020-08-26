@@ -96,7 +96,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			}
 
 			int maxPersonsInContainer = (int) (container.getMaxGroupSize() * episimConfig.getSampleSize());
-			if ( container instanceof InfectionEventHandler.EpisimVehicle ) {
+			// typical size is undefined if no vehicle file is used
+			if ( container instanceof InfectionEventHandler.EpisimVehicle && container.getTypicalCapacity() > -1) {
 				maxPersonsInContainer = (int) (container.getTypicalCapacity() * episimConfig.getSampleSize());
 				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
 					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
@@ -104,12 +105,13 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				}
 			}
 
+			// it may happen that persons enter and leave an container at the same time
+			// effectively they have a joint time of 0 and will not count towards maximum group size
+			// still the size of the list of persons in the container may be larger than max group size
 			if (maxPersonsInContainer <= 1) {
-				log.warn("maxPersonsInContainer is={} even though there are {} persons in container={}", maxPersonsInContainer, container.getPersons().size(), container.getContainerId());
-				maxPersonsInContainer = container.getPersons().size();
+				log.debug("maxPersonsInContainer is={} even though there are {} persons in container={}", maxPersonsInContainer, container.getPersons().size(), container.getContainerId());
+				// maxPersonsInContainer = container.getPersons().size();
 			}
-			//Gbl.assertIf( maxPersonsInContainer>1 );
-			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
 			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
 				continue;

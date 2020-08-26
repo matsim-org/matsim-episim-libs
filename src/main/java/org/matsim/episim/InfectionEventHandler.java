@@ -401,20 +401,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				}
 			}
 
-			// put person into first facility for all possible start of days
-			for (DayOfWeek next : DayOfWeek.values()) {
-				for (EpisimPerson p : personMap.values()) {
-					Id<ActivityFacility> firstFacilityId = p.getFirstFacilityId(next);
-					EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-
-					if (p.isInContainer())
-						p.getCurrentContainer().removePerson(p);
-
-					firstFacility.addPerson(p, 0);
-					maxGroupSize.mergeInt(firstFacility, firstFacility.getPersons().size(), Integer::max);
-				}
-			}
-
 			sameDay.put(eventsForDay, day);
 		}
 
