@@ -267,7 +267,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 						continue;
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
-					maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
 					handleEvent((ActivityStartEvent) event);
@@ -278,16 +277,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 						continue;
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
-
-					// Prevent negative group size for persons starting with end activity
-					if (groupSize.getOrDefault(facility, 0) == 0) {
-						groupSize.put(facility, 1);
-						// add one to maximum group size
-						maxGroupSize.mergeInt(facility, 1, Integer::sum);
-					}
-
-
-					groupSize.mergeInt(facility, -1, Integer::sum);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
 					// Add person to container if it starts its day with end activity
@@ -324,7 +313,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 					groupSize.mergeInt(vehicle, -1, Integer::sum);
 					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
-
 
 					handleEvent((PersonLeavesVehicleEvent) event);
 				}
@@ -378,6 +366,60 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			}
 		}
 
+		// Go through each day again to compute max group sizes
+		sameDay.clear();
+		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
+
+			DayOfWeek day = entry.getKey();
+			List<Event> eventsForDay = entry.getValue();
+
+			if (sameDay.containsKey(eventsForDay)) {
+				continue;
+			}
+
+			personMap.values().forEach(p -> {
+				checkAndHandleEndOfNonCircularTrajectory(p, day);
+				p.resetCurrentPositionInTrajectory(day);
+			});
+
+			pseudoFacilityMap.forEach((k, v) -> maxGroupSize.mergeInt(v, v.getPersons().size(), Integer::max));
+
+			for (Event event : eventsForDay) {
+				if (event instanceof HasFacilityId && event instanceof HasPersonId) {
+					EpisimFacility facility = pseudoFacilityMap.get(((HasFacilityId) event).getFacilityId());
+
+					// happens on filtered events that are not relevant
+					if (facility == null)
+						continue;
+
+					if (event instanceof ActivityStartEvent) {
+						handleEvent((ActivityStartEvent) event);
+						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
+					} else if (event instanceof ActivityEndEvent) {
+						handleEvent((ActivityEndEvent) event);
+					}
+				}
+			}
+
+			// put person into first facility for all possible start of days
+			for (DayOfWeek next : DayOfWeek.values()) {
+				for (EpisimPerson p : personMap.values()) {
+					Id<ActivityFacility> firstFacilityId = p.getFirstFacilityId(next);
+					EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
+
+					if (p.isInContainer())
+						p.getCurrentContainer().removePerson(p);
+
+					firstFacility.addPerson(p, 0);
+					maxGroupSize.mergeInt(firstFacility, firstFacility.getPersons().size(), Integer::max);
+				}
+			}
+
+			sameDay.put(eventsForDay, day);
+		}
+
+		log.info("Computed max group sizes");
+
 		reporting.reportContainerUsage(maxGroupSize, totalUsers, activityUsage);
 
 		boolean useVehicles = !scenario.getVehicles().getVehicles().isEmpty();
@@ -391,7 +433,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			container.setTotalUsers((int) (totalUsers.getInt(container) * scale));
 			container.setMaxGroupSize((int) (kv.getIntValue() * scale));
-
 
 			if (useVehicles && container instanceof EpisimVehicle) {
 

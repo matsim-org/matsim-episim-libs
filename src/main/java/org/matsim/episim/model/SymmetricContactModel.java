@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
 
 import java.util.SplittableRandom;
@@ -104,10 +103,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
 				}
 			}
-			
-			//Quick fix. Needs to be fixed properly. SM, aug'20
-			if (maxPersonsInContainer <= 1) { 
-				log.warn("maxPersonsInContainer is={} even though there are {} persons in container={}",maxPersonsInContainer, container.getPersons().size(), container.getContainerId());
+
+			if (maxPersonsInContainer <= 1) {
+				log.warn("maxPersonsInContainer is={} even though there are {} persons in container={}", maxPersonsInContainer, container.getPersons().size(), container.getContainerId());
 				maxPersonsInContainer = container.getPersons().size();
 			}
 			//Gbl.assertIf( maxPersonsInContainer>1 );

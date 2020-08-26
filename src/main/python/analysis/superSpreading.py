@@ -165,14 +165,6 @@ print(reduction.to_latex(columns=["rReduction", "std", "sem"], float_format="%.2
 
 #%%
 
-base_variables = ["sigma"]
-df = df[df.tracingCapacity == m]
-group_by= ["sigma", "containment"]
-
-
-
-#%%
-
 grp = read_batch_run("data/restrictGroupSizes.zip", r_values=True)
 
 #%% Compares reduction of acitivies
