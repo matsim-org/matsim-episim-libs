@@ -17,7 +17,7 @@ import javax.inject.Singleton;
 public abstract class AbstractSnzScenario2020 extends AbstractModule {
 
 	public static final String[] DEFAULT_ACTIVITIES = {
-			"pt", "work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other", "shop_daily", "shop_other", "visit", "errands", "business"
+			"work", "leisure", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_higher", "educ_other", "shop_daily", "shop_other", "visit", "errands", "business"
 	};
 
 //	public static void setContactIntensities(EpisimConfigGroup episimConfig) {
