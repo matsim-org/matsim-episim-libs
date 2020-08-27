@@ -86,19 +86,30 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 
 		log.info("Read " + scenarios.size() + " files");
 		log.info(scenarios);
+		
+		BufferedWriter rValues = Files.newBufferedWriter(output.resolve("rValues.txt"));
+		rValues.write("day\tdate\trValue\tnewContagious\tscenario");
+		
+		BufferedWriter infectionsPerActivity = Files.newBufferedWriter(output.resolve("infectionsPerActivity.txt"));
+		infectionsPerActivity.write("day\tdate\tactivity\tinfections\tscenario");
 
 		scenarios.parallelStream().forEach(scenario -> {
 			try {
-				calcValues(scenario);
+				calcValues(scenario, rValues, infectionsPerActivity);
 			} catch (IOException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
 		});
-
+		
+		rValues.close();
+		infectionsPerActivity.close();
+		
+		log.info("done");
+		
 		return 0;
 	}
 
-	private void calcValues(Path scenario) throws IOException {
+	private void calcValues(Path scenario, BufferedWriter rValues, BufferedWriter infectionsPerActivity) throws IOException {
 
 		Path eventFolder = scenario.resolve("events");
 		if (!Files.exists(eventFolder)) {
@@ -144,14 +155,15 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 				if (e.getKey().equals("pt") || e.getKey().equals("total")) {
 					int infections = 0;
 					if (e.getValue().get(i) != null) infections = e.getValue().get(i);
-					if (infections != 0) {
-						bw.write("\n");
-						bw.write(i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
-					}
+//					if (infections != 0) {
+						bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
+						infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
+//					}
 				}
 			}
 		}
-
+		
+		infectionsPerActivity.flush();
 		bw.close();
 
 		bw = Files.newBufferedWriter(scenario.resolve(id + ".rValues.txt"));
@@ -166,13 +178,12 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 					noOfInfected = noOfInfected + ip.getNoOfInfected();
 				}
 			}
-			if (noOfInfectors != 0) {
-				bw.write("\n");
-				double r = (double) noOfInfected / noOfInfectors;
-				bw.write(i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
-			}
+			double r = 0;
+			if (noOfInfectors != 0) r = (double) noOfInfected / noOfInfectors;
+			bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
+			rValues.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
 		}
-
+		rValues.flush();
 		bw.close();
 
 		log.info("Calculated results for scenario {}", scenario);
