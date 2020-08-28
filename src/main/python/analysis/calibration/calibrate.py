@@ -67,7 +67,12 @@ def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
     total = float(df[df.day == 1].nSusceptible)
 
     # comparison interval starts when 2% of susceptible infected
-    start = df[df.nTotalInfected >= total * 0.002].iloc[0].day
+    start = df[df.nTotalInfected >= total * 0.002].day
+    if start.empty:
+        start = start.iloc[0]
+    else:
+        start = df.day.iloc[-1]
+
     diff = df.iloc[-1].day - start - days
 
     if diff < 0:
