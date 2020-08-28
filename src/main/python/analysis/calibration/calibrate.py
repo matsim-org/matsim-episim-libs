@@ -10,16 +10,17 @@ import optuna
 import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
-
 if not hasattr(date, 'fromisoformat'):
     # python 3.6 backwards compatibility
     def parse(date_string):
         return datetime.strptime(date_string, "%Y-%m-%d").date()
 
+
     fromisoformat = parse
 
 else:
     fromisoformat = date.fromisoformat
+
 
 def read_data(f, district, hospital, rki, window=5):
     """Reads in three csv files"""
@@ -57,14 +58,24 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
 
 
-def infection_rate(f, district, target_rate=2, target_interval=3):
+def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
     """  Calculates the R values between a fixed day interval and returns MSE according to target rate """
 
     df = pd.read_csv(f, sep="\t")
     df = df[df.district == district]
 
+    total = float(df[df.day == 1].nSusceptible)
+
+    # comparison interval starts when 2% of susceptible infected
+    start = df[df.nTotalInfected >= total * 0.002].iloc[0].day
+    diff = df.iloc[-1].day - start - days
+
+    if diff < 0:
+        print("Simulation interval may be too short, had to adjust by", diff)
+        start -= diff
+
     rates = []
-    for i in range(25, 40):
+    for i in range(start, start + days):
         prev = float(df[df.day == i - target_interval].nTotalInfected)
         today = float(df[df.day == i].nTotalInfected)
 
@@ -111,12 +122,12 @@ def objective_unconstrained(trial):
 
     results = []
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -jar %(jvm)s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
+        cmd = "java -jar %s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
               % (jvm, scenario, n, i, c)
-    
+
         print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
         subprocess.run(cmd, shell=True)
-    
+
         res = infection_rate("output-calibration-unconstrained/%d/run%d/infections.txt" % (n, i), district)
         results.append(res)
 

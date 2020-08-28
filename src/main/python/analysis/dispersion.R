@@ -30,7 +30,6 @@ counts <- function(f) {
 
 f <- "C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy"
 
-#map(sigma, function(s) { s * 2} )
 
 sigma <- c(0.0, 1.0, 2.0)
 
@@ -58,7 +57,7 @@ est_disp <- function(f) {
   }
 
   df <- data.frame(as.numeric(est), as.numeric(inf80))
-  colnames(df) <- c("est", "inf80")
+  colnames(df) <- c("est", "top20")
   
   return(df)
 }

@@ -27,13 +27,13 @@ public class BerlinSuperSpreadingContainment implements BatchRun<BerlinSuperSpre
 	@Override
 	public AbstractModule getBindings(int id, Object params) {
 		Params p = (Params) params;
-		return new SnzBerlinSuperSpreaderScenario(25, p.sigma, p.sigma);
+		return new SnzBerlinSuperSpreaderScenario(true, 30, p.sigma, p.sigma);
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		Config config = new SnzBerlinSuperSpreaderScenario(25, params.sigma, params.sigma).config();
+		Config config = new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma).config();
 
 		config.global().setRandomSeed(params.seed);
 
