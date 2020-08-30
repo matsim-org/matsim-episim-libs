@@ -77,7 +77,7 @@ def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
 
     if diff < 0:
         print("Simulation interval may be too short, had to adjust by", diff)
-        start -= diff
+        start += diff
 
     rates = []
     for i in range(start, start + days):

@@ -49,22 +49,27 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 	/**
 	 * Calibration parameter for triples of max contacts, sigma inf. and sigma susp.
+	 * These are for {@link SymmetricContactModel}.
 	 */
 	private static final Map<Triple<Integer, Double, Double>, Double> calibrationSym = Map.of(
 
 			// Different maxContacts with no individual variation
-			Triple.of(1, 0d, 0d), 7.0e-5,
-			Triple.of(3, 0d, 0d), 2.30e-5,
-			Triple.of(10, 0d, 0d), Double.NaN,
-			Triple.of(30, 0d, 0d), 1.06e-5,
+			Triple.of(1, 0d, 0d), 8.5e-5, // TODO: this is even higher
+			Triple.of(3, 0d, 0d), 2.09e-5,
+			Triple.of(10, 0d, 0d), 0.7e-5, // TODO: needs recalibration with smaller value
+			Triple.of(30, 0d, 0d), Double.NaN,
 
-			// Different sigmas for 30 maxContacts
+			// Different sigmas for 30 maxContacts TODO not valid anymore because of changes in contacts model
 			Triple.of(30, 0.5, 0.5), 1.12e-5,
 			Triple.of(30, 0.75, 0.75), 1.25e-5,
 			Triple.of(30, 1d, 1d), 1.69e-5,
 			Triple.of(30, 1.5d, 1.5d), 2.81e-5
 	);
 
+	/**
+	 * Calibration parameter for {@link DefaultContactModel}
+	 * @see #calibrationSym
+	 */
 	private static final Map<Triple<Integer, Double, Double>, Double> calibrationDefault = Map.of(
 			Triple.of(1, 0d, 0d), Double.NaN,
 			Triple.of(3, 0d, 0d), Double.NaN,
