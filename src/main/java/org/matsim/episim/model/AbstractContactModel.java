@@ -32,6 +32,8 @@ import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 import java.util.Map;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.InfectionEventHandler.*;
+
 
 /**
  * Base implementation for interactions of persons during activities.
@@ -114,10 +116,10 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity,
 													String otherPersonsActivity) {
 		buffer.setLength(0);
-		if (container instanceof InfectionEventHandler.EpisimFacility) {
+		if (container instanceof EpisimFacility) {
 			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
 			return buffer;
-		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+		} else if (container instanceof EpisimVehicle) {
 			buffer.append("pt");
 			return buffer;
 		} else {
@@ -129,9 +131,9 @@ public abstract class AbstractContactModel implements ContactModel {
 	 * Get the relevant infection parameter based on container and activity and person.
 	 */
 	protected EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
-		if (container instanceof InfectionEventHandler.EpisimVehicle) {
+		if (container instanceof EpisimVehicle) {
 			return trParams.params;
-		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
+		} else if (container instanceof EpisimFacility) {
 			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
 
 			// Select different infection params for home quarantined persons
@@ -227,10 +229,10 @@ public abstract class AbstractContactModel implements ContactModel {
 			return false;
 		}
 
-		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {
+		if (container instanceof EpisimFacility && activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {
 			return true;
 		}
-		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
+		return container instanceof EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
 	}
 
 	/**
@@ -292,4 +294,9 @@ public abstract class AbstractContactModel implements ContactModel {
 	public Map<String, Restriction> getRestrictions() {
 		return restrictions;
 	}
+
+	@Override public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now){}
+	@Override public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now, String actType){}
+
+
 }

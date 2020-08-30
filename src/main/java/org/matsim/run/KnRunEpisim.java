@@ -82,7 +82,7 @@ public class KnRunEpisim {
 	private enum WeekendHandling{ weekdaysOnly, inclWeekends }
 	private static final WeekendHandling runType = WeekendHandling.inclWeekends;
 
-	private enum InteractionModelType{ original, divN, sqrt }
+	private enum InteractionModelType{ original, divN, sqrt, direct }
 	private static final InteractionModelType interactionModelType = InteractionModelType.divN;
 
 
@@ -113,6 +113,8 @@ public class KnRunEpisim {
 					case sqrt:
 						bind( ContactModel.class ).to( SqrtContactModel.class ).in( Singleton.class );
 						break;
+					case direct:
+						bind( ContactModel.class ).to( DirectContactModel.class ).in( Singleton.class );
 					default:
 						throw new IllegalStateException( "Unexpected value: " + interactionModelType );
 				}
@@ -395,10 +397,6 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
-//					final double ciEdu = 0.;
-//					restrictions.restrict( LocalDate.of(2020, 3, 7), Restriction.ofCiCorrection( ciEdu ), "educ_kiga", "educ_primary",
-//							"educ_secondary", "educ_higher", "educ_tertiary", "educ_other" );
-//					strb.append( "__ciEdu" ).append( ciEdu );
 					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() ); // overwrite snz policy
 				}
 

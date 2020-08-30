@@ -466,6 +466,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
 
+		contactModel.notifyEnterFacility( episimPerson, episimFacility, now, activityStartEvent.getActType() );
 	}
 
 	@Override
@@ -487,6 +488,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
+
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 
@@ -515,6 +517,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// add person to vehicle and memorize entering time:
 		episimVehicle.addPerson(episimPerson, now);
 
+		contactModel.notifyEnterVehicle( episimPerson, episimVehicle, now );
 	}
 
 	@Override
