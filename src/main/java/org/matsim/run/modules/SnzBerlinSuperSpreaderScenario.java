@@ -54,10 +54,10 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	private static final Map<Triple<Integer, Double, Double>, Double> calibrationSym = Map.of(
 
 			// Different maxContacts with no individual variation
-			Triple.of(1, 0d, 0d), 8.5e-5, // TODO: this is even higher
+			Triple.of(1, 0d, 0d), 10.5e-5,
 			Triple.of(3, 0d, 0d), 2.09e-5,
-			Triple.of(10, 0d, 0d), 0.7e-5, // TODO: needs recalibration with smaller value
-			Triple.of(30, 0d, 0d), Double.NaN,
+			Triple.of(10, 0d, 0d), 0.68e-5,
+			Triple.of(30, 0d, 0d), 0.28e-5,
 
 			// Different sigmas for 30 maxContacts TODO not valid anymore because of changes in contacts model
 			Triple.of(30, 0.5, 0.5), 1.12e-5,
