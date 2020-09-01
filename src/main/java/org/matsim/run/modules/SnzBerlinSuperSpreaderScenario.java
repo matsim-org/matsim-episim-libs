@@ -60,10 +60,10 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 			Triple.of(30, 0d, 0d), 0.28e-5,
 
 			// Different sigmas for 30 maxContacts TODO not valid anymore because of changes in contacts model
-			Triple.of(30, 0.5, 0.5), 1.12e-5,
-			Triple.of(30, 0.75, 0.75), 1.25e-5,
-			Triple.of(30, 1d, 1d), 1.69e-5,
-			Triple.of(30, 1.5d, 1.5d), 2.81e-5
+			Triple.of(10, 0.5, 0.5), 1.12e-5,
+			Triple.of(10, 0.75, 0.75), 1.25e-5,
+			Triple.of(10, 1d, 1d), 1.69e-5,
+			Triple.of(10, 1.5d, 1.5d), 2.81e-5
 	);
 
 	/**
@@ -71,10 +71,10 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	 * @see #calibrationSym
 	 */
 	private static final Map<Triple<Integer, Double, Double>, Double> calibrationDefault = Map.of(
-			Triple.of(1, 0d, 0d), Double.NaN,
-			Triple.of(3, 0d, 0d), Double.NaN,
-			Triple.of(10, 0d, 0d), Double.NaN,
-			Triple.of(30, 0d, 0d), Double.NaN
+			Triple.of(1, 0d, 0d), 3.79e-5,
+			Triple.of(3, 0d, 0d), 1.14e-5,
+			Triple.of(10, 0d, 0d), 0.45e-5,
+			Triple.of(30, 0d, 0d), 0.187e-5
 	);
 
 	private final boolean symmetric;
@@ -83,7 +83,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	private final double sigmaSusp;
 
 	public SnzBerlinSuperSpreaderScenario() {
-		this(true, 30, 0, 0);
+		this(false, 30, 0, 0);
 	}
 
 	public SnzBerlinSuperSpreaderScenario(boolean symmetric, int maxContacts, double sigmaInf, double sigmaSusp) {
