@@ -203,9 +203,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		 *  alpha = 1.4 -> ci=0.437
 		 */
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
-		private double alpha = 1;
-		private Extrapolation extrapolation = Extrapolation.linear;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200712.csv");
+		private double alpha = 3;
+		private Extrapolation extrapolation = Extrapolation.none;
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200823.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
 
