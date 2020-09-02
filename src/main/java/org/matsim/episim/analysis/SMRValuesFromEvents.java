@@ -20,6 +20,7 @@
 
 package org.matsim.episim.analysis;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -133,7 +134,6 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		manager.addHandler(infHandler);
 		manager.addHandler(rHandler);
 
-
 		List<Path> eventFiles = Files.list(eventFolder)
 				.filter(p -> p.getFileName().toString().contains("xml.gz"))
 				.collect(Collectors.toList());
@@ -152,7 +152,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			for (Entry<String, HashMap<Integer, Integer>> e : infHandler.infectionsPerActivity.entrySet()) {
-				if (e.getKey().equals("pt") || e.getKey().equals("total")) {
+				if (e.getKey().equals("pt") || e.getKey().equals("total")|| e.getKey().equals("edu") || e.getKey().equals("leisure") || e.getKey().equals("work") || e.getKey().equals("home") ) {
 					int infections = 0;
 					if (e.getValue().get(i) != null) infections = e.getValue().get(i);
 //					if (infections != 0) {
@@ -258,6 +258,12 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectionType = event.getInfectionType();
+			if (infectionType.startsWith("edu")) infectionType = "edu";
+			if (infectionType.startsWith("leisure")) infectionType = "leisure";
+			if (infectionType.startsWith("work")) infectionType = "work";
+			if (infectionType.startsWith("home")) infectionType = "home";
+
+
 			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new HashMap<>());
 			if (!infectionsPerActivity.containsKey(infectionType)) infectionsPerActivity.put(infectionType, new HashMap<>());
 
