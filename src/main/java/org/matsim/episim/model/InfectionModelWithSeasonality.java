@@ -59,8 +59,6 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration);
 
-//		if (date.isBefore(LocalDate.parse("2020-03-07"))) return 1;
-
 		//anchor dates
 		int daysOfYear = 365;
 		int winter = 15; //15.01.
@@ -80,11 +78,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 //		double probaSummer = 28.63 / 100.;
 //		double probaAutumn = 21.15 / 100.;
 
-		double probaWinter = 80. / 100.;
-
-		if (date.isAfter(LocalDate.parse("2020-08-01")))
-			probaWinter = 0.1;
-
+		double probaWinter = 10. / 100.;
 		double probaSpring = 80. / 100.;
 		double probaSummer = 80. / 100.;
 		double probaAutumn = 80. / 100.;
@@ -108,7 +102,6 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		}
 
 		double indoorOutdoorFactor = 1.;
-//		if (rnd.nextDouble() < episimConfig.getOutdoorProba()) {
 		if (rnd.nextDouble() < proba) {
 			indoorOutdoorFactor = 0.1;
 		}
