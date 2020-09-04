@@ -68,6 +68,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double susceptibility = 1.;
 		double infectability = 1.;
 		
+		//values taken from https://doi.org/10.1101/2020.06.03.20121145
 		if (ageTarget < 20) susceptibility = 0.45;
 		if (ageInfector < 20) infectability = 0.85;
 		
