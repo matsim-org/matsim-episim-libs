@@ -49,15 +49,15 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
-				* getIndoorOutdoorFactor(act1, act2)
+				* getIndoorOutdoorFactor(episimConfig.getStartDate(), iteration, rnd, act1, act2)
 		);
 
 	}
 
-	private double getIndoorOutdoorFactor(EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+	static double getIndoorOutdoorFactor(LocalDate startDate, int iteration, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
 		if (!act1.getContainerName().equals("leisure") && !act2.getContainerName().equals("leisure")) return 1.;
 
-		LocalDate date = episimConfig.getStartDate().plusDays(iteration);
+		LocalDate date = startDate.plusDays(iteration);
 
 		//anchor dates
 		int daysOfYear = 365;
