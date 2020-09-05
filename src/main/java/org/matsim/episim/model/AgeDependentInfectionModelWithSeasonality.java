@@ -66,15 +66,15 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		if (ageInfector < 0) throw new RuntimeException("Age attribute not found for person=" + infector.getPersonId().toString());
 
 		double susceptibility = 1.;
-		double infectability = 1.;
+		double infectivity = 1.;
 		
 		//values taken from https://doi.org/10.1101/2020.06.03.20121145
 		if (ageTarget < 20) susceptibility = 0.45;
-		if (ageInfector < 20) infectability = 0.85;
+		if (ageInfector < 20) infectivity = 0.85;
 		
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(episimConfig.getStartDate(), iteration, rnd, act1, act2);
 
-		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer * ciCorrection
+		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 				* indoorOutdoorFactor
