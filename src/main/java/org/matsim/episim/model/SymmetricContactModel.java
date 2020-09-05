@@ -99,10 +99,10 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			// typical size is undefined if no vehicle file is used
 			if ( container instanceof InfectionEventHandler.EpisimVehicle && container.getTypicalCapacity() > -1) {
 				maxPersonsInContainer = (int) (container.getTypicalCapacity() * episimConfig.getSampleSize());
-				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
-					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
-							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
-				}
+//				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
+//					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
+//							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
+//				}
 			}
 
 			// it may happen that persons enter and leave an container at the same time
