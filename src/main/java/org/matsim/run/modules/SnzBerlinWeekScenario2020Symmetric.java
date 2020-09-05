@@ -31,10 +31,10 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
+import org.matsim.episim.model.AgeDependentInfectionModelWithSeasonality;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.InfectionModelWithSeasonality;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.SymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -65,7 +65,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 	protected void configure() {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-		bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(Singleton.class);
+		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -97,7 +97,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 			throw new RuntimeException("100pct scenario not configured");
 		}
 
-		episimConfig.setCalibrationParameter(9.e-6);
+		episimConfig.setCalibrationParameter(1.0E-5);
 		episimConfig.setStartDate("2020-02-18");
 		
 		episimConfig.setInitialInfectionDistrict("Berlin");
