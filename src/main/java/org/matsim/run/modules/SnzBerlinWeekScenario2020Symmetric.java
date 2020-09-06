@@ -97,7 +97,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 			throw new RuntimeException("100pct scenario not configured");
 		}
 
-		episimConfig.setCalibrationParameter(1.0E-5);
+		episimConfig.setCalibrationParameter(9.e-6);
 		episimConfig.setStartDate("2020-02-18");
 		
 		episimConfig.setInitialInfectionDistrict("Berlin");
@@ -126,9 +126,9 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.7), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.7), "quarantine_home");
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.7), "pt");
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "quarantine_home");
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "pt");
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
