@@ -144,6 +144,8 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 				;
 
+		// yyyy Quellen für alle Aussagen oben??  kai, aug'20
+
 	}
 
 	@Provides
