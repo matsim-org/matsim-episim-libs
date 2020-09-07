@@ -121,7 +121,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 	/**
 	 * Creates a config with the default settings for all snz scenarios.
 	 */
-	protected Config getBaseConfig() {
+	protected static Config getBaseConfig() {
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
