@@ -435,6 +435,55 @@ public class KnRunEpisim {
 
 	}
 
+	/*
+	{
+		List<Long> cnts = new ArrayList<>();
+		for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
+			EpisimContainer<?> container = entry.getKey();
+			if( !(container instanceof EpisimFacility) ){
+				continue;
+			}
+			int idx = container.getMaxGroupSize();
+			while( idx >= cnts.size() ){
+				cnts.add( 0L );
+			}
+			cnts.set( idx, cnts.get( idx ) + 1 );
+		}
+		try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeFac.csv" ) ){
+			for( int ii = 0 ; ii < cnts.size() ; ii++ ){
+				writer.write( ii + "," + cnts.get( ii ) + "\n" );
+			}
+		} catch( IOException e ){
+			e.printStackTrace();
+		}
+	}
+	{
+		List<Long> cnts = new ArrayList<>();
+		for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
+			EpisimContainer<?> container = entry.getKey();
+			if( !(container instanceof EpisimVehicle) ){
+				continue;
+			}
+			int idx = container.getMaxGroupSize();
+			while( idx >= cnts.size() ){
+				cnts.add( 0L );
+			}
+			cnts.set( idx, cnts.get( idx ) + 1 );
+		}
+		try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeVeh.csv" ) ){
+			for( int ii = 0 ; ii < cnts.size() ; ii++ ){
+				writer.write( ii + "," + cnts.get( ii ) + "\n" );
+			}
+		} catch( IOException e ){
+			e.printStackTrace();
+		}
+	}
+
+		log.warn("stopping here ...");
+		System.exit(-1);
+	 */
+
+
 	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
 
 	private static class MyInfectionModel implements InfectionModel {
