@@ -97,9 +97,28 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = 'output/2020-07-16_22-48-02__divN__unrestr__theta1.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
 # base = 'output/2020-07-16_23-04-28__divN__unrestr__theta8.0E-6@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
 # base = 'output/2020-07-16_23-04-15__divN__unrestr__theta1.2E-5@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
-base = 'output/2020-07-16_23-04-34__divN__unrestr__theta1.6E-5@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+# base = 'output/2020-07-16_23-04-34__divN__unrestr__theta1.6E-5@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
 # base = 'output/2020-07-16_23-57-53__divN__unrestr__theta1.0E-4@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
 # base = 'output/2020-07-16_23-58-02__divN__unrestr__theta0.001@10.0__trStrt46_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-08-30_12-53-58__original__unrestr__theta1.2E-5@25.0__trStrt46_seed4711_strtDt2020-02-17_trCap{2020-04-01=30}/'
+
+# base = 'output/2020-08-30_13-35-54__original__unrestr__theta1.0E-5@3.0__trStrt46_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}/'
+# base = 'output/2020-08-30_18-37-36__original__unrestr__theta3.3333333333333337E-6@9.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-30_18-37-49__original__unrestr__theta1.1111111111111112E-6@27.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-30_18-38-00__original__unrestr__theta3.703703703703704E-7@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+
+base = 'output/2020-08-30_18-38-38__original__unrestr__theta3.0000000000000004E-5@1.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+
+# base = 'output/2020-08-30_18-38-00__original__unrestr__theta3.703703703703704E-7@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-30_22-56-42__original__unrestr__theta1.1111111111111112E-6@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-30_22-56-52__original__unrestr__theta3.3333333333333337E-6@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-30_22-57-01__original__unrestr__theta1.0E-5@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+
+# base = 'output/2020-08-31_08-36-56__original__unrestr__theta4.11522633744856E-8@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-31_08-37-03__original__unrestr__theta1.234567901234568E-7@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-31_08-37-12__original__unrestr__theta3.703703703703704E-7@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-31_08-37-22__original__unrestr__theta1.1111111111111112E-6@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
