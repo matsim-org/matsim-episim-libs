@@ -130,6 +130,8 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "quarantine_home");
 		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "pt");
 		
+		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.6 * 0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
