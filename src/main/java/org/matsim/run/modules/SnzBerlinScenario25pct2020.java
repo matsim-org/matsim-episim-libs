@@ -90,6 +90,15 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				//Herbstferien
 				.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 				.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Weihnachtsferien
+				.restrict("2020-12-21", 0.2, "educ_kiga, educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-01-03", 1., "educ_kiga, educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Winterferien
+				.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Osterferien
+				.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 
 		;
 
