@@ -1,43 +1,26 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.util.Modules;
 
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.BatchRun.GenerateSeeds;
-import org.matsim.episim.BatchRun.IntParameter;
-import org.matsim.episim.BatchRun.Metadata;
-import org.matsim.episim.BatchRun.Parameter;
-import org.matsim.episim.BatchRun.StringParameter;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.model.AgeDependentInfectionModelWithSeasonality;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.InfectionModelWithSeasonality;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.SymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.batch.BerlinSymmetric.Params;
-import org.matsim.run.modules.AbstractSnzScenario2020;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
-import org.matsim.vehicles.VehicleType;
 
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Nullable;
