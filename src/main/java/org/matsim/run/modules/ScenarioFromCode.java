@@ -101,10 +101,10 @@ public class ScenarioFromCode extends AbstractModule {
 			p.getAttributes().putAttribute("age", 50);
 			scenario.getPopulation().addPerson(p);
 			
-			ActivityEndEvent homeEvent1 = new ActivityEndEvent(8*3600, Id.createPersonId("person"+i), Id.createLinkId("link"), Id.create("home"+i, ActivityFacility.class), "home"+i);
-			ActivityStartEvent workEvent1 = new ActivityStartEvent(9*3600, Id.createPersonId("person"+i), Id.createLinkId("link"), Id.create("school", ActivityFacility.class), "school", null);
-			ActivityEndEvent workEvent2 = new ActivityEndEvent(17*3600., Id.createPersonId("person"+i), Id.createLinkId("link"), Id.create("school", ActivityFacility.class), "school");
-			ActivityStartEvent homeEvent2 = new ActivityStartEvent(18*3600., Id.createPersonId("person"+i), Id.createLinkId("link"), Id.create("home"+i, ActivityFacility.class), "home"+i, null);
+			ActivityEndEvent homeEvent1 = new ActivityEndEvent(8*3600, p.getId(), Id.createLinkId("link"), Id.create("home"+i, ActivityFacility.class), "home");
+			ActivityStartEvent workEvent1 = new ActivityStartEvent(9*3600, p.getId(), Id.createLinkId("link"), Id.create("school", ActivityFacility.class), "school", null);
+			ActivityEndEvent workEvent2 = new ActivityEndEvent(17*3600., p.getId(), Id.createLinkId("link"), Id.create("school", ActivityFacility.class), "school");
+			ActivityStartEvent homeEvent2 = new ActivityStartEvent(18*3600., p.getId(), Id.createLinkId("link"), Id.create("home"+i, ActivityFacility.class), "home", null);
 			events.add(homeEvent1);
 			events.add(workEvent2);
 			events.add(workEvent1);
