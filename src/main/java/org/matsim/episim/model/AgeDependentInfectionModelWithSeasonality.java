@@ -23,8 +23,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private int iteration;
 
 
-	@Inject
-	public AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, SplittableRandom rnd) {
+	@Inject AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, SplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.rnd = rnd;
