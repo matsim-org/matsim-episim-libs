@@ -21,6 +21,8 @@
 package org.matsim.run.modules;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.Map;
 
 import javax.inject.Singleton;
 
@@ -30,6 +32,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.model.AgeDependentInfectionModelWithSeasonality;
 import org.matsim.episim.model.AgeDependentProgressionModel;
@@ -133,6 +136,12 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.6 * 0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+		
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+				LocalDate.of(2020, 4, 1), 30,
+				LocalDate.of(2020, 6, 1), Integer.MAX_VALUE
+		));
 
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
 
