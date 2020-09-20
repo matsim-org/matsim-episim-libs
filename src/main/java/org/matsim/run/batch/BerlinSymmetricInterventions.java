@@ -126,7 +126,7 @@ public class BerlinSymmetricInterventions implements BatchRun<BerlinSymmetricInt
 
 	public static final class Params {
 
-		@GenerateSeeds(10)
+		@GenerateSeeds(40)
 		long seed;
 		
 		@StringParameter({"none", "0.9FFP@PT&SHOP", "0.9CLOTH@PT&SHOP", "workBusiness50", "leisure50", "shop50", "educ50", "educ_kiga50", 
