@@ -47,6 +47,7 @@ import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
 
 import java.io.File;
 import java.io.IOException;
@@ -118,7 +119,7 @@ public class KnRunEpisim {
 					default:
 						throw new IllegalStateException( "Unexpected value: " + contactModelType );
 				}
-				bind( InfectionModel.class).to( MyInfectionModel.class ).in( Singleton.class );
+				bind( InfectionModel.class).to( AgeDependentInfectionModelWithSeasonality.class ).in( Singleton.class );
 				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
 				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
 
@@ -151,47 +152,6 @@ public class KnRunEpisim {
 					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
 				}
 
-/*				for( VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values() ){
-					switch( vehicleType.getId().toString() ) {
-						case "bus":
-							vehicleType.getCapacity().setSeats( 70 );
-							vehicleType.getCapacity().setStandingRoom( 40 );
-							// https://de.wikipedia.org/wiki/Stadtbus_(Fahrzeug)#Stehpl%C3%A4tze
-							break;
-						case "metro":
-							vehicleType.getCapacity().setSeats( 200 );
-							vehicleType.getCapacity().setStandingRoom( 550 );
-							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
-							break;
-						case "plane":
-							vehicleType.getCapacity().setSeats( 200 );
-							vehicleType.getCapacity().setStandingRoom( 0 );
-							break;
-						case "pt":
-							vehicleType.getCapacity().setSeats( 70 );
-							vehicleType.getCapacity().setStandingRoom( 70 );
-							break;
-						case "ship":
-							vehicleType.getCapacity().setSeats( 150 );
-							vehicleType.getCapacity().setStandingRoom( 150 );
-							// https://www.berlin.de/tourismus/dampferfahrten/faehren/1824948-1824660-faehre-f10-wannsee-altkladow.html
-							break;
-						case "train":
-							vehicleType.getCapacity().setSeats( 250 );
-							vehicleType.getCapacity().setStandingRoom( 750 );
-							// https://de.wikipedia.org/wiki/Stadler_KISS#Technische_Daten_der_Varianten , mehr als ICE (https://inside.bahn.de/ice-baureihen/)
-							break;
-						case "tram":
-							vehicleType.getCapacity().setSeats( 84 );
-							vehicleType.getCapacity().setStandingRoom( 216 );
-							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
-							break;
-						default:
-							throw new IllegalStateException( "Unexpected value=|" + vehicleType.getId().toString() + "|");
-					}
-				}
- */
-
 				return scenario;
 			}
 			@Provides @Singleton public EpisimConfigGroup epsimConfig( Config config ) {
@@ -219,43 +179,22 @@ public class KnRunEpisim {
 				Config config ;
 				EpisimConfigGroup episimConfig ;
 
-/*				for( InfectionParams params : episimConfig.getInfectionParams() ){
-					if ( params.includesActivity( "home" ) ){
-						params.setContactIntensity( 1. );
-					} else if ( params.includesActivity( "quarantine_home" ) ) {
-						params.setContactIntensity( 0.3 );
-					} else if ( params.includesActivity( "work" ) || params.getContainerName().startsWith( "shop" ) || params.includesActivity(
-							"business" ) || params.includesActivity( "errands" ) ) {
-						params.setContactIntensity( 2. );
-					} else if ( params.getContainerName().startsWith( "edu" ) ) {
-						params.setContactIntensity( 10. );
-					} else if ( params.includesActivity( "pt" ) || params.includesActivity( "tr" )) {
-						params.setContactIntensity( 67 );
-					} else if ( params.includesActivity( "leisure" ) || params.includesActivity( "visit" ) ) {
-						params.setContactIntensity( 17.6 );
-					} else {
-						throw new RuntimeException( "need to define contact intensity for activityType=" + params.getContainerName() );
-					}
-				}
-				*/
-
 				switch( runType ) {
+					// NOTE: The dynamics is set by the guice bindings above; this here just configures parameters that have something to do with those different dynamics.
 					case weekdaysOnly:
 						config = new SnzBerlinScenario25pct2020().config();
 						episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 						break;
 					case inclWeekends:
-						config = new SnzBerlinWeekScenario2020().config();
-						episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
 						if ( contactModelType == ContactModelType.original ){
-//						episimConfig.setCalibrationParameter(1.18e-5); // from CR
-//							episimConfig.setStartDate("2020-02-18"); // from CR
-							double fact = 81.*9.;
-							episimConfig.setCalibrationParameter( 1.e-5/fact*3.*3.*3.*3.*3. );
+							config = new SnzBerlinWeekScenario2020().config();
+							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+							episimConfig.setCalibrationParameter( 1.e-5 );
 							episimConfig.setStartDate( "2020-02-17" );
-							episimConfig.setMaxContacts( 3.*fact );
+							episimConfig.setMaxContacts( 3. );
 						} else if ( contactModelType == ContactModelType.symmetric ) {
+							config = new SnzBerlinWeekScenario2020Symmetric().config();
+							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 							episimConfig.setStartDate( "2020-02-13" );
 							episimConfig.setCalibrationParameter( 7.e-5 );
 							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
@@ -265,6 +204,8 @@ public class KnRunEpisim {
 							// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
 							// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
 						} else if ( contactModelType == ContactModelType.sqrt ){
+							config = new SnzBerlinWeekScenario2020Symmetric().config();
+							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 							episimConfig.setStartDate( "2020-02-13" );
 							episimConfig.setCalibrationParameter( 1.2e-5 );
 							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
@@ -274,6 +215,8 @@ public class KnRunEpisim {
 							// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
 							// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
 						} else if ( contactModelType == ContactModelType.direct ) {
+							config = new SnzBerlinWeekScenario2020().config();
+							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 							episimConfig.setStartDate( "2020-02-17" );
 							episimConfig.setCalibrationParameter( 1.2e-5 );
 						} else {
@@ -486,6 +429,7 @@ public class KnRunEpisim {
 
 	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
 
+	/*
 	private static class MyInfectionModel implements InfectionModel {
 
 		private final FaceMaskModel maskModel;
@@ -516,5 +460,6 @@ public class KnRunEpisim {
 			);
 		}
 	}
+	 */
 
 }
