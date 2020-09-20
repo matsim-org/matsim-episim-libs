@@ -59,7 +59,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
-	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-16")
+	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-17")
 	private LocalDate startDate;
 
 
@@ -152,14 +152,12 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			for (Entry<String, HashMap<Integer, Integer>> e : infHandler.infectionsPerActivity.entrySet()) {
-				if (e.getKey().equals("pt") || e.getKey().equals("total")|| e.getKey().equals("edu_kiga") || e.getKey().equals("edu_school") || e.getKey().equals("leisure") || e.getKey().equals("work&business") || e.getKey().equals("home") ) {
+				//if (e.getKey().equals("pt") || e.getKey().equals("total")|| e.getKey().equals("edu_kiga") || e.getKey().equals("edu_school") || e.getKey().equals("leisure") || e.getKey().equals("work&business") || e.getKey().equals("home") ) {
 					int infections = 0;
 					if (e.getValue().get(i) != null) infections = e.getValue().get(i);
 					bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
-					if (infections != 0) {
-						infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
-					}
-				}
+					infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
+				//}
 			}
 		}
 		
@@ -262,11 +260,11 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 			String infectionType = event.getInfectionType();
 //			if (infectionType.startsWith("educ_higher")) infectionType = "edu_higher";
 //			if (infectionType.startsWith("educ_other")) infectionType = "edu_other";
-			if (infectionType.startsWith("educ_kiga")) infectionType = "edu_kiga";
-			if (infectionType.startsWith("educ_primary") || infectionType.startsWith("educ_secondary") || infectionType.startsWith("educ_tertiary")) infectionType = "edu_school";			
-			if (infectionType.startsWith("leisure")) infectionType = "leisure";
-			if (infectionType.startsWith("work") || infectionType.startsWith("business")) infectionType = "work&business";
-			if (infectionType.startsWith("home")) infectionType = "home";
+//			if (infectionType.startsWith("educ_kiga")) infectionType = "edu_kiga";
+//			if (infectionType.startsWith("educ_primary") || infectionType.startsWith("educ_secondary") || infectionType.startsWith("educ_tertiary")) infectionType = "edu_school";			
+//			if (infectionType.startsWith("leisure")) infectionType = "leisure";
+//			if (infectionType.startsWith("work") || infectionType.startsWith("business")) infectionType = "work&business";
+//			if (infectionType.startsWith("home")) infectionType = "home";
 
 
 			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new HashMap<>());
