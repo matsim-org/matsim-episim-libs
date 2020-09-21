@@ -137,10 +137,19 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = 'output/2020-09-20_22-50-04__symmetric__fromConfig__theta3.0E-6@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
 # base = 'output/2020-09-20_22-50-26__symmetric__fromConfig__theta5.0E-6@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
 # base = 'output/2020-09-21_07-56-08__symmetric__fromConfig__theta1.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
-base = 'output/2020-09-21_07-56-19__symmetric__fromConfig__theta2.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+# base = 'output/2020-09-21_07-56-19__symmetric__fromConfig__theta2.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
 # base = 'output/2020-09-21_07-56-36__symmetric__fromConfig__theta4.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
 # base = 'output/2020-09-21_07-56-52__symmetric__fromConfig__theta1.0E-4@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
 
+# base = 'output/2020-09-21_12-41-45__symmetric__fromConfig__theta1.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+# base = 'output/2020-09-21_12-41-37__symmetric__fromConfig__theta2.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+# base = 'output/2020-09-21_12-28-51__symmetric__fromConfig__theta3.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-21_14-24-50__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-16_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+# base = 'output/2020-09-21_15-23-09__symmetric__fromConfig__theta2.2E-5@NaN_seed4711_strtDt2020-02-19_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+base = 'output/2020-09-21_16-00-16__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+
+#
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
@@ -172,11 +181,18 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 axes.set_ylim(0.9,10000)
-axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-10-01'))
 pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
-pyplot.axvline(pd.to_datetime('2020-03-16'), color='gray', linestyle=':', lw=1)
-pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
+pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
 # pyplot.axhline(32,color='gray',linestyle='dotted')
+
+pyplot.plot( pd.to_datetime('2020-03-07'), 3000, 'yo' )
+pyplot.text( pd.to_datetime('2020-03-07'), 3000, '1st day of home office (sat)')
+
+pyplot.plot( pd.to_datetime('2020-03-14'), 2000, 'ro' )
+pyplot.text( pd.to_datetime('2020-03-14'), 2000, '1st day of school closures (sat)')
+
 pyplot.show()
 
 # In[]:

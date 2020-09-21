@@ -109,7 +109,7 @@ public class KnRunEpisim {
 						bind( ContactModel.class ).to( DefaultContactModel.class ).in( Singleton.class );
 						break;
 					case symmetric:
-						bind( ContactModel.class ).to( OldSymmetricContactModel.class ).in( Singleton.class );
+						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
 						break;
 					case sqrt:
 						bind( ContactModel.class ).to( SqrtContactModel.class ).in( Singleton.class );
@@ -239,10 +239,10 @@ public class KnRunEpisim {
 						} else if ( contactModelType == ContactModelType.symmetric ) {
 							config = new SnzBerlinWeekScenario2020Symmetric().config();
 							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-							episimConfig.setStartDate( "2020-02-13" );
-							episimConfig.setCalibrationParameter( 1.e-4 );
+							episimConfig.setStartDate( "2020-02-18" );
+							episimConfig.setCalibrationParameter( 2.1e-5 );
 							episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
-						} else if ( contactModelType == ContactModelType.sqrt ){
+						} else if ( contactModelType == ContactModelType.sqrt ) {
 							config = new SnzBerlinWeekScenario2020Symmetric().config();
 							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 							episimConfig.setStartDate( "2020-02-13" );
