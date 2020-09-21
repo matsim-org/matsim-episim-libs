@@ -49,7 +49,7 @@ public final class ReplayHandler {
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
 
 	/**
-	 * Constructor with optional scenario.
+	 * Constructor with optional scenario. Events will be read from given {@link EpisimConfigGroup#getInputEventsFiles()}.
 	 */
 	@Inject
 	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
@@ -79,6 +79,17 @@ public final class ReplayHandler {
 			EnumSet<DayOfWeek> missing = EnumSet.complementOf(EnumSet.copyOf(events.keySet()));
 			throw new IllegalStateException("Event definition missing for days: " + missing);
 		}
+	}
+
+	/**
+	 * Constructor for using pre-defined events. A list of events for all weekdays needs to be present.
+	 * Events also have to ordered by time.
+	 *
+	 * @param events ordered events for all weekdays
+	 */
+	public ReplayHandler(Map<DayOfWeek, List<Event>> events) {
+		this.events.putAll(events);
+		this.scenario = null;
 	}
 
 	/**
