@@ -20,7 +20,7 @@ public class BerlinDispersion implements BatchRun<BerlinDispersion.Params> {
 	}
 
 	@Override
-	public AbstractModule getBindings(int id, Object params) {
+	public AbstractModule getBindings(int id, Params params) {
 		Params p = (Params) params;
 		return new SnzBerlinSuperSpreaderScenario(p.contactModel.equals("SYMMETRIC"), p.maxContacts, p.sigma, p.sigma);
 	}

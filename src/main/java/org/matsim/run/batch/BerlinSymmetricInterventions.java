@@ -35,7 +35,7 @@ public class BerlinSymmetricInterventions implements BatchRun<BerlinSymmetricInt
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25))
 				.with(new AbstractModule() {
 					@Override

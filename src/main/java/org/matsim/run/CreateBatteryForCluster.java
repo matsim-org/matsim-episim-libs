@@ -63,6 +63,7 @@ import java.util.stream.Collectors;
 		description = "Create batch scripts for execution on computing cluster.",
 		mixinStandardHelpOptions = true
 )
+@SuppressWarnings("unchecked, rawtypes")
 public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
@@ -144,7 +145,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
-			noBindings &= prepare.setup.getBindings(run.id, run.args) == null;
+			noBindings &= ((BatchRun) prepare.setup).getBindings(run.id, run.args) == null;
 
 			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
 			if (noBindings) {

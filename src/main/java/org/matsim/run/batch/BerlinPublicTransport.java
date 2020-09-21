@@ -21,7 +21,7 @@ public class BerlinPublicTransport implements BatchRun<BerlinPublicTransport.Par
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinWeekScenario2020();
 	}
 

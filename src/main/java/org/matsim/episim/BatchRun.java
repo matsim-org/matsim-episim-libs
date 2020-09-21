@@ -190,7 +190,7 @@ public interface BatchRun<T> {
 	 * @return module with additional bindings, or null if not needed
 	 */
 	@Nullable
-	default AbstractModule getBindings(int id, @Nullable Object params) {
+	default AbstractModule getBindings(int id, @Nullable T params) {
 		return null;
 	}
 

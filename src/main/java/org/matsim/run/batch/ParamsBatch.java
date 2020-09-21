@@ -20,7 +20,7 @@ public class ParamsBatch implements BatchRun<ParamsBatch.Params> {
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinWeekScenario2020();
 	}
 

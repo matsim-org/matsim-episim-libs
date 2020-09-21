@@ -24,7 +24,7 @@ public class BerlinWeekSeason implements BatchRun<BerlinWeekSeason.Params> {
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020(25))
 				.with(new AbstractModule() {
 					@Override

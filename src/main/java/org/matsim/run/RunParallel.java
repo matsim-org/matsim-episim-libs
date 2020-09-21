@@ -62,6 +62,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 		showDefaultValues = true,
 		mixinStandardHelpOptions = true
 )
+@SuppressWarnings("unchecked, rawtypes")
 public class RunParallel<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RunParallel.class);
@@ -161,7 +162,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(
-					new Task(prepare.setup.getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
+					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;

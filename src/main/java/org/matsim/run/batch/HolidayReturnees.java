@@ -28,7 +28,7 @@ public class HolidayReturnees implements BatchRun<HolidayReturnees.Params> {
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020())
 				.with(new AbstractModule() {
 					@Override

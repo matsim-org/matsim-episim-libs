@@ -23,9 +23,8 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 	}
 
 	@Override
-	public AbstractModule getBindings(int id, Object params) {
-		Params p = (Params) params;
-		return new SnzBerlinSuperSpreaderScenario(true, 30, 0, p.sigma);
+	public AbstractModule getBindings(int id, Params params) {
+		return new SnzBerlinSuperSpreaderScenario(true, 30, 0, params.sigma);
 	}
 
 	@Override
