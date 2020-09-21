@@ -80,9 +80,6 @@ public class KnRunEpisim {
 
 	private static final double sigmaSusc = 0.;
 
-	private enum WeekendHandling{ weekdaysOnly, inclWeekends }
-	private static final WeekendHandling runType = WeekendHandling.inclWeekends;
-
 	private enum ContactModelType{ original, symmetric, sqrt, direct }
 	private static final ContactModelType contactModelType = ContactModelType.symmetric;
 
@@ -133,68 +130,13 @@ public class KnRunEpisim {
 			}
 			@Provides @Singleton public Scenario scenario( Config config ) {
 
-				// guice will use no args constructor by default, we check if this config was initialized
-				// this is only the case when no explicit binding are required
-				if (config.getModules().size() == 0)
-					throw new IllegalArgumentException("Please provide a config module or binding.");
-
-				config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore );
-
-				// save some time for not needed inputs
-				config.facilities().setInputFile(null);
-
-				ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "before loading scenario" );
-
-				final Scenario scenario = ScenarioUtils.loadScenario( config );
+				Scenario scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config );
 
 				SplittableRandom rnd = new SplittableRandom( 4715 );
 				for( Person person : scenario.getPopulation().getPersons().values() ){
 					person.getAttributes().putAttribute( VIRAL_LOAD, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaInfect ) );
 					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
 				}
-
-				double capFactor = 1.3;
-
-				for( VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values() ){
-					switch( vehicleType.getId().toString() ) {
-						case "bus":
-							vehicleType.getCapacity().setSeats( (int) (70 * capFactor));
-							vehicleType.getCapacity().setStandingRoom( (int) (40 * capFactor) );
-							// https://de.wikipedia.org/wiki/Stadtbus_(Fahrzeug)#Stehpl%C3%A4tze
-							break;
-						case "metro":
-							vehicleType.getCapacity().setSeats( (int) (200 * capFactor) );
-							vehicleType.getCapacity().setStandingRoom( (int) (550 * capFactor) );
-							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
-							break;
-						case "plane":
-							vehicleType.getCapacity().setSeats( (int) (200 * capFactor) );
-							vehicleType.getCapacity().setStandingRoom( (int) (0 * capFactor) );
-							break;
-						case "pt":
-							vehicleType.getCapacity().setSeats( (int) (70 * capFactor) );
-							vehicleType.getCapacity().setStandingRoom( (int) (70 * capFactor) );
-							break;
-						case "ship":
-							vehicleType.getCapacity().setSeats( (int) (150 * capFactor) );
-							vehicleType.getCapacity().setStandingRoom( (int) (150 * capFactor) );
-							// https://www.berlin.de/tourismus/dampferfahrten/faehren/1824948-1824660-faehre-f10-wannsee-altkladow.html
-							break;
-						case "train":
-							vehicleType.getCapacity().setSeats( (int) (250 * capFactor) );
-							vehicleType.getCapacity().setStandingRoom( (int) (750 * capFactor) );
-							// https://de.wikipedia.org/wiki/Stadler_KISS#Technische_Daten_der_Varianten , mehr als ICE (https://inside.bahn.de/ice-baureihen/)
-							break;
-						case "tram":
-							vehicleType.getCapacity().setSeats( (int) (84 * capFactor) );
-							vehicleType.getCapacity().setStandingRoom( (int) (216 * capFactor) );
-							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
-							break;
-						default:
-							throw new IllegalStateException( "Unexpected value=|" + vehicleType.getId().toString() + "|");
-					}
-				}
-
 
 				return scenario;
 			}
@@ -223,48 +165,38 @@ public class KnRunEpisim {
 				Config config ;
 				EpisimConfigGroup episimConfig ;
 
-				switch( runType ) {
-					// NOTE: The dynamics is set by the guice bindings above; this here just configures parameters that have something to do with those different dynamics.
-					case weekdaysOnly:
-						config = new SnzBerlinScenario25pct2020().config();
-						episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-						break;
-					case inclWeekends:
-						if ( contactModelType == ContactModelType.original ){
-							config = new SnzBerlinWeekScenario2020().config();
-							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-							episimConfig.setCalibrationParameter( 1.e-5 );
-							episimConfig.setStartDate( "2020-02-17" );
-							episimConfig.setMaxContacts( 3. );
-						} else if ( contactModelType == ContactModelType.symmetric ) {
-							config = new SnzBerlinWeekScenario2020Symmetric().config();
-							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-							episimConfig.setStartDate( "2020-02-18" );
-							episimConfig.setCalibrationParameter( 2.1e-5 );
-							episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
-						} else if ( contactModelType == ContactModelType.sqrt ) {
-							config = new SnzBerlinWeekScenario2020Symmetric().config();
-							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-							episimConfig.setStartDate( "2020-02-13" );
-							episimConfig.setCalibrationParameter( 1.e-5 );
-							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
-							// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
-							// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
-							// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
-							// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
-							// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
-						} else if ( contactModelType == ContactModelType.direct ) {
-							config = new SnzBerlinWeekScenario2020().config();
-							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-							episimConfig.setStartDate( "2020-02-17" );
-							episimConfig.setCalibrationParameter( 1.2e-5 );
-						} else {
-							throw new RuntimeException( "not implemented for infectionModelType=" + contactModelType );
-						}
+				// NOTE: The dynamics is set by the guice bindings above; this here just configures parameters that have something to do with those different dynamics.
+				if( contactModelType == ContactModelType.original ){
+					config = new SnzBerlinWeekScenario2020().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setCalibrationParameter( 1.e-5 );
+					episimConfig.setStartDate( "2020-02-17" );
+					episimConfig.setMaxContacts( 3. );
+				} else if( contactModelType == ContactModelType.symmetric ){
+					config = new SnzBerlinWeekScenario2020Symmetric().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-18" );
+					episimConfig.setCalibrationParameter( 2.1e-5 );
+					episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
+				} else if( contactModelType == ContactModelType.sqrt ){
+					config = new SnzBerlinWeekScenario2020Symmetric().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-13" );
+					episimConfig.setCalibrationParameter( 1.e-5 );
+					episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
 
-						break;
-					default:
-						throw new IllegalStateException( "Unexpected value: " + runType );
+					// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
+					// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
+					// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
+					// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
+					// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
+				} else if( contactModelType == ContactModelType.direct ){
+					config = new SnzBerlinWeekScenario2020().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-17" );
+					episimConfig.setCalibrationParameter( 1.2e-5 );
+				} else{
+					throw new RuntimeException( "not implemented for infectionModelType=" + contactModelType );
 				}
 
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -290,74 +222,6 @@ public class KnRunEpisim {
 
 				if ( restrictionsType==RestrictionsType.fromConfig ) {
 					// do nothing
-				} else if ( restrictionsType==RestrictionsType.triang ) {
-					List<String> allActivitiesExceptHomeList = new ArrayList<>();
-					List<String> allActivitiesExceptHomeAndEduList = new ArrayList<>();
-					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
-						final String activityType = infectionParams.getParams().get( "activityType" );
-						if ( !activityType.contains( "home" ) ) {
-							allActivitiesExceptHomeList.add(activityType);
-							if (!activityType.contains( "educ_" ) ){
-								allActivitiesExceptHomeAndEduList.add( activityType );
-							}
-						}
-					}
-					final String[] actsExceptHomeAndEdu = allActivitiesExceptHomeAndEduList.toArray( new String[0] );
-					final String[] actsExceptHome = allActivitiesExceptHomeList.toArray( new String[0] );
-					final String[] educ_lower = {"educ_primary", "educ_kiga"};
-					final String[] educ_higher = {"educ_secondary", "educ_higher", "educ_tertiary", "educ_other"};
-					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
-					// ===
-					// ci change:
-					LocalDate dateOfCiCorrA = LocalDate.of( 2020, 3, 8 );
-					double ciCorrA = 0.55;
-					// (8.3.: Empfehlung Absage Veranstaltungen > 1000 Teilnehmer ???; Verhaltensänderungen?)
-					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), actsExceptHome );
-					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), "pt", "home" );
-					// Wir hatten sicher bereits Reaktionen im Arbeitsleben.  Nicht nur home office (= in den Mobilitätsdaten), sondern
-					// auch kein Händeschütteln, Abstand, Räume lüften.  Freizeit damit vermutlich auch; die Tatsache, dass (dennoch)
-					// viele der Berliner Grossinfektionen in dieser Woche in den Clubs stattfanden, ist vllt Konsequenz der Tatsache, dass
-					// es vorher nicht genügend Virusträger in Bln gab.
-					// Obiger Ansatz (insbesondere mit inclHome) sagt allerdings, dass wir das im Prinzip ins theta hinein absorbieren.
-
-					// quick reductions towards lockdown:
-					LocalDate triangleStartDate = LocalDate.of( 2020, 3, 8 );
-					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
-					double alpha = 1.2;
-					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
-					restrictions.interpolate( triangleStartDate, date_2020_03_24,
-							Restriction.of(1.), Restriction.of(remainingFractionAtMax),
-							actsExceptHomeAndEdu );
-					// school closures:
-					restrictions.restrict( "2020-03-14", 0.1, educ_lower ).restrict( "2020-03-14", 0., educ_higher );
-					// slow re-opening:
-					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,31 ),
-							Restriction.of(remainingFractionAtMax ), Restriction.of( max( 0., 1.-alpha*0. ) ),
-							actsExceptHomeAndEdu );
-					// absorb masks into exposures and ramp up:
-					final LocalDate dateOfCiCorrB = LocalDate.of( 2020, 4, 15 );
-					final double ciCorrB = 0.15;
-					final int nDays = 14;
-					for ( int ii = 0 ; ii<= nDays ; ii++ ){
-						double newExposure = ciCorrA + ( ciCorrA*ciCorrB - ciCorrA ) * ii / nDays ;
-						// check: ii=0 --> old value; ii=nDays --> new value
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), "shop_daily","shop_other" );
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), "pt","tr", "leisure");
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), educ_higher );
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), educ_lower );
-					}
-
-					// ===
-					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
-
-					strb.append( "_ciCorrA" ).append( ciCorrA );
-					strb.append( "@" ).append( dateOfCiCorrA );
-
-					strb.append( "_triangStrt" ).append( triangleStartDate );
-					strb.append( "_alpha" ).append( alpha );
-
-					strb.append( "_ciCorrB" + ciCorrB + "@" ).append( dateOfCiCorrB ).append( "over" + nDays + "days" );
-
 				} else if ( restrictionsType==RestrictionsType.fromSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
 					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.25 ));

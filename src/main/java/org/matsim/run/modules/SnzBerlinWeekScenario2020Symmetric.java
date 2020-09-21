@@ -30,6 +30,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
+import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
@@ -165,6 +166,8 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 		// save some time for not needed inputs
 		config.facilities().setInputFile(null);
+
+		ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "before loading scenario" );
 
 		final Scenario scenario = ScenarioUtils.loadScenario( config );
 
