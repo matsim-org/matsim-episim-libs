@@ -46,9 +46,9 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 //		episimConfig.getOrAddContainerParams("quarantine_home")
 //				.setContactIntensity(0.01);
 //	}
-	
-	private static void setContactIntensities(EpisimConfigGroup episimConfig) {
-		episimConfig.getOrAddContainerParams("pt")
+
+	public static void addParams(EpisimConfigGroup episimConfig) {
+		episimConfig.getOrAddContainerParams("pt", "tr")
 				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("work")
 				.setContactIntensity(1.);
@@ -77,33 +77,12 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.getOrAddContainerParams("business")
 				.setContactIntensity(1.);
 		episimConfig.getOrAddContainerParams("home")
-				.setContactIntensity(1.);
+				.setContactIntensity(1.)
+				.setSpacesPerFacility(1.); // home facilities have already been split
 		episimConfig.getOrAddContainerParams("quarantine_home")
 				.setContactIntensity(1.);
 	}
 
-	public static void addParams(EpisimConfigGroup episimConfig) {
-
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("pt", "tr"));
-		// regular out-of-home acts:
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leisure"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_kiga"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_primary"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_secondary"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_tertiary"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_higher"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("educ_other"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shop_daily"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("shop_other"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("visit"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("errands"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("business"));
-
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home"));
-	}
-	
 	@Override
 	protected void configure() {
 
@@ -130,8 +109,6 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
 		addParams(episimConfig);
-		
-		setContactIntensities(episimConfig);
 
 		return config;
 	}

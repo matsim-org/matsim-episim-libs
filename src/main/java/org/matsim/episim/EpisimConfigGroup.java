@@ -69,12 +69,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String GROUPNAME = "episim";
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
-
+	/**
+	 * Number of initial infections per day.
+	 */
+	private final Map<LocalDate, Integer> infectionsPerDay = new TreeMap<>();
 	/**
 	 * Which events to write in the output.
 	 */
 	private WriteEvents writeEvents = WriteEvents.episim;
-
 	// this is current default for 25% scenarios
 	private double calibrationParameter = 0.000002;
 	private double hospitalFactor = 1.;
@@ -104,12 +106,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * How the internal rng state should be handled.
 	 */
 	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
-
-	/**
-	 * Number of initial infections per day.
-	 */
-	private final Map<LocalDate, Integer> infectionsPerDay = new TreeMap<>();
-
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
@@ -187,13 +183,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.initialInfections = initialInfections;
 	}
 
+	public Map<LocalDate, Integer> getInfections_pers_per_day() {
+		return infectionsPerDay;
+	}
+
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
 		this.infectionsPerDay.clear();
 		this.infectionsPerDay.putAll(infectionsPerDay);
 	}
 
-	public Map<LocalDate, Integer> getInfections_pers_per_day() {
-		return infectionsPerDay;
+	@StringGetter(INFECTIONS_PER_DAY)
+	String getInfectionsPerDay() {
+		return JOINER.join(infectionsPerDay);
 	}
 
 	@StringSetter(INFECTIONS_PER_DAY)
@@ -203,11 +204,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		setInfections_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
 		)));
-	}
-
-	@StringGetter(INFECTIONS_PER_DAY)
-	String getInfectionsPerDay() {
-		return JOINER.join(infectionsPerDay);
 	}
 
 	@StringGetter(INITIAL_INFECTION_DISTRICT)
@@ -500,13 +496,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Returns a container from the parameter set if it exists or creates a new one.
 	 */
-	public InfectionParams getOrAddContainerParams(final String containerName) {
+	public InfectionParams getOrAddContainerParams(final String containerName, String... mappedNames) {
 		InfectionParams params = this.getContainerParams().get(containerName);
 
 		if (params != null)
 			return params;
 
-		params = new InfectionParams(containerName);
+		params = new InfectionParams(containerName, mappedNames);
 
 		addParameterSet(params);
 		return params;
@@ -645,6 +641,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public static final class InfectionParams extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
+		public static final String SPACES_PER_FACILITY = "nSpacesPerFacility";
 		public static final String MAPPED_NAMES = "mappedNames";
 
 		static final String SET_TYPE = "infectionParams";
@@ -660,9 +657,15 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		private double contactIntensity = 1.;
 
 		/**
+		 * Typical number of distinct spaces per facility.
+		 */
+		private double spacesPerFacility = 1.;
+
+
+		/**
 		 * See {@link #InfectionParams(String, String...)}. Name itself will also be used as prefix.
 		 */
-		public InfectionParams(final String containerName) {
+		InfectionParams(final String containerName) {
 			this();
 			this.containerName = containerName;
 			this.mappedNames = Sets.newHashSet(containerName);
@@ -671,13 +674,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Constructor.
 		 *
-		 * @param containerName name name of this activity type
+		 * @param containerName name of this activity type
 		 * @param mappedNames   activity prefixes that will also be mapped to this container
 		 */
-		public InfectionParams(final String containerName, String... mappedNames) {
+		InfectionParams(final String containerName, String... mappedNames) {
 			this();
 			this.containerName = containerName;
-			this.mappedNames = Sets.newHashSet(mappedNames);
+			this.mappedNames = mappedNames.length == 0 ?
+					Sets.newHashSet(containerName) : Sets.newHashSet(mappedNames);
+		}
+
+		/**
+		 * Copy constructor.
+		 */
+		private InfectionParams(InfectionParams other) {
+			this();
+			this.containerName = other.containerName;
+			this.mappedNames = other.mappedNames;
+			this.contactIntensity = other.contactIntensity;
+			this.spacesPerFacility = other.spacesPerFacility;
 		}
 
 		private InfectionParams() {
@@ -690,7 +705,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringSetter(MAPPED_NAMES)
-		public void setMappedNames(String mappedNames) {
+		void setMappedNames(String mappedNames) {
 			this.mappedNames = Sets.newHashSet(mappedNames.split(","));
 		}
 
@@ -700,7 +715,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringSetter(ACTIVITY_TYPE)
-		public void setContainerName(String actType) {
+		void setContainerName(String actType) {
 			this.containerName = actType;
 		}
 
@@ -719,6 +734,26 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		public InfectionParams setContactIntensity(double contactIntensity) {
 			this.contactIntensity = contactIntensity;
 			return this;
+		}
+
+		@StringGetter(SPACES_PER_FACILITY)
+		public double getSpacesPerFacility() {
+			return spacesPerFacility;
+		}
+
+		@StringSetter(SPACES_PER_FACILITY)
+		public InfectionParams setSpacesPerFacility(double nSpacesPerFacility) {
+			this.spacesPerFacility = nSpacesPerFacility;
+			return this;
+		}
+
+		/**
+		 * Create a copy of the this infection params.
+		 *
+		 * @return new contact intensity to set
+		 */
+		public InfectionParams copy(double contactIntensity) {
+			return new InfectionParams(this).setContactIntensity(contactIntensity);
 		}
 
 		/**
@@ -742,9 +777,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		public static final String DAYS = "days";
 		public static final String PATH = "path";
 		static final String SET_TYPE = "eventFiles";
-
-		private String path;
 		private final Set<DayOfWeek> days = EnumSet.noneOf(DayOfWeek.class);
+		private String path;
 
 		EventFileParams(String path) {
 			this();
@@ -755,15 +789,14 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			super(SET_TYPE);
 		}
 
+		@StringGetter(PATH)
+		public String getPath() {
+			return path;
+		}
 
 		@StringSetter(PATH)
 		void setPath(String path) {
 			this.path = path;
-		}
-
-		@StringGetter(PATH)
-		public String getPath() {
-			return path;
 		}
 
 		/**
@@ -773,6 +806,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			this.days.addAll(Arrays.asList(days));
 		}
 
+		@StringGetter(DAYS)
+		public Set<DayOfWeek> getDays() {
+			return days;
+		}
+
 		@StringSetter(DAYS)
 		public void setDays(String days) {
 			String str = days.replace("[", "").replace(" ", "").replace("]", "");
@@ -780,11 +818,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			this.days.addAll(
 					Arrays.stream(str.split(",")).map(DayOfWeek::valueOf).collect(Collectors.toSet())
 			);
-		}
-
-		@StringGetter(DAYS)
-		public Set<DayOfWeek> getDays() {
-			return days;
 		}
 
 		@Override

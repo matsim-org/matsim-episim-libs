@@ -69,10 +69,10 @@ public class ScenarioFromCode extends AbstractModule {
 	 * Adds default parameters that should be valid for most scenarios.
 	 */
 	public static void addDefaultParams(EpisimConfigGroup config) {
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("school").setContactIntensity(1.));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("home").setContactIntensity(1.));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home").setContactIntensity(0.3));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1.));
+		config.getOrAddContainerParams("school").setContactIntensity(1.);
+		config.getOrAddContainerParams("home").setContactIntensity(1.);
+		config.getOrAddContainerParams("quarantine_home").setContactIntensity(0.3);
+		config.getOrAddContainerParams("tr").setContactIntensity(1.);
 
 	}
 
