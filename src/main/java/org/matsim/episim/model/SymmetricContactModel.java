@@ -103,6 +103,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 //					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
 //							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
 //				}
+//				log.warn("containerId={}; typical capacity={}; maxPersonsInContainer={}" , container.getContainerId(), container.getTypicalCapacity(), maxPersonsInContainer );
 			}
 
 			// it may happen that persons enter and leave an container at the same time
@@ -113,11 +114,28 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				// maxPersonsInContainer = container.getPersons().size();
 			}
 
+			/*
 			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
 				continue;
 			}
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
 			// if we want superspreading events, then maxInteractions needs to be much larger than 3 or 10.
+
+			*/
+
+			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
+			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+
+			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
+
+			double nSpacesPerFacility = 10.;
+			if ( infectionType.toString().contains( "home" ) ) {
+				nSpacesPerFacility = 1;
+			}
+
+			if( rnd.nextDouble() > 1. / nSpacesPerFacility ) { // i.e. other person is in other space
+				continue;
+			}
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
@@ -138,10 +156,6 @@ public final class SymmetricContactModel extends AbstractContactModel {
 					&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
 				continue;
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
-
-			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
 			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
 			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
@@ -197,11 +211,22 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 
 			// Parameter will only be retrieved one time
-			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
+			if (leavingParams == null){
+				EpisimConfigGroup.InfectionParams tmp = getInfectionParams( container, personLeavingContainer, leavingPersonsActivity );
+				leavingParams = new EpisimConfigGroup.InfectionParams( tmp.getContainerName(), tmp.getMappedNames());
+
+				double ci = tmp.getContactIntensity();
+				// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
+
+				leavingParams.setContactIntensity( ci / (maxPersonsInContainer / nSpacesPerFacility ) );
+			}
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, contactPerson, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams contactParams = new EpisimConfigGroup.InfectionParams( tmp.getContainerName(), tmp.getMappedNames() );
+			double ci2 = tmp.getContactIntensity();
+			contactParams.setContactIntensity( ci2 / (maxPersonsInContainer / nSpacesPerFacility) );
+			// (same computation as above; could just memorize)
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
