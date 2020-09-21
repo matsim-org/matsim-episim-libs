@@ -125,11 +125,13 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		}
 		
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		
+
+		// The following is, I think, the ci correction that we need around mar/6 in order to get the RKI infection peak right.  kai, sep/20
 		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
 		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "quarantine_home");
 		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "pt");
-		
+
+		// yyyyyy why this? Could you please comment?  kai, sep/20
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.6 * 0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
