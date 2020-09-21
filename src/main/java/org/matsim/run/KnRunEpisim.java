@@ -48,6 +48,7 @@ import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
+import org.matsim.vehicles.VehicleType;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,7 +84,7 @@ public class KnRunEpisim {
 	private static final WeekendHandling runType = WeekendHandling.inclWeekends;
 
 	private enum ContactModelType{ original, symmetric, sqrt, direct }
-	private static final ContactModelType contactModelType = ContactModelType.original;
+	private static final ContactModelType contactModelType = ContactModelType.symmetric;
 
 
 	public static void main(String[] args) throws IOException{
@@ -152,6 +153,49 @@ public class KnRunEpisim {
 					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
 				}
 
+				double capFactor = 1.3;
+
+				for( VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values() ){
+					switch( vehicleType.getId().toString() ) {
+						case "bus":
+							vehicleType.getCapacity().setSeats( (int) (70 * capFactor));
+							vehicleType.getCapacity().setStandingRoom( (int) (40 * capFactor) );
+							// https://de.wikipedia.org/wiki/Stadtbus_(Fahrzeug)#Stehpl%C3%A4tze
+							break;
+						case "metro":
+							vehicleType.getCapacity().setSeats( (int) (200 * capFactor) );
+							vehicleType.getCapacity().setStandingRoom( (int) (550 * capFactor) );
+							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
+							break;
+						case "plane":
+							vehicleType.getCapacity().setSeats( (int) (200 * capFactor) );
+							vehicleType.getCapacity().setStandingRoom( (int) (0 * capFactor) );
+							break;
+						case "pt":
+							vehicleType.getCapacity().setSeats( (int) (70 * capFactor) );
+							vehicleType.getCapacity().setStandingRoom( (int) (70 * capFactor) );
+							break;
+						case "ship":
+							vehicleType.getCapacity().setSeats( (int) (150 * capFactor) );
+							vehicleType.getCapacity().setStandingRoom( (int) (150 * capFactor) );
+							// https://www.berlin.de/tourismus/dampferfahrten/faehren/1824948-1824660-faehre-f10-wannsee-altkladow.html
+							break;
+						case "train":
+							vehicleType.getCapacity().setSeats( (int) (250 * capFactor) );
+							vehicleType.getCapacity().setStandingRoom( (int) (750 * capFactor) );
+							// https://de.wikipedia.org/wiki/Stadler_KISS#Technische_Daten_der_Varianten , mehr als ICE (https://inside.bahn.de/ice-baureihen/)
+							break;
+						case "tram":
+							vehicleType.getCapacity().setSeats( (int) (84 * capFactor) );
+							vehicleType.getCapacity().setStandingRoom( (int) (216 * capFactor) );
+							// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
+							break;
+						default:
+							throw new IllegalStateException( "Unexpected value=|" + vehicleType.getId().toString() + "|");
+					}
+				}
+
+
 				return scenario;
 			}
 			@Provides @Singleton public EpisimConfigGroup epsimConfig( Config config ) {
@@ -196,18 +240,13 @@ public class KnRunEpisim {
 							config = new SnzBerlinWeekScenario2020Symmetric().config();
 							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 							episimConfig.setStartDate( "2020-02-13" );
-							episimConfig.setCalibrationParameter( 7.e-5 );
-							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
-							// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
-							// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
-							// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
-							// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
-							// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
+							episimConfig.setCalibrationParameter( 1.e-4 );
+							episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
 						} else if ( contactModelType == ContactModelType.sqrt ){
 							config = new SnzBerlinWeekScenario2020Symmetric().config();
 							episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 							episimConfig.setStartDate( "2020-02-13" );
-							episimConfig.setCalibrationParameter( 1.2e-5 );
+							episimConfig.setCalibrationParameter( 1.e-5 );
 							episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
 							// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
 							// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
@@ -239,7 +278,7 @@ public class KnRunEpisim {
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.unrestr;
+				RestrictionsType restrictionsType = RestrictionsType.fromConfig;
 
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
