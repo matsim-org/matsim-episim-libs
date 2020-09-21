@@ -108,7 +108,7 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = 'output/2020-08-30_18-37-49__original__unrestr__theta1.1111111111111112E-6@27.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 # base = 'output/2020-08-30_18-38-00__original__unrestr__theta3.703703703703704E-7@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 
-base = 'output/2020-08-30_18-38-38__original__unrestr__theta3.0000000000000004E-5@1.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-08-30_18-38-38__original__unrestr__theta3.0000000000000004E-5@1.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 
 # base = 'output/2020-08-30_18-38-00__original__unrestr__theta3.703703703703704E-7@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 # base = 'output/2020-08-30_22-56-42__original__unrestr__theta1.1111111111111112E-6@81.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
@@ -119,6 +119,27 @@ base = 'output/2020-08-30_18-38-38__original__unrestr__theta3.0000000000000004E-
 # base = 'output/2020-08-31_08-37-03__original__unrestr__theta1.234567901234568E-7@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 # base = 'output/2020-08-31_08-37-12__original__unrestr__theta3.703703703703704E-7@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
 # base = 'output/2020-08-31_08-37-22__original__unrestr__theta1.1111111111111112E-6@2187.0_seed4711_strtDt2020-02-17_trCap{1970-01-01=0}__trStrt46/'
+
+# base = 'output/2020-09-19_17-55-38__symmetric__unrestr__theta7.0E-5@10.0_seed4711_strtDt2020-02-13_trCap{1970-01-01=0}__trStrt46/'
+
+# base = 'output/2020-09-19_18-27-13__symmetric__unrestr__theta7.0E-5@10.0_seed4711_strtDt2020-02-13_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-09-19_18-35-31__symmetric__unrestr__theta7.0E-6@10.0_seed4711_strtDt2020-02-13_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-09-19_18-35-38__symmetric__unrestr__theta7.0E-7@10.0_seed4711_strtDt2020-02-13_trCap{1970-01-01=0}__trStrt46/'
+
+# base = 'output/2020-09-19_23-30-36__symmetric__unrestr__theta1.0E-6@10.0_seed4711_strtDt2020-02-13_trCap{1970-01-01=0}__trStrt46/'
+# base = 'output/2020-09-19_23-30-58__symmetric__unrestr__theta3.0E-6@10.0_seed4711_strtDt2020-02-13_trCap{1970-01-01=0}__trStrt46/'
+
+# base = 'output/2020-09-20_09-44-07__symmetric__fromConfig__theta2.0E-6@10.0_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+# base = 'output/2020-09-20_09-44-37__symmetric__fromConfig__theta1.0E-6@10.0_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+
+# base = 'output/2020-09-20_18-07-37__symmetric__fromConfig__theta1.8E-6@10.0_seed4711_strtDt2020-02-15_trCap{2020-04-01=30}__trStrt46/'
+
+# base = 'output/2020-09-20_22-50-04__symmetric__fromConfig__theta3.0E-6@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+# base = 'output/2020-09-20_22-50-26__symmetric__fromConfig__theta5.0E-6@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+# base = 'output/2020-09-21_07-56-08__symmetric__fromConfig__theta1.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+base = 'output/2020-09-21_07-56-19__symmetric__fromConfig__theta2.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+# base = 'output/2020-09-21_07-56-36__symmetric__fromConfig__theta4.0E-5@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
+# base = 'output/2020-09-21_07-56-52__symmetric__fromConfig__theta1.0E-4@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/'
 
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
@@ -155,7 +176,7 @@ axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-08-15'))
 pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
 pyplot.axvline(pd.to_datetime('2020-03-16'), color='gray', linestyle=':', lw=1)
 pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
-pyplot.axhline(32,color='gray',linestyle='dotted')
+# pyplot.axhline(32,color='gray',linestyle='dotted')
 pyplot.show()
 
 # In[]:
