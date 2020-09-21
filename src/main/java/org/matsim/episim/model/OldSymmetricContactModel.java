@@ -31,11 +31,14 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
- * Variant of the {@link DefaultContactModel} with symetric interactions.
+ * Variant of the {@link DefaultContactModel} with symmetric interactions.
+ *
+ * @deprecated This model will be deprecated in favor of {@link SymmetricContactModel}.
  */
-public final class SymmetricContactModel extends AbstractContactModel {
+@Deprecated
+public final class OldSymmetricContactModel extends AbstractContactModel {
 
-	private static final Logger log = LogManager.getLogger( SymmetricContactModel.class );
+	private static final Logger log = LogManager.getLogger( OldSymmetricContactModel.class );
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -54,8 +57,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 	@Inject
 	/* package */
-	SymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-						  EpisimReporting reporting, InfectionModel infectionModel ) {
+	OldSymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+							 EpisimReporting reporting, InfectionModel infectionModel ) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();

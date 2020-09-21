@@ -109,7 +109,7 @@ public class KnRunEpisim {
 						bind( ContactModel.class ).to( DefaultContactModel.class ).in( Singleton.class );
 						break;
 					case symmetric:
-						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+						bind( ContactModel.class ).to( OldSymmetricContactModel.class ).in( Singleton.class );
 						break;
 					case sqrt:
 						bind( ContactModel.class ).to( SqrtContactModel.class ).in( Singleton.class );

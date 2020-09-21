@@ -48,7 +48,7 @@ import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
-import org.matsim.episim.model.SymmetricContactModel;
+import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -75,18 +75,18 @@ public class ScenarioFromCode extends AbstractModule {
 		config.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1.));
 
 	}
-	
+
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+		bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
-	
+
 	@Provides
 	@Singleton
 	public Scenario scenario(Config config) {
-		
+
 		final Scenario scenario = ScenarioUtils.loadScenario( config );
 		PopulationFactory popFac = scenario.getPopulation().getFactory();
 
@@ -94,13 +94,13 @@ public class ScenarioFromCode extends AbstractModule {
 
 		//create x persons that all visit the same facility at the same time but live alone
 		int personsToBeCreated = 100;
-		
+
 		for (int i = 0; i<personsToBeCreated; i++) {
 			//population is needed for age dependent models
 			Person p = popFac.createPerson(Id.createPersonId("person"+i));
 			p.getAttributes().putAttribute("age", 50);
 			scenario.getPopulation().addPerson(p);
-			
+
 			ActivityEndEvent homeEvent1 = new ActivityEndEvent(8*3600, p.getId(), Id.createLinkId("link"), Id.create("home"+i, ActivityFacility.class), "home");
 			ActivityStartEvent workEvent1 = new ActivityStartEvent(9*3600, p.getId(), Id.createLinkId("link"), Id.create("school", ActivityFacility.class), "school", null);
 			ActivityEndEvent workEvent2 = new ActivityEndEvent(17*3600., p.getId(), Id.createLinkId("link"), Id.create("school", ActivityFacility.class), "school");
@@ -110,7 +110,7 @@ public class ScenarioFromCode extends AbstractModule {
 			events.add(workEvent1);
 			events.add(homeEvent2);
 		}
-		
+
 		Collections.sort(events, new Comparator<Event>() {
 			@Override
 			public int compare(Event e1, Event e2) {
@@ -120,8 +120,8 @@ public class ScenarioFromCode extends AbstractModule {
 
 			}
 	    });
-		
-		//there needs to be a better way of doing this than writing out events and then reading them in again ... 
+
+		//there needs to be a better way of doing this than writing out events and then reading them in again ...
 		EventWriterXML writer = new EventWriterXML("./outEvents.xml.gz");
 
 		for (Event e : events) {
@@ -129,7 +129,7 @@ public class ScenarioFromCode extends AbstractModule {
 		}
 
 		writer.closeFile();
-		
+
 		return scenario;
 	}
 
@@ -147,19 +147,19 @@ public class ScenarioFromCode extends AbstractModule {
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		episimConfig.setSampleSize(.25);
 		episimConfig.setCalibrationParameter(9.e-6);
-		episimConfig.setStartDate("2020-02-18");	
+		episimConfig.setStartDate("2020-02-18");
 		episimConfig.setMaxContacts(3);
 		episimConfig.setHospitalFactor(1.6);
 		episimConfig.setProgressionConfig(SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config()).build());
 
-		
+
 		addDefaultParams(episimConfig);
 
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
 				//restrictions ...
 				.build()
 		);
-		
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		// tracing config ...
 

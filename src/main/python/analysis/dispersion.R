@@ -62,10 +62,14 @@ est_disp <- function(f) {
   return(df)
 }
 
-s0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/0.0_aggr.npy")
-s1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy") 
-s2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.5_aggr.npy")
+d0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/DEFAULT_1_aggr.npy")
+d1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/DEFAULT_3_aggr.npy")
+d2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/DEFAULT_10_aggr.npy")
 
+s0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_1_aggr.npy")
+s1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_3_aggr.npy")
+s2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_10_aggr.npy")
+s3 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_30_aggr.npy")
 
 #df <- counts(f)
 #hist(df, prob=TRUE)

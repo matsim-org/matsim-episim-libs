@@ -49,7 +49,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 	/**
 	 * Calibration parameter for triples of max contacts, sigma inf. and sigma susp.
-	 * These are for {@link SymmetricContactModel}.
+	 * These are for {@link OldSymmetricContactModel}.
 	 */
 	private static final Map<Triple<Integer, Double, Double>, Double> calibrationSym = Map.of(
 
@@ -99,7 +99,7 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 		bind(InfectionModel.class).to(InfectionModelWithViralLoad.class).in(Singleton.class);
 
 		if (symmetric)
-			bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+			bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
 		else
 			bind(ContactModel.class).to(DefaultContactModel.class).in(Singleton.class);
 	}

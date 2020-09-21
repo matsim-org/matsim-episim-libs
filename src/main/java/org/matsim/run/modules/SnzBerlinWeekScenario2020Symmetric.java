@@ -39,7 +39,7 @@ import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.ProgressionModel;
-import org.matsim.episim.model.SymmetricContactModel;
+import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.vehicles.VehicleType;
@@ -63,10 +63,10 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 	public SnzBerlinWeekScenario2020Symmetric(int sample) {
 		this.sample = sample;
 	}
-	
+
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+		bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
@@ -102,7 +102,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 		episimConfig.setCalibrationParameter(9.e-6);
 		episimConfig.setStartDate("2020-02-18");
-		
+
 		episimConfig.setInitialInfectionDistrict("Berlin");
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 
@@ -126,7 +126,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 				throw new RuntimeException( "need to define contact intensity for activityType=" + infParams.getContainerName() );
 			}
 		}
-		
+
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		// The following is, I think, the ci correction that we need around mar/6 in order to get the RKI infection peak right.  kai, sep/20
@@ -138,7 +138,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.6 * 0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), 30,
@@ -151,7 +151,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 		return config;
 	}
-	
+
 	@Provides
 	@Singleton
 	public Scenario scenario(Config config) {
@@ -165,11 +165,11 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 		// save some time for not needed inputs
 		config.facilities().setInputFile(null);
-		
+
 		final Scenario scenario = ScenarioUtils.loadScenario( config );
-		
+
 		double capFactor = 1.3;
-		
+
 		for( VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values() ){
 			switch( vehicleType.getId().toString() ) {
 				case "bus":
