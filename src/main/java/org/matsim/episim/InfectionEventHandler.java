@@ -413,7 +413,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		log.info("Using capacity from vehicles file: {}", useVehicles);
 
+		// these always needs to be present
 		paramsMap.computeIfAbsent("tr", this::createActivityType);
+		paramsMap.computeIfAbsent("home", this::createActivityType);
 
 		// entry for undefined activity type
 		AbstractObject2IntMap.BasicEntry<String> undefined = new AbstractObject2IntMap.BasicEntry<>("undefined", -1);
@@ -652,7 +654,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		String district = episimConfig.getInitialInfectionDistrict();
-		
+
 		int lowerAgeBoundaryForInitInfections = episimConfig.getLowerAgeBoundaryForInitInfections();
 		int upperAgeBoundaryForInitInfections = episimConfig.getUpperAgeBoundaryForInitInfections();
 
