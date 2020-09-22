@@ -36,6 +36,8 @@ import org.matsim.episim.policy.Restriction;
 import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -48,6 +50,9 @@ import static org.matsim.episim.model.Transition.to;
  * @see AbstractSnzScenario
  */
 public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
+
+	public static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/MunichV2/episim-input");
+
 
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
@@ -77,7 +82,7 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				//Ende der Sommerferien //TODO
 				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
-		
+
 		double maskCompliance = 0.95;
 		long introductionPeriod = 14;
 		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
@@ -100,37 +105,6 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		return builder;
 	}
 
-	/**
-	 * Adds base progression config to the given builder.
-	 */
-	public static Transition.Builder baseProgressionConfig(Transition.Builder builder) {
-		return builder
-				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
-				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-						to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
-
-// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
-// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
-				.from(EpisimPerson.DiseaseStatus.contagious,
-						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
-
-// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
-				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
-
-// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
-				.from(EpisimPerson.DiseaseStatus.seriouslySick,
-						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
-
-// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
-				.from(EpisimPerson.DiseaseStatus.critical,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)));
-
-	}
-
 	@Provides
 	@Singleton
 	public Config config() {
@@ -138,10 +112,6 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		Config config = getBaseConfig();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_2020_snz_episim_events_25pt.xml.gz"); //TODO
-
-		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_2020_snz_entirePopulation_noPlans_withDistricts_25pt.xml.gz"); //TODO
 
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("München");//TODO
@@ -167,10 +137,10 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		double alpha = 1.;
 		double ciCorrection = 1.;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/MunichSnzData_daily_until20200919.csv"); //TODO
+		File csv = new File(INPUT.resolve("MunichSnzData_daily_until20200919.csv").toString()); //TODO
 		String dateOfCiChange = "2020-03-08";
 
-		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
+		episimConfig.setProgressionConfig(SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config()).build());
 		episimConfig.setHospitalFactor(1.6);
 
 
@@ -178,7 +148,7 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		try {
 			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.none);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new UncheckedIOException(e);
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());

@@ -82,19 +82,19 @@ public class SnzMunichWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 		episimConfig.clearInputEventsFiles();
 
-		config.plans().setInputFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
-				"be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample)).toString());
+		config.plans().setInputFile(SnzMunichScenario25pct2020.INPUT.resolve(String.format(
+				"mu_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample)).toString());
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
-				"be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample)).toString())
+		episimConfig.addInputEventsFile(SnzMunichScenario25pct2020.INPUT.resolve(String.format(
+				"mu_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample)).toString())
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
-				"be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample)).toString())
+		episimConfig.addInputEventsFile(SnzMunichScenario25pct2020.INPUT.resolve(String.format(
+				"mu_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample)).toString())
 				.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(
-				String.format("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample)).toString())
+		episimConfig.addInputEventsFile(SnzMunichScenario25pct2020.INPUT.resolve(
+				String.format("mu_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample)).toString())
 				.addDays(DayOfWeek.SUNDAY);
 
 		if (sample == 100) {
