@@ -136,7 +136,7 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-		double tracingProbability = 0.75;
+		double tracingProbability = 0.5;
 		tracingConfig.setTracingProbability(tracingProbability);
 		tracingConfig.setTracingPeriod_days(14);
 		tracingConfig.setMinContactDuration_sec(15 * 60.);
@@ -145,17 +145,19 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setTracingDelay_days(2);
 		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE ); //TODO
 
-		double alpha = 1.4;
-		double ciCorrection = 0.3;
+		double alpha = 1.;
+		double ciCorrection = 1.;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/MunichSnzData_daily_until20200531.csv"); //TODO
+		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/MunichSnzData_daily_until20200919.csv"); //TODO
 		String dateOfCiChange = "2020-03-08";
 
 		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
+		episimConfig.setHospitalFactor(1.6);
+
 
 		ConfigBuilder configBuilder = null;
 		try {
-			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
+			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.none);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
