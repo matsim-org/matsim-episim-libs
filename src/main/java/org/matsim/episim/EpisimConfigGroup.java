@@ -20,6 +20,7 @@
  */
 package org.matsim.episim;
 
+import com.google.common.annotations.Beta;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
@@ -736,11 +737,17 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			return this;
 		}
 
+		/**
+		 * Returns the spaces for facilities.
+		 * @implNote Don't use this yet, may be removed or renamed.
+		 */
+		@Beta
 		@StringGetter(SPACES_PER_FACILITY)
 		public double getSpacesPerFacility() {
 			return spacesPerFacility;
 		}
 
+		@Beta
 		@StringSetter(SPACES_PER_FACILITY)
 		public InfectionParams setSpacesPerFacility(double nSpacesPerFacility) {
 			this.spacesPerFacility = nSpacesPerFacility;

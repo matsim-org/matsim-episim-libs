@@ -128,20 +128,11 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
-			// Parameter will only be retrieved one time
-			if (leavingParams == null) {
-				EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
-
-				double ci = tmp.getContactIntensity();
-
-				// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
-				leavingParams = tmp.copy(ci / (maxPersonsInContainer / tmp.getSpacesPerFacility()));
-			}
-
-			double nSpacesPerFacility = leavingParams.getSpacesPerFacility();
-			if (rnd.nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
-				continue;
-			}
+			double nSpacesPerFacility = 1;
+			// TODO: now set to 1. and not using the config due to better performance
+			//if (rnd.nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
+			//	continue;
+			//}
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
@@ -213,6 +204,16 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				log.warn(containerEnterTimeOfOtherPerson);
 				log.warn(now);
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
+			}
+
+			// Parameter will only be retrieved one time
+			if (leavingParams == null) {
+				EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
+
+				double ci = tmp.getContactIntensity();
+
+				// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
+				leavingParams = tmp.copy(ci / (maxPersonsInContainer / tmp.getSpacesPerFacility()));
 			}
 
 			// activity params of the contact person and leaving person
