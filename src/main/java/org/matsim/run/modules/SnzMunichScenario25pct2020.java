@@ -77,6 +77,25 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				//Ende der Sommerferien //TODO
 				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 		;
+		
+		double maskCompliance = 0.95;
+		long introductionPeriod = 14;
+		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
+		double clothFraction = maskCompliance * 0.9;
+		double surgicalFraction = maskCompliance * 0.1;
+		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
+		// in MUC and elsewhere!
+
+		for (int ii = 0; ii <= introductionPeriod; ii++) {
+			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
+			builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
+		}
+
+		// mask compliance according to bvg
+		builder.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
+		builder.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other");
+		builder.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other");
 
 		return builder;
 	}
