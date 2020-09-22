@@ -59,6 +59,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INITIAL_INFECTIONS = "initialInfections";
 	private static final String INITIAL_INFECTION_DISTRICT = "initialInfectionDistrict";
 	private static final String INFECTIONS_PER_DAY = "infectionsPerDay";
+	private static final String LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS = "lowerAgeBoundaryForInitInfections";
+	private static final String UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS = "upperAgeBoundaryForInitInfections";
 	private static final String MAX_CONTACTS = "maxContacts";
 	private static final String SAMPLE_SIZE = "sampleSize";
 	private static final String START_DATE = "startDate";
@@ -83,6 +85,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double hospitalFactor = 1.;
 	private double sampleSize = 0.1;
 	private int initialInfections = 10;
+	private int lowerAgeBoundaryForInitInfections = -1;
+	private int upperAgeBoundaryForInitInfections = -1;
 	/**
 	 * If not null, filter persons for initial infection by district.
 	 */
@@ -182,6 +186,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(INITIAL_INFECTIONS)
 	public void setInitialInfections(int initialInfections) {
 		this.initialInfections = initialInfections;
+	}
+	@StringGetter(LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public int getLowerAgeBoundaryForInitInfections() {
+		return this.lowerAgeBoundaryForInitInfections;
+	}
+
+	@StringSetter(LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public void setLowerAgeBoundaryForInitInfections(int lowerAgeBoundaryForInitInfections) {
+		this.lowerAgeBoundaryForInitInfections = lowerAgeBoundaryForInitInfections;
+	}
+	
+	@StringGetter(UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public int getUpperAgeBoundaryForInitInfections() {
+		return this.upperAgeBoundaryForInitInfections;
+	}
+
+	@StringSetter(UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
+	public void setUpperAgeBoundaryForInitInfections(int upperAgeBoundaryForInitInfections) {
+		this.upperAgeBoundaryForInitInfections = upperAgeBoundaryForInitInfections;
 	}
 
 	public Map<LocalDate, Integer> getInfections_pers_per_day() {

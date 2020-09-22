@@ -631,6 +631,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		String district = episimConfig.getInitialInfectionDistrict();
+		
+		int lowerAgeBoundaryForInitInfections = episimConfig.getLowerAgeBoundaryForInitInfections();
+		int upperAgeBoundaryForInitInfections = episimConfig.getUpperAgeBoundaryForInitInfections();
 
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
@@ -638,6 +641,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		List<EpisimPerson> candidates = this.personMap.values().stream()
 				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
+				.filter(p -> lowerAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") >= lowerAgeBoundaryForInitInfections)
+				.filter(p -> upperAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") <= upperAgeBoundaryForInitInfections)
 				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
 				.collect(Collectors.toList());
 
@@ -650,7 +655,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
 				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
-				log.warn("Person {} has initial infection", randomPerson.getPersonId());
+				log.warn("Person {} has initial infection.", randomPerson.getPersonId());
 				initialInfectionsLeft--;
 				numInfections--;
 			}
