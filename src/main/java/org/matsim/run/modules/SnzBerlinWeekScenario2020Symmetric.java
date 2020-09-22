@@ -143,7 +143,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), 30,
-				LocalDate.of(2020, 6, 1), Integer.MAX_VALUE
+				LocalDate.of(2020, 6, 15), Integer.MAX_VALUE
 		));
 
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
