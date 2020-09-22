@@ -123,16 +123,10 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 			*/
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
-
-			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
-
-			double nSpacesPerFacility = 1;
-			// TODO: now set to 1. and not using the config due to better performance
-			//if (rnd.nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
-			//	continue;
-			//}
+			double nSpacesPerFacility = container.getNumSpaces();
+			if (rnd.nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
+				continue;
+			}
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
@@ -153,6 +147,10 @@ public final class SymmetricContactModel extends AbstractContactModel {
 					&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
 				continue;
 
+			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
+			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+
+			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
 			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
 			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());

@@ -74,6 +74,11 @@ public class EpisimContainer<T> {
 	 */
 	private int typicalCapacity = -1;
 
+	/**
+	 * Number of distinct spaces in this facility. May be relevant for certain contact models.
+	 */
+	private double numSpaces = 1;
+
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
 	}
@@ -157,6 +162,10 @@ public class EpisimContainer<T> {
 		return typicalCapacity;
 	}
 
+	public double getNumSpaces() {
+		return numSpaces;
+	}
+
 	/**
 	 * Sets the max group size this container has during a day.
 	 *
@@ -177,6 +186,10 @@ public class EpisimContainer<T> {
 
 	void setTypicalCapacity(int typicalCapacity) {
 		this.typicalCapacity = typicalCapacity;
+	}
+
+	public void setNumSpaces(double numSpaces) {
+		this.numSpaces = numSpaces;
 	}
 
 	void clearPersons() {

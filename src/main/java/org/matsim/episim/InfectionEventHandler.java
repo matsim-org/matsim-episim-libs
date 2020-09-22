@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigFactory;
+import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang3.NotImplementedException;
@@ -412,6 +413,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		log.info("Using capacity from vehicles file: {}", useVehicles);
 
+		paramsMap.computeIfAbsent("tr", this::createActivityType);
+
+		// entry for undefined activity type
+		AbstractObject2IntMap.BasicEntry<String> undefined = new AbstractObject2IntMap.BasicEntry<>("undefined", -1);
+
 		for (Object2IntMap.Entry<EpisimContainer<?>> kv : maxGroupSize.object2IntEntrySet()) {
 
 			EpisimContainer<?> container = kv.getKey();
@@ -419,6 +425,21 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			container.setTotalUsers((int) (totalUsers.getInt(container) * scale));
 			container.setMaxGroupSize((int) (kv.getIntValue() * scale));
+
+			Object2IntMap<String> usage = activityUsage.get(kv.getKey());
+			if (usage != null) {
+				Object2IntMap.Entry<String> max = usage.object2IntEntrySet().stream()
+						.reduce(undefined, (s1, s2) -> s1.getIntValue() > s2.getIntValue() ? s1 : s2);
+
+				if (max != undefined) {
+					// set container spaces to spaces of most used activity
+					EpisimPerson.Activity act = paramsMap.get(max.getKey());
+					if (act == null)
+						log.warn("No activity found for {}", max.getKey());
+					else
+						container.setNumSpaces(act.params.getSpacesPerFacility());
+				}
+			}
 
 			if (useVehicles && container instanceof EpisimVehicle) {
 
@@ -686,7 +707,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 						episimPerson.setFirstFacilityId(facilityId, day);
 					}
 
-					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", episimConfig.selectInfectionParams("home")));
+					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", paramsMap.get("home").params));
 
 					facility.addPerson(episimPerson, 0);
 

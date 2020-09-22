@@ -56,7 +56,7 @@ import org.matsim.facilities.ActivityFacility;
 /**
  * Scenario is created in code, no input files needed.
  */
-public class ScenarioFromCode extends AbstractModule {
+public class SyntheticScenario extends AbstractModule {
 
 	/**
 	 * Activity names of the default params from {@link #addDefaultParams(EpisimConfigGroup)}.
@@ -82,6 +82,8 @@ public class ScenarioFromCode extends AbstractModule {
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
+
+	// TODO: scale group sizes, scale household, scale length, number of persons
 
 	@Provides
 	@Singleton
