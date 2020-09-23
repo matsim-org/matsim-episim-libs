@@ -66,7 +66,7 @@ public class SnzMunichWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 	}
 
 //	MunichV2 has roughly 770.000 agents, BerlinV2 has roughly 1.200.000
-	public static final double SCALE_FACTOR_MUNICH_TO_BERLIN = 770_000/1_200_000;
+	public static final double SCALE_FACTOR_MUNICH_TO_BERLIN = 770_000./1_200_000.;
 
 	@Override
 	protected void configure() {
