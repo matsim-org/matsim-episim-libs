@@ -51,8 +51,10 @@ import static org.matsim.episim.model.Transition.to;
  */
 public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 
+	/**
+	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
+	 */
 	public static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/MunichV2/episim-input");
-
 
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
@@ -73,14 +75,48 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
 
-				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary",  "educ_tertiary", "educ_other")
 
-//				//Sommerferien //TODO
-				.restrict("2020-07-25", 0.3, "educ_primary", "educ_kiga")
-				.restrict("2020-07-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
-				//Ende der Sommerferien //TODO
-				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+//		https://www.schulferien.org/Bayern/bayern.html
+
+//				//Sommerferien
+				.restrict("2020-07-25", 0.2, "educ_primary", "educ_kiga")
+				.restrict("2020-07-25", 0.2, "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Ende der Sommerferien
+				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//ab hier gilt ein 3-Stufen-Plan für Kiga und Schulen. Stufe 4 würde restriction = 0.5 bedeuten. Tritt in Kraft nach Ermessen des Gesundheitsamtes
+				// https://www.muenchen.de/rathaus/Stadtverwaltung/Referat-fuer-Bildung-und-Sport/Schule/corona.html#drei-stufen-plan_1
+				// https://www.muenchen.de/rathaus/Serviceangebote/familie/kinderbetreuung/corona.html
+
+
+				//Herbstferien
+				.restrict("2020-10-31", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-11-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				.restrict("2020-11-18", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-11-19", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Uni startet wieder mit Präsenzveranstaltungen
+				// https://www.uni-muenchen.de/aktuelles/corona_informationen/studium_lehre/index.html#Vorlesungszeit
+				// TUM kombiniert Präsenz- und digitale VEranstaltungen
+				// https://www.tum.de/die-tum/aktuelles/coronavirus/studium/
+				.restrict("2020-11-02", 0.5, "educ_higher")
+
+
+				//Weihnachtsferien
+				.restrict("2020-12-23", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-01-10", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Winterferien
+				.restrict("2021-02-15", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-02-21", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Osterferien
+				.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 		;
 
 		double maskCompliance = 0.95;

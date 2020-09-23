@@ -65,6 +65,9 @@ public class SnzMunichWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		this.sample = sample;
 	}
 
+//	MunichV2 has roughly 770.000 agents, BerlinV2 has roughly 1.200.000
+	public static final double SCALE_FACTOR_MUNICH_TO_BERLIN = 770_000/1_200_000;
+
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
@@ -102,7 +105,7 @@ public class SnzMunichWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		}
 
 		episimConfig.setCalibrationParameter(9.e-6);
-		episimConfig.setStartDate("2020-02-18");
+		episimConfig.setStartDate("2020-02-15");
 
 		episimConfig.setInitialInfectionDistrict("München");
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
@@ -137,13 +140,15 @@ public class SnzMunichWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 		// yyyyyy why this? Could you please comment?  kai, sep/20
 		//air exchange in schools after summer holidays
-		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+
+		//set this from  2020-08-08 (berlin) to beginning of school semester for munich 2020-09-08
+		builder.restrict("2020-09-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), 30,
+				LocalDate.of(2020, 4, 1), (int) Math.ceil(30 * SCALE_FACTOR_MUNICH_TO_BERLIN),
 				LocalDate.of(2020, 6, 15), Integer.MAX_VALUE
 		));
 
