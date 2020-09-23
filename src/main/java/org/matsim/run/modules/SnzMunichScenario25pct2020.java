@@ -103,7 +103,9 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				// https://www.uni-muenchen.de/aktuelles/corona_informationen/studium_lehre/index.html#Vorlesungszeit
 				// TUM kombiniert Präsenz- und digitale VEranstaltungen
 				// https://www.tum.de/die-tum/aktuelles/coronavirus/studium/
-				.restrict("2020-11-02", 0.5, "educ_higher")
+
+				//but maybe that is just different wording for the same thing that laso Berlin does
+//				.restrict("2020-11-02", 0.5, "educ_higher")
 
 
 				//Weihnachtsferien
