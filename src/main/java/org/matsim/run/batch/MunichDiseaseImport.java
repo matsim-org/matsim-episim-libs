@@ -124,7 +124,8 @@ public class MunichDiseaseImport implements BatchRun<MunichDiseaseImport.Params>
 		//scale the disease import according to scenario size (number of agents in relation to berlin scenario)
 		double importFactor = 1.0 * SnzMunichWeekScenario2020Symmetric.SCALE_FACTOR_MUNICH_TO_BERLIN;
 
-		importMap.put(episimConfig.getStartDate(), (int) Math.round(0.9 * importFactor));
+		//idk where 0.9 * import factor came from (berlin), but we need to infect at least one person on the start date. tschlenther, 23 sep 2020
+		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
 
 		int importOffset = 0;
 		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
@@ -161,7 +162,7 @@ public class MunichDiseaseImport implements BatchRun<MunichDiseaseImport.Params>
 		@GenerateSeeds(10)
 		long seed;
 
-		@StartDates({"2020-02-15", "2020-02-16", "2020-02-17", "2020-02-18"})
+		@StartDates({"2020-02-16", "2020-02-17", "2020-02-18", "2020-02-19", "2020-02-20"})
 		LocalDate startDate;
 
 //		@Parameter({1.})

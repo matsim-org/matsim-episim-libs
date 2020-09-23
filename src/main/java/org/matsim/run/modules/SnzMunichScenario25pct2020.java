@@ -128,6 +128,8 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		double surgicalFraction = maskCompliance * 0.1;
 		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
 		// in MUC and elsewhere!
+		//MUC started on the same date https://www.muenchen.de/aktuell/2020-04/corona-einkaufen-maerkte-muenchen-mit-maske.html
+
 
 		for (int ii = 0; ii <= introductionPeriod; ii++) {
 			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
