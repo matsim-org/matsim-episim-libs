@@ -35,6 +35,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -91,6 +92,22 @@ public interface BatchRun<T> {
 			StringParameter stringParam = field.getAnnotation(StringParameter.class);
 			if (stringParam != null) {
 				allParams.add(Arrays.asList(stringParam.value()));
+				fields.add(field);
+			}
+			EnumParameter enumParam = field.getAnnotation(EnumParameter.class);
+			if (enumParam != null) {
+				try {
+					Method m = enumParam.value().getDeclaredMethod("values");
+					Object[] invoke = (Object[]) m.invoke(null);
+					allParams.add(Arrays.asList(invoke));
+					fields.add(field);
+				} catch (ReflectiveOperationException e) {
+					throw new IllegalStateException(e);
+				}
+			}
+			ClassParameter classParam = field.getAnnotation(ClassParameter.class);
+			if (classParam != null) {
+				allParams.add(Arrays.asList(classParam.value()));
 				fields.add(field);
 			}
 			GenerateSeeds seed = field.getAnnotation(GenerateSeeds.class);
@@ -268,6 +285,31 @@ public interface BatchRun<T> {
 		String[] value();
 	}
 
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface EnumParameter {
+		/**
+		 * Desired enum class, by default all values will be used.
+		 */
+		Class<? extends Enum<?>> value();
+		//String[] ignore() default {};
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface ClassParameter {
+		/**
+		 * List of classes to use as parameters.
+		 */
+		Class<?>[] value();
+	}
 
 	/**
 	 * Generates desired number of seeds by using a different random number generator.
