@@ -147,7 +147,9 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # base = 'output/2020-09-21_14-24-50__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-16_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
 # base = 'output/2020-09-21_15-23-09__symmetric__fromConfig__theta2.2E-5@NaN_seed4711_strtDt2020-02-19_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
-base = 'output/2020-09-21_16-00-16__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+# base = 'output/2020-09-21_16-00-16__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+
+base = 'output/2020-09-21_19-04-07__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
 
 #
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
@@ -169,7 +171,7 @@ fit2.index = pd.date_range(start="2020-03-01", periods=30)
 fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
 fit3.index = pd.date_range(start="2020-03-01", periods=80)
 
-rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+rr3 = pd.concat([cc['cases'].rolling('1D').mean(), infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff()], axis=1)
 # rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
 # rr3 = pd.concat([cc['cases']])
 
@@ -214,7 +216,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
-axes.set_ylim(0.9,10000)
+axes.set_ylim(4.1,1000)
 pyplot.show()
 
 # In[]:
