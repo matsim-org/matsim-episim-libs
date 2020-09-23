@@ -20,7 +20,6 @@
 
 package org.matsim.episim.analysis;
 
-import org.apache.commons.lang.ArrayUtils;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,6 +29,7 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.events.*;
+import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
@@ -52,9 +52,9 @@ import java.util.stream.Collectors;
 		name = "calculateRValues",
 		description = "Calculate R values summaries"
 )
-public class SMRValuesFromEvents implements Callable<Integer> {
+public class RValuesFromEvents implements Callable<Integer> {
 
-	private static final Logger log = LogManager.getLogger(SMRValuesFromEvents.class);
+	private static final Logger log = LogManager.getLogger(RValuesFromEvents.class);
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
@@ -64,7 +64,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 
 
 	public static void main(String[] args) {
-		System.exit(new CommandLine(new SMRValuesFromEvents()).execute(args));
+		System.exit(new CommandLine(new RValuesFromEvents()).execute(args));
 	}
 
 	@Override
@@ -74,39 +74,30 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		Configurator.setLevel("org.matsim.core.events", Level.WARN);
 		Configurator.setLevel("org.matsim.core.utils", Level.WARN);
 
-		Set<Path> scenarios = new LinkedHashSet<>();
-
 		if (!Files.exists(output)) {
 			log.error("Output path {} does not exist.", output);
-			return 1;
+			return 2;
 		}
 
-		Files.list(output)
-				.filter(p -> Files.isDirectory(p))
-				.forEach(scenarios::add);
-
-		log.info("Read " + scenarios.size() + " files");
-		log.info(scenarios);
-		
 		BufferedWriter rValues = Files.newBufferedWriter(output.resolve("rValues.txt"));
 		rValues.write("day\tdate\trValue\tnewContagious\tscenario");
-		
+
 		BufferedWriter infectionsPerActivity = Files.newBufferedWriter(output.resolve("infectionsPerActivity.txt"));
 		infectionsPerActivity.write("day\tdate\tactivity\tinfections\tscenario");
 
-		scenarios.parallelStream().forEach(scenario -> {
+		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
 				calcValues(scenario, rValues, infectionsPerActivity);
 			} catch (IOException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
 		});
-		
+
 		rValues.close();
 		infectionsPerActivity.close();
-		
+
 		log.info("done");
-		
+
 		return 0;
 	}
 
@@ -118,14 +109,8 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 			return;
 		}
 
-		Optional<Path> config = Files.find(scenario, 1, (path, basicFileAttributes) -> path.toString().contains("config")).findFirst();
-		if (config.isEmpty()) {
-			log.warn("Could not find config for {}", scenario);
-			return;
-		}
 
-		String name = config.get().getFileName().toString();
-		String id = name.substring(0, name.indexOf('.'));
+		String id = AnalysisCommand.getScenarioPrefix(scenario);
 
 		EventsManager manager = EventsUtils.createEventsManager();
 		InfectionsHandler infHandler = new InfectionsHandler();
@@ -147,24 +132,24 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 		}
 
 
-		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + ".infectionsPerActivity.txt"));
+		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tscenario");
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			for (Entry<String, HashMap<Integer, Integer>> e : infHandler.infectionsPerActivity.entrySet()) {
 				//if (e.getKey().equals("pt") || e.getKey().equals("total")|| e.getKey().equals("edu_kiga") || e.getKey().equals("edu_school") || e.getKey().equals("leisure") || e.getKey().equals("work&business") || e.getKey().equals("home") ) {
-					int infections = 0;
-					if (e.getValue().get(i) != null) infections = e.getValue().get(i);
-					bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
-					infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
+				int infections = 0;
+				if (e.getValue().get(i) != null) infections = e.getValue().get(i);
+				bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
+				infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + scenario.getFileName());
 				//}
 			}
 		}
-		
+
 		infectionsPerActivity.flush();
 		bw.close();
 
-		bw = Files.newBufferedWriter(scenario.resolve(id + ".rValues.txt"));
+		bw = Files.newBufferedWriter(scenario.resolve(id + "rValues.txt"));
 		bw.write("day\tdate\trValue\tnewContagious\tscenario");
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
@@ -180,7 +165,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 			if (noOfInfectors != 0) r = (double) noOfInfected / noOfInfectors;
 			bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
 //			if (r != 0) {
-				rValues.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
+			rValues.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
 //			}
 		}
 		rValues.flush();
@@ -261,7 +246,7 @@ public class SMRValuesFromEvents implements Callable<Integer> {
 //			if (infectionType.startsWith("educ_higher")) infectionType = "edu_higher";
 //			if (infectionType.startsWith("educ_other")) infectionType = "edu_other";
 //			if (infectionType.startsWith("educ_kiga")) infectionType = "edu_kiga";
-//			if (infectionType.startsWith("educ_primary") || infectionType.startsWith("educ_secondary") || infectionType.startsWith("educ_tertiary")) infectionType = "edu_school";			
+//			if (infectionType.startsWith("educ_primary") || infectionType.startsWith("educ_secondary") || infectionType.startsWith("educ_tertiary")) infectionType = "edu_school";
 //			if (infectionType.startsWith("leisure")) infectionType = "leisure";
 //			if (infectionType.startsWith("work") || infectionType.startsWith("business")) infectionType = "work&business";
 //			if (infectionType.startsWith("home")) infectionType = "home";
