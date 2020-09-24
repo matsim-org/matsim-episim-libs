@@ -88,7 +88,6 @@ public class AnalysisCommand implements Runnable {
 		scenarios.parallelStream().forEach(scenario -> {
 			try {
 				function.accept(scenario);
-				log.info("Finished processing scenario {}", scenario);
 			} catch (RuntimeException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
@@ -101,7 +100,6 @@ public class AnalysisCommand implements Runnable {
 	 * @param scenario path of the scenario, which contains the event folder
 	 * @param callback will be executed before reading an event file and pass the path
 	 * @param handler  handler for the events
-	 * @throws IOException
 	 */
 	public static void forEachEvent(Path scenario, Consumer<Path> callback, EventHandler handler) {
 

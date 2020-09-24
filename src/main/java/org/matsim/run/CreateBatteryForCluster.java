@@ -111,7 +111,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Files.createDirectories(input);
 
 		// Copy all resources
-		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "postProcess.sh", "jvm.options")) {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
@@ -199,8 +199,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"export EPISIM_INPUT='/scratch/usr/bebchrak/episim/episim-input'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh",
-						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName)
+				String.format("jid=$(sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh)",
+						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName),
+				"sbatch --export=ALL --dependency=afterok:$jid postProcess.sh"
 		), "\n");
 
 		FileUtils.writeLines(dir.resolve("start_qsub.sh").toFile(), Lists.newArrayList(
@@ -211,7 +212,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"export EPISIM_INPUT='<PUT INPUT DIR HERE>'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("qsub -V -N %s run.sh", runName)
+				String.format("jid=$(qsub -V -N %s run.sh)", runName),
+				"qsub -V -W depend=afterok:$jid postProcess.sh"
 		), "\n");
 
 

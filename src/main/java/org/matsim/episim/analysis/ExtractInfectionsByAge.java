@@ -63,10 +63,12 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 		AnalysisCommand.forEachScenario(output, path -> {
 			try {
 				readScenario(path);
-			} catch (IOException e) {
-				log.warn("Could not read scenario: {}", path, e);
+			} catch (Exception e) {
+				log.warn("Could not process scenario: {}", path, e);
 			}
 		});
+
+		log.info("All done");
 
 		return 0;
 	}
@@ -74,7 +76,7 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	private void readScenario(Path path) throws IOException {
 
 		String id = AnalysisCommand.getScenarioPrefix(path);
-		BufferedWriter bw = Files.newBufferedWriter(path.resolve(id + "post.infectionByAge.txt"));
+		BufferedWriter bw = Files.newBufferedWriter(path.resolve(id + "post.infectionsByAge.txt"));
 
 		bw.write("date\t");
 		bw.write(Joiner.on("\t").join(IntStream.range(1, 100).boxed().toArray()));
@@ -90,12 +92,16 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 			Person p = population.getPersons().get(Id.createPersonId(infected));
 
 			if (district != null) {
-				if (!p.getAttributes().getAttribute("district").equals(district))
-					return;
+				if (!district.equals(p.getAttributes().getAttribute("district")))
+					continue;
 			}
 
 			Int2IntMap date = infections.computeIfAbsent(record.get("date"), (k) -> new Int2IntOpenHashMap());
-			date.merge((int) p.getAttributes().getAttribute("microm:modeled:age"), 1, Integer::sum);
+			Object age = p.getAttributes().getAttribute("microm:modeled:age");
+			if (age != null)
+				date.merge((int) age, 1, Integer::sum);
+			else
+				log.warn("Person {} without age attribute, has {}", p, p.getAttributes().getAsMap().keySet());
 		}
 
 		for (Map.Entry<String, Int2IntMap> e : infections.entrySet()) {
@@ -109,5 +115,7 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 		}
 
 		bw.close();
+
+		log.info("Finished scenario: {}", path);
 	}
 }
