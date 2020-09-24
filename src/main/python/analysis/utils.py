@@ -8,8 +8,14 @@ import numpy as np
 import pandas as pd
 
 
-def read_batch_run(run, r_values=False):
-    """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file. """
+def read_batch_run(run, r_values=False, age_groups=None):
+    """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file.
+
+    :param run path to folder or zip file of the run
+    :param r_values whether to read r values from the file
+    :param age_groups If given aggregates infections by age. Param needs to be array of monotonically increasing bin edges,
+                    including the rightmost edge.
+    """
 
     info = None
     if path.isdir(run):
@@ -43,6 +49,26 @@ def read_batch_run(run, r_values=False):
                         rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
                         df['rValue'] = rv.rValue
                         df['newContagious'] = rv.newContagious
+
+                if age_groups:
+                    with z.open(idx + ".post.infectionsByAge.txt") as rCSV:
+
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
+                        d = rv.to_numpy()
+                        data = {}
+
+                        off = age_groups[0]
+                        for i in range(len(age_groups) - 1):
+
+                            idx = np.arange(age_groups[i] - off, age_groups[i + 1] - off, step=1)
+                            column = d[:, idx].sum(axis=1)
+
+                            name = "age%d-%d" % (idx[0] + off, idx[-1] + off)
+
+                            data[name] = column
+
+                        agg = pd.DataFrame(index=rv.index.copy(), data=data)
+                        df = df.join(agg)
 
                 frames.append(df)
 

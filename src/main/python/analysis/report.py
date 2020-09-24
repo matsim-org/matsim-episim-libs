@@ -92,3 +92,35 @@ plt.legend(current_handles, current_labels, loc="best")
 plt.ylim(bottom=10)
 plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2021-04-30"))
 plt.title("Daily new infections aggregated over all random seeds")
+
+
+#%% Disease import
+
+imp = read_batch_run("data/diseaseImport.zip", age_groups=[1, 5, 15, 35, 60, 80, 100])
+m = 2147483647
+
+
+#%%
+
+for g in imp.ageBoundaries.value_counts().keys():
+    df = imp[(imp.calibrationParam==0.000004) & (imp.tracingCapacity==m) & (imp.ageBoundaries==g)]
+        
+    fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))    
+    ci = None
+    
+    #sns.lineplot(x="date", y="cases", label="cases", estimator="mean", ci=ci, ax=ax, data=df)
+    
+    for y in df.columns:
+        if not y.startswith("age") or "-" not in y:
+            continue
+    
+        sns.lineplot(x="date", y=y, label=y, estimator="mean", ci=ci, ax=ax, data=df)
+        
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    
+    plt.ylim(bottom=0, top=40)
+    plt.ylabel("cases")
+    plt.legend(loc="best")
+    plt.title("ageBoundaries=%s" % g)
+    plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2021-04-30"))
