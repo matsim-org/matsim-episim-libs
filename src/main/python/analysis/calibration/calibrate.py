@@ -68,7 +68,7 @@ def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
 
     # comparison interval starts when 2% of susceptible infected
     start = df[df.nTotalInfected >= total * 0.002].day
-    if start.empty:
+    if not start.empty:
         start = start.iloc[0]
     else:
         start = df.day.iloc[-1]
@@ -78,6 +78,12 @@ def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
     if diff < 0:
         print("Simulation interval may be too short, had to adjust by", diff)
         start += diff
+
+    # first day is 1 and not 0
+    if start - target_interval <= 0:
+        print("Adjust start to target interval")
+        start = target_interval + 1
+        days = min(days, len(df.day) - target_interval)
 
     rates = []
     for i in range(start, start + days):
@@ -122,7 +128,7 @@ def objective_unconstrained(trial):
     c = trial.suggest_uniform("calibrationParameter", 0.7e-5, 1.7e-5)
 
     scenario = trial.study.user_attrs["scenario"]
-    district = trial.study.user_attrs["district"]
+    district = trial.study.user_attrs.get("district", "unknown")
     jvm = trial.study.user_attrs["jvm_opts"]
 
     results = []

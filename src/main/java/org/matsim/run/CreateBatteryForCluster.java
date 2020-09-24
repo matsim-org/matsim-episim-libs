@@ -41,6 +41,7 @@ import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -68,13 +69,15 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
 
+	private static final DecimalFormat FMT = new DecimalFormat();
+
 	@CommandLine.Option(names = "--output", defaultValue = "battery")
 	private Path output;
 
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v13")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v14")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "44")
@@ -83,10 +86,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms84G -Xmx84G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.MunichDiseaseImport")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SyntheticModel")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.MunichDiseaseImport$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SyntheticModel$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -157,7 +160,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			}
 
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
-			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
+			line.addAll(run.params.stream().map(this::convert).collect(Collectors.toList()));
 
 			// base case is not contained in the info file
 			if (run.id > 0) {
@@ -231,5 +234,17 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		}
 
 		return 0;
+	}
+
+	private String convert(Object obj) {
+
+		if (obj instanceof Class)
+			return ((Class) obj).getCanonicalName();
+
+		if (obj instanceof Double || obj instanceof Float) {
+			return FMT.format(obj);
+		}
+
+		return obj.toString();
 	}
 }

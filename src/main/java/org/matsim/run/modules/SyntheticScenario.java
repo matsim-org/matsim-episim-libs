@@ -154,7 +154,7 @@ public class SyntheticScenario extends AbstractModule {
 		config.controler().setOutputDirectory(String.format("./output/synthetic-%s/", params.contactModel));
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setInitialInfections(1);
+		episimConfig.setInitialInfections(2);
 		episimConfig.setSampleSize(1);
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 

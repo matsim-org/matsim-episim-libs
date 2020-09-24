@@ -23,6 +23,12 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 		Config config = new SyntheticScenario(params).config();
+
+		// these don't need max contact setting
+		if (params.contactModel == DirectContactModel.class || params.contactModel == SymmetricContactModel.class)
+			if (params.maxContacts > 3)
+				return null;
+
 		return config;
 	}
 
@@ -32,26 +38,26 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 	 */
 	public static final class Params {
 
-		@GenerateSeeds(100)
+		@GenerateSeeds(50)
 		public long seed;
 
 		@IntParameter(10000)
-		public int persons = Integer.parseInt(System.getProperty("syn.persons", "10000"));
+		public int persons = (int) Double.parseDouble(System.getProperty("syn.persons", "10000"));
 
 		@IntParameter(1)
-		public int homeSize = Integer.parseInt(System.getProperty("syn.homeSize", "1"));
+		public int homeSize = (int) Double.parseDouble(System.getProperty("syn.homeSize", "1"));
 
 		@IntParameter(1)
-		public int numFacilities = Integer.parseInt(System.getProperty("syn.numFacilities", "1"));
+		public int numFacilities = (int) Double.parseDouble(System.getProperty("syn.numFacilities", "1"));
 
 		@IntParameter(1)
-		public int numActivitiesPerDay = Integer.parseInt(System.getProperty("syn.numActivitiesPerDay", "1"));
+		public int numActivitiesPerDay = (int) Double.parseDouble(System.getProperty("syn.numActivitiesPerDay", "1"));
 
 		@IntParameter(50)
-		public int age = Integer.parseInt(System.getProperty("syn.age", "50"));
+		public int age = (int) Double.parseDouble(System.getProperty("syn.age", "50"));
 
 		@IntParameter({3, 10})
-		public int maxContacts = Integer.parseInt(System.getProperty("syn.maxContacts", "3"));
+		public int maxContacts = (int) Double.parseDouble(System.getProperty("syn.maxContacts", "3"));
 
 		@ClassParameter({DefaultContactModel.class, SqrtContactModel.class, OldSymmetricContactModel.class,
 				SymmetricContactModel.class, DirectContactModel.class})

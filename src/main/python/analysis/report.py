@@ -124,3 +124,20 @@ for g in imp.ageBoundaries.value_counts().keys():
     plt.legend(loc="best")
     plt.title("ageBoundaries=%s" % g)
     plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2021-04-30"))
+    
+#%%
+
+df = imp[(imp.calibrationParam==0.000004) & (imp.tracingCapacity==m)]
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+hue = sns.color_palette(n_colors=10)
+
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+             hue="ageBoundaries", palette=hue, 
+             data=df)
+
+plt.ylim(bottom=1)
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
