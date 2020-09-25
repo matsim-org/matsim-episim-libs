@@ -13,6 +13,11 @@ import javax.annotation.Nullable;
  */
 public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 
+	@Override
+	public Metadata getMetadata() {
+		return Metadata.of("synthetic", "default");
+	}
+
 	@Nullable
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
@@ -41,8 +46,8 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 		@GenerateSeeds(50)
 		public long seed;
 
-		@IntParameter(10000)
-		public int persons = (int) Double.parseDouble(System.getProperty("syn.persons", "10000"));
+		@IntParameter({50, 100, 500, 1000})
+		public int persons = (int) Double.parseDouble(System.getProperty("syn.persons", "100"));
 
 		@IntParameter(1)
 		public int homeSize = (int) Double.parseDouble(System.getProperty("syn.homeSize", "1"));

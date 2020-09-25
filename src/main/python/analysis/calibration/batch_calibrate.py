@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+from os import path
 
 import numpy as np
 import optuna
@@ -10,9 +11,10 @@ from calibrate import objective_unconstrained
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run calibrations with optuna.")
-    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=50)
+    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=60)
     parser.add_argument("--batch", type=str, help="Path to info.txt of batch run", default="_info.txt")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SyntheticScenario")
+    parser.add_argument("--no-resume", action="store_true", default=False, help="Disable resuming from existing result")
     parser.add_argument("--runs", type=int, default=8, help="Number of runs per objective")
     parser.add_argument("--prefix", type=str, help="Prefix used for the properties", default="syn.")
     parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
@@ -27,7 +29,21 @@ if __name__ == "__main__":
 
     names = batch.index.names
 
+    csv = "%sresult.csv" % args.prefix
+
+    resume = None
+    if not args.no_resume and path.exists(csv):
+        resume = pd.read_csv(csv, index_col=names)
+
     for idx, run in batch.iterrows():
+        try:
+            run = resume.loc[idx]
+            if not np.isnan(run.param):
+                print("Skipping run", run)
+                continue
+        except:
+            pass
+
         # for i in batch
         study = optuna.create_study(
             study_name=run.run, storage="sqlite:///%sbatch.db" % args.prefix, load_if_exists=True,
@@ -49,4 +65,4 @@ if __name__ == "__main__":
         except:
             print("Failed calibrating batch run")
 
-        batch.to_csv("%sresult.csv" % args.prefix)
+        batch.to_csv(csv)
