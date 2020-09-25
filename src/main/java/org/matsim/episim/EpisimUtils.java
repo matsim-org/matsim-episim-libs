@@ -51,6 +51,7 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.text.DecimalFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -63,6 +64,8 @@ import java.util.stream.Collectors;
  * Common utility class for episim.
  */
 public final class EpisimUtils {
+
+	private static final DecimalFormat FMT = new DecimalFormat();
 
 	private EpisimUtils() {
 	}
@@ -118,6 +121,21 @@ public final class EpisimUtils {
 			}
 		}
 		config.controler().setOutputDirectory(outdir.toString());
+	}
+
+	/**
+	 * String representation of arbitrary parameter.
+	 */
+	public static String asString(Object obj) {
+
+		if (obj instanceof Class)
+			return ((Class) obj).getCanonicalName();
+
+		if (obj instanceof Double || obj instanceof Float) {
+			return FMT.format(obj);
+		}
+
+		return obj.toString();
 	}
 
 	/**

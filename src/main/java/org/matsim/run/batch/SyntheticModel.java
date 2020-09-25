@@ -1,17 +1,40 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.run.modules.SyntheticScenario;
 
 import javax.annotation.Nullable;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Compares different contact models and parameters on the synthetic scenario
  */
 public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
+
+	private static final Logger log = LogManager.getLogger(SyntheticModel.class);
+
+	private final List<CSVRecord> csv = new ArrayList<>();
+
+	public SyntheticModel() {
+		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("syn.result.csv")), CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+			csv.addAll(parser.getRecords());
+		} catch (Exception e) {
+			log.warn("Could not read calibration params", e);
+		}
+	}
 
 	@Override
 	public Metadata getMetadata() {
@@ -33,6 +56,12 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 		if (params.contactModel == DirectContactModel.class || params.contactModel == SymmetricContactModel.class)
 			if (params.maxContacts > 3)
 				return null;
+
+		double param = BatchRun.lookup(params, csv);
+
+		log.info("Using param {}", param);
+
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).setCalibrationParameter(param);
 
 		return config;
 	}

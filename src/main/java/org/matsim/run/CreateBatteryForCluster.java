@@ -33,6 +33,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.PreparedRun;
 import picocli.CommandLine;
 
@@ -68,8 +69,6 @@ import java.util.stream.Collectors;
 public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
-
-	private static final DecimalFormat FMT = new DecimalFormat();
 
 	@CommandLine.Option(names = "--output", defaultValue = "battery")
 	private Path output;
@@ -160,7 +159,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			}
 
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
-			line.addAll(run.params.stream().map(this::convert).collect(Collectors.toList()));
+			line.addAll(run.params.stream().map(EpisimUtils::asString).collect(Collectors.toList()));
 
 			// base case is not contained in the info file
 			if (run.id > 0) {
@@ -234,17 +233,5 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		}
 
 		return 0;
-	}
-
-	private String convert(Object obj) {
-
-		if (obj instanceof Class)
-			return ((Class) obj).getCanonicalName();
-
-		if (obj instanceof Double || obj instanceof Float) {
-			return FMT.format(obj);
-		}
-
-		return obj.toString();
 	}
 }

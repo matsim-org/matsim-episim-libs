@@ -22,6 +22,7 @@ package org.matsim.episim;
 
 import com.google.common.collect.Lists;
 import com.google.inject.AbstractModule;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -56,6 +57,55 @@ import java.util.stream.Stream;
  * @param <T> Class holding the available parameters.
  */
 public interface BatchRun<T> {
+
+	/**
+	 * Find calibration parameter for given params from a list of csv records.
+	 *
+	 * @param params  params to lookup
+	 * @param records parsed records with parameter
+	 * @return calibration parameter if present or NaN.
+	 */
+	static double lookup(Object params, List<CSVRecord> records) {
+
+		Field[] fields = params.getClass().getDeclaredFields();
+
+		outer:
+		for (CSVRecord record : records) {
+
+			int matched = 0;
+
+			for (Field field : fields) {
+				try {
+					Object obj = field.get(params);
+					String value = EpisimUtils.asString(obj);
+					try {
+
+						String cmp = record.get(field.getName());
+						if (!cmp.equals(value))
+							continue outer;
+
+					} catch (IllegalArgumentException e) {
+						// skip records not present
+					}
+
+					matched++;
+				} catch (ReflectiveOperationException e) {
+					// noting to do
+				}
+			}
+
+			// when no mismatches occurred this records is returned
+			if (matched > 0) {
+				String param = record.get("param");
+				if (param.isEmpty())
+					return Double.NaN;
+
+				return Double.parseDouble(param);
+			}
+		}
+
+		return Double.NaN;
+	}
 
 	/**
 	 * Loads the defined parameters and executes the {@link #prepareConfig(int, Object)} procedure.
@@ -240,7 +290,6 @@ public interface BatchRun<T> {
 
 		if (!episimConfig.getProgressionConfig().isEmpty())
 			Files.writeString(directory.resolve(episimConfig.getProgressionConfigName()), episimConfig.getProgressionConfig().root().render());
-
 	}
 
 	/**
