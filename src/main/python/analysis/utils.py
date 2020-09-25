@@ -52,29 +52,39 @@ def read_batch_run(run, r_values=False, age_groups=None):
 
                 if age_groups:
                     with z.open(idx + ".post.infectionsByAge.txt") as rCSV:
-
                         rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
-                        d = rv.to_numpy()
-                        data = {}
+                        df = df.join(group_by_age(rv, age_groups))
 
-                        off = age_groups[0]
-                        for i in range(len(age_groups) - 1):
+                    with z.open(idx + ".post.seriouslySickByAge.txt") as rCSV:
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
+                        df = df.merge(group_by_age(rv, age_groups, "sick"), on="day")
 
-                            idx = np.arange(age_groups[i] - off, age_groups[i + 1] - off, step=1)
-                            column = d[:, idx].sum(axis=1)
-
-                            name = "age%d-%d" % (idx[0] + off, idx[-1] + off)
-
-                            data[name] = column
-
-                        agg = pd.DataFrame(index=rv.index.copy(), data=data)
-                        df = df.join(agg)
+                    with z.open(idx + ".post.criticalByAge.txt") as rCSV:
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
+                        df = df.merge(group_by_age(rv, age_groups, "crit"), on="day")
 
                 frames.append(df)
 
             i += 1
 
     return pd.concat(frames)
+
+
+def group_by_age(rv, age_groups, prefix="age"):
+    """ Groups data frame by age """
+    d = rv.to_numpy()
+    data = {}
+
+    off = age_groups[0]
+    for i in range(len(age_groups) - 1):
+        idx = np.arange(age_groups[i] - off, age_groups[i + 1] - off, step=1)
+        column = d[:, idx].sum(axis=1)
+
+        name = prefix + "%d-%d" % (idx[0] + off, idx[-1] + off)
+
+        data[name] = column
+
+    return pd.DataFrame(index=rv.index.copy(), data=data)
 
 
 def read_run(f, district=None, window=5):

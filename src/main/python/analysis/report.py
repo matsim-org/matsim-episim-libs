@@ -111,7 +111,7 @@ for g in imp.ageBoundaries.value_counts().keys():
     #sns.lineplot(x="date", y="cases", label="cases", estimator="mean", ci=ci, ax=ax, data=df)
     
     for y in df.columns:
-        if not y.startswith("age") or "-" not in y:
+        if not y.startswith("crit") or "-" not in y:
             continue
     
         sns.lineplot(x="date", y=y, label=y, estimator="mean", ci=ci, ax=ax, data=df)
