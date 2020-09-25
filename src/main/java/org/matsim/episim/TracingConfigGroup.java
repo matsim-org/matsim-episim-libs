@@ -283,7 +283,12 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Follow back all contacts of infected persons.
 		 */
-		IDENTIFY_SOURCE
+		IDENTIFY_SOURCE,
+
+		/**
+		 * Randomly put persons into quarantine based on infection numbers.
+		 */
+		RANDOM
 	}
 
 }

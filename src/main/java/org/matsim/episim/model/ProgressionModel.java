@@ -45,9 +45,9 @@ public interface ProgressionModel {
 	void updateState(EpisimPerson person, int day);
 
 	/**
-	 * Called after all state updates for all persons have been done.
+	 * Called before all state updates for all persons have been done.
 	 */
-	default void beforeStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day) {}
+	default void beforeStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day, EpisimReporting.InfectionReport report) {}
 
 	/**
 	 * Checks whether any state transitions are possible. Otherwise the simulation will end.

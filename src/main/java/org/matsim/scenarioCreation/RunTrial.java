@@ -85,9 +85,7 @@ public final class RunTrial implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Configurator.setLevel("org.matsim.core.config", Level.WARN);
-		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
-		Configurator.setLevel("org.matsim.core.events", Level.WARN);
+		Configurator.setRootLevel(Level.ERROR);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(RunEpisim.resolveModules(moduleNames)));
 

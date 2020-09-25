@@ -9,10 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
@@ -94,6 +91,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 * Tracing probability for current day.
 	 */
 	private double tracingProb = 1;
+
+	/**
+	 * Used to track how many new people started showing symptoms.
+	 */
+	private long prevShowingSymptoms;
 
 	@Inject
 	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
@@ -182,7 +184,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	}
 
 	@Override
-	public final void beforeStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day) {
+	public final void beforeStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day, EpisimReporting.InfectionReport report) {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 
@@ -236,6 +238,23 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				}
 			}
 
+		} else if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM) {
+
+			double newCases = report.nShowingSymptomsCumulative - prevShowingSymptoms;
+			prevShowingSymptoms = report.nShowingSymptomsCumulative;
+
+			LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+			Double prob = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
+
+			// scale probability with config value
+			double p = prob * newCases / report.nTotal();
+
+			// put persons randomly into quarantine
+			for (EpisimPerson person : persons.values()) {
+				if (rnd.nextDouble() < p)
+					quarantinePerson(person, day);
+
+			}
 		}
 	}
 
@@ -304,7 +323,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private void performTracing(EpisimPerson person, double now, int day) {
 
-		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()) {
+		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()
+				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM) {
 			return;
 		}
 
@@ -361,6 +381,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	public void readExternal(ObjectInput in) throws IOException {
 		super.readExternal(in);
 
+		prevShowingSymptoms = in.readLong();
+
 		int n = in.readInt();
 		for (int i = 0; i < n; i++) {
 			Id<ActivityFacility> id = Id.create(readChars(in), ActivityFacility.class);
@@ -377,6 +399,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	@Override
 	public void writeExternal(ObjectOutput out) throws IOException {
 		super.writeExternal(out);
+
+		out.writeLong(prevShowingSymptoms);
+
 		out.writeInt(locations.size());
 		for (Object2IntMap.Entry<Id<ActivityFacility>> e : locations.object2IntEntrySet()) {
 			writeChars(out, e.getKey().toString());
