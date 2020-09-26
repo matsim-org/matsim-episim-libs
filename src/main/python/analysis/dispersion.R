@@ -27,12 +27,6 @@ counts <- function(f) {
   res <- sort(c(rep(0, length(no_inf)), v))
 }
 
-
-f <- "C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy"
-
-
-sigma <- c(0.0, 1.0, 2.0)
-
 est_disp <- function(f) {
   
   matrix <- np$load(f)
@@ -46,7 +40,16 @@ est_disp <- function(f) {
       v <- matrix[row,]
       v <- v[!is.na(v)]
       
-      fit <- fitdist(v, fix.arg=list(mu=2.5), "nbinom")
+      if (length(v) == 0) {
+          next
+      }
+      
+      fit <- try(fitdist(v, fix.arg=list(mu=2.5), "nbinom"), silent = T)
+      if(inherits(fit, "try-error"))
+      {
+        next
+      }
+      
       est <- c(est, as.numeric(fit$estimate))
       
       total = sum(v)
@@ -62,18 +65,16 @@ est_disp <- function(f) {
   return(df)
 }
 
-d0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/DEFAULT_1_aggr.npy")
-d1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/DEFAULT_3_aggr.npy")
-d2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/DEFAULT_10_aggr.npy")
+tmpdir <- tempdir()
+unzip("data/infections.zip", exdir = tmpdir )
 
-s0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_1_aggr.npy")
-s1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_3_aggr.npy")
-s2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_10_aggr.npy")
-s3 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/SYMMETRIC_30_aggr.npy")
+for (f in list.files(tmpdir, pattern = "*.npy", full.names = T)) {
+  print(f)
+  df <- est_disp(f)
+  print(colMeans(df))
+}
 
-#df <- counts(f)
-#hist(df, prob=TRUE)
-
+est_disp(f)
 
 # Testing the distribution
 df <- sort(rnbinom(15000, size=1, mu=2.5))

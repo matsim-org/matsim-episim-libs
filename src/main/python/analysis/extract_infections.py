@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import zipfile
 from os import path
 
 import numpy as np
@@ -58,19 +59,22 @@ if __name__ == "__main__":
 
     # %%
 
-    aggr = df.groupby(["alpha", "ci"]).agg(inf=('Output', extract_batch))
+    gb = [x for x in info.columns if x not in {"Config", "Output", "RunId", "RunScript", "seed"}]
+    aggr = df.groupby(gb).agg(inf=('Output', extract_batch))
 
     # %%
 
-    for index, data in aggr.itertuples():
+    with zipfile.ZipFile("infections.zip", "w") as z:
 
-        try:
-            name = "_".join(str(f) for f in index)
-        except TypeError:
-            name = str(index)
+        for index, data in aggr.itertuples():
 
-        if data is not None:
-            print("Writing", name)
-            print(data)
-            f = path.join(folder, name + "_aggr")
-            np.save(f, data, allow_pickle=False)
+            try:
+                name = "_".join(str(f) for f in index)
+            except TypeError:
+                name = str(index)
+
+            if data is not None:
+                print("Writing", name)
+                print(data)
+                with z.open(name=name + "_aggr.npy", mode="w") as f:
+                    np.save(f, data, allow_pickle=False)
