@@ -22,6 +22,7 @@ package org.matsim.run.modules;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Singleton;
@@ -62,7 +63,7 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+		bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
@@ -96,11 +97,32 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 			throw new RuntimeException("100pct scenario not configured");
 		}
 
-		episimConfig.setCalibrationParameter(9.e-6);
+		episimConfig.setCalibrationParameter(6.e-6);
 		episimConfig.setStartDate("2020-02-18");
 
-		episimConfig.setInitialInfectionDistrict("Berlin");
+		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
+		//values are calculated here: https://docs.google.com/spreadsheets/d/1aJ2XonFpfjKCpd0ZeXmzKe5fmDe0HHBGtXfJ-NDBolo/edit#gid=0
+		episimConfig.setInitialInfectionDistrict(null);
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
+		Map<LocalDate, Integer> importMap = new HashMap<>();
+		double importFactor = 1.;
+		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
+		
+		int importOffset = 0;
+		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset), 
+				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-09").plusDays(importOffset), 
+				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-23").plusDays(importOffset), 
+				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-06-08").plusDays(importOffset), 
+				LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
+		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset), 
+				LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
+		importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset), 
+				LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
+		
+		episimConfig.setInfections_pers_per_day(importMap);
 
 		for( InfectionParams infParams : episimConfig.getInfectionParams() ){
 			if ( infParams.includesActivity( "home" ) ){
@@ -126,12 +148,14 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		// The following is, I think, the ci correction that we need around mar/6 in order to get the RKI infection peak right.  kai, sep/20
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "quarantine_home");
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(0.6), "pt");
+		// overwriting ci corrections
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), "quarantine_home");
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), "pt");
 
 		// yyyyyy why this? Could you please comment?  kai, sep/20
-		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.6 * 0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly) 
+		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -209,5 +233,14 @@ public class SnzBerlinWeekScenario2020Symmetric extends AbstractSnzScenario2020 
 		}
 
 		return scenario;
+	}
+	
+	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
+		int days = end.getDayOfYear() - start.getDayOfYear();
+		for (int i = 1; i<=days; i++) {
+			double fraction = (double) i / days;
+			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b-a))));
+		}
+		return importMap;	
 	}
 }
