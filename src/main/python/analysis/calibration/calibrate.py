@@ -58,6 +58,26 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
 
 
+def reinfection_number(f, target=2.5, days=20):
+    """ Calculates reinfection number of a run """
+
+    ev = pd.read_csv(f, sep="\t")
+    df = ev[ev.time <= days * 86400]
+
+    # persons at end of interval are not considered
+    relevant = set(ev.infected[ev.time <= (days - 4) * 86400])
+    no_inf = set(df.infected).difference(set(ev.infector))
+
+    if not relevant:
+        return 0, target ** 2
+
+    counts = df['infector'].value_counts()
+
+    res = np.concatenate((np.zeros(len(no_inf)), counts[counts.index.isin(relevant)].array))
+
+    return res.mean(), np.square(res.mean() - target)
+
+
 def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
     """  Calculates the R values between a fixed day interval and returns MSE according to target rate """
 
@@ -121,6 +141,44 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
     return error_cases, error_sick, error_critical, peak, dz
 
 
+def objective_reinfection(trial):
+    """ Objective for reinfection number R """
+
+    n = trial.number
+    c = trial.suggest_loguniform("calibrationParameter", 0.5e-7, 1e-4)
+
+    scenario = trial.study.user_attrs["scenario"]
+    jvm = trial.study.user_attrs["jvm_opts"]
+
+    results = []
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java -jar %s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
+              % (jvm, scenario, n, i, c)
+
+        print("Running calibration for %s : %s" % (scenario, cmd))
+        subprocess.run(cmd, shell=True)
+
+        res = reinfection_number("output-calibration-unconstrained/%d/run%d/infectionEvents.txt" % (n, i), target=2.5)
+
+        # Ignore results with no infections at all
+        if res[0] == 0:
+            continue
+
+        results.append(res)
+
+    if not results:
+        results.append((0, 2.5 ** 2))
+
+    df = pd.DataFrame(results, columns=["target", "error"])
+    print(df)
+
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
+
+    trial.set_user_attr("df", df.to_json())
+    return df.error.mean()
+
+
 def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
@@ -142,7 +200,7 @@ def objective_unconstrained(trial):
         res = infection_rate("output-calibration-unconstrained/%d/run%d/infections.txt" % (n, i), district)
         results.append(res)
 
-    df = pd.DataFrame(results, columns=["rate", "error"])
+    df = pd.DataFrame(results, columns=["target", "error"])
     print(df)
 
     for k, v in df.mean().iteritems():

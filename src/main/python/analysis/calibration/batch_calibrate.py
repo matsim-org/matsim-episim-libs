@@ -26,6 +26,7 @@ if __name__ == "__main__":
     batch = info.groupby(by=gb).agg(run=("RunId", "min"))
     batch["param"] = np.nan
     batch["error"] = np.nan
+    batch["target"] = np.nan
 
     names = batch.index.names
 
@@ -62,6 +63,7 @@ if __name__ == "__main__":
             study.optimize(objective_unconstrained, n_trials=args.n_trials)
             batch.loc[idx, "param"] = study.best_params["calibrationParameter"]
             batch.loc[idx, "error"] = study.best_value
+            batch.loc[idx, "target"] = study.best_trial.user_attrs["target"]
         except:
             print("Failed calibrating batch run")
 

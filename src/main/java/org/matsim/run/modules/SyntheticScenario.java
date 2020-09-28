@@ -23,6 +23,8 @@ package org.matsim.run.modules;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -35,6 +37,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.ReplayHandler;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
@@ -50,10 +53,14 @@ import java.util.*;
  */
 public class SyntheticScenario extends AbstractModule {
 
+	private static final Logger log = LogManager.getLogger(SyntheticScenario.class);
+
 	private final SyntheticModel.Params params;
+	private final Map<Id<ActivityFacility>, Set<Id<Person>>> facilities = new IdentityHashMap<>();
 
 	public SyntheticScenario() {
-		this.params = new SyntheticModel.Params();
+		params = new SyntheticModel.Params();
+		params.contactModel = DirectContactModel.class;
 	}
 
 	public SyntheticScenario(SyntheticModel.Params params) {
@@ -118,11 +125,15 @@ public class SyntheticScenario extends AbstractModule {
 
 			for (int j = 0; j < params.numActivitiesPerDay; j++) {
 
-				ActivityStartEvent outside1 = new ActivityStartEvent((9 + length * j) * 3600 + 1, id, link, Id.create("outside" + i % params.numFacilities, ActivityFacility.class), "outside", null);
-				ActivityEndEvent outside2 = new ActivityEndEvent((9 + (j + 1) * length) * 3600., id, link, Id.create("outside" + i % params.numFacilities, ActivityFacility.class), "outside");
+				Id<ActivityFacility> facility = Id.create("outside" + i % params.numFacilities, ActivityFacility.class);
+
+				ActivityStartEvent outside1 = new ActivityStartEvent((9 + length * j) * 3600 + 1, id, link, facility, "outside", null);
+				ActivityEndEvent outside2 = new ActivityEndEvent((9 + (j + 1) * length) * 3600., id, link, facility, "outside");
 
 				events.add(outside1);
 				events.add(outside2);
+
+				facilities.computeIfAbsent(facility, (k) -> new HashSet<>()).add(id);
 			}
 
 			ActivityStartEvent homeEvent2 = new ActivityStartEvent(18 * 3600., id, link, Id.create("home" + homeId, ActivityFacility.class), "home", null);
@@ -154,11 +165,11 @@ public class SyntheticScenario extends AbstractModule {
 		config.controler().setOutputDirectory(String.format("./output/synthetic-%s/", params.contactModel));
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setInitialInfections(2);
 		episimConfig.setSampleSize(1);
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 
-		episimConfig.setCalibrationParameter(getCalibrationParam());
+		//Usually set in the batch run
+		episimConfig.setCalibrationParameter(100);
 
 		episimConfig.setStartDate("2020-02-18");
 		episimConfig.setMaxContacts(params.maxContacts);
@@ -179,15 +190,39 @@ public class SyntheticScenario extends AbstractModule {
 		return config;
 	}
 
-	private double getCalibrationParam() {
+	@Provides
+	@Singleton
+	public InitialInfectionHandler initialInfectionHandler(ReplayHandler replayHandler) {
+		// dependency on replay handler so this function is called after facilities have been constructed
+		return new InitialInfections(facilities);
 
-		double param = 0;
+	}
 
-		switch (params.contactModel.getSimpleName()) {
+	/**
+	 * Infect on person in each facility.
+	 */
+	private static final class InitialInfections implements InitialInfectionHandler {
 
+		private final Map<Id<ActivityFacility>, Set<Id<Person>>> facilities;
+
+		public InitialInfections(Map<Id<ActivityFacility>, Set<Id<Person>>> facilities) {
+			this.facilities = facilities;
 		}
 
-		return param;
+		@Override
+		public void handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
+
+			if (iteration != 1) return;
+
+			for (Map.Entry<Id<ActivityFacility>, Set<Id<Person>>> e : facilities.entrySet()) {
+				Id<Person> p = e.getValue().iterator().next();
+				EpisimPerson person = persons.get(p);
+				person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+				person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);
+			}
+
+			log.info("Infected {} persons for each facility.", facilities.size());
+		}
 	}
 
 }

@@ -45,9 +45,8 @@ est_disp <- function(f) {
       }
       
       fit <- try(fitdist(v, fix.arg=list(mu=2.5), "nbinom"), silent = T)
-      if(inherits(fit, "try-error"))
-      {
-        next
+      if(inherits(fit, "try-error")) {
+        fit <- list(estimate=NaN)
       }
       
       est <- c(est, as.numeric(fit$estimate))
@@ -65,16 +64,31 @@ est_disp <- function(f) {
   return(df)
 }
 
-tmpdir <- tempdir()
-unzip("data/infections.zip", exdir = tmpdir )
 
-for (f in list.files(tmpdir, pattern = "*.npy", full.names = T)) {
-  print(f)
-  df <- est_disp(f)
-  print(colMeans(df))
+est_disp_zip <- function(f) {
+  
+  tmpdir <- tempdir()
+  unzip(f, exdir = tmpdir )
+  
+  res <- data.frame()
+  
+  for (f in list.files(tmpdir, pattern = "*.npy", full.names = T)) {
+    df <- est_disp(f)
+    means <- colMeans(df, na.rm = T)
+    df <- data.frame(t(means))
+    
+    row.names(df) <- c(basename(f)) 
+    
+    res <- rbind(res, df)
+  }
+ 
+  return(res) 
 }
 
-est_disp(f)
+setwd("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis")
+
+
+df <- est_disp_zip("data/infections.zip")
 
 # Testing the distribution
 df <- sort(rnbinom(15000, size=1, mu=2.5))

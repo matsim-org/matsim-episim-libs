@@ -196,7 +196,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setLowerAgeBoundaryForInitInfections(int lowerAgeBoundaryForInitInfections) {
 		this.lowerAgeBoundaryForInitInfections = lowerAgeBoundaryForInitInfections;
 	}
-	
+
 	@StringGetter(UPPER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
 	public int getUpperAgeBoundaryForInitInfections() {
 		return this.upperAgeBoundaryForInitInfections;

@@ -1,10 +1,15 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Singleton;
+import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.model.OldSymmetricContactModel;
+import org.matsim.episim.model.SymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinSuperSpreaderScenario;
@@ -20,7 +25,15 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, Params params) {
-		return new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma);
+		return (AbstractModule) Modules.override(new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma), new AbstractModule() {
+			@Override
+			protected void configure() {
+				if (params.contactModel.equals("OLD_SYMMETRIC"))
+					bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
+				else
+					bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+			}
+		});
 	}
 
 	@Override
@@ -30,6 +43,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
+
 
 		SnzBerlinSuperSpreaderScenario module = new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma);
 		Config config = module.config();
@@ -42,6 +56,30 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 		builder.clearAfter(params.referenceDate);
 		//builder.clearAfter(params.referenceDate, "work", "leisure", "visit", "errands");
+
+		// calib run 1 = sym / nspaces = 10
+		// calib run 2 = old
+		// calib run 3 = sym / nspaces = 1
+
+		if (params.contactModel.equals("OLD_SYMMETRIC")) {
+			episimConfig.setCalibrationParameter(Double.NaN);
+
+		} else if (params.contactModel.equals("SYMMETRIC_N1")) {
+
+			episimConfig.setCalibrationParameter(Double.NaN);
+			episimConfig.getInfectionParams().forEach(p -> p.setSpacesPerFacility(1));
+
+		} else if (params.contactModel.equals("SYMMETRIC_N10")) {
+
+			episimConfig.setCalibrationParameter(Double.NaN);
+			episimConfig.getInfectionParams()
+					.stream()
+					.filter(p -> !p.getContainerName().equals("home"))
+					.forEach(p -> p.setSpacesPerFacility(10));
+
+		} else
+			throw new IllegalStateException("Unknown contact model");
+
 
 		if (params.containment.equals("GROUP_SIZES")) {
 
@@ -92,7 +130,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 		@GenerateSeeds(15)
 		long seed = 4711;
 
-		@Parameter({0, 1, 1.5})
+		@Parameter({0})
 		double sigma;
 
 		@Parameter({0.25, 0.5, 0.75})
@@ -100,6 +138,9 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 		@StringParameter({"GROUP_SIZES", "UNIFORM"})
 		String containment;
+
+		@StringParameter({"OLD_SYMMETRIC", "SYMMETRIC_N1", "SYMMETRIC_N10"})
+		String contactModel;
 
 		@StringParameter({"2020-03-07"})
 		String referenceDate;

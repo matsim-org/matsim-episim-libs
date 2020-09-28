@@ -21,7 +21,6 @@
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
@@ -44,8 +43,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.model.InitialInfectionHandler;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -58,9 +57,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -123,6 +120,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final ContactModel contactModel;
 
 	/**
+	 * Handle initial infections.
+	 */
+	private final InitialInfectionHandler initialInfections;
+
+	/**
 	 * Scenario with population information.
 	 */
 	private final Scenario scenario;
@@ -140,7 +142,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private boolean init = false;
 	private int iteration = 0;
-	private int initialInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -148,8 +149,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel,
-								 EpisimReporting reporting, ContactModel contactModel, SplittableRandom rnd) {
+	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
+								 InitialInfectionHandler initialInfections, ContactModel contactModel, SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -161,7 +162,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
 		this.progressionModel = progressionModel;
 		this.contactModel = contactModel;
-		this.initialInfectionsLeft = episimConfig.getInitialInfections();
+		this.initialInfections = initialInfections;
+		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 	}
 
 	/**
@@ -645,48 +647,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	}
 
 	/**
-	 * Create one infection every day until initialInfections is 0.
-	 */
-	private void handleInitialInfections() {
-
-		if (initialInfectionsLeft == 0) return;
-
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
-
-		String district = episimConfig.getInitialInfectionDistrict();
-
-		int lowerAgeBoundaryForInitInfections = episimConfig.getLowerAgeBoundaryForInitInfections();
-		int upperAgeBoundaryForInitInfections = episimConfig.getUpperAgeBoundaryForInitInfections();
-
-		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
-
-		int numInfections = EpisimUtils.findValidEntry(episimConfig.getInfections_pers_per_day(), 1, date);
-
-		List<EpisimPerson> candidates = this.personMap.values().stream()
-				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
-				.filter(p -> lowerAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") >= lowerAgeBoundaryForInitInfections)
-				.filter(p -> upperAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") <= upperAgeBoundaryForInitInfections)
-				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
-				.collect(Collectors.toList());
-
-		if (candidates.size() < numInfections) {
-			log.warn("Not enough persons match the initial infection requirement, using whole population...");
-			candidates = Lists.newArrayList(this.personMap.values());
-		}
-
-		while (numInfections > 0 && initialInfectionsLeft > 0) {
-			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
-			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
-				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
-				log.warn("Person {} has initial infection.", randomPerson.getPersonId());
-				initialInfectionsLeft--;
-				numInfections--;
-			}
-		}
-
-	}
-
-	/**
 	 * Insert agents that appear in the population, but not in the event file, into their home container.
 	 */
 	private void insertStationaryAgents() {
@@ -748,7 +708,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		this.iteration = iteration;
 
-		handleInitialInfections();
+		this.initialInfections.handleInfections(personMap, iteration);
 
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
@@ -820,7 +780,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void writeExternal(ObjectOutput out) throws IOException {
 
 		out.writeLong(EpisimUtils.getSeed(rnd));
-		out.writeInt(initialInfectionsLeft);
+		out.writeInt(initialInfections.getInfectionsLeft());
 		out.writeInt(iteration);
 
 		out.writeInt(restrictions.size());
@@ -860,7 +820,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			EpisimUtils.setSeed(rnd, config.global().getRandomSeed());
 		}
 
-		initialInfectionsLeft = in.readInt();
+		initialInfections.setInfectionsLeft(in.readInt());
 		iteration = in.readInt();
 
 		int r = in.readInt();

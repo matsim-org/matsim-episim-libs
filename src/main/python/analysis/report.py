@@ -111,7 +111,7 @@ for g in imp.ageBoundaries.value_counts().keys():
     #sns.lineplot(x="date", y="cases", label="cases", estimator="mean", ci=ci, ax=ax, data=df)
     
     for y in df.columns:
-        if not y.startswith("crit") or "-" not in y:
+        if not y.startswith("sick") or "-" not in y:
             continue
     
         sns.lineplot(x="date", y=y, label=y, estimator="mean", ci=ci, ax=ax, data=df)
@@ -119,7 +119,7 @@ for g in imp.ageBoundaries.value_counts().keys():
     ax.xaxis.set_major_formatter(dateFormater)
     ax.yaxis.set_major_formatter(ScalarFormatter())
     
-    plt.ylim(bottom=0, top=40)
+    plt.ylim(bottom=0, top=10)
     plt.ylabel("cases")
     plt.legend(loc="best")
     plt.title("ageBoundaries=%s" % g)

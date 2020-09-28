@@ -75,14 +75,16 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 		@GenerateSeeds(50)
 		public long seed;
 
-		@IntParameter({50, 100, 500, 1000})
+		@IntParameter({1000, 2000, 10000, 20000})
 		public int persons = (int) Double.parseDouble(System.getProperty("syn.persons", "100"));
 
 		@IntParameter(1)
 		public int homeSize = (int) Double.parseDouble(System.getProperty("syn.homeSize", "1"));
 
-		@IntParameter(1)
+		@IntParameter(20)
 		public int numFacilities = (int) Double.parseDouble(System.getProperty("syn.numFacilities", "1"));
+
+		// group size will be persons / facilities
 
 		@IntParameter(1)
 		public int numActivitiesPerDay = (int) Double.parseDouble(System.getProperty("syn.numActivitiesPerDay", "1"));
