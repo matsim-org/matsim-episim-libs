@@ -25,7 +25,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, Params params) {
-		return (AbstractModule) Modules.override(new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma), new AbstractModule() {
+		return (AbstractModule) Modules.override(new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma)).with(new AbstractModule() {
 			@Override
 			protected void configure() {
 				if (params.contactModel.equals("OLD_SYMMETRIC"))
@@ -60,18 +60,19 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 		// calib run 1 = sym / nspaces = 10
 		// calib run 2 = old
 		// calib run 3 = sym / nspaces = 1
+		// calib run 4 = direct
 
 		if (params.contactModel.equals("OLD_SYMMETRIC")) {
-			episimConfig.setCalibrationParameter(Double.NaN);
+			episimConfig.setCalibrationParameter(9.42e-6);
 
 		} else if (params.contactModel.equals("SYMMETRIC_N1")) {
 
-			episimConfig.setCalibrationParameter(Double.NaN);
+			episimConfig.setCalibrationParameter(1.786);
 			episimConfig.getInfectionParams().forEach(p -> p.setSpacesPerFacility(1));
 
 		} else if (params.contactModel.equals("SYMMETRIC_N10")) {
 
-			episimConfig.setCalibrationParameter(Double.NaN);
+			episimConfig.setCalibrationParameter(1.75e-5);
 			episimConfig.getInfectionParams()
 					.stream()
 					.filter(p -> !p.getContainerName().equals("home"))

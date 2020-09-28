@@ -61,6 +61,8 @@ public class SyntheticScenario extends AbstractModule {
 	public SyntheticScenario() {
 		params = new SyntheticModel.Params();
 		params.contactModel = DirectContactModel.class;
+//		params.persons *= 10;
+//		params.numFacilities *= 10;
 	}
 
 	public SyntheticScenario(SyntheticModel.Params params) {
@@ -120,12 +122,12 @@ public class SyntheticScenario extends AbstractModule {
 
 			ActivityEndEvent homeEvent1 = new ActivityEndEvent(8 * 3600, id, link, Id.create("home" + homeId, ActivityFacility.class), "home");
 
+			Id<ActivityFacility> facility = Id.create("outside" + i % params.numFacilities, ActivityFacility.class);
+
 			// outside from 9 to 17 o clock
 			int length = (17 - 9) / params.numActivitiesPerDay;
 
 			for (int j = 0; j < params.numActivitiesPerDay; j++) {
-
-				Id<ActivityFacility> facility = Id.create("outside" + i % params.numFacilities, ActivityFacility.class);
 
 				ActivityStartEvent outside1 = new ActivityStartEvent((9 + length * j) * 3600 + 1, id, link, facility, "outside", null);
 				ActivityEndEvent outside2 = new ActivityEndEvent((9 + (j + 1) * length) * 3600., id, link, facility, "outside");

@@ -296,7 +296,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	}
 
 	@Override public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now){}
-	@Override public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now, String actType){}
+	@Override public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now){}
 
 
 }

@@ -20,8 +20,8 @@
  */
 package org.matsim.episim.model;
 
-import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -56,7 +56,7 @@ public final class DirectContactModel extends AbstractContactModel {
 	private final StringBuilder buffer = new StringBuilder();
 
 	private final Map<EpisimContainer<?>, EpisimPerson> singlePersons = new IdentityHashMap<>();
-	private final Map<EpisimContainer<?>, List<Set<EpisimPerson>>> groups = new IdentityHashMap<>();
+	private final Map<EpisimContainer<?>, List<Group>> groups = new IdentityHashMap<>();
 
 	@Inject
 		/*package*/ DirectContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
@@ -82,27 +82,37 @@ public final class DirectContactModel extends AbstractContactModel {
 	}
 
 	@Override
-	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now, String actType) {
+	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now) {
 		notifyEnterContainerGeneralized(personEnteringFacility, facility, now);
 	}
 
 	private void notifyEnterContainerGeneralized(EpisimPerson personEnteringContainer, EpisimContainer<?> container, double now) {
-		if (!singlePersons.containsKey(container)) {
+
+		// this can happen because persons are not removed during initialization
+		if (findGroup(container, personEnteringContainer) != null)
+			return;
+
+		// for same reason a person currently at home will enter again
+		if (!singlePersons.containsKey(container) || singlePersons.get(container) == personEnteringContainer) {
 			singlePersons.put(container, personEnteringContainer);
 		} else {
 			groups.computeIfAbsent(container, k -> new ArrayList<>())
-					.add(Sets.newHashSet(personEnteringContainer, singlePersons.get(container)));
+					.add(Group.of(personEnteringContainer, singlePersons.get(container), now));
 			singlePersons.remove(container);
 		}
 	}
 
-	private Set<EpisimPerson> findGroup(EpisimContainer<?> container, EpisimPerson person) {
-		// will crash if there are not groups for container
-		for (Set<EpisimPerson> group : groups.get(container)) {
+	private Group findGroup(EpisimContainer<?> container, EpisimPerson person) {
+
+		if (!groups.containsKey(container))
+			return null;
+
+		for (Group group : groups.get(container)) {
 			if (group.contains(person)) {
 				return group;
 			}
 		}
+
 		return null;
 	}
 
@@ -118,7 +128,7 @@ public final class DirectContactModel extends AbstractContactModel {
 		}
 
 		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
-			removePersonFromGroups(container, personLeavingContainer);
+			removePersonFromGroups(container, personLeavingContainer, now);
 			// yyyyyy hat in diesem Modell die Konsequenz, dass, wenn jemand zu Hause bleibt, die andere Person alleine rumsitzt.  Somewhat plausible in public
 			// transport; not plausible in restaurant.
 			return;
@@ -127,41 +137,9 @@ public final class DirectContactModel extends AbstractContactModel {
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
 
-		EpisimConfigGroup.InfectionParams leavingParams = null;
+		Pair<EpisimPerson, Double> group = removePersonFromGroups(container, personLeavingContainer, now);
 
-		Set<EpisimPerson> group = findGroup(container, personLeavingContainer);
-		groups.get(container).remove(group);
-		group.remove(personLeavingContainer);
-		EpisimPerson contactPerson = group.iterator().next();
-
-		// TODO: this overwrites other single persons, who won't be assigned to any group
-		singlePersons.put(container, contactPerson);
-		group.clear();
-
-
-//		for( EpisimPerson contactPerson : container.getPersons() ){
-
-		// no contact with self, especially no tracing
-//			if (personLeavingContainer == contactPerson) {
-//				continue;
-//			}
-
-//			int maxPersonsInContainer = container.getMaxGroupSize();
-//			if ( container instanceof EpisimVehicle ) {
-//				maxPersonsInContainer = container.getTypicalCapacity();
-//				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
-//					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
-//							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
-//				}
-//			}
-//			Gbl.assertIf( maxPersonsInContainer>1 );
-		// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
-
-//			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
-//				continue;
-//			}
-		// since every pair of persons interacts only once, there is now a constant interaction probability per pair
-		// if we want superspreading events, then maxInteractions needs to be much larger than 3 or 10.
+		EpisimPerson contactPerson = group.getKey();
 
 		if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 			return;
@@ -187,9 +165,14 @@ public final class DirectContactModel extends AbstractContactModel {
 
 		StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
-		double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
-		double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
-		double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+		// use joint time in group as time
+		double jointTimeInContainer = now - group.getValue();
+
+		log.debug("Contact of {} and {}, with {}", personLeavingContainer, contactPerson, jointTimeInContainer);
+
+		if (jointTimeInContainer == 0) {
+			return;
+		}
 
 		//forbid certain cross-activity interactions, keep track of contacts
 		if (container instanceof EpisimFacility) {
@@ -223,26 +206,12 @@ public final class DirectContactModel extends AbstractContactModel {
 				contactPerson.daysSince(DiseaseStatus.contagious, iteration) > 4))
 			return;
 
-		// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
-		// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
-		if (containerEnterTimeOfPersonLeaving < 0 && containerEnterTimeOfOtherPerson < 0) {
-			throw new IllegalStateException("should not happen");
-			// should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
-			// can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
-			// container from the beginning.  ????  kai, mar'20
-		}
-
 		if (jointTimeInContainer < 0 || jointTimeInContainer > 86400 * 7) {
-			log.warn(containerEnterTimeOfPersonLeaving);
-			log.warn(containerEnterTimeOfOtherPerson);
-			log.warn(now);
+			log.warn(jointTimeInContainer);
 			throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 		}
 
-
-		// Parameter will only be retrieved one time
-		if (leavingParams == null)
-			leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
+		EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
 
 		// activity params of the contact person and leaving person
 		EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
@@ -265,15 +234,67 @@ public final class DirectContactModel extends AbstractContactModel {
 //		}
 	}
 
-	private void removePersonFromGroups(EpisimContainer<?> container, EpisimPerson personLeavingContainer) {
+	/**
+	 * Remove a person from groups and form new groups.
+	 *
+	 * @return contact person if person was in group.
+	 */
+	private Pair<EpisimPerson, Double> removePersonFromGroups(EpisimContainer<?> container, EpisimPerson personLeavingContainer, double time) {
 		if (singlePersons.get(container) == personLeavingContainer) {
 			singlePersons.remove(container);
+			return null;
 		} else {
-			Set<EpisimPerson> group = findGroup(container, personLeavingContainer);
-			group.remove(personLeavingContainer);
-			singlePersons.put(container, group.iterator().next());
+			Group group = findGroup(container, personLeavingContainer);
+
+			// other person will be single person
+			EpisimPerson leftOverPerson = group.remove(personLeavingContainer);
+			if (!singlePersons.containsKey(container)) {
+				singlePersons.put(container, leftOverPerson);
+			} else {
+
+				// single person and left over person will form a new group
+				groups.get(container)
+						.add(Group.of(leftOverPerson, singlePersons.get(container), time));
+
+				singlePersons.remove(container);
+			}
+
 			groups.get(container).remove(group);
-			group.clear();
+
+			return Pair.of(leftOverPerson, group.time);
+		}
+	}
+
+	/**
+	 * A group of two persons and time when the group was formed.
+	 */
+	private static final class Group {
+
+		private final EpisimPerson a;
+		private final EpisimPerson b;
+		private final double time;
+
+		private Group(EpisimPerson a, EpisimPerson b, double time) {
+			this.a = a;
+			this.b = b;
+			this.time = time;
+		}
+
+		private static Group of(EpisimPerson a, EpisimPerson b, double time) {
+			return new Group(a, b, time);
+		}
+
+		public boolean contains(EpisimPerson person) {
+			return a == person || b == person;
+		}
+
+		/**
+		 * Return the left over person.
+		 */
+		public EpisimPerson remove(EpisimPerson p) {
+			if (p == a) return b;
+			else if (p == b) return a;
+			throw new IllegalStateException("Leaving person not in group.");
 		}
 	}
 

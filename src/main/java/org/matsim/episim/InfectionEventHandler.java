@@ -491,7 +491,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
 
-		contactModel.notifyEnterFacility( episimPerson, episimFacility, now, activityStartEvent.getActType() );
+		contactModel.notifyEnterFacility(episimPerson, episimFacility, now);
 	}
 
 	@Override
@@ -757,6 +757,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				lastFacility.removePerson(person);
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, now);
+
+				contactModel.notifyEnterFacility(person, firstFacility, now);
+
 			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
 				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
 				contactModel.infectionDynamicsVehicle(person, lastVehicle, now);
@@ -765,10 +768,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				lastVehicle.removePerson(person);
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, now);
+
+				contactModel.notifyEnterFacility(person, firstFacility, now);
 			}
 		} else {
 			EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 			firstFacility.addPerson(person, now);
+
+			contactModel.notifyEnterFacility(person, firstFacility, now);
 		}
 	}
 
