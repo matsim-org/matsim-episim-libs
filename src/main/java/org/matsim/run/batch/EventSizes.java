@@ -12,6 +12,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SyntheticScenario;
 
 import javax.annotation.Nullable;
@@ -72,11 +73,29 @@ public class EventSizes implements BatchRun<EventSizes.Params> {
 
 		episimConfig.setCalibrationParameter(calib);
 
-		if (params.remaining != 1)
+		if (params.reduction.equals("uniform_0.5"))
 			episimConfig.setPolicy(FixedPolicy.class,
-					FixedPolicy.config().restrict(1, params.remaining, "outside")
+					FixedPolicy.config().restrict(1, 0.5, "outside")
 							.build()
 			);
+		else if (params.reduction.equals("closing_0.5")) {
+
+			FixedPolicy.ConfigBuilder policy = FixedPolicy.config();
+
+			for (int i = 1; i < 200; i++) {
+
+				List<String> closed = new ArrayList<>();
+				for (int n = 0; n <= p.numFacilities; n++) {
+					if (n % 2 == i % 2)
+						closed.add("outside" + n);
+				}
+
+				policy.restrict(i, Restriction.ofClosedFacilities(closed), "outside");
+
+			}
+
+			episimConfig.setPolicy(FixedPolicy.class, policy.build());
+		}
 
 		log.info("Using param {}", calib);
 
@@ -85,14 +104,14 @@ public class EventSizes implements BatchRun<EventSizes.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(15)
+		@GenerateSeeds(30)
 		public long seed;
 
 		@Parameter({1, 2, 5, 10})
 		public double divider;
 
-		@Parameter({1, 0.5})
-		public double remaining;
+		@StringParameter({"none", "uniform_0.5", "closing_0.5"})
+		public String reduction;
 
 		@ClassParameter({DefaultContactModel.class, SqrtContactModel.class, OldSymmetricContactModel.class,
 				SymmetricContactModel.class, DirectContactModel.class})

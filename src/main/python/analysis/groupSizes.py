@@ -138,7 +138,7 @@ for cm in set(gs.contactModel):
 
 #%%
 
-evs = read_batch_run("data/eventSizes.zip")
+evs = read_batch_run("data/eventSizes2.zip")
 
 #%%
 
@@ -153,7 +153,7 @@ for cm in set(evs.contactModel):
     #rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
 
     sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
-                 style="remaining", hue="divider", palette=hue, 
+                 style="reduction", hue="divider", palette=hue, 
                  data=df)
     
     plt.yscale("log")
