@@ -30,7 +30,9 @@ public class EventSizes implements BatchRun<EventSizes.Params> {
 
 	private final List<CSVRecord> csv = new ArrayList<>();
 
-	private final Function<Class<? extends ContactModel>, SyntheticBatch.Params> synParams = (c) -> new SyntheticBatch.Params(20000, 1, 20, 1, c, 3);
+	private final Function<EventSizes.Params, SyntheticBatch.Params> synParams = (p) -> new SyntheticBatch.Params(
+			20000, 1, (int) (20d * p.divider), 1,  (int) (10d / p.divider), p.contactModel, 3
+			);
 
 	public EventSizes() {
 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("syn.result.csv")), CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
@@ -49,19 +51,18 @@ public class EventSizes implements BatchRun<EventSizes.Params> {
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 
-		return new SyntheticScenario(synParams.apply(params.contactModel));
+		SyntheticBatch.Params p = synParams.apply(params);
+		p.seed = params.seed;
+
+		return new SyntheticScenario(p);
 	}
 
 	@Nullable
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SyntheticBatch.Params p = synParams.apply(params.contactModel);
-
+		SyntheticBatch.Params p = synParams.apply(params);
 		p.seed = params.seed;
-		p.contactModel = params.contactModel;
-		p.initialPerFacility = (int) (10d / params.divider);
-		p.numFacilities = (int) (20d * params.divider);
 
 		Config config = new SyntheticScenario(p).config();
 
@@ -84,7 +85,7 @@ public class EventSizes implements BatchRun<EventSizes.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(20)
+		@GenerateSeeds(15)
 		public long seed;
 
 		@Parameter({1, 2, 5, 10})

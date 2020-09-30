@@ -113,14 +113,15 @@ public class SyntheticBatch implements BatchRun<SyntheticBatch.Params> {
 		public Params() {
 		}
 
-		public Params(int persons, int homeSize, int numFacilities,
-					  int numActivitiesPerDay, Class<? extends ContactModel> contactModel, int maxContacts) {
+		public Params(int persons, int homeSize, int numFacilities, int numActivitiesPerDay, int initialPerFacility,
+					  Class<? extends ContactModel> contactModel, int maxContacts) {
 			this.persons = persons;
 			this.homeSize = homeSize;
 			this.numFacilities = numFacilities;
 			this.numActivitiesPerDay = numActivitiesPerDay;
 			this.contactModel = contactModel;
 			this.maxContacts = maxContacts;
+			this.initialPerFacility = initialPerFacility;
 		}
 
 	}
