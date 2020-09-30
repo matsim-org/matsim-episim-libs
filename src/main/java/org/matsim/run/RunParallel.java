@@ -70,10 +70,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.ParamsBatch}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.EventSizes}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.ParamsBatch$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.EventSizes$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
@@ -98,6 +98,8 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
 	private boolean noReuse;
 
+	@CommandLine.Option(names = "--silent", defaultValue = "false", description = "Disable info and warn logging")
+	private boolean silent;
 
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
@@ -110,6 +112,11 @@ public class RunParallel<T> implements Callable<Integer> {
 		Configurator.setLevel("org.matsim.core.config", Level.WARN);
 		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
 		Configurator.setLevel("org.matsim.core.events", Level.WARN);
+
+		if (silent) {
+			Configurator.setRootLevel(Level.ERROR);
+			Configurator.setLevel(log.getName(), Level.INFO);
+		}
 
 		if (!Files.exists(output)) Files.createDirectories(output);
 

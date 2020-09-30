@@ -8,6 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.model.DirectContactModel;
 import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.episim.model.SymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -30,6 +31,8 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 			protected void configure() {
 				if (params.contactModel.equals("OLD_SYMMETRIC"))
 					bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
+				else if (params.contactModel.equals("DIRECT"))
+					bind(ContactModel.class).to(DirectContactModel.class).in(Singleton.class);
 				else
 					bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 			}
@@ -67,17 +70,21 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 
 		} else if (params.contactModel.equals("SYMMETRIC_N1")) {
 
-			episimConfig.setCalibrationParameter(1.786);
+			// should be 1.94e-5
+			episimConfig.setCalibrationParameter(1.5e-4);
 			episimConfig.getInfectionParams().forEach(p -> p.setSpacesPerFacility(1));
 
 		} else if (params.contactModel.equals("SYMMETRIC_N10")) {
 
-			episimConfig.setCalibrationParameter(1.75e-5);
+			// should be 2.25e-5
+			episimConfig.setCalibrationParameter(1.75e-4);
 			episimConfig.getInfectionParams()
 					.stream()
 					.filter(p -> !p.getContainerName().equals("home"))
 					.forEach(p -> p.setSpacesPerFacility(10));
 
+		} else if (params.contactModel.equals("DIRECT")) {
+			episimConfig.setCalibrationParameter(1.2e-4);
 		} else
 			throw new IllegalStateException("Unknown contact model");
 
@@ -140,7 +147,7 @@ public class RestrictGroupSizes implements BatchRun<RestrictGroupSizes.Params> {
 		@StringParameter({"GROUP_SIZES", "UNIFORM"})
 		String containment;
 
-		@StringParameter({"OLD_SYMMETRIC", "SYMMETRIC_N1", "SYMMETRIC_N10"})
+		@StringParameter({"OLD_SYMMETRIC", "DIRECT", "SYMMETRIC_N10", "SYMMETRIC_N1"})
 		String contactModel;
 
 		@StringParameter({"2020-03-07"})

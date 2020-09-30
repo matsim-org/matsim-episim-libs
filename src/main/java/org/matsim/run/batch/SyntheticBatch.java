@@ -22,13 +22,13 @@ import java.util.List;
 /**
  * Compares different contact models and parameters on the synthetic scenario
  */
-public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
+public class SyntheticBatch implements BatchRun<SyntheticBatch.Params> {
 
-	private static final Logger log = LogManager.getLogger(SyntheticModel.class);
+	private static final Logger log = LogManager.getLogger(SyntheticBatch.class);
 
 	private final List<CSVRecord> csv = new ArrayList<>();
 
-	public SyntheticModel() {
+	public SyntheticBatch() {
 		try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("syn.result.csv")), CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
 			csv.addAll(parser.getRecords());
 		} catch (Exception e) {
@@ -75,7 +75,7 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 		@GenerateSeeds(50)
 		public long seed;
 
-		@IntParameter({1000, 2000, 10000, 20000})
+		@IntParameter({20000})
 		public int persons = (int) Double.parseDouble(System.getProperty("syn.persons", "100"));
 
 		@IntParameter(1)
@@ -94,6 +94,9 @@ public class SyntheticModel implements BatchRun<SyntheticModel.Params> {
 
 		@IntParameter({3, 10})
 		public int maxContacts = (int) Double.parseDouble(System.getProperty("syn.maxContacts", "3"));
+
+		@IntParameter({10})
+		public int initialPerFacility = (int) Double.parseDouble(System.getProperty("syn.initialPerFacility", "10"));
 
 		@ClassParameter({DefaultContactModel.class, SqrtContactModel.class, OldSymmetricContactModel.class,
 				SymmetricContactModel.class, DirectContactModel.class})

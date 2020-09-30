@@ -43,7 +43,7 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.run.batch.SyntheticModel;
+import org.matsim.run.batch.SyntheticBatch;
 
 import java.time.DayOfWeek;
 import java.util.*;
@@ -55,17 +55,17 @@ public class SyntheticScenario extends AbstractModule {
 
 	private static final Logger log = LogManager.getLogger(SyntheticScenario.class);
 
-	private final SyntheticModel.Params params;
+	private final SyntheticBatch.Params params;
 	private final Map<Id<ActivityFacility>, Set<Id<Person>>> facilities = new IdentityHashMap<>();
 
 	public SyntheticScenario() {
-		params = new SyntheticModel.Params();
+		params = new SyntheticBatch.Params();
 		params.contactModel = DirectContactModel.class;
 //		params.persons *= 10;
 //		params.numFacilities *= 10;
 	}
 
-	public SyntheticScenario(SyntheticModel.Params params) {
+	public SyntheticScenario(SyntheticBatch.Params params) {
 		this.params = params;
 	}
 
@@ -160,6 +160,14 @@ public class SyntheticScenario extends AbstractModule {
 
 	@Provides
 	@Singleton
+	public InitialInfectionHandler initialInfectionHandler(ReplayHandler replayHandler) {
+		// dependency on replay handler so this function is called after facilities have been constructed
+		return new InitialInfections(facilities, params.initialPerFacility);
+
+	}
+
+	@Provides
+	@Singleton
 	public Config config() {
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -175,9 +183,7 @@ public class SyntheticScenario extends AbstractModule {
 
 		episimConfig.setStartDate("2020-02-18");
 		episimConfig.setMaxContacts(params.maxContacts);
-		episimConfig.setHospitalFactor(1.6);
 		episimConfig.setProgressionConfig(SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config()).build());
-
 
 		addDefaultParams(episimConfig);
 
@@ -192,23 +198,17 @@ public class SyntheticScenario extends AbstractModule {
 		return config;
 	}
 
-	@Provides
-	@Singleton
-	public InitialInfectionHandler initialInfectionHandler(ReplayHandler replayHandler) {
-		// dependency on replay handler so this function is called after facilities have been constructed
-		return new InitialInfections(facilities);
-
-	}
-
 	/**
-	 * Infect on person in each facility.
+	 * Infect n person in each facility.
 	 */
 	private static final class InitialInfections implements InitialInfectionHandler {
 
 		private final Map<Id<ActivityFacility>, Set<Id<Person>>> facilities;
+		private final int n;
 
-		public InitialInfections(Map<Id<ActivityFacility>, Set<Id<Person>>> facilities) {
+		public InitialInfections(Map<Id<ActivityFacility>, Set<Id<Person>>> facilities, int n) {
 			this.facilities = facilities;
+			this.n = n;
 		}
 
 		@Override
@@ -217,10 +217,13 @@ public class SyntheticScenario extends AbstractModule {
 			if (iteration != 1) return;
 
 			for (Map.Entry<Id<ActivityFacility>, Set<Id<Person>>> e : facilities.entrySet()) {
-				Id<Person> p = e.getValue().iterator().next();
-				EpisimPerson person = persons.get(p);
-				person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
-				person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);
+				Iterator<Id<Person>> it = e.getValue().iterator();
+
+				for (int i = 0; i < this.n; i++) {
+					Id<Person> p = it.next();
+					EpisimPerson person = persons.get(p);
+					person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+				}
 			}
 
 			log.info("Infected {} persons for each facility.", facilities.size());

@@ -63,11 +63,14 @@ public interface BatchRun<T> {
 	 *
 	 * @param params  params to lookup
 	 * @param records parsed records with parameter
+	 * @param ignore fields that will be ignored and not matched
 	 * @return calibration parameter if present or NaN.
 	 */
-	static double lookup(Object params, List<CSVRecord> records) {
+	static double lookup(Object params, List<CSVRecord> records, String... ignore) {
 
 		Field[] fields = params.getClass().getDeclaredFields();
+
+		List<String> ignoreList = Arrays.asList(ignore);
 
 		outer:
 		for (CSVRecord record : records) {
@@ -75,6 +78,9 @@ public interface BatchRun<T> {
 			int matched = 0;
 
 			for (Field field : fields) {
+				if (ignoreList.contains(field.getName()))
+					continue;
+
 				try {
 					Object obj = field.get(params);
 					String value = EpisimUtils.asString(obj);
@@ -253,7 +259,7 @@ public interface BatchRun<T> {
 	 * Return the module that should be used for configuring custom guice bindings. May also be parametrized.
 	 *
 	 * @param id     task id
-	 * @param params parameters to use, will be null for the base case, but always of type {@code T}
+	 * @param params parameters to use, will be null for the base case.
 	 * @return module with additional bindings, or null if not needed
 	 */
 	@Nullable

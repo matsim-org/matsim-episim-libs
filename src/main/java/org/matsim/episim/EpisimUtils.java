@@ -128,12 +128,15 @@ public final class EpisimUtils {
 	 */
 	public static String asString(Object obj) {
 
+		if (obj == null)
+			return "null";
+
 		if (obj instanceof Class)
 			return ((Class) obj).getCanonicalName();
 
-		if (obj instanceof Double || obj instanceof Float) {
-			return FMT.format(obj);
-		}
+		//if (obj instanceof Double || obj instanceof Float) {
+		//	return FMT.format(obj);
+		//}
 
 		return obj.toString();
 	}

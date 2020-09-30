@@ -85,10 +85,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms84G -Xmx84G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.RestrictGroupSizes")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.EventSizes")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.RestrictGroupSizes$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.EventSizes$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -201,7 +201,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"export EPISIM_INPUT='/scratch/usr/bebchrak/episim/episim-input'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("jid=$(sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh)",
+				String.format("jid=$(sbatch --parsable --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh)",
 						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName),
 				"sbatch --export=ALL --dependency=afterok:$jid postProcess.sh"
 		), "\n");

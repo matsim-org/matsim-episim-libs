@@ -109,3 +109,34 @@ print(ev_errands.maxGroupSize.quantile(p))
 
 #%%
 
+gs = read_batch_run("data/groupSizes5.zip")
+
+
+#%%
+
+for cm in set(gs.contactModel):
+
+    df = gs[gs.contactModel==cm]
+    
+    fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+    hue = sns.color_palette(n_colors=3)
+    
+    #rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+    
+    sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+                 style="containment", hue="remaining", palette=hue, 
+                 data=df)
+    
+    
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    
+    plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-30"))
+    plt.title("contactModel = %s" % cm)
+    
+    plt.plot()
+
+#%%
+
+df = read_batch_run("C:/home/Development/matsim-org/matsim-episim")
+

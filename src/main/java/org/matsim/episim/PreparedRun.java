@@ -142,7 +142,7 @@ public final class PreparedRun {
 	 */
 	public Object getOutputName(Run run) {
 		return Joiner.on("-").join(
-				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -> p + "_" + v.toString()).collect(Collectors.toList())
+				Streams.zip(parameter.stream(), run.params.stream(), (p, v) -> p + "_" + EpisimUtils.asString(v)).collect(Collectors.toList())
 		);
 	}
 
