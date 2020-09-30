@@ -32,7 +32,8 @@ import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 import java.util.Map;
 import java.util.SplittableRandom;
 
-import static org.matsim.episim.InfectionEventHandler.*;
+import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
+import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 
 
 /**
@@ -178,6 +179,9 @@ public abstract class AbstractContactModel implements ContactModel {
 				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
+		if (r.isClosed(container.getContainerId()))
+			return false;
+
 		return actIsRelevant(act, restrictions, rnd);
 	}
 
@@ -220,11 +224,19 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container,
 																		 Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
-		// Infected but not contagious persons are considered additionally
-		if (!hasDiseaseStatusRelevantForInfectionDynamics(person) &&
-				person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
-			return false;
+		return personHasRelevantStatus(person) && checkPersonInContainer(person, container, restrictions, rnd);
+	}
 
+	protected final boolean personHasRelevantStatus(EpisimPerson person) {
+		// Infected but not contagious persons are considered additionally
+		return hasDiseaseStatusRelevantForInfectionDynamics(person) ||
+				person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious;
+	}
+
+	/**
+	 * Checks whether a person would be present in the container.
+	 */
+	protected final boolean checkPersonInContainer(EpisimPerson person, EpisimContainer<?> container, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
 			return false;
 		}
@@ -295,8 +307,13 @@ public abstract class AbstractContactModel implements ContactModel {
 		return restrictions;
 	}
 
-	@Override public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now){}
-	@Override public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now){}
+	@Override
+	public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now) {
+	}
+
+	@Override
+	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now) {
+	}
 
 
 }

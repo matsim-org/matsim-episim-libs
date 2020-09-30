@@ -21,7 +21,6 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
@@ -36,9 +35,9 @@ import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 /**
  * Model where persons are only interacting pairwise.
  */
-public final class DirectContactModel extends AbstractContactModel {
+public final class PairWiseContactModel extends AbstractContactModel {
 
-	private static final Logger log = LogManager.getLogger(DirectContactModel.class);
+	private static final Logger log = LogManager.getLogger(PairWiseContactModel.class);
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -55,12 +54,16 @@ public final class DirectContactModel extends AbstractContactModel {
 	 */
 	private final StringBuilder buffer = new StringBuilder();
 
-	private final Map<EpisimContainer<?>, EpisimPerson> singlePersons = new IdentityHashMap<>();
-	private final Map<EpisimContainer<?>, List<Group>> groups = new IdentityHashMap<>();
+	/**
+	 * Reusable list for contact persons.
+	 */
+	private final List<EpisimPerson> contactPersons = new ArrayList<>();
+
+	private final Map<EpisimContainer<?>, Set<EpisimPerson>> contacts = new IdentityHashMap<>();
 
 	@Inject
-		/*package*/ DirectContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-									   EpisimReporting reporting, InfectionModel infectionModel) {
+		/*package*/ PairWiseContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
+										 EpisimReporting reporting, InfectionModel infectionModel) {
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();
@@ -87,62 +90,44 @@ public final class DirectContactModel extends AbstractContactModel {
 	}
 
 	private void notifyEnterContainerGeneralized(EpisimPerson personEnteringContainer, EpisimContainer<?> container, double now) {
-
-		// this can happen because persons are not removed during initialization
-		if (findGroup(container, personEnteringContainer) != null)
-			return;
-
-		// for same reason a person currently at home will enter again
-		if (!singlePersons.containsKey(container) || singlePersons.get(container) == personEnteringContainer) {
-			singlePersons.put(container, personEnteringContainer);
-		} else {
-			groups.computeIfAbsent(container, k -> new ArrayList<>())
-					.add(Group.of(personEnteringContainer, singlePersons.get(container), now));
-			singlePersons.remove(container);
-		}
-	}
-
-	private Group findGroup(EpisimContainer<?> container, EpisimPerson person) {
-
-		if (!groups.containsKey(container))
-			return null;
-
-		for (Group group : groups.get(container)) {
-			if (group.contains(person)) {
-				return group;
+		try {
+			if (checkPersonInContainer(personEnteringContainer, container, getRestrictions(), rnd)) {
+				contacts.computeIfAbsent(container, (k) -> new HashSet<>()).add(personEnteringContainer);
 			}
+		} catch (IndexOutOfBoundsException | NullPointerException e) {
+			// these exceptions happen during init and are ignored
 		}
-
-		return null;
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
 		// no infection possible if there is only one person
 		if (iteration == 0 || container.getPersons().size() == 1) {
-			removePersonFromGroups(container, personLeavingContainer, now);
+
+			if (contacts.containsKey(container))
+				contacts.get(container).remove(personLeavingContainer);
+
 			return;
 		}
 
-		if (singlePersons.get(container) == personLeavingContainer) {
-			singlePersons.remove(container);
-			return;
-		}
-
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
-			removePersonFromGroups(container, personLeavingContainer, now);
-			// yyyyyy hat in diesem Modell die Konsequenz, dass, wenn jemand zu Hause bleibt, die andere Person alleine rumsitzt.  Somewhat plausible in public
-			// transport; not plausible in restaurant.
+		// person leaving was already a contact, or never present
+		if (!contacts.containsKey(container) || !contacts.get(container).contains(personLeavingContainer)) {
 			return;
 		}
 
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
 
-		Pair<EpisimPerson, Double> group = removePersonFromGroups(container, personLeavingContainer, now);
+		contacts.get(container).remove(personLeavingContainer);
+		contactPersons.addAll(contacts.get(container));
 
-		EpisimPerson contactPerson = group.getKey();
+		if (contactPersons.size() == 0)
+			return;
 
-		if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
+		EpisimPerson contactPerson = contactPersons.get(rnd.nextInt(contactPersons.size()));
+		contacts.get(container).remove(contactPerson);
+		contactPersons.clear();
+
+		if (!personHasRelevantStatus(personLeavingContainer) || !personHasRelevantStatus(contactPerson)) {
 			return;
 		}
 
@@ -166,14 +151,9 @@ public final class DirectContactModel extends AbstractContactModel {
 
 		StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
-		// use joint time in group as time
-		double jointTimeInContainer = now - group.getValue();
-
-		log.debug("Contact of {} and {}, with {}", personLeavingContainer, contactPerson, jointTimeInContainer);
-
-		if (jointTimeInContainer == 0) {
-			return;
-		}
+		double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
+		double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
+		double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 		//forbid certain cross-activity interactions, keep track of contacts
 		if (container instanceof EpisimFacility) {
@@ -207,10 +187,22 @@ public final class DirectContactModel extends AbstractContactModel {
 				contactPerson.daysSince(DiseaseStatus.contagious, iteration) > 4))
 			return;
 
+		// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons
+		// start healthy (the first seeds are set at enterVehicle), we can make some assumptions.
+		if (containerEnterTimeOfPersonLeaving < 0 && containerEnterTimeOfOtherPerson < 0) {
+			throw new IllegalStateException("should not happen");
+			// should only happen at first activity.  However, at first activity all persons are susceptible.  So the only way we
+			// can get here is if an infected person entered the container and is now leaving again, while the other person has been in the
+			// container from the beginning.  ????  kai, mar'20
+		}
+
 		if (jointTimeInContainer < 0 || jointTimeInContainer > 86400 * 7) {
-			log.warn(jointTimeInContainer);
+			log.warn(containerEnterTimeOfPersonLeaving);
+			log.warn(containerEnterTimeOfOtherPerson);
+			log.warn(now);
 			throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 		}
+
 
 		EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
 
@@ -234,73 +226,4 @@ public final class DirectContactModel extends AbstractContactModel {
 		}
 //		}
 	}
-
-	/**
-	 * Remove a person from groups and form new groups.
-	 *
-	 * @return contact person if person was in group.
-	 */
-	private Pair<EpisimPerson, Double> removePersonFromGroups(EpisimContainer<?> container, EpisimPerson personLeavingContainer, double time) {
-		if (singlePersons.get(container) == personLeavingContainer) {
-			singlePersons.remove(container);
-			return null;
-		} else {
-			Group group = findGroup(container, personLeavingContainer);
-
-			// might happen during init when person leaves first
-			if (group == null)
-				return null;
-
-			// other person will be single person
-			EpisimPerson leftOverPerson = group.remove(personLeavingContainer);
-			if (!singlePersons.containsKey(container)) {
-				singlePersons.put(container, leftOverPerson);
-			} else {
-
-				// single person and left over person will form a new group
-				groups.get(container)
-						.add(Group.of(leftOverPerson, singlePersons.get(container), time));
-
-				singlePersons.remove(container);
-			}
-
-			groups.get(container).remove(group);
-
-			return Pair.of(leftOverPerson, group.time);
-		}
-	}
-
-	/**
-	 * A group of two persons and time when the group was formed.
-	 */
-	private static final class Group {
-
-		private final EpisimPerson a;
-		private final EpisimPerson b;
-		private final double time;
-
-		private Group(EpisimPerson a, EpisimPerson b, double time) {
-			this.a = a;
-			this.b = b;
-			this.time = time;
-		}
-
-		private static Group of(EpisimPerson a, EpisimPerson b, double time) {
-			return new Group(a, b, time);
-		}
-
-		public boolean contains(EpisimPerson person) {
-			return a == person || b == person;
-		}
-
-		/**
-		 * Return the left over person.
-		 */
-		public EpisimPerson remove(EpisimPerson p) {
-			if (p == a) return b;
-			else if (p == b) return a;
-			throw new IllegalStateException("Leaving person not in group.");
-		}
-	}
-
 }

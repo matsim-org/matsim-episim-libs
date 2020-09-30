@@ -114,7 +114,7 @@ public class EventSizes implements BatchRun<EventSizes.Params> {
 		public String reduction;
 
 		@ClassParameter({DefaultContactModel.class, SqrtContactModel.class, OldSymmetricContactModel.class,
-				SymmetricContactModel.class, DirectContactModel.class})
+				SymmetricContactModel.class, DirectContactModel.class, PairWiseContactModel.class})
 		public Class<? extends ContactModel> contactModel;
 
 		{

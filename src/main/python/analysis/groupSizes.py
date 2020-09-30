@@ -138,7 +138,7 @@ for cm in set(gs.contactModel):
 
 #%%
 
-evs = read_batch_run("data/eventSizes2.zip")
+evs = read_batch_run("data/eventSizes3.zip")
 
 #%%
 
@@ -154,6 +154,7 @@ for cm in set(evs.contactModel):
 
     sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
                  style="reduction", hue="divider", palette=hue, 
+                 style_order=["none", "closing_0.5", "uniform_0.5"],
                  data=df)
     
     plt.yscale("log")
