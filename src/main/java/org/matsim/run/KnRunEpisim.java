@@ -23,6 +23,7 @@ package org.matsim.run;
 import com.google.common.base.Joiner;
 import com.google.inject.Module;
 import com.google.inject.*;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,15 +36,18 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
+import org.matsim.run.batch.BerlinDiseaseImport;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -73,8 +77,18 @@ public class KnRunEpisim {
 
 	private static final double sigmaSusc = 0.;
 
-	private enum ContactModelType{ original, symmetric, sqrt, direct }
-	private static final ContactModelType contactModelType = ContactModelType.symmetric;
+	private static final int IMPORT_OFFSET = -0;
+
+	private enum ContactModelType{ original, oldSymmetric, symmetric, sqrt, direct }
+	private static final ContactModelType contactModelType = ContactModelType.oldSymmetric;
+
+	private static class MyParams extends BerlinDiseaseImport.Params{
+		MyParams(){
+			this.ageBoundaries = "random";
+			this.tracingCapacity = Integer.MAX_VALUE;
+			this.importOffset = IMPORT_OFFSET;
+		}
+	}
 
 
 	public static void main(String[] args) throws IOException{
@@ -100,6 +114,9 @@ public class KnRunEpisim {
 						break;
 					case symmetric:
 						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+						break;
+					case oldSymmetric:
+						bind( ContactModel.class ).to( OldSymmetricContactModel.class ).in( Singleton.class );
 						break;
 					case sqrt:
 						bind( ContactModel.class ).to( SqrtContactModel.class ).in( Singleton.class );
@@ -165,6 +182,19 @@ public class KnRunEpisim {
 					episimConfig.setCalibrationParameter( 1.e-5 );
 					episimConfig.setStartDate( "2020-02-17" );
 					episimConfig.setMaxContacts( 3. );
+				} else if( contactModelType == ContactModelType.oldSymmetric ){
+//					config = new SnzBerlinWeekScenario2020Symmetric().config();
+//					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+//					episimConfig.setStartDate( "2020-02-22" );
+//					episimConfig.setCalibrationParameter( 9.e-6 );
+//					episimConfig.setInfections_pers_per_day( BerlinDiseaseImport.createDiseaseImportMap( episimConfig.getStartDate(), importOffset ) );
+//					// disease import start going up on feb/24 minus importOffset
+
+					config = new BerlinDiseaseImport().prepareConfig( 0, new MyParams() );
+					config.global().setRandomSeed( 4711 );
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-18" );
+					episimConfig.setCalibrationParameter( 5.e-6 );
 				} else if( contactModelType == ContactModelType.symmetric ){
 					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
@@ -177,12 +207,6 @@ public class KnRunEpisim {
 					episimConfig.setStartDate( "2020-02-13" );
 					episimConfig.setCalibrationParameter( 1.e-5 );
 					episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
-
-					// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
-					// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
-					// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
-					// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
-					// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
 				} else if( contactModelType == ContactModelType.direct ){
 					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
@@ -191,6 +215,12 @@ public class KnRunEpisim {
 				} else{
 					throw new RuntimeException( "not implemented for infectionModelType=" + contactModelType );
 				}
+
+				// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
+				// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
+				// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
+				// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
+				// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
 
 				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
@@ -234,9 +264,10 @@ public class KnRunEpisim {
 
 				strb.append( "_seed" ).append( config.global().getRandomSeed() );
 				strb.append( "_strtDt" ).append( episimConfig.getStartDate() );
+				strb.append( "_imprtOffst" ).append( IMPORT_OFFSET );
 				if ( !tracingConfig.getTracingCapacity().isEmpty() ) {
 					strb.append( "_trCap" ).append( tracingConfig.getTracingCapacity() );
-					strb.append( "__trStrt" ).append( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() );
+					strb.append( "_quStrt" ).append( episimConfig.getStartDate().plusDays( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() ) );
 				}
 				config.controler().setOutputDirectory( "output/" + strb.toString() );
 
@@ -268,59 +299,59 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run(80 );
+		injector.getInstance(EpisimRunner.class).run( 400 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
 
-	/*
-	{
-		List<Long> cnts = new ArrayList<>();
-		for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
-			EpisimContainer<?> container = entry.getKey();
-			if( !(container instanceof EpisimFacility) ){
-				continue;
+	public static void writeGroupSizes( Object2IntMap<EpisimContainer<?>> maxGroupSize ){
+		{
+			List<Long> cnts = new ArrayList<>();
+			for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
+				EpisimContainer<?> container = entry.getKey();
+				if( !(container instanceof InfectionEventHandler.EpisimFacility) ){
+					continue;
+				}
+				int idx = container.getMaxGroupSize();
+				while( idx >= cnts.size() ){
+					cnts.add( 0L );
+				}
+				cnts.set( idx, cnts.get( idx ) + 1 );
 			}
-			int idx = container.getMaxGroupSize();
-			while( idx >= cnts.size() ){
-				cnts.add( 0L );
+			try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeFac.csv" ) ){
+				for( int ii = 0 ; ii < cnts.size() ; ii++ ){
+					writer.write( ii + "," + cnts.get( ii ) + "\n" );
+				}
+			} catch( IOException e ){
+				e.printStackTrace();
 			}
-			cnts.set( idx, cnts.get( idx ) + 1 );
 		}
-		try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeFac.csv" ) ){
-			for( int ii = 0 ; ii < cnts.size() ; ii++ ){
-				writer.write( ii + "," + cnts.get( ii ) + "\n" );
+		{
+			List<Long> cnts = new ArrayList<>();
+			for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
+				EpisimContainer<?> container = entry.getKey();
+				if( !(container instanceof InfectionEventHandler.EpisimVehicle) ){
+					continue;
+				}
+				int idx = container.getMaxGroupSize();
+				while( idx >= cnts.size() ){
+					cnts.add( 0L );
+				}
+				cnts.set( idx, cnts.get( idx ) + 1 );
 			}
-		} catch( IOException e ){
-			e.printStackTrace();
+			try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeVeh.csv" ) ){
+				for( int ii = 0 ; ii < cnts.size() ; ii++ ){
+					writer.write( ii + "," + cnts.get( ii ) + "\n" );
+				}
+			} catch( IOException e ){
+				e.printStackTrace();
+			}
 		}
-	}
-	{
-		List<Long> cnts = new ArrayList<>();
-		for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
-			EpisimContainer<?> container = entry.getKey();
-			if( !(container instanceof EpisimVehicle) ){
-				continue;
-			}
-			int idx = container.getMaxGroupSize();
-			while( idx >= cnts.size() ){
-				cnts.add( 0L );
-			}
-			cnts.set( idx, cnts.get( idx ) + 1 );
-		}
-		try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeVeh.csv" ) ){
-			for( int ii = 0 ; ii < cnts.size() ; ii++ ){
-				writer.write( ii + "," + cnts.get( ii ) + "\n" );
-			}
-		} catch( IOException e ){
-			e.printStackTrace();
-		}
-	}
 
-		log.warn("stopping here ...");
-		System.exit(-1);
-	 */
+		log.warn( "stopping here ..." );
+		System.exit( -1 );
+	}
 
 
 	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }

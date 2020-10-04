@@ -20,6 +20,11 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 
 # In[]:
 
+ss = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv', sep=",",parse_dates=['Datum'],dayfirst=True).fillna(value=0.)
+ss.index = pd.to_datetime(ss['Datum'])
+
+# In[]:
+
 # base = 'output/2020-06-19_19-48-41__unrestr__theta1.1E-5@3__trStrt46_seed4711_strtDt2020-02-16_trCap0/'
 
 # base = 'output/2020-06-19_23-29-07__frmSnz__theta1.1E-5@3__trStrt46_ciCorr1.0_@2020-03-07_alph1.0upto0.0_0.0_seed4711_strtDt2020-02-16_trCap0/'
@@ -149,7 +154,53 @@ cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
 # base = 'output/2020-09-21_15-23-09__symmetric__fromConfig__theta2.2E-5@NaN_seed4711_strtDt2020-02-19_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
 # base = 'output/2020-09-21_16-00-16__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
 
-base = 'output/2020-09-21_19-04-07__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+# base = 'output/2020-09-21_19-04-07__symmetric__fromConfig__theta2.1E-5@NaN_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-01=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_16-21-37__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_16-27-39__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_16-27-39__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-18_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_17-03-48__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-20_imprtOffst-2_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_17-03-56__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-22_imprtOffst-2_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_17-42-32__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-24_imprtOffst-2_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_18-18-31__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-26_imprtOffst-2_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_18-21-55__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-28_imprtOffst-2_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_18-10-43__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-26_imprtOffst-1_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_18-11-07__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-28_imprtOffst-1_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_19-08-03__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-22_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_19-07-53__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-24_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_18-51-58__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-26_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_18-51-51__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-28_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# ---
+
+# base = 'output/2020-09-23_20-12-28__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_20-14-42__oldSymmetric__fromConfig__theta9.0E-6@3.0_seed4711_strtDt2020-02-22_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_21-34-18__oldSymmetric__fromConfig__theta6.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_22-30-37__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-14_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-03-31/'
+# base = 'output/2020-09-23_21-34-24__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_21-34-31__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-22_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+
+# base = 'output/2020-09-23_23-01-24__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-14_imprtOffst-6_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-03-31/'
+# base = 'output/2020-09-23_22-21-27__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-14_imprtOffst-4_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-03-31/'
+# base = 'output/2020-09-23_22-21-20__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-14_imprtOffst-2_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-03-31/'
+# base = 'output/2020-09-23_22-30-37__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-14_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-03-31/'
+# base = 'output/2020-09-23_22-21-34__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-14_imprtOffst2_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-03-31/'
+
+# base = 'output/2020-09-24_07-24-28__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst-18_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-24_07-25-23__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst-15_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-24_07-24-05__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst-12_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-24_07-23-51__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst-9_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-23_23-01-39__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst-6_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-23_23-01-51__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst-3_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-23_21-34-24__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
+# base = 'output/2020-09-23_23-02-01__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst3_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+
+base = 'output/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
 
 #
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
@@ -171,31 +222,57 @@ fit2.index = pd.date_range(start="2020-03-01", periods=30)
 fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
 fit3.index = pd.date_range(start="2020-03-01", periods=80)
 
-rr3 = pd.concat([cc['cases'].rolling('1D').mean(), infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff()], axis=1)
+rr3 = pd.concat([cc['cases'].rolling('7D').mean(), infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff().rolling('7D').mean(),ss['Anteil Positiv Berlin Meldewoche']*25], axis=1)
 # rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
 # rr3 = pd.concat([cc['cases']])
 
+rr3.at[pd.to_datetime("2020-02-24"),'diseaseImport'] = 0.9
+rr3.at[pd.to_datetime("2020-03-09"),'diseaseImport'] = 23.1
+rr3.at[pd.to_datetime("2020-03-23"),'diseaseImport'] = 3.9
+rr3.at[pd.to_datetime("2020-06-08"),'diseaseImport'] = 0.1
+rr3.at[pd.to_datetime("2020-07-13"),'diseaseImport'] = 0.9
+rr3.at[pd.to_datetime("2020-08-10"),'diseaseImport'] = 17.9
+rr3.at[pd.to_datetime("2020-08-24"),'diseaseImport'] = 8.6
+
+rr3['diseaseImport'].interpolate(inplace=True)
+
+
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
-default_cycler = (cycler(color=['r', 'g', 'b', 'y','red','purple','orange']) +
-                  cycler(linestyle=['', '', '', '','-','-','-']) +
-                  cycler(marker=['.','','','.','','','']))
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','purple','purple','orange']) +
+                  cycler(linestyle=['', '', '', '','','-','-']) +
+                  cycler(marker=['o','','','.','o','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=True,grid=True)
-axes.set_ylim(0.9,10000)
-axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-10-01'))
+axes = rr3.plot(logy=False,grid=True)
+axes.set_ylim(0.9,300)
+axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2021-02-01'))
 pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
 pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
 # pyplot.axhline(32,color='gray',linestyle='dotted')
 
-pyplot.plot( pd.to_datetime('2020-03-07'), 3000, 'yo' )
-pyplot.text( pd.to_datetime('2020-03-07'), 3000, '1st day of home office (sat)')
+# offset = -0
+# pyplot.plot( pd.to_datetime("2020-02-24") + pd.DateOffset(offset), 0.9, 'bo');
+# pyplot.plot( pd.to_datetime("2020-03-09") + pd.DateOffset(offset), 23.1, 'bo');
+# pyplot.plot( pd.to_datetime("2020-03-23") + pd.DateOffset(offset), 3.9, 'bo');
+# #pyplot.plot( pd.to_datetime("2020-06-08") + pd.DateOffset(offset), 0.1, 'bo');
+# pyplot.plot( pd.to_datetime("2020-06-08") + pd.DateOffset(offset), 0.9, 'bo');
+# pyplot.plot( pd.to_datetime("2020-07-13") + pd.DateOffset(offset), 2.7, 'bo');
+# pyplot.plot( pd.to_datetime("2020-08-10") + pd.DateOffset(offset), 17.9, 'bo');
+# pyplot.plot( pd.to_datetime("2020-08-24") + pd.DateOffset(offset), 8.6, 'bo');
 
-pyplot.plot( pd.to_datetime('2020-03-14'), 2000, 'ro' )
-pyplot.text( pd.to_datetime('2020-03-14'), 2000, '1st day of school closures (sat)')
+pyplot.plot( pd.to_datetime('2020-03-07'), 1000, 'yo' )
+pyplot.text( pd.to_datetime('2020-03-07'), 1000, '1st day of home office (sat)')
+
+pyplot.plot( pd.to_datetime('2020-03-14'), 800, 'ro' )
+pyplot.text( pd.to_datetime('2020-03-14'), 800, '1st day of school closures (sat)')
 
 pyplot.show()
+
+# In[]:
+
+# rr3.insert(5,"diseaseImport",pd.Series( np.arange(0,rr3.size,1) ) )
+
 
 # In[]:
 
@@ -286,33 +363,36 @@ plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/testPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/test2.xml", selectedPlansOnly = True )
 
-personAge = dict()
-cnt = 0
-for person, plan in plans:
-    cnt += 1
-    personId = person.attrib['id']
-    matsimAttributes = person.find('attributes')
-    for matsimAttribute in matsimAttributes:
-        if matsimAttribute.attrib['name'] == 'age':
-            personAge[personId] = int(matsimAttribute.text)
-    # if cnt >= 30:
-    #     break
-
-print(personAge)
+# personAge = dict()
+# cnt = 0
+# for person, plan in plans:
+#     cnt += 1
+#     personId = person.attrib['id']
+#     matsimAttributes = person.find('attributes')
+#     for matsimAttribute in matsimAttributes:
+#         if matsimAttribute.attrib['name'] == 'age':
+#             personAge[personId] = int(matsimAttribute.text)
+#     # if cnt >= 30:
+#     #     break
+#
+# print(personAge)
 
 # In[]:
 
-personsByAge = dict.fromkeys(range(100),0)
-for abc in personAge:
-    personsByAge[personAge.get(abc)] += 0.02
+# personsByAge = dict.fromkeys(range(100),0)
+# for abc in personAge:
+#     personsByAge[personAge.get(abc)] += 0.02
+#
+# infectionsByAge = dict.fromkeys(range(100),0)
+# for abc in infectionEvents.loc[:,"infected"]:
+#     infectionsByAge[personAge.get(abc)] += 1
+#
+#
+# print(infectionsByAge)
+#
+# pyplot.bar(*zip(*personsByAge.items()))
+# pyplot.bar(*zip(*infectionsByAge.items()))
+# pyplot.show()
 
-infectionsByAge = dict.fromkeys(range(100),0)
-for abc in infectionEvents.loc[:,"infected"]:
-    infectionsByAge[personAge.get(abc)] += 1
+# In[]:
 
-
-print(infectionsByAge)
-
-pyplot.bar(*zip(*personsByAge.items()))
-pyplot.bar(*zip(*infectionsByAge.items()))
-pyplot.show()
