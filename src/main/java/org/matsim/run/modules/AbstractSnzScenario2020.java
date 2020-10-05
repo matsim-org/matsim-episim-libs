@@ -84,7 +84,8 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 				.setContactIntensity(1.)
 				.setSpacesPerFacility(1.); // home facilities have already been split
 		episimConfig.getOrAddContainerParams("quarantine_home")
-				.setContactIntensity(1.);
+				.setContactIntensity(1.)
+				.setSpacesPerFacility(1.);
 	}
 
 	/**

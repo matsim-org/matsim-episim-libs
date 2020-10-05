@@ -34,7 +34,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25))
+		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25, true, true))
 				.with(new AbstractModule() {
 					@Override
 					protected void configure() {

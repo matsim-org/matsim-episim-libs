@@ -32,7 +32,7 @@ public class BerlinDiseaseImport implements BatchRun<BerlinDiseaseImport.Params>
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25))
+		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25, true, true))
 				.with(new AbstractModule() {
 					@Override
 					protected void configure() {
@@ -53,7 +53,7 @@ public class BerlinDiseaseImport implements BatchRun<BerlinDiseaseImport.Params>
 //
 //						// save some time for not needed inputs
 //						config.facilities().setInputFile(null);
-//						
+//
 //						final Scenario scenario = ScenarioUtils.loadScenario( config );
 //
 //						return scenario;
@@ -72,12 +72,12 @@ public class BerlinDiseaseImport implements BatchRun<BerlinDiseaseImport.Params>
 		SnzBerlinWeekScenario2020Symmetric module = new SnzBerlinWeekScenario2020Symmetric();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
-		
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setInitialInfectionDistrict(null);
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
-		
+
 		if (params.ageBoundaries.startsWith("0")) {
 			episimConfig.setUpperAgeBoundaryForInitInfections(9);
 		}
@@ -129,13 +129,13 @@ public class BerlinDiseaseImport implements BatchRun<BerlinDiseaseImport.Params>
 
 		@GenerateSeeds(10)
 		long seed;
-		
+
 		@Parameter({6.e-6, 4.e-6, 2.e-6})
 		private double calibrationParam;
-		
+
 		@StringParameter({"0-9", "10-19", "20-29", "30-39", "40-49", "50-59", "60-69", "70-79", "80+", "random"})
 		public String ageBoundaries;
-		
+
 		@IntParameter({100, Integer.MAX_VALUE})
 		private int tracingCapacity;
 
