@@ -21,7 +21,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.AbstractSnzScenario2020;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import java.util.Map;
 
@@ -36,15 +36,7 @@ public class BerlinSymmetricInterventions implements BatchRun<BerlinSymmetricInt
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25, true, true))
-				.with(new AbstractModule() {
-					@Override
-					protected void configure() {
-						bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
-						bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-						bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
-					}
-				});
+		return new SnzBerlinWeekScenario2020(25, true, true, OldSymmetricContactModel.class);
 	}
 
 	@Override
@@ -55,7 +47,7 @@ public class BerlinSymmetricInterventions implements BatchRun<BerlinSymmetricInt
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario2020Symmetric module = new SnzBerlinWeekScenario2020Symmetric();
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 

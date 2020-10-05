@@ -683,7 +683,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Typical number of distinct spaces per facility.
 		 */
-		private double spacesPerFacility = 10.;
+		private double spacesPerFacility = 20.;
 
 
 		/**

@@ -25,7 +25,7 @@ public class BerlinWeekSeason implements BatchRun<BerlinWeekSeason.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020(25))
+		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020())
 				.with(new AbstractModule() {
 					@Override
 					protected void configure() {
@@ -42,7 +42,7 @@ public class BerlinWeekSeason implements BatchRun<BerlinWeekSeason.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020(25);
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);

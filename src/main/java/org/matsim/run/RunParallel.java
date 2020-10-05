@@ -215,11 +215,11 @@ public class RunParallel<T> implements Callable<Integer> {
 		private static final AtomicInteger i = new AtomicInteger(0);
 
 		@Nullable
-		private final AbstractModule bindings;
+		private final Module bindings;
 		private final ParallelModule module;
 		private final int maxIterations;
 
-		private Task(@Nullable AbstractModule bindings, ParallelModule module, int maxIterations) {
+		private Task(@Nullable Module bindings, ParallelModule module, int maxIterations) {
 			this.bindings = bindings;
 			this.module = module;
 			this.maxIterations = maxIterations;

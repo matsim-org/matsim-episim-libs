@@ -1,29 +1,20 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Singleton;
-import com.google.inject.util.Modules;
-
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.model.AgeDependentInfectionModelWithSeasonality;
-import org.matsim.episim.model.AgeDependentProgressionModel;
-import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.FaceMask;
-import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
-
-import java.time.LocalDate;
-import java.util.Map;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
+import java.time.LocalDate;
+import java.util.Map;
 
 
 /**
@@ -34,33 +25,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return (AbstractModule) Modules.override(new SnzBerlinWeekScenario2020Symmetric(25, true, true))
-				.with(new AbstractModule() {
-					@Override
-					protected void configure() {
-						bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
-						bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-						bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
-					}
-//					@Provides
-//					@Singleton
-//					public Scenario scenario(Config config) {
-//
-//						// guice will use no args constructor by default, we check if this config was initialized
-//						// this is only the case when no explicit binding are required
-//						if (config.getModules().size() == 0)
-//							throw new IllegalArgumentException("Please provide a config module or binding.");
-//
-//						config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
-//
-//						// save some time for not needed inputs
-//						config.facilities().setInputFile(null);
-//
-//						final Scenario scenario = ScenarioUtils.loadScenario( config );
-//
-//						return scenario;
-//					}
-				});
+		return new SnzBerlinWeekScenario2020(25, true, true, OldSymmetricContactModel.class);
 	}
 
 	@Override
@@ -71,7 +36,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario2020Symmetric module = new SnzBerlinWeekScenario2020Symmetric();
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 

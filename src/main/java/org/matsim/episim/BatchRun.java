@@ -21,7 +21,7 @@
 package org.matsim.episim;
 
 import com.google.common.collect.Lists;
-import com.google.inject.AbstractModule;
+import com.google.inject.Module;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
@@ -263,7 +263,7 @@ public interface BatchRun<T> {
 	 * @return module with additional bindings, or null if not needed
 	 */
 	@Nullable
-	default AbstractModule getBindings(int id, @Nullable T params) {
+	default Module getBindings(int id, @Nullable T params) {
 		return null;
 	}
 

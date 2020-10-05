@@ -31,30 +31,23 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
-import org.matsim.vehicles.VehicleType;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -130,7 +123,7 @@ public class KnRunEpisim {
 			}
 			@Provides @Singleton public Scenario scenario( Config config ) {
 
-				Scenario scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config );
+				Scenario scenario = new SnzBerlinWeekScenario2020().scenario( config );
 
 				SplittableRandom rnd = new SplittableRandom( 4715 );
 				for( Person person : scenario.getPopulation().getPersons().values() ){
@@ -173,13 +166,13 @@ public class KnRunEpisim {
 					episimConfig.setStartDate( "2020-02-17" );
 					episimConfig.setMaxContacts( 3. );
 				} else if( contactModelType == ContactModelType.symmetric ){
-					config = new SnzBerlinWeekScenario2020Symmetric().config();
+					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 					episimConfig.setStartDate( "2020-02-18" );
 					episimConfig.setCalibrationParameter( 2.1e-5 );
 					episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
 				} else if( contactModelType == ContactModelType.sqrt ){
-					config = new SnzBerlinWeekScenario2020Symmetric().config();
+					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 					episimConfig.setStartDate( "2020-02-13" );
 					episimConfig.setCalibrationParameter( 1.e-5 );

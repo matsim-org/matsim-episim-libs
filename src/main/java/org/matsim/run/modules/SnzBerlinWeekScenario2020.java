@@ -1,68 +1,99 @@
-/*-
- * #%L
- * MATSim Episim
- * %%
- * Copyright (C) 2020 matsim-org
- * %%
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Affero General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU Affero General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- * #L%
- */
+/* *********************************************************************** *
+ * project: org.matsim.*
+ * EditRoutesTest.java
+ *                                                                         *
+ * *********************************************************************** *
+ *                                                                         *
+ * copyright       : (C) 2020 by the members listed in the COPYING,        *
+ *                   LICENSE and WARRANTY file.                            *
+ * email           : info at matsim dot org                                *
+ *                                                                         *
+ * *********************************************************************** *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *   See also COPYING, LICENSE and WARRANTY file                           *
+ *                                                                         *
+ * *********************************************************************** */
+
 package org.matsim.run.modules;
 
 import com.google.inject.Provides;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.config.groups.VspExperimentalConfigGroup;
+import org.matsim.core.controler.ControlerUtils;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.EpisimUtils.Extrapolation;
+import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.model.FaceMask;
-import org.matsim.episim.model.Transition;
+import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.Map;
 
-import static org.matsim.episim.model.Transition.to;
-
 /**
- * Snz scenario for Berlin.
- *
- * @see AbstractSnzScenario
+ * Model for Berlin week with different configurations.
  */
 public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
-
 	/**
 	 * Sample size of the scenario (Either 25 or 100)
 	 */
 	private final int sample;
 
+	/**
+	 * Enable Disease import based on RKI numbers.
+	 */
+	private final boolean withDiseaseImport;
+
+	/**
+	 * Enable modified CI values based on room sizes.
+	 */
+	private final boolean withModifiedCi;
+
+	/**
+	 * The contact model to use.
+	 */
+	private final Class<? extends ContactModel> contactModel;
+
 	public SnzBerlinWeekScenario2020() {
-		this(25);
+		this(25, false, false, DefaultContactModel.class);
 	}
 
-	public SnzBerlinWeekScenario2020(int sample) {
+	public SnzBerlinWeekScenario2020(int sample, boolean withDiseaseImport, boolean withModifiedCi, Class<? extends ContactModel> contactModel) {
 		this.sample = sample;
+		this.withDiseaseImport = withDiseaseImport;
+		this.withModifiedCi = withModifiedCi;
+		this.contactModel = contactModel;
+	}
+
+	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
+		int days = end.getDayOfYear() - start.getDayOfYear();
+		for (int i = 1; i <= days; i++) {
+			double fraction = (double) i / days;
+			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
+		}
+		return importMap;
+	}
+
+	@Override
+	protected void configure() {
+		bind(ContactModel.class).to(contactModel).in(Singleton.class);
+		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+
+		if (contactModel == DefaultContactModel.class) {
+			bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(com.google.inject.Singleton.class);
+		} else
+			bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -91,12 +122,83 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 				.addDays(DayOfWeek.SUNDAY);
 
 		if (sample == 100) {
-			episimConfig.setInitialInfections(4);
-			episimConfig.setSampleSize(1);
+			throw new RuntimeException("100pct scenario not configured");
 		}
 
-		episimConfig.setCalibrationParameter(1.18e-5);
+		episimConfig.setCalibrationParameter(6.e-6);
 		episimConfig.setStartDate("2020-02-18");
+
+		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
+		//values are calculated here: https://docs.google.com/spreadsheets/d/1aJ2XonFpfjKCpd0ZeXmzKe5fmDe0HHBGtXfJ-NDBolo/edit#gid=0
+
+		if (withDiseaseImport) {
+
+			episimConfig.setInitialInfectionDistrict(null);
+			episimConfig.setInitialInfections(Integer.MAX_VALUE);
+			Map<LocalDate, Integer> importMap = new HashMap<>();
+			double importFactor = 1.;
+			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
+
+			int importOffset = 0;
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
+					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-09").plusDays(importOffset),
+					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-23").plusDays(importOffset),
+					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-06-08").plusDays(importOffset),
+					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
+					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
+					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
+
+			episimConfig.setInfections_pers_per_day(importMap);
+
+		}
+
+		if (withModifiedCi) {
+			for (InfectionParams infParams : episimConfig.getInfectionParams()) {
+				if (infParams.includesActivity("home")) {
+					infParams.setContactIntensity(1.);
+				} else if (infParams.includesActivity("quarantine_home")) {
+					infParams.setContactIntensity(0.3);
+				} else if (infParams.getContainerName().startsWith("shop")) {
+					infParams.setContactIntensity(0.88);
+				} else if (infParams.includesActivity("work") || infParams.includesActivity(
+						"business") || infParams.includesActivity("errands")) {
+					infParams.setContactIntensity(1.47);
+				} else if (infParams.getContainerName().startsWith("edu")) {
+					infParams.setContactIntensity(11.);
+				} else if (infParams.includesActivity("pt") || infParams.includesActivity("tr")) {
+					infParams.setContactIntensity(10.);
+				} else if (infParams.includesActivity("leisure") || infParams.includesActivity("visit")) {
+					infParams.setContactIntensity(9.24);
+				} else {
+					throw new RuntimeException("need to define contact intensity for activityType=" + infParams.getContainerName());
+				}
+			}
+		}
+
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+
+		// The following is, I think, the ci correction that we need around mar/6 in order to get the RKI infection peak right.  kai, sep/20
+		// overwriting ci corrections
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), "quarantine_home");
+		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), "pt");
+
+		// yyyyyy why this? Could you please comment?  kai, sep/20
+		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly)
+		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+
+		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+				LocalDate.of(2020, 4, 1), 30,
+				LocalDate.of(2020, 6, 15), Integer.MAX_VALUE
+		));
 
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
 
@@ -105,4 +207,66 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		return config;
 	}
 
+	@Provides
+	@Singleton
+	public Scenario scenario(Config config) {
+
+		// guice will use no args constructor by default, we check if this config was initialized
+		// this is only the case when no explicit binding are required
+		if (config.getModules().size() == 0)
+			throw new IllegalArgumentException("Please provide a config module or binding.");
+
+		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
+
+		// save some time for not needed inputs
+		config.facilities().setInputFile(null);
+
+		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
+
+		final Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		double capFactor = 1.3;
+
+		for (VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values()) {
+			switch (vehicleType.getId().toString()) {
+				case "bus":
+					vehicleType.getCapacity().setSeats((int) (70 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (40 * capFactor));
+					// https://de.wikipedia.org/wiki/Stadtbus_(Fahrzeug)#Stehpl%C3%A4tze
+					break;
+				case "metro":
+					vehicleType.getCapacity().setSeats((int) (200 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (550 * capFactor));
+					// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
+					break;
+				case "plane":
+					vehicleType.getCapacity().setSeats((int) (200 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (0 * capFactor));
+					break;
+				case "pt":
+					vehicleType.getCapacity().setSeats((int) (70 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (70 * capFactor));
+					break;
+				case "ship":
+					vehicleType.getCapacity().setSeats((int) (150 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (150 * capFactor));
+					// https://www.berlin.de/tourismus/dampferfahrten/faehren/1824948-1824660-faehre-f10-wannsee-altkladow.html
+					break;
+				case "train":
+					vehicleType.getCapacity().setSeats((int) (250 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (750 * capFactor));
+					// https://de.wikipedia.org/wiki/Stadler_KISS#Technische_Daten_der_Varianten , mehr als ICE (https://inside.bahn.de/ice-baureihen/)
+					break;
+				case "tram":
+					vehicleType.getCapacity().setSeats((int) (84 * capFactor));
+					vehicleType.getCapacity().setStandingRoom((int) (216 * capFactor));
+					// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
+					break;
+				default:
+					throw new IllegalStateException("Unexpected value=|" + vehicleType.getId().toString() + "|");
+			}
+		}
+
+		return scenario;
+	}
 }
