@@ -43,25 +43,6 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		// TODO
-
-		// TODO: run1 OldSymModel
-		// run2 (new) Symmetric / n=20
-		// run3 default
-		// run4 pairwise
-
-		double param = Double.NaN;
-		if (params.contactModel == OldSymmetricContactModel.class) {
-			param = 1.07e-5;
-		} else if (params.contactModel == SymmetricContactModel.class) {
-			param = 2.53e-5;
-		} else if (params.contactModel == DefaultContactModel.class) {
-			param = 1.45e-5;
-		} else if (params.contactModel == PairWiseContactModel.class) {
-
-		}
-
-		episimConfig.setCalibrationParameter(param);
 
 		if (params.unrestricted.equals("yes")) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());

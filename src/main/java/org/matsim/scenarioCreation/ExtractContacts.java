@@ -43,7 +43,7 @@ public final class ExtractContacts implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(ExtractContacts.class);
 
 	@CommandLine.Parameters(paramLabel = "scenario", arity = "0..1", description = "Scenario module to load",
-			defaultValue = "SnzBerlinSuperSpreaderScenario")
+			defaultValue = "SnzBerlinWeekScenario2020")
 	private String scenario;
 
 	@CommandLine.Option(names = "--output", description = "Output folder", defaultValue = "output-contacts")

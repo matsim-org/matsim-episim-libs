@@ -214,6 +214,8 @@ def objective_ci_correction(trial):
     """ Objective for ci correction """
 
     n = trial.number
+
+    start = fromisoformat(trial.study.user_attrs["start"]) + timedelta(days=trial.suggest_int('ciOffset', -3, 3))
     params = dict(
         number=n,
         scenario=trial.study.user_attrs["scenario"],
@@ -224,8 +226,8 @@ def objective_ci_correction(trial):
         alpha=1,
         offset=0,
         # Parameter to calibrate
-        correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
-        start=trial.study.user_attrs["start"],
+        correction=trial.suggest_uniform("ciCorrection", 0.2, 0.9),
+        start=str(start)
     )
 
     end = fromisoformat(params["start"]) + timedelta(days=params["days"])
@@ -235,7 +237,7 @@ def objective_ci_correction(trial):
     for i in range(trial.study.user_attrs["runs"]):
         cmd = "java %(jvm)s -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
-              " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
+              " --correction %(correction).3f --start \"%(start)s\"" % params
 
         print("Running ci correction with params: %s" % params)
         print("Running calibration command: %s" % cmd)
@@ -300,11 +302,11 @@ if __name__ == "__main__":
     parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinWeekScenario2020")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
-    parser.add_argument("--start", type=str, default="", help="Start date for ci correction")
-    parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
-    parser.add_argument("--dz", type=float, default="2", help="Assumed Dunkelziffer for error metric")
+    parser.add_argument("--start", type=str, default="2020-03-07", help="Start date for ci correction")
+    parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
+    parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
     parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
 

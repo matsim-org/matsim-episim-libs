@@ -52,11 +52,10 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	 */
 	private static final Map<Class<? extends ContactModel>, Double> CALIB = Map.of(
 			OldSymmetricContactModel.class, 1.07e-5,
-			SymmetricContactModel.class, 2.53e-5, // nSpaces=20
+			SymmetricContactModel.class, 2.54e-5, // nSpaces=20
 			DefaultContactModel.class, 1.45e-5,
-			PairWiseContactModel.class, 2.0e-5
+			PairWiseContactModel.class, 1.91e-5
 	);
-
 	/**
 	 * Sample size of the scenario (Either 25 or 100)
 	 */
@@ -138,9 +137,9 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		}
 
 		episimConfig.setStartDate("2020-02-18");
-		
+
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
-		
+
 		basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.6));
 
 		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
@@ -204,7 +203,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		// yyyyyy why this? Could you please comment?  kai, sep/20
 		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly)
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);

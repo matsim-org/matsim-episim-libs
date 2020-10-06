@@ -147,7 +147,7 @@ public final class RunTrial implements Callable<Integer> {
 			iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
 
 			// Write a new snapshot
-			if (run == 0) {
+			if (run == 0 && snapshot != null) {
 				episimConfig.setSnapshotInterval(iterations - 7);
 			}
 		}
