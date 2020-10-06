@@ -33,6 +33,7 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.run.modules.SnzBerlinScenario25pct2020.BasePolicyBuilder;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -137,12 +138,16 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		}
 
 		episimConfig.setStartDate("2020-02-18");
+		
+		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
+		
+		basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.6));
 
 		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
 		//values are calculated here: https://docs.google.com/spreadsheets/d/1aJ2XonFpfjKCpd0ZeXmzKe5fmDe0HHBGtXfJ-NDBolo/edit#gid=0
 
 		if (withDiseaseImport) {
-
+			basePolicyBuilder.setCiCorrections(null);
 			episimConfig.setInitialInfectionDistrict(null);
 			episimConfig.setInitialInfections(Integer.MAX_VALUE);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
@@ -194,18 +199,12 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			}
 		}
 
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-
-		// The following is, I think, the ci correction that we need around mar/6 in order to get the RKI infection peak right.  kai, sep/20
-		// overwriting ci corrections
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), "quarantine_home");
-		builder.restrict("2020-03-07", Restriction.ofCiCorrection(1.), "pt");
+		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
 
 		// yyyyyy why this? Could you please comment?  kai, sep/20
 		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly)
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
+		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
