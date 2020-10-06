@@ -26,7 +26,7 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinWeekScenario2020(25, true, true, OldSymmetricContactModel.class);
+		return new SnzBerlinWeekScenario2020(25, false, true, OldSymmetricContactModel.class);
 	}
 
 	@Override
@@ -46,7 +46,7 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 		}
 
 
-		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020(25, false, true, OldSymmetricContactModel.class);
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -55,6 +55,9 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
 		config.global().setRandomSeed(params.seed);
+
+		// by default no tracing
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 
 		int restrictionDay = 20;
 
@@ -72,8 +75,9 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 					episimConfig.getStartDate(), 0,
 					episimConfig.getStartDate().plusDays(restrictionDay), Integer.MAX_VALUE)
 			);
-			episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		}
+
+		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 
 		// rest is not needed

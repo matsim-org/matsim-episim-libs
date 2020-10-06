@@ -19,15 +19,27 @@ import java.util.Map;
  */
 public class ContactModels implements BatchRun<ContactModels.Params> {
 
+	static final String OLD = "OLD";
+	static final String SYMMETRIC_OLD = "SYMMETRIC_OLD";
+	static final String SYMMETRIC_NEW_NSPACES_1 = "SYMMETRIC_NEW_NSPACES_1";
+	static final String SYMMETRIC_NEW_NSPACES_20 = "SYMMETRIC_NEW_NSPACES_20";
+	static final String PAIRWISE = "PAIRWISE";
+
+	static final Map<String, Class<? extends ContactModel>> MODELS = Map.of(
+			OLD, DefaultContactModel.class,
+			SYMMETRIC_OLD, OldSymmetricContactModel.class,
+			SYMMETRIC_NEW_NSPACES_1, SymmetricContactModel.class,
+			SYMMETRIC_NEW_NSPACES_20, SymmetricContactModel.class,
+			PAIRWISE, PairWiseContactModel.class
+	);
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		// for base case
 		if (params == null)
 			return new SnzBerlinWeekScenario2020();
 
-		return new SnzBerlinWeekScenario2020(25, false,
-				params.contactModel != DefaultContactModel.class, params.contactModel);
+		boolean withModifiedCi = !params.contactModel.equals(OLD);
+		return new SnzBerlinWeekScenario2020(25, false, withModifiedCi, ContactModels.MODELS.get(params.contactModel));
 	}
 
 	@Override
@@ -43,6 +55,12 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+		// assumes that 20 is the default...
+		if (params.contactModel.equals(SYMMETRIC_NEW_NSPACES_1)) {
+			for (EpisimConfigGroup.InfectionParams infParams : episimConfig.getInfectionParams()) {
+				if (!infParams.includesActivity("home")) infParams.setSpacesPerFacility(1);
+			}
+		}
 
 		if (params.unrestricted.equals("yes")) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
@@ -64,12 +82,11 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(50)
+		@GenerateSeeds(30)
 		public long seed;
 
-		@ClassParameter({DefaultContactModel.class, OldSymmetricContactModel.class,
-				SymmetricContactModel.class, PairWiseContactModel.class})
-		public Class<? extends ContactModel> contactModel;
+		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, PAIRWISE})
+		public String contactModel;
 
 		@StringParameter({"yes", "no"})
 		public String unrestricted;

@@ -17,28 +17,23 @@ import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import javax.annotation.Nullable;
 import java.util.Map;
 
+import static org.matsim.run.batch.ContactModels.*;
+
 
 /**
  * Interventions for symmetric Berlin week model with different contact models
  */
 public class BerlinContactModelsAndInterventions implements BatchRun<BerlinContactModelsAndInterventions.Params> {
 
-	private static final String OLD = "OLD";
-	private static final String SYMMETRIC_OLD = "SYMMETRIC_OLD";
-	private static final String SYMMETRIC_NEW_NSPACES_1 = "SYMMETRIC_NEW_NSPACES_1";
-	private static final String SYMMETRIC_NEW_NSPACES_20 = "SYMMETRIC_NEW_NSPACES_20";
 
-	private static final Map<String, Class<? extends ContactModel>> MODELS = Map.of(
-			OLD, DefaultContactModel.class,
-			SYMMETRIC_OLD, OldSymmetricContactModel.class,
-			SYMMETRIC_NEW_NSPACES_1, SymmetricContactModel.class,
-			SYMMETRIC_NEW_NSPACES_20, SymmetricContactModel.class
-	);
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
+		if (params == null)
+			return new SnzBerlinWeekScenario2020();
+
 		boolean withModifiedCi = !params.contactModel.equals(OLD);
-		return new SnzBerlinWeekScenario2020(25, false, withModifiedCi, MODELS.get(params.contactModel));
+		return new SnzBerlinWeekScenario2020(25, false, withModifiedCi, ContactModels.MODELS.get(params.contactModel));
 	}
 
 	@Override
@@ -174,7 +169,7 @@ public class BerlinContactModelsAndInterventions implements BatchRun<BerlinConta
 				"educ_primary0", "educ_secondary0", "educ_tertiary0", "educ_higher0", "educ_other0", "outOfHome50", "0.9FFP@EDU", "0.9CLOTH@EDU", "tracing50", "tracing75"})
 		public String restriction;
 
-		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20})
+		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, PAIRWISE})
 		public String contactModel;
 
 	}
