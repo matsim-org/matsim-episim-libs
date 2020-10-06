@@ -8,7 +8,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -22,7 +22,12 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinScenario25pct2020();
+		// for base case
+		if (params == null)
+			return new SnzBerlinWeekScenario2020();
+
+		return new SnzBerlinWeekScenario2020(25, false,
+				params.contactModel != DefaultContactModel.class, params.contactModel);
 	}
 
 	@Override
@@ -33,13 +38,30 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario2020Symmetric module = new SnzBerlinWeekScenario2020Symmetric();
+		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		// TODO
-		episimConfig.setCalibrationParameter(1.0e-5);
+
+		// TODO: run1 OldSymModel
+		// run2 (new) Symmetric / n=20
+		// run3 default
+		// run4 pairwise
+
+		double param = Double.NaN;
+		if (params.contactModel == OldSymmetricContactModel.class) {
+			param = 1.07e-5;
+		} else if (params.contactModel == SymmetricContactModel.class) {
+			param = 2.53e-5;
+		} else if (params.contactModel == DefaultContactModel.class) {
+			param = 1.45e-5;
+		} else if (params.contactModel == PairWiseContactModel.class) {
+
+		}
+
+		episimConfig.setCalibrationParameter(param);
 
 		if (params.unrestricted.equals("yes")) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
@@ -62,7 +84,7 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 	public static final class Params {
 
 		@GenerateSeeds(50)
-		long seed;
+		public long seed;
 
 		@ClassParameter({DefaultContactModel.class, OldSymmetricContactModel.class,
 				SymmetricContactModel.class, PairWiseContactModel.class})

@@ -70,10 +70,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.EventSizes}")
+	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.InterventionMix}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.EventSizes$Params}")
+	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.InterventionMix$Params}")
 	private Class<T> params;
 
 	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
@@ -139,9 +139,14 @@ public class RunParallel<T> implements Callable<Integer> {
 		if (noReuse) {
 			log.info("Reusing scenario and events is disabled.");
 		} else {
-			log.info("Reading base scenario...");
-			scenario = ScenarioUtils.loadScenario(baseConfig);
-			replay = new ReplayHandler(episimBase, scenario);
+			log.info("Creating base scenario...");
+
+			Module base = prepare.setup.getBindings(0, null);
+
+			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(base));
+
+			scenario = injector.getInstance(Scenario.class);
+			replay = injector.getInstance(ReplayHandler.class);
 		}
 
 		int i = 0;

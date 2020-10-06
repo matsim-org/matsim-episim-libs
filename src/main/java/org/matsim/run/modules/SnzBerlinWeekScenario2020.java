@@ -45,6 +45,17 @@ import java.util.Map;
  * Model for Berlin week with different configurations.
  */
 public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
+
+	/**
+	 * Calibration parameter for no disease import.
+	 */
+	private static final Map<Class<? extends ContactModel>, Double> CALIB = Map.of(
+			OldSymmetricContactModel.class, 1.07e-5,
+			SymmetricContactModel.class, 2.53e-5, // nSpaces=20
+			DefaultContactModel.class, 1.45e-5,
+			PairWiseContactModel.class, 2.0e-5
+	);
+
 	/**
 	 * Sample size of the scenario (Either 25 or 100)
 	 */
@@ -66,7 +77,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	private final Class<? extends ContactModel> contactModel;
 
 	public SnzBerlinWeekScenario2020() {
-		this(25, false, false, DefaultContactModel.class);
+		this(25, true, true, OldSymmetricContactModel.class);
 	}
 
 	public SnzBerlinWeekScenario2020(int sample, boolean withDiseaseImport, boolean withModifiedCi, Class<? extends ContactModel> contactModel) {
@@ -91,7 +102,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 
 		if (contactModel == DefaultContactModel.class) {
-			bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(com.google.inject.Singleton.class);
+			bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(Singleton.class);
 		} else
 			bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
@@ -125,7 +136,6 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			throw new RuntimeException("100pct scenario not configured");
 		}
 
-		episimConfig.setCalibrationParameter(6.e-6);
 		episimConfig.setStartDate("2020-02-18");
 
 		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
@@ -155,6 +165,10 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 			episimConfig.setInfections_pers_per_day(importMap);
 
+			episimConfig.setCalibrationParameter(6.e-6);
+		} else  {
+
+			episimConfig.setCalibrationParameter(CALIB.get(contactModel));
 		}
 
 		if (withModifiedCi) {

@@ -83,7 +83,7 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(50)
+		@GenerateSeeds(30)
 		long seed;
 
 		@Parameter({0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.})
