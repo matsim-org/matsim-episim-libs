@@ -82,6 +82,11 @@ if __name__ == "__main__":
     for k, v in attrs:
         print("\t", k, "=", v)
 
+    attrs = db.execute("SELECT param_name, param_value from trial_params WHERE trial_id=?", (best[0][0],)).fetchall()
+    print("Params:")
+    for k, v in attrs:
+        print("\t", k, "=", v)
+
     if not current_date:
         exit(0)
 

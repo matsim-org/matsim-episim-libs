@@ -22,6 +22,7 @@ import java.io.BufferedWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.concurrent.Callable;
@@ -33,7 +34,7 @@ import java.util.concurrent.Callable;
 		name = "contactGraph",
 		description = "Build contact graph from event file."
 )
-class CreateContactGraph implements Callable<Integer>, BasicEventHandler {
+public class CreateContactGraph implements Callable<Integer>, BasicEventHandler {
 
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
@@ -43,7 +44,7 @@ class CreateContactGraph implements Callable<Integer>, BasicEventHandler {
 	@CommandLine.Option(names = "--output", defaultValue = "output-graph")
 	private Path outputFolder;
 
-	@CommandLine.Option(names = "--sample", defaultValue = "0.2", description = "Sample  nodes (and their edges)")
+	@CommandLine.Option(names = "--sample", defaultValue = "0.2", description = "Sample nodes (and their edges)")
 	private double sample;
 
 	private DefaultUndirectedWeightedGraph<Id<Person>, DefaultEdge> graph;
@@ -69,12 +70,18 @@ class CreateContactGraph implements Callable<Integer>, BasicEventHandler {
 
 		if (sample < 1) {
 			SplittableRandom rnd = new SplittableRandom(0);
-			ArrayList<Id<Person>> nodes = new ArrayList<>(graph.vertexSet());
+			List<Id<Person>> nodes = new ArrayList<>(graph.vertexSet());
 
 			for (Id<Person> node : nodes) {
 				if (rnd.nextDouble() > sample) {
 					graph.removeVertex(node);
 				}
+			}
+
+			// remove now empty nodes
+			for (Id<Person> node : nodes) {
+				if (graph.containsVertex(node) && graph.degreeOf(node) == 0)
+					graph.removeVertex(node);
 			}
 		}
 
@@ -90,7 +97,7 @@ class CreateContactGraph implements Callable<Integer>, BasicEventHandler {
 		for (Map.Entry<String, GraphExporter<Id<Person>, DefaultEdge>> e : exporter.entrySet()) {
 
 			try {
-				String filename = outputFolder.resolve("graph-" + sample + "-." + e.getKey() + ".gz").toString();
+				String filename = outputFolder.resolve("graph-" + sample + "." + e.getKey() + ".gz").toString();
 				BufferedWriter writer = IOUtils.getBufferedWriter(filename);
 				e.getValue().exportGraph(graph, writer);
 				writer.close();

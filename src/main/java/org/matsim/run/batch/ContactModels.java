@@ -33,13 +33,20 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 			PAIRWISE, PairWiseContactModel.class
 	);
 
+	static SnzBerlinWeekScenario2020 getModule(String contactModel) {
+		if (contactModel == null)
+			return new SnzBerlinWeekScenario2020();
+
+		boolean withModifiedCi = !contactModel.equals(OLD);
+		return new SnzBerlinWeekScenario2020(25, false, withModifiedCi, ContactModels.MODELS.get(contactModel));
+	}
+
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 		if (params == null)
 			return new SnzBerlinWeekScenario2020();
 
-		boolean withModifiedCi = !params.contactModel.equals(OLD);
-		return new SnzBerlinWeekScenario2020(25, false, withModifiedCi, ContactModels.MODELS.get(params.contactModel));
+		return getModule(params.contactModel);
 	}
 
 	@Override
@@ -50,7 +57,7 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020();
+		SnzBerlinWeekScenario2020 module = getModule(params.contactModel);
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -65,14 +72,7 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 		if (params.unrestricted.equals("yes")) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
 		} else {
-
-			SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
-			basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
-
-			// TODO: ci corrections
-
-			episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
-
+			// set in base class
 		}
 
 		config.global().setRandomSeed(params.seed);
@@ -82,10 +82,10 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(50)
 		public long seed;
 
-		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, PAIRWISE})
+		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20})
 		public String contactModel;
 
 		@StringParameter({"yes", "no"})

@@ -26,6 +26,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.utils.io.UncheckedIOException;
+import org.matsim.episim.analysis.CreateContactGraph;
 import org.matsim.episim.analysis.ExtractInfectionsByAge;
 import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.events.EpisimEventsReader;
@@ -51,7 +52,7 @@ import java.util.stream.Collectors;
 		mixinStandardHelpOptions = true,
 		usageHelpWidth = 120,
 		subcommands = {CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
-				RValuesFromEvents.class, ExtractInfectionsByAge.class},
+				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class},
 		subcommandsRepeatable = true
 )
 public class AnalysisCommand implements Runnable {

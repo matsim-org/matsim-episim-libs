@@ -140,8 +140,6 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 
-		basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.6));
-
 		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
 		//values are calculated here: https://docs.google.com/spreadsheets/d/1aJ2XonFpfjKCpd0ZeXmzKe5fmDe0HHBGtXfJ-NDBolo/edit#gid=0
 
@@ -173,6 +171,19 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		} else  {
 
 			episimConfig.setCalibrationParameter(CALIB.get(contactModel));
+
+			if (contactModel == OldSymmetricContactModel.class) {
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", 0.52));
+			} else if (contactModel == SymmetricContactModel.class) {
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.80));
+			} else if (contactModel == DefaultContactModel.class) {
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-05", 0.53));
+			}
+
+
+			// this was the old value
+			//basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.6));
+
 		}
 
 		if (withModifiedCi) {
