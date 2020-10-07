@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.*;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
@@ -33,31 +34,31 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	public static final Config DEFAULT_CONFIG = Transition.config()
 			// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
-			.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-					to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
+			.from(DiseaseStatus.infectedButNotContagious,
+					to(DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
 
 // Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
 // Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
-			.from(EpisimPerson.DiseaseStatus.contagious,
-					to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
+			.from(DiseaseStatus.contagious,
+					to(DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
+					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
 
 // Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
-			.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-					to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
+			.from(DiseaseStatus.showingSymptoms,
+					to(DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
+					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
 
 // Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
-			.from(EpisimPerson.DiseaseStatus.seriouslySick,
-					to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
+			.from(DiseaseStatus.seriouslySick,
+					to(DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
+					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
 
 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
-			.from(EpisimPerson.DiseaseStatus.critical,
-					to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
+			.from(DiseaseStatus.critical,
+					to(DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
 
-			.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
-					to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+			.from(DiseaseStatus.seriouslySickAfterCritical,
+					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 
 			.build();
 
@@ -68,7 +69,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	/**
 	 * Definition of state transitions from x -> y
-	 * Indices are the ordinal values of {@link EpisimPerson.DiseaseStatus} (as 2d matrix form)
+	 * Indices are the ordinal values of {@link DiseaseStatus} (as 2d matrix form)
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
@@ -137,17 +138,17 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		// account for the delay in showing symptoms and tracing
 		int tracingDelay = tracingConfig.getTracingDelay();
 
+
 		// A healthy quarantined person is dismissed from quarantine after some time
-		if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
-				person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.daysSinceQuarantine(day) > 14) {
+		if (releasePerson(person) && person.daysSinceQuarantine(day) > tracingConfig.getQuarantineDuration()) {
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 		}
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 
 		// Delay 0 is already handled
-		if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
-				person.daysSince(EpisimPerson.DiseaseStatus.showingSymptoms, day) == tracingDelay) {
+		if (person.hadDiseaseStatus(DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
+				person.daysSince(DiseaseStatus.showingSymptoms, day) == tracingDelay) {
 
 			performTracing(person, now - tracingDelay * DAY, day);
 		}
@@ -156,10 +157,32 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		person.clearTraceableContractPersons(now - (tracingConfig.getTracingDelay() + tracingConfig.getTracingDayDistance() + 1) * DAY);
 	}
 
-	@Override
-	protected final void onTransition(EpisimPerson person, double now, int day, EpisimPerson.DiseaseStatus from, EpisimPerson.DiseaseStatus to) {
+	/**
+	 * Checks whether person can be released from quarantine.
+	 */
+	private boolean releasePerson(EpisimPerson person) {
 
-		if (to == EpisimPerson.DiseaseStatus.showingSymptoms) {
+		// person not in quarantine can not be released
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no)
+			return false;
+
+		TracingConfigGroup.QuarantineRelease release = tracingConfig.getQuarantineRelease();
+		DiseaseStatus status = person.getDiseaseStatus();
+
+		if (release == TracingConfigGroup.QuarantineRelease.SUSCEPTIBLE && status == DiseaseStatus.susceptible)
+			return true;
+
+		if (release == TracingConfigGroup.QuarantineRelease.NON_SYMPTOMS &&
+				(status == DiseaseStatus.susceptible || status == DiseaseStatus.contagious || status == DiseaseStatus.infectedButNotContagious))
+			return true;
+
+		return false;
+	}
+
+	@Override
+	protected final void onTransition(EpisimPerson person, double now, int day, DiseaseStatus from, DiseaseStatus to) {
+
+		if (to == DiseaseStatus.showingSymptoms) {
 
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
 			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
@@ -233,7 +256,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 				// Assume that each contact got tested
 				// if the test is positive contacts will be quarantined as well and also tested at the next day
-				if (person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.infectedButNotContagious)) {
+				if (person.hadDiseaseStatus(DiseaseStatus.infectedButNotContagious)) {
 					performTracing(person, now, day);
 				}
 			}
@@ -259,36 +282,36 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	}
 
 	@Override
-	protected final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person) {
+	protected final DiseaseStatus decideNextState(EpisimPerson person) {
 
 		switch (person.getDiseaseStatus()) {
 			case infectedButNotContagious:
-				return EpisimPerson.DiseaseStatus.contagious;
+				return DiseaseStatus.contagious;
 
 			case contagious:
 				if (rnd.nextDouble() < 0.8)
-					return EpisimPerson.DiseaseStatus.showingSymptoms;
+					return DiseaseStatus.showingSymptoms;
 				else
-					return EpisimPerson.DiseaseStatus.recovered;
+					return DiseaseStatus.recovered;
 
 			case showingSymptoms:
 				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person))
-					return EpisimPerson.DiseaseStatus.seriouslySick;
+					return DiseaseStatus.seriouslySick;
 				else
-					return EpisimPerson.DiseaseStatus.recovered;
+					return DiseaseStatus.recovered;
 
 			case seriouslySick:
-				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)
+				if (!person.hadDiseaseStatus(DiseaseStatus.critical)
 						&& rnd.nextDouble() < getProbaOfTransitioningToCritical(person))
-					return EpisimPerson.DiseaseStatus.critical;
+					return DiseaseStatus.critical;
 				else
-					return EpisimPerson.DiseaseStatus.recovered;
+					return DiseaseStatus.recovered;
 
 			case critical:
-				return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
+				return DiseaseStatus.seriouslySickAfterCritical;
 
 			case seriouslySickAfterCritical:
-				return EpisimPerson.DiseaseStatus.recovered;
+				return DiseaseStatus.recovered;
 
 
 			default:
@@ -297,8 +320,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	}
 
 	@Override
-	protected final int decideTransitionDay(EpisimPerson person, EpisimPerson.DiseaseStatus from, EpisimPerson.DiseaseStatus to) {
-		Transition t = tMatrix[from.ordinal() * EpisimPerson.DiseaseStatus.values().length + to.ordinal()];
+	protected final int decideTransitionDay(EpisimPerson person, DiseaseStatus from, DiseaseStatus to) {
+		Transition t = tMatrix[from.ordinal() * DiseaseStatus.values().length + to.ordinal()];
 		if (t == null) throw new IllegalStateException(String.format("No transition from %s to %s defined", from, to));
 
 		return t.getTransitionDay(rnd);
@@ -369,7 +392,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
+		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)

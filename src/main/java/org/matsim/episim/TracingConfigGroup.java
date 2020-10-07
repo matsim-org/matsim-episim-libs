@@ -21,8 +21,10 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
+	private static final String QUARANTINE_DURATION = "quarantineDuration";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
+	private static final String QUARANTINE_RELEASE = "quarantineRelease";
 	private static final String TRACE_SUSCEPTIBLE = "traceSusceptible";
 	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String CAPACITY = "tracingCapacity";
@@ -51,6 +53,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of days after the person showing symptoms.
 	 */
 	private int tracingDelay = 0;
+
+	/**
+	 * Duration of quarantine in days.
+	 */
+	private int quarantineDuration = 14;
 	/**
 	 * Probability that a person is equipped with a tracing device.
 	 */
@@ -80,6 +87,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Tracing and containment strategy.
 	 */
 	private Strategy strategy = Strategy.INDIVIDUAL_ONLY;
+
+	/**
+	 * Quarantine release strategy.
+	 */
+	private QuarantineRelease quarantineRelease = QuarantineRelease.SUSCEPTIBLE;
 
 	/**
 	 * How many infections are required for location based tracing to trigger.
@@ -201,6 +213,26 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.equipmentRate = equipmentRate;
 	}
 
+	@StringSetter(QUARANTINE_DURATION)
+	public void setQuarantineDuration(int quarantineDuration) {
+		this.quarantineDuration = quarantineDuration;
+	}
+
+	@StringGetter(QUARANTINE_DURATION)
+	public int getQuarantineDuration() {
+		return quarantineDuration;
+	}
+
+	@StringGetter(QUARANTINE_RELEASE)
+	public QuarantineRelease getQuarantineRelease() {
+		return quarantineRelease;
+	}
+
+	@StringSetter(QUARANTINE_RELEASE)
+	public void setQuarantineRelease(QuarantineRelease quarantineRelease) {
+		this.quarantineRelease = quarantineRelease;
+	}
+
 	@StringGetter(MIN_DURATION)
 	public double getMinDuration() {
 		return minDuration;
@@ -289,6 +321,24 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		 * Randomly put persons into quarantine based on infection numbers.
 		 */
 		RANDOM
+	}
+
+
+	/**
+	 * Defines, which person are released from quarantine.
+	 */
+	public enum QuarantineRelease {
+
+		/**
+		 * Release persons only if they are still susceptible.
+		 */
+		SUSCEPTIBLE,
+
+		/**
+		 * Release persons without showing symptoms.
+		 */
+		NON_SYMPTOMS
+
 	}
 
 }
