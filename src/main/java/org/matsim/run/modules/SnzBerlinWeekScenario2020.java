@@ -144,7 +144,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		//values are calculated here: https://docs.google.com/spreadsheets/d/1aJ2XonFpfjKCpd0ZeXmzKe5fmDe0HHBGtXfJ-NDBolo/edit#gid=0
 
 		if (withDiseaseImport) {
-			basePolicyBuilder.setCiCorrections(null);
+			basePolicyBuilder.setCiCorrections(Map.of());
 			episimConfig.setInitialInfectionDistrict(null);
 			episimConfig.setInitialInfections(Integer.MAX_VALUE);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
