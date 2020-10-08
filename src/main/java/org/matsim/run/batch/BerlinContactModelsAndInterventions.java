@@ -45,9 +45,10 @@ public class BerlinContactModelsAndInterventions implements BatchRun<BerlinConta
 	public Config prepareConfig(int id, Params params) {
 
 		int nSpaces = 1;
-		boolean withModifiedCi = true;
 		
 		if (params.contactModel.equals(SYMMETRIC_NEW_NSPACES_20)) nSpaces = 20; 
+		
+		boolean withModifiedCi = !params.contactModel.equals(OLD);
 
 		SnzBerlinWeekScenario2020 module = new SnzBerlinWeekScenario2020(25, false, withModifiedCi, MODELS.get(params.contactModel));
 		Config config = module.config();
@@ -126,7 +127,8 @@ public class BerlinContactModelsAndInterventions implements BatchRun<BerlinConta
 //		@StringParameter({"calibr"})
 		public String restriction;
 
-		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, PAIRWISE})
+		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20})
+//		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, PAIRWISE})
 		public String contactModel;
 
 	}
