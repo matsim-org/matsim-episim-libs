@@ -44,9 +44,6 @@ public class CreateContactGraph implements Callable<Integer>, BasicEventHandler 
 	@CommandLine.Option(names = "--output", defaultValue = "output-graph")
 	private Path outputFolder;
 
-	@CommandLine.Option(names = "--sample", defaultValue = "0.2", description = "Sample nodes (and their edges)")
-	private double sample;
-
 	private DefaultUndirectedWeightedGraph<Id<Person>, DefaultEdge> graph;
 
 	public static void main(String[] args) {
@@ -68,25 +65,6 @@ public class CreateContactGraph implements Callable<Integer>, BasicEventHandler 
 
 		Files.createDirectories(outputFolder);
 
-		if (sample < 1) {
-			SplittableRandom rnd = new SplittableRandom(0);
-			List<Id<Person>> nodes = new ArrayList<>(graph.vertexSet());
-
-			for (Id<Person> node : nodes) {
-				if (rnd.nextDouble() > sample) {
-					graph.removeVertex(node);
-				}
-			}
-
-			// remove now empty nodes
-			for (Id<Person> node : nodes) {
-				if (graph.containsVertex(node) && graph.degreeOf(node) == 0)
-					graph.removeVertex(node);
-			}
-		}
-
-		log.info("Sampling with {} done", sample);
-
 		Map<String, GraphExporter<Id<Person>, DefaultEdge>> exporter = Map.of(
 				//	"s6", new Graph6Sparse6Exporter<>(Graph6Sparse6Exporter.Format.SPARSE6),
 				"graphml", new GraphMLExporter<>(),
@@ -97,7 +75,9 @@ public class CreateContactGraph implements Callable<Integer>, BasicEventHandler 
 		for (Map.Entry<String, GraphExporter<Id<Person>, DefaultEdge>> e : exporter.entrySet()) {
 
 			try {
-				String filename = outputFolder.resolve("graph-" + sample + "." + e.getKey() + ".gz").toString();
+				String baseName = input.getFileName().toString().replace(".xml", "").replace(".gz", "");
+
+				String filename = outputFolder.resolve("graph-" + baseName + "." + e.getKey() + ".gz").toString();
 				BufferedWriter writer = IOUtils.getBufferedWriter(filename);
 				e.getValue().exportGraph(graph, writer);
 				writer.close();

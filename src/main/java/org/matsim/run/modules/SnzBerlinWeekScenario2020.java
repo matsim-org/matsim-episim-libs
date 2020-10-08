@@ -37,6 +37,7 @@ import org.matsim.run.modules.SnzBerlinScenario25pct2020.BasePolicyBuilder;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
@@ -96,6 +97,14 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		return importMap;
 	}
 
+	/**
+	 * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
+	 */
+	private static String inputForSample(String base, int sample) {
+		Path folder = (sample == 100 | sample == 25) ? SnzBerlinScenario25pct2020.INPUT : SnzBerlinScenario25pct2020.INPUT.resolve("samples");
+		return folder.resolve(String.format(base, sample)).toString();
+	}
+
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(contactModel).in(Singleton.class);
@@ -117,24 +126,17 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 		episimConfig.clearInputEventsFiles();
 
-		config.plans().setInputFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
-				"be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample)).toString());
+		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
-				"be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample)).toString())
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(String.format(
-				"be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample)).toString())
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve(
-				String.format("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample)).toString())
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
 
-		if (sample == 100) {
-			throw new RuntimeException("100pct scenario not configured");
-		}
 
 		episimConfig.setStartDate("2020-02-18");
 
@@ -168,14 +170,17 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			episimConfig.setInfections_pers_per_day(importMap);
 
 			episimConfig.setCalibrationParameter(6.e-6);
-		} else  {
+
+			// new param 9.50e-06?
+
+		} else {
 
 			episimConfig.setCalibrationParameter(CALIB.get(contactModel));
 
 			if (contactModel == OldSymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", 0.52));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", 0.48));
 			} else if (contactModel == SymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.80));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-09", 0.74));
 			} else if (contactModel == DefaultContactModel.class) {
 				basePolicyBuilder.setCiCorrections(Map.of("2020-03-05", 0.53));
 			}
