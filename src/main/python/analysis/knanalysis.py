@@ -200,16 +200,28 @@ ss.index = pd.to_datetime(ss['Datum'])
 # base = 'output/2020-09-23_21-34-24__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
 # base = 'output/2020-09-23_23-02-01__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst3_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
 
-base = 'output/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = 'output/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+
+# base = 'output/2020-10-04_16-24-49__symmetric__fromConfig__theta2.1E-5@NaN_seed0_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
+
+# base = 'output/2020-10-08_08-38-05__symmetric__unrestr__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
+
+# base = 'output/2020-10-08_08-45-58__oldSymmetric__unrestr__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
+# base = 'output/2020-10-08_12-00-57__oldSymmetric__unrestr__theta5.0E-5@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
+base = 'output/2020-10-08_12-02-34__oldSymmetric__unrestr__theta5.0E-4@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
+# base = 'output/2020-10-08_13-00-01__oldSymmetric__unrestr__theta0.005@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
 
 #
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
 
-infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
-nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
-nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
+# infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
+# nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
+# nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
+infectedCumulative = rr.loc[rr['district'] == 'unknown', ['nInfectedCumulative']]
+nContagious = rr.loc[rr['district'] == 'unknown', ['nContagiousCumulative']]
+nShowingSymptoms = rr.loc[rr['district'] == 'unknown', ['nShowingSymptomsCumulative']]
 
 # rr2b = pd.concat([hh['Gemeldete Fälle'], infectedCumulative.rolling('3D').mean()], axis=1).fillna(value=0.)
 
@@ -222,7 +234,7 @@ fit2.index = pd.date_range(start="2020-03-01", periods=30)
 fit3 = pd.Series(400 * np.exp(np.arange(0, 80, 1) * np.log(2.) / (-17)))
 fit3.index = pd.date_range(start="2020-03-01", periods=80)
 
-rr3 = pd.concat([cc['cases'].rolling('7D').mean(), infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff().rolling('7D').mean(),ss['Anteil Positiv Berlin Meldewoche']*25], axis=1)
+rr3 = pd.concat([cc['cases'].rolling('1D').mean(), infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff().rolling('7D').mean(),ss['Anteil Positiv Berlin Meldewoche']*25], axis=1)
 # rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
 # rr3 = pd.concat([cc['cases']])
 
@@ -243,9 +255,9 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','purple','purple','orange']) 
                   cycler(linestyle=['', '', '', '','','-','-']) +
                   cycler(marker=['o','','','.','o','','']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=False,grid=True)
-axes.set_ylim(0.9,300)
-axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2021-02-01'))
+axes = rr3.plot(logy=True,grid=True)
+axes.set_ylim(0.9,300000)
+axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2021-02-01'))
 pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
 pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
@@ -292,7 +304,7 @@ default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(marker=['.','.','.','.',",",'']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-axes.set_xlim(pd.to_datetime('2020-02-15'),pd.to_datetime('2020-05-15'))
+axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-05-15'))
 axes.set_ylim(4.1,1000)
 pyplot.show()
 

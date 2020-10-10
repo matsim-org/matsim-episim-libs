@@ -20,10 +20,8 @@
 
 package org.matsim.episim.analysis;
 
-import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
@@ -37,10 +35,7 @@ import tech.tablesaw.plotly.components.Layout;
 import tech.tablesaw.plotly.traces.ScatterTrace;
 import tech.tablesaw.plotly.traces.Trace;
 
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -81,8 +76,14 @@ public class KNRValuesFromEvents{
 
 	// 4719
 
-	private static final String base = "2020-06-28_17-01-46__unrestr__theta1.1E-5@3__trStrt46__ciEdu1.0_seed4719_strtDt2020-02-16_trCap{1970-01-01=0}/";
-	private static final String policy = "2020-06-28_17-02-03__unrestr__theta1.1E-5@3__trStrt46__ciEdu0.0_seed4719_strtDt2020-02-16_trCap{1970-01-01=0}/";
+//	private static final String base = "2020-06-28_17-01-46__unrestr__theta1.1E-5@3__trStrt46__ciEdu1.0_seed4719_strtDt2020-02-16_trCap{1970-01-01=0}/";
+//	private static final String policy = "2020-06-28_17-02-03__unrestr__theta1.1E-5@3__trStrt46__ciEdu0.0_seed4719_strtDt2020-02-16_trCap{1970-01-01=0}/";
+
+	private static final String [] dirs = {
+			"2020-10-04_16-24-49__symmetric__fromConfig__theta2.1E-5@NaN_seed0_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/"
+			,
+			"zz_archive-2020-10-04/2020-09-20_19-20-16__symmetric__fromConfig__theta1.8E-6@NaN_seed4711_strtDt2020-02-13_trCap{2020-04-01=30}__trStrt46/"
+	};
 
 	private static final LocalDate startDate = LocalDate.parse("2020-02-16");
 
@@ -90,21 +91,17 @@ public class KNRValuesFromEvents{
 
 	public static void main(String[] args){
 
-		HashSet<String> scenarios = new LinkedHashSet<>();
-		scenarios.add(base);
-		scenarios.add(policy);
-
 		EventsManager manager = EventsUtils.createEventsManager();
-		manager.addHandler( new RHandler() );
+		manager.addHandler( new Handler() );
 
-		log.info("Reading " + scenarios.size() + " files");
-		log.info(scenarios);
+		log.info("Reading " + dirs.length + " files");
+		log.info(dirs);
 
 		List<Trace> traces = new ArrayList<>(  );
 		List<DoubleColumn> rColumns = new ArrayList<>(  );
 		List<DateColumn> dateColumns = new ArrayList<>();
 
-		for (String scenario : scenarios) {
+		for (String scenario : dirs) {
 			log.info("starting to process directory " + scenario);
 			infectedPersons.clear();
 			final File eventsDir = new File( WORKINGDIR + scenario + "/events" );
@@ -123,18 +120,20 @@ public class KNRValuesFromEvents{
 			DateColumn dateColumn = DateColumn.create( "date" );
 			DoubleColumn rColumn = DoubleColumn.create( "r" );
 
-			for(int i = 0; i <= eventFiles.length; i++) {
+			for(int ii = 0; ii <= eventFiles.length; ii++) {
+				// (I think that this is a cheap trick to get the dates.  kai, oct'20)
+
 				int noOfInfectors = 0;
 				int noOfInfected = 0;
 				for (InfectedPerson ip : infectedPersons.values()) {
-					if (ip.getContagiousDay() == i) {
+					if (ip.getContagiousDay() == ii) {
 						noOfInfectors++;
 						noOfInfected = noOfInfected + ip.getNoOfInfected();
 					}
 				}
 				if (noOfInfectors != 0) {
 					double r = (double) noOfInfected / noOfInfectors;
-					final LocalDate date = startDate.plusDays( i );
+					final LocalDate date = startDate.plusDays( ii );
 					dateColumn.append( date );
 					rColumn.append( r );
 					log.info( "date=" + date + "; r=" + r );
@@ -155,21 +154,21 @@ public class KNRValuesFromEvents{
 
 			figure.setLayout( Layout.builder()
 						.xAxis( Axis.builder().type( Axis.Type.DATE ).build() )
-						.yAxis( Axis.builder().type( Axis.Type.LOG ).range( Math.log10(2.),Math.log10( 4. ) ).build() ).width( 1000 ).build() );
+						.yAxis( Axis.builder().type( Axis.Type.LOG ).range( Math.log10(0.5),Math.log10( 4. ) ).build() ).width( 1000 ).build() );
 
 			Plot.show( figure, "dada", new File( "output1.html" ) );
 		}
-		{
-			ScatterTrace trace = ScatterTrace.builder( dateColumns.get(0), rColumns.get(1).divide( rColumns.get(0) ).rolling( 7 ).mean() ).build();
-
-			Figure figure = Figure.builder().addTraces( trace ).build();
-
-			figure.setLayout( Layout.builder()
-						.xAxis( Axis.builder().type( Axis.Type.DATE ).build() )
-						.yAxis( Axis.builder().type( Axis.Type.LINEAR ).range( 0.6,1.2 ).build() ).width( 1000 ).build() );
-
-			Plot.show( figure, "dada", new File( "output2.html" ) );
-		}
+//		if ( rColumns.size() >= 2 ) {
+//			ScatterTrace trace = ScatterTrace.builder( dateColumns.get(0), rColumns.get(1).divide( rColumns.get(0) ).rolling( 7 ).mean() ).build();
+//
+//			Figure figure = Figure.builder().addTraces( trace ).build();
+//
+//			figure.setLayout( Layout.builder()
+//						.xAxis( Axis.builder().type( Axis.Type.DATE ).build() )
+//						.yAxis( Axis.builder().type( Axis.Type.LINEAR ).range( 0.6,1.2 ).build() ).width( 1000 ).build() );
+//
+//			Plot.show( figure, "dada", new File( "output2.html" ) );
+//		}
 
 
 	}
@@ -208,7 +207,7 @@ public class KNRValuesFromEvents{
 
 	}
 
-	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
+	private static class Handler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectorId = event.getInfectorId().toString();

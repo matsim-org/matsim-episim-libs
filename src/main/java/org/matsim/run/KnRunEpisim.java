@@ -36,16 +36,30 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
+<<<<<<< HEAD
 import org.matsim.core.scenario.ScenarioUtils;
+||||||| constructed merge base
+import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.io.IOUtils;
+=======
+import org.matsim.core.utils.io.IOUtils;
+>>>>>>> changes in kn scripts
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
-import org.matsim.run.batch.BerlinDiseaseImport;
+import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
+<<<<<<< HEAD
+||||||| constructed merge base
+import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
+import org.matsim.vehicles.VehicleType;
+=======
+import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
+>>>>>>> changes in kn scripts
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -72,24 +86,25 @@ public class KnRunEpisim {
 	private static final boolean verbose = false;
 	private static final boolean logToOutput = true;
 
-	private static final double sigmaInfect = 0.;
-	// 2 leads to dynamics so unstable that it does not look plausible w.r.t. reality.  kai, jun'20
+	// ===
 
-	private static final double sigmaSusc = 0.;
-
-	private static final int IMPORT_OFFSET = -0;
+	private enum ScenarioType{ openBln1pct, snzBerlinWeek2020Symmetric}
+	private static final ScenarioType scenarioType = ScenarioType.openBln1pct;
 
 	private enum ContactModelType{ original, oldSymmetric, symmetric, sqrt, direct }
 	private static final ContactModelType contactModelType = ContactModelType.oldSymmetric;
 
-	private static class MyParams extends BerlinDiseaseImport.Params{
-		MyParams(){
-			this.ageBoundaries = "random";
-			this.tracingCapacity = Integer.MAX_VALUE;
-			this.importOffset = IMPORT_OFFSET;
-		}
-	}
+	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
+	private static final RestrictionsType restrictionsType = RestrictionsType.unrestr;
 
+	private static final double SIGMA_INFECT = 0.;
+	// 2 leads to dynamics so unstable that it does not look plausible w.r.t. reality.  kai, jun'20
+
+	private static final double SIGMA_SUSC = 0.;
+
+	private static final int DISEASE_IMPORT_OFFSET = -0;
+
+	// ===
 
 	public static void main(String[] args) throws IOException{
 
@@ -127,9 +142,17 @@ public class KnRunEpisim {
 					default:
 						throw new IllegalStateException( "Unexpected value: " + contactModelType );
 				}
-				bind( InfectionModel.class).to( AgeDependentInfectionModelWithSeasonality.class ).in( Singleton.class );
-				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
-				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
+				if ( scenarioType == ScenarioType.openBln1pct ) {
+					bind( InfectionModel.class ).to( DefaultInfectionModel.class ).in( Singleton.class );
+					bind( ProgressionModel.class ).to( ConfigurableProgressionModel.class ).in( Singleton.class );
+					bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
+					bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
+				} else {
+					bind( InfectionModel.class ).to( AgeDependentInfectionModelWithSeasonality.class ).in( Singleton.class );
+					bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
+					bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
+					bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
+				}
 
 				// Internal classes, should rarely be needed to be reconfigured
 				bind(EpisimRunner.class).in( Singleton.class );
@@ -140,12 +163,28 @@ public class KnRunEpisim {
 			}
 			@Provides @Singleton public Scenario scenario( Config config ) {
 
+<<<<<<< HEAD
 				Scenario scenario = new SnzBerlinWeekScenario2020().scenario( config );
+||||||| constructed merge base
+				Scenario scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config );
+=======
+				Scenario scenario ;
+				switch( scenarioType ) {
+					case openBln1pct:
+						scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config ); // try using this one
+						break;
+					case snzBerlinWeek2020Symmetric:
+						scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config );
+						break;
+					default:
+						throw new IllegalStateException( "Unexpected value: " + scenarioType );
+				}
+>>>>>>> changes in kn scripts
 
 				SplittableRandom rnd = new SplittableRandom( 4715 );
 				for( Person person : scenario.getPopulation().getPersons().values() ){
-					person.getAttributes().putAttribute( VIRAL_LOAD, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaInfect ) );
-					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
+					person.getAttributes().putAttribute( VIRAL_LOAD, nextLogNormalFromMeanAndSigma( rnd, 1, SIGMA_INFECT ) );
+					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, SIGMA_SUSC ) );
 				}
 
 				return scenario;
@@ -177,36 +216,96 @@ public class KnRunEpisim {
 
 				// NOTE: The dynamics is set by the guice bindings above; this here just configures parameters that have something to do with those different dynamics.
 				if( contactModelType == ContactModelType.original ){
-					config = new SnzBerlinWeekScenario2020().config();
-					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-					episimConfig.setCalibrationParameter( 1.e-5 );
-					episimConfig.setStartDate( "2020-02-17" );
-					episimConfig.setMaxContacts( 3. );
+					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setCalibrationParameter( 1.e-5 );
+						episimConfig.setStartDate( "2020-02-17" );
+						episimConfig.setMaxContacts( 3. );
+					} else if ( scenarioType == ScenarioType.openBln1pct ) {
+						config = new OpenBerlinScenario().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setCalibrationParameter( 1.e-5 );
+						episimConfig.setStartDate( "2020-02-17" );
+						episimConfig.setMaxContacts( 3. );
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
 				} else if( contactModelType == ContactModelType.oldSymmetric ){
-//					config = new SnzBerlinWeekScenario2020Symmetric().config();
-//					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-//					episimConfig.setStartDate( "2020-02-22" );
-//					episimConfig.setCalibrationParameter( 9.e-6 );
-//					episimConfig.setInfections_pers_per_day( BerlinDiseaseImport.createDiseaseImportMap( episimConfig.getStartDate(), importOffset ) );
-//					// disease import start going up on feb/24 minus importOffset
-
-					config = new BerlinDiseaseImport().prepareConfig( 0, new MyParams() );
-					config.global().setRandomSeed( 4711 );
-					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-					episimConfig.setStartDate( "2020-02-18" );
-					episimConfig.setCalibrationParameter( 5.e-6 );
+					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020Symmetric().config();
+						config.global().setRandomSeed( 4711 );
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 5.e-6 );
+					} else if ( scenarioType == ScenarioType.openBln1pct ) {
+						config = new OpenBerlinScenario().config();
+						config.global().setRandomSeed( 4711 );
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 5.e-4 );
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
 				} else if( contactModelType == ContactModelType.symmetric ){
+<<<<<<< HEAD
 					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 					episimConfig.setStartDate( "2020-02-18" );
 					episimConfig.setCalibrationParameter( 2.1e-5 );
 					episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
+||||||| constructed merge base
+					config = new SnzBerlinWeekScenario2020Symmetric().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-18" );
+					episimConfig.setCalibrationParameter( 2.1e-5 );
+					episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
+=======
+					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020Symmetric().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 2.1e-5 );
+						episimConfig.setMaxContacts( Double.NaN );
+
+						// to save computing time:
+						TracingConfigGroup tracingConfig = tracingConfig( config );
+						tracingConfig.setTracingCapacity_pers_per_day( 0 );
+						tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( Integer.MAX_VALUE );
+					} else if ( scenarioType == ScenarioType.openBln1pct ) {
+						config = new OpenBerlinScenario().config();
+						config.global().setRandomSeed( 4711 );
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 5.e-6 );
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
+>>>>>>> changes in kn scripts
 				} else if( contactModelType == ContactModelType.sqrt ){
+<<<<<<< HEAD
 					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 					episimConfig.setStartDate( "2020-02-13" );
 					episimConfig.setCalibrationParameter( 1.e-5 );
 					episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
+||||||| constructed merge base
+					config = new SnzBerlinWeekScenario2020Symmetric().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-13" );
+					episimConfig.setCalibrationParameter( 1.e-5 );
+					episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
+=======
+					if ( scenarioType== ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020Symmetric().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-13" );
+						episimConfig.setCalibrationParameter( 1.e-5 );
+						episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
+>>>>>>> changes in kn scripts
 				} else if( contactModelType == ContactModelType.direct ){
 					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
@@ -233,15 +332,13 @@ public class KnRunEpisim {
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.fromConfig;
-
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
 				strb.append( "__" ).append( contactModelType.name() );
 				strb.append( "__" ).append( restrictionsType.name() );
 				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxContacts() );
-				if ( sigmaInfect!=0. ) strb.append( "__sInfct" ).append( sigmaInfect );
-				if ( sigmaSusc!=0. ) strb.append( "__sSusc" ).append( sigmaSusc );
+				if ( SIGMA_INFECT !=0. ) strb.append( "__sInfct" ).append( SIGMA_INFECT );
+				if ( SIGMA_SUSC !=0. ) strb.append( "__sSusc" ).append( SIGMA_SUSC );
 
 				if ( restrictionsType==RestrictionsType.fromConfig ) {
 					// do nothing
@@ -264,7 +361,7 @@ public class KnRunEpisim {
 
 				strb.append( "_seed" ).append( config.global().getRandomSeed() );
 				strb.append( "_strtDt" ).append( episimConfig.getStartDate() );
-				strb.append( "_imprtOffst" ).append( IMPORT_OFFSET );
+				strb.append( "_imprtOffst" ).append( DISEASE_IMPORT_OFFSET );
 				if ( !tracingConfig.getTracingCapacity().isEmpty() ) {
 					strb.append( "_trCap" ).append( tracingConfig.getTracingCapacity() );
 					strb.append( "_quStrt" ).append( episimConfig.getStartDate().plusDays( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() ) );
@@ -299,7 +396,7 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run( 400 );
+		injector.getInstance(EpisimRunner.class).run( 90 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
@@ -353,8 +450,6 @@ public class KnRunEpisim {
 		System.exit( -1 );
 	}
 
-
-	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
 
 	/*
 	private static class MyInfectionModel implements InfectionModel {

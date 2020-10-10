@@ -28,17 +28,18 @@ class KNTestLognormal{
 		double mu = Math.log( median );
 		double sigma = 3.;
 //		Transition abc = Transition.logNormalWithMedianAndSigma( Math.exp(mu), sigma );
-		Transition abc = Transition.logNormalWithMedianAndStd( 3., 6. );
+		Transition abc = Transition.logNormalWithMedianAndStd( 3.5, 4. );
 //		Transition abc = Transition.logNormalWithMean( 10., 8. );
-//		Transition def = Transition.logNormalWithMedianAndStd( 2, 2 );
+		Transition def = Transition.logNormalWithMedianAndStd( 2, 2 );
 		SplittableRandom rnd = new SplittableRandom();
 
 		NavigableMap<Integer,Double> map = new TreeMap<>();
 
 		final int nCases = 10000;
 		for ( int ii = 0 ; ii< nCases ; ii++ ){
-//			int result = abc.getTransitionDay( rnd ) + def.getTransitionDay( rnd );
-			int result = abc.getTransitionDay( rnd ) ;
+//			int result = abc.getTransitionDay( rnd ) + Math.min( 4, def.getTransitionDay( rnd ) );
+			int result = abc.getTransitionDay( rnd ) + def.getTransitionDay( rnd ) ;
+//			int result = abc.getTransitionDay( rnd ) ;
 			Double prev = map.get( result );
 			if ( prev==null ) {
 				map.put( result, 1.);
@@ -98,7 +99,7 @@ class KNTestLognormal{
 		Figure fig = new Figure(trace,dataTrace);
 
 		Axis yAxis = Axis.builder().type( Axis.Type.LINEAR).build();
-		Layout layout = Layout.builder().width( 800 ).height(500 ).yAxis( yAxis ).build();
+		Layout layout = Layout.builder().width( 800 ).height(500 ).yAxis( yAxis ).title( "w/o max4" ).build();
 		fig.setLayout( layout );
 
 		Plot.show(fig,"divname" , new File("output1.html") );
