@@ -36,14 +36,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
-<<<<<<< HEAD
-import org.matsim.core.scenario.ScenarioUtils;
-||||||| constructed merge base
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.io.IOUtils;
-=======
-import org.matsim.core.utils.io.IOUtils;
->>>>>>> changes in kn scripts
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
@@ -53,13 +46,6 @@ import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
-<<<<<<< HEAD
-||||||| constructed merge base
-import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
-import org.matsim.vehicles.VehicleType;
-=======
-import org.matsim.run.modules.SnzBerlinWeekScenario2020Symmetric;
->>>>>>> changes in kn scripts
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -73,9 +59,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 
-import static java.lang.Math.max;
-import static org.matsim.episim.EpisimConfigGroup.*;
-import static org.matsim.episim.EpisimUtils.*;
+import static org.matsim.episim.EpisimConfigGroup.WriteEvents;
+import static org.matsim.episim.EpisimUtils.nextLogNormalFromMeanAndSigma;
 
 public class KnRunEpisim {
 	public static final String SUSCEPTIBILITY = "susceptibility";
@@ -163,23 +148,17 @@ public class KnRunEpisim {
 			}
 			@Provides @Singleton public Scenario scenario( Config config ) {
 
-<<<<<<< HEAD
-				Scenario scenario = new SnzBerlinWeekScenario2020().scenario( config );
-||||||| constructed merge base
-				Scenario scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config );
-=======
 				Scenario scenario ;
 				switch( scenarioType ) {
 					case openBln1pct:
-						scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config ); // try using this one
+						scenario = new SnzBerlinWeekScenario2020().scenario( config ); // try using this one
 						break;
 					case snzBerlinWeek2020Symmetric:
-						scenario = new SnzBerlinWeekScenario2020Symmetric().scenario( config );
+						scenario = new SnzBerlinWeekScenario2020().scenario( config );
 						break;
 					default:
 						throw new IllegalStateException( "Unexpected value: " + scenarioType );
 				}
->>>>>>> changes in kn scripts
 
 				SplittableRandom rnd = new SplittableRandom( 4715 );
 				for( Person person : scenario.getPopulation().getPersons().values() ){
@@ -233,7 +212,7 @@ public class KnRunEpisim {
 					}
 				} else if( contactModelType == ContactModelType.oldSymmetric ){
 					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
-						config = new SnzBerlinWeekScenario2020Symmetric().config();
+						config = new SnzBerlinWeekScenario2020().config();
 						config.global().setRandomSeed( 4711 );
 						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 						episimConfig.setStartDate( "2020-02-18" );
@@ -248,21 +227,8 @@ public class KnRunEpisim {
 						throw new RuntimeException( "not implemented" );
 					}
 				} else if( contactModelType == ContactModelType.symmetric ){
-<<<<<<< HEAD
-					config = new SnzBerlinWeekScenario2020().config();
-					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-					episimConfig.setStartDate( "2020-02-18" );
-					episimConfig.setCalibrationParameter( 2.1e-5 );
-					episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
-||||||| constructed merge base
-					config = new SnzBerlinWeekScenario2020Symmetric().config();
-					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-					episimConfig.setStartDate( "2020-02-18" );
-					episimConfig.setCalibrationParameter( 2.1e-5 );
-					episimConfig.setMaxContacts( Double.NaN ); // interpreted as "typical number of interactions"
-=======
 					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
-						config = new SnzBerlinWeekScenario2020Symmetric().config();
+						config = new SnzBerlinWeekScenario2020().config();
 						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 						episimConfig.setStartDate( "2020-02-18" );
 						episimConfig.setCalibrationParameter( 2.1e-5 );
@@ -281,23 +247,9 @@ public class KnRunEpisim {
 					} else {
 						throw new RuntimeException( "not implemented" );
 					}
->>>>>>> changes in kn scripts
 				} else if( contactModelType == ContactModelType.sqrt ){
-<<<<<<< HEAD
-					config = new SnzBerlinWeekScenario2020().config();
-					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-					episimConfig.setStartDate( "2020-02-13" );
-					episimConfig.setCalibrationParameter( 1.e-5 );
-					episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
-||||||| constructed merge base
-					config = new SnzBerlinWeekScenario2020Symmetric().config();
-					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-					episimConfig.setStartDate( "2020-02-13" );
-					episimConfig.setCalibrationParameter( 1.e-5 );
-					episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
-=======
 					if ( scenarioType== ScenarioType.snzBerlinWeek2020Symmetric ){
-						config = new SnzBerlinWeekScenario2020Symmetric().config();
+						config = new SnzBerlinWeekScenario2020().config();
 						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
 						episimConfig.setStartDate( "2020-02-13" );
 						episimConfig.setCalibrationParameter( 1.e-5 );
@@ -305,7 +257,6 @@ public class KnRunEpisim {
 					} else {
 						throw new RuntimeException( "not implemented" );
 					}
->>>>>>> changes in kn scripts
 				} else if( contactModelType == ContactModelType.direct ){
 					config = new SnzBerlinWeekScenario2020().config();
 					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
