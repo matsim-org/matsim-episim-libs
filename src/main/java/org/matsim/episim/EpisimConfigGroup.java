@@ -183,6 +183,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return this.initialInfections;
 	}
 
+	/**
+	 * @param initialInfections -- number of initial infections to start the dynamics.  These will be distributed over several days.
+	 * @see       #setInfections_pers_per_day(Map)
+	 */
 	@StringSetter(INITIAL_INFECTIONS)
 	public void setInitialInfections(int initialInfections) {
 		this.initialInfections = initialInfections;
@@ -211,7 +215,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return infectionsPerDay;
 	}
 
+	/**
+	 * @param infectionsPerDay -- From each given date, this will be the number of infections.  Until {@link #setInitialInfections(int)} are used up.
+	 */
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
+		// yyyy Is it really so plausible to have this here _and_ the plain integer initial infections?  kai, oct'20
 		this.infectionsPerDay.clear();
 		this.infectionsPerDay.putAll(infectionsPerDay);
 	}
