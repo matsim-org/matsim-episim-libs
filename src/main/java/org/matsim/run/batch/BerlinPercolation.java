@@ -44,7 +44,10 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setInitialInfections(21);
+		episimConfig.setInitialInfections(20);
+
+		// reduced calib param
+		episimConfig.setCalibrationParameter(1.07e-5 * params.fraction);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
@@ -54,7 +57,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
 		// ci correction that should lead to R approx 1
-		builder.restrict(20, 0.45, SnzBerlinWeekScenario2020.DEFAULT_ACTIVITIES);
+		//builder.restrict(20, 0.45, SnzBerlinWeekScenario2020.DEFAULT_ACTIVITIES);
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -63,8 +66,11 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(1000)
+		@GenerateSeeds(200)
 		public long seed;
+
+		@Parameter({0.15, 0.2, 0.25})
+		public double fraction;
 
 	}
 }
