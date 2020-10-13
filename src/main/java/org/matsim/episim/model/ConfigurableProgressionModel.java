@@ -62,6 +62,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 			.build();
 
+	// yyyy Quellen für alle Aussagen oben??  "Es ..." oder "Eine Studie aus ..." ist mir eigentlich nicht genug.  kai, aug'20
+	// yyyy Der obige Code existiert nochmals in AbstractSnzScenario2020.  Können wir in konsolidieren?  kai, oct'20
+
+
 
 	private static final Logger log = LogManager.getLogger(ConfigurableProgressionModel.class);
 

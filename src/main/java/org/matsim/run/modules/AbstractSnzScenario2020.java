@@ -121,7 +121,8 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 				;
 
-		// yyyy Quellen für alle Aussagen oben??  kai, aug'20
+		// yyyy Quellen für alle Aussagen oben??  "Es" oder "Eine Studie aus ..." ist mir eigentlich nicht genug.  kai, aug'20
+		// yyyy Der obige Code existiert nochmals in ConfigurableProgressionModel.  Können wir in konsolidieren?  kai, oct'20
 
 	}
 
