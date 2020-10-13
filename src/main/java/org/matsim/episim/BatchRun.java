@@ -276,7 +276,8 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * Prepare a config using the given parameters.
+	 * Prepare a config using the given parameters that will be used for this batch run.
+	 * Any other defined config is replaced.
 	 *
 	 * @param id     task id
 	 * @param params parameters to use

@@ -66,10 +66,10 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(200)
+		@GenerateSeeds(500)
 		public long seed;
 
-		@Parameter({0.15, 0.2, 0.25})
+		@Parameter({0.19, 0.2, 0.21})
 		public double fraction;
 
 	}

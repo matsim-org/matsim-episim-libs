@@ -43,6 +43,12 @@ public final class Restriction {
 	private Set<Id<ActivityFacility>> closed;
 
 	/**
+	 * List of (from, to) hours when activity is closed.
+	 */
+	@Nullable
+	private List<ClosingHours> closingHours;
+
+	/**
 	 * Maps mask type to percentage of persons wearing it.
 	 */
 	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
@@ -51,7 +57,7 @@ public final class Restriction {
 	 * Constructor.
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
-						@Nullable List<String> closed, @Nullable Map<FaceMask, Double> maskUsage) {
+						@Nullable List<String> closed, @Nullable List<ClosingHours> closingHours, @Nullable Map<FaceMask, Double> maskUsage) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -63,6 +69,7 @@ public final class Restriction {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
+		this.closingHours = closingHours;
 
 		if (closed != null) {
 			this.closed = closed.stream().map(s -> Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());
@@ -98,10 +105,11 @@ public final class Restriction {
 	 * @param maskUsage will only be used of other is null
 	 */
 	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
-				@Nullable List<String> closed, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
+				@Nullable List<String> closed, @Nullable List<ClosingHours> closingHours, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
+		this.closingHours = closingHours;
 		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
 
 		if (closed != null) {
@@ -113,28 +121,28 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, Integer.MAX_VALUE, null,Map.of());
+		return new Restriction(1d, 1d, Integer.MAX_VALUE, null, null, Map.of());
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null,  null, null);
+		return new Restriction(remainingFraction, null, null, null, null, null);
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-		return new Restriction(remainingFraction, ciCorrection, null,  null, null);
+		return new Restriction(remainingFraction, ciCorrection, null, null, null, null);
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
-		return new Restriction(remainingFraction, ciCorrection, null,  null, maskUsage);
+		return new Restriction(remainingFraction, ciCorrection, null, null, null, maskUsage);
 	}
 
 	/**
@@ -142,7 +150,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-		return new Restriction(remainingFraction, null, null, null, Map.of(mask, maskCompliance));
+		return new Restriction(remainingFraction, null, null, null, null, Map.of(mask, maskCompliance));
 	}
 
 	/**
@@ -151,7 +159,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, null,null,  Map.of(mask, complianceRate));
+		return new Restriction(null, null, null, null, null, Map.of(mask, complianceRate));
 	}
 
 	/**
@@ -159,38 +167,46 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
-		return new Restriction(null, null, null, null, maskUsage);
+		return new Restriction(null, null, null, null, null, maskUsage);
 	}
 
 	/**
 	 * Creates a restriction with certain facilities closed. Should not be combined with other restrictions.
 	 */
 	public static Restriction ofClosedFacilities(List<String> closed) {
-		return new Restriction(null, null, null, closed, null);
-	}
-
-	/**
-	 * Renamed to ci correction.
-	 *
-	 * @deprecated Use {@link #ofCiCorrection(double)}.
-	 */
-	@Deprecated
-	public static Restriction ofExposure(double exposure) {
-		return ofCiCorrection(exposure);
+		return new Restriction(null, null, null, closed, null, null);
 	}
 
 	/**
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null, (List) null, null);
+		return new Restriction(null, ciCorrection, null, null, null, null);
 	}
 
 	/**
 	 * Creates a restriction with limited maximum group size of activities.
 	 */
 	public static Restriction ofGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, maxGroupSize, (List) null, null);
+		return new Restriction(null, null, maxGroupSize, null, null, null);
+	}
+
+	/**
+	 * Creates a restriction for activity to be closed during certain hours.
+	 *
+	 * @param hours pairs of hours when activity needs to be closed. Eg. [0,6, 23,24]
+	 */
+	public static Restriction ofClosingHours(Integer... hours) {
+
+		if (hours.length % 2 != 0)
+			throw new IllegalArgumentException("Closing hours must be given in pairs of (closed, open)");
+
+		List<Integer> seconds = Arrays.stream(hours).map(h -> h * 3600)
+				.collect(Collectors.toList());
+
+		List<ClosingHours> closed = asClosingHours(seconds);
+
+		return new Restriction(null, null, null, null, closed, null);
 	}
 
 	/**
@@ -210,8 +226,25 @@ public final class Restriction {
 				config.getIsNull("ciCorrection") ? null : config.getDouble("ciCorrection"),
 				config.getIsNull("maxGroupSize") ? null : config.getInt("maxGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
+				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
 				enumMap, null
 		);
+	}
+
+	/**
+	 * Convert list of ints to closing hour instances.
+	 */
+	private static List<ClosingHours> asClosingHours(List<Integer> closingHours) {
+
+		if (closingHours == null)
+			return null;
+
+		List<ClosingHours> result = new ArrayList<>();
+		for (int i = 0; i < closingHours.size(); i += 2) {
+			result.add(new ClosingHours(closingHours.get(i), closingHours.get(i + 1)));
+		}
+
+		return Collections.unmodifiableList(result);
 	}
 
 	/**
@@ -220,6 +253,7 @@ public final class Restriction {
 	static Restriction clone(Restriction restriction) {
 		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.maxGroupSize,
 				restriction.closed == null ? null : restriction.closed.stream().map(Objects::toString).collect(Collectors.toList()),
+				restriction.closingHours,
 				null, restriction);
 	}
 
@@ -270,6 +304,9 @@ public final class Restriction {
 		if (r.closed != null)
 			closed = r.closed;
 
+		if (r.closingHours != null)
+			closingHours = r.closingHours;
+
 		if (!r.maskUsage.isEmpty()) {
 			maskUsage.clear();
 			maskUsage.putAll(r.maskUsage);
@@ -286,6 +323,7 @@ public final class Restriction {
 		Double otherRf = (Double) restriction.get("fraction");
 		Double otherE = (Double) restriction.get("ciCorrection");
 		Integer otherGroup = (Integer) restriction.get("maxGroupSize");
+		List<ClosingHours> otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
 		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
 		((Map<String, Double>) restriction.get("masks"))
@@ -305,6 +343,11 @@ public final class Restriction {
 			log.warn("Duplicated max group size " + maxGroupSize + " and " + otherGroup);
 		else if (maxGroupSize == null)
 			maxGroupSize = otherGroup;
+
+		if (closingHours != null && otherClosingH != null && !closingHours.equals(otherClosingH))
+			log.warn("Duplicated max closing hours " + closingHours + " and " + otherClosingH);
+		else if (closingHours == null)
+			closingHours = otherClosingH;
 
 		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks)) {
 			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value.");
@@ -331,6 +374,11 @@ public final class Restriction {
 			return false;
 
 		return closed.contains(containerId);
+	}
+
+	@Nullable
+	public List<ClosingHours> getClosingHours() {
+		return closingHours;
 	}
 
 	@Nullable
@@ -369,6 +417,52 @@ public final class Restriction {
 		map.put("masks", nameMap);
 
 		return map;
+	}
+
+	/**
+	 * Hours when an activity is closed.
+	 */
+	public static final class ClosingHours {
+
+		/**
+		 * Starting second when activity is closed (inclusive)
+		 */
+		public final int from;
+
+		/**
+		 * Seconds until when activity is still closed.
+		 */
+		public final int to;
+
+		ClosingHours(int from, int to) {
+			if (from >= to)
+				throw new IllegalArgumentException("Closing time must be given as (from, to), where from < to");
+
+			this.from = from;
+			this.to = to;
+		}
+
+		@Override
+		public boolean equals(Object o) {
+			if (this == o) return true;
+			if (o == null || getClass() != o.getClass()) return false;
+			ClosingHours that = (ClosingHours) o;
+			return from == that.from &&
+					to == that.to;
+		}
+
+		@Override
+		public int hashCode() {
+			return Objects.hash(from, to);
+		}
+
+		@Override
+		public String toString() {
+			return "ClosingHours{" +
+					"from=" + from +
+					", to=" + to +
+					'}';
+		}
 	}
 
 }
