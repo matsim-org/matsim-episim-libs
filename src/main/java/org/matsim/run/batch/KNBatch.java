@@ -42,6 +42,14 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				bind( InfectionEventHandler.class ).in( Singleton.class );
 				bind( EpisimReporting.class ).in( Singleton.class );
 			}
+
+			// yyyyyy does not work without the following lines:
+//			@Provides Config config() {
+//				return new SnzBerlinWeekScenario2020(25,false,false, OldSymmetricContactModel.class ).config();
+//			}
+
+			// yyyy where is the scenario binding coming from?
+
 		};
 	};
 
