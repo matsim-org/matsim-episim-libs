@@ -32,7 +32,6 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import picocli.CommandLine;
 
@@ -70,13 +69,16 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.Percolation}")
+	public static final String OPTION_SETUP = "--setup";
+	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.Percolation}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.Percolation$Params}")
+	public static final String OPTION_PARAMS = "--params";
+	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.Percolation$Params}")
 	private Class<T> params;
 
-	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
+	public static final String OPTION_THREADS = "--threads";
+	@CommandLine.Option(names = OPTION_THREADS, defaultValue = "4", description = "Number of threads to use concurrently")
 	private int threads;
 
 	@CommandLine.Option(names = "--total-worker", defaultValue = "1", description = "Total number of worker processes available for this run." +
@@ -92,7 +94,8 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
 	private int maxJobs;
 
-	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "360")
+	public static final String OPTION_ITERATIONS = "--iterations";
+	@CommandLine.Option(names = OPTION_ITERATIONS, description = "Maximum number of days to simulate.", defaultValue = "360")
 	private int maxIterations;
 
 	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
