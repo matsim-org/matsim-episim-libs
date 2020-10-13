@@ -36,4 +36,18 @@ public class RestrictionTest {
 		//		.isThrownBy(() -> r.merge(Restriction.ofExposure(0.4).asMap()));
 
 	}
+
+	@Test
+	public void closingHours() {
+
+		Restriction r = Restriction.ofClosingHours(5, 9);
+
+		assertThat(r.getClosingHours()).contains(new Restriction.ClosingHours(5 * 3600, 9 * 3600));
+
+
+		// not overwritten
+		r.merge(Restriction.ofClosingHours(17, 20).asMap());
+		assertThat(r.getClosingHours()).contains(new Restriction.ClosingHours(5 * 3600, 9 * 3600));
+	}
+
 }
