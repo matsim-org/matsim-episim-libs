@@ -52,6 +52,7 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
+		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);
 
 		// Internal classes, should rarely be needed to be reconfigured
 		bind(EpisimRunner.class).in(Singleton.class);
@@ -75,7 +76,6 @@ public class EpisimModule extends AbstractModule {
 
 		// save some time for not needed inputs
 		config.facilities().setInputFile(null);
-		config.vehicles().setVehiclesFile(null);
 
 		return ScenarioUtils.loadScenario(config);
 	}

@@ -10,16 +10,17 @@ import optuna
 import pandas as pd
 from sklearn.metrics import mean_squared_log_error
 
-
 if not hasattr(date, 'fromisoformat'):
     # python 3.6 backwards compatibility
     def parse(date_string):
         return datetime.strptime(date_string, "%Y-%m-%d").date()
 
+
     fromisoformat = parse
 
 else:
     fromisoformat = date.fromisoformat
+
 
 def read_data(f, district, hospital, rki, window=5):
     """Reads in three csv files"""
@@ -57,14 +58,55 @@ def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
 
 
-def infection_rate(f, district, target_rate=2, target_interval=3):
+def reinfection_number(f, target=2.5, days=20):
+    """ Calculates reinfection number of a run """
+
+    ev = pd.read_csv(f, sep="\t")
+    df = ev[ev.time <= days * 86400]
+
+    # persons at end of interval are not considered
+    relevant = set(ev.infected[ev.time <= (days - 4) * 86400])
+    no_inf = set(df.infected).difference(set(ev.infector))
+
+    if not relevant:
+        return 0, target ** 2
+
+    counts = df['infector'].value_counts()
+
+    res = np.concatenate((np.zeros(len(no_inf)), counts[counts.index.isin(relevant)].array))
+
+    return res.mean(), np.square(res.mean() - target)
+
+
+def infection_rate(f, district, target_rate=2, target_interval=3, days=15):
     """  Calculates the R values between a fixed day interval and returns MSE according to target rate """
 
     df = pd.read_csv(f, sep="\t")
     df = df[df.district == district]
 
+    total = float(df[df.day == 1].nSusceptible)
+
+    # comparison interval starts when 2% of susceptible infected
+    start = df[df.nTotalInfected >= total * 0.002].day
+    if not start.empty:
+        start = start.iloc[0]
+    else:
+        start = df.day.iloc[-1]
+
+    diff = df.iloc[-1].day - start - days
+
+    if diff < 0:
+        print("Simulation interval may be too short, had to adjust by", diff)
+        start += diff
+
+    # first day is 1 and not 0
+    if start - target_interval <= 0:
+        print("Adjust start to target interval")
+        start = target_interval + 1
+        days = min(days, len(df.day) - target_interval)
+
     rates = []
-    for i in range(25, 40):
+    for i in range(start, start + days):
         prev = float(df[df.day == i - target_interval].nTotalInfected)
         today = float(df[df.day == i].nTotalInfected)
 
@@ -99,6 +141,44 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
     return error_cases, error_sick, error_critical, peak, dz
 
 
+def objective_reinfection(trial):
+    """ Objective for reinfection number R """
+
+    n = trial.number
+    c = trial.suggest_loguniform("calibrationParameter", 0.5e-7, 1e-4)
+
+    scenario = trial.study.user_attrs["scenario"]
+    jvm = trial.study.user_attrs["jvm_opts"]
+
+    results = []
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java -jar %s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
+              % (jvm, scenario, n, i, c)
+
+        print("Running calibration for %s : %s" % (scenario, cmd))
+        subprocess.run(cmd, shell=True)
+
+        res = reinfection_number("output-calibration-unconstrained/%d/run%d/infectionEvents.txt" % (n, i), target=2.5)
+
+        # Ignore results with no infections at all
+        if res[0] == 0:
+            continue
+
+        results.append(res)
+
+    if not results:
+        results.append((0, 2.5 ** 2))
+
+    df = pd.DataFrame(results, columns=["target", "error"])
+    print(df)
+
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
+
+    trial.set_user_attr("df", df.to_json())
+    return df.error.mean()
+
+
 def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
@@ -106,21 +186,21 @@ def objective_unconstrained(trial):
     c = trial.suggest_uniform("calibrationParameter", 0.7e-5, 1.7e-5)
 
     scenario = trial.study.user_attrs["scenario"]
-    district = trial.study.user_attrs["district"]
+    district = trial.study.user_attrs.get("district", "unknown")
     jvm = trial.study.user_attrs["jvm_opts"]
 
     results = []
     for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -jar %(jvm)s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
+        cmd = "java -jar %s matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %s --number %d --run %d --unconstrained --calibParameter %.12f" \
               % (jvm, scenario, n, i, c)
-    
+
         print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
         subprocess.run(cmd, shell=True)
-    
+
         res = infection_rate("output-calibration-unconstrained/%d/run%d/infections.txt" % (n, i), district)
         results.append(res)
 
-    df = pd.DataFrame(results, columns=["rate", "error"])
+    df = pd.DataFrame(results, columns=["target", "error"])
     print(df)
 
     for k, v in df.mean().iteritems():
@@ -134,6 +214,8 @@ def objective_ci_correction(trial):
     """ Objective for ci correction """
 
     n = trial.number
+
+    start = fromisoformat(trial.study.user_attrs["start"]) + timedelta(days=trial.suggest_int('ciOffset', -3, 3))
     params = dict(
         number=n,
         scenario=trial.study.user_attrs["scenario"],
@@ -144,8 +226,8 @@ def objective_ci_correction(trial):
         alpha=1,
         offset=0,
         # Parameter to calibrate
-        correction=trial.suggest_uniform("ciCorrection", 0.2, 1),
-        start=trial.study.user_attrs["start"],
+        correction=trial.suggest_uniform("ciCorrection", 0.2, 0.9),
+        start=str(start)
     )
 
     end = fromisoformat(params["start"]) + timedelta(days=params["days"])
@@ -155,7 +237,7 @@ def objective_ci_correction(trial):
     for i in range(trial.study.user_attrs["runs"]):
         cmd = "java %(jvm)s -jar matsim-episim-1.0-SNAPSHOT.jar scenarioCreation trial %(scenario)s --days %(days)s" \
               f" --number %(number)d --run {i} --alpha %(alpha).3f --offset %(offset)d" \
-              " --correction %(correction).3f --start \"%(start)s\" --snapshot \"episim-snapshot-%(start)s.zip\"" % params
+              " --correction %(correction).3f --start \"%(start)s\"" % params
 
         print("Running ci correction with params: %s" % params)
         print("Running calibration command: %s" % cmd)
@@ -220,11 +302,11 @@ if __name__ == "__main__":
     parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinScenario25pct2020")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinWeekScenario2020")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
-    parser.add_argument("--start", type=str, default="", help="Start date for ci correction")
-    parser.add_argument("--days", type=int, default="21", help="Number of days to simulate after ci correction")
-    parser.add_argument("--dz", type=float, default="2", help="Assumed Dunkelziffer for error metric")
+    parser.add_argument("--start", type=str, default="2020-03-07", help="Start date for ci correction")
+    parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
+    parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
     parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
 

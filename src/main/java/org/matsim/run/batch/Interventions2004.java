@@ -22,12 +22,12 @@ import static org.matsim.run.modules.AbstractSnzScenario2020.DEFAULT_ACTIVITIES;
  * This batch run executes different interventions strategies to measure their influence
  */
 public class Interventions2004 implements BatchRun<Interventions2004.Params> {
-	
+
 	private static final String UNRESTRICTED = "unrestricted";
 	private static final String RESTRICTED = "restricted";
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinScenario25pct2020();
 	}
 
@@ -50,18 +50,18 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		LocalDate referenceDate = LocalDate.parse(params.referenceDate);
-		
+
 		double remainingFraction = 1.;
-		
+
 		if (params.runType.equals(RESTRICTED)) remainingFraction = 0.5;
 
 		switch (params.intervention) {
 
 			case "ci0.32":
 				double ciCorrection = 1.;
-				
+
 				if (params.runType.equals(RESTRICTED)) ciCorrection = 0.32;
-				
+
 				builder.restrict(referenceDate, Restriction.ofCiCorrection(ciCorrection), DEFAULT_ACTIVITIES)
 						.restrict(referenceDate, Restriction.ofCiCorrection(ciCorrection), "pt")
 						.restrict(referenceDate, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
@@ -69,7 +69,7 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 
 			case "edu0":
 				double edu0Fraction = 1.;
-				
+
 				if (params.runType.equals(RESTRICTED)) edu0Fraction = 0.0;
 				builder.clearAfter(params.referenceDate, "educ_primary");
 				builder.clearAfter(params.referenceDate, "educ_kiga");
@@ -77,11 +77,11 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 				builder.clearAfter(params.referenceDate, "educ_higher");
 				builder.clearAfter(params.referenceDate, "educ_tertiary");
 				builder.clearAfter(params.referenceDate, "educ_other");
-				
+
 				builder.restrict(referenceDate, edu0Fraction, "educ_primary", "educ_kiga", "educ_secondary",
 						"educ_higher", "educ_tertiary", "educ_other");
 				break;
-				
+
 			case "edu50":
 				builder.clearAfter(params.referenceDate, "educ_primary");
 				builder.clearAfter(params.referenceDate, "educ_kiga");
@@ -129,33 +129,33 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 				break;
 
 			case "masks0.6@pt&shop":
-				
+
 				double clothFraction = 0.;
 				double surgicalFraction = 0.;
-				
+
 				if (params.runType.equals(RESTRICTED)) {
 					clothFraction = 0.5;
 					surgicalFraction = 0.1;
 				}
-				
+
 				for (int i = 0; i<=14; i++) {
 					builder.restrict(referenceDate.plusDays(i), Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction, FaceMask.SURGICAL, surgicalFraction)), "pt", "shop_daily", "shop_other");
 				}
-				
+
 				break;
 
 			case "masks0.9@pt&shop":
-				
+
 				double n95Fraction = 0.;
-				
+
 				if (params.runType.equals(RESTRICTED)) {
 					n95Fraction = 0.9;
 				}
-				
+
 				for (int i = 0; i<=14; i++) {
 					builder.restrict(referenceDate.plusDays(i), Restriction.ofMask(Map.of(FaceMask.CLOTH, 0., FaceMask.SURGICAL, 0., FaceMask.N95, n95Fraction)), "pt", "shop_daily", "shop_other");
 				}
-				
+
 				break;
 
 			case "masks0.9@work":
@@ -179,7 +179,7 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 				tracingConfig.setTracingProbability(0.5);
 			}
 				break;
-				
+
 			case "contactTracing75":
 			{
 				if (params.runType.equals(RESTRICTED)) {
@@ -195,7 +195,7 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 					));
 				}
 				tracingConfig.setTracingProbability(0.75);
-				
+
 
 			}
 				break;
@@ -222,7 +222,7 @@ public class Interventions2004 implements BatchRun<Interventions2004.Params> {
 		@StringParameter({"ci0.32", "edu0", "edu50", "leisure50", "shopping50", "work50", "outOfHome50",
 				"masks0.6@pt&shop", "masks0.9@pt&shop", "masks0.9@work", "contactTracing50", "contactTracing75"})
 		String intervention;
-		
+
 		@StringParameter({RESTRICTED, UNRESTRICTED})
 		String runType;
 

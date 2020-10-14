@@ -29,7 +29,7 @@ import java.util.TreeMap;
 class KNAgeAnalysis{
 	private static final Logger log = Logger.getLogger( KNAgeAnalysis.class );
 
-	private static final String base = "piecewise__theta2.8E-6__offset-4__leis_1.0_0.7_0.7_0.1__other0.2/";
+	private static final String base = "output/2020-10-04_16-24-49__symmetric__fromConfig__theta2.1E-5@NaN_seed0_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/";
 
 	public static void main( String[] args ) throws IOException{
 		Config config = ConfigUtils.createConfig();
@@ -43,7 +43,6 @@ class KNAgeAnalysis{
 		{
 			Map<String, Double> freq = new TreeMap<>();
 			for( Person person : scenario.getPopulation().getPersons().values() ){
-				//noinspection ConstantConditions
 				String age = Integer.toString( (int) person.getAttributes().getAttribute( "age" ) );
 				Double sum = freq.computeIfAbsent( age, ( a ) -> 0. );
 				freq.put( age, sum + 0.02 );
@@ -69,7 +68,7 @@ class KNAgeAnalysis{
 					log.warn( "infected=" + infected );
 				}
 				Gbl.assertNotNull( person );
-				@SuppressWarnings("ConstantConditions") String age = Integer.toString( (int) person.getAttributes().getAttribute( "age" ) );
+				String age = Integer.toString( (int) person.getAttributes().getAttribute( "age" ) );
 				Double sum = freq2.computeIfAbsent( age, ( a ) -> 0. );
 				freq2.put( age, sum + 1 );
 			}

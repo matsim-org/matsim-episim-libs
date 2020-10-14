@@ -21,9 +21,9 @@
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigFactory;
+import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.lang3.NotImplementedException;
@@ -43,8 +43,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.model.ContactModel;
+import org.matsim.episim.model.InitialInfectionHandler;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -57,9 +57,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -122,6 +120,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final ContactModel contactModel;
 
 	/**
+	 * Handle initial infections.
+	 */
+	private final InitialInfectionHandler initialInfections;
+
+	/**
 	 * Scenario with population information.
 	 */
 	private final Scenario scenario;
@@ -139,7 +142,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	private boolean init = false;
 	private int iteration = 0;
-	private int initialInfectionsLeft;
 
 	/**
 	 * Most recent infection report for all persons.
@@ -147,8 +149,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel,
-								 EpisimReporting reporting, ContactModel contactModel, SplittableRandom rnd) {
+	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
+								 InitialInfectionHandler initialInfections, ContactModel contactModel, SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -160,7 +162,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
 		this.progressionModel = progressionModel;
 		this.contactModel = contactModel;
-		this.initialInfectionsLeft = episimConfig.getInitialInfections();
+		this.initialInfections = initialInfections;
+		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 	}
 
 	/**
@@ -208,7 +211,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		iteration = 0;
 
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
-		Object2IntMap<EpisimContainer<?>> containerSize = new Object2IntOpenHashMap<>();
+		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
 
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
@@ -267,8 +270,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 						continue;
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
-					maxGroupSize.mergeInt(facility, groupSize.mergeInt(facility, 1, Integer::sum), Integer::max);
-					containerSize.mergeInt(facility, 1, Integer::sum);
+					totalUsers.mergeInt(facility, 1, Integer::sum);
 
 					handleEvent((ActivityStartEvent) event);
 
@@ -278,16 +280,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 						continue;
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
-
-					// Prevent negative group size for persons starting with end activity
-					if (groupSize.getOrDefault(facility, 0) == 0) {
-						groupSize.put(facility, 1);
-						// add one to maximum group size
-						maxGroupSize.mergeInt(facility, 1, Integer::sum);
-					}
-
-
-					groupSize.mergeInt(facility, -1, Integer::sum);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
 					// Add person to container if it starts its day with end activity
@@ -314,7 +306,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 
 					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
-					containerSize.mergeInt(vehicle, 1, Integer::sum);
+					totalUsers.mergeInt(vehicle, 1, Integer::sum);
 
 					handleEvent((PersonEntersVehicleEvent) event);
 
@@ -324,7 +316,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 					groupSize.mergeInt(vehicle, -1, Integer::sum);
 					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
-
 
 					handleEvent((PersonLeavesVehicleEvent) event);
 				}
@@ -366,7 +357,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// Add missing facilities, with only stationary agents
 		for (EpisimFacility facility : pseudoFacilityMap.values()) {
 			if (!maxGroupSize.containsKey(facility)) {
-				containerSize.put(facility, facility.getPersons().size());
+				totalUsers.put(facility, facility.getPersons().size());
 				maxGroupSize.put(facility, facility.getPersons().size());
 
 				// there may be facilities with only "end" events, thus no group size, but correct activity usage
@@ -378,12 +369,95 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			}
 		}
 
-		reporting.reportContainerUsage(maxGroupSize, containerSize, activityUsage);
+		// Go through each day again to compute max group sizes
+		sameDay.clear();
+		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
+
+			DayOfWeek day = entry.getKey();
+			List<Event> eventsForDay = entry.getValue();
+
+			if (sameDay.containsKey(eventsForDay)) {
+				continue;
+			}
+
+			personMap.values().forEach(p -> {
+				checkAndHandleEndOfNonCircularTrajectory(p, day);
+				p.resetCurrentPositionInTrajectory(day);
+			});
+
+			pseudoFacilityMap.forEach((k, v) -> maxGroupSize.mergeInt(v, v.getPersons().size(), Integer::max));
+
+			for (Event event : eventsForDay) {
+				if (event instanceof HasFacilityId && event instanceof HasPersonId) {
+					EpisimFacility facility = pseudoFacilityMap.get(((HasFacilityId) event).getFacilityId());
+
+					// happens on filtered events that are not relevant
+					if (facility == null)
+						continue;
+
+					if (event instanceof ActivityStartEvent) {
+						handleEvent((ActivityStartEvent) event);
+						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
+					} else if (event instanceof ActivityEndEvent) {
+						handleEvent((ActivityEndEvent) event);
+					}
+				}
+			}
+
+			sameDay.put(eventsForDay, day);
+		}
+
+		log.info("Computed max group sizes");
+
+		reporting.reportContainerUsage(maxGroupSize, totalUsers, activityUsage);
+
+		boolean useVehicles = !scenario.getVehicles().getVehicles().isEmpty();
+
+		log.info("Using capacity from vehicles file: {}", useVehicles);
+
+		// these always needs to be present
+		paramsMap.computeIfAbsent("tr", this::createActivityType);
+		paramsMap.computeIfAbsent("home", this::createActivityType);
+
+		// entry for undefined activity type
+		AbstractObject2IntMap.BasicEntry<String> undefined = new AbstractObject2IntMap.BasicEntry<>("undefined", -1);
 
 		for (Object2IntMap.Entry<EpisimContainer<?>> kv : maxGroupSize.object2IntEntrySet()) {
+
+			EpisimContainer<?> container = kv.getKey();
 			double scale = 1 / episimConfig.getSampleSize();
-			kv.getKey().setMaxGroupSize((int) (kv.getIntValue() * scale));
-			kv.getKey().setSize((int) (containerSize.getInt(kv.getKey()) * scale));
+
+			container.setTotalUsers((int) (totalUsers.getInt(container) * scale));
+			container.setMaxGroupSize((int) (kv.getIntValue() * scale));
+
+			Object2IntMap<String> usage = activityUsage.get(kv.getKey());
+			if (usage != null) {
+				Object2IntMap.Entry<String> max = usage.object2IntEntrySet().stream()
+						.reduce(undefined, (s1, s2) -> s1.getIntValue() > s2.getIntValue() ? s1 : s2);
+
+				if (max != undefined) {
+					// set container spaces to spaces of most used activity
+					EpisimPerson.Activity act = paramsMap.get(max.getKey());
+					if (act == null)
+						log.warn("No activity found for {}", max.getKey());
+					else
+						container.setNumSpaces(act.params.getSpacesPerFacility());
+				}
+			}
+
+			if (useVehicles && container instanceof EpisimVehicle) {
+
+				Id<Vehicle> vehicleId = Id.createVehicleId(container.getContainerId().toString());
+				Vehicle vehicle = scenario.getVehicles().getVehicles().get(vehicleId);
+
+				if (vehicle == null) {
+					log.warn("No type found for vehicleId={}; using capacity of 150.", vehicleId);
+					container.setTypicalCapacity(150 );
+				} else {
+					int capacity = vehicle.getType().getCapacity().getStandingRoom() + vehicle.getType().getCapacity().getSeats();
+					container.setTypicalCapacity(capacity);
+				}
+			}
 		}
 
 		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
@@ -417,6 +491,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
 
+		contactModel.notifyEnterFacility(episimPerson, episimFacility, now);
 	}
 
 	@Override
@@ -438,6 +513,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
+
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 
@@ -466,6 +542,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// add person to vehicle and memorize entering time:
 		episimVehicle.addPerson(episimPerson, now);
 
+		contactModel.notifyEnterVehicle( episimPerson, episimVehicle, now );
 	}
 
 	@Override
@@ -570,43 +647,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	}
 
 	/**
-	 * Create one infection every day until initialInfections is 0.
-	 */
-	private void handleInitialInfections() {
-
-		if (initialInfectionsLeft == 0) return;
-
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
-
-		String district = episimConfig.getInitialInfectionDistrict();
-
-		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
-
-		int numInfections = EpisimUtils.findValidEntry(episimConfig.getInfections_pers_per_day(), 1, date);
-
-		List<EpisimPerson> candidates = this.personMap.values().stream()
-				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
-				.filter(p -> p.getDiseaseStatus() == DiseaseStatus.susceptible)
-				.collect(Collectors.toList());
-
-		if (candidates.size() < numInfections) {
-			log.warn("Not enough persons match the initial infection requirement, using whole population...");
-			candidates = Lists.newArrayList(this.personMap.values());
-		}
-
-		while (numInfections > 0 && initialInfectionsLeft > 0) {
-			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
-			if (randomPerson.getDiseaseStatus() == DiseaseStatus.susceptible) {
-				randomPerson.setDiseaseStatus(now, DiseaseStatus.infectedButNotContagious);
-				log.warn("Person {} has initial infection", randomPerson.getPersonId());
-				initialInfectionsLeft--;
-				numInfections--;
-			}
-		}
-
-	}
-
-	/**
 	 * Insert agents that appear in the population, but not in the event file, into their home container.
 	 */
 	private void insertStationaryAgents() {
@@ -629,7 +669,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 						episimPerson.setFirstFacilityId(facilityId, day);
 					}
 
-					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", episimConfig.selectInfectionParams("home")));
+					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", paramsMap.get("home").params));
 
 					facility.addPerson(episimPerson, 0);
 
@@ -659,7 +699,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig.getStartDate(), iteration);
 
 		progressionModel.setIteration(iteration);
-		progressionModel.beforeStateUpdates(personMap.values(), iteration);
+		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);
@@ -668,7 +708,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		this.iteration = iteration;
 
-		handleInitialInfections();
+		this.initialInfections.handleInfections(personMap, iteration);
 
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
@@ -717,6 +757,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				lastFacility.removePerson(person);
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, now);
+
+				contactModel.notifyEnterFacility(person, firstFacility, now);
+
 			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
 				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
 				contactModel.infectionDynamicsVehicle(person, lastVehicle, now);
@@ -725,10 +768,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				lastVehicle.removePerson(person);
 				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 				firstFacility.addPerson(person, now);
+
+				contactModel.notifyEnterFacility(person, firstFacility, now);
 			}
 		} else {
 			EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 			firstFacility.addPerson(person, now);
+
+			contactModel.notifyEnterFacility(person, firstFacility, now);
 		}
 	}
 
@@ -740,7 +787,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void writeExternal(ObjectOutput out) throws IOException {
 
 		out.writeLong(EpisimUtils.getSeed(rnd));
-		out.writeInt(initialInfectionsLeft);
+		out.writeInt(initialInfections.getInfectionsLeft());
 		out.writeInt(iteration);
 
 		out.writeInt(restrictions.size());
@@ -780,7 +827,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			EpisimUtils.setSeed(rnd, config.global().getRandomSeed());
 		}
 
-		initialInfectionsLeft = in.readInt();
+		initialInfections.setInfectionsLeft(in.readInt());
 		iteration = in.readInt();
 
 		int r = in.readInt();

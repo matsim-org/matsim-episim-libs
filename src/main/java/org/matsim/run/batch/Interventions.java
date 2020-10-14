@@ -26,7 +26,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinScenario25pct2020();
 	}
 

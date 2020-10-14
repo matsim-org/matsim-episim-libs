@@ -312,7 +312,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
 		log.warn("---");
-		log.warn("No of persons in quarantine={}", decimalFormat.format(t.nInQuarantine));
+		log.warn("No of persons in quarantine={} / {}%", decimalFormat.format(t.nInQuarantine), 100 * t.nInQuarantine / t.nTotal());
 		log.warn("100 persons={} agents", sampleSize * 100);
 		log.warn("===============================");
 

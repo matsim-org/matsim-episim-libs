@@ -36,6 +36,8 @@ import org.matsim.episim.policy.Restriction;
 import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -48,6 +50,11 @@ import static org.matsim.episim.model.Transition.to;
  * @see AbstractSnzScenario
  */
 public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
+
+	/**
+	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
+	 */
+	public static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/MunichV2/episim-input");
 
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
@@ -63,53 +70,80 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 //				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
-				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
 				.restrict("2020-05-11", 0.3, "educ_primary")
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
 
-				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 
-//				//Sommerferien //TODO
-				.restrict("2020-07-25", 0.3, "educ_primary", "educ_kiga")
-				.restrict("2020-07-25", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+				//TODO kläre, was genau in der Zwischenzeit bis zu Ferienbeginn in den Schulen passiert ist
+//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary",  "educ_tertiary", "educ_other")
 
-				//Ende der Sommerferien //TODO
-				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+
+//		https://www.schulferien.org/Bayern/bayern.html
+
+//				//Sommerferien
+				.restrict("2020-07-25", 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Ende der Sommerferien
+				.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//ab hier gilt ein 3-Stufen-Plan für Kiga und Schulen. Stufe 4 würde restriction = 0.5 bedeuten. Tritt in Kraft nach Ermessen des Gesundheitsamtes
+				// https://www.muenchen.de/rathaus/Stadtverwaltung/Referat-fuer-Bildung-und-Sport/Schule/corona.html#drei-stufen-plan_1
+				// https://www.muenchen.de/rathaus/Serviceangebote/familie/kinderbetreuung/corona.html
+
+
+				//Herbstferien
+				.restrict("2020-10-31", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-11-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				.restrict("2020-11-18", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-11-19", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Uni startet wieder mit Präsenzveranstaltungen
+				// https://www.uni-muenchen.de/aktuelles/corona_informationen/studium_lehre/index.html#Vorlesungszeit
+				// TUM kombiniert Präsenz- und digitale VEranstaltungen
+				// https://www.tum.de/die-tum/aktuelles/coronavirus/studium/
+
+				//but maybe that is just different wording for the same thing that laso Berlin does
+//				.restrict("2020-11-02", 0.5, "educ_higher")
+
+
+				//Weihnachtsferien
+				.restrict("2020-12-23", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-01-10", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Winterferien
+				.restrict("2021-02-15", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-02-21", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+				//Osterferien
+				.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 		;
 
+		double maskCompliance = 0.95;
+		long introductionPeriod = 14;
+		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
+		double clothFraction = maskCompliance * 0.9;
+		double surgicalFraction = maskCompliance * 0.1;
+		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
+		// in MUC and elsewhere!
+		//MUC started on the same date https://www.muenchen.de/aktuell/2020-04/corona-einkaufen-maerkte-muenchen-mit-maske.html
+
+
+		for (int ii = 0; ii <= introductionPeriod; ii++) {
+			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
+			builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
+		}
+
+		// mask compliance according to bvg
+		builder.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
+		builder.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other");
+		builder.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other");
+
 		return builder;
-	}
-
-	/**
-	 * Adds base progression config to the given builder.
-	 */
-	public static Transition.Builder baseProgressionConfig(Transition.Builder builder) {
-		return builder
-				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
-				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-						to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
-
-// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
-// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
-				.from(EpisimPerson.DiseaseStatus.contagious,
-						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
-
-// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
-				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(4., 4.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
-
-// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
-				.from(EpisimPerson.DiseaseStatus.seriouslySick,
-						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
-
-// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
-				.from(EpisimPerson.DiseaseStatus.critical,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(21., 21.)));
-
 	}
 
 	@Provides
@@ -119,10 +153,6 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		Config config = getBaseConfig();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		episimConfig.setInputEventsFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_2020_snz_episim_events_25pt.xml.gz"); //TODO
-
-		config.plans().setInputFile("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/mu_2020_snz_entirePopulation_noPlans_withDistricts_25pt.xml.gz"); //TODO
 
 		episimConfig.setInitialInfections(500);
 		episimConfig.setInitialInfectionDistrict("München");//TODO
@@ -136,7 +166,7 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-		double tracingProbability = 0.75;
+		double tracingProbability = 0.5;
 		tracingConfig.setTracingProbability(tracingProbability);
 		tracingConfig.setTracingPeriod_days(14);
 		tracingConfig.setMinContactDuration_sec(15 * 60.);
@@ -145,19 +175,21 @@ public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		tracingConfig.setTracingDelay_days(2);
 		tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE ); //TODO
 
-		double alpha = 1.4;
-		double ciCorrection = 0.3;
+		double alpha = 1.;
+		double ciCorrection = 1.;
 
-		File csv = new File("../shared-svn/projects/episim/matsim-files/snz/Munich/episim-input/MunichSnzData_daily_until20200531.csv"); //TODO
+		File csv = new File(INPUT.resolve("MunichSnzData_daily_until20200919.csv").toString()); //TODO
 		String dateOfCiChange = "2020-03-08";
 
-		episimConfig.setProgressionConfig(baseProgressionConfig(Transition.config()).build());
+		episimConfig.setProgressionConfig(SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config()).build());
+		episimConfig.setHospitalFactor(1.6);
+
 
 		ConfigBuilder configBuilder = null;
 		try {
-			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.linear);
+			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.none);
 		} catch (IOException e) {
-			e.printStackTrace();
+			throw new UncheckedIOException(e);
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());

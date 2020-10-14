@@ -24,7 +24,6 @@ import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.*;
 
 import java.util.SplittableRandom;
@@ -32,11 +31,11 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.EpisimPerson.DiseaseStatus;
 
 /**
- * Variant of the {@link DefaultContactModel} with symetric interactions.
+ * Variant of the {@link DefaultContactModel} with symmetric interactions.
  */
 public final class SymmetricContactModel extends AbstractContactModel {
 
-	private static final Logger log = LogManager.getLogger( SymmetricContactModel.class );
+	private static final Logger log = LogManager.getLogger(SymmetricContactModel.class);
 
 	/**
 	 * Flag to enable tracking, which is considerably slower.
@@ -54,9 +53,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 	private final StringBuilder buffer = new StringBuilder();
 
 	@Inject
-	/* package */
+		/* package */
 	SymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-						  EpisimReporting reporting, InfectionModel infectionModel ) {
+						  EpisimReporting reporting, InfectionModel infectionModel) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
 		super(rnd, config, infectionModel, reporting);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
@@ -89,22 +88,45 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 		EpisimConfigGroup.InfectionParams leavingParams = null;
 
-		for( EpisimPerson contactPerson : container.getPersons() ){
+		for (EpisimPerson contactPerson : container.getPersons()) {
 
 			// no contact with self, especially no tracing
 			if (personLeavingContainer == contactPerson) {
 				continue;
 			}
 
-			int maxPersonsInContainer = container.getMaxGroupSize();
-			Gbl.assertIf( maxPersonsInContainer>1 );
-			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
+			int maxPersonsInContainer = (int) (container.getMaxGroupSize() * episimConfig.getSampleSize());
+			// typical size is undefined if no vehicle file is used
+			if (container instanceof InfectionEventHandler.EpisimVehicle && container.getTypicalCapacity() > -1) {
+				maxPersonsInContainer = (int) (container.getTypicalCapacity() * episimConfig.getSampleSize());
+//				if ( container.getMaxGroupSize() > container.getTypicalCapacity() ) {
+//					log.warn("yyyyyy: vehicleId={}: maxGroupSize={} is larger than typicalCapacity={}; need to find organized answer to this.",
+//							container.getContainerId(), container.getMaxGroupSize(), container.getTypicalCapacity() );
+//				}
+//				log.warn("containerId={}; typical capacity={}; maxPersonsInContainer={}" , container.getContainerId(), container.getTypicalCapacity(), maxPersonsInContainer );
+			}
 
+			// it may happen that persons enter and leave an container at the same time
+			// effectively they have a joint time of 0 and will not count towards maximum group size
+			// still the size of the list of persons in the container may be larger than max group size
+			if (maxPersonsInContainer <= 1) {
+				log.debug("maxPersonsInContainer is={} even though there are {} persons in container={}", maxPersonsInContainer, container.getPersons().size(), container.getContainerId());
+				// maxPersonsInContainer = container.getPersons().size();
+			}
+
+			/*
 			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/(maxPersonsInContainer-1) ) {
 				continue;
 			}
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
 			// if we want superspreading events, then maxInteractions needs to be much larger than 3 or 10.
+
+			*/
+
+			double nSpacesPerFacility = container.getNumSpaces();
+			if (rnd.nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
+				continue;
+			}
 
 			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
 				continue;
@@ -139,9 +161,11 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				//home can only interact with home, leisure or work
 				if (infectionType.indexOf("home") >= 0 && infectionType.indexOf("leis") == -1 && infectionType.indexOf("work") == -1
 						&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
+					// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
 					continue;
 				} else if (infectionType.indexOf("edu") >= 0 && infectionType.indexOf("work") == -1 && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
 					//edu can only interact with work or edu
+					// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
 					continue;
 				}
 				if (trackingEnabled) {
@@ -180,13 +204,21 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 			}
 
-
 			// Parameter will only be retrieved one time
-			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
+			if (leavingParams == null) {
+				EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
+
+				double ci = tmp.getContactIntensity();
+
+				// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
+				leavingParams = tmp.copy(ci / (maxPersonsInContainer / tmp.getSpacesPerFacility()));
+			}
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, contactPerson, otherPersonsActivity);
+			double ci2 = tmp.getContactIntensity();
+			EpisimConfigGroup.InfectionParams contactParams = tmp.copy(ci2 / (maxPersonsInContainer / nSpacesPerFacility));
+			// (same computation as above; could just memorize)
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {

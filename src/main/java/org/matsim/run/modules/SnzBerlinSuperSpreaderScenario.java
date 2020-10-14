@@ -22,7 +22,7 @@ package org.matsim.run.modules;
 
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
-import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.lang3.tuple.Triple;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
@@ -31,10 +31,7 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.model.ContactModel;
-import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.InfectionModelWithViralLoad;
-import org.matsim.episim.model.SymmetricContactModel;
+import org.matsim.episim.model.*;
 
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -51,51 +48,60 @@ import static org.matsim.episim.model.InfectionModelWithViralLoad.VIRAL_LOAD;
 public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 	/**
-	 * Calibration parameter for pairs of sigma inf. and sigma susp.
+	 * Calibration parameter for triples of max contacts, sigma inf. and sigma susp.
+	 * These are for {@link OldSymmetricContactModel}.
 	 */
-	private static final Map<Pair<Double, Double>, Double> calibration25 = Map.of(
-			// Symetric
-			Pair.of(0d, 0d), 1.06e-5,
-			Pair.of(0.5, 0.5), 1.12e-5,
-			Pair.of(0.75, 0.75), 1.25e-5,
-			Pair.of(1d, 1d), 1.69e-5,
-			Pair.of(1.5d, 1.5d), 2.81e-5,
+	private static final Map<Triple<Integer, Double, Double>, Double> calibrationSym = Map.of(
 
-			// Only receiving
-			Pair.of(0d, 1d), 1.22e-5
+			// Different maxContacts with no individual variation
+			Triple.of(1, 0d, 0d), 10.5e-5,
+			Triple.of(3, 0d, 0d), 2.09e-5,
+			Triple.of(10, 0d, 0d), 0.68e-5,
+			Triple.of(30, 0d, 0d), 0.28e-5,
+
+			// Different sigmas for 10 maxContacts
+			Triple.of(10, 0.5, 0.5), 0.92e-5,
+			Triple.of(10, 1.5d, 1.5d), 1.64e-5
 	);
 
 	/**
-	 * Calibration params for the 100pct scenario.
+	 * Calibration parameter for {@link DefaultContactModel}
+	 * @see #calibrationSym
 	 */
-	private static final Map<Pair<Double, Double>, Double> calibration100 = Map.of(
-			Pair.of(1d, 1d), Double.NaN // Not Calibrated
+	private static final Map<Triple<Integer, Double, Double>, Double> calibrationDefault = Map.of(
+			Triple.of(1, 0d, 0d), 3.79e-5,
+			Triple.of(3, 0d, 0d), 1.14e-5,
+			Triple.of(10, 0d, 0d), 0.45e-5,
+			Triple.of(30, 0d, 0d), 0.187e-5
 	);
 
-
-	private final int sample;
+	private final boolean symmetric;
+	private final int maxContacts;
 	private final double sigmaInf;
 	private final double sigmaSusp;
 
-	/**
-	 * Constructor with default values.
-	 */
 	public SnzBerlinSuperSpreaderScenario() {
-		this(25, 1.5, 1.5);
+		this(true, 10, 1.5, 1.5);
 	}
 
-	public SnzBerlinSuperSpreaderScenario(int sample, double sigmaInf, double sigmaSusp) {
-		this.sample = sample;
+	public SnzBerlinSuperSpreaderScenario(boolean symmetric, int maxContacts, double sigmaInf, double sigmaSusp) {
+		this.symmetric = symmetric;
+		this.maxContacts = maxContacts;
 		this.sigmaInf = sigmaInf;
 		this.sigmaSusp = sigmaSusp;
 	}
+
 
 	@Override
 	protected void configure() {
 		super.configure();
 
 		bind(InfectionModel.class).to(InfectionModelWithViralLoad.class).in(Singleton.class);
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+
+		if (symmetric)
+			bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
+		else
+			bind(ContactModel.class).to(DefaultContactModel.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -103,23 +109,21 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 	public Config config() {
 
 
-		Config config = new SnzBerlinWeekScenario2020(sample).config();
+		Config config = new SnzBerlinWeekScenario2020().config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setMaxContacts(30);
+		config.vehicles().setVehiclesFile(null);
+		episimConfig.setMaxContacts(maxContacts);
 
-		Pair<Double, Double> p = Pair.of(sigmaInf, sigmaSusp);
+		Triple<Integer, Double, Double> p = Triple.of(maxContacts, sigmaInf, sigmaSusp);
 
 		double calibration;
 
-		if (sample == 25)
-			calibration = calibration25.get(p);
-		else if (sample == 100)
-			calibration = calibration100.get(p);
+		if (symmetric)
+			calibration = calibrationSym.get(p);
 		else
-			throw new IllegalStateException("Sample size has to be either 25 or 100, not" + sample);
-
+			calibration = calibrationDefault.get(p);
 
 		episimConfig.setCalibrationParameter(calibration);
 
@@ -150,7 +154,6 @@ public class SnzBerlinSuperSpreaderScenario extends AbstractSnzScenario2020 {
 
 		// save some time for not needed inputs
 		config.facilities().setInputFile(null);
-		config.vehicles().setVehiclesFile(null);
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
 

@@ -27,13 +27,6 @@ counts <- function(f) {
   res <- sort(c(rep(0, length(no_inf)), v))
 }
 
-
-f <- "C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy"
-
-#map(sigma, function(s) { s * 2} )
-
-sigma <- c(0.0, 1.0, 2.0)
-
 est_disp <- function(f) {
   
   matrix <- np$load(f)
@@ -47,7 +40,15 @@ est_disp <- function(f) {
       v <- matrix[row,]
       v <- v[!is.na(v)]
       
-      fit <- fitdist(v, fix.arg=list(mu=2.5), "nbinom")
+      if (length(v) == 0) {
+          next
+      }
+      
+      fit <- try(fitdist(v, fix.arg=list(mu=2.5), "nbinom"), silent = T)
+      if(inherits(fit, "try-error")) {
+        fit <- list(estimate=NaN)
+      }
+      
       est <- c(est, as.numeric(fit$estimate))
       
       total = sum(v)
@@ -58,19 +59,36 @@ est_disp <- function(f) {
   }
 
   df <- data.frame(as.numeric(est), as.numeric(inf80))
-  colnames(df) <- c("est", "inf80")
+  colnames(df) <- c("est", "top20")
   
   return(df)
 }
 
-s0 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/0.0_aggr.npy")
-s1 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.0_aggr.npy") 
-s2 <- est_disp("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis/data/dispersion/1.5_aggr.npy")
+
+est_disp_zip <- function(f) {
+  
+  tmpdir <- tempdir()
+  unzip(f, exdir = tmpdir )
+  
+  res <- data.frame()
+  
+  for (f in list.files(tmpdir, pattern = "*.npy", full.names = T)) {
+    df <- est_disp(f)
+    means <- colMeans(df, na.rm = T)
+    df <- data.frame(t(means))
+    
+    row.names(df) <- c(basename(f)) 
+    
+    res <- rbind(res, df)
+  }
+ 
+  return(res) 
+}
+
+setwd("C:/home/Development/matsim-org/matsim-episim/src/main/python/analysis")
 
 
-#df <- counts(f)
-#hist(df, prob=TRUE)
-
+df <- est_disp_zip("data/infections.zip")
 
 # Testing the distribution
 df <- sort(rnbinom(15000, size=1, mu=2.5))

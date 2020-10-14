@@ -70,7 +70,7 @@ public final class Berlin2020Tracing implements BatchRun<Berlin2020Tracing.Param
 	}
 
 	@Override
-	public AbstractModule getBindings(int id, Object params) {
+	public AbstractModule getBindings(int id, Params params) {
 		return new SnzBerlinScenario25pct2020();
 	}
 

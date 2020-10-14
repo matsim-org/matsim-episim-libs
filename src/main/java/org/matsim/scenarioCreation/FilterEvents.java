@@ -113,7 +113,7 @@ public class FilterEvents implements Callable<Integer> {
 
 //		log.info("Filtered {} out of {} events = {}%", handler.events.size(), handler.getCounter(), handler.events.size() / handler.getCounter());
 
-		handler.events.forEach((time, eventsList) -> eventsList.forEach(writer::handleEvent));
+		handler.events.forEach(writer::handleEvent);
 		writer.closeFile();
 
 		return 0;

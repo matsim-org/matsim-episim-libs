@@ -45,20 +45,20 @@ public class OpenBerlinScenario extends AbstractModule {
 	 */
 	public static void addDefaultParams(EpisimConfigGroup config) {
 		// pt
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("pt", "tr"));
+		config.getOrAddContainerParams("pt", "tr");
 		// regular out-of-home acts:
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("work"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("leisure", "leis"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("edu"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("shop"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("errands"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("business"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("other"));
+		config.getOrAddContainerParams("work");
+		config.getOrAddContainerParams("leisure", "leis");
+		config.getOrAddContainerParams("edu");
+		config.getOrAddContainerParams("shop");
+		config.getOrAddContainerParams("errands");
+		config.getOrAddContainerParams("business");
+		config.getOrAddContainerParams("other");
 		// freight act:
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("freight"));
+		config.getOrAddContainerParams("freight");
 		// home act:
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("home"));
-		config.addContainerParams(new EpisimConfigGroup.InfectionParams("quarantine_home"));
+		config.getOrAddContainerParams("home");
+		config.getOrAddContainerParams("quarantine_home");
 	}
 
 	@Provides
