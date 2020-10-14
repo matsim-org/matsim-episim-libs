@@ -25,15 +25,14 @@ public class BerlinSuperSpreadingContainment implements BatchRun<BerlinSuperSpre
 	}
 
 	@Override
-	public AbstractModule getBindings(int id, Object params) {
-		Params p = (Params) params;
-		return new SnzBerlinSuperSpreaderScenario(25, p.sigma, p.sigma);
+	public AbstractModule getBindings(int id, Params params) {
+		return new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma);
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		Config config = new SnzBerlinSuperSpreaderScenario(25, params.sigma, params.sigma).config();
+		Config config = new SnzBerlinSuperSpreaderScenario(true, 30, params.sigma, params.sigma).config();
 
 		config.global().setRandomSeed(params.seed);
 
@@ -47,17 +46,7 @@ public class BerlinSuperSpreadingContainment implements BatchRun<BerlinSuperSpre
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
 		}
 
-		if (params.containment.equals("GROUP_SIZES")) {
-
-			if (params.tracingCapacity != 0)
-				return null;
-
-			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-					.restrict(referenceDate, Restriction.ofGroupSize(100), BerlinSuperSpreading.ACTIVITIES)
-					.build()
-			);
-
-		} else if (params.tracingCapacity > 0) {
+		 if (params.tracingCapacity > 0) {
 
 			LocalDate warmUp = referenceDate.minusDays(14);
 			long offset = ChronoUnit.DAYS.between(episimConfig.getStartDate(), warmUp) + 1;
@@ -95,13 +84,13 @@ public class BerlinSuperSpreadingContainment implements BatchRun<BerlinSuperSpre
 		@IntParameter({0, 30, 90, Integer.MAX_VALUE})
 		private int tracingCapacity;
 
-		@StringParameter({"INDIVIDUAL_ONLY", "LOCATION", "GROUP_SIZES"})
+		@StringParameter({"INDIVIDUAL_ONLY", "LOCATION", "LOCATION_WITH_TESTING", "IDENTIFY_SOURCE"})
 		public String containment;
 
 		@StringParameter({"2020-03-07"})
 		String referenceDate;
 
-		@StringParameter({"yes", "no"})
+		@StringParameter({"yes"})
 		public String unrestricted;
 
 	}

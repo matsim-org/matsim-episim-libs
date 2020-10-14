@@ -32,6 +32,9 @@ import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 import java.util.Map;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.InfectionEventHandler.EpisimFacility;
+import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
+
 
 /**
  * Base implementation for interactions of persons during activities.
@@ -114,10 +117,10 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected static StringBuilder getInfectionType(StringBuilder buffer, EpisimContainer<?> container, String leavingPersonsActivity,
 													String otherPersonsActivity) {
 		buffer.setLength(0);
-		if (container instanceof InfectionEventHandler.EpisimFacility) {
+		if (container instanceof EpisimFacility) {
 			buffer.append(leavingPersonsActivity).append("_").append(otherPersonsActivity);
 			return buffer;
-		} else if (container instanceof InfectionEventHandler.EpisimVehicle) {
+		} else if (container instanceof EpisimVehicle) {
 			buffer.append("pt");
 			return buffer;
 		} else {
@@ -129,9 +132,9 @@ public abstract class AbstractContactModel implements ContactModel {
 	 * Get the relevant infection parameter based on container and activity and person.
 	 */
 	protected EpisimConfigGroup.InfectionParams getInfectionParams(EpisimContainer<?> container, EpisimPerson person, String activity) {
-		if (container instanceof InfectionEventHandler.EpisimVehicle) {
-			return episimConfig.selectInfectionParams(container.getContainerId().toString());
-		} else if (container instanceof InfectionEventHandler.EpisimFacility) {
+		if (container instanceof EpisimVehicle) {
+			return trParams.params;
+		} else if (container instanceof EpisimFacility) {
 			EpisimConfigGroup.InfectionParams params = episimConfig.selectInfectionParams(activity);
 
 			// Select different infection params for home quarantined persons
@@ -176,6 +179,9 @@ public abstract class AbstractContactModel implements ContactModel {
 				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
+		if (r.isClosed(container.getContainerId()))
+			return false;
+
 		return actIsRelevant(act, restrictions, rnd);
 	}
 
@@ -218,19 +224,27 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected final boolean personRelevantForTrackingOrInfectionDynamics(EpisimPerson person, EpisimContainer<?> container,
 																		 Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
-		// Infected but not contagious persons are considered additionally
-		if (!hasDiseaseStatusRelevantForInfectionDynamics(person) &&
-				person.getDiseaseStatus() != EpisimPerson.DiseaseStatus.infectedButNotContagious)
-			return false;
+		return personHasRelevantStatus(person) && checkPersonInContainer(person, container, restrictions, rnd);
+	}
 
+	protected final boolean personHasRelevantStatus(EpisimPerson person) {
+		// Infected but not contagious persons are considered additionally
+		return hasDiseaseStatusRelevantForInfectionDynamics(person) ||
+				person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious;
+	}
+
+	/**
+	 * Checks whether a person would be present in the container.
+	 */
+	protected final boolean checkPersonInContainer(EpisimPerson person, EpisimContainer<?> container, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
 			return false;
 		}
 
-		if (container instanceof InfectionEventHandler.EpisimFacility && activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {
+		if (container instanceof EpisimFacility && activityRelevantForInfectionDynamics(person, container, restrictions, rnd)) {
 			return true;
 		}
-		return container instanceof InfectionEventHandler.EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
+		return container instanceof EpisimVehicle && tripRelevantForInfectionDynamics(person, restrictions, rnd);
 	}
 
 	/**
@@ -272,9 +286,12 @@ public abstract class AbstractContactModel implements ContactModel {
 			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
 		}
 
-		reporting.reportInfection(personWrapper, infector, now, infectionType.toString(), container);
+		String infType = infectionType.toString();
+
+		reporting.reportInfection(personWrapper, infector, now, infType, container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 		personWrapper.setInfectionContainer(container);
+		personWrapper.setInfectionType(infType);
 
 		// TODO: Currently not in use, is it still needed?
 		// Necessary for the otfvis visualization (although it is unfortunately not working).  kai, apr'20
@@ -289,4 +306,14 @@ public abstract class AbstractContactModel implements ContactModel {
 	public Map<String, Restriction> getRestrictions() {
 		return restrictions;
 	}
+
+	@Override
+	public void notifyEnterVehicle(EpisimPerson personEnteringVehicle, EpisimVehicle vehicle, double now) {
+	}
+
+	@Override
+	public void notifyEnterFacility(EpisimPerson personEnteringFacility, EpisimFacility facility, double now) {
+	}
+
+
 }

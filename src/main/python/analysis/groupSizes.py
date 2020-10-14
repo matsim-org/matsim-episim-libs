@@ -109,47 +109,62 @@ print(ev_errands.maxGroupSize.quantile(p))
 
 #%%
 
-scaled = []
-
-for row in ev_un.itertuples():
-    try:
-        container = f.loc[row.container]
-        scaled.append(container["size"])
-    except:
-        pass
-
-h_bound = pd.DataFrame(scaled, columns=["size"])
-
-#%%
-
-p = np.array([0.1, 0.25, 0.5, 0.75, 0.9])
-
-# Effect of remaining fraction is roughly quadratic
-
-print(h_bound['size'].quantile(p ** 1.6))    
+gs = read_batch_run("data/groupSizes5.zip")
 
 
 #%%
 
-gs = read_batch_run("data/groupSizes3.zip")
+for cm in set(gs.contactModel):
+
+    df = gs[gs.contactModel==cm]
+    
+    fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+    hue = sns.color_palette(n_colors=3)
+    
+    #rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+    
+    sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+                 style="containment", hue="remaining", palette=hue, 
+                 data=df)
+    
+    
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    
+    plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
+    plt.title("contactModel = %s" % cm)
+    
+    plt.plot()
 
 #%%
 
-fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
-
-palette = sns.color_palette(n_colors=3)
-
-rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], ax=ax, logy=True)
-
-#sns.lineplot(x="date", y="cases", hue="remaining", style="bySize", palette=palette, ci=None, data=df, ax=ax)
-sns.lineplot(x="date", y="cases", hue="sigma", style="bySize", palette=palette, 
-             ci=None, data=gs[gs.remaining==0.25], ax=ax)
-
-
-plt.ylim(bottom=1)
-plt.legend(loc="upper left")
-plt.title("remaining=0.25")
+evs = read_batch_run("data/eventSizes3.zip")
 
 #%%
 
 
+for cm in set(evs.contactModel):
+
+    df = evs[evs.contactModel==cm]
+    
+    fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+    hue = sns.color_palette(n_colors=4)
+    
+    #rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+
+    sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+                 style="reduction", hue="divider", palette=hue, 
+                 style_order=["none", "closing_0.5", "uniform_0.5"],
+                 data=df)
+    
+    plt.yscale("log")
+    
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    
+    plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
+    plt.title("contactModel = %s" % cm)
+
+    ax.set_ylim(bottom=1)
+    
+    plt.plot()

@@ -21,7 +21,8 @@
 package org.matsim.episim;
 
 import com.google.common.collect.Lists;
-import com.google.inject.AbstractModule;
+import com.google.inject.Module;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,6 +36,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -55,6 +57,61 @@ import java.util.stream.Stream;
  * @param <T> Class holding the available parameters.
  */
 public interface BatchRun<T> {
+
+	/**
+	 * Find calibration parameter for given params from a list of csv records.
+	 *
+	 * @param params  params to lookup
+	 * @param records parsed records with parameter
+	 * @param ignore fields that will be ignored and not matched
+	 * @return calibration parameter if present or NaN.
+	 */
+	static double lookup(Object params, List<CSVRecord> records, String... ignore) {
+
+		Field[] fields = params.getClass().getDeclaredFields();
+
+		List<String> ignoreList = Arrays.asList(ignore);
+
+		outer:
+		for (CSVRecord record : records) {
+
+			int matched = 0;
+
+			for (Field field : fields) {
+				if (ignoreList.contains(field.getName()))
+					continue;
+
+				try {
+					Object obj = field.get(params);
+					String value = EpisimUtils.asString(obj);
+					try {
+
+						String cmp = record.get(field.getName());
+						if (!cmp.equals(value))
+							continue outer;
+
+					} catch (IllegalArgumentException e) {
+						// skip records not present
+					}
+
+					matched++;
+				} catch (ReflectiveOperationException e) {
+					// noting to do
+				}
+			}
+
+			// when no mismatches occurred this records is returned
+			if (matched > 0) {
+				String param = record.get("param");
+				if (param.isEmpty())
+					return Double.NaN;
+
+				return Double.parseDouble(param);
+			}
+		}
+
+		return Double.NaN;
+	}
 
 	/**
 	 * Loads the defined parameters and executes the {@link #prepareConfig(int, Object)} procedure.
@@ -91,6 +148,22 @@ public interface BatchRun<T> {
 			StringParameter stringParam = field.getAnnotation(StringParameter.class);
 			if (stringParam != null) {
 				allParams.add(Arrays.asList(stringParam.value()));
+				fields.add(field);
+			}
+			EnumParameter enumParam = field.getAnnotation(EnumParameter.class);
+			if (enumParam != null) {
+				try {
+					Method m = enumParam.value().getDeclaredMethod("values");
+					Object[] invoke = (Object[]) m.invoke(null);
+					allParams.add(Arrays.asList(invoke));
+					fields.add(field);
+				} catch (ReflectiveOperationException e) {
+					throw new IllegalStateException(e);
+				}
+			}
+			ClassParameter classParam = field.getAnnotation(ClassParameter.class);
+			if (classParam != null) {
+				allParams.add(Arrays.asList(classParam.value()));
 				fields.add(field);
 			}
 			GenerateSeeds seed = field.getAnnotation(GenerateSeeds.class);
@@ -186,11 +259,11 @@ public interface BatchRun<T> {
 	 * Return the module that should be used for configuring custom guice bindings. May also be parametrized.
 	 *
 	 * @param id     task id
-	 * @param params parameters to use, will be null for the base case, but always of type {@code T}
+	 * @param params parameters to use, will be null for the base case.
 	 * @return module with additional bindings, or null if not needed
 	 */
 	@Nullable
-	default AbstractModule getBindings(int id, @Nullable Object params) {
+	default Module getBindings(int id, @Nullable T params) {
 		return null;
 	}
 
@@ -203,7 +276,8 @@ public interface BatchRun<T> {
 	}
 
 	/**
-	 * Prepare a config using the given parameters.
+	 * Prepare a config using the given parameters that will be used for this batch run.
+	 * Any other defined config is replaced.
 	 *
 	 * @param id     task id
 	 * @param params parameters to use
@@ -223,7 +297,6 @@ public interface BatchRun<T> {
 
 		if (!episimConfig.getProgressionConfig().isEmpty())
 			Files.writeString(directory.resolve(episimConfig.getProgressionConfigName()), episimConfig.getProgressionConfig().root().render());
-
 	}
 
 	/**
@@ -268,6 +341,31 @@ public interface BatchRun<T> {
 		String[] value();
 	}
 
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface EnumParameter {
+		/**
+		 * Desired enum class, by default all values will be used.
+		 */
+		Class<? extends Enum<?>> value();
+		//String[] ignore() default {};
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface ClassParameter {
+		/**
+		 * List of classes to use as parameters.
+		 */
+		Class<?>[] value();
+	}
 
 	/**
 	 * Generates desired number of seeds by using a different random number generator.

@@ -23,6 +23,7 @@ package org.matsim.run;
 import com.google.common.base.Joiner;
 import com.google.inject.Module;
 import com.google.inject.*;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -31,28 +32,26 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
-import org.matsim.core.scenario.ScenarioUtils;
+import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
+import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -60,9 +59,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 
-import static java.lang.Math.max;
-import static org.matsim.episim.EpisimConfigGroup.*;
-import static org.matsim.episim.EpisimUtils.*;
+import static org.matsim.episim.EpisimConfigGroup.WriteEvents;
+import static org.matsim.episim.EpisimUtils.nextLogNormalFromMeanAndSigma;
 
 public class KnRunEpisim {
 	public static final String SUSCEPTIBILITY = "susceptibility";
@@ -73,13 +71,25 @@ public class KnRunEpisim {
 	private static final boolean verbose = false;
 	private static final boolean logToOutput = true;
 
-	private static final double sigmaInfect = 0.;
+	// ===
+
+	private enum ScenarioType{ openBln1pct, snzBerlinWeek2020Symmetric}
+	private static final ScenarioType scenarioType = ScenarioType.openBln1pct;
+
+	private enum ContactModelType{ original, oldSymmetric, symmetric, sqrt, direct }
+	private static final ContactModelType contactModelType = ContactModelType.oldSymmetric;
+
+	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
+	private static final RestrictionsType restrictionsType = RestrictionsType.unrestr;
+
+	private static final double SIGMA_INFECT = 0.;
 	// 2 leads to dynamics so unstable that it does not look plausible w.r.t. reality.  kai, jun'20
 
-	private static final double sigmaSusc = 0.;
+	private static final double SIGMA_SUSC = 0.;
 
-	private enum WeekendHandling{ weekdaysOnly, inclWeekends }
-	private static final WeekendHandling runType = WeekendHandling.inclWeekends;
+	private static final int DISEASE_IMPORT_OFFSET = -0;
+
+	// ===
 
 	public static void main(String[] args) throws IOException{
 
@@ -98,10 +108,36 @@ public class KnRunEpisim {
 				binder().requireExplicitBindings();
 
 				// Main model classes regarding progression / infection etc..
-				bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
-				bind( InfectionModel.class).to( MyInfectionModel.class ).in( Singleton.class );
-				bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
-				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
+				switch( contactModelType ) {
+					case original:
+						bind( ContactModel.class ).to( DefaultContactModel.class ).in( Singleton.class );
+						break;
+					case symmetric:
+						bind( ContactModel.class ).to( SymmetricContactModel.class ).in( Singleton.class );
+						break;
+					case oldSymmetric:
+						bind( ContactModel.class ).to( OldSymmetricContactModel.class ).in( Singleton.class );
+						break;
+					case sqrt:
+						bind( ContactModel.class ).to( SqrtContactModel.class ).in( Singleton.class );
+						break;
+					case direct:
+						bind( ContactModel.class ).to( DirectContactModel.class ).in( Singleton.class );
+						break;
+					default:
+						throw new IllegalStateException( "Unexpected value: " + contactModelType );
+				}
+				if ( scenarioType == ScenarioType.openBln1pct ) {
+					bind( InfectionModel.class ).to( DefaultInfectionModel.class ).in( Singleton.class );
+					bind( ProgressionModel.class ).to( ConfigurableProgressionModel.class ).in( Singleton.class );
+					bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
+					bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
+				} else {
+					bind( InfectionModel.class ).to( AgeDependentInfectionModelWithSeasonality.class ).in( Singleton.class );
+					bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
+					bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
+					bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
+				}
 
 				// Internal classes, should rarely be needed to be reconfigured
 				bind(EpisimRunner.class).in( Singleton.class );
@@ -112,33 +148,30 @@ public class KnRunEpisim {
 			}
 			@Provides @Singleton public Scenario scenario( Config config ) {
 
-				// guice will use no args constructor by default, we check if this config was initialized
-				// this is only the case when no explicit binding are required
-				if (config.getModules().size() == 0)
-					throw new IllegalArgumentException("Please provide a config module or binding.");
-
-				config.vspExperimental().setVspDefaultsCheckingLevel( VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore );
-
-				// save some time for not needed inputs
-				config.facilities().setInputFile(null);
-				config.vehicles().setVehiclesFile(null);
-
-				ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "before loading scenario" );
-
-				final Scenario scenario = ScenarioUtils.loadScenario( config );
+				Scenario scenario ;
+				switch( scenarioType ) {
+					case openBln1pct:
+						scenario = new SnzBerlinWeekScenario2020().scenario( config ); // try using this one
+						break;
+					case snzBerlinWeek2020Symmetric:
+						scenario = new SnzBerlinWeekScenario2020().scenario( config );
+						break;
+					default:
+						throw new IllegalStateException( "Unexpected value: " + scenarioType );
+				}
 
 				SplittableRandom rnd = new SplittableRandom( 4715 );
 				for( Person person : scenario.getPopulation().getPersons().values() ){
-					person.getAttributes().putAttribute( VIRAL_LOAD, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaInfect ) );
-					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, sigmaSusc ) );
+					person.getAttributes().putAttribute( VIRAL_LOAD, nextLogNormalFromMeanAndSigma( rnd, 1, SIGMA_INFECT ) );
+					person.getAttributes().putAttribute( SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma( rnd, 1, SIGMA_SUSC ) );
 				}
 
 				return scenario;
 			}
-			@Provides @Singleton public EpisimConfigGroup episimConfigGroup(Config config) {
+			@Provides @Singleton public EpisimConfigGroup epsimConfig( Config config ) {
 				return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 			}
-			@Provides @Singleton public TracingConfigGroup tracingConfigGroup( Config config ) {
+			@Provides @Singleton public TracingConfigGroup tracingConfig( Config config ) {
 				return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			}
 			@Provides @Singleton public EpisimWriter episimWriter( EpisimConfigGroup episimConfig ) {
@@ -157,132 +190,112 @@ public class KnRunEpisim {
 				return new SplittableRandom(config.global().getRandomSeed());
 			}
 			@Provides @Singleton public Config config(){
-				Config config = new SnzBerlinScenario25pct2020().config();
+				Config config ;
+				EpisimConfigGroup episimConfig ;
 
-				EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+				// NOTE: The dynamics is set by the guice bindings above; this here just configures parameters that have something to do with those different dynamics.
+				if( contactModelType == ContactModelType.original ){
+					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setCalibrationParameter( 1.e-5 );
+						episimConfig.setStartDate( "2020-02-17" );
+						episimConfig.setMaxContacts( 3. );
+					} else if ( scenarioType == ScenarioType.openBln1pct ) {
+						config = new OpenBerlinScenario().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setCalibrationParameter( 1.e-5 );
+						episimConfig.setStartDate( "2020-02-17" );
+						episimConfig.setMaxContacts( 3. );
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
+				} else if( contactModelType == ContactModelType.oldSymmetric ){
+					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020().config();
+						config.global().setRandomSeed( 4711 );
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 5.e-6 );
+					} else if ( scenarioType == ScenarioType.openBln1pct ) {
+						config = new OpenBerlinScenario().config();
+						config.global().setRandomSeed( 4711 );
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 5.e-4 );
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
+				} else if( contactModelType == ContactModelType.symmetric ){
+					if ( scenarioType == ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 2.1e-5 );
+						episimConfig.setMaxContacts( Double.NaN );
 
-				switch( runType ) {
-					case weekdaysOnly:
-						break;
-					case inclWeekends:
-						episimConfig.clearInputEventsFiles();
-
-						config.plans().setInputFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz").toString());
-
-						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_wt_25pt_split.xml.gz").toString())
-							    .addDays( DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY );
-
-						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_sa_25pt_split.xml.gz").toString())
-							    .addDays(DayOfWeek.SATURDAY);
-
-						episimConfig.addInputEventsFile(SnzBerlinScenario25pct2020.INPUT.resolve("be_2020-week_snz_episim_events_so_25pt_split.xml.gz").toString())
-							    .addDays(DayOfWeek.SUNDAY);
-
-						episimConfig.setCalibrationParameter(1.13e-5);
-						episimConfig.setStartDate("2020-02-15");
-						break;
-					default:
-						throw new IllegalStateException( "Unexpected value: " + runType );
+						// to save computing time:
+						TracingConfigGroup tracingConfig = tracingConfig( config );
+						tracingConfig.setTracingCapacity_pers_per_day( 0 );
+						tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( Integer.MAX_VALUE );
+					} else if ( scenarioType == ScenarioType.openBln1pct ) {
+						config = new OpenBerlinScenario().config();
+						config.global().setRandomSeed( 4711 );
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-18" );
+						episimConfig.setCalibrationParameter( 5.e-6 );
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
+				} else if( contactModelType == ContactModelType.sqrt ){
+					if ( scenarioType== ScenarioType.snzBerlinWeek2020Symmetric ){
+						config = new SnzBerlinWeekScenario2020().config();
+						episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+						episimConfig.setStartDate( "2020-02-13" );
+						episimConfig.setCalibrationParameter( 1.e-5 );
+						episimConfig.setMaxContacts( 10 ); // interpreted as "typical number of interactions"
+					} else {
+						throw new RuntimeException( "not implemented" );
+					}
+				} else if( contactModelType == ContactModelType.direct ){
+					config = new SnzBerlinWeekScenario2020().config();
+					episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+					episimConfig.setStartDate( "2020-02-17" );
+					episimConfig.setCalibrationParameter( 1.2e-5 );
+				} else{
+					throw new RuntimeException( "not implemented for infectionModelType=" + contactModelType );
 				}
 
+				// derzeit proba_interact = maxIA/sqrt(containerSize).  Konsequenzen:
+				// * wenn containerSize < maxIA, dann IA deterministisch.  Vermutl. kein Schaden.
+				// * wenn containerSize gross, dann  theta und maxIA multiplikativ und somit redundant.
+				// Ich werde jetzt erstmal maxIA auf das theta des alten Modells kalibrieren.  Aber perspektivisch
+				// könnte man (wie ja auch schon vorher) maxIA plausibel festlegen, und dann theta kalibrieren.
+
+				TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 				episimConfig.setWriteEvents( WriteEvents.episim );
 
 				// ---
 
-				config.global().setRandomSeed( 4711 );
-
-				episimConfig.setMaxContacts( 25. );
-
 //				tracingConfig.setTracingCapacity_per_day( Integer.MAX_VALUE );
-				tracingConfig.setTracingCapacity_pers_per_day( 0 );
+//				tracingConfig.setTracingCapacity_pers_per_day( 0 );
 
 				// ---
 
-				RestrictionsType restrictionsType = RestrictionsType.fromConfig;
-
 				StringBuilder strb = new StringBuilder();
 				strb.append( LocalDateTime.now().format( DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss" ) ) );
+				strb.append( "__" ).append( contactModelType.name() );
 				strb.append( "__" ).append( restrictionsType.name() );
 				strb.append( "__theta" ).append( episimConfig.getCalibrationParameter() ).append( "@" ).append( episimConfig.getMaxContacts() );
-				if ( sigmaInfect!=0. ) strb.append( "__sInfct" ).append( sigmaInfect );
-				if ( sigmaSusc!=0. ) strb.append( "__sSusc" ).append( sigmaSusc );
-				strb.append( "__trStrt" ).append( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() );
+				if ( SIGMA_INFECT !=0. ) strb.append( "__sInfct" ).append( SIGMA_INFECT );
+				if ( SIGMA_SUSC !=0. ) strb.append( "__sSusc" ).append( SIGMA_SUSC );
 
 				if ( restrictionsType==RestrictionsType.fromConfig ) {
 					// do nothing
-				} else if ( restrictionsType==RestrictionsType.triang ) {
-					List<String> allActivitiesExceptHomeList = new ArrayList<>();
-					List<String> allActivitiesExceptHomeAndEduList = new ArrayList<>();
-					for( ConfigGroup infectionParams : episimConfig.getParameterSets().get( "infectionParams" ) ){
-						final String activityType = infectionParams.getParams().get( "activityType" );
-						if ( !activityType.contains( "home" ) ) {
-							allActivitiesExceptHomeList.add(activityType);
-							if (!activityType.contains( "educ_" ) ){
-								allActivitiesExceptHomeAndEduList.add( activityType );
-							}
-						}
-					}
-					final String[] actsExceptHomeAndEdu = allActivitiesExceptHomeAndEduList.toArray( new String[0] );
-					final String[] actsExceptHome = allActivitiesExceptHomeList.toArray( new String[0] );
-					final String[] educ_lower = {"educ_primary", "educ_kiga"};
-					final String[] educ_higher = {"educ_secondary", "educ_higher", "educ_tertiary", "educ_other"};
-					FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
-					// ===
-					// ci change:
-					LocalDate dateOfCiCorrA = LocalDate.of( 2020, 3, 8 );
-					double ciCorrA = 0.55;
-					// (8.3.: Empfehlung Absage Veranstaltungen > 1000 Teilnehmer ???; Verhaltensänderungen?)
-					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), actsExceptHome );
-					restrictions.restrict( dateOfCiCorrA, Restriction.ofCiCorrection( ciCorrA ), "pt", "home" );
-					// Wir hatten sicher bereits Reaktionen im Arbeitsleben.  Nicht nur home office (= in den Mobilitätsdaten), sondern
-					// auch kein Händeschütteln, Abstand, Räume lüften.  Freizeit damit vermutlich auch; die Tatsache, dass (dennoch)
-					// viele der Berliner Grossinfektionen in dieser Woche in den Clubs stattfanden, ist vllt Konsequenz der Tatsache, dass
-					// es vorher nicht genügend Virusträger in Bln gab.
-					// Obiger Ansatz (insbesondere mit inclHome) sagt allerdings, dass wir das im Prinzip ins theta hinein absorbieren.
-
-					// quick reductions towards lockdown:
-					LocalDate triangleStartDate = LocalDate.of( 2020, 3, 8 );
-					final LocalDate date_2020_03_24 = LocalDate.of( 2020, 3, 24 );
-					double alpha = 1.2;
-					final double remainingFractionAtMax = max( 0., 1. - alpha * 0.36 );
-					restrictions.interpolate( triangleStartDate, date_2020_03_24,
-							Restriction.of(1.), Restriction.of(remainingFractionAtMax),
-							actsExceptHomeAndEdu );
-					// school closures:
-					restrictions.restrict( "2020-03-14", 0.1, educ_lower ).restrict( "2020-03-14", 0., educ_higher );
-					// slow re-opening:
-					restrictions.interpolate( date_2020_03_24, LocalDate.of( 2020,5,31 ),
-							Restriction.of(remainingFractionAtMax ), Restriction.of( max( 0., 1.-alpha*0. ) ),
-							actsExceptHomeAndEdu );
-					// absorb masks into exposures and ramp up:
-					final LocalDate dateOfCiCorrB = LocalDate.of( 2020, 4, 15 );
-					final double ciCorrB = 0.15;
-					final int nDays = 14;
-					for ( int ii = 0 ; ii<= nDays ; ii++ ){
-						double newExposure = ciCorrA + ( ciCorrA*ciCorrB - ciCorrA ) * ii / nDays ;
-						// check: ii=0 --> old value; ii=nDays --> new value
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), "shop_daily","shop_other" );
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), "pt","tr", "leisure");
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), educ_higher );
-						restrictions.restrict( dateOfCiCorrB.plusDays( ii ), Restriction.ofCiCorrection( newExposure ), educ_lower );
-					}
-
-					// ===
-					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() );
-
-					strb.append( "_ciCorrA" ).append( ciCorrA );
-					strb.append( "@" ).append( dateOfCiCorrA );
-
-					strb.append( "_triangStrt" ).append( triangleStartDate );
-					strb.append( "_alpha" ).append( alpha );
-
-					strb.append( "_ciCorrB" + ciCorrB + "@" ).append( dateOfCiCorrB ).append( "over" + nDays + "days" );
-
 				} else if ( restrictionsType==RestrictionsType.fromSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
-					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.32 ));
+					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.25 ));
 					basePolicyBuilder.setAlpha( 1. );
 
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
@@ -293,16 +306,17 @@ public class KnRunEpisim {
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
-//					final double ciEdu = 0.;
-//					restrictions.restrict( LocalDate.of(2020, 3, 7), Restriction.ofCiCorrection( ciEdu ), "educ_kiga", "educ_primary",
-//							"educ_secondary", "educ_higher", "educ_tertiary", "educ_other" );
-//					strb.append( "__ciEdu" ).append( ciEdu );
-					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() ); // overwrite snz policy
+					episimConfig.setPolicy( FixedPolicy.class, restrictions.build() ); // overwrite snz policy with empty policy
+					tracingConfig.setTracingCapacity_pers_per_day( 0 );
 				}
 
 				strb.append( "_seed" ).append( config.global().getRandomSeed() );
 				strb.append( "_strtDt" ).append( episimConfig.getStartDate() );
-				strb.append("_trCap" ).append( tracingConfig.getTracingCapacity() );
+				strb.append( "_imprtOffst" ).append( DISEASE_IMPORT_OFFSET );
+				if ( !tracingConfig.getTracingCapacity().isEmpty() ) {
+					strb.append( "_trCap" ).append( tracingConfig.getTracingCapacity() );
+					strb.append( "_quStrt" ).append( episimConfig.getStartDate().plusDays( tracingConfig.getPutTraceablePersonsInQuarantineAfterDay() ) );
+				}
 				config.controler().setOutputDirectory( "output/" + strb.toString() );
 
 				return config;
@@ -333,14 +347,62 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run(100 );
+		injector.getInstance(EpisimRunner.class).run( 90 );
 
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
 
-	enum RestrictionsType {unrestr, triang, fromSnz, fromConfig }
+	public static void writeGroupSizes( Object2IntMap<EpisimContainer<?>> maxGroupSize ){
+		{
+			List<Long> cnts = new ArrayList<>();
+			for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
+				EpisimContainer<?> container = entry.getKey();
+				if( !(container instanceof InfectionEventHandler.EpisimFacility) ){
+					continue;
+				}
+				int idx = container.getMaxGroupSize();
+				while( idx >= cnts.size() ){
+					cnts.add( 0L );
+				}
+				cnts.set( idx, cnts.get( idx ) + 1 );
+			}
+			try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeFac.csv" ) ){
+				for( int ii = 0 ; ii < cnts.size() ; ii++ ){
+					writer.write( ii + "," + cnts.get( ii ) + "\n" );
+				}
+			} catch( IOException e ){
+				e.printStackTrace();
+			}
+		}
+		{
+			List<Long> cnts = new ArrayList<>();
+			for( Object2IntMap.Entry<EpisimContainer<?>> entry : maxGroupSize.object2IntEntrySet() ){
+				EpisimContainer<?> container = entry.getKey();
+				if( !(container instanceof InfectionEventHandler.EpisimVehicle) ){
+					continue;
+				}
+				int idx = container.getMaxGroupSize();
+				while( idx >= cnts.size() ){
+					cnts.add( 0L );
+				}
+				cnts.set( idx, cnts.get( idx ) + 1 );
+			}
+			try( BufferedWriter writer = IOUtils.getBufferedWriter( "maxGroupSizeVeh.csv" ) ){
+				for( int ii = 0 ; ii < cnts.size() ; ii++ ){
+					writer.write( ii + "," + cnts.get( ii ) + "\n" );
+				}
+			} catch( IOException e ){
+				e.printStackTrace();
+			}
+		}
 
+		log.warn( "stopping here ..." );
+		System.exit( -1 );
+	}
+
+
+	/*
 	private static class MyInfectionModel implements InfectionModel {
 
 		private final FaceMaskModel maskModel;
@@ -371,5 +433,6 @@ public class KnRunEpisim {
 			);
 		}
 	}
+	 */
 
 }

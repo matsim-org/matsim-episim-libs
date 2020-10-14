@@ -14,8 +14,9 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.model.DefaultContactModel;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.RunEpisim;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import picocli.CommandLine;
 
 import java.io.IOException;
@@ -25,16 +26,16 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.EnumMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * This is a runnable class that is used to write all contact events between persons.
  */
 @CommandLine.Command(
 		name = "extractContacts",
-		description = "Run one simulation trial (used for calibration)",
+		description = "Run one simulation trial to generate contact events between all persons",
 		abbreviateSynopsis = true,
 		showDefaultValues = true
 )
@@ -42,9 +43,9 @@ public final class ExtractContacts implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(ExtractContacts.class);
 
-	@CommandLine.Parameters(paramLabel = "scenario", arity = "0..1", description = "Scenario module to load",
-			defaultValue = "SnzBerlinSuperSpreaderScenario")
-	private String scenario;
+	@CommandLine.Parameters(paramLabel = "sample", arity = "1", description = "Sample size of scenario to load",
+			defaultValue = "10")
+	private int sample;
 
 	@CommandLine.Option(names = "--output", description = "Output folder", defaultValue = "output-contacts")
 	private Path output;
@@ -61,7 +62,7 @@ public final class ExtractContacts implements Callable<Integer> {
 		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
 		Configurator.setLevel("org.matsim.core.events", Level.WARN);
 
-		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(RunEpisim.resolveModules(List.of(scenario))));
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzBerlinWeekScenario2020(sample, false, false, DefaultContactModel.class)));
 
 		Config config = injector.getInstance(Config.class);
 
@@ -101,7 +102,10 @@ public final class ExtractContacts implements Callable<Integer> {
 		config.controler().setOutputDirectory(output.toString());
 
 		EpisimRunner runner = injector.getInstance(EpisimRunner.class);
-		runner.run(iterations);
+		runner.run(iterations + 1);
+
+		// On windows, files are still busy, so we wait here
+		Thread.sleep(5000);
 
 		log.info("Finished");
 
@@ -110,14 +114,14 @@ public final class ExtractContacts implements Callable<Integer> {
 				Files.list(output.resolve("events")),
 				(day, path) -> {
 					try {
-						log.info("Moving {} to {}", day, path);
-						Files.move(path, output.resolve("events_" + day.toString() + ".xml.gz"));
+						log.info("Copying {} for {}", path, day);
+						Files.copy(path, output.resolve("events_" + day.toString() + "-" + sample + "pt.xml.gz"));
 					} catch (IOException e) {
 						log.error("Could not move file", e);
 					}
 					return 0;
 				}
-		);
+		).toArray();
 
 		return 0;
 	}

@@ -83,12 +83,22 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-25", 0.3, "educ_kiga")
 				.restrict("2020-06-08", 0.5, "educ_kiga")
 				.restrict("2020-06-22", 1., "educ_kiga")
-
+				//Sommerferien
+				.restrict("2020-06-25", 0.2, "educ_primary")
 				//Ende der Sommerferien
-				.restrict("2020-08-10", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 				//Herbstferien
-				.restrict("2020-10-09", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 				.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Weihnachtsferien
+				.restrict("2020-12-21", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Winterferien
+				.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				//Osterferien
+				.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 
 		;
 
@@ -105,44 +115,12 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
 		}
 
-		// mask compliance has gone down in Berlin (now 80%)
-		restrictions.restrict("2020-06-04", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
+		// mask compliance according to bvg
+		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
+		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other");
+		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other");
+
 		return restrictions;
-	}
-
-	/**
-	 * Adds base progression config to the given builder.
-	 */
-	public static Transition.Builder baseProgressionConfig(Transition.Builder builder) {
-		return builder
-				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
-				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-						to(EpisimPerson.DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.)))
-
-// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
-// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
-				.from(EpisimPerson.DiseaseStatus.contagious,
-						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
-
-// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
-				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(5., 5.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
-
-// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
-				.from(EpisimPerson.DiseaseStatus.seriouslySick,
-						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
-
-// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
-				.from(EpisimPerson.DiseaseStatus.critical,
-						to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
-
-				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
-				;
-
 	}
 
 	@Provides
@@ -150,6 +128,8 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	public Config config() {
 
 		Config config = getBaseConfig();
+
+		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -201,9 +181,9 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		 *  alpha = 1.4 -> ci=0.437
 		 */
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
-		private double alpha = 1;
-		private Extrapolation extrapolation = Extrapolation.linear;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200712.csv");
+		private double alpha = 1.;
+		private Extrapolation extrapolation = Extrapolation.none;
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200830.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
 

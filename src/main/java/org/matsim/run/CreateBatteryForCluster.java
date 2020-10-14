@@ -33,6 +33,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.PreparedRun;
 import picocli.CommandLine;
 
@@ -41,6 +42,7 @@ import java.io.FileWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -63,6 +65,7 @@ import java.util.stream.Collectors;
 		description = "Create batch scripts for execution on computing cluster.",
 		mixinStandardHelpOptions = true
 )
+@SuppressWarnings("unchecked, rawtypes")
 public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(CreateBatteryForCluster.class);
@@ -73,7 +76,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v13")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v14")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "44")
@@ -82,10 +85,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms84G -Xmx84G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.HolidayReturnees")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.BerlinPercolation")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.HolidayReturnees$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.BerlinPercolation$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -110,7 +113,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		Files.createDirectories(input);
 
 		// Copy all resources
-		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "jvm.options")) {
+		for (String name : Lists.newArrayList("collect.sh", "run.sh", "runSlurm.sh", "runParallel.sh", "postProcess.sh", "jvm.options")) {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
@@ -144,7 +147,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			String runId = runName + run.id;
 			String configFileName = "config_" + runName + run.id + ".xml";
 
-			noBindings &= prepare.setup.getBindings(run.id, run.args) == null;
+			noBindings &= ((BatchRun) prepare.setup).getBindings(run.id, run.args) == null;
 
 			String outputPath = batchOutput + "/" + prepare.getOutputName(run);
 			if (noBindings) {
@@ -156,7 +159,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			}
 
 			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
-			line.addAll(run.params.stream().map(Object::toString).collect(Collectors.toList()));
+			line.addAll(run.params.stream().map(EpisimUtils::asString).collect(Collectors.toList()));
 
 			// base case is not contained in the info file
 			if (run.id > 0) {
@@ -198,8 +201,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"export EPISIM_INPUT='/scratch/usr/bebchrak/episim/episim-input'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("sbatch --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh",
-						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName)
+				String.format("jid=$(sbatch --parsable --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh)",
+						(int) Math.ceil(prepare.runs.size() / (perSocket * 4d)), perSocket, runName),
+				"sbatch --export=ALL --dependency=afterok:$jid postProcess.sh"
 		), "\n");
 
 		FileUtils.writeLines(dir.resolve("start_qsub.sh").toFile(), Lists.newArrayList(
@@ -210,7 +214,8 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				"export EPISIM_INPUT='<PUT INPUT DIR HERE>'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
-				String.format("qsub -V -N %s run.sh", runName)
+				String.format("jid=$(qsub -V -N %s run.sh)", runName),
+				"qsub -V -W depend=afterok:$jid postProcess.sh"
 		), "\n");
 
 

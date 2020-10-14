@@ -28,6 +28,11 @@ for f in output/*/*.rValues.txt; do
     cp $f tmp/$name.csv
 done
 
+for f in output/*/*.post.*.*; do
+    name=$(basename "$f")
+    cp $f tmp/$name
+done
+
 echo "Creating zip file..."
 
 zip --junk-paths summaries.zip _info.txt metadata.yaml tmp/*.csv tmp/*.txt

@@ -8,8 +8,14 @@ import numpy as np
 import pandas as pd
 
 
-def read_batch_run(run, r_values=False):
-    """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file. """
+def read_batch_run(run, r_values=False, age_groups=None):
+    """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file.
+
+    :param run path to folder or zip file of the run
+    :param r_values whether to read r values from the file
+    :param age_groups If given aggregates infections by age. Param needs to be array of monotonically increasing bin edges,
+                    including the rightmost edge.
+    """
 
     info = None
     if path.isdir(run):
@@ -44,11 +50,41 @@ def read_batch_run(run, r_values=False):
                         df['rValue'] = rv.rValue
                         df['newContagious'] = rv.newContagious
 
+                if age_groups:
+                    with z.open(idx + ".post.infectionsByAge.txt") as rCSV:
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
+                        df = df.join(group_by_age(rv, age_groups))
+
+                    with z.open(idx + ".post.seriouslySickByAge.txt") as rCSV:
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
+                        df = df.merge(group_by_age(rv, age_groups, "sick"), on="day")
+
+                    with z.open(idx + ".post.criticalByAge.txt") as rCSV:
+                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
+                        df = df.merge(group_by_age(rv, age_groups, "crit"), on="day")
+
                 frames.append(df)
 
             i += 1
 
     return pd.concat(frames)
+
+
+def group_by_age(rv, age_groups, prefix="age"):
+    """ Groups data frame by age """
+    d = rv.to_numpy()
+    data = {}
+
+    off = age_groups[0]
+    for i in range(len(age_groups) - 1):
+        idx = np.arange(age_groups[i] - off, age_groups[i + 1] - off, step=1)
+        column = d[:, idx].sum(axis=1)
+
+        name = prefix + "%d-%d" % (idx[0] + off, idx[-1] + off)
+
+        data[name] = column
+
+    return pd.DataFrame(index=rv.index.copy(), data=data)
 
 
 def read_run(f, district=None, window=5):
@@ -101,3 +137,39 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     rates = np.array(rates)
 
     return rates.mean(), np.square(rates - target_rate).mean()
+
+
+def calc_r_reduction(base_case, base_variables, df, group_by=None):
+    """ Calculates the reduction of r
+    
+    :param base_case: data set with the base case
+    :param base_variables: columns to group by in the base case
+    :param df: data set for which to calculate the reductions
+    :param group_by: columns to group by in the result
+    :return: aggregated data frame
+    """
+
+    if group_by is None:
+        group_by = base_variables
+    else:
+        group_by.insert(0, "seed")
+
+    base_variables.insert(0, "seed")
+
+    base_r = base_case.groupby(base_variables).agg(rValue=("rValue", "mean"))
+
+    aggr = df.groupby(group_by).agg(rValue=("rValue", "mean"))
+
+    aggr['baseR'] = 0
+
+    for index, value in base_r.itertuples():
+        aggr.loc[index, "baseR"] = value
+
+    aggr['reduction'] = 1 - aggr.rValue / aggr.baseR
+
+    group_by.remove("seed")
+
+    result = aggr.groupby(group_by).agg(rValue=("rValue", "mean"), rReduction=("reduction", "mean"),
+                                        std=("reduction", "std"), sem=("reduction", "sem"))
+
+    return result

@@ -98,9 +98,14 @@ public final class EpisimPerson implements Attributable {
 	private EpisimContainer<?> currentContainer = null;
 
 	/**
-	 * The facility where the person got infected, null otherwise.
+	 * The facility where the person got infected. Can be null if person was initially infected.
 	 */
 	private Id<ActivityFacility> infectionContainer = null;
+
+	/**
+	 * The infection type when the person got infected. Can be null if person was initially infected.
+	 */
+	private String infectionType = null;
 
 	/**
 	 * Current {@link DiseaseStatus}.
@@ -174,6 +179,10 @@ public final class EpisimPerson implements Attributable {
 			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
 		}
 
+		if (in.readBoolean()) {
+			infectionType = readChars(in);
+		}
+
 		n = in.readInt();
 		spentTime.clear();
 		for (int i = 0; i < n; i++) {
@@ -214,6 +223,11 @@ public final class EpisimPerson implements Attributable {
 		out.writeBoolean(infectionContainer != null);
 		if (infectionContainer != null) {
 			writeChars(out, infectionContainer.toString());
+		}
+
+		out.writeBoolean(infectionType != null);
+		if (infectionType != null) {
+			writeChars(out, infectionType);
 		}
 
 		out.writeInt(spentTime.size());
@@ -444,6 +458,14 @@ public final class EpisimPerson implements Attributable {
 
 	public Id<ActivityFacility> getInfectionContainer() {
 		return infectionContainer;
+	}
+
+	public void setInfectionType(String infectionType) {
+		this.infectionType = infectionType;
+	}
+
+	public String getInfectionType() {
+		return infectionType;
 	}
 
 	/**

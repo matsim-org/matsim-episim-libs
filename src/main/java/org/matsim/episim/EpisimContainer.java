@@ -65,9 +65,19 @@ public class EpisimContainer<T> {
 	private int maxGroupSize = -1;
 
 	/**
-	 * The number of persons in this container during one day.
+	 * The number of persons using this container over all days.
 	 */
-	private int size = -1;
+	private int totalUsers = -1;
+
+	/**
+	 * Typical number of persons that can fit into this container.
+	 */
+	private int typicalCapacity = -1;
+
+	/**
+	 * Number of distinct spaces in this facility. May be relevant for certain contact models.
+	 */
+	private double numSpaces = 1;
 
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
@@ -134,12 +144,26 @@ public class EpisimContainer<T> {
 		return containerId;
 	}
 
+	/**
+	 * @return maximum group size in container.
+	 */
 	public int getMaxGroupSize() {
 		return maxGroupSize;
 	}
 
-	public int getSize() {
-		return size;
+	/**
+	 * @return number of people using container.  May be larger than {@link #getMaxGroupSize()}.
+	 */
+	public int getTotalUsers() {
+		return totalUsers;
+	}
+
+	public int getTypicalCapacity() {
+		return typicalCapacity;
+	}
+
+	public double getNumSpaces() {
+		return numSpaces;
 	}
 
 	/**
@@ -152,11 +176,20 @@ public class EpisimContainer<T> {
 	}
 
 	/**
-	 * Sets the total number of persons
+	 * Sets the total number of persons using this container.
+	 *
 	 * @param num number of persons
 	 */
-	void setSize(int num) {
-		size = num;
+	void setTotalUsers(int num) {
+		totalUsers = num;
+	}
+
+	void setTypicalCapacity(int typicalCapacity) {
+		this.typicalCapacity = typicalCapacity;
+	}
+
+	public void setNumSpaces(double numSpaces) {
+		this.numSpaces = numSpaces;
 	}
 
 	void clearPersons() {

@@ -26,7 +26,7 @@ public class PtInterventions implements BatchRun<PtInterventions.Params> {
 
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Object params) {
+	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinScenario25pct2020();
 	}
 
@@ -56,7 +56,7 @@ public class PtInterventions implements BatchRun<PtInterventions.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		LocalDate referenceDate = LocalDate.parse(params.referenceDate);
-		
+
 		episimConfig.getOrAddContainerParams("pt").setContactIntensity(params.ptCi);
 
 		switch (params.intervention) {
@@ -133,7 +133,7 @@ public class PtInterventions implements BatchRun<PtInterventions.Params> {
 
 		@StringParameter({"none", "pt50", "pt100", "cloth50", "cloth90", "cloth100", "surgical50", "surgical90", "surgical100", "N9550", "N9590", "N95100"})
 		String intervention;
-		
+
 		@Parameter({1., 2., 5.})
 		double ptCi;
 

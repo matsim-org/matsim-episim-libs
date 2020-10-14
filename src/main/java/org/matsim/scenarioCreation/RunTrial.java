@@ -51,7 +51,7 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--offset", description = "Adds an offset to start date", defaultValue = "0")
 	private int offset;
 
-	@CommandLine.Option(names = "--days", description = "Number of days to simulate", defaultValue = "45")
+	@CommandLine.Option(names = "--days", description = "Number of days to simulate", defaultValue = "52")
 	private int days;
 
 	@CommandLine.Option(names = "--ci", description = "Overwrite contact intensities", split = ";")
@@ -85,9 +85,7 @@ public final class RunTrial implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		Configurator.setLevel("org.matsim.core.config", Level.WARN);
-		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
-		Configurator.setLevel("org.matsim.core.events", Level.WARN);
+		Configurator.setRootLevel(Level.ERROR);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(RunEpisim.resolveModules(moduleNames)));
 
@@ -149,7 +147,7 @@ public final class RunTrial implements Callable<Integer> {
 			iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
 
 			// Write a new snapshot
-			if (run == 0) {
+			if (run == 0 && snapshot != null) {
 				episimConfig.setSnapshotInterval(iterations - 7);
 			}
 		}

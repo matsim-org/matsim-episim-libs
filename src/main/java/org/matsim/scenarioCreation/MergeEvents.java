@@ -74,7 +74,8 @@ public class MergeEvents implements Callable<Integer>{
 
 			EventsUtils.readEvents(manager, path.toString());
 
-			handler.events.forEach( (timeStamp,eventsList) -> allEvents.computeIfAbsent(timeStamp, time -> new ArrayList<Event>()).addAll(eventsList));
+			throw new RuntimeException("Merging not implemented...");
+			//handler.events.forEach( (timeStamp,eventsList) -> allEvents.computeIfAbsent(timeStamp, time -> new ArrayList<Event>()).addAll(eventsList));
 		}
 
 		EventWriterXML writer = new EventWriterXML(

@@ -38,7 +38,7 @@ public class RunEpisimSnapshotTest {
 
 	@Parameterized.Parameters(name = "tracing-{0}")
 	public static Iterable<TracingConfigGroup.Strategy> parameters() {
-		return Arrays.asList(TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, TracingConfigGroup.Strategy.LOCATION_WITH_TESTING);
+		return Arrays.asList(TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, TracingConfigGroup.Strategy.LOCATION_WITH_TESTING, TracingConfigGroup.Strategy.IDENTIFY_SOURCE);
 	}
 
 	@Before

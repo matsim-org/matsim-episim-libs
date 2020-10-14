@@ -21,8 +21,10 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
+	private static final String QUARANTINE_DURATION = "quarantineDuration";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
+	private static final String QUARANTINE_RELEASE = "quarantineRelease";
 	private static final String TRACE_SUSCEPTIBLE = "traceSusceptible";
 	private static final String EQUIPMENT_RATE = "equipmentRate";
 	private static final String CAPACITY = "tracingCapacity";
@@ -51,6 +53,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of days after the person showing symptoms.
 	 */
 	private int tracingDelay = 0;
+
+	/**
+	 * Duration of quarantine in days.
+	 */
+	private int quarantineDuration = 14;
 	/**
 	 * Probability that a person is equipped with a tracing device.
 	 */
@@ -80,6 +87,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Tracing and containment strategy.
 	 */
 	private Strategy strategy = Strategy.INDIVIDUAL_ONLY;
+
+	/**
+	 * Quarantine release strategy.
+	 */
+	private QuarantineRelease quarantineRelease = QuarantineRelease.SUSCEPTIBLE;
 
 	/**
 	 * How many infections are required for location based tracing to trigger.
@@ -124,17 +136,21 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.tracingDelay = tracingDelay;
 	}
 
+	@StringGetter(TRACING_PROBABILITY)
+	public String getTracingProbabilityString() {
+		return JOINER.join(tracingProbability);
+	}
+
+	public Map<LocalDate, Double> getTracingProbability() {
+		return tracingProbability;
+	}
+
 	@StringSetter(TRACING_PROBABILITY)
 	void setTracingProbability(String capacity) {
 		Map<String, String> map = SPLITTER.split(capacity);
 		setTracingProbability(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
-	}
-
-	@StringGetter(TRACING_PROBABILITY)
-	public String getTracingProbabilityString() {
-		return JOINER.join(tracingProbability);
 	}
 
 	public void setTracingProbability(Map<LocalDate, Double> tracingProbability) {
@@ -146,11 +162,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Sets one tracing probability valid throughout whole simulation.
 	 */
 	public void setTracingProbability(double tracingProbability) {
-		setTracingProbability(Map.of(LocalDate.of(1970,1,1), tracingProbability));
-	}
-
-	public Map<LocalDate, Double> getTracingProbability() {
-		return tracingProbability;
+		setTracingProbability(Map.of(LocalDate.of(1970, 1, 1), tracingProbability));
 	}
 
 	/**
@@ -199,6 +211,26 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(EQUIPMENT_RATE)
 	public void setEquipmentRate(double equipmentRate) {
 		this.equipmentRate = equipmentRate;
+	}
+
+	@StringSetter(QUARANTINE_DURATION)
+	public void setQuarantineDuration(int quarantineDuration) {
+		this.quarantineDuration = quarantineDuration;
+	}
+
+	@StringGetter(QUARANTINE_DURATION)
+	public int getQuarantineDuration() {
+		return quarantineDuration;
+	}
+
+	@StringGetter(QUARANTINE_RELEASE)
+	public QuarantineRelease getQuarantineRelease() {
+		return quarantineRelease;
+	}
+
+	@StringSetter(QUARANTINE_RELEASE)
+	public void setQuarantineRelease(QuarantineRelease quarantineRelease) {
+		this.quarantineRelease = quarantineRelease;
 	}
 
 	@StringGetter(MIN_DURATION)
@@ -271,13 +303,42 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		INDIVIDUAL_ONLY,
 
 		/**
-		 * Trace contacts of all persons that got infected at specific location.
+		 * Put persons at location with lot of infections into quarantine.
 		 */
 		LOCATION,
+
 		/**
 		 * Trace and test all contacts for persons that have been at specific location.
 		 */
-		LOCATION_WITH_TESTING
+		LOCATION_WITH_TESTING,
+
+		/**
+		 * Follow back all contacts of infected persons.
+		 */
+		IDENTIFY_SOURCE,
+
+		/**
+		 * Randomly put persons into quarantine based on infection numbers.
+		 */
+		RANDOM
+	}
+
+
+	/**
+	 * Defines, which person are released from quarantine.
+	 */
+	public enum QuarantineRelease {
+
+		/**
+		 * Release persons only if they are still susceptible.
+		 */
+		SUSCEPTIBLE,
+
+		/**
+		 * Release persons without showing symptoms.
+		 */
+		NON_SYMPTOMS
+
 	}
 
 }

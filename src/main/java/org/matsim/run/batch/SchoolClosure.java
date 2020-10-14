@@ -49,7 +49,6 @@ public final class SchoolClosure implements BatchRun<SchoolClosure.Params> {
 		episimConfig.setInitialInfections(5);
 
 		AbstractSnzScenario.addParams(episimConfig);
-		AbstractSnzScenario.setContactIntensities(episimConfig);
 
 		return config;
 	}

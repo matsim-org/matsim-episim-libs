@@ -23,15 +23,14 @@ public class BerlinSuperSpreading implements BatchRun<BerlinSuperSpreading.Param
 	}
 
 	@Override
-	public AbstractModule getBindings(int id, Object params) {
-		Params p = (Params) params;
-		return new SnzBerlinSuperSpreaderScenario(25, 0, p.sigma);
+	public AbstractModule getBindings(int id, Params params) {
+		return new SnzBerlinSuperSpreaderScenario(true, 30, 0, params.sigma);
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		Config config = new SnzBerlinSuperSpreaderScenario(25, 0, params.sigma).config();
+		Config config = new SnzBerlinSuperSpreaderScenario(true, 30, 0, params.sigma).config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 

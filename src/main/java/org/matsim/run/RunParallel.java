@@ -32,7 +32,6 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import picocli.CommandLine;
 
@@ -62,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 		showDefaultValues = true,
 		mixinStandardHelpOptions = true
 )
+@SuppressWarnings("unchecked, rawtypes")
 public class RunParallel<T> implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RunParallel.class);
@@ -69,13 +69,16 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "${env:EPISIM_OUTPUT:-output}")
 	private Path output;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.ParamsBatch}")
+	public static final String OPTION_SETUP = "--setup";
+	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.Percolation}")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.ParamsBatch$Params}")
+	public static final String OPTION_PARAMS = "--params";
+	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.Percolation$Params}")
 	private Class<T> params;
 
-	@CommandLine.Option(names = "--threads", defaultValue = "4", description = "Number of threads to use concurrently")
+	public static final String OPTION_THREADS = "--threads";
+	@CommandLine.Option(names = OPTION_THREADS, defaultValue = "4", description = "Number of threads to use concurrently")
 	private int threads;
 
 	@CommandLine.Option(names = "--total-worker", defaultValue = "1", description = "Total number of worker processes available for this run." +
@@ -91,12 +94,15 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--max-jobs", defaultValue = "${env:EPISIM_MAX_JOBS:-0}", description = "Maximum number of jobs to execute. (0=all)")
 	private int maxJobs;
 
-	@CommandLine.Option(names = "--iterations", description = "Maximum number of days to simulate.", defaultValue = "360")
+	public static final String OPTION_ITERATIONS = "--iterations";
+	@CommandLine.Option(names = OPTION_ITERATIONS, description = "Maximum number of days to simulate.", defaultValue = "360")
 	private int maxIterations;
 
 	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
 	private boolean noReuse;
 
+	@CommandLine.Option(names = "--silent", defaultValue = "false", description = "Disable info and warn logging")
+	private boolean silent;
 
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
@@ -109,6 +115,11 @@ public class RunParallel<T> implements Callable<Integer> {
 		Configurator.setLevel("org.matsim.core.config", Level.WARN);
 		Configurator.setLevel("org.matsim.core.controler", Level.WARN);
 		Configurator.setLevel("org.matsim.core.events", Level.WARN);
+
+		if (silent) {
+			Configurator.setRootLevel(Level.ERROR);
+			Configurator.setLevel(log.getName(), Level.INFO);
+		}
 
 		if (!Files.exists(output)) Files.createDirectories(output);
 
@@ -131,9 +142,14 @@ public class RunParallel<T> implements Callable<Integer> {
 		if (noReuse) {
 			log.info("Reusing scenario and events is disabled.");
 		} else {
-			log.info("Reading base scenario...");
-			scenario = ScenarioUtils.loadScenario(baseConfig);
-			replay = new ReplayHandler(episimBase, scenario);
+			log.info("Creating base scenario...");
+
+			Module base = prepare.setup.getBindings(0, null);
+
+			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(base));
+
+			scenario = injector.getInstance(Scenario.class);
+			replay = injector.getInstance(ReplayHandler.class);
 		}
 
 		int i = 0;
@@ -161,7 +177,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(
-					new Task(prepare.setup.getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
+					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
@@ -207,11 +223,11 @@ public class RunParallel<T> implements Callable<Integer> {
 		private static final AtomicInteger i = new AtomicInteger(0);
 
 		@Nullable
-		private final AbstractModule bindings;
+		private final Module bindings;
 		private final ParallelModule module;
 		private final int maxIterations;
 
-		private Task(@Nullable AbstractModule bindings, ParallelModule module, int maxIterations) {
+		private Task(@Nullable Module bindings, ParallelModule module, int maxIterations) {
 			this.bindings = bindings;
 			this.module = module;
 			this.maxIterations = maxIterations;
