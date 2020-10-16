@@ -193,6 +193,8 @@ public final class Restriction {
 
 	/**
 	 * Creates a restriction for activity to be closed during certain hours.
+	 * Closing hours must be consecutively, "holes" are not allowed.
+	 * End of day needs to be split into multiple closing hours.
 	 *
 	 * @param hours pairs of hours when activity needs to be closed. Eg. [0,6, 23,24]
 	 */
@@ -277,6 +279,28 @@ public final class Restriction {
 		}
 
 		throw new IllegalStateException("Could not determine mask. Probabilities are likely wrong.");
+	}
+
+	/**
+	 * Check whether one time falls into a closing hour.
+	 *
+	 * @param time      zero based timestamp in seconds
+	 * @param adjustEnd when true result time is shifted to be later, otherwise shifted to start of closing hour
+	 * @return adjusted time, unchanged when not in closing hour. Otherwise moved to closing hours
+	 */
+	public double adjustByClosingHour(double time, boolean adjustEnd) {
+		if (closingHours == null || closingHours.isEmpty())
+			return time;
+
+		// seconds of day
+		double sod = time % 86400;
+
+		for (ClosingHours ch : closingHours) {
+			if (sod > ch.from && sod <= ch.to)
+				return adjustEnd ? time + (ch.to - sod) : time + (ch.from - sod);
+		}
+
+		return time;
 	}
 
 	/**

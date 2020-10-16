@@ -153,7 +153,7 @@ public final class PairWiseContactModel extends AbstractContactModel {
 
 		double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
 		double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
-		double jointTimeInContainer = now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+		double jointTimeInContainer = calculateJointTimeInContainer(now, personLeavingContainer, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 		//forbid certain cross-activity interactions, keep track of contacts
 		if (container instanceof EpisimFacility) {
