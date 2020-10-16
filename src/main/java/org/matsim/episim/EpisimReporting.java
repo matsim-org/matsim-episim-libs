@@ -258,9 +258,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			switch (person.getQuarantineStatus()) {
 				// For now there is no separation in the report between full and home
 				case atHome:
+					report.nInQuarantineHome++;
+					district.nInQuarantineHome++;
+					break;
 				case full:
-					report.nInQuarantine++;
-					district.nInQuarantine++;
+					report.nInQuarantineFull++;
+					district.nInQuarantineFull++;
 					break;
 				case no:
 					break;
@@ -312,7 +315,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
 		log.warn("---");
-		log.warn("No of persons in quarantine={} / {}%", decimalFormat.format(t.nInQuarantine), 100 * t.nInQuarantine / t.nTotal());
+		log.warn("No of persons in quarantineFull={} / {}%", decimalFormat.format(t.nInQuarantineFull), 100 * t.nInQuarantineFull / t.nTotal());
+		log.warn("No of persons in quarantineHome (through tracing)={} / {}%", decimalFormat.format(t.nInQuarantineHome), 100 * t.nInQuarantineHome / t.nTotal());
 		log.warn("100 persons={} agents", sampleSize * 100);
 		log.warn("===============================");
 
@@ -335,7 +339,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
 			array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((r.nTotalInfected + r.nRecovered));
 
-			array[InfectionsWriterFields.nInQuarantine.ordinal()] = Long.toString(r.nInQuarantine);
+			array[InfectionsWriterFields.nInQuarantineFull.ordinal()] = Long.toString(r.nInQuarantineFull);
+			array[InfectionsWriterFields.nInQuarantineHome.ordinal()] = Long.toString(r.nInQuarantineHome);
 
 			array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);
 			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);
@@ -576,7 +581,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
 		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
-		nRecovered, nInQuarantine, district
+		nRecovered, nInQuarantineFull, nInQuarantineHome, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility}
@@ -604,7 +609,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		public long nCriticalCumulative = 0;
 		public long nTotalInfected = 0;
 		public long nRecovered = 0;
-		public long nInQuarantine = 0;
+		public long nInQuarantineFull = 0;
+		public long nInQuarantineHome = 0;
 
 		/**
 		 * Constructor.
@@ -636,7 +642,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			nCriticalCumulative *= factor;
 			nTotalInfected *= factor;
 			nRecovered *= factor;
-			nInQuarantine *= factor;
+			nInQuarantineFull *= factor;
+			nInQuarantineHome *= factor;
 		}
 	}
 }
