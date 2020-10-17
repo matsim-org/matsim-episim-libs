@@ -23,6 +23,7 @@ public class RestrictionTest {
 		r.merge(Restriction.ofMask(FaceMask.CLOTH, 0.5).asMap());
 		r.merge(Restriction.ofCiCorrection(0.5).asMap());
 		r.merge(Restriction.ofGroupSize(20).asMap());
+		r.merge(Restriction.ofClosingHours(0, 7).asMap());
 
 		assertThat(r.getRemainingFraction()).isEqualTo(0.8);
 		assertThat(r.getCiCorrection()).isEqualTo(0.5);
@@ -31,6 +32,8 @@ public class RestrictionTest {
 		assertThat(r.getMaskUsage().get(FaceMask.CLOTH)).isEqualTo(1);
 
 		assertThat(r.getMaxGroupSize()).isEqualTo(20);
+
+		assertThat(r.getClosingHours()).contains(new Restriction.ClosingHours(hours(0), hours(7)));
 
 		//assertThatExceptionOfType(IllegalArgumentException.class)
 		//		.isThrownBy(() -> r.merge(Restriction.ofExposure(0.4).asMap()));

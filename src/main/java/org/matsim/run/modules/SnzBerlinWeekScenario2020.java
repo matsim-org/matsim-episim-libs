@@ -145,6 +145,10 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 				.addDays(DayOfWeek.SUNDAY);
 
 
+		//for (InfectionParams infParams : episimConfig.getInfectionParams()) {
+		//	if (!infParams.includesActivity("home")) infParams.setSpacesPerFacility(1);
+		//}
+
 		episimConfig.setStartDate("2020-02-18");
 
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);

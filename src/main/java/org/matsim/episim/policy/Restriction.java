@@ -440,6 +440,16 @@ public final class Restriction {
 		maskUsage.forEach((k, v) -> nameMap.put(k.name(), v));
 		map.put("masks", nameMap);
 
+		if (closingHours != null) {
+			List<Integer> chs = new ArrayList<>();
+			for (ClosingHours c : closingHours) {
+				chs.add(c.from);
+				chs.add(c.to);
+			}
+			map.put("closingHours", chs);
+		}
+
+
 		return map;
 	}
 
@@ -449,7 +459,7 @@ public final class Restriction {
 	public static final class ClosingHours {
 
 		/**
-		 * Starting second when activity is closed (inclusive)
+		 * Starting second when activity is closed (exclusive)
 		 */
 		public final int from;
 
