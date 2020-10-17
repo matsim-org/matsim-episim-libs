@@ -13,6 +13,7 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
+import java.time.LocalDate;
 
 /**
  * Batch class for curfew runs
@@ -44,14 +45,24 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 
-		ConfigBuilder builder = FixedPolicy.config();
+		ConfigBuilder builder;
+		LocalDate day;
 
-		if (params.curfew.equals("23-6")) builder.restrict(episimConfig.getStartDate().plusDays(params.day), Restriction.ofClosingHours(0,6 ,23,24), "leisure");
-		else if (params.curfew.equals("22-6")) builder.restrict(episimConfig.getStartDate().plusDays(params.day), Restriction.ofClosingHours(0,6 ,22,24), "leisure");
-		else if (params.curfew.equals("21-6")) builder.restrict(episimConfig.getStartDate().plusDays(params.day), Restriction.ofClosingHours(0,6 ,21,24), "leisure");
-		else if (params.curfew.equals("20-6")) builder.restrict(episimConfig.getStartDate().plusDays(params.day), Restriction.ofClosingHours(0,6 ,20,24), "leisure");
-		else if (params.curfew.equals("0-24")) builder.restrict(episimConfig.getStartDate().plusDays(params.day), Restriction.ofClosingHours(0,24), "leisure");
-		else if (params.curfew.equals("remainingFraction0")) builder.restrict(episimConfig.getStartDate().plusDays(params.day), 0., "leisure");
+		// test scenario with few restrictions
+		if (params.variant.equals("testing")) {
+			builder = FixedPolicy.config();
+			day = episimConfig.getStartDate().plusDays(20);
+		} else  {
+			builder = FixedPolicy.parse(episimConfig.getPolicy());
+			day = LocalDate.of(2020, 10, 12);
+		}
+
+		if (params.curfew.equals("23-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,23,24), "leisure");
+		else if (params.curfew.equals("22-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,22,24), "leisure");
+		else if (params.curfew.equals("21-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,21,24), "leisure");
+		else if (params.curfew.equals("20-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,20,24), "leisure");
+		else if (params.curfew.equals("0-24")) builder.restrict(day, Restriction.ofClosingHours(0,24), "leisure");
+		else if (params.curfew.equals("remainingFraction0")) builder.restrict(day, 0., "leisure");
 		else if (params.curfew.equals("no"));
 		else throw new RuntimeException("not implemented");
 
@@ -62,11 +73,11 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(20)
+		@GenerateSeeds(50)
 		public long seed;
 
-		@IntParameter({20})
-		public int day;
+		@StringParameter({"testing", "current"})
+		public String variant;
 
 		@StringParameter({"no", "23-6", "22-6", "21-6", "20-6", "0-24", "remainingFraction0"})
 		public String curfew;
