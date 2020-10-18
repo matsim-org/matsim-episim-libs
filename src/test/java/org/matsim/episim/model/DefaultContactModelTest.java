@@ -305,7 +305,17 @@ public class DefaultContactModelTest {
 		);
 
 		assertThat(rate).isGreaterThan(0);
+	}
 
+	@Test
+	public void closedAllDay() {
+		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.ofClosingHours(0, 24)));
+		double rate = sampleInfectionRate(Duration.ofHours(6), "c10",
+				() -> EpisimTestUtils.createFacility(10, "c10", 21, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c10", f)
+		);
+
+		assertThat(rate).isCloseTo(0, OFFSET);
 	}
 
 	@Test
