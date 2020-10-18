@@ -67,6 +67,9 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 			for (EpisimConfigGroup.InfectionParams infParams : episimConfig.getInfectionParams()) {
 				if (!infParams.includesActivity("home")) infParams.setSpacesPerFacility(1);
 			}
+
+			// separate calib param for nspaces = 1
+			episimConfig.setCalibrationParameter(2.44e-5);
 		}
 
 		if (params.unrestricted.equals("yes")) {
