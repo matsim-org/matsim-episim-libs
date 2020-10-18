@@ -33,7 +33,7 @@ public class RestrictionTest {
 
 		assertThat(r.getMaxGroupSize()).isEqualTo(20);
 
-		assertThat(r.getClosingHours()).contains(new Restriction.ClosingHours(hours(0), hours(7)));
+		assertThat(r.getClosingHours()).isEqualTo(new Restriction.ClosingHours(hours(0), hours(7)));
 
 		//assertThatExceptionOfType(IllegalArgumentException.class)
 		//		.isThrownBy(() -> r.merge(Restriction.ofExposure(0.4).asMap()));
@@ -45,13 +45,13 @@ public class RestrictionTest {
 
 		Restriction r = Restriction.ofClosingHours(5, 9);
 
-		assertThat(r.getClosingHours()).contains(new Restriction.ClosingHours(hours(5), hours(9)));
+		assertThat(r.getClosingHours()).isEqualTo(new Restriction.ClosingHours(hours(5), hours(9)));
 
 		// not overwritten
 		r.merge(Restriction.ofClosingHours(17, 20).asMap());
-		assertThat(r.getClosingHours()).contains(new Restriction.ClosingHours(hours(5), hours(9)));
+		assertThat(r.getClosingHours()).isEqualTo(new Restriction.ClosingHours(hours(5), hours(9)));
 
-		r = Restriction.ofClosingHours(1, 6, 22, 24);
+		r = Restriction.ofClosingHours(1, 6);
 
 		// moved to be later
 		assertThat(r.adjustByClosingHour(hours(2), true))
@@ -69,11 +69,30 @@ public class RestrictionTest {
 		assertThat(r.adjustByClosingHour(days(2) + hours(10), true))
 				.isEqualTo(days(2) + hours(10));
 
-		assertThat(r.adjustByClosingHour(days(2) + hours(23), true))
-				.isEqualTo(days(2) + hours(24));
-
 	}
 
+	@Test
+	public void closingOverlap() {
+
+		Restriction r = Restriction.ofClosingHours(22, 6);
+
+		// day
+		int d = days(2);
+
+		assertThat(r.adjustByClosingHour(d + hours(8), false))
+				.isEqualTo(d + hours(8));
+
+		assertThat(r.adjustByClosingHour(d + hours(23), true))
+				.isEqualTo(d + days(1) + hours(6));
+		assertThat(r.adjustByClosingHour(d + hours(23), false))
+				.isEqualTo(d + hours(22));
+
+		assertThat(r.adjustByClosingHour(d + days(1) + hours(3), true))
+				.isEqualTo(d + days(1) + hours(6));
+		assertThat(r.adjustByClosingHour(d + days(1) + hours(3), false))
+				.isEqualTo(d + hours(22));
+
+	}
 
 	private int days(int d) {
 		return d * 86400;

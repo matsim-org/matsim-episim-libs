@@ -57,11 +57,11 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 			day = LocalDate.of(2020, 10, 12);
 		}
 
-		if (params.curfew.equals("23-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,23,24), "leisure");
-		else if (params.curfew.equals("22-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,22,24), "leisure");
-		else if (params.curfew.equals("21-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,21,24), "leisure");
-		else if (params.curfew.equals("20-6")) builder.restrict(day, Restriction.ofClosingHours(0,6 ,20,24), "leisure");
-		else if (params.curfew.equals("0-24")) builder.restrict(day, Restriction.ofClosingHours(0,24), "leisure");
+		if (params.curfew.equals("23-6")) builder.restrict(day, Restriction.ofClosingHours(23, 6), "leisure");
+		else if (params.curfew.equals("22-6")) builder.restrict(day, Restriction.ofClosingHours(22, 6), "leisure");
+		else if (params.curfew.equals("21-6")) builder.restrict(day, Restriction.ofClosingHours(21, 6), "leisure");
+		else if (params.curfew.equals("20-6")) builder.restrict(day, Restriction.ofClosingHours(20, 6), "leisure");
+		else if (params.curfew.equals("0-24")) builder.restrict(day, Restriction.ofClosingHours(0, 24), "leisure");
 		else if (params.curfew.equals("remainingFraction0")) builder.restrict(day, 0., "leisure");
 		else if (params.curfew.equals("no"));
 		else throw new RuntimeException("not implemented");

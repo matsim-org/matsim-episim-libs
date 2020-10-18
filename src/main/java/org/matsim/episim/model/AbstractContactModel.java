@@ -256,7 +256,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		Restriction r = getRestrictions().get(act.params.getContainerName());
 
 		// no closing hour set
-		if (r.getClosingHours() == null || r.getClosingHours().isEmpty())
+		if (r.getClosingHours() == null)
 			return now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 		// entering times are shifted to the past if the facility was closed
