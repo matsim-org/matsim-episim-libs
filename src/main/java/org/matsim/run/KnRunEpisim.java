@@ -36,6 +36,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
+import org.matsim.core.gbl.Gbl;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
@@ -51,6 +52,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -74,7 +76,7 @@ public class KnRunEpisim {
 	// ===
 
 	private enum ScenarioType{ openBln1pct, snzBerlinWeek2020Symmetric}
-	private static final ScenarioType scenarioType = ScenarioType.openBln1pct;
+	private static final ScenarioType scenarioType = ScenarioType.snzBerlinWeek2020Symmetric;
 
 	private enum ContactModelType{ original, oldSymmetric, symmetric, sqrt, direct }
 	private static final ContactModelType contactModelType = ContactModelType.oldSymmetric;
@@ -347,8 +349,20 @@ public class KnRunEpisim {
 		ConfigUtils.writeConfig( config, config.controler().getOutputDirectory() + "/output_config.xml.gz" );
 		ConfigUtils.writeMinimalConfig( config, config.controler().getOutputDirectory() + "/output_config_reduced.xml.gz" );
 
-		injector.getInstance(EpisimRunner.class).run( 90 );
+//		injector.getInstance(EpisimRunner.class).run( 90 );
+		{
 
+			// Construct these dependencies as late as possible, so all other configs etc have been fully configured
+			final ReplayHandler replay = injector.getInstance( ReplayHandler.class );
+			final InfectionEventHandler handler = injector.getInstance( InfectionEventHandler.class );
+			final EventsManager manager = injector.getInstance( EventsManager.class );
+
+			manager.addHandler( handler );
+
+			ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "Just before running init" );
+
+			handler.init( replay.getEvents() );
+		}
 		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
