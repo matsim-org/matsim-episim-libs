@@ -81,6 +81,13 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		this(25, true, true, OldSymmetricContactModel.class);
 	}
 
+	/**
+	 * Create new scenario module.
+	 * @param sample sample sizes to use, currently 1, 10, 25, 100 are supported
+	 * @param withDiseaseImport enable disease import data from rki, otherwise will be constant each day
+	 * @param withModifiedCi use new ci values based on avg. room sizes, otherwise ci will be same for each activity.
+	 * @param contactModel contact model to use
+	 */
 	public SnzBerlinWeekScenario2020(int sample, boolean withDiseaseImport, boolean withModifiedCi, Class<? extends ContactModel> contactModel) {
 		this.sample = sample;
 		this.withDiseaseImport = withDiseaseImport;
@@ -137,6 +144,10 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
 
+
+		//for (InfectionParams infParams : episimConfig.getInfectionParams()) {
+		//	if (!infParams.includesActivity("home")) infParams.setSpacesPerFacility(1);
+		//}
 
 		episimConfig.setStartDate("2020-02-18");
 

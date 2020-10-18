@@ -167,6 +167,7 @@ public final class DirectContactModel extends AbstractContactModel {
 		StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
 		// use joint time in group as time
+		// TODO: this model does not support closing hours at the moment
 		double jointTimeInContainer = now - group.getValue();
 
 		log.debug("Contact of {} and {}, with {}", personLeavingContainer, contactPerson, jointTimeInContainer);

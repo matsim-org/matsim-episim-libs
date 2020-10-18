@@ -124,7 +124,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 
 	@Override
 	public boolean canProgress(EpisimReporting.InfectionReport report) {
-		return report.nTotalInfected > 0 || report.nInQuarantine > 0;
+		return report.nTotalInfected > 0 || report.nInQuarantineFull + report.nInQuarantineHome > 0;
 	}
 
 	@Override

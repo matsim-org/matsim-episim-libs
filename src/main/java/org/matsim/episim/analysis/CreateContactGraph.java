@@ -61,7 +61,7 @@ public class CreateContactGraph implements Callable<Integer>, BasicEventHandler 
 
 		new EpisimEventsReader(manager).readFile(input.toString());
 
-		log.info("Reading done");
+		log.info("Created graph with {} nodes and {} edges", graph.vertexSet().size(), graph.edgeSet().size());
 
 		Files.createDirectories(outputFolder);
 
