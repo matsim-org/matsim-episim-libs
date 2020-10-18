@@ -644,4 +644,23 @@ public final class EpisimUtils {
 		}
 	}
 
+	public static int getAge( EpisimPerson person ){
+		int age = -1;
+
+		for( String attr : person.getAttributes().getAsMap().keySet() ){
+			if( attr.contains( "age" ) ){
+				age = (int) person.getAttributes().getAttribute( attr );
+				break;
+			}
+		}
+
+		if( age == -1 ){
+			throw new RuntimeException( "Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible." );
+		}
+
+		if( age < 0 || age > 120 ){
+			throw new RuntimeException( "Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age );
+		}
+		return age;
+	}
 }

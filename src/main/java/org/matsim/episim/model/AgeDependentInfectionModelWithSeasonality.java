@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
@@ -41,28 +42,10 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
-		
-		int ageTarget = -1;
 
-		for (String attr : target.getAttributes().getAsMap().keySet()) {
-			if (attr.contains("age")) {
-				ageTarget = (int) target.getAttributes().getAttribute(attr);
-				break;
-			}
-		}
-		
-		if (ageTarget < 0) throw new RuntimeException("Age attribute not found for person=" + target.getPersonId().toString());
-		
-		int ageInfector = -1;
+		int ageTarget = EpisimUtils.getAge( target );
 
-		for (String attr : infector.getAttributes().getAsMap().keySet()) {
-			if (attr.contains("age")) {
-				ageInfector = (int) infector.getAttributes().getAttribute(attr);
-				break;
-			}
-		}
-		
-		if (ageInfector < 0) throw new RuntimeException("Age attribute not found for person=" + infector.getPersonId().toString());
+		int ageInfector = EpisimUtils.getAge( infector );
 
 		double susceptibility = 1.;
 		double infectivity = 1.;

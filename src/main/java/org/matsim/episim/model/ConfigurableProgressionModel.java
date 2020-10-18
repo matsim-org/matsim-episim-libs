@@ -293,7 +293,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				return DiseaseStatus.contagious;
 
 			case contagious:
-				if (rnd.nextDouble() < 0.8)
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person ))
 					return DiseaseStatus.showingSymptoms;
 				else
 					return DiseaseStatus.recovered;
@@ -343,6 +343,14 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
 		return 0.25;
+	}
+
+	protected double getProbaOfTransitioningToContagious(EpisimPerson person) {
+		return 1.;
+	}
+
+	protected double getProbaOfTransitioningToShowingSymptoms( EpisimPerson person ) {
+		return 0.8;
 	}
 
 	/**

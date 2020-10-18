@@ -22,6 +22,7 @@ package org.matsim.episim.model;
 
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 
 import com.google.inject.Inject;
@@ -42,47 +43,90 @@ public final class AgeDependentProgressionModel extends ConfigurableProgressionM
 	}
 
 	@Override
+	protected double getProbaOfTransitioningToContagious(EpisimPerson person) {
+
+		double proba = 1.;
+
+//		int age = EpisimUtils.getAge( person );
+//
+//		if (age < 10) {
+//			proba = 0.1 / 100;
+//		} else if (age < 20) {
+//			proba = 0.3 / 100;
+//		} else if (age < 30) {
+//			proba = 1.2 / 100;
+//		} else if (age < 40) {
+//			proba = 3.2 / 100;
+//		} else if (age < 50) {
+//			proba = 4.9 / 100;
+//		} else if (age < 60) {
+//			proba = 10.2 / 100;
+//		} else if (age < 70) {
+//			proba = 16.6 / 100;
+//		} else if (age < 80) {
+//			proba = 24.3 / 100;
+//		} else {
+//			proba = 27.3 / 100;
+//		}
+
+		return proba ;
+	}
+
+	@Override
+	protected double getProbaOfTransitioningToShowingSymptoms (EpisimPerson person) {
+
+		double proba = 0.8;
+
+//		int age = EpisimUtils.getAge( person );
+//
+//		if (age < 10) {
+//			proba = 0.1 / 100;
+//		} else if (age < 20) {
+//			proba = 0.3 / 100;
+//		} else if (age < 30) {
+//			proba = 1.2 / 100;
+//		} else if (age < 40) {
+//			proba = 3.2 / 100;
+//		} else if (age < 50) {
+//			proba = 4.9 / 100;
+//		} else if (age < 60) {
+//			proba = 10.2 / 100;
+//		} else if (age < 70) {
+//			proba = 16.6 / 100;
+//		} else if (age < 80) {
+//			proba = 24.3 / 100;
+//		} else {
+//			proba = 27.3 / 100;
+//		}
+
+		return proba;
+	}
+
+	@Override
 	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
 
 		double proba = -1;
 
-		int age = -1;
+		int age = EpisimUtils.getAge( person );
 
-		for (String attr : person.getAttributes().getAsMap().keySet()) {
-			if (attr.contains("age")) {
-				age = (int) person.getAttributes().getAttribute(attr);
-				break;
-			}
-		}
-
-		if (age != -1) {
-
-			if (age < 0 || age > 120) {
-				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
-			}
-
-			if (age < 10) {
-				proba = 0.1 / 100;
-			} else if (age < 20) {
-				proba = 0.3 / 100;
-			} else if (age < 30) {
-				proba = 1.2 / 100;
-			} else if (age < 40) {
-				proba = 3.2 / 100;
-			} else if (age < 50) {
-				proba = 4.9 / 100;
-			} else if (age < 60) {
-				proba = 10.2 / 100;
-			} else if (age < 70) {
-				proba = 16.6 / 100;
-			} else if (age < 80) {
-				proba = 24.3 / 100;
-			} else {
-				proba = 27.3 / 100;
-			}
-
+		if (age < 10) {
+			proba = 0.1 / 100;
+		} else if (age < 20) {
+			proba = 0.3 / 100;
+		} else if (age < 30) {
+			proba = 1.2 / 100;
+		} else if (age < 40) {
+			proba = 3.2 / 100;
+		} else if (age < 50) {
+			proba = 4.9 / 100;
+		} else if (age < 60) {
+			proba = 10.2 / 100;
+		} else if (age < 70) {
+			proba = 16.6 / 100;
+		} else if (age < 80) {
+			proba = 24.3 / 100;
 		} else {
-			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
+			proba = 27.3 / 100;
 		}
 
 		return proba * episimConfig.getHospitalFactor();
@@ -92,40 +136,24 @@ public final class AgeDependentProgressionModel extends ConfigurableProgressionM
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
 		double proba = -1;
 
-		int age = -1;
+		int age = EpisimUtils.getAge( person );
 
-		for (String attr : person.getAttributes().getAsMap().keySet()) {
-			if (attr.contains("age")) {
-				age = (int) person.getAttributes().getAttribute(attr);
-				break;
-			}
-		}
-
-		if (age != -1) {
-
-			if (age < 0 || age > 120) {
-				throw new RuntimeException("Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age);
-			}
-
-			if (age < 40) {
-				proba = 5. / 100;
-			} else if (age < 50) {
-				proba = 6.3 / 100;
-			} else if (age < 60) {
-				proba = 12.2 / 100;
-			} else if (age < 70) {
-				proba = 27.4 / 100;
-			} else if (age < 80) {
-				proba = 43.2 / 100;
-			} else {
-				proba = 70.9 / 100;
-			}
-
+		if (age < 40) {
+			proba = 5. / 100;
+		} else if (age < 50) {
+			proba = 6.3 / 100;
+		} else if (age < 60) {
+			proba = 12.2 / 100;
+		} else if (age < 70) {
+			proba = 27.4 / 100;
+		} else if (age < 80) {
+			proba = 43.2 / 100;
 		} else {
-			throw new RuntimeException("Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible.");
+			proba = 70.9 / 100;
 		}
 
 		return proba;
 	}
+
 
 }
