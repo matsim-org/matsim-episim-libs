@@ -281,6 +281,10 @@ public final class Restriction {
 		if (closingHours == null)
 			return time;
 
+		// closing of 0-24 needs to be handled separate as time can not be adjusted
+		if (closingHours.length >= 86400)
+			return adjustEnd ? Integer.MAX_VALUE : Integer.MIN_VALUE;
+
 		// seconds of day
 		double sod = time % 86400;
 

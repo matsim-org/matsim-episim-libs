@@ -69,6 +69,10 @@ public class RestrictionTest {
 		assertThat(r.adjustByClosingHour(days(2) + hours(10), true))
 				.isEqualTo(days(2) + hours(10));
 
+		r = Restriction.ofClosingHours(0, 24);
+		assertThat(r.adjustByClosingHour(days(2) + hours(10), true))
+				.isEqualTo(Integer.MAX_VALUE);
+
 	}
 
 	@Test
