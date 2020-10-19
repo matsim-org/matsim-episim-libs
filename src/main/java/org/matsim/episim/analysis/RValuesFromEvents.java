@@ -134,17 +134,28 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
-
-		for (int i = 0; i <= eventFiles.size(); i++) {
+		
+		int rollingAveragae = 3;
+		for (int i = 0 + rollingAveragae; i <= eventFiles.size() - rollingAveragae; i++) {
 			for (Entry<String, HashMap<Integer, Integer>> e : infHandler.infectionsPerActivity.entrySet()) {
-				if (!e.getKey().equals("total")) {
+				if (!e.getKey().equals("total") && !e.getKey().equals("home")) {
 				int infections = 0;
+				int totalInfections = 0;
 				double infectionsShare = 0.;
-				if (e.getValue().get(i) != null) infections = e.getValue().get(i);
+				for (int j = i-rollingAveragae; j<=i+rollingAveragae; j++) {
+					int infectionsDay = 0;
+					int totalInfectionsDay = 0;
+					if (e.getValue().get(j) != null) {
+						infectionsDay = e.getValue().get(j);
+						totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
+					}
+					infections = infections + infectionsDay;
+					totalInfections = totalInfections + totalInfectionsDay;
+				}				
 				if (infections != 0) {
-					infectionsShare = (double) infections / infHandler.infectionsPerActivity.get("total").get(i);
-					bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + infectionsShare);
-					infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + infections + "\t" + infectionsShare + "\t" + scenario.getFileName());
+					infectionsShare = (double) infections / totalInfections;
+					bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
+					infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare + "\t" + scenario.getFileName());
 					}
 				}
 			}
@@ -257,7 +268,6 @@ public class RValuesFromEvents implements Callable<Integer> {
 			else if (infectionType.endsWith("home")) infectionType = "home";
 			else if (infectionType.startsWith("pt")) infectionType = "pt";
 			else infectionType = "other";
-
 
 			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new HashMap<>());
 			if (!infectionsPerActivity.containsKey(infectionType)) infectionsPerActivity.put(infectionType, new HashMap<>());
