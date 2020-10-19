@@ -13,8 +13,9 @@ public interface InitialInfectionHandler {
 
 	/**
 	 * Called at the start of every iteration. This class should set the disease state of persons as necessary.
+	 * @return number of people infected
 	 */
-	void handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration);
+	int handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration);
 
 	/**
 	 * Number of initial infections left that will also be persisted. Might be relevant for certain models to stop disease import.
