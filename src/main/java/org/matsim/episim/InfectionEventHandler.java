@@ -708,13 +708,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		this.iteration = iteration;
 
-		this.initialInfections.handleInfections(personMap, iteration);
+		int infected = this.initialInfections.handleInfections(personMap, iteration);
 
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration, report.date);
 		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);
+		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
