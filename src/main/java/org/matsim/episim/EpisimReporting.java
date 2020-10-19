@@ -135,7 +135,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
-		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.txt", "day", "date", "nInfected");
+		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -179,7 +179,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
-			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.txt")) {
+			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -190,7 +190,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
-		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.txt");
+		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();

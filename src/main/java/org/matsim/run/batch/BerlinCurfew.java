@@ -56,7 +56,7 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 		} else  {
 			builder = FixedPolicy.parse(episimConfig.getPolicy());
 			day = LocalDate.of(2020, 10, 12);
-			
+
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 					LocalDate.of(2020, 4, 1), 30,
@@ -64,15 +64,35 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 			));
 		}
 
-		if (params.curfew.equals("23-6")) builder.restrict(day, Restriction.ofClosingHours(23, 6), "leisure");
-		else if (params.curfew.equals("22-6")) builder.restrict(day, Restriction.ofClosingHours(22, 6), "leisure");
-		else if (params.curfew.equals("21-6")) builder.restrict(day, Restriction.ofClosingHours(21, 6), "leisure");
-		else if (params.curfew.equals("20-6")) builder.restrict(day, Restriction.ofClosingHours(20, 6), "leisure");
-		else if (params.curfew.equals("0-24")) builder.restrict(day, Restriction.ofClosingHours(0, 24), "leisure");
-		else if (params.curfew.equals("remainingFraction0")) builder.restrict(day, 0., "leisure");
-		else if (params.curfew.equals("no"));
-		else throw new RuntimeException("not implemented");
-		
+		switch (params.curfew) {
+			case "1-6":
+				builder.restrict(day, Restriction.ofClosingHours(1, 6), "leisure");
+			case "0-6":
+				builder.restrict(day, Restriction.ofClosingHours(0, 6), "leisure");
+			case "23-6":
+				builder.restrict(day, Restriction.ofClosingHours(23, 6), "leisure");
+				break;
+			case "22-6":
+				builder.restrict(day, Restriction.ofClosingHours(22, 6), "leisure");
+				break;
+			case "21-6":
+				builder.restrict(day, Restriction.ofClosingHours(21, 6), "leisure");
+				break;
+			case "20-6":
+				builder.restrict(day, Restriction.ofClosingHours(20, 6), "leisure");
+				break;
+			case "0-24":
+				builder.restrict(day, Restriction.ofClosingHours(0, 24), "leisure");
+				break;
+			case "remainingFraction0":
+				builder.restrict(day, 0., "leisure");
+				break;
+			case "no":
+				break;
+			default:
+				throw new RuntimeException("not implemented");
+		}
+
 		if (params.holidays.equals("no")) builder.restrict("2020-10-12", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		else if (params.holidays.equals("yes"));
 		else throw new RuntimeException();
@@ -90,13 +110,13 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 //		@StringParameter({"testing"})
 		@StringParameter({"current"})
 		public String variant;
-		
+
 		@StringParameter({"no", "yes"})
 		public String holidays;
 
-		@StringParameter({"no", "23-6", "22-6", "21-6", "20-6", "0-24", "remainingFraction0"})
+		@StringParameter({"no", "1-6", "0-6", "23-6", "22-6", "21-6", "20-6", "0-24", "remainingFraction0"})
 		public String curfew;
-		
+
 		@IntParameter({100, Integer.MAX_VALUE})
 		int tracingCapacity;
 
