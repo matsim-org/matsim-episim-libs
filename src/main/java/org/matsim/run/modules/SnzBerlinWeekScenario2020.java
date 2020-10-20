@@ -49,14 +49,26 @@ import java.util.Map;
 public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 	/**
-	 * Calibration parameter for no disease import.
+	 * Calibration parameter for no disease import and modified ci.
 	 */
-	private static final Map<Class<? extends ContactModel>, Double> CALIB = Map.of(
+	private static final Map<Class<? extends ContactModel>, Double> NEW_CI = Map.of(
 			OldSymmetricContactModel.class, 1.07e-5,
 			SymmetricContactModel.class, 2.54e-5, // nSpaces=20
-			DefaultContactModel.class, 1.45e-5,
-			PairWiseContactModel.class, 1.91e-5
+			DefaultContactModel.class, 1.45e-5, // this value is for old ci
+			DirectContactModel.class, 1.91e-5
 	);
+
+	/**
+	 * Calibration parameter for old (uniform) ci values.
+	 */
+	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
+			OldSymmetricContactModel.class, Double.NaN,
+			SymmetricContactModel.class, Double.NaN, // nSpaces=20
+			DefaultContactModel.class, 1.45e-5,
+			DirectContactModel.class, Double.NaN
+
+	);
+
 	/**
 	 * Sample size of the scenario (Either 25 or 100)
 	 */
@@ -186,14 +198,14 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 		} else {
 
-			episimConfig.setCalibrationParameter(CALIB.get(contactModel));
+			episimConfig.setCalibrationParameter(withModifiedCi ? NEW_CI.get(contactModel) : OLD_CI.get(contactModel));
 
 			if (contactModel == OldSymmetricContactModel.class) {
 				basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", 0.48));
 			} else if (contactModel == SymmetricContactModel.class) {
 				basePolicyBuilder.setCiCorrections(Map.of("2020-03-09", 0.74));
 			} else if (contactModel == DefaultContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-05", 0.53));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.3));
 			}
 
 
@@ -241,7 +253,8 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
 
-		config.controler().setOutputDirectory(config.controler().getOutputDirectory() + "-week-" + episimConfig.getCalibrationParameter());
+		config.controler().setOutputDirectory(String.format("output-berlin-%dpct-week-cm_%s-diseaseImport_%s-modCI_%s-calib_%f",
+				sample, contactModel.getSimpleName(), withDiseaseImport, withModifiedCi, episimConfig.getCalibrationParameter()));
 
 		return config;
 	}

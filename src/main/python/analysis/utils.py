@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import io
 import zipfile
 from os import path
 
@@ -137,6 +138,77 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     rates = np.array(rates)
 
     return rates.mean(), np.square(rates - target_rate).mean()
+
+def aggregate_batch_run(run):
+    """ Reads a batch run with all files and aggregates over all seeds by using the mean.
+
+     :param run path to the zip file
+     :return nothing, aggregated run will be written based on the filename
+     """
+    # run id to file id to list of files
+    runs = defaultdict(lambda: defaultdict(lambda: []))
+    # run id to aggregated id
+    idMap = {}
+    info = None
+
+    with zipfile.ZipFile(run) as z:
+
+        with z.open("_info.txt") as f:
+            info = pd.read_csv(f, sep=";")
+
+        params = set(info.columns).difference({'RunScript', 'Config', 'RunId', 'Output'})
+        woSeed = params.difference({'seed'})
+
+        byId = info.groupby(list(woSeed), as_index=False).agg(ids=('RunId', set))
+
+        for row in byId.itertuples():
+            for idx in row.ids:
+                idMap[idx] = row.Index
+
+        for f in z.namelist():
+            idx, _, filename = f.partition(".")
+            if idx not in idMap:
+                continue
+
+            with z.open(f) as zf:
+                df = pd.read_csv(zf, sep="\t")
+                runs[idMap[idx]][filename].append(df)
+
+
+    with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
+                         mode="w", compresslevel=6,
+                         compression=zipfile.ZIP_DEFLATED) as z:
+
+        buf = io.StringIO()
+
+        info = byId.reset_index().rename(columns={"index": "RunId"}).drop(columns=["ids"])
+        info["RunScript"] = "na"
+        info["Config"] = "na"
+        info["Output"] = "na"
+
+        info.to_csv(buf, columns = ["RunScript", "Config", "RunId", "Output"] + list(woSeed),
+                    sep=";", mode="w", line_terminator="\n", index=False)
+
+        with z.open("_info.txt", "w") as zf:
+            zf.write(buf.getvalue().encode("utf8"))
+
+        for runId, files in runs.items():
+            for filename, dfs in files.items():
+                concat = pd.concat(dfs)
+                by_row_index = concat.groupby(concat.index)
+                means = by_row_index.mean()
+
+                # attach non numeric columns without aggregating
+                nonNumeric = dfs[0].columns.difference(means.columns)
+                for column in nonNumeric:
+                    means[column] = dfs[0][column]
+
+                buf.truncate(0)
+                means.to_csv(buf, sep="\t", mode="w", line_terminator="\n", index=False)
+
+                with z.open(str(runId) + "." + filename, "w") as zf:
+                    zf.write(buf.getvalue().encode("utf8"))
+
 
 
 def calc_r_reduction(base_case, base_variables, df, group_by=None):

@@ -141,3 +141,29 @@ sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
 plt.ylim(bottom=1)
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())
+
+#%%
+
+curfew = read_batch_run("data/curfew3.zip")
+
+#%%
+
+df = curfew[(curfew.holidays=="yes") & (curfew.tracingCapacity==100)]
+
+order = sorted(df.curfew.value_counts().keys())
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+hue = sns.color_palette(n_colors=9)
+
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+             hue="curfew", hue_order=order, palette=hue,
+             data=df)
+
+plt.ylim(bottom=1)
+plt.yscale("log")
+plt.title("With holidays, tracing=100")
+
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
