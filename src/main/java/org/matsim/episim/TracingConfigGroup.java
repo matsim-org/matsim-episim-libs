@@ -34,7 +34,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
-	 * Amount of persons traceable der day.
+	 * Amount of persons traceable per day.
 	 */
 	private final Map<LocalDate, Integer> tracingCapacity = new TreeMap<>();
 	/**
