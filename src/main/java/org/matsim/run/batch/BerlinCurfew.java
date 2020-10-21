@@ -52,7 +52,6 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
-
 		} else {
 			builder = FixedPolicy.parse(episimConfig.getPolicy());
 			day = LocalDate.of(2020, 10, 12);
@@ -106,7 +105,7 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(19)
 		public long seed;
 
 //		@StringParameter({"current"})

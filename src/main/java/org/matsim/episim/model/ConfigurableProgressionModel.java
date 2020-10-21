@@ -159,7 +159,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		// Delay 0 is already handled
 		if (person.hadDiseaseStatus(DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
-				person.daysSince(DiseaseStatus.showingSymptoms, day) >= tracingDelay) {
+				person.daysSince(DiseaseStatus.showingSymptoms, day) == tracingDelay) {
 
 			performTracing(person, now - tracingDelay * DAY, day);
 		}
@@ -374,10 +374,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		}
 
 		// check if already traced
-		if (traced.contains(person.getPersonId()))
-			return;
-
-		traced.add(person.getPersonId());
+		//if (traced.contains(person.getPersonId()))
+		//	return;
+		// traced.add(person.getPersonId());
 
 		String homeId = null;
 
