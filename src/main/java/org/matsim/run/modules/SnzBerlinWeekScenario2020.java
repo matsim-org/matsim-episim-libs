@@ -65,7 +65,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			OldSymmetricContactModel.class, 3.18e-5,
 			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
 			DefaultContactModel.class, 1.45e-5,
-			DirectContactModel.class, Double.NaN
+			DirectContactModel.class, 11.06e-5
 
 	);
 

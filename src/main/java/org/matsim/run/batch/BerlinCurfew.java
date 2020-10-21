@@ -53,7 +53,7 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 
-		} else  {
+		} else {
 			builder = FixedPolicy.parse(episimConfig.getPolicy());
 			day = LocalDate.of(2020, 10, 12);
 
@@ -67,8 +67,10 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 		switch (params.curfew) {
 			case "1-6":
 				builder.restrict(day, Restriction.ofClosingHours(1, 6), "leisure");
+				break;
 			case "0-6":
 				builder.restrict(day, Restriction.ofClosingHours(0, 6), "leisure");
+				break;
 			case "23-6":
 				builder.restrict(day, Restriction.ofClosingHours(23, 6), "leisure");
 				break;
@@ -107,9 +109,8 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 		@GenerateSeeds(30)
 		public long seed;
 
-//		@StringParameter({"testing"})
-		@StringParameter({"current"})
-		public String variant;
+//		@StringParameter({"current"})
+		public String variant = "current";
 
 		@StringParameter({"no", "yes"})
 		public String holidays;
