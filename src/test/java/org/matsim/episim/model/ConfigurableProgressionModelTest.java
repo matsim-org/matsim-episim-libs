@@ -135,11 +135,12 @@ public class ConfigurableProgressionModelTest {
 
 		// test with delay
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay_days(2 );
+		tracingConfig.setTracingDelay_days(2);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 5; day++) {
+			model.setIteration(day);
 			model.updateState(p, day);
 		}
 
@@ -201,6 +202,7 @@ public class ConfigurableProgressionModelTest {
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
 		for (int day = 0; day <= 5; day++) {
+			model.setIteration(day);
 			model.updateState(p, day);
 		}
 
@@ -214,13 +216,14 @@ public class ConfigurableProgressionModelTest {
 		model.updateState(p, 6);
 		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no);
 
-		// person is traced one day later when activated
+		// person is not traced one day later when activated, as person is only traced one time
 
 		tracingConfig.setQuarantineHouseholdMembers(true);
 		tracingConfig.setTracingDelay_days(1 );
 
+		model.setIteration(7);
 		model.updateState(p, 7);
-		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome);
+		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no);
 
 
 	}

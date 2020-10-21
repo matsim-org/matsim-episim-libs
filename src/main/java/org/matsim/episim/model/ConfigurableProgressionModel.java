@@ -83,6 +83,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private final Object2IntMap<Id<ActivityFacility>> locations = new Object2IntOpenHashMap<>();
 
 	/**
+	 * Person ids already traced.
+	 */
+	private final Set<Id<Person>> traced = Collections.newSetFromMap(new IdentityHashMap<>());
+
+	/**
 	 * Persons marked for contact tracing.
 	 */
 	private final Set<Id<Person>> tracingQueue = new LinkedHashSet<>();
@@ -96,6 +101,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 * Tracing probability for current day.
 	 */
 	private double tracingProb = 1;
+
+	/**
+	 * Tracing delay for current day.
+	 */
+	private int tracingDelay = 0;
 
 	/**
 	 * Used to track how many new people started showing symptoms.
@@ -132,15 +142,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			tracingCapacity *= episimConfig.getSampleSize();
 
 		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
-
+		tracingDelay = EpisimUtils.findValidEntry(tracingConfig.getTracingDelay(), 0, date);
 	}
 
 	@Override
 	public final void updateState(EpisimPerson person, int day) {
 		super.updateState(person, day);
-
-		// account for the delay in showing symptoms and tracing
-		int tracingDelay = tracingConfig.getTracingDelay();
 
 
 		// A healthy quarantined person is dismissed from quarantine after some time
@@ -152,13 +159,13 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		// Delay 0 is already handled
 		if (person.hadDiseaseStatus(DiseaseStatus.showingSymptoms) && tracingDelay > 0 &&
-				person.daysSince(DiseaseStatus.showingSymptoms, day) == tracingDelay) {
+				person.daysSince(DiseaseStatus.showingSymptoms, day) >= tracingDelay) {
 
 			performTracing(person, now - tracingDelay * DAY, day);
 		}
 
 		// clear tracing if not relevant anymore
-		person.clearTraceableContractPersons(now - (tracingConfig.getTracingDelay() + tracingConfig.getTracingDayDistance() + 1) * DAY);
+		person.clearTraceableContractPersons(now - (tracingDelay + tracingConfig.getTracingDayDistance() + 1) * DAY);
 	}
 
 	/**
@@ -190,10 +197,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.full, day);
 			// Perform tracing immediately if there is no delay, otherwise needs to be done when person shows symptoms
-			if (tracingConfig.getTracingDelay() == 0) {
+			if (tracingDelay == 0) {
 				performTracing(person, now, day);
 			}
-
 
 			// count infections at locations
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.LOCATION ||
@@ -367,6 +373,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			return;
 		}
 
+		// check if already traced
+		if (traced.contains(person.getPersonId()))
+			return;
+
+		traced.add(person.getPersonId());
+
 		String homeId = null;
 
 		// quarantine household flag controls direct household and 2nd order household
@@ -429,6 +441,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			Id<Person> id = Id.createPersonId(readChars(in));
 			tracingQueue.add(id);
 		}
+
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			Id<Person> id = Id.createPersonId(readChars(in));
+			traced.add(id);
+		}
 	}
 
 	@Override
@@ -448,5 +466,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			writeChars(out, personId.toString());
 		}
 
+		out.writeInt(traced.size());
+		for (Id<Person> personId : traced) {
+			writeChars(out, personId.toString());
+		}
 	}
 }
