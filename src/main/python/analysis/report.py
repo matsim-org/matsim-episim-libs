@@ -144,7 +144,7 @@ ax.yaxis.set_major_formatter(ScalarFormatter())
 
 #%%
 
-curfew = read_batch_run("data/curfew3.zip")
+curfew = read_batch_run("data/curfew4.zip")
 
 #%%
 

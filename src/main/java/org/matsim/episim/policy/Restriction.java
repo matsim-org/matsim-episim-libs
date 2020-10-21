@@ -316,6 +316,7 @@ public final class Restriction {
 
 		boolean containsFrom = ch.contains(fSod);
 		boolean containsTo = ch.contains(tSod);
+		boolean actOvernight = tSod < fSod;
 
 		if (containsFrom && containsTo) {
 			// whole time nullified
@@ -325,7 +326,7 @@ public final class Restriction {
 		} else if (containsTo) {
 			return calculateOverlap(tSod, false);
 
-		} else if (ch.includedIn(fSod, tSod))
+		} else if (ch.includedIn(fSod, tSod) && (ch.overnight == actOvernight))
 			// reduce by time of closing hour length
 			return ch.length;
 

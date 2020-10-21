@@ -104,7 +104,7 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(50)
+		@GenerateSeeds(30)
 		public long seed;
 
 //		@StringParameter({"testing"})
