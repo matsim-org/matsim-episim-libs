@@ -326,9 +326,13 @@ public final class Restriction {
 		} else if (containsTo) {
 			return calculateOverlap(tSod, false);
 
-		} else if (ch.includedIn(fSod, tSod) && (ch.overnight == actOvernight))
+		} else if (ch.includedIn(fSod, tSod) && (ch.overnight == actOvernight)) {
 			// reduce by time of closing hour length
 			return ch.length;
+		} else if (actOvernight && !ch.overnight && tSod >= ch.to) {
+			// also covered completely
+			return ch.length;
+		}
 
 		return 0;
 	}

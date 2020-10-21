@@ -89,6 +89,9 @@ public class RestrictionTest {
 				.isEqualTo(hours(5));
 		assertThat(r.overlapWithClosingHour(d + hours(4), d + hours(7)))
 				.isEqualTo(hours(2));
+		assertThat(r.overlapWithClosingHour(d + hours(23), d + days(1) + hours(7)))
+				.isEqualTo(hours(5));
+
 		// not affected
 		assertThat(r.overlapWithClosingHour(d + hours(6), d + hours(8)))
 				.isEqualTo(0);
