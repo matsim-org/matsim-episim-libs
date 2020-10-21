@@ -54,7 +54,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	private static final Map<Class<? extends ContactModel>, Double> NEW_CI = Map.of(
 			OldSymmetricContactModel.class, 1.07e-5,
 			SymmetricContactModel.class, 2.54e-5, // nSpaces=20
-			DefaultContactModel.class, 1.45e-5, // this value is for old ci
+			DefaultContactModel.class, 0.38e-5,
 			DirectContactModel.class, 1.91e-5
 	);
 
@@ -62,8 +62,8 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	 * Calibration parameter for old (uniform) ci values.
 	 */
 	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
-			OldSymmetricContactModel.class, Double.NaN,
-			SymmetricContactModel.class, Double.NaN, // nSpaces=20
+			OldSymmetricContactModel.class, 3.18e-5,
+			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
 			DefaultContactModel.class, 1.45e-5,
 			DirectContactModel.class, Double.NaN
 
