@@ -61,11 +61,12 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	/**
 	 * Calibration parameter for old (uniform) ci values.
 	 */
+	// These have been manual adjusted
 	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
-			OldSymmetricContactModel.class, 3.18e-5,
+			OldSymmetricContactModel.class, 3.18e-5 * 0.950,
 			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
-			DefaultContactModel.class, 1.45e-5,
-			DirectContactModel.class, 11.06e-5
+			DefaultContactModel.class, 1.45e-5 * 0.931,
+			DirectContactModel.class, 11.06e-5 * 0.921
 	);
 
 	/**

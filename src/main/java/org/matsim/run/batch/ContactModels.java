@@ -70,6 +70,9 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 			// separate calib param for nspaces = 1
 			if (params.modifiedCI.equals("yes"))
 				episimConfig.setCalibrationParameter(2.44e-5);
+			else {
+				episimConfig.setCalibrationParameter(9.03e-5 * 0.90);
+			}
 		}
 
 		if (params.unrestricted.equals("yes")) {
