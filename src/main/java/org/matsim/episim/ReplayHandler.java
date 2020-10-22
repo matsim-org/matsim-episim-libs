@@ -178,7 +178,7 @@ public final class ReplayHandler {
 					// adjust person during the first 3.6h
 					// valid comparison because of .intern()
 					if (time < 13000 && actType.equals("leisure")) {
-						time -= Math.min(time, 13000 * rnd.nextDouble());
+						time -= Math.min(time - 1, 13000 * rnd.nextDouble());
 						adjusted++;
 					}
 				}
