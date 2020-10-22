@@ -177,21 +177,19 @@ def aggregate_batch_run(run):
 
 
     with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
-                         mode="w", compresslevel=6,
+                         mode="w", compresslevel=9,
                          compression=zipfile.ZIP_DEFLATED) as z:
-
-        buf = io.StringIO()
 
         info = byId.reset_index().rename(columns={"index": "RunId"}).drop(columns=["ids"])
         info["RunScript"] = "na"
         info["Config"] = "na"
         info["Output"] = "na"
 
-        info.to_csv(buf, columns = ["RunScript", "Config", "RunId", "Output"] + list(woSeed),
-                    sep=";", mode="w", line_terminator="\n", index=False)
-
         with z.open("_info.txt", "w") as zf:
-            zf.write(buf.getvalue().encode("utf8"))
+            buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+            info.to_csv(buf, columns = ["RunScript", "Config", "RunId", "Output"] + list(woSeed),
+                        sep=";", mode="w", line_terminator="\n", index=False)
+            buf.flush()
 
         for runId, files in runs.items():
             for filename, dfs in files.items():
@@ -204,26 +202,10 @@ def aggregate_batch_run(run):
                 for column in nonNumeric:
                     means[column] = dfs[0][column]
 
-                buf.truncate(0)
-
-                # time, day and date must be first columns
-                columns = list(means.columns)
-                if "date" in columns:
-                    columns.remove("date")
-                    columns.insert(0, "date")
-
-                if "day" in columns:
-                    columns.remove("day")
-                    columns.insert(0, "day")
-
-                if "time" in columns:
-                    columns.remove("time")
-                    columns.insert(0, "time")
-
-                means.to_csv(buf, sep="\t", columns=columns, mode="w", line_terminator="\n", index=False)
-
                 with z.open(str(runId) + "." + filename, "w") as zf:
-                    zf.write(buf.getvalue().encode("utf8"))
+                    buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+                    means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
+                    buf.flush()
 
 
 
