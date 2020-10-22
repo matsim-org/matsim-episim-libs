@@ -223,7 +223,7 @@ public class ConfigurableProgressionModelTest {
 
 		model.setIteration(7);
 		model.updateState(p, 7);
-		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no);
+		assertThat(p.getTraceableContactPersons(0)).allMatch(t -> t.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome);
 
 
 	}
