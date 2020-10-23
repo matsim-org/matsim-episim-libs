@@ -71,7 +71,7 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 			if (params.modifiedCI.equals("yes"))
 				episimConfig.setCalibrationParameter(2.44e-5);
 			else {
-				episimConfig.setCalibrationParameter(9.03e-5 * 0.90);
+				episimConfig.setCalibrationParameter(7.72065E-5);
 			}
 		}
 
@@ -94,7 +94,7 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, DIRECT})
 		public String contactModel;
 
-		@StringParameter({"yes"})
+		@StringParameter({"no"})
 		public String unrestricted;
 
 		@StringParameter({"no"})

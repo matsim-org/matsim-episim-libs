@@ -63,10 +63,10 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	 */
 	// These have been manual adjusted
 	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
-			OldSymmetricContactModel.class, 3.18e-5 * 0.950,
+			OldSymmetricContactModel.class, 2.918286E-5,
 			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
-			DefaultContactModel.class, 1.45e-5 * 0.931,
-			DirectContactModel.class, 11.06e-5 * 0.921
+			DefaultContactModel.class, 1.34995E-5,
+			DirectContactModel.class, 9.752878954E-5
 	);
 
 	/**
@@ -201,16 +201,14 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			episimConfig.setCalibrationParameter(withModifiedCi ? NEW_CI.get(contactModel) : OLD_CI.get(contactModel));
 
 			if (contactModel == OldSymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-08", 0.48));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
 			} else if (contactModel == SymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-09", 0.74));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
 			} else if (contactModel == DefaultContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.3));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
+			} else if (contactModel == DirectContactModel.class) {
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
 			}
-
-
-			// this was the old value
-			//basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.6));
 
 		}
 

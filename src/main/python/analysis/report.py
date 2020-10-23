@@ -144,16 +144,16 @@ ax.yaxis.set_major_formatter(ScalarFormatter())
 
 #%% Curfew
 
-curfew = read_batch_run("data/curfew4.zip")
+curfew = read_batch_run("data/curfew5.zip")
 
 #%%
 
-df = curfew[(curfew.holidays=="yes") & (curfew.tracingCapacity==100) & (curfew.curfew !="remainingFraction0") & (curfew.curfew != "1-6")]
+df = curfew[(curfew.holidays=="yes") & (curfew.tracingCapacity==200) & (curfew.curfew !="remainingFraction0") & (curfew.curfew != "1-6")]
 
 order = sorted(df.curfew.value_counts().keys())
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
-hue = sns.color_palette(n_colors=7)
+hue = sns.color_palette(n_colors=8)
 
 rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax)
 
@@ -163,7 +163,7 @@ sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
 
 plt.ylim(bottom=1)
 plt.yscale("log")
-plt.title("Daily new infections over all random seeds, tracingCapacity=100")
+plt.title("Daily new infections over all random seeds, tracingCapacity=200")
 
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())

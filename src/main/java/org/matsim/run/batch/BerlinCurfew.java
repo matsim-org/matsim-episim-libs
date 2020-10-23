@@ -82,6 +82,9 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 			case "20-6":
 				builder.restrict(day, Restriction.ofClosingHours(20, 6), "leisure");
 				break;
+			case "19-6":
+				builder.restrict(day, Restriction.ofClosingHours(19, 6), "leisure");
+				break;
 			case "0-24":
 				builder.restrict(day, Restriction.ofClosingHours(0, 24), "leisure");
 				break;
@@ -105,7 +108,7 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(19)
+		@GenerateSeeds(20)
 		public long seed;
 
 //		@StringParameter({"current"})
@@ -114,10 +117,10 @@ public class BerlinCurfew implements BatchRun<BerlinCurfew.Params> {
 		@StringParameter({"no", "yes"})
 		public String holidays;
 
-		@StringParameter({"no", "1-6", "0-6", "23-6", "22-6", "21-6", "20-6", "0-24", "remainingFraction0"})
+		@StringParameter({"no", "0-6", "23-6", "22-6", "21-6", "20-6", "19-6", "0-24"})
 		public String curfew;
 
-		@IntParameter({100, Integer.MAX_VALUE})
+		@IntParameter({200, Integer.MAX_VALUE})
 		int tracingCapacity;
 
 	}
