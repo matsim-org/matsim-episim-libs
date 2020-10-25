@@ -65,7 +65,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
 			OldSymmetricContactModel.class, 2.918286E-5,
 			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
-			DefaultContactModel.class, 1.34995E-5,
+			DefaultContactModel.class, 1.41952E-5,
 			DirectContactModel.class, 9.752878954E-5
 	);
 
@@ -128,11 +128,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	protected void configure() {
 		bind(ContactModel.class).to(contactModel).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-
-		if (contactModel == DefaultContactModel.class) {
-			bind(InfectionModel.class).to(InfectionModelWithSeasonality.class).in(Singleton.class);
-		} else
-			bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -201,13 +197,13 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			episimConfig.setCalibrationParameter(withModifiedCi ? NEW_CI.get(contactModel) : OLD_CI.get(contactModel));
 
 			if (contactModel == OldSymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.336));
 			} else if (contactModel == SymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.352));
 			} else if (contactModel == DefaultContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.384));
 			} else if (contactModel == DirectContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", 0.32));
+				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.272));
 			}
 
 		}

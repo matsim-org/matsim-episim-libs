@@ -7,7 +7,8 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020;
+import org.matsim.episim.policy.Restriction;
+import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
@@ -73,6 +74,13 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 			else {
 				episimConfig.setCalibrationParameter(7.72065E-5);
 			}
+
+			FixedPolicy.ConfigBuilder policy = FixedPolicy.parse(episimConfig.getPolicy());
+
+			// separate ci correction for nspaces 1
+			policy.restrict("2020-03-06", Restriction.ofCiCorrection(0.384), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+
+			episimConfig.setPolicy(FixedPolicy.class, policy.build());
 		}
 
 		if (params.unrestricted.equals("yes")) {
