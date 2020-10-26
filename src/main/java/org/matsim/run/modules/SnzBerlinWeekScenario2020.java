@@ -157,7 +157,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		//	if (!infParams.includesActivity("home")) infParams.setSpacesPerFacility(1);
 		//}
 
-		episimConfig.setStartDate("2020-02-18");
+		episimConfig.setStartDate("2020-02-16");
 
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 
@@ -220,7 +220,8 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 						"business") || infParams.includesActivity("errands")) {
 					infParams.setContactIntensity(1.47);
 				} else if (infParams.getContainerName().startsWith("edu")) {
-					infParams.setContactIntensity(11.);
+					if (infParams.includesActivity("educ_higher")) infParams.setContactIntensity(5.5);
+					else infParams.setContactIntensity(11.);
 				} else if (infParams.includesActivity("pt") || infParams.includesActivity("tr")) {
 					infParams.setContactIntensity(10.);
 				} else if (infParams.includesActivity("leisure") || infParams.includesActivity("visit")) {
