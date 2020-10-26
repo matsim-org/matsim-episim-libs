@@ -61,12 +61,21 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	/**
 	 * Calibration parameter for old (uniform) ci values.
 	 */
-	// These have been manual adjusted
 	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
 			OldSymmetricContactModel.class, 2.918286E-5,
 			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
 			DefaultContactModel.class, 1.41952E-5,
 			DirectContactModel.class, 9.752878954E-5
+	);
+
+	/**
+	 * Calibrated theta parameter for disease import *and* new ci values.
+	 */
+	private static final Map<Class<? extends ContactModel>, Double> DI_CI = Map.of(
+			OldSymmetricContactModel.class, 8.3E-6,
+			SymmetricContactModel.class, 2.375E-5, // nSpaces=20
+			DefaultContactModel.class, 3.78E-6,
+			DirectContactModel.class, 2.0928E-5
 	);
 
 	/**
@@ -188,9 +197,8 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 
 			episimConfig.setInfections_pers_per_day(importMap);
 
-			episimConfig.setCalibrationParameter(6.e-6);
-
 			// new param 9.50e-06?
+			episimConfig.setCalibrationParameter(DI_CI.get(contactModel));
 
 		} else {
 

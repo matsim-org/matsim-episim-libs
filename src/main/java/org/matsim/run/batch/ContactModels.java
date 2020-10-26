@@ -39,7 +39,8 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 			return new SnzBerlinWeekScenario2020();
 
 		boolean withModifiedCi = params.modifiedCI.equals("yes");
-		return new SnzBerlinWeekScenario2020(25, false, withModifiedCi, ContactModels.MODELS.get(params.contactModel));
+		boolean withDiseaseImport = params.diseaseImport.equals("yes");
+		return new SnzBerlinWeekScenario2020(25, withDiseaseImport, withModifiedCi, ContactModels.MODELS.get(params.contactModel));
 	}
 
 	@Override
@@ -102,11 +103,14 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, DIRECT})
 		public String contactModel;
 
-		@StringParameter({"no"})
+		@StringParameter({"yes"})
 		public String unrestricted;
 
-		@StringParameter({"no"})
+		@StringParameter({"yes"})
 		public String modifiedCI;
+
+		@StringParameter({"yes"})
+		public String diseaseImport;
 
 	}
 
