@@ -78,10 +78,10 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 //		double probaSummer = 28.63 / 100.;
 //		double probaAutumn = 21.15 / 100.;
 
-		double probaWinter = 10. / 100.;
-		double probaSpring = 80. / 100.;
-		double probaSummer = 80. / 100.;
-		double probaAutumn = 80. / 100.;
+		double probaWinter = 50. / 100.;
+		double probaSpring = 50. / 100.;
+		double probaSummer = 50. / 100.;
+		double probaAutumn = 50. / 100.;
 
 		double proba = 1;
 
