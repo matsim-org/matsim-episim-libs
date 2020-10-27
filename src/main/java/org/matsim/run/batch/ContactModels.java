@@ -103,7 +103,7 @@ public class ContactModels implements BatchRun<ContactModels.Params> {
 		@StringParameter({OLD, SYMMETRIC_OLD, SYMMETRIC_NEW_NSPACES_1, SYMMETRIC_NEW_NSPACES_20, DIRECT})
 		public String contactModel;
 
-		@StringParameter({"yes"})
+		@StringParameter({"yes", "no"})
 		public String unrestricted;
 
 		@StringParameter({"yes"})

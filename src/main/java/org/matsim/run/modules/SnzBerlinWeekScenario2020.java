@@ -72,10 +72,10 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	 * Calibrated theta parameter for disease import *and* new ci values.
 	 */
 	private static final Map<Class<? extends ContactModel>, Double> DI_CI = Map.of(
-			OldSymmetricContactModel.class, 8.3E-6,
-			SymmetricContactModel.class, 2.375E-5, // nSpaces=20
-			DefaultContactModel.class, 3.78E-6,
-			DirectContactModel.class, 2.0928E-5
+			OldSymmetricContactModel.class, 6.53E-6,
+			SymmetricContactModel.class, 2.006E-5, // nSpaces=20
+			DefaultContactModel.class, 2.887E-6,
+			DirectContactModel.class, 1.905E-5
 	);
 
 	/**
@@ -99,7 +99,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	private final Class<? extends ContactModel> contactModel;
 
 	public SnzBerlinWeekScenario2020() {
-		this(25, true, true, OldSymmetricContactModel.class);
+		this(25, true, true, SymmetricContactModel.class);
 	}
 
 	/**
@@ -196,8 +196,6 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
 
 			episimConfig.setInfections_pers_per_day(importMap);
-
-			// new param 9.50e-06?
 			episimConfig.setCalibrationParameter(DI_CI.get(contactModel));
 
 		} else {
@@ -254,6 +252,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 				LocalDate.of(2020, 6, 15), Integer.MAX_VALUE
 		));
 
+		//tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
 		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
 
 		config.controler().setOutputDirectory(String.format("output-berlin-%dpct-week-cm_%s-diseaseImport_%s-modCI_%s-calib_%f",
