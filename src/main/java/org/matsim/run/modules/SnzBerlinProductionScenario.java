@@ -54,12 +54,15 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum Restrictions {yes, no, onlyEdu, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
+	public static enum Snapshot {no, snapshot20200314, snapshot20200411, snapshot20200509, snapshot20200606}
 
 	private final int sample;
 	private final DiseaseImport diseaseImport;
 	private final Restrictions restrictions;
 	private final Masks masks;
 	private final Tracing tracing;
+	private final Snapshot snapshot;
+
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -67,15 +70,16 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 	
 	public SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes);
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.snapshot20200606);
 	}
 	
-	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing) {
+	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
 		this.masks = masks;
 		this.tracing = tracing;
+		this.snapshot = snapshot;
 	}
 
 	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -129,6 +133,9 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(1.);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
+		
+		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/snapshots/" + snapshot + ".zip");
+//		episimConfig.setSnapshotInterval(14);
 		
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
@@ -200,7 +207,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			tracingConfig.setTraceSusceptible(true);
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 					LocalDate.of(2020, 4, 1), 30,
-					LocalDate.of(2020, 6, 15), 300
+					LocalDate.of(2020, 6, 15), 200
 			));
 		}
 
