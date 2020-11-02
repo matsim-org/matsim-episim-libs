@@ -62,6 +62,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	private final Masks masks;
 	private final Tracing tracing;
 	private final Snapshot snapshot;
+	private final Class<? extends InfectionModel> infectionModel;
 
 
 	/**
@@ -70,16 +71,17 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 	
 	public SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.snapshot20200606);
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
 	}
 	
-	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot) {
+	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot, Class<? extends InfectionModel> infectionModel) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
 		this.masks = masks;
 		this.tracing = tracing;
 		this.snapshot = snapshot;
+		this.infectionModel = infectionModel;
 	}
 
 	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -103,7 +105,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	protected void configure() {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 	}
 
 	@Provides
@@ -162,6 +164,15 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		else {
 			episimConfig.setInitialInfectionDistrict("Berlin");
 			episimConfig.setCalibrationParameter(2.54e-5);
+		}
+		
+		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
+			if (this.diseaseImport == DiseaseImport.yes) {
+				episimConfig.setCalibrationParameter(1.6E-5);
+			}
+			else {
+				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
+			}	
 		}
 		
 		int spaces = 20;
