@@ -85,6 +85,9 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		case "0.9CLOTH@PT&SHOP":
 			builder.restrict(interventionDay, Restriction.ofMask(FaceMask.CLOTH, 0.9), "pt", "shop_daily", "shop_other");
 			break;
+		case "0.9FFP@WORK":
+			builder.restrict(interventionDay, Restriction.ofMask(FaceMask.N95, 0.9), "work", "business");
+			break;
 		case "0.9CLOTH@SCHOOL":
 			builder.restrict(interventionDay, Restriction.ofMask(FaceMask.CLOTH, 0.9), "educ_primary", "educ_secondary", "educ_tertiary");
 			break;
@@ -187,6 +190,50 @@ public class Interventions implements BatchRun<Interventions.Params> {
 			tracingConfig.setTracingDelay_days(2);
 			tracingConfig.setTraceSusceptible(true);
 			break;
+		case "tracing60-4d-4d":
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(1);
+			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+					episimConfig.getStartDate(), 0,
+					episimConfig.getStartDate().plusDays(interventionDay), Integer.MAX_VALUE)
+			);
+			tracingConfig.setTracingProbability(0.6);
+			tracingConfig.setTracingPeriod_days(4);
+			tracingConfig.setTracingDelay_days(4);
+			tracingConfig.setTraceSusceptible(true);
+			break;
+		case "tracing60-2d-4d":
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(1);
+			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+					episimConfig.getStartDate(), 0,
+					episimConfig.getStartDate().plusDays(interventionDay), Integer.MAX_VALUE)
+			);
+			tracingConfig.setTracingProbability(0.6);
+			tracingConfig.setTracingPeriod_days(4);
+			tracingConfig.setTracingDelay_days(2);
+			tracingConfig.setTraceSusceptible(true);
+			break;
+		case "tracing90-4d-4d":
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(1);
+			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+					episimConfig.getStartDate(), 0,
+					episimConfig.getStartDate().plusDays(interventionDay), Integer.MAX_VALUE)
+			);
+			tracingConfig.setTracingProbability(0.9);
+			tracingConfig.setTracingPeriod_days(4);
+			tracingConfig.setTracingDelay_days(4);
+			tracingConfig.setTraceSusceptible(true);
+			break;
+		case "tracing90-2d-4d":
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(1);
+			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+					episimConfig.getStartDate(), 0,
+					episimConfig.getStartDate().plusDays(interventionDay), Integer.MAX_VALUE)
+			);
+			tracingConfig.setTracingProbability(0.9);
+			tracingConfig.setTracingPeriod_days(4);
+			tracingConfig.setTracingDelay_days(2);
+			tracingConfig.setTraceSusceptible(true);
+			break;
 
 		default:
 			throw new IllegalArgumentException("Unknown intervention: " + params.intervention);
@@ -199,10 +246,10 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(20)
+		@GenerateSeeds(30)
 		public long seed;
 
-		@StringParameter({"none", "tracing60-4d-2d", "tracing60-2d-2d", "tracing90-4d-2d", "tracing90-2d-2d", "0.9CLOTH@PT&SHOP", "0.9CLOTH@SCHOOL", "workBusiness50", "workBusiness0", "leisure50", "leisure0", "errands50", "errands0", "shop50", "shop0", "educ_kiga50", "educ_kiga0",
+		@StringParameter({"none", "tracing60-4d-2d", "tracing60-2d-2d", "tracing90-4d-2d", "tracing90-2d-2d", "tracing90-4d-4d", "tracing90-2d-4d", "0.9FFP@WORK", "0.9CLOTH@PT&SHOP", "0.9CLOTH@SCHOOL", "workBusiness50", "workBusiness0", "leisure50", "leisure0", "errands50", "errands0", "shop50", "shop0", "educ_kiga50", "educ_kiga0",
 			"educ_school50", "educ_school0", "educ_higher50", "educ_higher0", "educ_other50", "educ_other0", "outOfHome50", "outOfHome0"})
 		public String intervention;
 		
