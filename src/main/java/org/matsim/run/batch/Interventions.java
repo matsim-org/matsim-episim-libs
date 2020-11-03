@@ -246,7 +246,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(25)
 		public long seed;
 
 		@StringParameter({"none", "tracing60-4d-2d", "tracing60-2d-2d", "tracing90-4d-2d", "tracing90-2d-2d", "tracing90-4d-4d", "tracing90-2d-4d", "0.9FFP@WORK", "0.9CLOTH@PT&SHOP", "0.9CLOTH@SCHOOL", "workBusiness50", "workBusiness0", "leisure50", "leisure0", "errands50", "errands0", "shop50", "shop0", "educ_kiga50", "educ_kiga0",
