@@ -5,15 +5,8 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.BatchRun.IntParameter;
-import org.matsim.episim.BatchRun.Parameter;
 import org.matsim.episim.model.*;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
-import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.run.modules.SnzBerlinProductionScenario.DiseaseImport;
@@ -24,12 +17,6 @@ import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
 
 import javax.annotation.Nullable;
 
-import java.time.LocalDate;
-import java.util.Map;
-import java.util.TreeMap;
-
-import static org.matsim.run.batch.ContactModels.*;
-
 
 /**
  * Runs for symmetric Berlin week model
@@ -39,23 +26,26 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 		if (params == null)
-			return new SnzBerlinProductionScenario();
+			return new SnzBerlinWeekScenario2020();
 
 		Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
 		DiseaseImport diseaseImport = DiseaseImport.yes;
 		Restrictions restrictions = Restrictions.yes;
 		Masks masks = Masks.yes;
 		Tracing tracing = Tracing.yes;
-		
+
 		if (params.run.contains("noDiseaseImport")) diseaseImport = DiseaseImport.no;
 		if (params.run.contains("noRestrictions")) restrictions = Restrictions.no;
+		if (params.run.contains("noNonEduRestrictions")) restrictions = Restrictions.onlyEdu;
 		if (params.run.contains("noEduRestrictions")) restrictions = Restrictions.allExceptEdu;
+		if (params.run.contains("noSchoolAndDayCareRestrictions")) restrictions = Restrictions.allExceptSchoolsAndDayCare;
+		if (params.run.contains("noUniversitiyRestrictions")) restrictions = Restrictions.allExceptUniversities;
+
 		if (params.run.contains("noOutOfHomeRestrictionsExceptEdu")) restrictions = Restrictions.onlyEdu;
 		if (params.run.contains("noMasks")) masks = Masks.no;
 		if (params.run.contains("noTracing")) tracing = Tracing.no;
 		if (params.run.contains("noAgeDepInfModel")) infectionModel = InfectionModelWithSeasonality.class;
-
-
+				
 		return new SnzBerlinProductionScenario(25, diseaseImport, restrictions, masks, tracing, Snapshot.no, infectionModel);
 //		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, InfectionModelWithSeasonality.class);
 	}
@@ -73,10 +63,14 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 		Restrictions restrictions = Restrictions.yes;
 		Masks masks = Masks.yes;
 		Tracing tracing = Tracing.yes;
-		
+
 		if (params.run.contains("noDiseaseImport")) diseaseImport = DiseaseImport.no;
 		if (params.run.contains("noRestrictions")) restrictions = Restrictions.no;
+		if (params.run.contains("noNonEduRestrictions")) restrictions = Restrictions.onlyEdu;
 		if (params.run.contains("noEduRestrictions")) restrictions = Restrictions.allExceptEdu;
+		if (params.run.contains("noSchoolAndDayCareRestrictions")) restrictions = Restrictions.allExceptSchoolsAndDayCare;
+		if (params.run.contains("noUniversitiyRestrictions")) restrictions = Restrictions.allExceptUniversities;
+
 		if (params.run.contains("noOutOfHomeRestrictionsExceptEdu")) restrictions = Restrictions.onlyEdu;
 		if (params.run.contains("noMasks")) masks = Masks.no;
 		if (params.run.contains("noTracing")) tracing = Tracing.no;
@@ -110,7 +104,7 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 //		@Parameter({1.8E-5, 1.7E-5, 1.6E-5, 1.5E-5, 1.4E-5, 1.3E-5, 1.27E-5, 1.1E-5, 1.E-5})
 //		double theta;
 		
-		@StringParameter({"base", "noDiseaseImport", "noDiseaseImportAdaptedTheta", "noRestrictions", "noEduRestrictions", "noOutOfHomeRestrictionsExceptEdu", "noMasks", "noTracing", "noAgeDepInfModel", "noAgeDepInfModelAdaptedTheta"})
+		@StringParameter({"base", "noDiseaseImport", "noDiseaseImportAdaptedTheta", "noRestrictions", "noNonEduRestrictions", "noEduRestrictions", "noSchoolAndDayCareRestrictions", "noUniversitiyRestrictions", "noOutOfHomeRestrictionsExceptEdu", "noMasks", "noTracing", "noAgeDepInfModel", "noAgeDepInfModelAdaptedTheta"})
 		public String run;
 		
 //		@StringParameter({"yes", "no"})
