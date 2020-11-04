@@ -51,7 +51,7 @@ import java.util.Map;
 public class SnzBerlinProductionScenario extends AbstractModule {
 	
 	public static enum DiseaseImport {yes, no}
-	public static enum Restrictions {yes, no, onlyEdu, allExceptEdu}
+	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
 	public static enum Snapshot {no, snapshot20200314, snapshot20200411, snapshot20200509, snapshot20200606}
@@ -197,7 +197,9 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		//restrictions and masks
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) basePolicyBuilder.setCsv(null);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu) basePolicyBuilder.setRestrictEdu(false);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) basePolicyBuilder.setRestrictUniversities(false);
+
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
