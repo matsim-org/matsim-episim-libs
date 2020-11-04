@@ -33,6 +33,11 @@ for f in output/*/*.diseaseImport.tsv; do
     cp $f tmp/$name
 done
 
+for f in output/*/*.infectionsPerActivity.txt; do
+    name=$(basename "$f")
+    cp $f tmp/$name.tsv
+done
+
 for f in output/*/*.post.*.*; do
     name=$(basename "$f")
     cp $f tmp/$name
