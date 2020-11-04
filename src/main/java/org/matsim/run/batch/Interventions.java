@@ -139,6 +139,9 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		case "educ_higher0":
 			builder.restrict(interventionDay, 0.0, "educ_higher");
 			break;
+		case "outOfHome90":
+			builder.restrict(interventionDay, 0.9, AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			break;
 		case "outOfHome50":
 			builder.restrict(interventionDay, 0.5, AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
 			break;
@@ -250,7 +253,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		public long seed;
 
 		@StringParameter({"none", "tracing60-4d-2d", "tracing60-2d-2d", "tracing90-4d-2d", "tracing90-2d-2d", "tracing90-4d-4d", "tracing90-2d-4d", "0.9FFP@WORK", "0.9CLOTH@PT&SHOP", "0.9CLOTH@SCHOOL", "workBusiness50", "workBusiness0", "leisure50", "leisure0", "errands50", "errands0", "shop50", "shop0", "educ_kiga50", "educ_kiga0",
-			"educ_school50", "educ_school0", "educ_higher50", "educ_higher0", "educ_other50", "educ_other0", "outOfHome50", "outOfHome0"})
+			"educ_school50", "educ_school0", "educ_higher50", "educ_higher0", "educ_other50", "educ_other0", "outOfHome90", "outOfHome50", "outOfHome0"})
 		public String intervention;
 		
 		@StringParameter({"summer", "winter"})
