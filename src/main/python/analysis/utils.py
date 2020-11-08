@@ -111,7 +111,7 @@ def read_run(f, district=None, window=5):
     return df
 
 
-def read_case_data(rki, hospital, window=5):
+def read_case_data(rki, meldedatum, hospital, window=5):
     """ Reads in RKI and hospital case numbers from csv """
     hospital = pd.read_csv(hospital, parse_dates=[0], dayfirst=True)
     rki = pd.read_csv(rki, parse_dates={'date': ['month', 'day', 'year']})
@@ -119,8 +119,14 @@ def read_case_data(rki, hospital, window=5):
     rki['casesCumulative'] = rki.cases.cumsum()
     rki['casesSmoothed'] = rki.cases.rolling(window).mean()
     rki['casesNorm'] = rki.casesSmoothed / rki.casesSmoothed.mean()
+    
+    meldedatum = pd.read_csv(meldedatum, parse_dates={'date': ['month', 'day', 'year']})
+    meldedatum.set_index('date', drop=False, inplace=True)
+    meldedatum['casesCumulative'] = meldedatum.cases.cumsum()
+    meldedatum['casesSmoothed'] = meldedatum.cases.rolling(window).mean()
+    meldedatum['casesNorm'] = meldedatum.casesSmoothed / meldedatum.casesSmoothed.mean()
 
-    return rki, hospital
+    return rki, meldedatum, hospital
 
 
 def infection_rate(f, district, target_rate=2, target_interval=3):
