@@ -1,4 +1,4 @@
-numpy>=1.16
-pandas>=0.25
+numpy>=1.19
+pandas>=1.1.1
 optuna==1.5.0
-scikit-learn>=0.21
+scikit-learn>=0.23
