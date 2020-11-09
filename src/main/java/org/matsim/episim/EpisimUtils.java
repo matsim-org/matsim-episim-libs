@@ -220,7 +220,7 @@ public final class EpisimUtils {
 		if (fileList == null) return;
 		for (File file : fileList) {
 			// Zip files (i.e. other snapshots or large files) are not added
-			if (file.getName().endsWith(".zip") || file.getName().endsWith(".gz"))
+			if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
 				continue;
 
 			if (file.isDirectory()) {
