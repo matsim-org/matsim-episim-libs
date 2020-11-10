@@ -25,9 +25,6 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		if (params == null)
-			return new SnzBerlinWeekScenario2020();
-
 		return new SnzBerlinProductionScenario();
 	}
 
@@ -44,10 +41,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		config.global().setRandomSeed(params.seed);
 
 //		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-				
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		tracingConfig.setCapacityType(CapacityType.PER_CONTACT_PERSON);
-		
+
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), params.tracingCapacityApril,
 				LocalDate.of(2020, 6, 15), params.tracingCapacityJune
@@ -60,15 +57,15 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		@GenerateSeeds(3)
 		public long seed;
-		
+
 		@IntParameter({100, 200, 300, 400})
 		int tracingCapacityApril;
-		
+
 		@IntParameter({500, 1000, 1500, 2000, Integer.MAX_VALUE})
 		int tracingCapacityJune;
-	
+
 	}
-	
+
 
 }
 

@@ -49,7 +49,7 @@ import java.util.Map;
  * Scenario for Berlin using Senozon events for different weekdays.
  */
 public class SnzBerlinProductionScenario extends AbstractModule {
-	
+
 	public static enum DiseaseImport {yes, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
@@ -69,11 +69,11 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
 	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
-	
+
 	public SnzBerlinProductionScenario() {
 		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
 	}
-	
+
 	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot, Class<? extends InfectionModel> infectionModel) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
@@ -110,13 +110,15 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 
 	@Provides
 	@Singleton
-	public Config config() {		
-		
+	public Config config() {
+
 		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
@@ -135,10 +137,10 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(1.);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
-		
+
 		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/snapshots/" + snapshot + ".zip");
 //		episimConfig.setSnapshotInterval(14);
-		
+
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		if (this.diseaseImport == DiseaseImport.yes) {
@@ -165,18 +167,18 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			episimConfig.setInitialInfectionDistrict("Berlin");
 			episimConfig.setCalibrationParameter(2.54e-5);
 		}
-		
+
 		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
 			if (this.diseaseImport == DiseaseImport.yes) {
 				episimConfig.setCalibrationParameter(1.6E-5);
 			}
 			else {
 				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
-			}	
+			}
 		}
-		
+
 		int spaces = 20;
-		//contact intensities		
+		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces);
@@ -187,13 +189,13 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(5.5).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(11.).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("shop_daily").setContactIntensity(0.88).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("shop_other").setContactIntensity(0.88).setSpacesPerFacility(spaces);		
+		episimConfig.getOrAddContainerParams("shop_other").setContactIntensity(0.88).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("errands").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("business").setContactIntensity(1.47).setSpacesPerFacility(spaces);	
+		episimConfig.getOrAddContainerParams("business").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("visit").setContactIntensity(9.24).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1);
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1);
-		
+
 		//restrictions and masks
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) basePolicyBuilder.setCsv(null);
@@ -205,7 +207,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		//tracing
 		if (this.tracing == Tracing.yes) {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -225,7 +227,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
-		
+
 		return config;
 	}
 
