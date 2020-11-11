@@ -215,7 +215,7 @@ def objective_ci_correction(trial):
 
     n = trial.number
 
-    start = fromisoformat(trial.study.user_attrs["start"]) + timedelta(days=trial.suggest_int('ciOffset', -3, 3))
+    start = fromisoformat(trial.study.user_attrs["start"]) + timedelta(days=trial.suggest_int('ciOffset', -2, 2))
     params = dict(
         number=n,
         scenario=trial.study.user_attrs["scenario"],
@@ -304,7 +304,7 @@ if __name__ == "__main__":
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinWeekScenario2020")
     parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
-    parser.add_argument("--start", type=str, default="2020-03-07", help="Start date for ci correction")
+    parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")

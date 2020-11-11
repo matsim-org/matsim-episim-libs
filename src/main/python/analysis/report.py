@@ -23,8 +23,8 @@ palette = sns.color_palette()
 
 
 #%%
-
 rki, hospital = read_case_data("berlin-cases.csv", "berlin-hospital.csv")
+#rki, meldedatum, hospital = read_case_data("/Users/sebastianmuller/git/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv", "/Users/sebastianmuller/git/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv", "/Users/sebastianmuller/git/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv")
 
 #%%  Graphs for outdoor / indoor runs
 
@@ -139,5 +139,110 @@ sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
              data=df)
 
 plt.ylim(bottom=1)
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
+
+#%% Curfew
+
+curfew = read_batch_run("data/curfew5.zip")
+
+#%%
+
+df = curfew[(curfew.holidays=="yes") & (curfew.tracingCapacity==200) & (curfew.curfew !="remainingFraction0") & (curfew.curfew != "1-6")]
+
+order = sorted(df.curfew.value_counts().keys())
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+hue = sns.color_palette(n_colors=8)
+
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+             hue="curfew", hue_order=order, palette=hue,
+             data=df)
+
+plt.ylim(bottom=1)
+plt.yscale("log")
+plt.title("Daily new infections over all random seeds, tracingCapacity=200")
+
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
+
+#%% sensitivity
+
+sensitivity = read_batch_run("/Users/sebastianmuller/git/public-svn/matsim/scenarios/countries/de/episim/battery/2020-11-03/sensitivity/summaries.zip")
+
+#%%
+
+run = "noDiseaseImport"
+run = "noDiseaseImportAdaptedTheta"
+run = "noTracing"
+run = "noAgeDepInfModel"
+run = "noAgeDepInfModelAdaptedTheta"
+run = "noSchoolAndDayCareRestrictions"
+run = "noUniversitiyRestrictions"
+run = "noOutOfHomeRestrictionsExceptEdu"
+run = "base"
+
+df = sensitivity[(sensitivity.run==run) & (sensitivity.thetaFactor==1.1)]
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+hue = sns.color_palette(n_colors=1)
+
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases (reference date)"], edgecolors=palette[3], facecolors='none',  ax=ax, s=3)
+meldedatum.plot.scatter(x="date", y=["cases"], label=["RKI Cases (reporting date)"], edgecolors=palette[2], facecolors='none',  ax=ax, s=3)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, palette=hue, label="showing symptoms (model)",
+             data=df)
+plt.legend()
+plt.ylim(bottom=1)
+plt.ylim(top=50000)
+
+plt.xlim(datetime.fromisoformat("2020-02-16"), datetime.fromisoformat("2020-10-31"))
+
+plt.yscale("log")
+#plt.title("Daily new infections over all random seeds - " + run)
+
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
+
+#%% sensitivity hospital cases
+
+sensitivity = read_batch_run("/Users/sebastianmuller/git/public-svn/matsim/scenarios/countries/de/episim/battery/2020-11-03/sensitivity/summaries.zip")
+
+#%%
+
+run = "noDiseaseImport"
+run = "noDiseaseImportAdaptedTheta"
+run = "noTracing"
+run = "noAgeDepInfModel"
+run = "noAgeDepInfModelAdaptedTheta"
+run = "noSchoolAndDayCareRestrictions"
+run = "noUniversitiyRestrictions"
+run = "noOutOfHomeRestrictionsExceptEdu"
+run = "base"
+
+df = sensitivity[(sensitivity.run==run) & (sensitivity.thetaFactor==1.0)]
+df['inHospital'] = df['nCritical'] + df['nSeriouslySick']
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+hue = sns.color_palette(n_colors=1)
+
+hospital.plot.scatter(x="Datum", y=["Stationaere Behandlung"], label=["hospitalized (LAGeSo)"], edgecolors=palette[3], facecolors='none',  ax=ax, s=3)
+hospital.plot.scatter(x="Datum", y=["Intensivmedizin"], label=["intensive care (LAGeSo)"], edgecolors=palette[2], facecolors='none',  ax=ax, s=3)
+sns.lineplot(x="date", y="nCritical", estimator="mean", ci="q95", ax=ax, palette=hue, label="critical (model)",
+             data=df)
+sns.lineplot(x="date", y="inHospital", estimator="mean", ci="q95", ax=ax, palette=hue, label="seriouslySick + critical (model)",
+             data=df)
+plt.legend()
+plt.ylim(bottom=1)
+plt.ylim(top=50000)
+plt.ylabel('cases')
+
+plt.xlim(datetime.fromisoformat("2020-02-16"), datetime.fromisoformat("2020-10-31"))
+
+plt.yscale("log")
+#plt.title("Daily new infections over all random seeds - " + run)
+
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())

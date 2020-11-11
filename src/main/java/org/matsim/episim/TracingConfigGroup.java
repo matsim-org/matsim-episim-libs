@@ -34,13 +34,19 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
-	 * Amount of persons traceable der day.
+	 * Amount of persons traceable per day.
 	 */
 	private final Map<LocalDate, Integer> tracingCapacity = new TreeMap<>();
 	/**
 	 * Probability of successfully tracing a person.
 	 */
 	private final Map<LocalDate, Double> tracingProbability = new TreeMap<>();
+
+	/**
+	 * Delay between showing symptoms and tracing of contact person.
+	 */
+	private final Map<LocalDate, Integer> tracingDelay = new TreeMap<>();
+
 	/**
 	 * Day after which tracing starts and puts persons into quarantine.
 	 */
@@ -49,11 +55,6 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * How many days the tracing works back.
 	 */
 	private int tracingDayDistance = 4;
-	/**
-	 * Amount of days after the person showing symptoms.
-	 */
-	private int tracingDelay = 0;
-
 	/**
 	 * Duration of quarantine in days.
 	 */
@@ -126,14 +127,36 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		this.tracingDayDistance = tracingDayDistance;
 	}
 
-	@StringGetter(TRACING_DELAY)
-	public int getTracingDelay() {
+	public Map<LocalDate, Integer> getTracingDelay() {
 		return tracingDelay;
 	}
 
 	@StringSetter(TRACING_DELAY)
+	void setTracingDelay(String delay) {
+		Map<String, String> map = SPLITTER.split(delay);
+		setTracingDelay_days(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+		)));
+	}
+
+	@StringGetter(TRACING_DELAY)
+	String getTracingDelayString() {
+		return JOINER.join(tracingDelay);
+	}
+
+	/**
+	 * Set tracing delay valid throughout whole simulation.
+	 */
 	public void setTracingDelay_days(int tracingDelay) {
-		this.tracingDelay = tracingDelay;
+		setTracingDelay_days(Map.of(LocalDate.of(1970, 1, 1), tracingDelay));
+	}
+
+	/**
+	 * Set tracing delay in days for individual points in time.
+	 */
+	public void setTracingDelay_days(Map<LocalDate, Integer> tracingDelay) {
+		this.tracingDelay.clear();
+		this.tracingDelay.putAll(tracingDelay);
 	}
 
 	@StringGetter(TRACING_PROBABILITY)

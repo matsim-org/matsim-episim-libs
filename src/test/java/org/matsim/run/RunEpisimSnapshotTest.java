@@ -51,7 +51,7 @@ public class RunEpisimSnapshotTest {
 		runner = injector.getInstance(EpisimRunner.class);
 		episimConfig.setPolicyConfig(FixedPolicy.config()
 				.shutdown(1, "freight")
-				.restrict(6, 0.2,"leisure", "edu", "business")
+				.restrict(6, 0.2, "leisure", "edu", "business")
 				.restrict(6, 0.2, "work", "other")
 				.restrict(6, 0.3, "shop", "errands")
 				.build()
@@ -81,11 +81,21 @@ public class RunEpisimSnapshotTest {
 		runner.run(30);
 
 		for (File file : Objects.requireNonNull(new File(utils.getOutputDirectory()).listFiles())) {
+
+			// check event files
+			if (file.getName().equals("events")) {
+				for (File event : Objects.requireNonNull(file.listFiles())) {
+					assertThat(event)
+							.hasSameBinaryContentAs(new File(fromSnapshot, "events/" +  event.getName()));
+				}
+			}
+
 			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")) continue;
 
 			assertThat(file)
 					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
 		}
+
 	}
 
 	@Test

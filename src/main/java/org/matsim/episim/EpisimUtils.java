@@ -57,6 +57,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -186,6 +187,32 @@ public final class EpisimUtils {
 	}
 
 	/**
+	 * Interpolate a value for the current day from a map of target dates and values.
+	 * E.g. if there are the entries 01.01=1 and 10.01=10 then interpolation for
+	 * 05.01 will be 5
+	 *
+	 * @param map map of target values.
+	 * @param date date to interpolate.
+	 * @return interpolated values (or exact if entry is in map)
+	 */
+	public static double interpolateEntry(NavigableMap<LocalDate, ? extends Number> map, LocalDate date) {
+
+		Map.Entry<LocalDate, ? extends Number> floor = map.floorEntry(date);
+		if (floor.getKey().equals(date))
+			return floor.getValue().doubleValue();
+
+		Map.Entry<LocalDate, ? extends Number> ceil = map.ceilingEntry(date);
+
+		// there is no higher entry to interpolate
+		if (ceil == null)
+			return floor.getValue().doubleValue();
+
+		double between = ChronoUnit.DAYS.between(floor.getKey(), ceil.getKey());
+		double diff = ChronoUnit.DAYS.between(floor.getKey(), date);
+		return floor.getValue().doubleValue() +  diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
+	}
+
+	/**
 	 * Compress directory recursively.
 	 */
 	public static void compressDirectory(String rootDir, String sourceDir, String runId, ArchiveOutputStream out) throws IOException {
@@ -193,7 +220,7 @@ public final class EpisimUtils {
 		if (fileList == null) return;
 		for (File file : fileList) {
 			// Zip files (i.e. other snapshots or large files) are not added
-			if (file.getName().endsWith(".zip") || file.getName().endsWith(".gz"))
+			if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
 				continue;
 
 			if (file.isDirectory()) {
@@ -644,4 +671,23 @@ public final class EpisimUtils {
 		}
 	}
 
+	public static int getAge( EpisimPerson person ){
+		int age = -1;
+
+		for( String attr : person.getAttributes().getAsMap().keySet() ){
+			if( attr.contains( "age" ) ){
+				age = (int) person.getAttributes().getAttribute( attr );
+				break;
+			}
+		}
+
+		if( age == -1 ){
+			throw new RuntimeException( "Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible." );
+		}
+
+		if( age < 0 || age > 120 ){
+			throw new RuntimeException( "Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age );
+		}
+		return age;
+	}
 }

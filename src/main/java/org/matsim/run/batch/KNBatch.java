@@ -44,9 +44,13 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 			}
 
 			// yyyyyy does not work without the following lines:
-//			@Provides Config config() {
-//				return new SnzBerlinWeekScenario2020(25,false,false, OldSymmetricContactModel.class ).config();
-//			}
+			// According to CR, this will be used to read the events, but for nothing else.
+			@Provides Config config() {
+				Config config = new SnzBerlinWeekScenario2020(25,false,false, OldSymmetricContactModel.class ).config();
+//				config.removeModule( "episim" );
+//				config.removeModule( "episimTracing" );
+				return config ;
+			}
 
 			// yyyy where is the scenario binding coming from?
 
@@ -70,8 +74,6 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		episimConfig.setInitialInfections( 10 );
 		episimConfig.setInfections_pers_per_day( Collections.singletonMap( episimConfig.getStartDate(), 10 ) );
 
-		episimConfig.setWriteEvents( EpisimConfigGroup.WriteEvents.all );
-
 		final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
 		episimConfig.setPolicy( FixedPolicy.class, restrictions.build() ); // overwrite snz policy with empty policy
 
@@ -83,10 +85,10 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(100)
 		long seed;
 
-		@Parameter( {0.01} )
+		@Parameter( {0.01,0.03,0.1,0.3} )
 		double factor;
 
 //		@StringParameter({"2020-02-16", "2020-02-18"})
@@ -107,7 +109,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 365 )
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 90 )
 		};
 
 		RunParallel.main( args2 );

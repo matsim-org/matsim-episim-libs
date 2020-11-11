@@ -110,7 +110,7 @@ public final class RunTrial implements Callable<Integer> {
 		if (unconstrained) {
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
 			log.info("Cleared all restrictions");
-		} else if (alpha > -1) {
+		} else if (alpha > -1 && correction > -1) {
 
 			SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 			builder.setAlpha(alpha);
@@ -126,6 +126,8 @@ public final class RunTrial implements Callable<Integer> {
 
 			episimConfig.setPolicy(FixedPolicy.class, policyConf.build());
 
+		} else {
+			log.warn("No alpha or ci correction specified");
 		}
 
 

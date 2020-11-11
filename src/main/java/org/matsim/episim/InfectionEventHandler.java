@@ -357,7 +357,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		// Add missing facilities, with only stationary agents
 		for (EpisimFacility facility : pseudoFacilityMap.values()) {
 			if (!maxGroupSize.containsKey(facility)) {
-				totalUsers.put(facility, facility.getPersons().size());
+				totalUsers.mergeInt(facility, facility.getPersons().size(), Integer::max);
 				maxGroupSize.put(facility, facility.getPersons().size());
 
 				// there may be facilities with only "end" events, thus no group size, but correct activity usage
@@ -389,7 +389,8 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			for (Event event : eventsForDay) {
 				if (event instanceof HasFacilityId && event instanceof HasPersonId) {
-					EpisimFacility facility = pseudoFacilityMap.get(((HasFacilityId) event).getFacilityId());
+					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
+					EpisimFacility facility = pseudoFacilityMap.get(episimFacilityId);
 
 					// happens on filtered events that are not relevant
 					if (facility == null)
@@ -708,13 +709,14 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 		this.iteration = iteration;
 
-		this.initialInfections.handleInfections(personMap, iteration);
+		int infected = this.initialInfections.handleInfections(personMap, iteration);
 
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration, report.date);
 		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);
+		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);

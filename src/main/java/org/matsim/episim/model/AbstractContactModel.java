@@ -248,6 +248,32 @@ public abstract class AbstractContactModel implements ContactModel {
 	}
 
 	/**
+	 * Calculate the joint time persons have been in a container.
+	 * This takes possible closing hours into account.
+	 */
+	protected double calculateJointTimeInContainer(double now, EpisimPerson person, double containerEnterTimeOfPersonLeaving, double containerEnterTimeOfOtherPerson) {
+		EpisimPerson.Activity act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
+		Restriction r = getRestrictions().get(act.params.getContainerName());
+
+		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+
+		// no closing hour set
+		if (r.getClosingHours() == null) {
+			return now - max;
+		}
+
+		double overlap = r.overlapWithClosingHour(max, now);
+		if (overlap > 0) {
+			double jointTime = now - max - overlap;
+			// joint time can now be negative and will be set to 0
+			return jointTime > 0 ? jointTime : 0;
+
+		} else {
+			return now - max;
+		}
+	}
+
+	/**
 	 * Set the iteration number and restrictions that are in place.
 	 */
 	@Override

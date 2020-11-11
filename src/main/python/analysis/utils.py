@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import io
 import zipfile
+from collections import defaultdict
 from os import path
 
 import numpy as np
@@ -109,7 +111,7 @@ def read_run(f, district=None, window=5):
     return df
 
 
-def read_case_data(rki, hospital, window=5):
+def read_case_data(rki, meldedatum, hospital, window=5):
     """ Reads in RKI and hospital case numbers from csv """
     hospital = pd.read_csv(hospital, parse_dates=[0], dayfirst=True)
     rki = pd.read_csv(rki, parse_dates={'date': ['month', 'day', 'year']})
@@ -117,8 +119,14 @@ def read_case_data(rki, hospital, window=5):
     rki['casesCumulative'] = rki.cases.cumsum()
     rki['casesSmoothed'] = rki.cases.rolling(window).mean()
     rki['casesNorm'] = rki.casesSmoothed / rki.casesSmoothed.mean()
+    
+    meldedatum = pd.read_csv(meldedatum, parse_dates={'date': ['month', 'day', 'year']})
+    meldedatum.set_index('date', drop=False, inplace=True)
+    meldedatum['casesCumulative'] = meldedatum.cases.cumsum()
+    meldedatum['casesSmoothed'] = meldedatum.cases.rolling(window).mean()
+    meldedatum['casesNorm'] = meldedatum.casesSmoothed / meldedatum.casesSmoothed.mean()
 
-    return rki, hospital
+    return rki, meldedatum, hospital
 
 
 def infection_rate(f, district, target_rate=2, target_interval=3):
@@ -137,6 +145,74 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     rates = np.array(rates)
 
     return rates.mean(), np.square(rates - target_rate).mean()
+
+def aggregate_batch_run(run):
+    """ Reads a batch run with all files and aggregates over all seeds by using the mean.
+
+     :param run path to the zip file
+     :return nothing, aggregated run will be written based on the filename
+     """
+    # run id to file id to list of files
+    runs = defaultdict(lambda: defaultdict(lambda: []))
+    # run id to aggregated id
+    idMap = {}
+    info = None
+
+    with zipfile.ZipFile(run) as z:
+
+        with z.open("_info.txt") as f:
+            info = pd.read_csv(f, sep=";")
+
+        params = set(info.columns).difference({'RunScript', 'Config', 'RunId', 'Output'})
+        woSeed = params.difference({'seed'})
+
+        byId = info.groupby(list(woSeed), as_index=False).agg(ids=('RunId', set))
+
+        for row in byId.itertuples():
+            for idx in row.ids:
+                idMap[idx] = row.Index
+
+        for f in z.namelist():
+            idx, _, filename = f.partition(".")
+            if idx not in idMap:
+                continue
+
+            with z.open(f) as zf:
+                df = pd.read_csv(zf, sep="\t")
+                runs[idMap[idx]][filename].append(df)
+
+
+    with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
+                         mode="w", compresslevel=9,
+                         compression=zipfile.ZIP_DEFLATED) as z:
+
+        info = byId.reset_index().rename(columns={"index": "RunId"}).drop(columns=["ids"])
+        info["RunScript"] = "na"
+        info["Config"] = "na"
+        info["Output"] = "na"
+
+        with z.open("_info.txt", "w") as zf:
+            buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+            info.to_csv(buf, columns = ["RunScript", "Config", "RunId", "Output"] + list(woSeed),
+                        sep=";", mode="w", line_terminator="\n", index=False)
+            buf.flush()
+
+        for runId, files in runs.items():
+            for filename, dfs in files.items():
+                concat = pd.concat(dfs)
+                by_row_index = concat.groupby(concat.index)
+                means = by_row_index.mean()
+
+                # attach non numeric columns without aggregating
+                nonNumeric = dfs[0].columns.difference(means.columns)
+                for column in nonNumeric:
+                    means[column] = dfs[0][column]
+
+                with z.open(str(runId) + "." + filename, "w") as zf:
+                    buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+                    means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
+                    buf.flush()
+
 
 
 def calc_r_reduction(base_case, base_variables, df, group_by=None):

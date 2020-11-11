@@ -43,10 +43,10 @@ public final class Restriction {
 	private Set<Id<ActivityFacility>> closed;
 
 	/**
-	 * List of (from, to) hours when activity is closed.
+	 * {@link ClosingHours} when activity is closed.
 	 */
 	@Nullable
-	private List<ClosingHours> closingHours;
+	private ClosingHours closingHours;
 
 	/**
 	 * Maps mask type to percentage of persons wearing it.
@@ -57,7 +57,7 @@ public final class Restriction {
 	 * Constructor.
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
-						@Nullable List<String> closed, @Nullable List<ClosingHours> closingHours, @Nullable Map<FaceMask, Double> maskUsage) {
+						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -105,7 +105,7 @@ public final class Restriction {
 	 * @param maskUsage will only be used of other is null
 	 */
 	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
-				@Nullable List<String> closed, @Nullable List<ClosingHours> closingHours, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
+				@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
@@ -193,18 +193,14 @@ public final class Restriction {
 
 	/**
 	 * Creates a restriction for activity to be closed during certain hours.
+	 * If {@code fromHour} is larger than {@code toHour} it is assumed that the closing hour is over midnight.
 	 *
-	 * @param hours pairs of hours when activity needs to be closed. Eg. [0,6, 23,24]
+	 * @param fromHour hour of the day when activity will close
+	 * @param toHour   hour of the day when activity will open again.
 	 */
-	public static Restriction ofClosingHours(Integer... hours) {
+	public static Restriction ofClosingHours(int fromHour, int toHour) {
 
-		if (hours.length % 2 != 0)
-			throw new IllegalArgumentException("Closing hours must be given in pairs of (closed, open)");
-
-		List<Integer> seconds = Arrays.stream(hours).map(h -> h * 3600)
-				.collect(Collectors.toList());
-
-		List<ClosingHours> closed = asClosingHours(seconds);
+		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
 		return new Restriction(null, null, null, null, closed, null);
 	}
@@ -234,17 +230,12 @@ public final class Restriction {
 	/**
 	 * Convert list of ints to closing hour instances.
 	 */
-	private static List<ClosingHours> asClosingHours(List<Integer> closingHours) {
+	private static ClosingHours asClosingHours(List<Integer> closingHours) {
 
 		if (closingHours == null)
 			return null;
 
-		List<ClosingHours> result = new ArrayList<>();
-		for (int i = 0; i < closingHours.size(); i += 2) {
-			result.add(new ClosingHours(closingHours.get(i), closingHours.get(i + 1)));
-		}
-
-		return Collections.unmodifiableList(result);
+		return new ClosingHours(closingHours.get(0), closingHours.get(1));
 	}
 
 	/**
@@ -277,6 +268,73 @@ public final class Restriction {
 		}
 
 		throw new IllegalStateException("Could not determine mask. Probabilities are likely wrong.");
+	}
+
+	/**
+	 * Check whether one time falls into a closing hour.
+	 *
+	 * @param sod      timestamp as seconds of day
+	 * @param adjustFrom when true result time is shifted to be later, otherwise shifted to start of closing hour
+	 * @return adjusted time, unchanged when not in closing hour. Otherwise moved to closing hours
+	 */
+	double calculateOverlap(double sod, boolean adjustFrom) {
+		// seconds of day
+		ClosingHours ch = closingHours;
+
+		if (adjustFrom) {
+			if (ch.overnight)
+				return sod >= ch.from ? ch.length - (sod - ch.from) : ch.length -  (sod + 86400 - ch.from);
+
+			return ch.length - (sod - ch.from);
+		} else {
+			if (ch.overnight)
+				return sod <= ch.to ? ch.length - (ch.to - sod) : sod - ch.from;
+
+
+			return ch.length - (ch.to - sod);
+		}
+
+	}
+
+	/**
+	 * Calculate how many seconds are overlapped by the closing hour, given a time interval.
+	 *
+	 * @return overlap or 0 if the time interval is inside the closing.
+	 */
+	public double overlapWithClosingHour(double from, double to) {
+
+		if (closingHours == null)
+			return 0;
+
+		// closing of 0-24 needs to be handled separately, as overlap would be infinite
+		if (closingHours.length >= 86400)
+			return Integer.MAX_VALUE;
+
+		double fSod = from % 86400;
+		double tSod = to % 86400;
+		ClosingHours ch = closingHours;
+
+		boolean containsFrom = ch.contains(fSod);
+		boolean containsTo = ch.contains(tSod);
+		boolean actOvernight = tSod < fSod;
+
+		if (containsFrom && containsTo) {
+			// whole time nullified
+			return to - from;
+		} else if (containsFrom) {
+			return calculateOverlap(fSod, true);
+		} else if (containsTo) {
+			return calculateOverlap(tSod, false);
+
+		} else if (ch.includedIn(fSod, tSod) && (ch.overnight == actOvernight)) {
+			// reduce by time of closing hour length
+			return ch.length;
+		} else if (actOvernight && !ch.overnight && tSod >= ch.to) {
+			// also covered completely
+			return ch.length;
+		}
+
+		return 0;
 	}
 
 	/**
@@ -323,7 +381,7 @@ public final class Restriction {
 		Double otherRf = (Double) restriction.get("fraction");
 		Double otherE = (Double) restriction.get("ciCorrection");
 		Integer otherGroup = (Integer) restriction.get("maxGroupSize");
-		List<ClosingHours> otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
+		ClosingHours otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
 		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
 		((Map<String, Double>) restriction.get("masks"))
@@ -377,7 +435,7 @@ public final class Restriction {
 	}
 
 	@Nullable
-	public List<ClosingHours> getClosingHours() {
+	public ClosingHours getClosingHours() {
 		return closingHours;
 	}
 
@@ -416,6 +474,11 @@ public final class Restriction {
 		maskUsage.forEach((k, v) -> nameMap.put(k.name(), v));
 		map.put("masks", nameMap);
 
+		if (closingHours != null) {
+			map.put("closingHours", List.of(closingHours.from, closingHours.to));
+		}
+
+
 		return map;
 	}
 
@@ -425,7 +488,7 @@ public final class Restriction {
 	public static final class ClosingHours {
 
 		/**
-		 * Starting second when activity is closed (inclusive)
+		 * Starting second when activity is closed (exclusive)
 		 */
 		public final int from;
 
@@ -434,12 +497,41 @@ public final class Restriction {
 		 */
 		public final int to;
 
+		/**
+		 * Closed overnight.
+		 */
+		public final boolean overnight;
+
+		/**
+		 * Length of closing hours.
+		 */
+		public final int length;
+
 		ClosingHours(int from, int to) {
-			if (from >= to)
-				throw new IllegalArgumentException("Closing time must be given as (from, to), where from < to");
+			if (from == to)
+				throw new IllegalArgumentException("Closing time must be different from each other.");
 
 			this.from = from;
 			this.to = to;
+			this.overnight = from > to;
+			this.length = overnight ? (86400 - from) + to : to - from;
+		}
+
+		/**
+		 * Check whether timestamp is contained in the closing hours.
+		 */
+		public boolean contains(double sod) {
+			if (overnight) {
+				return sod >= from || sod <= to;
+			} else
+				return sod >= from && sod <= to;
+		}
+
+		/**
+		 * Closing hour is completely included in this interval (as seconds of day).
+		 */
+		public boolean includedIn(double fSod, double tSod) {
+			return fSod < from && tSod > to;
 		}
 
 		@Override

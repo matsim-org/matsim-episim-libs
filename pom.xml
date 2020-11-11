@@ -20,7 +20,7 @@
     </licenses>
 
     <properties>
-        <matsim.version>12.0-SNAPSHOT</matsim.version>
+        <matsim.version>12.0</matsim.version>
         <!--<matsim.version>12.0-2020w09-SNAPSHOT</matsim.version>-->
         <mainClass>org.matsim.run.RunEpisim</mainClass>
     </properties>
@@ -73,6 +73,14 @@
         </repository>
 
     </repositories>
+
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Packages</name>
+            <url>https://maven.pkg.github.com/matsim-org/matsim-episim</url>
+        </repository>
+    </distributionManagement>
 
     <dependencies>
 
