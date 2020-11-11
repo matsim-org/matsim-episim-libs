@@ -31,6 +31,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
@@ -220,9 +221,10 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			tracingConfig.setEquipmentRate(1.);
 			tracingConfig.setTracingDelay_days(4);
 			tracingConfig.setTraceSusceptible(true);
+			tracingConfig.setCapacityType(CapacityType.PER_CONTACT_PERSON);
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-					LocalDate.of(2020, 4, 1), 30,
-					LocalDate.of(2020, 6, 15), 200
+					LocalDate.of(2020, 4, 1), 300,
+					LocalDate.of(2020, 6, 15), 2000
 			));
 		}
 

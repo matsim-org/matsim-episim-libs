@@ -38,9 +38,6 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		if (params == null)
-			return new SnzBerlinWeekScenario2020();
-
 		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
 	}
 
@@ -75,9 +72,8 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		}
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), 30,
-				LocalDate.of(2020, 6, 15), 200,
-				LocalDate.parse("2020-11-02"), 400,
+				LocalDate.of(2020, 4, 1), 300,
+				LocalDate.of(2020, 6, 15), 2000,
 				LocalDate.parse("2020-11-23"), params.tracingCapacity
 		));
 		
@@ -155,7 +151,7 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		public String lockdown;
 		
 		//23.11.
-		@IntParameter({200, 400, Integer.MAX_VALUE})
+		@IntParameter({2000, 4000, Integer.MAX_VALUE})
 		int tracingCapacity;
 		
 		@Parameter({0.6, 0.9})
