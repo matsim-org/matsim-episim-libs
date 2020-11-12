@@ -55,7 +55,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
-	public static enum Snapshot {no, snapshot20200314, snapshot20200411, snapshot20200509, snapshot20200606}
+	public static enum Snapshot {no, episim_snapshot_030_2020_03_16, episim_snapshot_060_2020_04_15, episim_snapshot_090_2020_05_15, episim_snapshot_120_2020_06_14, episim_snapshot_150_2020_07_14, episim_snapshot_180_2020_08_13}
 
 	private final int sample;
 	private final DiseaseImport diseaseImport;
@@ -139,7 +139,8 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setHospitalFactor(1.);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 
-		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/snapshots/" + snapshot + ".zip");
+		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
+
 //		episimConfig.setSnapshotInterval(14);
 
 		//inital infections and import
