@@ -38,7 +38,7 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
+		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.episim_snapshot_150_2020_07_14, AgeDependentInfectionModelWithSeasonality.class);
 	}
 
 	@Override
@@ -49,8 +49,7 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = 
-				new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.episim_snapshot_150_2020_07_14, AgeDependentInfectionModelWithSeasonality.class);
 		
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
@@ -77,15 +76,15 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 				LocalDate.parse("2020-11-23"), params.tracingCapacity
 		));
 		
-		tracingConfig.setTracingDelay_days(Map.of(
-				LocalDate.of(2020, 1, 1), 4,
-				LocalDate.parse("2020-11-23"), params.tracingDelay
-		));
-		
-		tracingConfig.setTracingProbability(Map.of(
-				LocalDate.of(2020, 1, 1), 0.6,
-				LocalDate.parse("2020-11-23"), params.tracingProbability
-		));
+//		tracingConfig.setTracingDelay_days(Map.of(
+//				LocalDate.of(2020, 1, 1), 4,
+//				LocalDate.parse("2020-11-23"), params.tracingDelay
+//		));
+//		
+//		tracingConfig.setTracingProbability(Map.of(
+//				LocalDate.of(2020, 1, 1), 0.6,
+//				LocalDate.parse("2020-11-23"), params.tracingProbability
+//		));
 
 		
 		if (params.schools.contains("school50")) {
@@ -134,16 +133,13 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
-		if (params.lockdown.equals("outOfHomeExceptEdu84") && params.tracingCapacity == 400 && params.tracingProbability == 0.6 && params.tracingDelay == 4 && params.schools.equals("open") && params.furhterMeasures.equals("no")) {
-			episimConfig.setSnapshotInterval(30);
-		}
 
 		return config;
 	}
 
 	public static final class Params {
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(10)
 		public long seed;
 		
 		//2.11.
@@ -151,14 +147,14 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		public String lockdown;
 		
 		//23.11.
-		@IntParameter({2000, 4000, Integer.MAX_VALUE})
+		@IntParameter({2000, Integer.MAX_VALUE})
 		int tracingCapacity;
 		
-		@Parameter({0.6, 0.9})
-		double tracingProbability;
-		
-		@IntParameter({2, 4})
-		int tracingDelay;
+//		@Parameter({0.6, 0.9})
+//		double tracingProbability;
+//		
+//		@IntParameter({2, 4})
+//		int tracingDelay;
 		
 		@StringParameter({"open", "school50", "N95masks", "school50&N95masks", "earlyHolidays"})
 		public String schools;
