@@ -220,6 +220,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
 		// yyyy Is it really so plausible to have this here _and_ the plain integer initial infections?  kai, oct'20
+		// yyyyyy Is it correct that the default of this is empty, so even if someone sets the initial infections to some number, this will not have any effect?  kai, nov'20
 		this.infectionsPerDay.clear();
 		this.infectionsPerDay.putAll(infectionsPerDay);
 	}
