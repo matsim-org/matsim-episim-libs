@@ -81,11 +81,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Leisure outdoor fractions per day.
 	 */
 	private final Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
-			LocalDate.parse("2020-01-15"), 0.1, 
-			LocalDate.parse("2020-04-15"), 0.8, 
-			LocalDate.parse("2020-09-15"), 0.8, 
-			LocalDate.parse("2020-11-15"), 0.1, 
-			LocalDate.parse("2021-02-15"), 0.1, 
+			LocalDate.parse("2020-01-15"), 0.1,
+			LocalDate.parse("2020-04-15"), 0.8,
+			LocalDate.parse("2020-09-15"), 0.8,
+			LocalDate.parse("2020-11-15"), 0.1,
+			LocalDate.parse("2021-02-15"), 0.1,
 			LocalDate.parse("2021-04-15"), 0.8,
 			LocalDate.parse("2021-09-15"), 0.8)
 			);
@@ -234,6 +234,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
 		// yyyy Is it really so plausible to have this here _and_ the plain integer initial infections?  kai, oct'20
 		// yyyyyy Is it correct that the default of this is empty, so even if someone sets the initial infections to some number, this will not have any effect?  kai, nov'20
+		// No, If no entry is present, 1 will be assumed (because this was default at some point).
+		// This logic of handling no entries is not part of the config, but the initial infection handler  - cr, nov'20
 		this.infectionsPerDay.clear();
 		this.infectionsPerDay.putAll(infectionsPerDay);
 	}
@@ -436,7 +438,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setMaxContacts(double maxContacts) {
 		this.maxContacts = maxContacts;
 	}
-	
+
 	/**
 	 * Sets the leisure outdoor fraction for the whole simulation period.
 	 */
@@ -445,7 +447,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
-	 * Sets the leisure outdoor fraction for individual days. If a day has no entry the values will be interpolated. 
+	 * Sets the leisure outdoor fraction for individual days. If a day has no entry the values will be interpolated.
 	 */
 	public void setLeisureOutdoorFraction(Map<LocalDate, Double> fraction) {
 		leisureOutdoorFraction.clear();

@@ -72,7 +72,7 @@ def read_batch_run(run, r_values=False, age_groups=None):
     return pd.concat(frames)
 
 
-def group_by_age(rv, age_groups, prefix="age"):
+def group_by_age(rv, age_groups, prefix="age", scale=None):
     """ Groups data frame by age """
     d = rv.to_numpy()
     data = {}
@@ -83,6 +83,9 @@ def group_by_age(rv, age_groups, prefix="age"):
         column = d[:, idx].sum(axis=1)
 
         name = prefix + "%d-%d" % (idx[0] + off, idx[-1] + off)
+
+        if scale is not None:
+            column = np.multiply(column, scale[i])
 
         data[name] = column
 

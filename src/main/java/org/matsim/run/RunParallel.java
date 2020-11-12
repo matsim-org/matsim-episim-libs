@@ -166,6 +166,10 @@ public class RunParallel<T> implements Callable<Integer> {
 
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
 								episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+
+			sameInput &= baseConfig.vehicles().getVehiclesFile().equals(run.config.vehicles().getVehiclesFile());
+			sameInput &= baseConfig.plans().getInputFile().equals(run.config.plans().getInputFile());
+
 			if (!noReuse && !sameInput) {
 				log.error("Input files differs for run {}", run.id);
 				return 1;
