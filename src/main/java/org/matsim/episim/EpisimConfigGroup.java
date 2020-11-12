@@ -67,6 +67,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
+	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -76,6 +77,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Number of initial infections per day.
 	 */
 	private final Map<LocalDate, Integer> infectionsPerDay = new TreeMap<>();
+	/**
+	 * Leisure outdoor fractions per day.
+	 */
+	private final Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
+			LocalDate.parse("2020-01-15"), 0.1, 
+			LocalDate.parse("2020-04-15"), 0.8, 
+			LocalDate.parse("2020-09-15"), 0.8, 
+			LocalDate.parse("2020-11-15"), 0.1, 
+			LocalDate.parse("2021-02-15"), 0.1, 
+			LocalDate.parse("2021-04-15"), 0.8,
+			LocalDate.parse("2021-09-15"), 0.8)
+			);
 	/**
 	 * Which events to write in the output.
 	 */
@@ -422,6 +435,39 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(MAX_CONTACTS)
 	public void setMaxContacts(double maxContacts) {
 		this.maxContacts = maxContacts;
+	}
+	
+	/**
+	 * Sets the leisure outdoor fraction for the whole simulation period.
+	 */
+	public void setLeisureOutdoorFraction(double fraction) {
+		setLeisureOutdoorFraction(Map.of(LocalDate.of(1970, 1, 1), fraction));
+	}
+
+	/**
+	 * Sets the leisure outdoor fraction for individual days. If a day has no entry the values will be interpolated. 
+	 */
+	public void setLeisureOutdoorFraction(Map<LocalDate, Double> fraction) {
+		leisureOutdoorFraction.clear();
+		leisureOutdoorFraction.putAll(fraction);
+	}
+
+	public Map<LocalDate, Double> getLeisureOutdoorFraction() {
+		return leisureOutdoorFraction;
+	}
+
+	@StringSetter(LEISUREOUTDOORFRACTION)
+	void setLeisureOutdoorFraction(String capacity) {
+
+		Map<String, String> map = SPLITTER.split(capacity);
+		setLeisureOutdoorFraction(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
+	}
+
+	@StringGetter(LEISUREOUTDOORFRACTION)
+	String getLeisureOutdoorFractionString() {
+		return JOINER.join(leisureOutdoorFraction);
 	}
 
 	/**

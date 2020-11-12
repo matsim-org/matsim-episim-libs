@@ -255,19 +255,22 @@ public abstract class AbstractContactModel implements ContactModel {
 		EpisimPerson.Activity act = person.getTrajectory().get(person.getCurrentPositionInTrajectory());
 		Restriction r = getRestrictions().get(act.params.getContainerName());
 
+		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+
 		// no closing hour set
-		if (r.getClosingHours() == null)
-			return now - Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+		if (r.getClosingHours() == null) {
+			return now - max;
+		}
 
-		// entering times are shifted to the past if the facility was closed
-		// now (leave time) is shifted to be earlier if the facility closed already at earlier point
-		double jointTime = r.adjustByClosingHour(now, false) - Math.max(
-				r.adjustByClosingHour(containerEnterTimeOfPersonLeaving, true),
-				r.adjustByClosingHour(containerEnterTimeOfOtherPerson, true)
-		);
+		double overlap = r.overlapWithClosingHour(max, now);
+		if (overlap > 0) {
+			double jointTime = now - max - overlap;
+			// joint time can now be negative and will be set to 0
+			return jointTime > 0 ? jointTime : 0;
 
-		// joint time can now be negative and will be set to 0
-		return jointTime > 0 ? jointTime : 0;
+		} else {
+			return now - max;
+		}
 	}
 
 	/**

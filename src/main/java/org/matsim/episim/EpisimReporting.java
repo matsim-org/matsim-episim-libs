@@ -96,6 +96,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter infectionEvents;
 	private BufferedWriter restrictionReport;
 	private BufferedWriter timeUse;
+	private BufferedWriter diseaseImport;
 
 	private String memorizedDate = null;
 
@@ -134,6 +135,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
+		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -177,7 +179,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
-			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt")) {
+			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -188,6 +190,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
+		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
@@ -468,10 +471,13 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		manager.processEvent(event);
 	}
 
-	public void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize,
-									 Object2IntMap<EpisimContainer<?>> containerSize, Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
+	/**
+	 * Write container statistic to file.
+	 */
+	public void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
+									 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
 
-		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "containerSize", "maxGroupSize");
+		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "totalUsers", "maxGroupSize");
 
 		for (Object2IntMap.Entry<EpisimContainer<?>> kv : maxGroupSize.object2IntEntrySet()) {
 
@@ -480,12 +486,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			this.writer.append(out, new String[]{
 					kv.getKey().getContainerId().toString(),
 					String.valueOf(activityUsage.get(kv.getKey())),
-					String.valueOf((int) (containerSize.getInt(kv.getKey()) * scale)),
+					String.valueOf((int) (totalUsers.getInt(kv.getKey()) * scale)),
 					String.valueOf((int) (kv.getIntValue() * scale))
 			});
 		}
 
 		this.writer.close(out);
+	}
+
+	/**
+	 * Write number of initially infected persons.
+	 */
+	public void reportDiseaseImport(int infected, int iteration, String date) {
+		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
 	}
 
 	@Override
@@ -495,6 +508,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(infectionEvents);
 		writer.close(restrictionReport);
 		writer.close(timeUse);
+		writer.close(diseaseImport);
 
 	}
 

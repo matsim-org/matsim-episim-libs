@@ -41,7 +41,7 @@ public class RestrictionTest {
 	}
 
 	@Test
-	public void closingHours() {
+	public void adjustClosing() {
 
 		Restriction r = Restriction.ofClosingHours(5, 9);
 
@@ -53,48 +53,72 @@ public class RestrictionTest {
 
 		r = Restriction.ofClosingHours(1, 6);
 
-		// moved to be later
-		assertThat(r.adjustByClosingHour(hours(2), true))
-				.isEqualTo(hours(6));
+		assertThat(r.calculateOverlap(hours(2), true))
+				.isEqualTo(hours(4));
 
-		assertThat(r.adjustByClosingHour(hours(2), false))
+		assertThat(r.calculateOverlap(hours(2), false))
 				.isEqualTo(hours(1));
 
-		assertThat(r.adjustByClosingHour(days(2) + hours(3), true))
-				.isEqualTo(days(2) + hours(6));
+		r = Restriction.ofClosingHours(22, 6);
 
-		assertThat(r.adjustByClosingHour(days(2) + hours(3), false))
-				.isEqualTo(days(2) + hours(1));
+		assertThat(r.calculateOverlap(hours(23), true))
+				.isEqualTo(hours(7));
+		assertThat(r.calculateOverlap(hours(23), false))
+				.isEqualTo(hours(1));
 
-		assertThat(r.adjustByClosingHour(days(2) + hours(10), true))
-				.isEqualTo(days(2) + hours(10));
-
-		r = Restriction.ofClosingHours(0, 24);
-		assertThat(r.adjustByClosingHour(days(2) + hours(10), true))
-				.isEqualTo(Integer.MAX_VALUE);
-
+		assertThat(r.calculateOverlap(hours(3), true))
+				.isEqualTo(hours(3));
+		assertThat(r.calculateOverlap(hours(3), false))
+				.isEqualTo(hours(5));
 	}
 
 	@Test
-	public void closingOverlap() {
+	public void closingHours() {
 
-		Restriction r = Restriction.ofClosingHours(22, 6);
-
-		// day
 		int d = days(2);
 
-		assertThat(r.adjustByClosingHour(d + hours(8), false))
-				.isEqualTo(d + hours(8));
+		Restriction r = Restriction.ofClosingHours(0, 24);
+		assertThat(r.overlapWithClosingHour(d + hours(1), d + hours(5)))
+				.isEqualTo(Integer.MAX_VALUE);
 
-		assertThat(r.adjustByClosingHour(d + hours(23), true))
-				.isEqualTo(d + days(1) + hours(6));
-		assertThat(r.adjustByClosingHour(d + hours(23), false))
-				.isEqualTo(d + hours(22));
+		r = Restriction.ofClosingHours(1, 6);
 
-		assertThat(r.adjustByClosingHour(d + days(1) + hours(3), true))
-				.isEqualTo(d + days(1) + hours(6));
-		assertThat(r.adjustByClosingHour(d + days(1) + hours(3), false))
-				.isEqualTo(d + hours(22));
+		assertThat(r.overlapWithClosingHour(d + hours(1), d + hours(5)))
+				.isEqualTo(hours(4));
+		assertThat(r.overlapWithClosingHour(d + hours(0), d + hours(7)))
+				.isEqualTo(hours(5));
+		assertThat(r.overlapWithClosingHour(d + hours(4), d + hours(7)))
+				.isEqualTo(hours(2));
+		assertThat(r.overlapWithClosingHour(d + hours(23), d + days(1) + hours(7)))
+				.isEqualTo(hours(5));
+
+		// not affected
+		assertThat(r.overlapWithClosingHour(d + hours(6), d + hours(8)))
+				.isEqualTo(0);
+		assertThat(r.overlapWithClosingHour(d + hours(23), d + hours(24)))
+				.isEqualTo(0);
+		assertThat(r.overlapWithClosingHour(d + hours(23), d + hours(24) + 30))
+				.isEqualTo(0);
+
+		r = Restriction.ofClosingHours(22, 6);
+		assertThat(r.overlapWithClosingHour(d + hours(22), d + hours(23)))
+				.isEqualTo(hours(1));
+		assertThat(r.overlapWithClosingHour(d + hours(22), d + days(1) + hours(5)))
+				.isEqualTo(hours(7));
+		assertThat(r.overlapWithClosingHour(d + hours(21), d + days(1) + hours(10)))
+				.isEqualTo(hours(8));
+		assertThat(r.overlapWithClosingHour(d + hours(0), d + hours(7)))
+				.isEqualTo(hours(6));
+		assertThat(r.overlapWithClosingHour(d + hours(4), d + hours(7)))
+				.isEqualTo(hours(2));
+		// not affected
+		assertThat(r.overlapWithClosingHour(d + hours(6), d + hours(8)))
+				.isEqualTo(0);
+		assertThat(r.overlapWithClosingHour(d + hours(8), d + hours(22)))
+				.isEqualTo(0);
+		assertThat(r.overlapWithClosingHour(d + hours(8), d + hours(10)))
+				.isEqualTo(0);
+
 
 	}
 

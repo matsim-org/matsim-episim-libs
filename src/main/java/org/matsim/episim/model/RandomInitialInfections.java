@@ -37,9 +37,9 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 	}
 
 	@Override
-	public void handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
+	public int handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
 
-		if (initialInfectionsLeft == 0) return;
+		if (initialInfectionsLeft == 0) return 0;
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
@@ -64,6 +64,7 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 			candidates = Lists.newArrayList(persons.values());
 		}
 
+		int infected = 0;
 		while (numInfections > 0 && initialInfectionsLeft > 0) {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
@@ -71,9 +72,11 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 				log.warn("Person {} has initial infection.", randomPerson.getPersonId());
 				initialInfectionsLeft--;
 				numInfections--;
+				infected++;
 			}
 		}
 
+		return infected;
 	}
 
 	@Override

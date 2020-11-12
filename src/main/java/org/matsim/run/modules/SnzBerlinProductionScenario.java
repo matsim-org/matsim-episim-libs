@@ -20,6 +20,7 @@
 
 package org.matsim.run.modules;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
@@ -28,8 +29,9 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimConfigGroup.InfectionParams;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
@@ -40,80 +42,47 @@ import javax.inject.Singleton;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Model for Berlin week with different configurations.
+ * Scenario for Berlin using Senozon events for different weekdays.
  */
-public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
+public class SnzBerlinProductionScenario extends AbstractModule {
 
-	/**
-	 * Calibration parameter for no disease import and modified ci.
-	 */
-	private static final Map<Class<? extends ContactModel>, Double> NEW_CI = Map.of(
-			OldSymmetricContactModel.class, 1.07e-5,
-			SymmetricContactModel.class, 2.54e-5, // nSpaces=20
-			DefaultContactModel.class, 0.38e-5,
-			DirectContactModel.class, 1.91e-5
-	);
+	public static enum DiseaseImport {yes, no}
+	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+	public static enum Masks {yes, no}
+	public static enum Tracing {yes, no}
+	public static enum Snapshot {no, snapshot20200314, snapshot20200411, snapshot20200509, snapshot20200606}
 
-	/**
-	 * Calibration parameter for old (uniform) ci values.
-	 */
-	private static final Map<Class<? extends ContactModel>, Double> OLD_CI = Map.of(
-			OldSymmetricContactModel.class, 2.918286E-5,
-			SymmetricContactModel.class, 9.03e-5, // nSpaces=20
-			DefaultContactModel.class, 1.41952E-5,
-			DirectContactModel.class, 9.752878954E-5
-	);
-
-	/**
-	 * Calibrated theta parameter for disease import *and* new ci values.
-	 */
-	private static final Map<Class<? extends ContactModel>, Double> DI_CI = Map.of(
-			OldSymmetricContactModel.class, 6.53E-6,
-			SymmetricContactModel.class, 2.006E-5, // nSpaces=20
-			DefaultContactModel.class, 2.887E-6,
-			DirectContactModel.class, 1.905E-5
-	);
-
-	/**
-	 * Sample size of the scenario (Either 25 or 100)
-	 */
 	private final int sample;
+	private final DiseaseImport diseaseImport;
+	private final Restrictions restrictions;
+	private final Masks masks;
+	private final Tracing tracing;
+	private final Snapshot snapshot;
+	private final Class<? extends InfectionModel> infectionModel;
+
 
 	/**
-	 * Enable Disease import based on RKI numbers.
+	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	private final boolean withDiseaseImport;
+	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
-	/**
-	 * Enable modified CI values based on room sizes.
-	 */
-	private final boolean withModifiedCi;
-
-	/**
-	 * The contact model to use.
-	 */
-	private final Class<? extends ContactModel> contactModel;
-
-	public SnzBerlinWeekScenario2020() {
-		this(25, true, true, SymmetricContactModel.class);
+	public SnzBerlinProductionScenario() {
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
 	}
 
-	/**
-	 * Create new scenario module.
-	 * @param sample sample sizes to use, currently 1, 10, 25, 100 are supported
-	 * @param withDiseaseImport enable disease import data from rki, otherwise will be constant each day
-	 * @param withModifiedCi use new ci values based on avg. room sizes, otherwise ci will be same for each activity.
-	 * @param contactModel contact model to use
-	 */
-	public SnzBerlinWeekScenario2020(int sample, boolean withDiseaseImport, boolean withModifiedCi, Class<? extends ContactModel> contactModel) {
+	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot, Class<? extends InfectionModel> infectionModel) {
 		this.sample = sample;
-		this.withDiseaseImport = withDiseaseImport;
-		this.withModifiedCi = withModifiedCi;
-		this.contactModel = contactModel;
+		this.diseaseImport = diseaseImport;
+		this.restrictions = restrictions;
+		this.masks = masks;
+		this.tracing = tracing;
+		this.snapshot = snapshot;
+		this.infectionModel = infectionModel;
 	}
 
 	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -129,26 +98,28 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	 * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
 	 */
 	private static String inputForSample(String base, int sample) {
-		Path folder = (sample == 100 | sample == 25) ? SnzBerlinScenario25pct2020.INPUT : SnzBerlinScenario25pct2020.INPUT.resolve("samples");
+		Path folder = (sample == 100 | sample == 25) ? INPUT : INPUT.resolve("samples");
 		return folder.resolve(String.format(base, sample)).toString();
 	}
 
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(contactModel).in(Singleton.class);
+		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 	}
 
 	@Provides
 	@Singleton
 	public Config config() {
 
-		Config config = new SnzBerlinScenario25pct2020().config();
+		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+
+		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.clearInputEventsFiles();
+		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
@@ -161,26 +132,23 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
 
-
-		//for (InfectionParams infParams : episimConfig.getInfectionParams()) {
-		//	if (!infParams.includesActivity("home")) infParams.setSpacesPerFacility(1);
-		//}
-
+		episimConfig.setCalibrationParameter(1.7E-5);
 		episimConfig.setStartDate("2020-02-16");
+		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
+		episimConfig.setSampleSize(this.sample / 100.);
+		episimConfig.setHospitalFactor(1.);
+		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 
-		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
+		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/snapshots/" + snapshot + ".zip");
+//		episimConfig.setSnapshotInterval(14);
 
-		//import numbers based on https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Situationsberichte/Sept_2020/2020-09-22-de.pdf?__blob=publicationFile
-		//values are calculated here: https://docs.google.com/spreadsheets/d/1aJ2XonFpfjKCpd0ZeXmzKe5fmDe0HHBGtXfJ-NDBolo/edit#gid=0
-
-		if (withDiseaseImport) {
-			basePolicyBuilder.setCiCorrections(Map.of());
+		//inital infections and import
+		episimConfig.setInitialInfections(Integer.MAX_VALUE);
+		if (this.diseaseImport == DiseaseImport.yes) {
 			episimConfig.setInitialInfectionDistrict(null);
-			episimConfig.setInitialInfections(Integer.MAX_VALUE);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
 			double importFactor = 1.;
 			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
-
 			int importOffset = 0;
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
 					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
@@ -194,76 +162,80 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
 					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
-
 			episimConfig.setInfections_pers_per_day(importMap);
-			episimConfig.setCalibrationParameter(DI_CI.get(contactModel));
-
-		} else {
-
-			episimConfig.setCalibrationParameter(withModifiedCi ? NEW_CI.get(contactModel) : OLD_CI.get(contactModel));
-
-			if (contactModel == OldSymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.336));
-			} else if (contactModel == SymmetricContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.352));
-			} else if (contactModel == DefaultContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.384));
-			} else if (contactModel == DirectContactModel.class) {
-				basePolicyBuilder.setCiCorrections(Map.of("2020-03-06", 0.272));
-			}
-
+		}
+		else {
+			episimConfig.setInitialInfectionDistrict("Berlin");
+			episimConfig.setCalibrationParameter(2.54e-5);
 		}
 
-		if (withModifiedCi) {
-			for (InfectionParams infParams : episimConfig.getInfectionParams()) {
-				if (infParams.includesActivity("home")) {
-					infParams.setContactIntensity(1.);
-				} else if (infParams.includesActivity("quarantine_home")) {
-					infParams.setContactIntensity(0.3);
-				} else if (infParams.getContainerName().startsWith("shop")) {
-					infParams.setContactIntensity(0.88);
-				} else if (infParams.includesActivity("work") || infParams.includesActivity(
-						"business") || infParams.includesActivity("errands")) {
-					infParams.setContactIntensity(1.47);
-				} else if (infParams.getContainerName().startsWith("edu")) {
-					if (infParams.includesActivity("educ_higher")) infParams.setContactIntensity(5.5);
-					else infParams.setContactIntensity(11.);
-				} else if (infParams.includesActivity("pt") || infParams.includesActivity("tr")) {
-					infParams.setContactIntensity(10.);
-				} else if (infParams.includesActivity("leisure") || infParams.includesActivity("visit")) {
-					infParams.setContactIntensity(9.24);
-				} else {
-					throw new RuntimeException("need to define contact intensity for activityType=" + infParams.getContainerName());
-				}
+		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
+			if (this.diseaseImport == DiseaseImport.yes) {
+				episimConfig.setCalibrationParameter(1.6E-5);
+			}
+			else {
+				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
 			}
 		}
 
+		int spaces = 20;
+		//contact intensities
+		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(11.).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(5.5).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(11.).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("shop_daily").setContactIntensity(0.88).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("shop_other").setContactIntensity(0.88).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("errands").setContactIntensity(1.47).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("business").setContactIntensity(1.47).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("visit").setContactIntensity(9.24).setSpacesPerFacility(spaces);
+		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1);
+		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1);
+
+		//restrictions and masks
+		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) basePolicyBuilder.setCsv(null);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) basePolicyBuilder.setRestrictUniversities(false);
+
+		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
+		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
-
-		// yyyyyy why this? Could you please comment?  kai, sep/20
-		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly)
 		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), 30,
-				LocalDate.of(2020, 6, 15), Integer.MAX_VALUE
-		));
+		//tracing
+		if (this.tracing == Tracing.yes) {
+			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
+			tracingConfig.setTracingProbability(0.6);
+			tracingConfig.setTracingPeriod_days(2);
+			tracingConfig.setMinContactDuration_sec(15 * 60.);
+			tracingConfig.setQuarantineHouseholdMembers(true);
+			tracingConfig.setEquipmentRate(1.);
+			tracingConfig.setTracingDelay_days(4);
+			tracingConfig.setTraceSusceptible(true);
+			tracingConfig.setCapacityType(CapacityType.PER_CONTACT_PERSON);
+			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+					LocalDate.of(2020, 4, 1), 300,
+					LocalDate.of(2020, 6, 15), 2000
+			));
+		}
 
-		//tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		//episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.tracing);
-
-		config.controler().setOutputDirectory(String.format("output-berlin-%dpct-week-cm_%s-diseaseImport_%s-modCI_%s-calib_%f",
-				sample, contactModel.getSimpleName(), withDiseaseImport, withModifiedCi, episimConfig.getCalibrationParameter()));
+		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		return config;
 	}
 
 	@Provides
 	@Singleton
-	public Scenario scenario(Config config) {
+	private Scenario scenario(Config config) {
 
 		// guice will use no args constructor by default, we check if this config was initialized
 		// this is only the case when no explicit binding are required

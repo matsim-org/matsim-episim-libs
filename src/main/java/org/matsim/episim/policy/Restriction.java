@@ -273,36 +273,68 @@ public final class Restriction {
 	/**
 	 * Check whether one time falls into a closing hour.
 	 *
-	 * @param time      zero based timestamp in seconds
-	 * @param adjustEnd when true result time is shifted to be later, otherwise shifted to start of closing hour
+	 * @param sod      timestamp as seconds of day
+	 * @param adjustFrom when true result time is shifted to be later, otherwise shifted to start of closing hour
 	 * @return adjusted time, unchanged when not in closing hour. Otherwise moved to closing hours
 	 */
-	public double adjustByClosingHour(double time, boolean adjustEnd) {
-		if (closingHours == null)
-			return time;
-
-		// closing of 0-24 needs to be handled separate as time can not be adjusted
-		if (closingHours.length >= 86400)
-			return adjustEnd ? Integer.MAX_VALUE : Integer.MIN_VALUE;
-
+	double calculateOverlap(double sod, boolean adjustFrom) {
 		// seconds of day
-		double sod = time % 86400;
-
 		ClosingHours ch = closingHours;
 
-		if (ch.overnight) {
-			if (sod > ch.from)
-				return adjustEnd ? time + (ch.length - (sod - ch.from)) : time - (sod - ch.from);
-			else if (sod < ch.to)
-				return adjustEnd ? time + (ch.to - sod) : time - (ch.length - (ch.to - sod));
+		if (adjustFrom) {
+			if (ch.overnight)
+				return sod >= ch.from ? ch.length - (sod - ch.from) : ch.length -  (sod + 86400 - ch.from);
 
+			return ch.length - (sod - ch.from);
 		} else {
-			if (sod > ch.from && sod <= ch.to)
-				return adjustEnd ? time + (ch.to - sod) : time - (sod - ch.from);
+			if (ch.overnight)
+				return sod <= ch.to ? ch.length - (ch.to - sod) : sod - ch.from;
+
+
+			return ch.length - (ch.to - sod);
 		}
 
+	}
 
-		return time;
+	/**
+	 * Calculate how many seconds are overlapped by the closing hour, given a time interval.
+	 *
+	 * @return overlap or 0 if the time interval is inside the closing.
+	 */
+	public double overlapWithClosingHour(double from, double to) {
+
+		if (closingHours == null)
+			return 0;
+
+		// closing of 0-24 needs to be handled separately, as overlap would be infinite
+		if (closingHours.length >= 86400)
+			return Integer.MAX_VALUE;
+
+		double fSod = from % 86400;
+		double tSod = to % 86400;
+		ClosingHours ch = closingHours;
+
+		boolean containsFrom = ch.contains(fSod);
+		boolean containsTo = ch.contains(tSod);
+		boolean actOvernight = tSod < fSod;
+
+		if (containsFrom && containsTo) {
+			// whole time nullified
+			return to - from;
+		} else if (containsFrom) {
+			return calculateOverlap(fSod, true);
+		} else if (containsTo) {
+			return calculateOverlap(tSod, false);
+
+		} else if (ch.includedIn(fSod, tSod) && (ch.overnight == actOvernight)) {
+			// reduce by time of closing hour length
+			return ch.length;
+		} else if (actOvernight && !ch.overnight && tSod >= ch.to) {
+			// also covered completely
+			return ch.length;
+		}
+
+		return 0;
 	}
 
 	/**
@@ -483,6 +515,23 @@ public final class Restriction {
 			this.to = to;
 			this.overnight = from > to;
 			this.length = overnight ? (86400 - from) + to : to - from;
+		}
+
+		/**
+		 * Check whether timestamp is contained in the closing hours.
+		 */
+		public boolean contains(double sod) {
+			if (overnight) {
+				return sod >= from || sod <= to;
+			} else
+				return sod >= from && sod <= to;
+		}
+
+		/**
+		 * Closing hour is completely included in this interval (as seconds of day).
+		 */
+		public boolean includedIn(double fSod, double tSod) {
+			return fSod < from && tSod > to;
 		}
 
 		@Override

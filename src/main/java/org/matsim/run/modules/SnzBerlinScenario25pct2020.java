@@ -62,9 +62,44 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	 */
 	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
 														Map<String, Double> ciCorrections, Extrapolation extrapolation,
-														long introductionPeriod, Double maskCompliance) throws IOException {
-
-		ConfigBuilder restrictions = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
+														long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare, boolean restrictUniversities) throws IOException {
+		ConfigBuilder restrictions; 
+		
+		if (csv == null) restrictions = FixedPolicy.config();
+		else restrictions = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
+		
+		if (restrictSchoolsAndDayCare) {
+			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+			.restrict("2020-03-14", 0., "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2020-05-11", 0.3, "educ_primary")
+			.restrict("2020-05-11", 0.2, "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2020-05-25", 0.3, "educ_kiga")
+			.restrict("2020-06-08", 0.5, "educ_kiga")
+			.restrict("2020-06-22", 1., "educ_kiga")
+			//Sommerferien
+			.restrict("2020-06-25", 0.2, "educ_primary")
+			//Ende der Sommerferien
+			.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Herbstferien
+			.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Weihnachtsferien
+			.restrict("2020-12-21", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Winterferien
+			.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Osterferien
+			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			;
+		}
+		
+		if (restrictUniversities ) {
+			restrictions.restrict("2020-03-14", 0., "educ_higher")
+			.restrict("2020-05-11", 0.2, "educ_higher")
+			;
+		}
 
 		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
 
@@ -76,33 +111,8 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		}
 
 
-		restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-05-11", 0.3, "educ_primary")
-				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-				.restrict("2020-05-25", 0.3, "educ_kiga")
-				.restrict("2020-06-08", 0.5, "educ_kiga")
-				.restrict("2020-06-22", 1., "educ_kiga")
-				//Sommerferien
-				.restrict("2020-06-25", 0.2, "educ_primary")
-				//Ende der Sommerferien
-				.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				//Herbstferien
-				.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				//Weihnachtsferien
-				.restrict("2020-12-21", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				//Winterferien
-				.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				//Osterferien
-				.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-				.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-
-		;
-
-
+		if (maskCompliance == 0) return restrictions;
+		
 		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 		double clothFraction = maskCompliance * 0.9;
 		double surgicalFraction = maskCompliance * 0.1;
@@ -183,9 +193,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1.;
 		private Extrapolation extrapolation = Extrapolation.none;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20200830.csv");
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20201107.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
+		private boolean restrictSchoolsAndDayCare = true;
+		private boolean restrictUniversities = true;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
@@ -226,12 +238,29 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		public void setExtrapolation(Extrapolation extrapolation) {
 			this.extrapolation = extrapolation;
 		}
+		
+		public boolean getRestrictSchoolsAndDayCare() {
+			return restrictSchoolsAndDayCare;
+		}
+
+		public void setRestrictSchoolsAndDayCare(boolean restrictSchoolsAndDayCare) {
+			this.restrictSchoolsAndDayCare = restrictSchoolsAndDayCare;
+		}
+		public boolean getRestrictUniversities() {
+			return restrictUniversities;
+		}
+
+		public void setRestrictUniversities(boolean restrictUniversities) {
+			this.restrictUniversities = restrictUniversities;
+		}
 
 		public ConfigBuilder build() {
 			ConfigBuilder configBuilder = null;
+			File file = null; 
+			if (csv != null) file = csv.toFile();
 			try {
-				configBuilder = basePolicy(episimConfig, csv.toFile(), alpha, ciCorrections, extrapolation, introductionPeriod,
-						maskCompliance);
+				configBuilder = basePolicy(episimConfig, file, alpha, ciCorrections, extrapolation, introductionPeriod,
+						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}

@@ -54,7 +54,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		if (ageTarget < 20) susceptibility = 0.45;
 		if (ageInfector < 20) infectivity = 0.85;
 		
-		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(episimConfig.getStartDate(), iteration, rnd, act1, act2);
+		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(episimConfig, iteration, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding

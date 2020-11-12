@@ -5,10 +5,12 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.Restriction;
 
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SplittableRandom;
 
 /**
@@ -49,60 +51,21 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
-				* getIndoorOutdoorFactor(episimConfig.getStartDate(), iteration, rnd, act1, act2)
+				* getIndoorOutdoorFactor(episimConfig, iteration, rnd, act1, act2)
 		);
 
 	}
 
-	static double getIndoorOutdoorFactor(LocalDate startDate, int iteration, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+	static double getIndoorOutdoorFactor(EpisimConfigGroup episimConfig, int iteration, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+		
 		if (!act1.getContainerName().equals("leisure") && !act2.getContainerName().equals("leisure")) return 1.;
 
-		LocalDate date = startDate.plusDays(iteration);
-
-		//anchor dates
-		int daysOfYear = 365;
-		int winter = 15; //15.01.
-		int spring = 105; //15.04.
-		int summer = 196; //15.07.
-		int autumn = 288; //15.10.
-
-		if (date.isLeapYear()) {
-			daysOfYear++;
-			spring++;
-			summer++;
-			autumn++;
-		}
-
-//		double probaWinter = 12.44 / 100.;
-//		double probaSpring = 23.60 / 100.;
-//		double probaSummer = 28.63 / 100.;
-//		double probaAutumn = 21.15 / 100.;
-
-		double probaWinter = 10. / 100.;
-		double probaSpring = 80. / 100.;
-		double probaSummer = 80. / 100.;
-		double probaAutumn = 80. / 100.;
-
-		double proba = 1;
-
-		int dayOfYear = date.getDayOfYear();
-
-		if (dayOfYear <= winter) {
-			proba = probaAutumn + (probaWinter - probaAutumn) * (dayOfYear + daysOfYear - autumn) / (winter + daysOfYear - autumn);
-		} else if (dayOfYear <= spring) {
-			proba = probaWinter + (probaSpring - probaWinter) * (dayOfYear - winter) / (spring - winter);
-		} else if (dayOfYear <= summer) {
-			proba = probaSpring + (probaSummer - probaSpring) * (dayOfYear - spring) / (summer - spring);
-		} else if (dayOfYear <= autumn) {
-			proba = probaSummer + (probaAutumn - probaSummer) * (dayOfYear - summer) / (autumn - summer);
-		} else if (dayOfYear <= daysOfYear) {
-			proba = probaAutumn + (probaWinter - probaAutumn) * (dayOfYear - autumn) / (daysOfYear - autumn + winter);
-		} else {
-			throw new RuntimeException("Something went wrong. The day of the year is =" + dayOfYear);
-		}
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration-1);
+		
+		double outdoorFraction = EpisimUtils.interpolateEntry((NavigableMap<LocalDate, ? extends Number>) episimConfig.getLeisureOutdoorFraction(), date);
 
 		double indoorOutdoorFactor = 1.;
-		if (rnd.nextDouble() < proba) {
+		if (rnd.nextDouble() < outdoorFraction) {
 			indoorOutdoorFactor = 0.1;
 		}
 

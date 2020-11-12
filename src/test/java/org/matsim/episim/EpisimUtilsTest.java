@@ -15,7 +15,9 @@ import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import java.io.*;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.SplittableRandom;
+import java.util.TreeMap;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -125,5 +127,26 @@ public class EpisimUtilsTest {
 		//FileUtils.write(new File("out.json"), config.build().root().render(ConfigRenderOptions.defaults().setJson(true).setComments(false).setOriginComments(false)));
 	}
 
+	@Test
+	public void interpolateEntry() {
 
+		TreeMap<LocalDate, Double> map = new TreeMap<>(Map.of(
+				LocalDate.of(2020, 1, 1), 1d,
+				LocalDate.of(2020, 1, 10), 10d,
+				LocalDate.of(2020, 1, 30), 10d
+		));
+
+		assertThat(EpisimUtils.interpolateEntry(map, LocalDate.of(2020, 1, 2)))
+				.isEqualTo(2d);
+
+		assertThat(EpisimUtils.interpolateEntry(map, LocalDate.of(2020, 1, 5)))
+				.isEqualTo(5d);
+
+		assertThat(EpisimUtils.interpolateEntry(map, LocalDate.of(2020, 1, 10)))
+				.isEqualTo(10d);
+
+		assertThat(EpisimUtils.interpolateEntry(map, LocalDate.of(2020, 2, 23)))
+				.isEqualTo(10d);
+
+	}
 }
