@@ -98,6 +98,11 @@ class AnalyzeSnzData implements Callable<Integer> {
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 		log.info("Amount of found files: " + filesWithData.size());
 
+		// zip codes for Germany
+		IntSet zipCodesGER = new IntOpenHashSet();
+		for (int i = 0; i <= 99999; i++)
+			zipCodesGER.add(i);
+		
 		// zip codes for Berlin
 		IntSet zipCodesBerlin = new IntOpenHashSet();
 		for (int i = 10115; i <= 14199; i++)
@@ -111,6 +116,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		// zip codes for the district "Kreis Heinsberg"
 		IntSet zipCodesHeinsberg = new IntOpenHashSet(List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 
+//		analyzeDataForCertainArea(zipCodesDE, "Germany", filesWithData);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
 		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
 		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
@@ -214,6 +220,8 @@ class AnalyzeSnzData implements Callable<Integer> {
 				if (countingDays == 1 || countingDays % 5 == 0)
 					log.info("Finished day " + countingDays);
 
+				if (countingDays == 245)
+					log.info("Finished day " + countingDays);
 				countingDays++;
 			}
 			writer.close();
