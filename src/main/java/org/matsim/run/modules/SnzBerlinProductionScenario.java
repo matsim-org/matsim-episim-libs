@@ -55,7 +55,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
-	public static enum Snapshot {no, episim_snapshot_030_2020_03_16, episim_snapshot_060_2020_04_15, episim_snapshot_090_2020_05_15, episim_snapshot_120_2020_06_14, episim_snapshot_150_2020_07_14, episim_snapshot_180_2020_08_13}
+	public static enum Snapshot {no, episim_snapshot_030_2020_03_16, episim_snapshot_060_2020_04_15, episim_snapshot_090_2020_05_15, episim_snapshot_120_2020_06_14, episim_snapshot_150_2020_07_14, episim_snapshot_180_2020_08_13, episim_snapshot_210_2020_09_12, episim_snapshot_240_2020_10_12}
 
 	private final int sample;
 	private final DiseaseImport diseaseImport;
