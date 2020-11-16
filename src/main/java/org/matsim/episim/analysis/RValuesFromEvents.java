@@ -20,6 +20,8 @@
 
 package org.matsim.episim.analysis;
 
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -135,10 +137,10 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
-		
+
 		int rollingAveragae = 3;
 		for (int i = 0 + rollingAveragae; i <= eventFiles.size() - rollingAveragae; i++) {
-			for (Entry<String, HashMap<Integer, Integer>> e : infHandler.infectionsPerActivity.entrySet()) {
+			for (Entry<String, Int2IntMap> e : infHandler.infectionsPerActivity.entrySet()) {
 				if (!e.getKey().equals("total") && !e.getKey().equals("home")) {
 				int infections = 0;
 				int totalInfections = 0;
@@ -148,7 +150,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 					int totalInfectionsDay = 0;
 					if (e.getValue().get(j) != null) infectionsDay = e.getValue().get(j);
 					if (infHandler.infectionsPerActivity.get("total").get(j) != null) totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
-					
+
 					infections = infections + infectionsDay;
 					totalInfections = totalInfections + totalInfectionsDay;
 				}
@@ -252,7 +254,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 	private static class InfectionsHandler implements EpisimInfectionEventHandler {
 
-		private final Map<String, HashMap<Integer, Integer>> infectionsPerActivity = new LinkedHashMap<>();
+		private final Map<String, Int2IntMap> infectionsPerActivity = new TreeMap<>();
 
 
 		@Override
@@ -271,19 +273,16 @@ public class RValuesFromEvents implements Callable<Integer> {
 			else if (infectionType.startsWith("pt")) infectionType = "pt";
 			else infectionType = "other";
 
-			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new HashMap<>());
-			if (!infectionsPerActivity.containsKey(infectionType)) infectionsPerActivity.put(infectionType, new HashMap<>());
+			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new Int2IntOpenHashMap());
+			if (!infectionsPerActivity.containsKey(infectionType)) infectionsPerActivity.put(infectionType, new Int2IntOpenHashMap());
 
-			HashMap<Integer, Integer> infectionsPerDay = infectionsPerActivity.get(infectionType);
-			HashMap<Integer, Integer> infectionsPerDayTotal = infectionsPerActivity.get("total");
+			Int2IntMap infectionsPerDay = infectionsPerActivity.get(infectionType);
+			Int2IntMap infectionsPerDayTotal = infectionsPerActivity.get("total");
 
 			int day = (int) event.getTime() / 86400;
 
-			if (!infectionsPerDay.containsKey(day)) infectionsPerDay.put(day, 1);
-			else infectionsPerDay.replace(day, infectionsPerDay.get(day) + 1);
-
-			if (!infectionsPerDayTotal.containsKey(day)) infectionsPerDayTotal.put(day, 1);
-			else infectionsPerDayTotal.replace(day, infectionsPerDayTotal.get(day) + 1);
+			infectionsPerDay.merge(day, 1, Integer::sum);
+			infectionsPerDayTotal.merge(day, 1, Integer::sum);
 
 		}
 	}
