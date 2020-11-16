@@ -140,9 +140,13 @@ public class AnalysisCommand implements Runnable {
 	 * @return empty string or prefix for scenario file that ends with "."
 	 */
 	public static String getScenarioPrefix(Path scenario) throws IOException {
-		Optional<Path> config = Files.find(scenario, 1, (path, basicFileAttributes) -> path.toString().endsWith("config.xml")).findFirst();
+
+		// find prefixed *config.xml
+		Optional<Path> config = Files.find(scenario, 1,
+				(path, attr) -> !path.getFileName().toString().equals("config.xml") && path.toString().endsWith("config.xml")).findFirst();
+
 		if (config.isEmpty()) {
-			return null;
+			return "";
 		}
 
 		String name = config.get().getFileName().toString();
