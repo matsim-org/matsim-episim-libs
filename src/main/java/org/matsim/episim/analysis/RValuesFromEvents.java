@@ -40,8 +40,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -142,22 +145,26 @@ public class RValuesFromEvents implements Callable<Integer> {
 		for (int i = 0 + rollingAveragae; i <= eventFiles.size() - rollingAveragae; i++) {
 			for (Entry<String, Int2IntMap> e : infHandler.infectionsPerActivity.entrySet()) {
 				if (!e.getKey().equals("total") && !e.getKey().equals("home")) {
-				int infections = 0;
-				int totalInfections = 0;
-				double infectionsShare = 0.;
-				for (int j = i-rollingAveragae; j<=i+rollingAveragae; j++) {
-					int infectionsDay = 0;
-					int totalInfectionsDay = 0;
-					if (e.getValue().get(j) != null) infectionsDay = e.getValue().get(j);
-					if (infHandler.infectionsPerActivity.get("total").get(j) != null) totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
+					int infections = 0;
+					int totalInfections = 0;
+					double infectionsShare = 0.;
+					for (int j = i - rollingAveragae; j <= i + rollingAveragae; j++) {
+						int infectionsDay = 0;
+						int totalInfectionsDay = 0;
 
-					infections = infections + infectionsDay;
-					totalInfections = totalInfections + totalInfectionsDay;
-				}
-				if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
-					infectionsShare = (double) infections / totalInfections;
-					bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
-					infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare + "\t" + scenario.getFileName());
+						if (e.getValue().containsKey(j))
+							infectionsDay = e.getValue().get(j);
+
+						if (infHandler.infectionsPerActivity.get("total").containsKey(j))
+							totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
+
+						infections = infections + infectionsDay;
+						totalInfections = totalInfections + totalInfectionsDay;
+					}
+					if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
+						infectionsShare = (double) infections / totalInfections;
+						bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
+						infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare + "\t" + scenario.getFileName());
 					}
 				}
 			}
@@ -264,7 +271,8 @@ public class RValuesFromEvents implements Callable<Integer> {
 //			else if (infectionType.endsWith("educ_other")) infectionType = "edu_other";
 //			else if (infectionType.endsWith("educ_kiga")) infectionType = "edu_kiga";
 //			else if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary")) infectionType = "edu_school";
-			if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other")) infectionType = "schools";
+			if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other"))
+				infectionType = "schools";
 			else if (infectionType.endsWith("educ_higher")) infectionType = "university";
 			else if (infectionType.endsWith("educ_kiga")) infectionType = "day care";
 			else if (infectionType.endsWith("leisure")) infectionType = "leisure";
