@@ -36,6 +36,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
@@ -59,7 +60,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
-	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-17")
+	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-15")
 	private LocalDate startDate;
 
 
@@ -145,14 +146,13 @@ public class RValuesFromEvents implements Callable<Integer> {
 				for (int j = i-rollingAveragae; j<=i+rollingAveragae; j++) {
 					int infectionsDay = 0;
 					int totalInfectionsDay = 0;
-					if (e.getValue().get(j) != null) {
-						infectionsDay = e.getValue().get(j);
-						totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
-					}
+					if (e.getValue().get(j) != null) infectionsDay = e.getValue().get(j);
+					if (infHandler.infectionsPerActivity.get("total").get(j) != null) totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
+					
 					infections = infections + infectionsDay;
 					totalInfections = totalInfections + totalInfectionsDay;
-				}				
-				if (infections != 0) {
+				}
+				if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
 					infectionsShare = (double) infections / totalInfections;
 					bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
 					infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare + "\t" + scenario.getFileName());
@@ -262,7 +262,9 @@ public class RValuesFromEvents implements Callable<Integer> {
 //			else if (infectionType.endsWith("educ_other")) infectionType = "edu_other";
 //			else if (infectionType.endsWith("educ_kiga")) infectionType = "edu_kiga";
 //			else if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary")) infectionType = "edu_school";
-			if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_higher") || infectionType.endsWith("educ_other") || infectionType.endsWith("educ_kiga")) infectionType = "edu";
+			if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other")) infectionType = "schools";
+			else if (infectionType.endsWith("educ_higher")) infectionType = "university";
+			else if (infectionType.endsWith("educ_kiga")) infectionType = "day care";
 			else if (infectionType.endsWith("leisure")) infectionType = "leisure";
 			else if (infectionType.endsWith("work") || infectionType.endsWith("business")) infectionType = "work&business";
 			else if (infectionType.endsWith("home")) infectionType = "home";
