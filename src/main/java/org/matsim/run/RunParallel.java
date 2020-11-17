@@ -42,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -167,8 +168,8 @@ public class RunParallel<T> implements Callable<Integer> {
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
 								episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
 
-			sameInput &= baseConfig.vehicles().getVehiclesFile().equals(run.config.vehicles().getVehiclesFile());
-			sameInput &= baseConfig.plans().getInputFile().equals(run.config.plans().getInputFile());
+			sameInput &= Objects.equals(baseConfig.vehicles().getVehiclesFile(), run.config.vehicles().getVehiclesFile());
+			sameInput &= Objects.equals(baseConfig.plans().getInputFile(), run.config.plans().getInputFile());
 
 			if (!noReuse && !sameInput) {
 				log.error("Input files differs for run {}", run.id);
