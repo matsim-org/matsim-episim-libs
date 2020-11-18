@@ -1,8 +1,10 @@
 package org.matsim.episim.analysis;
 
 import com.google.common.base.Joiner;
+import it.unimi.dsi.fastutil.ints.Int2IntAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntSortedMap;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -21,9 +23,8 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.EnumMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.time.LocalDate;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
@@ -48,10 +49,20 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	@CommandLine.Option(names = "--district", description = "District to filter for")
 	private String district = null;
 
+	@CommandLine.Option(names = "--detailed", description = "Write detailed stats for multiple infection status, non-aggregated")
+	private boolean detailed = false;
+
+	@CommandLine.Option(names = "--age-groups", description = "Age groups as list of bin edges")
+	private List<Integer> ageGroups = List.of(0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90);
+
+	@CommandLine.Option(names = "--sample-size", description = "Sample size used to calculate incidents", defaultValue = "0.25")
+	private double sampleSize;
+
 	@CommandLine.Option(names = "--attr", defaultValue = "microm:modeled:age", description = "Name of the age attribute")
 	private String ageAttr;
 
 	private Population population;
+	private Int2IntSortedMap groupSizes;
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new ExtractInfectionsByAge()).execute(args));
@@ -66,6 +77,19 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 		}
 
 		population = PopulationUtils.readPopulation(this.p.toString());
+		groupSizes = new Int2IntAVLTreeMap();
+
+		// Aggregate by age group
+		for (Person p : population.getPersons().values()) {
+			if (district != null) {
+				if (!district.equals(p.getAttributes().getAttribute("district")))
+					continue;
+			}
+
+			groupSizes.merge(getAgeGroup((Integer) p.getAttributes().getAttribute(ageAttr)), 1, Integer::sum);
+		}
+
+		log.info("Age groups: {}", groupSizes);
 
 		AnalysisCommand.forEachScenario(output, path -> {
 			try {
@@ -83,11 +107,6 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	private void readScenario(Path path) throws IOException {
 
 		String id = AnalysisCommand.getScenarioPrefix(path);
-		BufferedWriter bw = Files.newBufferedWriter(path.resolve(id + "post.infectionsByAge.txt"));
-
-		bw.write("date\t");
-		bw.write(Joiner.on("\t").join(IntStream.range(1, 100).boxed().toArray()));
-
 		Map<String, Int2IntMap> infections = new LinkedHashMap<>();
 
 		CSVParser parser = new CSVParser(Files.newBufferedReader(path.resolve((id + "infectionEvents.txt"))),
@@ -103,13 +122,61 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 					continue;
 			}
 
-			Int2IntMap date = infections.computeIfAbsent(record.get("date"), (k) -> new Int2IntOpenHashMap());
+			Int2IntMap date = infections.computeIfAbsent(calcDate(record), (k) -> new Int2IntOpenHashMap());
 			Object age = p.getAttributes().getAttribute(ageAttr);
 			if (age != null)
 				date.merge((int) age, 1, Integer::sum);
 			else
 				log.warn("Person {} without age attribute, has {}", p, p.getAttributes().getAsMap().keySet());
 		}
+
+		BufferedWriter bw = Files.newBufferedWriter(path.resolve(id + "post.incidenceByAge.tsv"));
+		bw.write("date\t");
+
+		for (int i = 0; i < ageGroups.size() - 1; i++) {
+			bw.write(String.format("%d-%d", ageGroups.get(i), +ageGroups.get(i + 1) - 1));
+			bw.write("\t");
+		}
+
+		bw.write(String.format("%d+", ageGroups.get(ageGroups.size() - 1)));
+
+		for (Map.Entry<String, Int2IntMap> e : infections.entrySet()) {
+
+			bw.write("\n");
+			bw.write(e.getKey());
+			bw.write("\t");
+
+			Int2IntMap day = e.getValue();
+
+			int group = 0;
+			double aggr = 0;
+
+			for (int i = 0; i < 100; i++) {
+
+				int g = getAgeGroup(i);
+				if (group == g) {
+					aggr += day.get(i);
+				} else {
+
+					bw.write(calcIncidence(group, aggr));
+					bw.write('\t');
+
+					group = g;
+					aggr = 0;
+				}
+			}
+
+			bw.write(calcIncidence(group, aggr));
+		}
+
+		bw.close();
+
+		if (!detailed)
+			return;
+
+		bw = Files.newBufferedWriter(path.resolve(id + "post.infectionsByAge.txt"));
+		bw.write("date\t");
+		bw.write(Joiner.on("\t").join(IntStream.range(1, 100).boxed().toArray()));
 
 		for (Map.Entry<String, Int2IntMap> e : infections.entrySet()) {
 
@@ -188,4 +255,43 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 
 		log.info("Finished scenario: {}", path);
 	}
+
+	/**
+	 * Calculate incidence per 100k.
+	 */
+	private String calcIncidence(int group, double aggr) {
+
+		double scale = 100_000d / ((groupSizes.get(group) * (1 / sampleSize)));
+		return String.valueOf(aggr * scale);
+	}
+
+	/**
+	 * Calculate date of infection from record.
+	 */
+	private String calcDate(CSVRecord record) {
+		LocalDate date = LocalDate.parse(record.get("date"));
+
+		// if not monday, go to next monday
+		int day = date.getDayOfWeek().getValue();
+		if (day != 1) {
+			date = date.plusDays(8 - day);
+		}
+
+		return date.toString();
+	}
+
+	/**
+	 * Get lower bound of age group.
+	 */
+	private int getAgeGroup(int age) {
+
+		int idx = Collections.binarySearch(ageGroups, age);
+
+		if (idx >= 0)
+			return ageGroups.get(idx);
+
+
+		return ageGroups.get(Math.abs(idx) - 2);
+	}
+
 }
