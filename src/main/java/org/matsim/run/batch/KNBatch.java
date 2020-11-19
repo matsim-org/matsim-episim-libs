@@ -130,6 +130,15 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //			return report.nTotalInfected > 0 || report.nInQuarantine > 0;
 			return report.nInfectedButNotContagious + report.nContagious + report.nShowingSymptoms > 0 ;
 		}
+
+		@Override public int getNextTransitionDay(Id<Person> personId) {
+			return delegate.getNextTransitionDay(personId);
+		}
+
+		@Override public EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id<Person> personId) {
+			return delegate.getNextDiseaseStatus(personId);
+		}
+
 		@Override public void beforeStateUpdates( Map<Id<Person>, EpisimPerson> persons, int day, EpisimReporting.InfectionReport report ){
 			delegate.beforeStateUpdates( persons, day, report );
 		}

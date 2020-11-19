@@ -1,7 +1,5 @@
 package org.matsim.episim.model;
 
-import it.unimi.dsi.fastutil.ints.Int2LongMap;
-import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap;
 import org.matsim.api.core.v01.Id;
@@ -120,6 +118,22 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 * Arbitrary function that can be overwritten to perform actions on state transitions.
 	 */
 	protected void onTransition(EpisimPerson person, double now, int day, EpisimPerson.DiseaseStatus from, EpisimPerson.DiseaseStatus to) {
+	}
+
+	@Override
+	public EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id<Person> personId) {
+		long value = nextStateAndDay.getOrDefault(personId, 0);
+		int nextState = (int) (value >> 32);
+		return EpisimPerson.DiseaseStatus.values()[nextState];
+	}
+
+	@Override
+	public int getNextTransitionDay(Id<Person> personId) {
+		long value = nextStateAndDay.getOrDefault(personId, 0);
+		if (value == 0)
+			return -1;
+
+		return (int) value;
 	}
 
 	@Override
