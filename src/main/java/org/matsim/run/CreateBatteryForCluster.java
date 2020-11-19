@@ -137,6 +137,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 		metadata.put("readme", runVersion + "-notes.md");
 		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
 		metadata.put("info", runVersion + "-info-" + runName + ".txt");
+		metadata.put("zipFolder", "summaries");
 		metadata.put("timestamp", LocalDate.now());
 
 		metadata.putAll(prepare.getMetadata());
