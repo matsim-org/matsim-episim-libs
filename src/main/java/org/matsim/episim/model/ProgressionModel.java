@@ -55,10 +55,10 @@ public interface ProgressionModel {
 	boolean canProgress(EpisimReporting.InfectionReport report);
 
 	/**
-	 * Return the day when this person switches to the next {@link #getNextDiseaseStatus(Id)} ()}.
+	 * Return the number of days between current state and next one.
 	 * @return next day of transition, or -1 if there is none.
 	 */
-	int getNextTransitionDay(Id<Person> personId);
+	int getNextTransitionDays(Id<Person> personId);
 
 	/**
 	 * Next disease status this person will go into.

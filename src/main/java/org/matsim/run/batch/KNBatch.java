@@ -131,8 +131,8 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 			return report.nInfectedButNotContagious + report.nContagious + report.nShowingSymptoms > 0 ;
 		}
 
-		@Override public int getNextTransitionDay(Id<Person> personId) {
-			return delegate.getNextTransitionDay(personId);
+		@Override public int getNextTransitionDays(Id<Person> personId) {
+			return delegate.getNextTransitionDays(personId);
 		}
 
 		@Override public EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id<Person> personId) {

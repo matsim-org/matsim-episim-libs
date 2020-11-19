@@ -128,7 +128,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	}
 
 	@Override
-	public int getNextTransitionDay(Id<Person> personId) {
+	public int getNextTransitionDays(Id<Person> personId) {
 		long value = nextStateAndDay.getOrDefault(personId, 0);
 		if (value == 0)
 			return -1;
