@@ -69,7 +69,7 @@ cp _info.txt metadata.yaml tmp
 
 cd "$cwd/tmp" || exit
 
-zip "$cwd/summaries.zip" -r *
+zip "$cwd/summaries.zip" -r ./*
 
 cd "$cwd" || exit
 
