@@ -55,8 +55,10 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		return Modules.override(new SnzBerlinProductionScenario()).with(new AbstractModule() {
 			@Override
 			protected void configure() {
-				bindConstant().annotatedWith(Names.named("symptomatic")).to(params.symptomatic);
-				bind(ProgressionModel.class).to(CustomProgressionModel.class);
+				if (params != null) {
+					bindConstant().annotatedWith(Names.named("symptomatic")).to(params.symptomatic);
+					bind(ProgressionModel.class).to(CustomProgressionModel.class);
+				}
 			}
 		}) ;
 	}

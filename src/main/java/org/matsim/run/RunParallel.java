@@ -71,11 +71,11 @@ public class RunParallel<T> implements Callable<Integer> {
 	private Path output;
 
 	public static final String OPTION_SETUP = "--setup";
-	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.Percolation}")
+	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.BerlinClusterTracing}")
 	private Class<? extends BatchRun<T>> setup;
 
 	public static final String OPTION_PARAMS = "--params";
-	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.Percolation$Params}")
+	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.BerlinClusterTracing$Params}")
 	private Class<T> params;
 
 	public static final String OPTION_THREADS = "--threads";
