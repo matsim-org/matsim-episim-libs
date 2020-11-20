@@ -30,12 +30,12 @@ import com.google.inject.Inject;
 import java.util.SplittableRandom;
 
 /**
- * Works exactly as the {@link DefaultProgressionModel}, but with age dependent transitions.
+ * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
  */
-public final class AgeDependentProgressionModel extends ConfigurableProgressionModel {
+public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 
 	/**
-	 * Constructor as in {@link DefaultProgressionModel}.
+	 * Constructor as in {@link ConfigurableProgressionModel}.
 	 */
 	@Inject
 	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
