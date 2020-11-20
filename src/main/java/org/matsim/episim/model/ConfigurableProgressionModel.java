@@ -365,7 +365,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private void performTracing(EpisimPerson person, double now, int day) {
 
 		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()
-				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM) {
+				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM
+				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.NONE) {
 			return;
 		}
 

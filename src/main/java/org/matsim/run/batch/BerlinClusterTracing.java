@@ -62,28 +62,21 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 	}
 
 	@Override
-	public Config baseCase(int id) {
+	public Config prepareConfig(int id, BerlinClusterTracing.Params params) {
+
 		Config config = new SnzBerlinProductionScenario().config();
+
+		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		// unrestricted
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 
-		return config;
-	}
-
-	@Override
-	public Config prepareConfig(int id, BerlinClusterTracing.Params params) {
-
-		Config config = baseCase(0);
-
-		config.global().setRandomSeed(params.seed);
-
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		// Filter some runs without tracing
+		if (params.tracingStrategy == TracingConfigGroup.Strategy.NONE && params.tracingCapacity != Integer.MAX_VALUE)
+			return null;
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
 		tracingConfig.setStrategy(params.tracingStrategy);
