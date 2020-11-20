@@ -50,9 +50,8 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double susceptibility = 1.;
 		double infectivity = 1.;
 		
-		//values taken from https://doi.org/10.1101/2020.06.03.20121145
-		if (ageTarget < 20) susceptibility = 0.45;
-		if (ageInfector < 20) infectivity = 0.85;
+		if (ageTarget < 20) susceptibility = this.episimConfig.getChildSusceptibility();
+		if (ageInfector < 20) infectivity = this.episimConfig.getChildInfectivity();
 		
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(episimConfig, iteration, rnd, act1, act2);
 

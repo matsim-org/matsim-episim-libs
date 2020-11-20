@@ -68,6 +68,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
 	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
+	private static final String CHILD_SUSCEPTIBILITY = "childSusceptibility";
+	private static final String CHILD_INFECTIVITY = "childInfectivity";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -130,7 +132,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
-
+	/**
+	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
+	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
+	 */
+	private double childSusceptibility = 0.45;	/**
+	 * Child infectivity used in AgeDependentInfectionModelWithSeasonality.
+	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
+	 */
+	private double childInfectivity = 0.85;
+	
 	/**
 	 * Default constructor.
 	 */
@@ -437,6 +448,26 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(MAX_CONTACTS)
 	public void setMaxContacts(double maxContacts) {
 		this.maxContacts = maxContacts;
+	}
+	
+	@StringGetter(CHILD_SUSCEPTIBILITY)
+	public double getChildSusceptibility() {
+		return this.childSusceptibility;
+	}
+
+	@StringSetter(CHILD_SUSCEPTIBILITY)
+	public void setChildSusceptibility(double childSusceptibility) {
+		this.childSusceptibility = childSusceptibility;
+	}
+	
+	@StringGetter(CHILD_INFECTIVITY)
+	public double getChildInfectivity() {
+		return this.childInfectivity;
+	}
+
+	@StringSetter(CHILD_INFECTIVITY)
+	public void setChildInfectivity(double childInfectivity) {
+		this.childInfectivity = childInfectivity;
 	}
 
 	/**
