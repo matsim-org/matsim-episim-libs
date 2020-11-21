@@ -74,6 +74,10 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	public SnzBerlinProductionScenario() {
 		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
 	}
+	
+	public SnzBerlinProductionScenario(Snapshot snapshot) {
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, snapshot, AgeDependentInfectionModelWithSeasonality.class);
+	}
 
 	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot, Class<? extends InfectionModel> infectionModel) {
 		this.sample = sample;
