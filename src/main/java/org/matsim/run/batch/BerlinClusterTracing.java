@@ -29,15 +29,11 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.model.AgeDependentProgressionModel;
-import org.matsim.episim.model.ConfigurableProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
-import javax.annotation.Nullable;
 import javax.inject.Named;
-import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
@@ -52,7 +48,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 
 	@Override
 	public Module getBindings(int id, Params params) {
-		return Modules.override(new SnzBerlinProductionScenario()).with(new AbstractModule() {
+		return Modules.override( new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario() ).with( new AbstractModule() {
 			@Override
 			protected void configure() {
 				if (params != null) {
@@ -60,13 +56,13 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 					bind(ProgressionModel.class).to(CustomProgressionModel.class);
 				}
 			}
-		}) ;
+		} ) ;
 	}
 
 	@Override
 	public Config prepareConfig(int id, BerlinClusterTracing.Params params) {
 
-		Config config = new SnzBerlinProductionScenario().config();
+		Config config = new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario().config();
 
 		config.global().setRandomSeed(params.seed);
 

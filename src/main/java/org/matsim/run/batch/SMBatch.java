@@ -7,8 +7,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
@@ -27,7 +25,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario(SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14);
+		return new SnzBerlinProductionScenario.Builder().setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -38,7 +36,8 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario(SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14);
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
+				SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 ).createSnzBerlinProductionScenario();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 

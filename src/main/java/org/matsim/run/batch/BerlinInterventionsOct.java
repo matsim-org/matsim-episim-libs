@@ -31,7 +31,8 @@ public class BerlinInterventionsOct implements BatchRun<BerlinInterventionsOct.P
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 
-		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.episim_snapshot_240_2020_10_12, AgeDependentInfectionModelWithSeasonality.class);
+		return new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
+				Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -42,7 +43,9 @@ public class BerlinInterventionsOct implements BatchRun<BerlinInterventionsOct.P
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.episim_snapshot_240_2020_10_12, AgeDependentInfectionModelWithSeasonality.class);
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
+				Masks.yes ).setTracing( Tracing.yes ).setSnapshot( Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel(
+				AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 
