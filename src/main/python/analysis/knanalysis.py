@@ -7,8 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as pyplot
 import numpy as np
 from cycler import cycler
-import scipy as sp
-import matsim as ms
+# import matsim as ms
 
 # todo: https??
 hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
@@ -386,7 +385,7 @@ pyplot.show()
 infectionEvents = pd.read_csv(base + "infectionEvents.txt", sep="\t")
 
 # In[]:
-plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz", selectedPlansOnly = True )
+# plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/testPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/test2.xml", selectedPlansOnly = True )
 
