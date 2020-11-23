@@ -53,7 +53,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		SnzBerlinProductionScenario.Builder scenario = new SnzBerlinProductionScenario.Builder();
 
 		if (params != null && params.unrestricted.equals("no"))
-			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_150_2020_07_14);
+			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_12);
 
 		return scenario.createSnzBerlinProductionScenario();
 	}
@@ -81,6 +81,8 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+
 		if (params.unrestricted.equals("yes"))
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
 
@@ -90,7 +92,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
 		tracingConfig.setStrategy(params.tracingStrategy);
-		tracingConfig.setLocationThreshold(2);
+		tracingConfig.setLocationThreshold(3);
 		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
 		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
 
