@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import io
+import numpy as np
+import pandas as pd
 import zipfile
 from collections import defaultdict
 from os import path
-
-import numpy as np
-import pandas as pd
 
 
 def read_batch_run(run, r_values=False, age_groups=None):
@@ -32,42 +31,56 @@ def read_batch_run(run, r_values=False, age_groups=None):
             with z.open("_info.txt") as f:
                 info = pd.read_csv(f, sep=";")
 
+        # Iterator for zip files
+        zips = None
+        if "summaries/" in z.namelist():
+            def _generator(z):
+                for f in z.namelist():
+                    if not f.endswith("zip"): continue
+                    with zipfile.ZipFile(z.open(f)) as inner:
+                        yield inner
+
+            zips = _generator(z)
+        else:
+            zips = [z]
+
         i = 0
-        for f in z.namelist():
-            if "infections.txt" not in f:
-                continue
+        for z in zips:
+            for f in z.namelist():
+                if "infections.txt" not in f:
+                    continue
 
-            idx = f.replace(".infections.txt.csv", "")
-            with z.open(f) as csv:
-                df = read_run(csv)
-                df['run'] = i
+                idx = f.replace(".infections.txt.csv", "")
+                with z.open(f) as csv:
+                    df = read_run(csv)
+                    df['run'] = i
 
-                for name, v in info[info.RunId == idx].iteritems():
-                    if v.values.shape[0] > 0:
-                        df[name] = v.values[0]
+                    for name, v in info[info.RunId == idx].iteritems():
+                        if v.values.shape[0] > 0:
+                            df[name] = v.values[0]
 
-                if r_values:
-                    with z.open(idx + ".rValues.txt.csv") as rCSV:
-                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
-                        df['rValue'] = rv.rValue
-                        df['newContagious'] = rv.newContagious
+                    if r_values:
+                        with z.open(idx + ".rValues.txt.csv") as rCSV:
+                            rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
+                            df['rValue'] = rv.rValue
+                            df['newContagious'] = rv.newContagious
 
-                if age_groups:
-                    with z.open(idx + ".post.infectionsByAge.txt") as rCSV:
-                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
-                        df = df.join(group_by_age(rv, age_groups))
+                    if age_groups:
+                        with z.open(idx + ".post.infectionsByAge.txt") as rCSV:
+                            rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
+                            df = df.join(group_by_age(rv, age_groups))
 
-                    with z.open(idx + ".post.seriouslySickByAge.txt") as rCSV:
-                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
-                        df = df.merge(group_by_age(rv, age_groups, "sick"), on="day")
+                        with z.open(idx + ".post.seriouslySickByAge.txt") as rCSV:
+                            rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
+                            df = df.merge(group_by_age(rv, age_groups, "sick"), on="day")
 
-                    with z.open(idx + ".post.criticalByAge.txt") as rCSV:
-                        rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
-                        df = df.merge(group_by_age(rv, age_groups, "crit"), on="day")
+                        with z.open(idx + ".post.criticalByAge.txt") as rCSV:
+                            rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="day")
+                            df = df.merge(group_by_age(rv, age_groups, "crit"), on="day")
 
-                frames.append(df)
+                    frames.append(df)
 
-            i += 1
+                i += 1
 
     return pd.concat(frames)
 
@@ -122,7 +135,7 @@ def read_case_data(rki, meldedatum, hospital, window=5):
     rki['casesCumulative'] = rki.cases.cumsum()
     rki['casesSmoothed'] = rki.cases.rolling(window).mean()
     rki['casesNorm'] = rki.casesSmoothed / rki.casesSmoothed.mean()
-    
+
     meldedatum = pd.read_csv(meldedatum, parse_dates={'date': ['month', 'day', 'year']})
     meldedatum.set_index('date', drop=False, inplace=True)
     meldedatum['casesCumulative'] = meldedatum.cases.cumsum()
@@ -148,6 +161,7 @@ def infection_rate(f, district, target_rate=2, target_interval=3):
     rates = np.array(rates)
 
     return rates.mean(), np.square(rates - target_rate).mean()
+
 
 def aggregate_batch_run(run):
     """ Reads a batch run with all files and aggregates over all seeds by using the mean.
@@ -184,7 +198,6 @@ def aggregate_batch_run(run):
                 df = pd.read_csv(zf, sep="\t")
                 runs[idMap[idx]][filename].append(df)
 
-
     with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
                          mode="w", compresslevel=9,
                          compression=zipfile.ZIP_DEFLATED) as z:
@@ -196,7 +209,7 @@ def aggregate_batch_run(run):
 
         with z.open("_info.txt", "w") as zf:
             buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
-            info.to_csv(buf, columns = ["RunScript", "Config", "RunId", "Output"] + list(woSeed),
+            info.to_csv(buf, columns=["RunScript", "Config", "RunId", "Output"] + list(woSeed),
                         sep=";", mode="w", line_terminator="\n", index=False)
             buf.flush()
 
@@ -215,7 +228,6 @@ def aggregate_batch_run(run):
                     buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
                     means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
                     buf.flush()
-
 
 
 def calc_r_reduction(base_case, base_variables, df, group_by=None):

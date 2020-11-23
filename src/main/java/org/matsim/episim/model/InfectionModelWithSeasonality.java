@@ -22,7 +22,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
 
-	private int iteration;
+	private double outdoorFactor;
 
 	@Inject
 	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, SplittableRandom rnd, Config config) {
@@ -33,7 +33,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 
 	@Override
 	public void setIteration(int iteration) {
-		this.iteration = iteration;
+		this.outdoorFactor = interpolateOutdoorFraction(episimConfig, iteration);
 	}
 
 	@Override
@@ -51,18 +51,22 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
-				* getIndoorOutdoorFactor(episimConfig, iteration, rnd, act1, act2)
+				* getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2)
 		);
 
 	}
 
-	static double getIndoorOutdoorFactor(EpisimConfigGroup episimConfig, int iteration, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
-		
-		if (!act1.getContainerName().equals("leisure") && !act2.getContainerName().equals("leisure")) return 1.;
-
+	/**
+	 * Interpolate outdoor fraction for current day.
+	 */
+	static double interpolateOutdoorFraction(EpisimConfigGroup episimConfig, int iteration) {
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration-1);
-		
-		double outdoorFraction = EpisimUtils.interpolateEntry((NavigableMap<LocalDate, ? extends Number>) episimConfig.getLeisureOutdoorFraction(), date);
+		return EpisimUtils.interpolateEntry((NavigableMap<LocalDate, ? extends Number>) episimConfig.getLeisureOutdoorFraction(), date);
+	}
+
+	static double getIndoorOutdoorFactor(double outdoorFraction, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
+
+		if (!act1.getContainerName().equals("leisure") && !act2.getContainerName().equals("leisure")) return 1.;
 
 		double indoorOutdoorFactor = 1.;
 		if (rnd.nextDouble() < outdoorFraction) {
@@ -72,5 +76,4 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		return indoorOutdoorFactor;
 
 	}
-
 }

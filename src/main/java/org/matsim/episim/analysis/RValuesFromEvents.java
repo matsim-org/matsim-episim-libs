@@ -22,6 +22,8 @@ package org.matsim.episim.analysis;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -40,11 +42,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
@@ -174,24 +173,36 @@ public class RValuesFromEvents implements Callable<Integer> {
 		bw.close();
 
 		bw = Files.newBufferedWriter(scenario.resolve(id + "rValues.txt"));
-		bw.write("day\tdate\trValue\tnewContagious\tscenario");
+		bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
+		bw.write(AnalysisCommand.TSV.join(rHandler.activityTypes));
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			int noOfInfectors = 0;
-			int noOfInfected = 0;
+			// infected persons per activity
+			Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
 			for (InfectedPerson ip : rHandler.infectedPersons.values()) {
-				if (ip.getContagiousDay() == i) {
+				if (ip.contagiousDay == i) {
 					noOfInfectors++;
-					noOfInfected = noOfInfected + ip.getNoOfInfected();
+					ip.noOfInfected.forEach((k,v) -> noOfInfected.mergeInt(k, v, Integer::sum));
 				}
 			}
-			double r = 0;
-			if (noOfInfectors != 0) r = (double) noOfInfected / noOfInfectors;
-			bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
-//			if (r != 0) {
-			rValues.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + r + "\t" + noOfInfectors + "\t" + scenario.getFileName());
-//			}
+
+			double r = noOfInfectors == 0 ? 0 : (double) noOfInfected.getInt("total") / noOfInfectors;
+
+			String join = "\n" + AnalysisCommand.TSV.join(
+					i, startDate.plusDays(i).toString(), r, noOfInfectors, scenario.getFileName()
+			) + "\t";
+
+			int finalNoOfInfectors = noOfInfectors;
+			join += AnalysisCommand.TSV.join(rHandler.activityTypes.stream()
+					.map( k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
+					.collect(Collectors.toList())
+			);
+
+			bw.write(join);
+			rValues.write(join);
 		}
+
 		rValues.flush();
 		bw.close();
 
@@ -201,50 +212,32 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 	private static class InfectedPerson {
 
-		private String id;
-		private int noOfInfected;
+		private final String id;
+		private final Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
 		private int contagiousDay;
 
 		InfectedPerson(String id) {
 			this.id = id;
-			this.noOfInfected = 0;
 		}
 
-		String getId() {
-			return id;
+		void increaseNoOfInfectedByOne(String infectionType) {
+			noOfInfected.mergeInt("total", 1, Integer::sum);
+			noOfInfected.mergeInt(infectionType, 1, Integer::sum);
 		}
-
-		void setId(String id) {
-			this.id = id;
-		}
-
-		int getNoOfInfected() {
-			return noOfInfected;
-		}
-
-		void increaseNoOfInfectedByOne() {
-			this.noOfInfected++;
-		}
-
-		int getContagiousDay() {
-			return contagiousDay;
-		}
-
-		void setContagiousDay(int contagiousDay) {
-			this.contagiousDay = contagiousDay;
-		}
-
 	}
 
 	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
 
+		private final Set<String> activityTypes = new TreeSet<>();
 		private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
 
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectorId = event.getInfectorId().toString();
 			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, InfectedPerson::new);
-			infector.increaseNoOfInfectedByOne();
+			String activityType = getActivityType(event.getInfectionType());
+			activityTypes.add(activityType);
+			infector.increaseNoOfInfectedByOne(activityType);
 		}
 
 		@Override
@@ -254,7 +247,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 				String personId = event.getPersonId().toString();
 				InfectedPerson person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
-				person.setContagiousDay((int) event.getTime() / 86400);
+				person.contagiousDay = (int) (event.getTime() / 86400);
 			}
 		}
 	}
@@ -263,36 +256,42 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		private final Map<String, Int2IntMap> infectionsPerActivity = new TreeMap<>();
 
-
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
-			String infectionType = event.getInfectionType();
+			String infectionType = getActivityType(event.getInfectionType());
+
+			int day = (int) event.getTime() / 86400;
+
+			infectionsPerActivity.computeIfAbsent("total", k -> new Int2IntOpenHashMap())
+					.merge(day, 1, Integer::sum);
+
+			infectionsPerActivity.computeIfAbsent(infectionType, k -> new Int2IntOpenHashMap())
+					.merge(day, 1, Integer::sum);
+
+		}
+	}
+
+	/**
+	 * Compute group of infection type.
+	 */
+	private static String getActivityType(String infectionType) {
+
+		String activityType;
 //			if (infectionType.endsWith("educ_higher")) infectionType = "edu_higher";
 //			else if (infectionType.endsWith("educ_other")) infectionType = "edu_other";
 //			else if (infectionType.endsWith("educ_kiga")) infectionType = "edu_kiga";
 //			else if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary")) infectionType = "edu_school";
-			if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other"))
-				infectionType = "schools";
-			else if (infectionType.endsWith("educ_higher")) infectionType = "university";
-			else if (infectionType.endsWith("educ_kiga")) infectionType = "day care";
-			else if (infectionType.endsWith("leisure")) infectionType = "leisure";
-			else if (infectionType.endsWith("work") || infectionType.endsWith("business")) infectionType = "work&business";
-			else if (infectionType.endsWith("home")) infectionType = "home";
-			else if (infectionType.startsWith("pt")) infectionType = "pt";
-			else infectionType = "other";
+		if (infectionType.endsWith("educ_primary") || infectionType.endsWith("educ_secondary") || infectionType.endsWith("educ_tertiary") || infectionType.endsWith("educ_other"))
+			activityType = "schools";
+		else if (infectionType.endsWith("educ_higher")) activityType = "university";
+		else if (infectionType.endsWith("educ_kiga")) activityType = "day care";
+		else if (infectionType.endsWith("leisure")) activityType = "leisure";
+		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
+		else if (infectionType.endsWith("home")) activityType = "home";
+		else if (infectionType.startsWith("pt")) activityType = "pt";
+		else activityType = "other";
 
-			if (!infectionsPerActivity.containsKey("total")) infectionsPerActivity.put("total", new Int2IntOpenHashMap());
-			if (!infectionsPerActivity.containsKey(infectionType)) infectionsPerActivity.put(infectionType, new Int2IntOpenHashMap());
-
-			Int2IntMap infectionsPerDay = infectionsPerActivity.get(infectionType);
-			Int2IntMap infectionsPerDayTotal = infectionsPerActivity.get("total");
-
-			int day = (int) event.getTime() / 86400;
-
-			infectionsPerDay.merge(day, 1, Integer::sum);
-			infectionsPerDayTotal.merge(day, 1, Integer::sum);
-
-		}
+		return activityType;
 	}
 
 }
