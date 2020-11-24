@@ -134,9 +134,9 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		Map<String, Object> metadata = new LinkedHashMap<>();
 
-		metadata.put("readme", runVersion + "-notes.md");
-		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
-		metadata.put("info", runVersion + "-info-" + runName + ".txt");
+		metadata.put("readme", "notes.md");
+		metadata.put("zip", "summaries.zip");
+		metadata.put("info", "_info.txt");
 		metadata.put("zipFolder", "summaries");
 		metadata.put("timestamp", LocalDate.now());
 

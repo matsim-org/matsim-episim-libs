@@ -233,6 +233,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 				log.debug("Trace location {}", e.getKey());
 
+				if (tracingCapacity <= 0)
+					break;
+
 				for (EpisimPerson p : persons.values()) {
 
 					if (p.getInfectionContainer() == e.getKey()) {

@@ -95,6 +95,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		tracingConfig.setLocationThreshold(3);
 		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
 		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
+		tracingConfig.setTracingProbability(params.tracingProbability);
 
 
 		return config;
@@ -102,17 +103,20 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(20)
 		long seed;
 
 		@EnumParameter(value = TracingConfigGroup.Strategy.class, ignore = "RANDOM")
 		TracingConfigGroup.Strategy tracingStrategy;
 
-		@Parameter({0.5, 0.6, 0.7, 0.8})
+		@Parameter({0.5, 0.65, 0.8})
 		double symptomatic;
 
-		@IntParameter({200, 500, 1000, Integer.MAX_VALUE})
+		@IntParameter({200, 1000, Integer.MAX_VALUE})
 		int tracingCapacity;
+
+		@Parameter({0.6, 1.0})
+		double tracingProbability;
 
 		@StringParameter({"no"})
 		String unrestricted;
