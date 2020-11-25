@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.Restriction;
 
@@ -21,19 +22,22 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private final FaceMaskModel maskModel;
 	private final SplittableRandom rnd;
 	private final EpisimConfigGroup episimConfig;
+	private final EpisimReporting reporting;
 
 	private double outdoorFactor;
 
 	@Inject
-	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, SplittableRandom rnd, Config config) {
+	public InfectionModelWithSeasonality(FaceMaskModel faceMaskModel, SplittableRandom rnd, Config config, EpisimReporting reporting) {
 		this.maskModel = faceMaskModel;
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.reporting = reporting;
 	}
 
 	@Override
 	public void setIteration(int iteration) {
 		this.outdoorFactor = interpolateOutdoorFraction(episimConfig, iteration);
+		reporting.reportOutdoorFraction(this.outdoorFactor, iteration);
 	}
 
 	@Override
