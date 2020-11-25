@@ -93,6 +93,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
 		tracingConfig.setStrategy(params.tracingStrategy);
 		tracingConfig.setLocationThreshold(3);
+		tracingConfig.setTracingDelay_days(1);
 		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
 		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
 		tracingConfig.setTracingProbability(params.tracingProbability);
@@ -109,7 +110,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		@EnumParameter(value = TracingConfigGroup.Strategy.class, ignore = "RANDOM")
 		TracingConfigGroup.Strategy tracingStrategy;
 
-		@Parameter({0.5, 0.65, 0.8})
+		@Parameter({0.5, 0.8, 1.0})
 		double symptomatic;
 
 		@IntParameter({200, 1000, Integer.MAX_VALUE})

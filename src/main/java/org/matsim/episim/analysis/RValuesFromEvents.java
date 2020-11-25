@@ -61,6 +61,13 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RValuesFromEvents.class);
 
+	/**
+	 * Activity types used by this analysis.
+	 */
+	private static final List<String> ACTIVITY_TYPES = List.of(
+			"home", "leisure", "schools", "day care", "university", "work&business", "pt", "other"
+	);
+
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
@@ -85,7 +92,8 @@ public class RValuesFromEvents implements Callable<Integer> {
 		}
 
 		BufferedWriter rValues = Files.newBufferedWriter(output.resolve("rValues.txt"));
-		rValues.write("day\tdate\trValue\tnewContagious\tscenario");
+		rValues.write("day\tdate\trValue\tnewContagious\tscenario\t");
+		rValues.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
 
 		BufferedWriter infectionsPerActivity = Files.newBufferedWriter(output.resolve("infectionsPerActivity.txt"));
 		infectionsPerActivity.write("day\tdate\tactivity\tinfections\tscenario");
@@ -174,7 +182,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		bw = Files.newBufferedWriter(scenario.resolve(id + "rValues.txt"));
 		bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
-		bw.write(AnalysisCommand.TSV.join(rHandler.activityTypes));
+		bw.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
 
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			int noOfInfectors = 0;
@@ -194,7 +202,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 			) + "\t";
 
 			int finalNoOfInfectors = noOfInfectors;
-			join += AnalysisCommand.TSV.join(rHandler.activityTypes.stream()
+			join += AnalysisCommand.TSV.join(ACTIVITY_TYPES.stream()
 					.map( k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
 					.collect(Collectors.toList())
 			);

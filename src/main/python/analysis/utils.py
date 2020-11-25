@@ -9,6 +9,18 @@ from collections import defaultdict
 from os import path
 
 
+def _generator(z):
+    """ Generator for zip files inside zip file. """
+    if "summaries/" in z.namelist():
+        for f in z.namelist():
+            if not f.endswith("zip"): continue
+            with zipfile.ZipFile(z.open(f)) as inner:
+                yield inner
+
+    else:
+        yield z
+
+
 def read_batch_run(run, r_values=False, age_groups=None):
     """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file.
 
@@ -32,17 +44,7 @@ def read_batch_run(run, r_values=False, age_groups=None):
                 info = pd.read_csv(f, sep=";")
 
         # Iterator for zip files
-        zips = None
-        if "summaries/" in z.namelist():
-            def _generator(z):
-                for f in z.namelist():
-                    if not f.endswith("zip"): continue
-                    with zipfile.ZipFile(z.open(f)) as inner:
-                        yield inner
-
-            zips = _generator(z)
-        else:
-            zips = [z]
+        zips = _generator(z)
 
         i = 0
         for z in zips:
@@ -189,14 +191,16 @@ def aggregate_batch_run(run):
             for idx in row.ids:
                 idMap[idx] = row.Index
 
-        for f in z.namelist():
-            idx, _, filename = f.partition(".")
-            if idx not in idMap:
-                continue
+        zips = _generator(z)
+        for z in zips:
+            for f in z.namelist():
+                idx, _, filename = f.partition(".")
+                if idx not in idMap:
+                    continue
 
-            with z.open(f) as zf:
-                df = pd.read_csv(zf, sep="\t")
-                runs[idMap[idx]][filename].append(df)
+                with z.open(f) as zf:
+                    df = pd.read_csv(zf, sep="\t")
+                    runs[idMap[idx]][filename].append(df)
 
     with zipfile.ZipFile(run.replace(".zip", "-aggr.zip"),
                          mode="w", compresslevel=9,
