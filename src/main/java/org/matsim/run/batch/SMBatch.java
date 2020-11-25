@@ -7,6 +7,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
@@ -45,10 +46,12 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta);
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		
-		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility);
-		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility);
+		if (params.childInfSusReduced.equals("no")) {
+			episimConfig.setChildInfectivity(1.);
+			episimConfig.setChildSusceptibility(1.);
+		}
 
-		if (params.winterEnd.equals("fromWeather")) {
+		if (params.summerEnd.equals("fromWeather")) {
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
@@ -61,7 +64,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
 					LocalDate.parse("2020-01-15"), 0.1,
 					LocalDate.parse("2020-04-15"), 0.8,
-					LocalDate.parse(params.winterEnd), 0.8,
+					LocalDate.parse(params.summerEnd), 0.8,
 					LocalDate.parse("2020-11-15"), 0.1,
 					LocalDate.parse("2021-02-15"), 0.1,
 					LocalDate.parse("2021-04-15"), 0.8,
@@ -69,6 +72,13 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 					);
 			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
 		}
+		
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+				LocalDate.of(2020, 4, 1), 300,
+				LocalDate.of(2020, 6, 15), params.tracingCapacityJune
+		));
 
 
 		return config;
@@ -79,14 +89,17 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@GenerateSeeds(3)
 		public long seed;
 		
-		@Parameter({0.9, 0.95, 1., 1.05, 1.1, 1.15, 1.2})
+		@Parameter({0.9, 0.95, 1., 1.05, 1.1})
 		double theta;
 		
-		@Parameter({1., 0.9, 0.8, 0.7, 0.5, 0.})
-		double childInfectivitySusceptibility;
+		@IntParameter({1000, 2000, 3000, 4000})
+		int tracingCapacityJune;
 		
 		@StringParameter({"2020-09-15", "2020-09-01", "2020-08-15", "fromWeather"})
-		public String winterEnd;
+		public String summerEnd;
+		
+		@StringParameter({"yes", "no"})
+		public String childInfSusReduced;
 
 	}
 
