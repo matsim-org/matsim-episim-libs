@@ -46,7 +46,8 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 		if (params.run.contains("noTracing")) tracing = Tracing.no;
 		if (params.run.contains("noAgeDepInfModel")) infectionModel = InfectionModelWithSeasonality.class;
 				
-		return new SnzBerlinProductionScenario(25, diseaseImport, restrictions, masks, tracing, Snapshot.no, infectionModel);
+		return new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing( tracing ).setSnapshot(
+				Snapshot.no ).setInfectionModel( infectionModel ).createSnzBerlinProductionScenario();
 //		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, InfectionModelWithSeasonality.class);
 	}
 
@@ -76,7 +77,8 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 		if (params.run.contains("noTracing")) tracing = Tracing.no;
 		if (params.run.contains("noAgeDepInfModel")) infectionModel = InfectionModelWithSeasonality.class;
 		
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario(25, diseaseImport, restrictions, masks, tracing, Snapshot.no, infectionModel);
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing(
+				tracing ).setSnapshot( Snapshot.no ).setInfectionModel( infectionModel ).createSnzBerlinProductionScenario();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 		

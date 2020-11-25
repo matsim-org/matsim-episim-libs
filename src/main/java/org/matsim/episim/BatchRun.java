@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.common.collect.Lists;
 import com.google.inject.Module;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -155,7 +156,11 @@ public interface BatchRun<T> {
 				try {
 					Method m = enumParam.value().getDeclaredMethod("values");
 					Object[] invoke = (Object[]) m.invoke(null);
-					allParams.add(Arrays.asList(invoke));
+					List<Object> enums = Lists.newArrayList(invoke);
+					// remove the ignored enums
+					enums.removeIf(p -> ArrayUtils.indexOf(enumParam.ignore(), p.toString()) > -1);
+
+					allParams.add(enums);
 					fields.add(field);
 				} catch (ReflectiveOperationException e) {
 					throw new IllegalStateException(e);
@@ -352,7 +357,7 @@ public interface BatchRun<T> {
 		 * Desired enum class, by default all values will be used.
 		 */
 		Class<? extends Enum<?>> value();
-		//String[] ignore() default {};
+		String[] ignore() default {};
 	}
 
 	/**

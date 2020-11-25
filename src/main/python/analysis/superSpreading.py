@@ -24,7 +24,7 @@ dateFormater = ConciseDateFormatter(AutoDateLocator())
 
 #%%
 
-rki, hospital = read_case_data("berlin-cases.csv", "berlin-hospital.csv")
+rki, _, hospital = read_case_data("berlin-cases.csv", "berlin-cases-meldedatum.csv", "berlin-hospital.csv")
 
 
 #%% 
@@ -186,6 +186,52 @@ for ax in g.axes.flat:
     ax.set_yscale('log')
     ax.set_ylim(bottom=5)
     ax.set_xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-06-01"))
+    
+    ax.xaxis.set_major_formatter(dateFormater)
+    ax.yaxis.set_major_formatter(ScalarFormatter())
+    
+    
+#%%
+
+tracing = read_batch_run("data/clusterTracing2.zip")
+m = 2 ** 31- 1
+
+#%%
+
+df = tracing[(tracing.tracingCapacity==m) & (tracing.symptomatic==0.8) & (tracing.tracingProbability==1.0)]
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3))
+
+hue = sns.color_palette(n_colors=5)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
+            palette=hue, hue="tracingStrategy",
+            data=df)
+
+
+plt.yscale("log")
+ax.xaxis.set_major_formatter(dateFormater)
+ax.yaxis.set_major_formatter(ScalarFormatter())
+
+#%%
+
+cap = m
+df = tracing[(tracing.tracingCapacity==cap)]
+
+
+hue = sns.color_palette(n_colors=5)
+
+g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95", palette=hue,
+                hue="tracingStrategy", col="symptomatic", row="tracingProbability",
+                kind="line", data=df,
+                height=3, aspect=1.4)
+
+g.fig.set_dpi(250)
+
+for ax in g.axes.flat:
+    ax.set_yscale('log')
+    ax.set_ylim(bottom=100)
+    ax.set_xlim(left=datetime.fromisoformat("2020-09-01"))
     
     ax.xaxis.set_major_formatter(dateFormater)
     ax.yaxis.set_major_formatter(ScalarFormatter())

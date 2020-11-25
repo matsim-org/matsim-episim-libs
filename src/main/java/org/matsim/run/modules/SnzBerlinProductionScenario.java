@@ -50,6 +50,54 @@ import java.util.Map;
  * Scenario for Berlin using Senozon events for different weekdays.
  */
 public class SnzBerlinProductionScenario extends AbstractModule {
+	private final int importOffset;
+
+	public static class Builder{
+		private int importOffset = 0;
+		private int sample = 25;
+		private DiseaseImport diseaseImport = DiseaseImport.yes;
+		private Restrictions restrictions = Restrictions.yes;
+		private Masks masks = Masks.yes;
+		private Tracing tracing = Tracing.yes;
+		private Snapshot snapshot = Snapshot.no;
+		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
+		public Builder setSample( int sample ){
+			this.sample = sample;
+			return this;
+		}
+		public Builder setDiseaseImport( DiseaseImport diseaseImport ){
+			this.diseaseImport = diseaseImport;
+			return this;
+		}
+		public Builder setRestrictions( Restrictions restrictions ){
+			this.restrictions = restrictions;
+			return this;
+		}
+		public Builder setMasks( Masks masks ){
+			this.masks = masks;
+			return this;
+		}
+		public Builder setTracing( Tracing tracing ){
+			this.tracing = tracing;
+			return this;
+		}
+		public Builder setSnapshot( Snapshot snapshot ){
+			this.snapshot = snapshot;
+			return this;
+		}
+		public Builder setInfectionModel( Class<? extends InfectionModel> infectionModel ){
+			this.infectionModel = infectionModel;
+			return this;
+		}
+		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, snapshot, infectionModel, importOffset );
+		}
+		public Builder setImportOffset( int importOffset ){
+			this.importOffset = importOffset;
+			return this;
+		}
+	}
+
 
 	public static enum DiseaseImport {yes, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
@@ -72,10 +120,15 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
 	public SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0 );
+	}
+	
+	public SnzBerlinProductionScenario(Snapshot snapshot) {
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, snapshot, AgeDependentInfectionModelWithSeasonality.class, 0 );
 	}
 
-	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot, Class<? extends InfectionModel> infectionModel) {
+	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot,
+					    Class<? extends InfectionModel> infectionModel, int importOffset ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -83,6 +136,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		this.tracing = tracing;
 		this.snapshot = snapshot;
 		this.infectionModel = infectionModel;
+		this.importOffset = importOffset;
 	}
 
 	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -150,7 +204,6 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			Map<LocalDate, Integer> importMap = new HashMap<>();
 			double importFactor = 1.;
 			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
-			int importOffset = 0;
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
 					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-09").plusDays(importOffset),

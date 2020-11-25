@@ -7,8 +7,7 @@ import pandas as pd
 import matplotlib.pyplot as pyplot
 import numpy as np
 from cycler import cycler
-import scipy as sp
-import matsim as ms
+# import matsim as ms
 
 # todo: https??
 hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
@@ -200,7 +199,7 @@ ss.index = pd.to_datetime(ss['Datum'])
 # base = 'output/2020-09-23_21-34-24__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
 # base = 'output/2020-09-23_23-02-01__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst3_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
 
-base = '0output/zz_archive-2020-10-04/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = '0output/zz_archive-2020-10-04/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
 
 # base = 'output/2020-10-04_16-24-49__symmetric__fromConfig__theta2.1E-5@NaN_seed0_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
 
@@ -218,10 +217,16 @@ base = '0output/zz_archive-2020-10-04/2020-09-24_12-37-12__oldSymmetric__fromCon
 
 # base = 'output/seed_4711-factor_0.01/weekSymmetric1.'
 
+base = 'output/importOffset_0-seed_4711-theta_0.9-childInfectivitySusceptibility_0.0-winterEnd_2021-11-14/calibration1.'
+
 #
 rr = pd.read_csv(base + 'infections.txt', sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
+
+di = pd.read_csv( base + 'diseaseImport.tsv', sep='\t')
+di['date'] = pd.to_datetime( di['date'] )
+di.set_index('date',inplace=True)
 
 infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
 nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
@@ -251,20 +256,20 @@ fit5.index = pd.date_range(start="2020-07-01", periods=fit5.size)
 fit6 = pd.Series(42 * np.exp(np.arange(0, 300, 1) * np.log(2.) / 20))
 fit6.index = pd.date_range(start="2020-08-20", periods=fit6.size)
 
-rr3 = pd.concat([cc['cases'].rolling('7D').mean(), infectedCumulative.diff(), nContagious.diff(), nShowingSymptoms.diff().rolling('7D').mean(), ss['Anteil Positiv Berlin Meldewoche'] * 25, nTotalInfected, fit4, fit5, fit6], axis=1)
+rr3 = pd.concat([cc['cases'].rolling('7D').mean(), infectedCumulative.diff(), nContagious.diff(), nShowingSymptoms.diff().rolling('7D').mean(), ss['Anteil Positiv Berlin Meldewoche'] * 25, nTotalInfected, fit4, fit5, fit6, di['nInfected']], axis=1)
 # rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
 # rr3 = pd.concat([cc['cases']])
 
 # disease import:
-rr3.at[pd.to_datetime("2020-02-24"),'diseaseImport'] = 0.9
-rr3.at[pd.to_datetime("2020-03-09"),'diseaseImport'] = 23.1
-rr3.at[pd.to_datetime("2020-03-23"),'diseaseImport'] = 3.9
-rr3.at[pd.to_datetime("2020-06-08"),'diseaseImport'] = 0.1
-rr3.at[pd.to_datetime("2020-07-13"),'diseaseImport'] = 0.9
-rr3.at[pd.to_datetime("2020-08-10"),'diseaseImport'] = 17.9
-rr3.at[pd.to_datetime("2020-09-07"),'diseaseImport'] = 5.4
-
-rr3['diseaseImport'].interpolate(inplace=True)
+# rr3.at[pd.to_datetime("2020-02-24"),'diseaseImport'] = 0.9
+# rr3.at[pd.to_datetime("2020-03-09"),'diseaseImport'] = 23.1
+# rr3.at[pd.to_datetime("2020-03-23"),'diseaseImport'] = 3.9
+# rr3.at[pd.to_datetime("2020-06-08"),'diseaseImport'] = 0.1
+# rr3.at[pd.to_datetime("2020-07-13"),'diseaseImport'] = 0.9
+# rr3.at[pd.to_datetime("2020-08-10"),'diseaseImport'] = 17.9
+# rr3.at[pd.to_datetime("2020-09-07"),'diseaseImport'] = 5.4
+#
+# rr3['diseaseImport'].interpolate(inplace=True)
 
 
 pyplot.close('all')
@@ -386,7 +391,7 @@ pyplot.show()
 infectionEvents = pd.read_csv(base + "infectionEvents.txt", sep="\t")
 
 # In[]:
-plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz", selectedPlansOnly = True )
+# plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/testPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/test2.xml", selectedPlansOnly = True )
 

@@ -2,106 +2,102 @@ package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
-import com.google.inject.Provides;
-import com.google.inject.Singleton;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.model.*;
-import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.model.AgeDependentProgressionModel;
+import org.matsim.episim.model.ProgressionModel;
 import org.matsim.run.RunParallel;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020;
+import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
-import java.util.Collections;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.SplittableRandom;
+import java.util.TreeMap;
 
 
 /**
  * sebastians playground
  */
 public class KNBatch implements BatchRun<KNBatch.Params> {
+	private static final int IMPORT_OFFSET = +7;
 
 	@Override
 	public AbstractModule getBindings( int id, @Nullable Params params ) {
-		return new AbstractModule(){
-			@Override protected void configure(){
-				binder().requireExplicitBindings();
-
-				bind( InfectionModel.class ).to( DefaultInfectionModel.class ).in( Singleton.class );
-				bind( ProgressionModel.class ).to( MyProgressionModel.class ).in( Singleton.class );
-				bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
-				bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
-
-				// Internal classes, should rarely be needed to be reconfigured
-				bind( EpisimRunner.class ).in( Singleton.class );
-				bind( ReplayHandler.class ).in( Singleton.class );
-				bind( InfectionEventHandler.class ).in( Singleton.class );
-				bind( EpisimReporting.class ).in( Singleton.class );
-			}
-
-			// yyyyyy does not work without the following lines:
-			// According to CR, this will be used to read the events, but for nothing else.
-			@Provides Config config() {
-				Config config = new SnzBerlinWeekScenario2020(25,false,false, OldSymmetricContactModel.class ).config();
-//				config.removeModule( "episim" );
-//				config.removeModule( "episimTracing" );
-				return config ;
-			}
-
-			// yyyy where is the scenario binding coming from?
-
-		};
+		return new SnzBerlinProductionScenario.Builder()
+				       .setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 )
+				       .setImportOffset( IMPORT_OFFSET )
+				       .createSnzBerlinProductionScenario();
 	};
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "weekSymmetric");
+		return Metadata.of("berlin", "calibration");
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
+								     .setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 )
+								     .setImportOffset( params.importOffset )
+								     .createSnzBerlinProductionScenario();
 
-		Config config = new SnzBerlinWeekScenario2020(25,false,false, OldSymmetricContactModel.class ).config();
+		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setCalibrationParameter( episimConfig.getCalibrationParameter() * params.factor );
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta);
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
-		episimConfig.setInitialInfections( 10 );
-		episimConfig.setInfections_pers_per_day( Collections.singletonMap( episimConfig.getStartDate(), 10 ) );
+		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility);
+		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility);
 
-		final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
-		episimConfig.setPolicy( FixedPolicy.class, restrictions.build() ); // overwrite snz policy with empty policy
+		if (params.winterEnd.equals("fromWeather")) {
+			try {
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2 );
+				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+			} catch ( IOException e) {
+				e.printStackTrace();
+			}
+		}
 
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule( config, TracingConfigGroup.class );
-		tracingConfig.setTracingCapacity_pers_per_day( 0 );
+		else {
+			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
+					LocalDate.parse("2020-01-15"), 0.1,
+					LocalDate.parse("2020-04-15"), 0.8,
+					LocalDate.parse(params.winterEnd), 0.8,
+					LocalDate.parse("2020-11-15"), 0.1,
+					LocalDate.parse("2021-02-15"), 0.1,
+					LocalDate.parse("2021-04-15"), 0.8,
+					LocalDate.parse("2021-09-15"), 0.8 )
+			);
+			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
+		}
+
 
 		return config;
+
 	}
 
 	public static final class Params {
+		@IntParameter({IMPORT_OFFSET})
+		int importOffset;
 
-		@GenerateSeeds(100)
+		@GenerateSeeds(1)
 		long seed;
 
-		@Parameter( {0.01,0.03,0.1,0.3} )
-		double factor;
+		@Parameter({0.9})
+		double theta;
 
-//		@StringParameter({"2020-02-16", "2020-02-18"})
-//		public String startDate;
+		@Parameter({0.})
+		double childInfectivitySusceptibility;
 
-//		@Parameter({0.25, 0.5, 1.})
-//		private double eduCiCorrection;
-//
-//		@IntParameter({Integer.MAX_VALUE, 100})
-//		private int tracingCapacity;
-//
-//		@StringParameter({"none", "cloth90", "FFP90"})
-//		public String mask;
+		@StringParameter({"2021-11-14"})
+		String winterEnd;
 	}
 
 	public static void main( String[] args ){
@@ -109,7 +105,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 90 )
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 180 )
 		};
 
 		RunParallel.main( args2 );
@@ -130,6 +126,15 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //			return report.nTotalInfected > 0 || report.nInQuarantine > 0;
 			return report.nInfectedButNotContagious + report.nContagious + report.nShowingSymptoms > 0 ;
 		}
+
+		@Override public int getNextTransitionDays(Id<Person> personId) {
+			return delegate.getNextTransitionDays(personId);
+		}
+
+		@Override public EpisimPerson.DiseaseStatus getNextDiseaseStatus(Id<Person> personId) {
+			return delegate.getNextDiseaseStatus(personId);
+		}
+
 		@Override public void beforeStateUpdates( Map<Id<Person>, EpisimPerson> persons, int day, EpisimReporting.InfectionReport report ){
 			delegate.beforeStateUpdates( persons, day, report );
 		}

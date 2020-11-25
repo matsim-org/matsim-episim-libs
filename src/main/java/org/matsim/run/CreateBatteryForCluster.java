@@ -76,7 +76,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v14")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v15")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "44")
@@ -85,10 +85,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms84G -Xmx84G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.ContactModels")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.BerlinClusterTracing")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.ContactModels$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.BerlinClusterTracing$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -134,9 +134,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		Map<String, Object> metadata = new LinkedHashMap<>();
 
-		metadata.put("readme", runVersion + "-notes.md");
-		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
-		metadata.put("info", runVersion + "-info-" + runName + ".txt");
+		metadata.put("readme", "notes.md");
+		metadata.put("zip", "summaries.zip");
+		metadata.put("info", "_info.txt");
+		metadata.put("zipFolder", "summaries");
 		metadata.put("timestamp", LocalDate.now());
 
 		metadata.putAll(prepare.getMetadata());

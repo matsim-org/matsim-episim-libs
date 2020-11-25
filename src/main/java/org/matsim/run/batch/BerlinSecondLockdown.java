@@ -27,7 +27,8 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.episim_snapshot_150_2020_07_14, AgeDependentInfectionModelWithSeasonality.class);
+		return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
+				Snapshot.episim_snapshot_150_2020_07_14 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -38,7 +39,9 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.episim_snapshot_150_2020_07_14, AgeDependentInfectionModelWithSeasonality.class);
+		SnzBerlinProductionScenario module = new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
+				Masks.yes ).setTracing( Tracing.yes ).setSnapshot( Snapshot.episim_snapshot_150_2020_07_14 ).setInfectionModel(
+				AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);

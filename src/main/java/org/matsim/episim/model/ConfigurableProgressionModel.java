@@ -233,6 +233,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 				log.debug("Trace location {}", e.getKey());
 
+				if (tracingCapacity <= 0)
+					break;
+
 				for (EpisimPerson p : persons.values()) {
 
 					if (p.getInfectionContainer() == e.getKey()) {
@@ -365,7 +368,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private void performTracing(EpisimPerson person, double now, int day) {
 
 		if (day < tracingConfig.getPutTraceablePersonsInQuarantineAfterDay()
-				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM) {
+				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.RANDOM
+				|| tracingConfig.getStrategy() == TracingConfigGroup.Strategy.NONE) {
 			return;
 		}
 

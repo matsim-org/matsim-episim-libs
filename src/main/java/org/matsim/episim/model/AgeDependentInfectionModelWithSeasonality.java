@@ -13,15 +13,15 @@ import java.util.SplittableRandom;
 
 /**
  * Extension of the {@link DefaultInfectionModel}, with additional parameter {@link #SUSCEPTIBILITY} and {@link #VIRAL_LOAD},
- *  which are set according to age. 
+ *  which are set according to age.
  */
 public final class AgeDependentInfectionModelWithSeasonality implements InfectionModel {
 
 	private final FaceMaskModel maskModel;
 	private final EpisimConfigGroup episimConfig;
 	private final SplittableRandom rnd;
-	
-	private int iteration;
+
+	private double outdoorFactor;
 
 
 	@Inject AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, SplittableRandom rnd) {
@@ -29,10 +29,10 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.rnd = rnd;
 	}
-	
+
 	@Override
 	public void setIteration(int iteration) {
-		this.iteration = iteration;
+		this.outdoorFactor = InfectionModelWithSeasonality.interpolateOutdoorFraction(episimConfig, iteration);
 	}
 
 	@Override
@@ -49,12 +49,11 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		double susceptibility = 1.;
 		double infectivity = 1.;
-		
-		//values taken from https://doi.org/10.1101/2020.06.03.20121145
-		if (ageTarget < 20) susceptibility = 0.45;
-		if (ageInfector < 20) infectivity = 0.85;
-		
-		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(episimConfig, iteration, rnd, act1, act2);
+
+		if (ageTarget < 20) susceptibility = this.episimConfig.getChildSusceptibility();
+		if (ageInfector < 20) infectivity = this.episimConfig.getChildInfectivity();
+
+		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding

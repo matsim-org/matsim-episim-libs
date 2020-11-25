@@ -690,4 +690,40 @@ public final class EpisimUtils {
 		}
 		return age;
 	}
+	
+	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(String weatherDataPath, double rainThreshold) throws IOException {
+				
+		Reader in = new FileReader(weatherDataPath);
+		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
+		LocalDate date = null;
+		for (CSVRecord record : records) {
+			date = LocalDate.parse(record.get("date"), fmt);
+			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
+//				System.out.println("Scipping day because tmax or prcp data is not available. Date: " + date.toString()); 
+				continue;
+			}
+			
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+			
+			double outDoorFraction = 0.0344 * tMax - 0.0518;
+			if (prcp > rainThreshold) {
+				outDoorFraction = outDoorFraction * 0.5;
+			}
+			
+			if (outDoorFraction > 1.) {
+				outDoorFraction = 1.;
+//				System.out.println("outDoorFraction is > 1. Setting to 1. Date: " + date.toString());
+			}
+			if (outDoorFraction < 0.) {
+				outDoorFraction = 0.;
+//				System.out.println("outDoorFraction is < 1. Setting to 0. Date: " + date.toString());
+			}
+			outdoorFractions.put(date, outDoorFraction);			
+		}
+		return outdoorFractions;
+	}
 }
