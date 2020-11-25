@@ -21,11 +21,10 @@
 package org.matsim.episim.analysis;
 
 import com.google.common.base.Joiner;
-import com.google.common.io.Resources;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -37,30 +36,25 @@ import picocli.CommandLine;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 /**
- * @author: rewert
- * This class reads the SENEZON data for every day. The data is filtered by the
- * zip codes of every area. The base line is always the first day. The results
- * for every day are the percentile of the changes compared to the base.
+ * @author:rewert
+ * This class reads the SENEZON personStat data for every day. The data is filtered by the
+ * zip codes of every area. The results for every day are the amount of people.
  */
 @CommandLine.Command(
-		name = "analyzeSnzData",
-		description = "Aggregate snz mobility data."
+		name = "AnalyzeSnzPersonsStat",
+		description = "Aggregate snz person statistics of the daily mobility data."
 )
-class AnalyzeSnzData implements Callable<Integer> {
+class AnalyzeSnzPersonsStat implements Callable<Integer> {
 
-	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
+	private static final Logger log = LogManager.getLogger(AnalyzeSnzPersonsStat.class);
 
 	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final Joiner JOIN = Joiner.on("\t");
@@ -72,7 +66,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private Path outputFolder;
 
 	public static void main(String[] args) {
-		System.exit(new CommandLine(new AnalyzeSnzData()).execute(args));
+		System.exit(new CommandLine(new AnalyzeSnzPersonsStat()).execute(args));
 	}
 
 	/**
@@ -84,7 +78,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		for (File folder : Objects.requireNonNull(inputFolder.listFiles())) {
 			if (folder.isDirectory()) {
 				for (File file : Objects.requireNonNull(folder.listFiles())) {
-					if (file.getName().contains("_zipCode.csv.gz"))
+					if (file.getName().contains("_personStats.csv.gz"))
 						fileData.add(file);
 				}
 			}
@@ -99,6 +93,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 		log.info("Amount of found files: " + filesWithData.size());
 
+		// zip codes for Test
+				IntSet zipCodesTest = new IntOpenHashSet();	
+				zipCodesTest.add(1067);
+		
 		// zip codes for Germany
 		IntSet zipCodesGER = new IntOpenHashSet();
 		for (int i = 0; i <= 99999; i++)
@@ -117,10 +115,11 @@ class AnalyzeSnzData implements Callable<Integer> {
 		// zip codes for the district "Kreis Heinsberg"
 		IntSet zipCodesHeinsberg = new IntOpenHashSet(List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 
+//		analyzeDataForCertainArea(zipCodesTest, "Test", filesWithData);
 //		analyzeDataForCertainArea(zipCodesDE, "Germany", filesWithData);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
-		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
-		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
+//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
+//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
 
 		log.info("Done!");
 
@@ -131,32 +130,13 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		log.info("Analyze data for " + area);
 
-		Path outputFile = outputFolder.resolve(area + "SnzData_daily_until.csv");
-
-		Set<LocalDate> holidays = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
-				.stream().map(LocalDate::parse).collect(Collectors.toSet());
+		Path outputFile = outputFolder.resolve(area + "SnzDataPersonStats_daily_until.csv");
 
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
 		try {
 
 			JOIN.appendTo(writer, Types.values());
 			writer.write("\n");
-
-			// base activity level for different days
-			Object2DoubleMap<String> wd = new Object2DoubleOpenHashMap<>();
-			Object2DoubleMap<String> sa = new Object2DoubleOpenHashMap<>();
-			Object2DoubleMap<String> so = new Object2DoubleOpenHashMap<>();
-
-			Map<DayOfWeek, Object2DoubleMap<String>> base = new EnumMap<>(DayOfWeek.class);
-
-			// working days share the same base
-			base.put(DayOfWeek.MONDAY, wd);
-			base.put(DayOfWeek.TUESDAY, wd);
-			base.put(DayOfWeek.WEDNESDAY, wd);
-			base.put(DayOfWeek.THURSDAY, wd);
-			base.put(DayOfWeek.FRIDAY, wd);
-			base.put(DayOfWeek.SATURDAY, sa);
-			base.put(DayOfWeek.SUNDAY, so);
 
 			int countingDays = 1;
 
@@ -165,10 +145,9 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 			for (File file : filesWithData) {
 
-				Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+				Object2IntOpenHashMap<String> sums = new Object2IntOpenHashMap<>();
 
 				dateString = file.getName().split("_")[0];
-				LocalDate date = LocalDate.parse(dateString, FMT);
 
 				CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(IOUtils.getBufferedReader(file.toString()));
 
@@ -177,42 +156,23 @@ class AnalyzeSnzData implements Callable<Integer> {
 					int zipCode = Integer.parseInt(record.get("zipCode"));
 					if (zipCodes.contains(zipCode)) {
 
-						double duration = Double.parseDouble(record.get("durationSum"));
-						String actType = record.get("actType");
+						int nStayHome = Integer.parseInt(record.get("nStayHomes"));
+						int nMobilePersons = Integer.parseInt(record.get("nMobilePersons"));
 
-						sums.mergeDouble(actType, duration, Double::sum);
-
-						if (!actType.equals("home")) {
-
-							sums.mergeDouble("notAtHome", duration, Double::sum);
-
-							if (!actType.equals("education") && !actType.equals("leisure")) {
-								sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
-							}
-						}
+						sums.mergeInt("shareStayHome",nStayHome, Integer::sum);
+						sums.mergeInt("shareMobilePersons",nMobilePersons, Integer::sum);
+						sums.mergeInt("nPersons",nStayHome+nMobilePersons, Integer::sum);
+						
 					}
 				}
-
-				DayOfWeek day = date.getDayOfWeek();
-
-				// week days are compared to weekends if they are holidays
-				if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
-					if (holidays.contains(date)) {
-						day = DayOfWeek.SATURDAY;
-					}
-				}
-
-				// set base
-				if (base.get(day).isEmpty())
-					base.get(day).putAll(sums);
 
 				List<String> row = new ArrayList<>();
 				row.add(dateString);
+				row.add(String.valueOf(sums.getInt("nPersons")));
+				for (int i = 2; i < Types.values().length; i++) {
 
-				for (int i = 1; i < Types.values().length; i++) {
-
-					String actType = Types.values()[i].toString();
-					row.add(String.valueOf(Math.round((sums.getDouble(actType) / base.get(day).getDouble(actType) - 1) * 100)));
+					String type = Types.values()[i].toString();
+					row.add(String.valueOf(Math.round((double)sums.getInt(type)/(double)sums.getInt("nPersons")*100)));
 				}
 
 				JOIN.appendTo(writer, row);
@@ -235,6 +195,6 @@ class AnalyzeSnzData implements Callable<Integer> {
 	}
 
 	private enum Types {
-		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit, work, notAtHome, notAtHomeExceptLeisureAndEdu
+		date, nPersons, shareStayHome, shareMobilePersons
 	}
 }
