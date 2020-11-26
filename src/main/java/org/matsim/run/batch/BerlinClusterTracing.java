@@ -27,7 +27,10 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.*;
+import org.matsim.episim.BatchRun;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -46,9 +49,18 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		return Metadata.of("berlin", "clusterTracing");
 	}
 
+	private SnzBerlinProductionScenario getScenario(Params params) {
+		SnzBerlinProductionScenario.Builder scenario = new SnzBerlinProductionScenario.Builder();
+
+		if (params != null && params.unrestricted.equals("no"))
+			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_12);
+
+		return scenario.createSnzBerlinProductionScenario();
+	}
+
 	@Override
 	public Module getBindings(int id, Params params) {
-		return Modules.override( new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario() ).with( new AbstractModule() {
+		return Modules.override(getScenario(params)).with(new AbstractModule() {
 			@Override
 			protected void configure() {
 				if (params != null) {
@@ -56,21 +68,23 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 					bind(ProgressionModel.class).to(CustomProgressionModel.class);
 				}
 			}
-		} ) ;
+		});
 	}
 
 	@Override
 	public Config prepareConfig(int id, BerlinClusterTracing.Params params) {
 
-		Config config = new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario().config();
+		Config config = getScenario(params).config();
 
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
-		// unrestricted
-		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+
+		if (params.unrestricted.equals("yes"))
+			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());
 
 		// Filter some runs without tracing
 		if (params.tracingStrategy == TracingConfigGroup.Strategy.NONE && params.tracingCapacity != Integer.MAX_VALUE)
@@ -78,9 +92,11 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
 		tracingConfig.setStrategy(params.tracingStrategy);
-		tracingConfig.setLocationThreshold(2);
+		tracingConfig.setLocationThreshold(3);
+		tracingConfig.setTracingDelay_days(1);
 		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
 		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
+		tracingConfig.setTracingProbability(params.tracingProbability);
 
 
 		return config;
@@ -88,17 +104,23 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(20)
 		long seed;
 
 		@EnumParameter(value = TracingConfigGroup.Strategy.class, ignore = "RANDOM")
 		TracingConfigGroup.Strategy tracingStrategy;
 
-		@Parameter({0.5, 0.6, 0.7, 0.8})
+		@Parameter({0.5, 0.8, 1.0})
 		double symptomatic;
 
-		@IntParameter({200, 500, 1000, Integer.MAX_VALUE})
+		@IntParameter({200, 1000, Integer.MAX_VALUE})
 		int tracingCapacity;
+
+		@Parameter({0.6, 1.0})
+		double tracingProbability;
+
+		@StringParameter({"no"})
+		String unrestricted;
 
 
 	}

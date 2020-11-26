@@ -18,6 +18,7 @@ copy_output() {
 
 cwd=$(pwd)
 tmp="$cwd/tmp/summaries"
+district=$1
 
 mkdir -p "$tmp"
 
@@ -36,7 +37,7 @@ aggregate_run() {
 
     # Copy and grep the infections file
     head -1 $name > $tmp/$run/$name.csv
-    grep $1 $name >> $tmp/$run/$name.csv
+    grep $district $name >> $tmp/$run/$name.csv
 
     # Copy other output files
     copy_output *.restrictions.txt $tmp/$run .csv

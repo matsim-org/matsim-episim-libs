@@ -97,6 +97,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter restrictionReport;
 	private BufferedWriter timeUse;
 	private BufferedWriter diseaseImport;
+	private BufferedWriter outdoorFraction;
 
 	private String memorizedDate = null;
 
@@ -136,6 +137,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
+		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -179,7 +181,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
-			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv")) {
+			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv", "outdoorFraction.tsv")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -191,6 +193,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
+		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
@@ -501,6 +504,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
 	}
 
+	/**
+	 * Write outdoor fraction for each day.
+	 */
+	public void reportOutdoorFraction(double outdoorFraction, int iteration) {
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+		writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+	}
+
 	@Override
 	public void close() {
 
@@ -509,6 +520,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(restrictionReport);
 		writer.close(timeUse);
 		writer.close(diseaseImport);
+		writer.close(outdoorFraction);
 
 	}
 
@@ -592,7 +604,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		}
 	}
 
-	enum InfectionsWriterFields {
+    enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
 		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
 		nRecovered, nInQuarantineFull, nInQuarantineHome, district

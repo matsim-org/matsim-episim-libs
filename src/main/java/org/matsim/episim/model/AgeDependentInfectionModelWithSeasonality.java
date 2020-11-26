@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.Restriction;
 
@@ -13,26 +14,30 @@ import java.util.SplittableRandom;
 
 /**
  * Extension of the {@link DefaultInfectionModel}, with additional parameter {@link #SUSCEPTIBILITY} and {@link #VIRAL_LOAD},
- *  which are set according to age. 
+ *  which are set according to age.
  */
 public final class AgeDependentInfectionModelWithSeasonality implements InfectionModel {
 
 	private final FaceMaskModel maskModel;
 	private final EpisimConfigGroup episimConfig;
+	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
-	
-	private int iteration;
+
+	private double outdoorFactor;
 
 
-	@Inject AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, SplittableRandom rnd) {
+	@Inject AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, EpisimReporting reporting, SplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.reporting = reporting;
 		this.rnd = rnd;
 	}
-	
+
 	@Override
 	public void setIteration(int iteration) {
-		this.iteration = iteration;
+		this.outdoorFactor = InfectionModelWithSeasonality.interpolateOutdoorFraction(episimConfig, iteration);
+		reporting.reportOutdoorFraction(this.outdoorFactor, iteration);
+
 	}
 
 	@Override
@@ -49,11 +54,11 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		double susceptibility = 1.;
 		double infectivity = 1.;
-		
+
 		if (ageTarget < 20) susceptibility = this.episimConfig.getChildSusceptibility();
 		if (ageInfector < 20) infectivity = this.episimConfig.getChildInfectivity();
-		
-		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(episimConfig, iteration, rnd, act1, act2);
+
+		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding

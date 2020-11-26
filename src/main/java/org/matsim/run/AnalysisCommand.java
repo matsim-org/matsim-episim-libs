@@ -20,6 +20,7 @@
  */
 package org.matsim.run;
 
+import com.google.common.base.Joiner;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -58,6 +59,11 @@ import java.util.stream.Collectors;
 public class AnalysisCommand implements Runnable {
 
 	private static final Logger log = LogManager.getLogger(AnalysisCommand.class);
+
+	/**
+	 * Separator for TSV.
+	 */
+	public static Joiner TSV = Joiner.on("\t");
 
 	@CommandLine.Spec
 	CommandLine.Model.CommandSpec spec;
