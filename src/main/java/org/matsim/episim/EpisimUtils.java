@@ -691,8 +691,17 @@ public final class EpisimUtils {
 		return age;
 	}
 	
-	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(String weatherDataPath, double rainThreshold) throws IOException {
-				
+	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( String weatherDataPath, double rainThreshold, Double temperature0, Double temperature1 ) throws IOException {
+		if ( (temperature0==null && temperature1!=null) || (temperature0!=null && temperature1==null ) ) {
+			throw new RuntimeException( "one temperature is null, the other one is given; don't know how to interpret that; aborting ..." );
+		}
+		if ( temperature0==null ) {
+			temperature0 = 1.5;
+			temperature1 = 30.5;
+			// should correspond to 0.0344 * tMax - 0.0518, which is what I found.  kai, nov'20
+		}
+
+
 		Reader in = new FileReader(weatherDataPath);
 		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -709,7 +718,8 @@ public final class EpisimUtils {
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
 			
-			double outDoorFraction = 0.0344 * tMax - 0.0518;
+			double outDoorFraction = (tMax-temperature0)/(temperature1-temperature0);
+
 			if (prcp > rainThreshold) {
 				outDoorFraction = outDoorFraction * 0.5;
 			}

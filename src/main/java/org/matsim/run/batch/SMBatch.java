@@ -50,7 +50,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		if (params.winterEnd.equals("fromWeather")) {
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2, null, null );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();

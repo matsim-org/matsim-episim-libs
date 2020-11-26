@@ -212,10 +212,10 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-06-08").plusDays(importOffset),
 					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
-					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
-					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
+//			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
+//					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
+//			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
+//					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
 			episimConfig.setInfections_pers_per_day(importMap);
 		}
 		else {

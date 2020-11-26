@@ -24,7 +24,7 @@ import java.util.TreeMap;
  * sebastians playground
  */
 public class KNBatch implements BatchRun<KNBatch.Params> {
-	private static final int IMPORT_OFFSET = +7;
+	private static final int IMPORT_OFFSET = 0;
 
 	@Override
 	public AbstractModule getBindings( int id, @Nullable Params params ) {
@@ -43,25 +43,25 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	public Config prepareConfig(int id, Params params) {
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
 								     .setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 )
-								     .setImportOffset( params.importOffset )
+								     .setImportOffset( IMPORT_OFFSET )
 								     .createSnzBerlinProductionScenario();
 
 		Config config = module.config();
-		config.global().setRandomSeed(params.seed);
+		config.global().setRandomSeed(4711);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta);
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
-		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility);
-		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility);
+		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility );
+		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility );
 
-		if (params.winterEnd.equals("fromWeather")) {
+		if (params.summerEnd.equals("fromWeather" )) {
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2 );
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2, params.temperature0, params.temperature1 );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch ( IOException e) {
-				e.printStackTrace();
+				throw new RuntimeException( e );
 			}
 		}
 
@@ -69,7 +69,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
 					LocalDate.parse("2020-01-15"), 0.1,
 					LocalDate.parse("2020-04-15"), 0.8,
-					LocalDate.parse(params.winterEnd), 0.8,
+					LocalDate.parse(params.summerEnd ), 0.8,
 					LocalDate.parse("2020-11-15"), 0.1,
 					LocalDate.parse("2021-02-15"), 0.1,
 					LocalDate.parse("2021-04-15"), 0.8,
@@ -78,26 +78,31 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
 		}
 
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
+//		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+//				LocalDate.of(2020, 4, 1), 300,
+//				LocalDate.of(2020, 6, 15), 2000
+//								     ) );
+
+		tracingConfig.setTracingDelay_days( Map.of(
+				LocalDate.of( 2020, 4, 1), 4,
+				LocalDate.of( 2020, 6, 15), params.tracingDelay
+								     ) );
+
 
 		return config;
 
 	}
 
 	public static final class Params {
-		@IntParameter({IMPORT_OFFSET})
-		int importOffset;
-
-		@GenerateSeeds(1)
-		long seed;
-
-		@Parameter({0.9})
-		double theta;
-
-		@Parameter({0.})
-		double childInfectivitySusceptibility;
-
-		@StringParameter({"2021-11-14"})
-		String winterEnd;
+		//		@GenerateSeeds(1) long seed;
+//		@IntParameter({IMPORT_OFFSET}) int importOffset;
+		@Parameter( { 15. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad
+		@Parameter( { 30. } ) double temperature1; //
+		@Parameter({1.0}) double theta;
+		@IntParameter({4}) int tracingDelay;
+		@Parameter({2.0}) double childInfectivitySusceptibility;
+		@StringParameter({"fromWeather"}) String summerEnd;
 	}
 
 	public static void main( String[] args ){
@@ -105,7 +110,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 180 )
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 270 )
 		};
 
 		RunParallel.main( args2 );
