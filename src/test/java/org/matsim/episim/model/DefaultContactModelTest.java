@@ -319,6 +319,25 @@ public class DefaultContactModelTest {
 	}
 
 	@Test
+	public void reducedGroupSize() {
+		restrictions.put("c0.5", RestrictionTest.update(restrictions.get("c0.5"), Restriction.ofReducedGroupSize(10)));
+		double baseRate = sampleInfectionRate(Duration.ofMinutes(10), "c0.5",
+				() -> EpisimTestUtils.createFacility(9, "c0.5", 10, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c0.5", f)
+		);
+
+		restrictions.put("c0.5", RestrictionTest.update(restrictions.get("c0.5"), Restriction.ofReducedGroupSize(5)));
+		double rate = sampleInfectionRate(Duration.ofMinutes(10), "c0.5",
+				() -> EpisimTestUtils.createFacility(9, "c0.5", 10, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c0.5", f)
+		);
+
+
+		// strong reduction in infections
+		assertThat(baseRate - rate).isCloseTo(0.6d, Offset.offset(0.1));
+	}
+
+	@Test
 	public void sameWithOrWithoutTracking() {
 		Config config = EpisimTestUtils.createTestConfig();
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );

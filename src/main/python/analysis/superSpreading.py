@@ -193,7 +193,7 @@ for ax in g.axes.flat:
     
 #%%
 
-tracing = read_batch_run("data/clusterTracing2.zip")
+tracing = read_batch_run("data/clusterTracing3.zip")
 m = 2 ** 31- 1
 
 #%%
@@ -215,11 +215,11 @@ ax.yaxis.set_major_formatter(ScalarFormatter())
 
 #%%
 
-cap = m
+cap = 200
 df = tracing[(tracing.tracingCapacity==cap)]
 
 
-hue = sns.color_palette(n_colors=5)
+hue = sns.color_palette(n_colors=4)
 
 g = sns.relplot(x="date", y="cases", estimator="mean", ci="q95", palette=hue,
                 hue="tracingStrategy", col="symptomatic", row="tracingProbability",

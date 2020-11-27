@@ -37,6 +37,12 @@ public final class Restriction {
 	private Integer maxGroupSize;
 
 	/**
+	 * Reduced group size for activities.
+	 */
+	@Nullable
+	private Integer reducedGroupSize;
+
+	/**
 	 * Ids of closed facilities.
 	 */
 	@Nullable
@@ -56,7 +62,7 @@ public final class Restriction {
 	/**
 	 * Constructor.
 	 */
-	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
+	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
 						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
@@ -69,6 +75,7 @@ public final class Restriction {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
+		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
 
 		if (closed != null) {
@@ -104,11 +111,12 @@ public final class Restriction {
 	 *
 	 * @param maskUsage will only be used of other is null
 	 */
-	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize,
+	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
 				@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Restriction other) {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
+		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
 		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
 
@@ -121,28 +129,28 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, Integer.MAX_VALUE, null, null, Map.of());
+		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null, null, Map.of());
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null, null, null, null);
+		return new Restriction(remainingFraction, null, null, null,null, null, null);
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-		return new Restriction(remainingFraction, ciCorrection, null, null, null, null);
+		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null);
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
-		return new Restriction(remainingFraction, ciCorrection, null, null, null, maskUsage);
+		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage);
 	}
 
 	/**
@@ -150,7 +158,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-		return new Restriction(remainingFraction, null, null, null, null, Map.of(mask, maskCompliance));
+		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance));
 	}
 
 	/**
@@ -159,7 +167,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, null, null, null, Map.of(mask, complianceRate));
+		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate));
 	}
 
 	/**
@@ -167,28 +175,38 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
-		return new Restriction(null, null, null, null, null, maskUsage);
+		return new Restriction(null, null, null,null, null, null, maskUsage);
 	}
 
 	/**
 	 * Creates a restriction with certain facilities closed. Should not be combined with other restrictions.
 	 */
 	public static Restriction ofClosedFacilities(List<String> closed) {
-		return new Restriction(null, null, null, closed, null, null);
+		return new Restriction(null, null, null,null, closed, null, null);
 	}
 
 	/**
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null, null, null, null);
+		return new Restriction(null, ciCorrection, null,null, null, null, null);
 	}
 
 	/**
 	 * Creates a restriction with limited maximum group size of activities.
 	 */
 	public static Restriction ofGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, maxGroupSize, null, null, null);
+		return new Restriction(null, null, maxGroupSize, null,null, null, null);
+	}
+
+	/**
+	 * Restriction that reduces group sizes of activities.
+	 * Unlike {@link #ofGroupSize(int)} activities above {@code maxGroupSize} are not closed completely, but have reduced participation.
+	 *
+	 * @param maxGroupSize maximum allowed group size
+	 */
+	public static Restriction ofReducedGroupSize(int maxGroupSize) {
+		return new Restriction(null, null, null, maxGroupSize, null, null, null);
 	}
 
 	/**
@@ -202,7 +220,7 @@ public final class Restriction {
 
 		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
-		return new Restriction(null, null, null, null, closed, null);
+		return new Restriction(null, null, null, null,null, closed, null);
 	}
 
 	/**
@@ -221,6 +239,7 @@ public final class Restriction {
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
 				config.getIsNull("ciCorrection") ? null : config.getDouble("ciCorrection"),
 				config.getIsNull("maxGroupSize") ? null : config.getInt("maxGroupSize"),
+				config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
 				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
 				enumMap, null
@@ -242,7 +261,7 @@ public final class Restriction {
 	 * Creates a copy of a restriction.
 	 */
 	static Restriction clone(Restriction restriction) {
-		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.maxGroupSize,
+		return new Restriction(restriction.remainingFraction, restriction.ciCorrection, restriction.maxGroupSize, restriction.reducedGroupSize,
 				restriction.closed == null ? null : restriction.closed.stream().map(Objects::toString).collect(Collectors.toList()),
 				restriction.closingHours,
 				null, restriction);
@@ -359,6 +378,9 @@ public final class Restriction {
 		if (r.getMaxGroupSize() != null)
 			maxGroupSize = r.getMaxGroupSize();
 
+		if (r.getReducedGroupSize() != null)
+			reducedGroupSize = r.getReducedGroupSize();
+
 		if (r.closed != null)
 			closed = r.closed;
 
@@ -381,6 +403,7 @@ public final class Restriction {
 		Double otherRf = (Double) restriction.get("fraction");
 		Double otherE = (Double) restriction.get("ciCorrection");
 		Integer otherGroup = (Integer) restriction.get("maxGroupSize");
+		Integer otherReduced = (Integer) restriction.get("reducedGroupSize");
 		ClosingHours otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
 		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
@@ -401,6 +424,11 @@ public final class Restriction {
 			log.warn("Duplicated max group size " + maxGroupSize + " and " + otherGroup);
 		else if (maxGroupSize == null)
 			maxGroupSize = otherGroup;
+
+		if (reducedGroupSize != null && otherReduced != null && !reducedGroupSize.equals(otherReduced))
+			log.warn("Duplicated reduced group size " + reducedGroupSize + " and " + otherReduced);
+		else if (reducedGroupSize == null)
+			reducedGroupSize = otherReduced;
 
 		if (closingHours != null && otherClosingH != null && !closingHours.equals(otherClosingH))
 			log.warn("Duplicated max closing hours " + closingHours + " and " + otherClosingH);
@@ -444,6 +472,11 @@ public final class Restriction {
 		return maxGroupSize;
 	}
 
+	@Nullable
+	public Integer getReducedGroupSize() {
+		return reducedGroupSize;
+	}
+
 	Map<FaceMask, Double> getMaskUsage() {
 		return maskUsage;
 	}
@@ -465,6 +498,7 @@ public final class Restriction {
 		map.put("fraction", remainingFraction);
 		map.put("ciCorrection", ciCorrection);
 		map.put("maxGroupSize", maxGroupSize);
+		map.put("reducedGroupSize", reducedGroupSize);
 
 		if (closed != null)
 			map.put("closed", closed.stream().map(Object::toString).collect(Collectors.toList()));

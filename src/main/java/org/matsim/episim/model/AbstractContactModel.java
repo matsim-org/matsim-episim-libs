@@ -179,6 +179,17 @@ public abstract class AbstractContactModel implements ContactModel {
 				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
+		// reduce group size probabilistically
+		if (r.getReducedGroupSize() != null && r.getReducedGroupSize() > -1) {
+			double current = (container.getPersons().size() * episimConfig.getSampleSize()) / container.getNumSpaces();
+
+			// always false if current < reduced size
+			boolean out = rnd.nextDouble() > r.getReducedGroupSize() / current;
+
+			// don'T return true, other conditions might be false
+			if (out) return false;
+		}
+
 		if (r.isClosed(container.getContainerId()))
 			return false;
 
