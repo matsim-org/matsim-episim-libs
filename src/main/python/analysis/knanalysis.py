@@ -2,7 +2,7 @@
 # coding: utf-8
 
 # In[]:
-
+import glob
 import pandas as pd
 import matplotlib.pyplot as pyplot
 import numpy as np
@@ -257,15 +257,17 @@ hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 
 # base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_fromWeather/calibration1.'
 # base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_0.5-summerEnd_fromWeather/calibration1.'
-base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
 
+base = 'output/temperature0_10.0-temperature1_20.0-thetaFactor_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration*.'
 
-#
-rr = pd.read_csv(base + 'infections.txt', sep='\t')
+for textfile in glob.glob(base + 'infections.txt'):
+    rr = pd.read_csv(textfile, sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
 
-di = pd.read_csv( base + 'diseaseImport.tsv', sep='\t')
+for textfile in glob.glob(base + 'diseaseImport.tsv'):
+    di = pd.read_csv( textfile, sep='\t')
 di['date'] = pd.to_datetime( di['date'] )
 di.set_index('date',inplace=True)
 

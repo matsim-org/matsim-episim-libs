@@ -19,17 +19,21 @@ import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 
+import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
+
 
 /**
  * sebastians playground
  */
 public class KNBatch implements BatchRun<KNBatch.Params> {
 	private static final int IMPORT_OFFSET = 0;
+//	private static final Snapshot snapshot = Snapshot.episim_snapshot_120_2020_06_14;
+	private static final Snapshot SNAPSHOT = Snapshot.no;
 
 	@Override
 	public AbstractModule getBindings( int id, @Nullable Params params ) {
-		return new SnzBerlinProductionScenario.Builder()
-				       .setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 )
+		return new Builder()
+				       .setSnapshot( SNAPSHOT )
 				       .setImportOffset( IMPORT_OFFSET )
 				       .createSnzBerlinProductionScenario();
 	};
@@ -41,8 +45,8 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
-								     .setSnapshot( SnzBerlinProductionScenario.Snapshot.episim_snapshot_120_2020_06_14 )
+		SnzBerlinProductionScenario module = new Builder()
+								     .setSnapshot( SNAPSHOT )
 								     .setImportOffset( IMPORT_OFFSET )
 								     .createSnzBerlinProductionScenario();
 
@@ -50,7 +54,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		config.global().setRandomSeed(4711);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
 		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility );
@@ -97,11 +101,11 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	public static final class Params {
 		//		@GenerateSeeds(1) long seed;
 //		@IntParameter({IMPORT_OFFSET}) int importOffset;
-		@Parameter( { 15. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad
+		@Parameter( { 20. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
 		@Parameter( { 30. } ) double temperature1; //
-		@Parameter({1.0}) double theta;
+		@Parameter({0.9,1.0,1.1}) double thetaFactor;
 		@IntParameter({4}) int tracingDelay;
-		@Parameter({2.0}) double childInfectivitySusceptibility;
+		@Parameter({1.0}) double childInfectivitySusceptibility;
 		@StringParameter({"fromWeather"}) String summerEnd;
 	}
 
@@ -110,7 +114,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 270 )
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 120 )
 		};
 
 		RunParallel.main( args2 );
