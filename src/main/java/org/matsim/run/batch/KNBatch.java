@@ -62,7 +62,8 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 		if (params.summerEnd.equals("fromWeather" )) {
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", 2, params.temperature0, params.temperature1 );
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
+						2, params.temperature0, params.temperature1 );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch ( IOException e) {
 				throw new RuntimeException( e );
@@ -101,11 +102,11 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	public static final class Params {
 		//		@GenerateSeeds(1) long seed;
 //		@IntParameter({IMPORT_OFFSET}) int importOffset;
-		@Parameter( { 20. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
-		@Parameter( { 30. } ) double temperature1; //
-		@Parameter({0.9,1.0,1.1}) double thetaFactor;
+		@Parameter( { 22.5-10. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
+		@Parameter( { 22.5+10. } ) double temperature1; //
+		@Parameter({0.7}) double thetaFactor;
 		@IntParameter({4}) int tracingDelay;
-		@Parameter({1.0}) double childInfectivitySusceptibility;
+		@Parameter({1.0,1.5}) double childInfectivitySusceptibility;
 		@StringParameter({"fromWeather"}) String summerEnd;
 	}
 
