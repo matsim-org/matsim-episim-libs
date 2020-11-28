@@ -139,7 +139,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		this.importOffset = importOffset;
 	}
 
-	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
+	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;

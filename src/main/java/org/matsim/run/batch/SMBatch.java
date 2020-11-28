@@ -42,38 +42,46 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 				SnzBerlinProductionScenario.Snapshot.no ).createSnzBerlinProductionScenario();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
-
+		
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta);
+		
+		double thetaFactor = Double.parseDouble(params.weatherMidPoint_Theta.split("_")[1]);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * thetaFactor);
+//		episimConfig.setStartDate("2020-02-25");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+
+		Map<LocalDate, Integer> importMap = new HashMap<>();
+		int importOffset = 0;
+		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * 1)));
+		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 1., LocalDate.parse("2020-02-24").plusDays(importOffset),
+				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 1., LocalDate.parse("2020-03-09").plusDays(importOffset),
+				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 1., LocalDate.parse("2020-03-23").plusDays(importOffset),
+				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
 		
-//		if (params.childInfSusReduced.equals("no")) {
-//			episimConfig.setChildInfectivity(1.);
-//			episimConfig.setChildSusceptibility(1.);
-//		}
-		
+		double importFactor = params.importFactorAfterJune;
+		if (importFactor == 0.) {
+			importMap.put(LocalDate.parse("2020-06-08"), 1);
+		}
+		else {
+			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactor, LocalDate.parse("2020-06-08").plusDays(importOffset),
+					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
+			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
+					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
+			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
+					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
+		}
+		episimConfig.setInfections_pers_per_day(importMap);	
+
+		double tempMidPoint = Double.parseDouble(params.weatherMidPoint_Theta.split("_")[0]);
 
 		try {
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", params.rainThreshold, params.temperature0, params.temperature1 );
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", params.rainThreshold, tempMidPoint-10., tempMidPoint+10. );
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
-		
-//		else {
-//			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
-//					LocalDate.parse("2020-01-15"), 0.1,
-//					LocalDate.parse("2020-04-15"), 0.8,
-//					LocalDate.parse(params.summerEnd), 0.8,
-//					LocalDate.parse("2020-11-15"), 0.1,
-//					LocalDate.parse("2021-02-15"), 0.1,
-//					LocalDate.parse("2021-04-15"), 0.8,
-//					LocalDate.parse("2021-09-15"), 0.8)
-//					);
-//			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
-//		}
-		
 		
 //		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 //
@@ -88,32 +96,34 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(2)
+		@GenerateSeeds(3)
 		public long seed;
 		
-		@Parameter({0.75, 0.8, 0.85, 0.9, 0.95, 1., 1.05, 1.1})
-		double theta;
+//		@Parameter({0.75, 0.8, 0.85, 0.9, 0.95, 1., 1.05, 1.1})
+//		double theta;
 		
-		@Parameter({1., 2., 3.})
+		@Parameter({0.5, 1., 2.})
 		double rainThreshold;
 		
-		@Parameter({5., 10., 15., 20.})
-		double temperature0;
+//		@Parameter({5., 10., 15., 20.})
+//		double temperature0;
+//		
+//		@Parameter({20., 25., 30.})
+//		double temperature1;
 		
-		@Parameter({20., 25., 30.})
-		double temperature1;
+		@Parameter({1., 0.25, 0.5, 0.75, 0.})
+		double importFactorAfterJune;
+		
+		@StringParameter({
+			"15.0_0.85", "15.0_0.9", "15.0_0.95",
+			"17.5_0.75", "17.5_0.8", "17.5_0.85",
+			"20.0_0.7", "20.0_0.75", "20.0_0.8",
+			"22.5_0.65", "22.5_0.7", "22.5_0.75",
+			"25.0_0.6", "25.0_0.65", "25.0_0.7"})
+		public String weatherMidPoint_Theta;
 		
 //		@IntParameter({1000, 2000, 3000})
 //		int tracingCapacityJune;
-		
-//		@StringParameter({"2020-09-15", "2020-09-01", "fromWeather1", "fromWeather2", "fromWeather3"})
-//		public String summerEnd;
-		
-//		@StringParameter({"yes", "no"})
-//		public String childInfSusReduced;
-		
-//		@Parameter({1., 0.67, 0.33, 0.})
-//		double importFactorAfterJune;
 
 	}
 
