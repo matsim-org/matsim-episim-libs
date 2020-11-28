@@ -17,7 +17,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.SplittableRandom;
-import java.util.TreeMap;
 
 import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
@@ -60,7 +59,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility );
 		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility );
 
-		if (params.summerEnd.equals("fromWeather" )) {
+//		if (params.summerEnd.equals("fromWeather" )) {
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
 						2, params.temperature0, params.temperature1 );
@@ -68,30 +67,28 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 			} catch ( IOException e) {
 				throw new RuntimeException( e );
 			}
-		}
-
-		else {
-			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
-					LocalDate.parse("2020-01-15"), 0.1,
-					LocalDate.parse("2020-04-15"), 0.8,
-					LocalDate.parse(params.summerEnd ), 0.8,
-					LocalDate.parse("2020-11-15"), 0.1,
-					LocalDate.parse("2021-02-15"), 0.1,
-					LocalDate.parse("2021-04-15"), 0.8,
-					LocalDate.parse("2021-09-15"), 0.8 )
-			);
-			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
-		}
+//		} else {
+//			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
+//					LocalDate.parse("2020-01-15"), 0.1,
+//					LocalDate.parse("2020-04-15"), 0.8,
+//					LocalDate.parse(params.summerEnd ), 0.8,
+//					LocalDate.parse("2020-11-15"), 0.1,
+//					LocalDate.parse("2021-02-15"), 0.1,
+//					LocalDate.parse("2021-04-15"), 0.8,
+//					LocalDate.parse("2021-09-15"), 0.8 )
+//			);
+//			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
+//		}
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
-//		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-//				LocalDate.of(2020, 4, 1), 300,
-//				LocalDate.of(2020, 6, 15), 2000
-//								     ) );
+		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+				LocalDate.of(2020, 4, 1), 300,
+				LocalDate.of(2020, 6, 15), params.tracingCap
+								     ) );
 
 		tracingConfig.setTracingDelay_days( Map.of(
 				LocalDate.of( 2020, 4, 1), 4,
-				LocalDate.of( 2020, 6, 15), params.tracingDelay
+				LocalDate.of( 2020, 6, 15), 4
 								     ) );
 
 
@@ -105,9 +102,10 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		@Parameter( { 22.5-10. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
 		@Parameter( { 22.5+10. } ) double temperature1; //
 		@Parameter({0.7}) double thetaFactor;
-		@IntParameter({4}) int tracingDelay;
-		@Parameter({1.0,1.5}) double childInfectivitySusceptibility;
-		@StringParameter({"fromWeather"}) String summerEnd;
+//		@IntParameter({4}) int tracingDelay;
+		@Parameter({1.0,1.5,2.0}) double childInfectivitySusceptibility;
+//		@StringParameter({"fromWeather"}) String summerEnd;
+		@IntParameter({500,1000,2000}) int tracingCap;
 	}
 
 	public static void main( String[] args ){
