@@ -511,8 +511,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Set infectivity for all age groups, previous entries will be overwritten.
 	 */
 	public void setAgeInfectivity(Map<Integer, Double> ageSusceptibility) {
-		this.ageSusceptibility.clear();
-		this.ageSusceptibility.putAll(ageSusceptibility);
+		this.ageInfectivity.clear();
+		this.ageInfectivity.putAll(ageSusceptibility);
 	}
 
 	/**
