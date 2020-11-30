@@ -13,8 +13,7 @@ import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
- * Extension of the {@link DefaultInfectionModel}, with additional parameter {@link #SUSCEPTIBILITY} and {@link #VIRAL_LOAD},
- *  which are set according to age.
+ * Extension of the {@link DefaultInfectionModel}, with age-dependent additions.
  */
 public final class AgeDependentInfectionModelWithSeasonality implements InfectionModel {
 
@@ -25,12 +24,21 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 	private double outdoorFactor;
 
+	private double[] susceptibility = new double[128];
+	private double[] infectivity = new double[susceptibility.length];
 
-	@Inject AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, EpisimReporting reporting, SplittableRandom rnd) {
+	@Inject
+	AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, EpisimReporting reporting, SplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
+
+		// pre-compute interpolated age dependent entries
+		for (int i = 0; i < susceptibility.length; i++) {
+			susceptibility[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeSusceptibility(), i);
+			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
+		}
 	}
 
 	@Override
@@ -48,15 +56,12 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
-		int ageTarget = EpisimUtils.getAge( target );
+		int ageTarget = EpisimUtils.getAge(target);
 
-		int ageInfector = EpisimUtils.getAge( infector );
+		int ageInfector = EpisimUtils.getAge(infector);
 
-		double susceptibility = 1.;
-		double infectivity = 1.;
-
-		if (ageTarget < 20) susceptibility = this.episimConfig.getChildSusceptibility();
-		if (ageInfector < 20) infectivity = this.episimConfig.getChildInfectivity();
+		double susceptibility = this.susceptibility[ageTarget];
+		double infectivity = this.infectivity[ageInfector];
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 

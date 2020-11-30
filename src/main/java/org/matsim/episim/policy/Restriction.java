@@ -239,7 +239,7 @@ public final class Restriction {
 				config.getIsNull("fraction") ? null : config.getDouble("fraction"),
 				config.getIsNull("ciCorrection") ? null : config.getDouble("ciCorrection"),
 				config.getIsNull("maxGroupSize") ? null : config.getInt("maxGroupSize"),
-				config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
+				!config.hasPath("reducedGroupSize") || config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
 				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
 				enumMap, null

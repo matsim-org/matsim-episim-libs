@@ -40,6 +40,7 @@ import org.matsim.episim.EpisimRunner;
 import org.matsim.run.modules.OpenBerlinScenario;
 import picocli.CommandLine;
 
+import java.lang.reflect.Constructor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -161,7 +162,9 @@ public class RunEpisim implements Callable<Integer> {
 			if (!name.contains(".")) name = "org.matsim.run.modules." + name;
 
 			Class<?> clazz = ClassLoader.getSystemClassLoader().loadClass(name);
-			Module module = (Module) clazz.getDeclaredConstructor().newInstance();
+			Constructor<?> constructor = clazz.getDeclaredConstructor();
+			constructor.trySetAccessible();
+			Module module = (Module) constructor.newInstance();
 			result.add(module);
 		}
 

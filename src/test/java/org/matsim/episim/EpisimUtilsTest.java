@@ -149,4 +149,27 @@ public class EpisimUtilsTest {
 				.isEqualTo(10d);
 
 	}
+
+	@Test
+	public void interpolateNumber() {
+
+		TreeMap<Integer, Double> map = new TreeMap<>(Map.of(
+				5, 0.5d,
+				20, 20d,
+				30, 30d
+		));
+
+		assertThat(EpisimUtils.interpolateEntry(map, 1))
+				.isEqualTo(0.5);
+
+		assertThat(EpisimUtils.interpolateEntry(map, 10))
+				.isEqualTo(7);
+
+		assertThat(EpisimUtils.interpolateEntry(map, 25))
+				.isEqualTo(25);
+
+		assertThat(EpisimUtils.interpolateEntry(map, 35))
+				.isEqualTo(30);
+
+	}
 }
