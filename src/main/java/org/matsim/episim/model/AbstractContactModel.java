@@ -180,11 +180,12 @@ public abstract class AbstractContactModel implements ContactModel {
 			return false;
 
 		// reduce group size probabilistically
-		if (r.getReducedGroupSize() != null && r.getReducedGroupSize() > -1) {
+		Integer reducedGroupSize = r.getReducedGroupSize();
+		if (reducedGroupSize != null && reducedGroupSize > -1 && reducedGroupSize != Integer.MAX_VALUE) {
 			double current = (container.getPersons().size() * episimConfig.getSampleSize()) / container.getNumSpaces();
 
 			// always false if current < reduced size
-			boolean out = rnd.nextDouble() > r.getReducedGroupSize() / current;
+			boolean out = rnd.nextDouble() > reducedGroupSize / current;
 
 			// don'T return true, other conditions might be false
 			if (out) return false;
