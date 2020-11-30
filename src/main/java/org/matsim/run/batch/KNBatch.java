@@ -59,14 +59,17 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 //		episimConfig.setSnapshotInterval( 30 );
 
-		episimConfig.getAgeInfectivity().replaceAll((k,v) ->  k < 20 ? v * params.childInfectivitySusceptibility : 1);
-		episimConfig.getAgeSusceptibility().replaceAll((k,v) -> k < 20 ? v * params.childInfectivitySusceptibility : 1);
+//		episimConfig.getAgeInfectivity().replaceAll((k,v) ->  k < 20 ? v * params.childInfectivitySusceptibility : 1);
+//		episimConfig.getAgeSusceptibility().replaceAll((k,v) -> k < 20 ? v * params.childInfectivitySusceptibility : 1);
+
+		episimConfig.setAgeInfectivity( Map.of( 0,params.newbornInfectivity,params.grownUpAge,1.) );
+		episimConfig.setAgeSusceptibility( Map.of( 0,params.newbornSusceptibility, params.grownUpAge, 1.) );
 
 
 //		if (params.summerEnd.equals("fromWeather" )) {
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
-						2, params.temperature0, params.temperature1 );
+						2, params.temperatureMidPoint-10, params.temperatureMidPoint+10 );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch ( IOException e) {
 				throw new RuntimeException( e );
@@ -127,14 +130,17 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	public static final class Params {
 		//		@GenerateSeeds(1) long seed;
 //		@IntParameter({IMPORT_OFFSET}) int importOffset;
-		@Parameter( { 22.5-10. } ) double temperature0; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
-		@Parameter( { 22.5+10. } ) double temperature1; //
-		@Parameter({0.7}) double thetaFactor;
+		@Parameter( { 22.5 } ) double temperatureMidPoint; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
+//		@Parameter( { 22.5+10. } ) double temperature1; //
+		@Parameter({0.8}) double thetaFactor;
 //		@IntParameter({4}) int tracingDelay;
-		@Parameter({1.5}) double childInfectivitySusceptibility;
+//		@Parameter({1.5}) double childInfectivitySusceptibility;
 //		@StringParameter({"fromWeather"}) String summerEnd;
 		@IntParameter({500,2000}) int tracingCap;
 		@Parameter({0.25}) double importFactorAfterJune;
+		@Parameter({0.}) double newbornSusceptibility;
+		@Parameter({0.7}) double newbornInfectivity;
+		@IntParameter( {16,18,20} ) int grownUpAge;
 	}
 
 	public static void main( String[] args ){

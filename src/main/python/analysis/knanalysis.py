@@ -260,8 +260,10 @@ hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 # base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
 
 # base = 'output/temperature0_10.0-temperature1_20.0-thetaFactor_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration*.'
-#
-base = 'output/temperature0_12.5-temperature1_32.5-thetaFactor_0.7-childInfectivitySusceptibility_1.6-tracingCap_2000-importFactorAfterJune_0.0/calibration*.'
+
+# base = 'output/temperature0_12.5-temperature1_32.5-thetaFactor_0.7-childInfectivitySusceptibility_1.6-tracingCap_2000-importFactorAfterJune_0.0/calibration*.'
+
+base = 'output/temperatureMidPoint_22.5-thetaFactor_0.7-tracingCap_500-importFactorAfterJune_0.25-newbornSusceptibility_0.0-newbornInfectivity_0.7-grownUpAge_16/calibration*.'
 
 glob_glob = glob.glob(base + 'infections.txt')
 print(glob_glob)
@@ -310,7 +312,7 @@ rr3 = pd.concat([
     nShowingSymptoms.diff().resample('7D').mean(),
     ss['Anteil Positiv Berlin Meldewoche'] * 25,
     nTotalInfected,
-    fit4, fit5, fit6,
+    #fit4, fit5, fit6,
     di['nInfected'],
     dd['cases'].resample('7D').mean()
 ], axis=1)
@@ -336,7 +338,7 @@ default_cycler = ( cycler(color=      ['r', 'g', 'b', 'y','purple','purple','ora
                              cycler(marker=  ['.','','','o','.','','','','','','.']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-axes.set_ylim(0.9,3000)
+axes.set_ylim(0.9,4000)
 axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-12-01'))
 # pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
@@ -349,9 +351,10 @@ axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-12-01'))
 # pyplot.plot( pd.to_datetime('2020-03-14'), 800, 'ro' )
 # pyplot.text( pd.to_datetime('2020-03-14'), 800, '1st day of school closures (sat)')
 
-pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':11})
+pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':10})
 pyplot.plot( pd.to_datetime('2020-10-01'), 800, 'yo')
 pyplot.text( pd.to_datetime('2020-10-01'), 800, 'KW 40 mid')
+pyplot.legend(loc='upper center')
 
 pyplot.show()
 ############################################
