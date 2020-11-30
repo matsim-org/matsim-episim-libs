@@ -44,7 +44,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer) {
 
-		// ci corr can not be null, because sim is initialized with non null value
+		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
