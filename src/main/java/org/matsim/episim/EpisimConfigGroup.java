@@ -68,8 +68,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
 	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
-	private static final String CHILD_SUSCEPTIBILITY = "childSusceptibility";
-	private static final String CHILD_INFECTIVITY = "childInfectivity";
+	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
+	private static final String AGE_INFECTIVITY = "ageInfectivity";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -90,7 +90,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			LocalDate.parse("2021-02-15"), 0.1,
 			LocalDate.parse("2021-04-15"), 0.8,
 			LocalDate.parse("2021-09-15"), 0.8)
-			);
+	);
 	/**
 	 * Which events to write in the output.
 	 */
@@ -136,12 +136,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
 	 */
-	private double childSusceptibility = 0.45;	/**
+	private final NavigableMap<Integer, Double> ageSusceptibility = new TreeMap<>(Map.of(
+			19, 0.45,
+			20, 1d
+	));
+
+	/**
 	 * Child infectivity used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
 	 */
-	private double childInfectivity = 0.85;
-	
+	private final NavigableMap<Integer, Double> ageInfectivity = new TreeMap<>(Map.of(
+			19, 0.85,
+			20, 1d
+	));
+
 	/**
 	 * Default constructor.
 	 */
@@ -209,12 +217,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * @param initialInfections -- number of initial infections to start the dynamics.  These will be distributed over several days.
-	 * @see       #setInfections_pers_per_day(Map)
+	 * @see #setInfections_pers_per_day(Map)
 	 */
 	@StringSetter(INITIAL_INFECTIONS)
 	public void setInitialInfections(int initialInfections) {
 		this.initialInfections = initialInfections;
 	}
+
 	@StringGetter(LOWER_AGE_BOUNDARY_FOR_INIT_INFECTIONS)
 	public int getLowerAgeBoundaryForInitInfections() {
 		return this.lowerAgeBoundaryForInitInfections;
@@ -449,25 +458,61 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setMaxContacts(double maxContacts) {
 		this.maxContacts = maxContacts;
 	}
-	
-	@StringGetter(CHILD_SUSCEPTIBILITY)
-	public double getChildSusceptibility() {
-		return this.childSusceptibility;
+
+	@StringGetter(AGE_SUSCEPTIBILITY)
+	String getAgeSusceptibilityString() {
+		return JOINER.join(ageSusceptibility);
 	}
 
-	@StringSetter(CHILD_SUSCEPTIBILITY)
-	public void setChildSusceptibility(double childSusceptibility) {
-		this.childSusceptibility = childSusceptibility;
-	}
-	
-	@StringGetter(CHILD_INFECTIVITY)
-	public double getChildInfectivity() {
-		return this.childInfectivity;
+	@StringSetter(AGE_SUSCEPTIBILITY)
+	void setAgeSusceptibility(String config) {
+		Map<String, String> map = SPLITTER.split(config);
+		setAgeSusceptibility(map.entrySet().stream().collect(Collectors.toMap(
+				e -> Integer.parseInt(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
 	}
 
-	@StringSetter(CHILD_INFECTIVITY)
-	public void setChildInfectivity(double childInfectivity) {
-		this.childInfectivity = childInfectivity;
+	/**
+	 * Return susceptibility for different age groups.
+	 */
+	public NavigableMap<Integer, Double> getAgeSusceptibility() {
+		return ageSusceptibility;
+	}
+
+	/**
+	 * Set susceptibility for all age groups, previous entries will be overwritten.
+	 */
+	public void setAgeSusceptibility(Map<Integer, Double> ageSusceptibility) {
+		this.ageSusceptibility.clear();
+		this.ageSusceptibility.putAll(ageSusceptibility);
+	}
+
+	@StringGetter(AGE_INFECTIVITY)
+	String getAgeInfectivityString() {
+		return JOINER.join(ageInfectivity);
+	}
+
+	@StringSetter(AGE_INFECTIVITY)
+	void setAgeInfectivity(String config) {
+		Map<String, String> map = SPLITTER.split(config);
+		setAgeInfectivity(map.entrySet().stream().collect(Collectors.toMap(
+				e -> Integer.parseInt(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
+	}
+
+	/**
+	 * Return infectivity for different age groups.
+	 */
+	public NavigableMap<Integer, Double> getAgeInfectivity() {
+		return ageInfectivity;
+	}
+
+	/**
+	 * Set infectivity for all age groups, previous entries will be overwritten.
+	 */
+	public void setAgeInfectivity(Map<Integer, Double> ageSusceptibility) {
+		this.ageSusceptibility.clear();
+		this.ageSusceptibility.putAll(ageSusceptibility);
 	}
 
 	/**
@@ -850,6 +895,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		/**
 		 * Returns the spaces for facilities.
+		 *
 		 * @implNote Don't use this yet, may be removed or renamed.
 		 */
 		@Beta

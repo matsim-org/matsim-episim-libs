@@ -119,13 +119,13 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
-//	public SnzBerlinProductionScenario() {
-//		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0 );
-//	}
-//
-//	public SnzBerlinProductionScenario(Snapshot snapshot) {
-//		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, snapshot, AgeDependentInfectionModelWithSeasonality.class, 0 );
-//	}
+	/**
+	 * Empty constructor is needed for running scenario from command line.
+	 */
+	@SuppressWarnings("unused")
+	private SnzBerlinProductionScenario() {
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0 );
+	}
 
 	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot,
 					    Class<? extends InfectionModel> infectionModel, int importOffset ) {

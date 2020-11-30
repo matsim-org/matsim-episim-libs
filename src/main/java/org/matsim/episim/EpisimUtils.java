@@ -213,6 +213,35 @@ public final class EpisimUtils {
 	}
 
 	/**
+	 * Interpolate a value for specific key from a map of target keys and values.
+	 *
+	 * @param map map of target values.
+	 * @param key key to interpolate.
+	 * @return interpolated values (or exact if entry is in map)
+	 * @see #interpolateEntry(NavigableMap, LocalDate)
+	 */
+	public static <T extends Number> double interpolateEntry(NavigableMap<T, ? extends Number> map, T key) {
+
+		Map.Entry<T, ? extends Number> floor = map.floorEntry(key);
+
+		if (floor == null)
+			return map.firstEntry().getValue().doubleValue();
+
+		if (floor.getKey().equals(key))
+			return floor.getValue().doubleValue();
+
+		Map.Entry<T, ? extends Number> ceil = map.ceilingEntry(key);
+
+		// there is no higher entry to interpolate
+		if (ceil == null)
+			return floor.getValue().doubleValue();
+
+		double between = floor.getKey().doubleValue() - ceil.getKey().doubleValue();
+		double diff = floor.getKey().doubleValue() - key.doubleValue();
+		return floor.getValue().doubleValue() +  diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
+	}
+
+	/**
 	 * Compress directory recursively.
 	 */
 	public static void compressDirectory(String rootDir, String sourceDir, String runId, ArchiveOutputStream out) throws IOException {
@@ -690,7 +719,7 @@ public final class EpisimUtils {
 		}
 		return age;
 	}
-	
+
 	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( String weatherDataPath, double rainThreshold, Double temperature0, Double temperature1 ) throws IOException {
 		if ( (temperature0==null && temperature1!=null) || (temperature0!=null && temperature1==null ) ) {
 			throw new RuntimeException( "one temperature is null, the other one is given; don't know how to interpret that; aborting ..." );
@@ -711,19 +740,19 @@ public final class EpisimUtils {
 		for (CSVRecord record : records) {
 			date = LocalDate.parse(record.get("date"), fmt);
 			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
-//				System.out.println("Scipping day because tmax or prcp data is not available. Date: " + date.toString()); 
+//				System.out.println("Scipping day because tmax or prcp data is not available. Date: " + date.toString());
 				continue;
 			}
-			
+
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
-			
+
 			double outDoorFraction = (tMax-temperature0)/(temperature1-temperature0);
 
 			if (prcp > rainThreshold) {
 				outDoorFraction = outDoorFraction * 0.5;
 			}
-			
+
 			if (outDoorFraction > 1.) {
 				outDoorFraction = 1.;
 //				System.out.println("outDoorFraction is > 1. Setting to 1. Date: " + date.toString());
@@ -732,7 +761,7 @@ public final class EpisimUtils {
 				outDoorFraction = 0.;
 //				System.out.println("outDoorFraction is < 1. Setting to 0. Date: " + date.toString());
 			}
-			outdoorFractions.put(date, outDoorFraction);			
+			outdoorFractions.put(date, outDoorFraction);
 		}
 		return outdoorFractions;
 	}

@@ -18,7 +18,8 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.SplittableRandom;
 
-import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
+import static org.matsim.run.modules.SnzBerlinProductionScenario.Builder;
+import static org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
 
 
 /**
@@ -56,8 +57,9 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
-		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility );
-		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility );
+		episimConfig.getAgeInfectivity().replaceAll((k,v) ->  k < 20 ? v * params.childInfectivitySusceptibility : 1);
+		episimConfig.getAgeSusceptibility().replaceAll((k,v) -> k < 20 ? v * params.childInfectivitySusceptibility : 1);
+
 
 //		if (params.summerEnd.equals("fromWeather" )) {
 			try {
