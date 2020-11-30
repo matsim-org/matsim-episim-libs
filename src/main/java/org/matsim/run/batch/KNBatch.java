@@ -15,6 +15,7 @@ import org.matsim.run.modules.SnzBerlinProductionScenario;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -55,6 +56,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+//		episimConfig.setSnapshotInterval( 30 );
 
 		episimConfig.setChildInfectivity(episimConfig.getChildInfectivity() * params.childInfectivitySusceptibility );
 		episimConfig.setChildSusceptibility(episimConfig.getChildSusceptibility() * params.childInfectivitySusceptibility );
@@ -80,6 +82,30 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
 //		}
 
+		Map<LocalDate, Integer> importMap = new HashMap<>();
+		int importOffset = 0;
+		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * 1)));
+		SnzBerlinProductionScenario.interpolateImport( importMap, 1., LocalDate.parse( "2020-02-24" ).plusDays( importOffset ),
+				LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
+		SnzBerlinProductionScenario.interpolateImport( importMap, 1., LocalDate.parse( "2020-03-09" ).plusDays( importOffset ),
+				LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
+		SnzBerlinProductionScenario.interpolateImport( importMap, 1., LocalDate.parse( "2020-03-23" ).plusDays( importOffset ),
+				LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
+
+		double importFactor = params.importFactorAfterJune;
+		if (importFactor == 0.) {
+			importMap.put(LocalDate.parse("2020-06-08"), 1);
+		} else {
+			SnzBerlinProductionScenario.interpolateImport( importMap, importFactor, LocalDate.parse( "2020-06-08" ).plusDays( importOffset ),
+					LocalDate.parse( "2020-07-13" ).plusDays( importOffset ), 0.1, 2.7 );
+			SnzBerlinProductionScenario.interpolateImport( importMap, importFactor, LocalDate.parse( "2020-07-13" ).plusDays( importOffset ),
+					LocalDate.parse( "2020-08-10" ).plusDays( importOffset ), 2.7, 17.9 );
+			SnzBerlinProductionScenario.interpolateImport( importMap, importFactor, LocalDate.parse( "2020-08-10" ).plusDays( importOffset ),
+					LocalDate.parse( "2020-09-07" ).plusDays( importOffset ), 17.9, 5.4 );
+		}
+		episimConfig.setInfections_pers_per_day(importMap);
+
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), 300,
@@ -103,9 +129,10 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		@Parameter( { 22.5+10. } ) double temperature1; //
 		@Parameter({0.7}) double thetaFactor;
 //		@IntParameter({4}) int tracingDelay;
-		@Parameter({1.0,1.5,2.0}) double childInfectivitySusceptibility;
+		@Parameter({1.5}) double childInfectivitySusceptibility;
 //		@StringParameter({"fromWeather"}) String summerEnd;
-		@IntParameter({500,1000,2000}) int tracingCap;
+		@IntParameter({500,2000}) int tracingCap;
+		@Parameter({0.25}) double importFactorAfterJune;
 	}
 
 	public static void main( String[] args ){
@@ -113,7 +140,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 120 )
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 270 )
 		};
 
 		RunParallel.main( args2 );

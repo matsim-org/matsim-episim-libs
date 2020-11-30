@@ -259,9 +259,13 @@ hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 # base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_0.5-summerEnd_fromWeather/calibration1.'
 # base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
 
-base = 'output/temperature0_10.0-temperature1_20.0-thetaFactor_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration*.'
+# base = 'output/temperature0_10.0-temperature1_20.0-thetaFactor_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration*.'
+#
+base = 'output/temperature0_12.5-temperature1_32.5-thetaFactor_0.7-childInfectivitySusceptibility_1.6-tracingCap_2000-importFactorAfterJune_0.0/calibration*.'
 
-for textfile in glob.glob(base + 'infections.txt'):
+glob_glob = glob.glob(base + 'infections.txt')
+print(glob_glob)
+for textfile in glob_glob:
     rr = pd.read_csv(textfile, sep='\t')
 rr['date'] = pd.to_datetime(rr['date'])
 rr.set_index('date',inplace=True)
@@ -324,19 +328,20 @@ rr3 = pd.concat([
 #
 # rr3['diseaseImport'].interpolate(inplace=True)
 
-
 pyplot.close('all')
+pyplot.rcParams['figure.figsize']=[12, 5]
 
-# surveillance:
-# offset = -0
-# pyplot.plot( pd.to_datetime("2020-02-24") + pd.DateOffset(offset), 0.9, 'bo');
-# pyplot.plot( pd.to_datetime("2020-03-09") + pd.DateOffset(offset), 23.1, 'bo');
-# pyplot.plot( pd.to_datetime("2020-03-23") + pd.DateOffset(offset), 3.9, 'bo');
-# #pyplot.plot( pd.to_datetime("2020-06-08") + pd.DateOffset(offset), 0.1, 'bo');
-# pyplot.plot( pd.to_datetime("2020-06-08") + pd.DateOffset(offset), 0.9, 'bo');
-# pyplot.plot( pd.to_datetime("2020-07-13") + pd.DateOffset(offset), 2.7, 'bo');
-# pyplot.plot( pd.to_datetime("2020-08-10") + pd.DateOffset(offset), 17.9, 'bo');
-# pyplot.plot( pd.to_datetime("2020-08-24") + pd.DateOffset(offset), 8.6, 'bo');
+default_cycler = ( cycler(color=      ['r', 'g', 'b', 'y','purple','purple','orange','cyan','brown','r','orange']) +
+                             cycler(linestyle= ['','', '', '','','','','','','-','']) +
+                             cycler(marker=  ['.','','','o','.','','','','','','.']))
+pyplot.rc('axes', prop_cycle=default_cycler)
+axes = rr3.plot(logy=True,grid=True)
+axes.set_ylim(0.9,3000)
+axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-12-01'))
+# pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
+# pyplot.axhline(32,color='gray',linestyle='dotted')
 
 # pyplot.plot( pd.to_datetime('2020-03-07'), 1000, 'yo' )
 # pyplot.text( pd.to_datetime('2020-03-07'), 1000, '1st day of home office (sat)')
@@ -344,18 +349,9 @@ pyplot.close('all')
 # pyplot.plot( pd.to_datetime('2020-03-14'), 800, 'ro' )
 # pyplot.text( pd.to_datetime('2020-03-14'), 800, '1st day of school closures (sat)')
 
-pyplot.rcParams['figure.figsize']=[12, 5]
-default_cycler = ( cycler(color=      ['r', 'g', 'b', 'y','purple','purple','orange','cyan','brown','r','orange']) +
-                             cycler(linestyle= ['','', '', '','','','','','','-','']) +
-                             cycler(marker=  ['.','','','o','.','','','','','','.']))
-pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=True,grid=True)
-axes.set_ylim(0.9,2000)
-axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2021-02-01'))
-# pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
-# pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
-# pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
-# pyplot.axhline(32,color='gray',linestyle='dotted')
+pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':11})
+pyplot.plot( pd.to_datetime('2020-10-01'), 800, 'yo')
+pyplot.text( pd.to_datetime('2020-10-01'), 800, 'KW 40 mid')
 
 pyplot.show()
 ############################################
@@ -376,7 +372,7 @@ rr3 = pd.concat([
     infected['nCritical'].resample('7D').mean()
 ], axis=1).fillna(value=0.)
 
-pyplot.close('all')
+# pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple','orange','cyan','r','g']) +
                   cycler(linestyle=['', '', '', '','-','','','','-','']) +
@@ -385,6 +381,9 @@ pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2021-01-01'))
 axes.set_ylim(4.1,2000)
+pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':10})
+pyplot.plot( pd.to_datetime('2020-10-01'), 10, 'yo')
+pyplot.text( pd.to_datetime('2020-10-01'), 10, 'KW 40 mid')
 pyplot.show()
 
 ############################################
@@ -400,7 +399,7 @@ fit.index = pd.date_range(start="2020-02-15", periods=60)
 
 rr3 = pd.concat([rr2b, fit], axis=1)
 
-pyplot.close('all')
+# pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['-', '-', '-', '-','-','']) +
