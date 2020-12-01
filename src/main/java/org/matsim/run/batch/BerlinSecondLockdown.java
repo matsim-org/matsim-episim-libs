@@ -16,7 +16,10 @@ import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
 import javax.annotation.Nullable;
+
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
 
@@ -33,7 +36,7 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "ReducedGroupSize");
+		return Metadata.of("berlin", "secondLockdown");
 	}
 
 	@Override
@@ -53,10 +56,11 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-
+		
 		if (params.lockdown.equals("outOfHomeExceptEdu59")) {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
+				builder.clearAfter("2020-11-02", act);
 				builder.restrict("2020-11-02", 0.59, act);
 			}
 		}
@@ -90,23 +94,59 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 			builder.restrict("2020-12-07", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict("2021-01-03", 0.2, "educ_higher");
 		}
+		
+		if (params.schools.contains("noHolidays")) {
+			builder.clearAfter("2020-12-08", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		}
 
-		if (params.furhterMeasures.contains("leisure10")) {
-			builder.restrict("2020-12-07", 0.1, "leisure");
+		if (params.furhterMeasures.contains("outOfHomeExceptEdu59")) {
+			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+				if (act.contains("educ")) continue;
+				builder.restrict("2020-12-07", 0.59, act);
+			}
 		}
 		
 		if (params.furhterMeasures.contains("FFP@Work")) {
 			builder.restrict("2020-12-07", Restriction.ofMask(FaceMask.N95, 0.9), "work");
 		}
 		
-//		if (params.ReducedGroupSize != Integer.MAX_VALUE) {
-//			builder.restrict("2020-11-30", Restriction.ofReducedGroupSize(4 * params.ReducedGroupSize), "leisure");
-//		}
+		if (params.furhterMeasures.equals("curfew18-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(18, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furhterMeasures.equals("curfew20-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(20, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furhterMeasures.equals("curfew22-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(22, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		
-		if (params.curfew.equals("18-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(18, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
-		if (params.curfew.equals("20-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(20, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
-		if (params.curfew.equals("22-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(22, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
-
+		if (params.reducedGroupsize.equals("yes")) {
+			builder.restrict("2020-11-02", Restriction.ofReducedGroupSize(4 * 10), "leisure");
+			builder.restrict("2020-12-01", Restriction.ofReducedGroupSize(4 * 5), "leisure");
+		}
+		
+		if (params.christmasModel.equals("yes")) {
+			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+				if (act.contains("educ")) continue;
+				builder.restrict("2020-12-19", 1.0, act);
+			}
+			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
+			
+			christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
+			
+			christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
+			christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
+			
+			episimConfig.setInputDays(christmasInputDays);
+			double fraction = 0.795;
+			if (params.furhterMeasures.contains("outOfHomeExceptEdu59") || params.lockdown.equals("outOfHomeExceptEdu59")) fraction = 0.59;				
+			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+				if (act.contains("educ")) continue;
+				builder.restrict("2021-01-04", fraction, act);
+			}
+		}
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -116,26 +156,29 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	public static final class Params {
 
-		@GenerateSeeds(3)
+		@GenerateSeeds(1)
 		public long seed;
 
-		@StringParameter({"outOfHomeExceptEdu59"})
+		@StringParameter({"outOfHomeExceptEdu59", "fromData"})
 		public String lockdown;
 
-		@IntParameter({2000, Integer.MAX_VALUE})
+		@IntParameter({0, 2000, Integer.MAX_VALUE})
 		int tracingCapacity;
 
-		@StringParameter({"open", "school50", "N95masks", "school50&N95masks", "earlyHolidays"})
+		@StringParameter({"open", "school50", "N95masks", "school50&N95masks", "earlyHolidays", "noHolidays"})
 		public String schools;
 
-		@StringParameter({"no", "leisure10", "FFP@Work", "leisure10&FFP@Work"})
+		@StringParameter({"no", "outOfHomeExceptEdu59", "FFP@Work", "curfew18-6","curfew20-6","curfew22-6"})
 		public String furhterMeasures;
 		
-//		@IntParameter({Integer.MAX_VALUE, 3, 5, 7, 10})
-//		int ReducedGroupSize;
+		@StringParameter({"no", "yes"})
+		public String reducedGroupsize;
 		
-		@StringParameter({"no", "18-6","20-6","22-6"})
-		public String curfew;
+		@StringParameter({"no", "yes"})
+		public String christmasModel;
+		
+		
+
 
 	}
 
