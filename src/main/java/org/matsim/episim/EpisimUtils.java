@@ -73,9 +73,16 @@ public final class EpisimUtils {
 
 	/**
 	 * Gets the day of a week for a certain start day and current iteration.
+	 * The {@link DayOfWeek} can be overwritten by the input config and does not necessarily match the reality.
 	 */
-	public static DayOfWeek getDayOfWeek(LocalDate startDate, long iteration) {
-		return startDate.plusDays(iteration - 1).getDayOfWeek();
+	public static DayOfWeek getDayOfWeek(EpisimConfigGroup config, long iteration) {
+		LocalDate date = config.getStartDate().plusDays(iteration - 1);
+
+		// check if date was re-mapped
+		if (config.getInputDays().containsKey(date))
+			return config.getInputDays().get(date);
+
+		return date.getDayOfWeek();
 	}
 
 	/**

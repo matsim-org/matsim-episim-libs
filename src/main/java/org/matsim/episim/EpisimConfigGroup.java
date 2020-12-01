@@ -68,6 +68,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
 	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
+	private static final String INPUT_DAYS = "inputDays";
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 
@@ -91,6 +92,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			LocalDate.parse("2021-04-15"), 0.8,
 			LocalDate.parse("2021-09-15"), 0.8)
 	);
+
+	/**
+	 * Re-mapping of specific dates to different week days events.
+	 */
+	private final Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
+
 	/**
 	 * Which events to write in the output.
 	 */
@@ -547,6 +554,33 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	String getLeisureOutdoorFractionString() {
 		return JOINER.join(leisureOutdoorFraction);
 	}
+
+
+	/**
+	 * Get remapping of input days.
+	 */
+	public Map<LocalDate, DayOfWeek> getInputDays() {
+		return inputDays;
+	}
+
+	public void setInputDays(Map<LocalDate, DayOfWeek> days) {
+		this.inputDays.clear();
+		this.inputDays.putAll(days);
+	}
+
+	@StringSetter(INPUT_DAYS)
+	void setInputDays(String days) {
+		Map<String, String> map = SPLITTER.split(days);
+		setInputDays(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> DayOfWeek.valueOf(e.getValue())
+		)));
+	}
+
+	@StringGetter(INPUT_DAYS)
+	String getInputDaysString() {
+		return JOINER.join(inputDays);
+	}
+
 
 	/**
 	 * Create a configured instance of the desired policy.

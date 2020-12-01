@@ -697,7 +697,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (paramsMap.size() > 1000)
 			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
-		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig.getStartDate(), iteration);
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
