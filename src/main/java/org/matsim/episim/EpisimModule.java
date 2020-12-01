@@ -53,6 +53,7 @@ public class EpisimModule extends AbstractModule {
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);
+		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);
 
 		// Internal classes, should rarely be needed to be reconfigured
 		bind(EpisimRunner.class).in(Singleton.class);

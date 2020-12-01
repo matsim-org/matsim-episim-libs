@@ -3,10 +3,7 @@ package org.matsim.episim.model;
 import com.google.inject.Inject;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimReporting;
-import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
@@ -21,16 +18,19 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
+	private final VaccinationConfigGroup vaccinationConfig;
+
+	private final double[] susceptibility = new double[128];
+	private final double[] infectivity = new double[susceptibility.length];
 
 	private double outdoorFactor;
-
-	private double[] susceptibility = new double[128];
-	private double[] infectivity = new double[susceptibility.length];
+	private int iteration;
 
 	@Inject
 	AgeDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, Config config, EpisimReporting reporting, SplittableRandom rnd) {
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
 
@@ -44,6 +44,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	@Override
 	public void setIteration(int iteration) {
 		this.outdoorFactor = InfectionModelWithSeasonality.interpolateOutdoorFraction(episimConfig, iteration);
+		this.iteration = iteration;
 		reporting.reportOutdoorFraction(this.outdoorFactor, iteration);
 
 	}
@@ -62,6 +63,18 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		double susceptibility = this.susceptibility[ageTarget];
 		double infectivity = this.infectivity[ageInfector];
+
+		// apply reduced susceptibility of vaccinated persons
+		if (target.getDiseaseStatus() == EpisimPerson.DiseaseStatus.vaccinated) {
+
+			double daysVaccinated = target.daysSince(EpisimPerson.DiseaseStatus.vaccinated, iteration);
+			double scale = (1d / vaccinationConfig.getDaysBeforeFullEffect()) * daysVaccinated;
+			double effectiveness = vaccinationConfig.getEffectiveness();
+			if (scale < 1)
+				effectiveness *= scale;
+
+			susceptibility *= (1 - effectiveness);
+		}
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 

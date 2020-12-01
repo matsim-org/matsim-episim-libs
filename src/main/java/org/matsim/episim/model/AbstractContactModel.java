@@ -84,6 +84,7 @@ public abstract class AbstractContactModel implements ContactModel {
 			case susceptible:
 			case contagious:
 			case showingSymptoms:
+			case vaccinated:
 				return true;
 
 			case infectedButNotContagious:
@@ -304,7 +305,8 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
 		}
-		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {
+		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms
+			&& infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.vaccinated) {
 			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
 		}
 		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {

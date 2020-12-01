@@ -65,15 +65,28 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			defaultValue = "41.9 33.8 11.9 9.1 3.4", split = " ")
 	private List<Double> target;
 
+	@CommandLine.Option(names = "--remap", description = "Activity types to remap into split home facilities (randomly)",
+			defaultValue = "visit")
+	private Set<String> remapActivities;
+
 	private final SplittableRandom rnd = new SplittableRandom(0);
-	// new homes of persons if they have been reassigned
+	/**
+	 * New homes of persons if they have been reassigned
+	 */
 	private final Map<Id<Person>, Id<ActivityFacility>> newHomes = new HashMap<>();
-	// list of ids a facility was split into
+	/**
+	 * list of ids a facility was split into
+	 */
 	private final Map<Id<ActivityFacility>, List<Id<ActivityFacility>>> splitHomes = new HashMap<>();
-	// set of old valid home ids that have been converted
+	/**
+	 * set of old valid home ids that have been converted
+	 */
 	private final Set<String> oldHomeIds = new HashSet<>();
-	// store visits of a person
-	private final Map<Id<Person>, Id<ActivityFacility>> visits = new HashMap<>();
+
+	/**
+	 * Store remapped facilities for each person, individually by activity type
+	 */
+	private final Map<String, Map<Id<Person>, Id<ActivityFacility>>> remapped = new HashMap<>();
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new SplitHomeFacilities()).execute(args));
@@ -129,6 +142,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 		log.info("Targeting distribution: {}", target);
 		log.info("Distribution before splitting ({} total):", groups.size());
+		log.info("Remapping activities: {}", remapActivities);
 		int[] hist = calcHist(groups, target);
 		printHist(hist, target);
 
@@ -251,11 +265,13 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 			return homeId;
 
-		} else if (actType.equals("visit")) {
+		} else if (remapActivities.contains(actType)) {
 
-			// choose a visit randomly
+			Map<Id<Person>, Id<ActivityFacility>> mapping = remapped.computeIfAbsent(actType, k -> new HashMap<>());
+
+			// choose a new home randomly from the splitted ones
 			if (splitHomes.containsKey(homeId)) {
-				return visits.computeIfAbsent(personId, p -> {
+				return mapping.computeIfAbsent(personId, p -> {
 					List<Id<ActivityFacility>> split = splitHomes.get(homeId);
 					return split.get(rnd.nextInt(split.size()));
 				});

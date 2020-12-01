@@ -147,6 +147,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
+		cumulativeCases.put(EpisimPerson.DiseaseStatus.vaccinated, new Object2IntOpenHashMap<>());
 
 		writeConfigFiles();
 	}
@@ -258,6 +259,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					report.nRecovered++;
 					district.nRecovered++;
 					break;
+				case vaccinated:
+					report.nVaccinated++;
+					district.nVaccinated++;
+					break;
 				default:
 					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
 			}
@@ -284,17 +289,20 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
 			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
 			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
+			int nVaccinated = cumulativeCases.get(EpisimPerson.DiseaseStatus.vaccinated).getOrDefault(district, 0);
 
 			reports.get(district).nContagiousCumulative = nContagious;
 			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;
 			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;
 			reports.get(district).nCriticalCumulative = nCritical;
+			reports.get(district).nVaccinated = nVaccinated;
 
 			// Sum for total report
 			report.nContagiousCumulative += nContagious;
 			report.nShowingSymptomsCumulative += nShowingSymptoms;
 			report.nSeriouslySickCumulative += nSeriouslySick;
 			report.nCriticalCumulative += nCritical;
+			report.nVaccinatedCumulative += nVaccinated;
 		}
 
 		reports.forEach((k, v) -> v.scale(1 / sampleSize));
@@ -320,6 +328,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
+		log.warn("No of vaccinated persons={} / {}%", decimalFormat.format(t.nVaccinated), 100 * t.nVaccinated / t.nTotal());
 		log.warn("---");
 		log.warn("No of persons in quarantineFull={} / {}%", decimalFormat.format(t.nInQuarantineFull), 100 * t.nInQuarantineFull / t.nTotal());
 		log.warn("No of persons in quarantineHome (through tracing)={} / {}%", decimalFormat.format(t.nInQuarantineHome), 100 * t.nInQuarantineHome / t.nTotal());
@@ -352,6 +361,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);
 			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
 			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);
+
+			array[InfectionsWriterFields.nVaccinated.ordinal()] = Long.toString(r.nVaccinated);
+			array[InfectionsWriterFields.nVaccinatedCumulative.ordinal()] = Long.toString(r.nVaccinatedCumulative);
+
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
 			writer.append(infectionReport, array);
@@ -607,7 +620,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
     enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
 		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
-		nRecovered, nInQuarantineFull, nInQuarantineHome, district
+		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, nVaccinatedCumulative, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility}
@@ -637,6 +650,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		public long nRecovered = 0;
 		public long nInQuarantineFull = 0;
 		public long nInQuarantineHome = 0;
+		public long nVaccinated = 0;
+		public long nVaccinatedCumulative = 0;
 
 		/**
 		 * Constructor.
@@ -652,7 +667,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		 * Total number of persons in the simulation.
 		 */
 		public long nTotal() {
-			return nSusceptible + nTotalInfected + nRecovered;
+			return nSusceptible + nTotalInfected + nRecovered + nVaccinated;
 		}
 
 		void scale(double factor) {
@@ -670,6 +685,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			nRecovered *= factor;
 			nInQuarantineFull *= factor;
 			nInQuarantineHome *= factor;
+			nVaccinated *= factor;
+			nVaccinatedCumulative *= factor;
 		}
 	}
 }
