@@ -221,7 +221,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			// (same computation as above; could just memorize)
 
 			// need to differentiate which person might be the infector
-			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
+			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible ||
+					personLeavingContainer.getDiseaseStatus() == DiseaseStatus.vaccinated) {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, jointTimeInContainer);
