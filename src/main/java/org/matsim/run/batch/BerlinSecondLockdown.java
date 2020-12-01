@@ -28,19 +28,19 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 		return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
+				Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "secondLockdown");
+		return Metadata.of("berlin", "ReducedGroupSize");
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
 		SnzBerlinProductionScenario module = new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
-				Masks.yes ).setTracing( Tracing.yes ).setSnapshot( Snapshot.no ).setInfectionModel(
+				Masks.yes ).setTracing( Tracing.yes ).setSnapshot( Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel(
 				AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 
 		Config config = module.config();
@@ -48,46 +48,28 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		if (params.lockdown.equals("leisure63")) {
-			builder.clearAfter("2020-10-19", "leisure");
-			builder.restrict("2020-10-19", 0.63, "leisure");
-		}
-
-
 		if (params.lockdown.equals("outOfHomeExceptEdu59")) {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				builder.clearAfter("2020-10-19", act);
-				builder.restrict("2020-10-19", 0.59, act);
+				builder.restrict("2020-11-02", 0.59, act);
 			}
 		}
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), 300,
 				LocalDate.of(2020, 6, 15), 2000,
-				LocalDate.parse("2020-11-09"), params.tracingCapacity
+				LocalDate.parse("2020-12-07"), params.tracingCapacity
 		));
-
-//		tracingConfig.setTracingDelay_days(Map.of(
-//				LocalDate.of(2020, 1, 1), 4,
-//				LocalDate.parse("2020-11-23"), params.tracingDelay
-//		));
-//
-//		tracingConfig.setTracingProbability(Map.of(
-//				LocalDate.of(2020, 1, 1), 0.6,
-//				LocalDate.parse("2020-11-23"), params.tracingProbability
-//		));
-
 
 		if (params.schools.contains("school50")) {
 			builder
-					.restrict("2020-11-09", 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2020-12-07", 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 					//Weihnachtsferien
 					.restrict("2020-12-21", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 					.restrict("2021-01-03", 0.5, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
@@ -100,35 +82,32 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 			;
 		}
 		if (params.schools.contains("N95masks")) {
-			builder.restrict("2020-11-09", Restriction.ofMask(FaceMask.N95, 0.9), "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+			builder.restrict("2020-12-07", Restriction.ofMask(FaceMask.N95, 0.9), "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
 		}
 
 		if (params.schools.contains("earlyHolidays")) {
-			builder.restrict("2020-11-09", 0., "educ_higher");
-			builder.restrict("2020-11-09", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict("2020-12-07", 0., "educ_higher");
+			builder.restrict("2020-12-07", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict("2021-01-03", 0.2, "educ_higher");
 		}
 
-		if (params.furhterMeasures.equals("outOfHomeExceptEdu59")) {
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				builder.restrict("2020-11-09", 0.59, act);
-			}
+		if (params.furhterMeasures.contains("leisure10")) {
+			builder.restrict("2020-12-07", 0.1, "leisure");
 		}
-
-		if (params.furhterMeasures.equals("leisure10")) {
-			builder.restrict("2020-11-09", 0.1, "leisure");
+		
+		if (params.furhterMeasures.contains("FFP@Work")) {
+			builder.restrict("2020-12-07", Restriction.ofMask(FaceMask.N95, 0.9), "work");
 		}
+		
+//		if (params.ReducedGroupSize != Integer.MAX_VALUE) {
+//			builder.restrict("2020-11-30", Restriction.ofReducedGroupSize(4 * params.ReducedGroupSize), "leisure");
+//		}
+		
+		if (params.curfew.equals("18-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(18, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.curfew.equals("20-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(20, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.curfew.equals("22-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(22, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 
-		if (params.furhterMeasures.equals("outOfHomeExceptEdu59&leisure10")) {
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				if (act.contains("leisure")) continue;
-				builder.restrict("2020-11-09", 0.59, act);
-			}
-			builder.restrict("2020-11-09", 0.1, "leisure");
-		}
-
+		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 
@@ -137,28 +116,26 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 
 	public static final class Params {
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(3)
 		public long seed;
 
-		//2.11.
-		@StringParameter({"outOfHomeExceptEdu59", "outOfHomeExceptEdu84", "leisure63"})
+		@StringParameter({"outOfHomeExceptEdu59"})
 		public String lockdown;
 
-		//23.11.
 		@IntParameter({2000, Integer.MAX_VALUE})
 		int tracingCapacity;
-
-//		@Parameter({0.6, 0.9})
-//		double tracingProbability;
-//
-//		@IntParameter({2, 4})
-//		int tracingDelay;
 
 		@StringParameter({"open", "school50", "N95masks", "school50&N95masks", "earlyHolidays"})
 		public String schools;
 
-		@StringParameter({"no", "outOfHomeExceptEdu59", "leisure10", "outOfHomeExceptEdu59&leisure10"})
+		@StringParameter({"no", "leisure10", "FFP@Work", "leisure10&FFP@Work"})
 		public String furhterMeasures;
+		
+//		@IntParameter({Integer.MAX_VALUE, 3, 5, 7, 10})
+//		int ReducedGroupSize;
+		
+		@StringParameter({"no", "18-6","20-6","22-6"})
+		public String curfew;
 
 	}
 
