@@ -295,7 +295,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;
 			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;
 			reports.get(district).nCriticalCumulative = nCritical;
-			reports.get(district).nVaccinated = nVaccinated;
+			reports.get(district).nVaccinatedCumulative = nVaccinated;
 
 			// Sum for total report
 			report.nContagiousCumulative += nContagious;
