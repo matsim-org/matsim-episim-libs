@@ -28,6 +28,7 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.opengis.feature.simple.SimpleFeature;
 import picocli.CommandLine;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
@@ -93,7 +94,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 	}
 
 	@Override
-	public Integer call() {
+	public Integer call() throws IOException {
 
 		Config config = ConfigUtils.createConfig();
 		config.plans().setInputFile(population.toString());
@@ -210,6 +211,8 @@ public class SplitHomeFacilities implements Callable<Integer> {
 		hist = calcHist(groups, target);
 		printHist(hist, target);
 
+		Files.createDirectories(output);
+
 		String name = population.getFileName().toString().replace(".xml.gz", "") + "_split.xml.gz";
 		PopulationUtils.writePopulation(scenario.getPopulation(), output.resolve(name).toString());
 
@@ -273,7 +276,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 
 			Map<Id<Person>, Id<ActivityFacility>> mapping = remapped.computeIfAbsent(actType, k -> new HashMap<>());
 
-			// choose a new home randomly from the splitted ones
+			// choose a new home randomly from the split ones
 			if (splitHomes.containsKey(homeId)) {
 				return mapping.computeIfAbsent(personId, p -> {
 					List<Id<ActivityFacility>> split = splitHomes.get(homeId);
