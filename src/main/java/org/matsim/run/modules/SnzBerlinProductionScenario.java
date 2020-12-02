@@ -61,6 +61,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		private Tracing tracing = Tracing.yes;
 		private Snapshot snapshot = Snapshot.no;
 		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
+		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 		public Builder setSample( int sample ){
 			this.sample = sample;
 			return this;
@@ -89,8 +90,12 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			this.infectionModel = infectionModel;
 			return this;
 		}
+		public Builder setVaccinationModel( Class<? extends VaccinationModel> vaccinationModel ){
+			this.vaccinationModel = vaccinationModel;
+			return this;
+		}
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, snapshot, infectionModel, importOffset );
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, snapshot, infectionModel, importOffset, vaccinationModel );
 		}
 		public Builder setImportOffset( int importOffset ){
 			this.importOffset = importOffset;
@@ -112,6 +117,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	private final Tracing tracing;
 	private final Snapshot snapshot;
 	private final Class<? extends InfectionModel> infectionModel;
+	private final Class<? extends VaccinationModel> vaccinationModel;
 
 
 	/**
@@ -124,11 +130,11 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0 );
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 	}
 
 	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot,
-					    Class<? extends InfectionModel> infectionModel, int importOffset ) {
+					    Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -137,6 +143,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		this.snapshot = snapshot;
 		this.infectionModel = infectionModel;
 		this.importOffset = importOffset;
+		this.vaccinationModel = vaccinationModel;
 	}
 
 	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -161,6 +168,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
+		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 	}
 
 	@Provides
@@ -195,7 +203,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 
 		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
 
-//		episimConfig.setSnapshotInterval(14);
+//		episimConfig.setSnapshotInterval(30);
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
