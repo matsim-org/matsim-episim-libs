@@ -12,10 +12,7 @@ import org.junit.runners.Parameterized;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimModule;
-import org.matsim.episim.EpisimRunner;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.ConfigurableProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -30,6 +27,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -45,6 +43,7 @@ public class RunEpisimIntegrationTest {
 	public int it;
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
+	private VaccinationConfigGroup vaccinationConfig;
 	private EpisimRunner runner;
 
 	@Parameterized.Parameters(name = "it{0}")
@@ -71,6 +70,7 @@ public class RunEpisimIntegrationTest {
 
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
+		vaccinationConfig = injector.getInstance(VaccinationConfigGroup.class);
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
@@ -152,6 +152,23 @@ public class RunEpisimIntegrationTest {
 		);
 
 		runner.run(it);
+	}
+
+	@Test
+	public void testVaccination() throws IOException {
+
+		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
+			LocalDate.MIN, 100
+		));
+
+		runner.run(it);
+
+		Path baseCase = Path.of(utils.getClassInputDirectory(), utils.getMethodName().replace("Vaccination", "BaseCase"));
+		List<String> baseLines = Files.readAllLines(baseCase.resolve("infections.txt"));
+
+		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));
+
+		assertThat(baseLines).isNotEqualTo(cmpLines);
 	}
 
 	static class TestScenario extends AbstractModule {

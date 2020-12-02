@@ -205,6 +205,10 @@ public final class EpisimUtils {
 	public static double interpolateEntry(NavigableMap<LocalDate, ? extends Number> map, LocalDate date) {
 
 		Map.Entry<LocalDate, ? extends Number> floor = map.floorEntry(date);
+
+		if (floor == null)
+			return map.firstEntry().getValue().doubleValue();
+
 		if (floor.getKey().equals(date))
 			return floor.getValue().doubleValue();
 

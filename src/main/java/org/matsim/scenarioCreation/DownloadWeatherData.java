@@ -77,7 +77,10 @@ public class DownloadWeatherData implements Callable<Integer> {
 		log.info("Loading weather data for station {}", station);
 
 		BufferedWriter writer = Files.newBufferedWriter(output, StandardOpenOption.CREATE);
-		CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(
+		CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT.withCommentMarker('#').withHeaderComments(
+				"Source: Meteostat (https://meteostat.net/).",
+				"Raw data provided by NOAA (https://www.noaa.gov/), DWD (https://www.dwd.de/) and others (https://dev.meteostat.net/docs/sources.html)."
+		).withHeader(
 				"date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
 		);
 

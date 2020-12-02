@@ -245,6 +245,10 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			writer.closeFile();
 		}
 
+		for (Map.Entry<String, Map<Id<Person>, Id<ActivityFacility>>> e : remapped.entrySet()) {
+			log.info("Remapped {} {} activities",e.getKey(), e.getValue().size());
+		}
+
 		return 0;
 	}
 

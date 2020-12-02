@@ -43,9 +43,9 @@ public class DefaultContactModelTest {
 		SplittableRandom rnd = new SplittableRandom(1);
 
 		config = EpisimTestUtils.createTestConfig();
-		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
+		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		infectionModel = new DefaultInfectionModel(new DefaultFaceMaskModel(rnd), config);
-		model = new DefaultContactModel(rnd, config, reporting, infectionModel ) ;
+		model = new DefaultContactModel(rnd, config, reporting, infectionModel);
 		restrictions = episimConfig.createInitialRestrictions();
 		model.setRestrictionsForIteration(1, restrictions);
 
@@ -265,7 +265,7 @@ public class DefaultContactModelTest {
 		assertThat(rate).isCloseTo(1, OFFSET);
 
 		// no contact between home quarantined persons
-		ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class ).getOrAddContainerParams("quarantine_home").setContactIntensity(0);
+		ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class).getOrAddContainerParams("quarantine_home").setContactIntensity(0);
 
 		rate = sampleInfectionRate(Duration.ofMinutes(30), "home",
 				() -> EpisimTestUtils.createFacility(5, "home", EpisimTestUtils.HOME_QUARANTINE),
@@ -338,10 +338,37 @@ public class DefaultContactModelTest {
 	}
 
 	@Test
+	public void vaccinated() {
+
+		VaccinationConfigGroup vac = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		vac.setEffectiveness(1.0);
+		vac.setDaysBeforeFullEffect(0);
+
+		Function<InfectionEventHandler.EpisimFacility, EpisimPerson> fp = f -> {
+			EpisimPerson p = EpisimTestUtils.createPerson("c10", f);
+			p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.vaccinated);
+			return p;
+		};
+
+		double rate = sampleInfectionRate(Duration.ofMinutes(10), "c10",
+				() -> EpisimTestUtils.createFacility(9, "c10", 10, EpisimTestUtils.CONTAGIOUS), fp);
+
+		assertThat(rate)
+				.isEqualTo(0);
+
+		vac.setDaysBeforeFullEffect(15);
+		rate = sampleInfectionRate(Duration.ofMinutes(10), "c10",
+				() -> EpisimTestUtils.createFacility(9, "c10", 10, EpisimTestUtils.CONTAGIOUS), fp);
+
+		assertThat(rate)
+				.isGreaterThan(0);
+	}
+
+	@Test
 	public void sameWithOrWithoutTracking() {
 		Config config = EpisimTestUtils.createTestConfig();
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule( config, EpisimConfigGroup.class );
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule( config, TracingConfigGroup.class );
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		// Container with persons of different state
 		Supplier<InfectionEventHandler.EpisimFacility> container = () -> {
@@ -359,18 +386,18 @@ public class DefaultContactModelTest {
 		EpisimReporting rNoTracking = mock(EpisimReporting.class);
 
 
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( Integer.MAX_VALUE );
-		tracingConfig.setMinContactDuration_sec( 0 );
-		model = new DefaultContactModel(new SplittableRandom(1), config, rNoTracking, infectionModel ) ;
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
+		tracingConfig.setMinContactDuration_sec(0);
+		model = new DefaultContactModel(new SplittableRandom(1), config, rNoTracking, infectionModel);
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);
 
 
 		EpisimTestUtils.resetIds();
 		EpisimReporting rTracking = mock(EpisimReporting.class);
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay( 0 );
-		tracingConfig.setMinContactDuration_sec( 0 );
-		model = new DefaultContactModel(new SplittableRandom(1), config, rTracking, infectionModel );
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
+		tracingConfig.setMinContactDuration_sec(0);
+		model = new DefaultContactModel(new SplittableRandom(1), config, rTracking, infectionModel);
 		model.setRestrictionsForIteration(1, episimConfig.createInitialRestrictions());
 
 		sampleTotalInfectionRate(500, Duration.ofMinutes(15), "leis", container);

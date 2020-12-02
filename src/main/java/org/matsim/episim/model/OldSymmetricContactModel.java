@@ -207,7 +207,7 @@ public final class OldSymmetricContactModel extends AbstractContactModel {
 			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
 
 			// need to differentiate which person might be the infector
-			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
+			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible || personLeavingContainer.getDiseaseStatus() == DiseaseStatus.vaccinated) {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, jointTimeInContainer);
