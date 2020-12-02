@@ -346,7 +346,7 @@ public class DefaultContactModelTest {
 
 		Function<InfectionEventHandler.EpisimFacility, EpisimPerson> fp = f -> {
 			EpisimPerson p = EpisimTestUtils.createPerson("c10", f);
-			p.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.vaccinated);
+			p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 			return p;
 		};
 

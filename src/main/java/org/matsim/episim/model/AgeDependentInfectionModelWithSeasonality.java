@@ -65,7 +65,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double infectivity = this.infectivity[ageInfector];
 
 		// apply reduced susceptibility of vaccinated persons
-		if (target.getDiseaseStatus() == EpisimPerson.DiseaseStatus.vaccinated) {
+		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
 			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
 		}
 

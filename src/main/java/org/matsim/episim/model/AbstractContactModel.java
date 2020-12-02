@@ -84,7 +84,6 @@ public abstract class AbstractContactModel implements ContactModel {
 			case susceptible:
 			case contagious:
 			case showingSymptoms:
-			case vaccinated:
 				return true;
 
 			case infectedButNotContagious:
@@ -108,12 +107,6 @@ public abstract class AbstractContactModel implements ContactModel {
 		// at least one of the persons must be susceptible
 		if (person1.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible && person2.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible)
 			return false;
-
-		// vaccinated persons don't infect others
-		if ((person1.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && person2.getDiseaseStatus() == EpisimPerson.DiseaseStatus.vaccinated) ||
-				(person1.getDiseaseStatus() == EpisimPerson.DiseaseStatus.vaccinated && person2.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible))
-			return false;
-
 		return (hasDiseaseStatusRelevantForInfectionDynamics(person1) && hasDiseaseStatusRelevantForInfectionDynamics(person2));
 	}
 
@@ -311,8 +304,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
 		}
-		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms
-				&& infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.vaccinated) {
+		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {
 			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
 		}
 		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {

@@ -49,7 +49,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 
 		// No transitions from susceptible
-		if (status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.vaccinated)
+		if (status == EpisimPerson.DiseaseStatus.susceptible)
 			return;
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);

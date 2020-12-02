@@ -42,7 +42,7 @@ public class InfectionModelWithSeasonalityTest {
 		infector.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);
 
 		EpisimPerson target = EpisimTestUtils.createPerson(reporting);
-		target.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.vaccinated);
+		target.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 
 		model.setIteration(1);
 		double prob = model.calcInfectionProbability(target, infector, restrictions, act, act, Duration.ofHours(1).getSeconds());

@@ -46,7 +46,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
-		double susceptibility = target.getDiseaseStatus() != EpisimPerson.DiseaseStatus.vaccinated ? 1
+		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
 				 : getVaccinationEffectiveness(target, vaccinationConfig, iteration);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
@@ -60,7 +60,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 * Calculate the current effectiveness of vaccination.
 	 */
 	static double getVaccinationEffectiveness(EpisimPerson target, VaccinationConfigGroup config, int iteration) {
-		double daysVaccinated = target.daysSince(EpisimPerson.DiseaseStatus.vaccinated, iteration);
+		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 		double scale = (1d / config.getDaysBeforeFullEffect()) * daysVaccinated;
 		double effectiveness = config.getEffectiveness();
 		if (scale < 1)

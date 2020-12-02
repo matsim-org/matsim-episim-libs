@@ -30,6 +30,7 @@ public class RandomVaccination implements VaccinationModel {
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, int availableVaccinations, int iteration, double now) {
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
+				.filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 				.collect(Collectors.toList());
 
 		if (candidates.size() < availableVaccinations) {
@@ -42,7 +43,7 @@ public class RandomVaccination implements VaccinationModel {
 		while (vaccinationsLeft > 0) {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
-				randomPerson.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.vaccinated);
+				randomPerson.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, iteration);
 				vaccinationsLeft--;
 			}
 		}

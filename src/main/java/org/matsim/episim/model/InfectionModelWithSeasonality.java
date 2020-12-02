@@ -52,7 +52,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
-		double susceptibility = target.getDiseaseStatus() != EpisimPerson.DiseaseStatus.vaccinated ? 1
+		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
 				: DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
