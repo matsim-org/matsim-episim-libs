@@ -46,7 +46,7 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	@CommandLine.Option(names = "--population", description = "Path to population file", required = true)
 	private Path p;
 
-	@CommandLine.Option(names = "--district", description = "District to filter for")
+	@CommandLine.Option(names = "--district", description = "District to filter for", defaultValue = "Berlin")
 	private String district = null;
 
 	@CommandLine.Option(names = "--detailed", description = "Write detailed stats for multiple infection status, non-aggregated")
