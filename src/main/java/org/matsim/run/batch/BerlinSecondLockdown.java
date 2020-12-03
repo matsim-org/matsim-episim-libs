@@ -114,12 +114,12 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		if (params.furhterMeasures.equals("curfew20-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(20, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		if (params.furhterMeasures.equals("curfew22-6")) builder.restrict("2020-12-07", Restriction.ofClosingHours(22, 6), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		
-		if (params.reducedGroupsize.equals("yes")) {
-			builder.restrict("2020-11-02", Restriction.ofReducedGroupSize(4 * 10), "leisure");
-			builder.restrict("2020-12-01", Restriction.ofReducedGroupSize(4 * 5), "leisure");
-		}
+//		if (params.reducedGroupsize.equals("yes")) {
+//			builder.restrict("2020-11-02", Restriction.ofReducedGroupSize(4 * 10), "leisure");
+//			builder.restrict("2020-12-01", Restriction.ofReducedGroupSize(4 * 5), "leisure");
+//		}
 		
-		if (params.christmasModel.equals("yes")) {
+		if (params.christmasModel.equals("permissive")) {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				builder.restrict("2020-12-19", 1.0, act);
@@ -148,6 +148,34 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 			}
 		}
 		
+		if (params.christmasModel.equals("restrictive")) {
+			double fraction = 0.795;
+			if (params.furhterMeasures.contains("outOfHomeExceptEdu59") || params.lockdown.equals("outOfHomeExceptEdu59")) fraction = 0.59;
+			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+				if (act.contains("educ")) continue;
+				builder.restrict("2020-12-24", 1.0, act);
+				builder.restrict("2020-12-27", fraction, act);
+				builder.restrict("2020-12-31", 1.0, act);
+				builder.restrict("2021-01-02", fraction, act);
+			}
+			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
+			
+			christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
+			
+			christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
+			christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
+			christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
+			
+			episimConfig.setInputDays(christmasInputDays);			
+		}
+		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 
@@ -171,10 +199,10 @@ public class BerlinSecondLockdown implements BatchRun<BerlinSecondLockdown.Param
 		@StringParameter({"no", "outOfHomeExceptEdu59", "FFP@Work", "curfew18-6","curfew20-6","curfew22-6"})
 		public String furhterMeasures;
 		
-		@StringParameter({"no", "yes"})
-		public String reducedGroupsize;
+//		@StringParameter({"no", "yes"})
+//		public String reducedGroupsize;
 		
-		@StringParameter({"no", "yes"})
+		@StringParameter({"no", "restrictive", "permissive"})
 		public String christmasModel;
 		
 		
