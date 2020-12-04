@@ -129,7 +129,8 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null, null, Map.of());
+		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null,
+				new ClosingHours(0, 0), Map.of());
 	}
 
 	/**
@@ -463,8 +464,15 @@ public final class Restriction {
 	}
 
 	@Nullable
-	public ClosingHours getClosingHours() {
+	ClosingHours getClosingHours() {
 		return closingHours;
+	}
+
+	/**
+	 * Whether closing hours are set.
+	 */
+	public boolean hasClosingHours() {
+		return closingHours != null && closingHours.to != closingHours.from;
 	}
 
 	@Nullable
@@ -542,9 +550,6 @@ public final class Restriction {
 		public final int length;
 
 		ClosingHours(int from, int to) {
-			if (from == to)
-				throw new IllegalArgumentException("Closing time must be different from each other.");
-
 			this.from = from;
 			this.to = to;
 			this.overnight = from > to;

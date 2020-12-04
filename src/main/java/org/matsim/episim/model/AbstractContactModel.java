@@ -270,7 +270,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 		// no closing hour set
-		if (r.getClosingHours() == null) {
+		if (!r.hasClosingHours()) {
 			return now - max;
 		}
 

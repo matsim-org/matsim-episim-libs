@@ -35,10 +35,10 @@ public class RestrictionTest {
 		assertThat(r.getMaxGroupSize()).isEqualTo(20);
 		assertThat(r.getReducedGroupSize()).isEqualTo(5);
 
+		assertThat(r.hasClosingHours()).isTrue();
 		assertThat(r.getClosingHours()).isEqualTo(new Restriction.ClosingHours(hours(0), hours(7)));
 
-		//assertThatExceptionOfType(IllegalArgumentException.class)
-		//		.isThrownBy(() -> r.merge(Restriction.ofExposure(0.4).asMap()));
+		assertThat(Restriction.ofClosingHours(0, 0).hasClosingHours()).isFalse();
 
 	}
 
