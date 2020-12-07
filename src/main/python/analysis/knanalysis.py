@@ -11,11 +11,19 @@ from cycler import cycler
 
 # In[]:
 
-cc = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv', sep=",").fillna(value=0.)
-cc.index = pd.to_datetime( cc['year'].apply(str) + '-' + cc['month'].apply(str) + '-' + cc['day'].apply(str) )
+rkiDiseaseImport = pd.read_csv('rkiDiseaseImport.tsv', sep='\t', parse_dates=['date']).fillna(value=0.)
+rkiDiseaseImport.set_index('date', inplace=True)
 
-dd = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv', sep=",").fillna(value=0.)
-dd.index = pd.to_datetime( dd['year'].apply(str) + '-' + dd['month'].apply(str) + '-' + dd['day'].apply(str) )
+casesReferenceDate = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv', sep=",").fillna(value=0.)
+casesReferenceDate.index = pd.to_datetime(casesReferenceDate['year'].apply(str) + '-' + casesReferenceDate['month'].apply(str) + '-' + casesReferenceDate['day'].apply(str))
+casesReferenceDate2 = pd.concat( [casesReferenceDate,rkiDiseaseImport]).fillna(value=0.)
+casesReferenceDate.drop(casesReferenceDate.index, inplace=True)
+
+casesReportingDate = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv', sep=",").fillna(value=0.)
+casesReportingDate.index = pd.to_datetime(casesReportingDate['year'].apply(str) + '-' + casesReportingDate['month'].apply(str) + '-' + casesReportingDate['day'].apply(str))
+casesReportingDate2 = pd.concat( [casesReportingDate,rkiDiseaseImport]).fillna(value=0.)
+casesReportingDate.drop(casesReportingDate.index, inplace=True)
+
 
 ss = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv', sep=",",parse_dates=['Datum'],dayfirst=True).fillna(value=0.)
 ss.index = pd.to_datetime(ss['Datum'])
@@ -261,26 +269,41 @@ hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
 
 # base = 'output/temperature0_10.0-temperature1_20.0-thetaFactor_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration*.'
 
-# base = 'output/temperature0_12.5-temperature1_32.5-thetaFactor_0.7-childInfectivitySusceptibility_1.6-tracingCap_2000-importFactorAfterJune_0.0/calibration*.'
+# base = 'output/temperature0_12.5-temperature1_32.5-thetaFactor_0.7-childInfectivitySusceptibility_1.0-tracingCap_500-importFactorAfterJune_0.25/calibration*.'
 
-base = 'output/temperatureMidPoint_22.5-thetaFactor_0.7-tracingCap_500-importFactorAfterJune_0.25-newbornSusceptibility_0.0-newbornInfectivity_0.7-grownUpAge_16/calibration*.'
+# base = 'output/temperatureMidPoint_22.5-thetaFactor_0.7-tracingCap_500-importFactorAfterJune_0.0-newbornSusceptibility_0.0-newbornInfectivity_0.7-grownUpAge_16/calibration*.'
+
+# base = 'output/tempMidPoint_20.0-tempPm_0.0-thetaFactor_0.7-tracingCap_500-impFactAftJun_0.25/calibration*.'
+
+# base = 'output/tempXTheta_15.0_1.0-tempPm_0.0-tracingCap_2000-impFactAftJun_0.25-grownUpAge_16/calibration*.'
+# base = 'output/tempXTheta_25.0_0.65-tempPm_0.0-tracingCap_200-impFactAftJun_0.0-grownUpAge_24/calibration*.'
+# base = 'output/tempXTheta_25.0_0.65-tempPm_0.0-impFactBefJun_4.0-youthAge_7-youthSuscept_1.0-grownUpAge_16-impFactAftJun_0.0-tracingCap_2000/calibration*.'
+
+base = 'output/tempXTheta_25.0_0.65-tempPm_0.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.0-grownUpAge_24-impFactAftJun_0.0-tracCapApr_300-tracCapJun_0/calibration*.'
 
 glob_glob = glob.glob(base + 'infections.txt')
 print(glob_glob)
+assert( len(glob_glob) == 1 )
+
 for textfile in glob_glob:
-    rr = pd.read_csv(textfile, sep='\t')
-rr['date'] = pd.to_datetime(rr['date'])
-rr.set_index('date',inplace=True)
+    infections = pd.read_csv(textfile, sep='\t')
+infections['date'] = pd.to_datetime(infections['date'])
+infections.set_index('date', inplace=True)
 
 for textfile in glob.glob(base + 'diseaseImport.tsv'):
-    di = pd.read_csv( textfile, sep='\t')
-di['date'] = pd.to_datetime( di['date'] )
-di.set_index('date',inplace=True)
+    diseaseImport = pd.read_csv(textfile, sep='\t')
+diseaseImport['date'] = pd.to_datetime(diseaseImport['date'])
+diseaseImport.set_index('date', inplace=True)
 
-infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
-nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
-nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
-nTotalInfected = rr.loc[rr['district'] == 'Berlin', ['nTotalInfected']]
+for textfile in glob.glob(base + 'outdoorFraction.tsv'):
+    outdoorFraction = pd.read_csv(textfile, sep='\t')
+outdoorFraction['date'] = pd.to_datetime(outdoorFraction['date'])
+outdoorFraction.set_index('date', inplace=True)
+
+infectedCumulative = infections.loc[infections['district'] == 'Berlin', ['nInfectedCumulative']]
+nContagious = infections.loc[infections['district'] == 'Berlin', ['nContagiousCumulative']]
+nShowingSymptoms = infections.loc[infections['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
+nTotalInfected = infections.loc[infections['district'] == 'Berlin', ['nTotalInfected']]
 # infectedCumulative = rr.loc[rr['district'] == 'unknown', ['nInfectedCumulative']]
 # nContagious = rr.loc[rr['district'] == 'unknown', ['nContagiousCumulative']]
 # nShowingSymptoms = rr.loc[rr['district'] == 'unknown', ['nShowingSymptomsCumulative']]
@@ -306,40 +329,35 @@ fit6 = pd.Series(42 * np.exp(np.arange(0, 300, 1) * np.log(2.) / 20))
 fit6.index = pd.date_range(start="2020-08-20", periods=fit6.size)
 
 rr3 = pd.concat([
-    cc['cases'].resample('7D').mean(),
+    (casesReferenceDate2['cases'] - casesReferenceDate2['nInfected']).resample('W').mean(),
     infectedCumulative.diff().rolling('7D').mean(),
     nContagious.diff().rolling('7D').mean(),
     nShowingSymptoms.diff().resample('7D').mean(),
-    ss['Anteil Positiv Berlin Meldewoche'] * 25,
+    ss['Anteil Positiv Berlin Meldewoche'] * 70,
     nTotalInfected,
     #fit4, fit5, fit6,
-    di['nInfected'],
-    dd['cases'].resample('7D').mean()
+    diseaseImport['nInfected'],
+    (casesReportingDate2['cases'] - casesReportingDate2['nInfected']).resample('W').mean(),
+    (1.-0.99*outdoorFraction['outdoorFraction'].resample('W').mean()) * 10
 ], axis=1)
-# rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
-# rr3 = pd.concat([cc['cases']])
 
 # disease import:
 # rr3.at[pd.to_datetime("2020-02-24"),'diseaseImport'] = 0.9
-# rr3.at[pd.to_datetime("2020-03-09"),'diseaseImport'] = 23.1
-# rr3.at[pd.to_datetime("2020-03-23"),'diseaseImport'] = 3.9
-# rr3.at[pd.to_datetime("2020-06-08"),'diseaseImport'] = 0.1
-# rr3.at[pd.to_datetime("2020-07-13"),'diseaseImport'] = 0.9
-# rr3.at[pd.to_datetime("2020-08-10"),'diseaseImport'] = 17.9
-# rr3.at[pd.to_datetime("2020-09-07"),'diseaseImport'] = 5.4
-#
+# ...
 # rr3['diseaseImport'].interpolate(inplace=True)
 
 pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 
 default_cycler = ( cycler(color=      ['r', 'g', 'b', 'y','purple','purple','orange','cyan','brown','r','orange']) +
-                             cycler(linestyle= ['','', '', '','','','','','','-','']) +
-                             cycler(marker=  ['.','','','o','.','','','','','','.']))
+                             cycler(linestyle= ['','', '', '','','','-','','','-','']) +
+                             cycler(marker=  ['.','','','','.','','','.','o','','.']))
 pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=True,grid=True)
+axes = rr3.plot(logy=True,grid=True,legend=None)
 axes.set_ylim(0.9,4000)
 axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-12-01'))
+pyplot.errorbar(rr3.index,rr3['nShowingSymptomsCumulative'],yerr=3*np.sqrt(rr3['nShowingSymptomsCumulative']) )
+
 # pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
 # pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
@@ -351,26 +369,31 @@ axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-12-01'))
 # pyplot.plot( pd.to_datetime('2020-03-14'), 800, 'ro' )
 # pyplot.text( pd.to_datetime('2020-03-14'), 800, '1st day of school closures (sat)')
 
+# noinspection PyUnresolvedReferences
 pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':10})
+pyplot.plot( pd.to_datetime('2020-05-14'), 800, 'yo')
+pyplot.text( pd.to_datetime('2020-05-14'), 800, 'KW 20 mid')
 pyplot.plot( pd.to_datetime('2020-10-01'), 800, 'yo')
 pyplot.text( pd.to_datetime('2020-10-01'), 800, 'KW 40 mid')
-pyplot.legend(loc='upper center')
+# pyplot.legend(loc='upper center')
 
 pyplot.show()
 ############################################
 ############################################
 # In[]:
+#
 
 # --
 
-infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
+infected = infections.loc[infections['district'] == 'Berlin' , ['nSeriouslySick', 'nCritical']]
 
 
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 
+fact = 4
 rr3 = pd.concat([
-    hh['Stationäre Behandlung'].resample('7D').mean(),
-    hh['Intensivmedizin'].resample('7D').mean(),
+    hh['Stationäre Behandlung'].resample('7D').mean() * fact,
+    hh['Intensivmedizin'].resample('7D').mean() * fact,
     infected['shouldBeInHospital'].resample('7D').mean(),
     infected['nCritical'].resample('7D').mean()
 ], axis=1).fillna(value=0.)
@@ -378,15 +401,17 @@ rr3 = pd.concat([
 # pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple','orange','cyan','r','g']) +
-                  cycler(linestyle=['', '', '', '','-','','','','-','']) +
-                  cycler(marker=['.','.','o','o',",",'','o','','','o']))
+                  cycler(linestyle=['', '', '', '','','','','','-','']) +
+                  cycler(marker=['.','.','','',",",'','o','','','o']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
 axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2021-01-01'))
-axes.set_ylim(4.1,2000)
+axes.set_ylim(4.1,5000)
 pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':10})
 pyplot.plot( pd.to_datetime('2020-10-01'), 10, 'yo')
 pyplot.text( pd.to_datetime('2020-10-01'), 10, 'KW 40 mid')
+pyplot.errorbar(rr3.index,rr3['shouldBeInHospital'],yerr=3*np.sqrt(rr3['shouldBeInHospital']) )
+pyplot.errorbar(rr3.index,rr3['nCritical'],yerr=3*np.sqrt(rr3['nCritical']) )
 pyplot.show()
 
 ############################################

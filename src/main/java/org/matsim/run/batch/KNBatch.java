@@ -19,8 +19,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 
-import static org.matsim.run.modules.SnzBerlinProductionScenario.Builder;
-import static org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
+import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
 
 /**
@@ -54,22 +53,42 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		Config config = module.config();
 		config.global().setRandomSeed(4711);
 
+		String[] tempXTheta = params.tempXTheta.split( "_" );
+		double tempMidPoint = Double.parseDouble( tempXTheta[0] );
+		double theta = Double.parseDouble( tempXTheta[1] );
+
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * theta );
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 //		episimConfig.setSnapshotInterval( 30 );
 
 //		episimConfig.getAgeInfectivity().replaceAll((k,v) ->  k < 20 ? v * params.childInfectivitySusceptibility : 1);
 //		episimConfig.getAgeSusceptibility().replaceAll((k,v) -> k < 20 ? v * params.childInfectivitySusceptibility : 1);
 
-		episimConfig.setAgeInfectivity( Map.of( 0,params.newbornInfectivity,params.grownUpAge,1.) );
-		episimConfig.setAgeSusceptibility( Map.of( 0,params.newbornSusceptibility, params.grownUpAge, 1.) );
+		// The following are actually the wrong way round, influencing many of my tryout runs.  kai, dec'20
+//		double newbornInfect=0.;
+//		double newbornSuscept=0.7;
+
+
+//		episimConfig.setAgeInfectivity( Map.of(
+//				0,0.,
+//				params.youthAge-1,0.,
+//				params.youthAge,1.,
+//				params.grownUpAge,1.
+//						      ) );
+
+		episimConfig.setAgeSusceptibility( Map.of(
+				0,params.childSusc, params.youthAge-1,params.childSusc,
+				params.youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
+				params.grownUpAge,1.
+				));
 
 
 //		if (params.summerEnd.equals("fromWeather" )) {
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
-						2, params.temperatureMidPoint-10, params.temperatureMidPoint+10 );
+						2, tempMidPoint-params.tempPm, tempMidPoint+params.tempPm );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch ( IOException e) {
 				throw new RuntimeException( e );
@@ -89,32 +108,30 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		int importOffset = 0;
-		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * 1)));
-		SnzBerlinProductionScenario.interpolateImport( importMap, 1., LocalDate.parse( "2020-02-24" ).plusDays( importOffset ),
-				LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
-		SnzBerlinProductionScenario.interpolateImport( importMap, 1., LocalDate.parse( "2020-03-09" ).plusDays( importOffset ),
-				LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
-		SnzBerlinProductionScenario.interpolateImport( importMap, 1., LocalDate.parse( "2020-03-23" ).plusDays( importOffset ),
-				LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
-
-		double importFactor = params.importFactorAfterJune;
-		if (importFactor == 0.) {
-			importMap.put(LocalDate.parse("2020-06-08"), 1);
-		} else {
-			SnzBerlinProductionScenario.interpolateImport( importMap, importFactor, LocalDate.parse( "2020-06-08" ).plusDays( importOffset ),
-					LocalDate.parse( "2020-07-13" ).plusDays( importOffset ), 0.1, 2.7 );
-			SnzBerlinProductionScenario.interpolateImport( importMap, importFactor, LocalDate.parse( "2020-07-13" ).plusDays( importOffset ),
-					LocalDate.parse( "2020-08-10" ).plusDays( importOffset ), 2.7, 17.9 );
-			SnzBerlinProductionScenario.interpolateImport( importMap, importFactor, LocalDate.parse( "2020-08-10" ).plusDays( importOffset ),
-					LocalDate.parse( "2020-09-07" ).plusDays( importOffset ), 17.9, 5.4 );
+		{
+			double importFactor = params.impFactBefJun;
+			importMap.put( episimConfig.getStartDate(), Math.max( 1, (int) Math.round( 0.9 * 1 ) ) );
+			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ), LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
+			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
+			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
+		}
+		{
+			double importFactor = params.impFactAftJun;
+			if( importFactor == 0. ){
+				importMap.put( LocalDate.parse( "2020-06-08" ), 1 );
+			} else{
+				interpolateImport( importMap, importFactor, LocalDate.parse( "2020-06-08" ).plusDays( importOffset ), LocalDate.parse( "2020-07-13" ).plusDays( importOffset ), 0.1, 2.7 );
+				interpolateImport( importMap, importFactor, LocalDate.parse( "2020-07-13" ).plusDays( importOffset ), LocalDate.parse( "2020-08-10" ).plusDays( importOffset ), 2.7, 17.9 );
+				interpolateImport( importMap, importFactor, LocalDate.parse( "2020-08-10" ).plusDays( importOffset ), LocalDate.parse( "2020-09-07" ).plusDays( importOffset ), 17.9, 5.4 );
+			}
 		}
 		episimConfig.setInfections_pers_per_day(importMap);
 
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), 300,
-				LocalDate.of(2020, 6, 15), params.tracingCap
+				LocalDate.of(2020, 4, 1), params.tracCapApr,
+				LocalDate.of(2020, 6, 15), params.tracCapJun
 								     ) );
 
 		tracingConfig.setTracingDelay_days( Map.of(
@@ -128,27 +145,40 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	}
 
 	public static final class Params {
-		//		@GenerateSeeds(1) long seed;
+
+		@StringParameter({
+//				"15.0_1.0",
+//				"17.5_0.8","20.0_0.75","22.5_0.7",
+				"25.0_0.65"
+		}) String tempXTheta;
+		@Parameter( { 0. } ) double tempPm;
+		@Parameter({4.0}) double impFactBefJun;
+		@Parameter ({0.0}) double childSusc;
+		@IntParameter( {7} ) int youthAge;
+		@Parameter({0.}) double youthSusc;
+		@IntParameter( {24} ) int grownUpAge;
+		@Parameter({0.0}) double impFactAftJun;
+		@IntParameter({600,1200}) int tracCapApr;
+		@IntParameter({0}) int tracCapJun;
+
+//		@GenerateSeeds(1) long seed;
 //		@IntParameter({IMPORT_OFFSET}) int importOffset;
-		@Parameter( { 22.5 } ) double temperatureMidPoint; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
-//		@Parameter( { 22.5+10. } ) double temperature1; //
-		@Parameter({0.8}) double thetaFactor;
-//		@IntParameter({4}) int tracingDelay;
+//		@Parameter( { 15.,20.,25.,30. } ) double tempMidPoint; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
+//		@Parameter({0.7}) double thetaFactor;
+// 		@IntParameter({4}) int tracingDelay;
 //		@Parameter({1.5}) double childInfectivitySusceptibility;
 //		@StringParameter({"fromWeather"}) String summerEnd;
-		@IntParameter({500,2000}) int tracingCap;
-		@Parameter({0.25}) double importFactorAfterJune;
-		@Parameter({0.}) double newbornSusceptibility;
-		@Parameter({0.7}) double newbornInfectivity;
-		@IntParameter( {16,18,20} ) int grownUpAge;
+//		@Parameter({0.}) double newbornSuscept;
+//		@Parameter({0.7}) double newbornInfect;
+
 	}
 
 	public static void main( String[] args ){
 		String [] args2 = {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 270 )
+				RunParallel.OPTION_THREADS, Integer.toString( 2 ),
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 )
 		};
 
 		RunParallel.main( args2 );
