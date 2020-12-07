@@ -743,7 +743,7 @@ public final class EpisimUtils {
 
 
 		Reader in = new FileReader(weatherDataPath);
-		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().parse(in);
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();

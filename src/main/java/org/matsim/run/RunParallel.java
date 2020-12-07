@@ -36,6 +36,7 @@ import org.matsim.episim.*;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Files;
@@ -105,6 +106,10 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--silent", defaultValue = "false", description = "Disable info and warn logging")
 	private boolean silent;
 
+	public static final String OPTION_METADATA = "--write-metadata";
+	@CommandLine.Option(names = OPTION_METADATA, description = "Write metadata to output directory.", defaultValue = "false")
+	private boolean writeMetadata;
+
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new RunParallel()).execute(args));
@@ -153,8 +158,19 @@ public class RunParallel<T> implements Callable<Integer> {
 			replay = injector.getInstance(ReplayHandler.class);
 		}
 
+		BufferedWriter infoWriter = null;
+		if (writeMetadata) {
+			CreateBatteryForCluster.writeMetadata(output, prepare);
+			infoWriter = CreateBatteryForCluster.writeInfoHeader(output, prepare);
+		}
+
 		int i = 0;
 		for (PreparedRun.Run run : prepare.runs) {
+
+			if (writeMetadata) {
+				CreateBatteryForCluster.writeRunToInfo(infoWriter, run, prepare.getName());
+			}
+
 			if (i++ % totalWorker != workerIndex)
 				continue;
 
@@ -166,7 +182,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
 
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
-								episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+					episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
 
 			sameInput &= Objects.equals(baseConfig.vehicles().getVehiclesFile(), run.config.vehicles().getVehiclesFile());
 			sameInput &= Objects.equals(baseConfig.plans().getInputFile(), run.config.plans().getInputFile());
@@ -187,6 +203,10 @@ public class RunParallel<T> implements Callable<Integer> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
 					}));
+		}
+
+		if (writeMetadata) {
+			infoWriter.close();
 		}
 
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
