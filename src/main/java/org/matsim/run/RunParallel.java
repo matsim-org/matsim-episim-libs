@@ -168,7 +168,7 @@ public class RunParallel<T> implements Callable<Integer> {
 		for (PreparedRun.Run run : prepare.runs) {
 
 			if (writeMetadata) {
-				CreateBatteryForCluster.writeRunToInfo(infoWriter, run, prepare.getName());
+				CreateBatteryForCluster.writeRunToInfo(infoWriter, output, prepare, run, prepare.getName());
 			}
 
 			if (i++ % totalWorker != workerIndex)

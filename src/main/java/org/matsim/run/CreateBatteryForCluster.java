@@ -121,7 +121,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		for (PreparedRun.Run run : prepare.runs) {
 
-			String configFileName = writeRunToInfo(infoWriter, run, runName);
+			String configFileName = writeRunToInfo(infoWriter, batchOutput, prepare, run, runName);
 
 			noBindings &= ((BatchRun) prepare.setup).getBindings(run.id, run.args) == null;
 
@@ -221,11 +221,13 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	 * Writes one line into the info.txt for one run.
 	 * @return config file name
 	 */
-	static String  writeRunToInfo(BufferedWriter infoWriter, PreparedRun.Run run, String runName) throws IOException {
+	static String  writeRunToInfo(BufferedWriter infoWriter, Path batchOutput, PreparedRun prepare, PreparedRun.Run run, String runName) throws IOException {
 		String runId = runName + run.id;
 		String configFileName = "config_" + runName + run.id + ".xml";
 
-		List<String> line = Lists.newArrayList("run.sh", configFileName, runId, "output");
+		String outputPath = batchOutput + "/" + prepare.getOutputName(run);
+
+		List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
 		line.addAll(run.params.stream().map(EpisimUtils::asString).collect(Collectors.toList()));
 
 		// base case is not contained in the info file
