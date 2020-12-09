@@ -44,7 +44,7 @@ aggregate_run() {
     copy_output *.rValues.txt $tmp/$run .csv
     copy_output *.diseaseImport.tsv $tmp/$run
     copy_output *.infectionsPerActivity.txt $tmp/$run .tsv
-
+	copy_output *.outdoorFraction.tsv $tmp/$run
     for OUTPUT in *.post.*.*; do
         copy_output $OUTPUT $tmp/$run
     done
