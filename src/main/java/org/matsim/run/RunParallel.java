@@ -212,7 +212,11 @@ public class RunParallel<T> implements Callable<Integer> {
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
 
 		// Wait for all futures to complete
-		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).exceptionally( e -> {
+			log.error("Tasks finished with error", e);
+			return null;
+		}
+		).join();
 
 		log.info("Finished all tasks");
 		executor.shutdown();
