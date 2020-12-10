@@ -17,7 +17,9 @@ import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.annotation.Nullable;
@@ -34,12 +36,12 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 		if (params == null) {
 			return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-					Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(VaccinationByAge.class).createSnzBerlinProductionScenario();
+					Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(VaccinationByAge.class).createSnzBerlinProductionScenario();
 		}
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 		if (params.vaccinationModel.equals("RandomVaccination")) vaccinationModel = RandomVaccination.class;
 		return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
+				Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -52,7 +54,7 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 		if (params.vaccinationModel.equals("RandomVaccination")) vaccinationModel = RandomVaccination.class;
 		SnzBerlinProductionScenario module = new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
+				Snapshot.episim_snapshot_240_2020_10_12 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
 
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
@@ -63,18 +65,42 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		
-		if (params.lockdown.equals("outOfHomeExceptEdu59")) {
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				builder.clearAfter("2020-11-02", act);
-				builder.restrict("2020-11-02", 0.59, act);
-			}
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			builder.clearAfter("2020-11-02", act);
+			builder.restrict("2020-11-02", 0.59, act);
 		}
+		
 		
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
 			builder.restrict("2021-01-04", params.outOfHomeFraction, act);
 		}
+		
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			builder.restrict("2020-12-24", 1.0, act);
+			builder.restrict("2020-12-27", 0.59, act);
+			builder.restrict("2020-12-31", 1.0, act);
+			builder.restrict("2021-01-02", 0.59, act);
+		}
+		
+		Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
+		
+		christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
+		
+		christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
+		christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
+		christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
+		
+		episimConfig.setInputDays(christmasInputDays);	
 
 		VaccinationConfigGroup vaccinationConfigGroup = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		
@@ -85,10 +111,9 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 			vaccinationConfigGroup.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse(params.vaccinationsAfter), params.dailyCapacity,
-					LocalDate.parse(params.vaccinationsAfter).plusDays((int) 450000 / params.dailyCapacity), 0
+					LocalDate.parse(params.vaccinationsAfter).plusDays((int) params.totalCapacity / params.dailyCapacity), 0
 					));
 		}
-
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -99,9 +124,6 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 
 		@GenerateSeeds(1)
 		public long seed;
-
-		@StringParameter({"outOfHomeExceptEdu59"})
-		public String lockdown;
 		
 		@StringParameter({"VaccinationByAge", "RandomVaccination"})
 		public String vaccinationModel;
@@ -118,8 +140,11 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 		@StringParameter({"never", "2021-01-04", "2021-02-01"})
 		public String vaccinationsAfter;
 		
-		@IntParameter({100, 1000, 10000, 20000, 40000})
+		@IntParameter({5000, 20000, 40000})
 		public int dailyCapacity;
+		
+		@IntParameter({400000, 10000000})
+		public int totalCapacity;
 	}
 
 
