@@ -61,7 +61,7 @@ public class BerlinVaccinationsWinterEnd implements BatchRun<BerlinVaccinationsW
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		
