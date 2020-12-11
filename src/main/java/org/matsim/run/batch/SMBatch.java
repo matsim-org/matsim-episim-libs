@@ -8,6 +8,8 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
@@ -104,24 +106,36 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		
 		episimConfig.setHospitalFactor(params.hospitalFactor);
 		
+		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+		
+		builder.apply("2020-08-20", "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))) , "leisure");
+		
+		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+		
+
+		
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), params.tracingCapacitySpring,
 				LocalDate.of(2020, 6, 15), params.tracingCapacityAfterJune
 		));
-
+		
+		
 
 		return config;
 	}
 
 	public static final class Params {
 
-		@GenerateSeeds(5)
+		@GenerateSeeds(1)
 		public long seed;
 		
-		@Parameter({0.6, 0.65, 0.7, 0.75, 0.8})
+		@Parameter({0.55, 0.6, 0.65, 0.7})
 		double theta;
+		
+		@Parameter({1., 1.5, 2., 2.5, 3.})
+		double leisureFactor;
 		
 		@Parameter({0.5})
 		double rainThreshold;
@@ -129,17 +143,16 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@Parameter({4.})
 		double importFactorSpring;
 		
-//		@Parameter({0., 0.25})
-		@Parameter({0.})
+		@Parameter({0., 0.25})
 		double importFactorAfterJune;
 		
-		@Parameter({20., 25.})
+		@Parameter({25.})
 		double weatherMidPont;
 		
-		@Parameter({0.5, 1.})
+		@Parameter({0.5})
 		double hospitalFactor;
 		
-		@IntParameter({20, 10, 5, 0})
+		@IntParameter({5})
 		int weatherSlope;
 		
 //		@StringParameter({
@@ -149,15 +162,13 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 //			"25.0_0.55", "25.0_0.6", "25.0_0.65", "25.0_0.7"})
 //		public String weatherMidPoint_Theta;
 		
-		@StringParameter({"0", "current"})
+		@StringParameter({"0", "current", "linear"})
 		public String childSusInf;
 		
-//		@IntParameter({0, 600, 1200})
-		@IntParameter({0})
+		@IntParameter({0, 600, 1200})
 		int tracingCapacitySpring;
 		
-//		@IntParameter({0, 2000})
-		@IntParameter({0})
+		@IntParameter({0, 2000, 5000})
 		int tracingCapacityAfterJune;
 		
 
