@@ -123,7 +123,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
 	/**
 	 * Empty constructor is needed for running scenario from command line.
@@ -297,7 +297,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 
 	@Provides
 	@Singleton
-	private Scenario scenario(Config config) {
+	public Scenario scenario(Config config) {
 
 		// guice will use no args constructor by default, we check if this config was initialized
 		// this is only the case when no explicit binding are required
