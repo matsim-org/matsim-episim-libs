@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.run.RunParallel;
@@ -79,7 +80,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //						      ) );
 
 		episimConfig.setAgeSusceptibility( Map.of(
-				0,params.childSusc, params.youthAge-1,params.childSusc,
+				0,0., params.youthAge-1,0.,
 				params.youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
 				params.grownUpAge,1.
 				));
@@ -129,9 +130,10 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
+		tracingConfig.setCapacityType( CapacityType.valueOf( params.tracCapType ) );
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), params.tracCapApr,
-				LocalDate.of(2020, 6, 15), params.tracCapJun
+				LocalDate.of(2020, 4, 1), params.tracCap
+//				, LocalDate.of(2020, 6, 15), params.tracCapJun
 								     ) );
 
 		tracingConfig.setTracingDelay_days( Map.of(
@@ -148,18 +150,23 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 		@StringParameter({
 //				"15.0_1.0",
-//				"17.5_0.8","20.0_0.75","22.5_0.7",
-				"25.0_0.65"
+//				"17.5_0.8",
+//				"20.0_0.75",
+//				"22.5_0.7",
+				"25.0_0.7",
+//				"25.0_0.65" // child/youth inf = 0
+//				"25.0_0.60"
+//				"25.0_0.55"
 		}) String tempXTheta;
-		@Parameter( { 0. } ) double tempPm;
+		@Parameter( { 5. } ) double tempPm;
 		@Parameter({4.0}) double impFactBefJun;
-		@Parameter ({0.0}) double childSusc;
 		@IntParameter( {7} ) int youthAge;
-		@Parameter({0.}) double youthSusc;
-		@IntParameter( {24} ) int grownUpAge;
-		@Parameter({0.0}) double impFactAftJun;
-		@IntParameter({600,1200}) int tracCapApr;
-		@IntParameter({0}) int tracCapJun;
+		@Parameter({0.5}) double youthSusc;
+		@IntParameter( {16} ) int grownUpAge;
+		@Parameter({0.5}) double impFactAftJun;
+		@StringParameter( { "PER_PERSON" } ) String tracCapType;
+		@IntParameter({100,200}) int tracCap;
+
 
 //		@GenerateSeeds(1) long seed;
 //		@IntParameter({IMPORT_OFFSET}) int importOffset;
@@ -177,8 +184,9 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		String [] args2 = {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString( 2 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 )
+				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
+				RunParallel.OPTION_METADATA
 		};
 
 		RunParallel.main( args2 );
