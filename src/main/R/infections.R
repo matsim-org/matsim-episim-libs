@@ -1,7 +1,9 @@
 library(tidyverse)
 library(lubridate)
 
-rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
+# setwd("/Users/sebastianmuller/git/matsim-episim")
+
+rkiCasesReferenceDate <- read_csv("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
 # cc %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> cc2
 cc2 <- rkiCasesReferenceDate %>%
   mutate( date=make_date(year,month,day)) %>%
@@ -9,7 +11,7 @@ cc2 <- rkiCasesReferenceDate %>%
   group_by(week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
-rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
+rkiCasesReportingDate <- read_csv("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
 # dd %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> dd2
 dd2 <- rkiCasesReportingDate %>%
   mutate( date=make_date(year,month,day)) %>%
@@ -17,8 +19,19 @@ dd2 <- rkiCasesReportingDate %>%
   group_by(week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
-rkiSurveillance <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv")
+rkiSurveillance <- read_csv("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv")
 ee2 <- rkiSurveillance %>% mutate(date = dmy(Datum) )
+
+hospitalData <- read_csv("https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv")
+names(hospitalData)<-str_replace_all(names(hospitalData), c(" " = "." , "," = "" ))
+ff2 <- hospitalData %>%
+  mutate( date=as.Date(strptime(Datum, "%d.%m.%Y"))) %>%
+  mutate(inHospital=Stationäre.Behandlung) %>%
+  mutate(inICU=Intensivmedizin) %>%
+  mutate( week = isoweek(date) ) %>%
+  group_by(week) %>%
+  summarise(inHospital=mean(inHospital), inICU=mean(inICU), date=mean(date))
+
 
 # Fieberkurve:
 # https://github.com/corona-datenspende/data-updates/tree/master/detections
@@ -60,6 +73,12 @@ base <- paste0("output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-childSus
 
 base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.5-tracCapType_PER_PERSON-tracCap_100/"
 
+# ---
+# Sebastian:
+# base <- "output/seed_4711-theta_0.6-rainThreshold_0.5-importFactorSpring_4.0-importFactorAfterJune_0.0-weatherMidPont_25.0-hospitalFactor_0.5-weatherSlope_5-childSusInf_linear-tracingCapacitySpring_0-tracingCapacityAfterJune_350/"
+# base <- "output/seed_4711-theta_0.6-rainThreshold_0.5-importFactorSpring_4.0-importFactorAfterJune_0.0-weatherMidPont_25.0-hospitalFactor_0.5-weatherSlope_5-childSusInf_linear-tracingCapacitySpring_210-tracingCapacityAfterJune_350/"
+
+
 
 # ---
 
@@ -73,6 +92,13 @@ infections2 <- infections %>%
   mutate( week = isoweek(date) ) %>%
   group_by( week ) %>%
   summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date))
+hospital <- infections %>%
+  filter(district=="Berlin") %>%
+  mutate( inHospital=nSeriouslySick + nCritical ) %>%
+  mutate( inICU=nCritical ) %>%
+  mutate( week = isoweek(date) ) %>%
+  group_by( week ) %>%
+  summarize( inHospital=mean(inHospital), inICU=mean(inICU), date=mean(date))
 
 # ---
 
@@ -114,6 +140,22 @@ ggplot() + scale_y_log10() +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2020-12-31')), expand = expansion() ) +
   geom_point(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=2) +
   geom_point(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=2)
+
+# ---
+
+ggplot() + scale_y_log10() +
+  geom_point(data=ff2,mapping=aes(x=date,y=inHospital),size=2,color="blue",show.legend = TRUE) +
+  geom_point(data=ff2,mapping=aes(x=date,y=inICU),size=2,color="green",show.legend = TRUE) +
+  # geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
+  # geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
+  # geom_point(data=ee2,mapping=aes(x=date,y=4*170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
+  geom_errorbar(data=hospital, mapping = aes(x=date, ymin=pmax(0.5,inHospital-3*sqrt(inHospital)), ymax=inHospital+3*sqrt(inHospital)), size=1., color="orange") +
+  geom_errorbar(data=hospital, mapping = aes(x=date, ymin=pmax(0.5,inICU-3*sqrt(inICU)), ymax=inICU+3*sqrt(inICU)), size=1., color="red") +
+  # geom_point(data=outdoors2, mapping = aes(x=date,y=10^mean),size=2,color="green4") +
+  labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2020-12-31')), expand = expansion() )
+  # geom_point(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=2) +
+  # geom_point(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=2)
 
 
 
