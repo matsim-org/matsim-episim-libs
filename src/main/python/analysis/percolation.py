@@ -23,6 +23,12 @@ from plot import comparison_plots
 
 #%%
 
+sns.set_style("whitegrid")
+sns.set_context("paper")
+sns.set_palette("deep")
+
+#%%
+
 output = "C:/Users/chris/Development/matsim-org/matsim-episim/output"
 
 G = {

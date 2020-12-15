@@ -84,7 +84,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		@GenerateSeeds(value = 1500)
 		public long seed;
 
-		@Parameter({0.09, 0.1, 0.11})
+		@Parameter({0.07, 0.08})
 		public double fraction;
 
 	}
