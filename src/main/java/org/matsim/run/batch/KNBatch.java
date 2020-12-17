@@ -64,6 +64,9 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 //		episimConfig.setSnapshotInterval( 30 );
 
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(params.ciLsrFct*9.24);
+
+
 //		episimConfig.getAgeInfectivity().replaceAll((k,v) ->  k < 20 ? v * params.childInfectivitySusceptibility : 1);
 //		episimConfig.getAgeSusceptibility().replaceAll((k,v) -> k < 20 ? v * params.childInfectivitySusceptibility : 1);
 
@@ -79,17 +82,19 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //				params.grownUpAge,1.
 //						      ) );
 
+		Integer youthAge = 7;
 		episimConfig.setAgeSusceptibility( Map.of(
-				0,0., params.youthAge-1,0.,
-				params.youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
+				0,0., youthAge-1,0.,
+				youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
 				params.grownUpAge,1.
-				));
+							 ) );
 
 
 //		if (params.summerEnd.equals("fromWeather" )) {
 			try {
+				double tempPm = 5.;
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
-						2, tempMidPoint-params.tempPm, tempMidPoint+params.tempPm );
+						2, tempMidPoint-tempPm, tempMidPoint+tempPm );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch ( IOException e) {
 				throw new RuntimeException( e );
@@ -110,7 +115,8 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		int importOffset = 0;
 		{
-			double importFactor = params.impFactBefJun;
+			double impFactBefJun = 4.;
+			double importFactor = impFactBefJun;
 			importMap.put( episimConfig.getStartDate(), Math.max( 1, (int) Math.round( 0.9 * 1 ) ) );
 			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ), LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
 			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
@@ -130,9 +136,9 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
-		tracingConfig.setCapacityType( CapacityType.valueOf( params.tracCapType ) );
+		tracingConfig.setCapacityType( CapacityType.PER_PERSON );
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), params.tracCap
+				LocalDate.of(2020, 4, 1), params.tracCapInf
 //				, LocalDate.of(2020, 6, 15), params.tracCapJun
 								     ) );
 
@@ -153,19 +159,25 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //				"17.5_0.8",
 //				"20.0_0.75",
 //				"22.5_0.7",
-				"25.0_0.7",
+//				"25.0_0.7",
 //				"25.0_0.65" // child/youth inf = 0
 //				"25.0_0.60"
 //				"25.0_0.55"
+//				"25.0_0.50",
+//				"25.0_0.45",
+				"25.0_0.40"
+//				"25.0_0.35",
+//				"25.0_0.30"
 		}) String tempXTheta;
-		@Parameter( { 5. } ) double tempPm;
-		@Parameter({4.0}) double impFactBefJun;
-		@IntParameter( {7} ) int youthAge;
+//		@Parameter( { 5. } ) double tempPm;
+//		@Parameter({4.0}) double impFactBefJun;
+//		@IntParameter( {7} ) int youthAge;
 		@Parameter({0.5}) double youthSusc;
 		@IntParameter( {16} ) int grownUpAge;
-		@Parameter({0.5}) double impFactAftJun;
-		@StringParameter( { "PER_PERSON" } ) String tracCapType;
-		@IntParameter({100,200}) int tracCap;
+		@Parameter({2.0}) double ciLsrFct;
+		@Parameter({0.}) double impFactAftJun;
+//		@StringParameter( { "PER_PERSON" } ) String tracCapType;
+		@IntParameter({100,200,300}) int tracCapInf;
 
 
 //		@GenerateSeeds(1) long seed;
@@ -180,11 +192,16 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	}
 
+	@Override
+	public int getOffset() {
+		return 400;
+	}
+
 	public static void main( String[] args ){
 		String [] args2 = {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
+				RunParallel.OPTION_THREADS, Integer.toString( 3 ),
 				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
 				RunParallel.OPTION_METADATA
 		};

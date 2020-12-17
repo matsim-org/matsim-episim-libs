@@ -1,5 +1,6 @@
 library(tidyverse)
 library(lubridate)
+library(cowplot)
 
 rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
 # cc %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> cc2
@@ -18,7 +19,15 @@ dd2 <- rkiCasesReportingDate %>%
   summarise(mean=mean(cases),date=mean(date))
 
 rkiSurveillance <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv")
-ee2 <- rkiSurveillance %>% mutate(date = dmy(Datum) )
+rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(Datum) )
+
+hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv')
+hospital2 <- hospital %>%
+  mutate(date = dmy(Datum)) %>%
+  mutate( week = isoweek(date) ) %>%
+  group_by(week) %>%
+  summarise( mean=mean(`Stationäre Behandlung`),date=mean(date))
+
 
 # Fieberkurve:
 # https://github.com/corona-datenspende/data-updates/tree/master/detections
@@ -33,32 +42,92 @@ ee2 <- rkiSurveillance %>% mutate(date = dmy(Datum) )
 
 # best from Tmid/slope variations:
 #base <- "output/tempXTheta_25.0_0.65-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.0-grownUpAge_24-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
-
+#
 # add youth:
 #base <- "output/tempXTheta_25.0_0.65-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_24-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
 #base <- "output/tempXTheta_25.0_0.65-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
-#base <- "output/tempXTheta_25.0_0.65-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
+base <- "output/tempXTheta_25.0_0.65-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
+# (** this one is not so bad **)
 
 # reduce Theta:
 #base <- "output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_24-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
 #base <- "output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
 #base <- "output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_0.0-tracCapApr_0-tracCapJun_0/"
 
-# increase contact tracing:
-tracing <- 300
-base <- paste0("output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_24-impFactAftJun_0.0-tracCapApr_", tracing, "-tracCapJun_", tracing, "/")
+# # for these I do not trust the tracing algo:
+# # increase contact tracing:
+# #tracing <- 300
+# #base <- paste0("output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_24-impFactAftJun_0.0-tracCapApr_", tracing, "-tracCapJun_", tracing, "/")
+# #
+# # increase disease import
+# #tracing <- 600
+# #base <- paste0("output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_24-impFactAftJun_0.5-tracCapApr_", tracing, "-tracCapJun_", tracing, "/")
+# #
+# # start from some earlier place:
+# #tracing <- 2400
+# #base <- paste0("output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapApr_", tracing, "-tracCapJun_", tracing, "/")
 
-# increase disease import
-tracing <- 300
-base <- paste0("output/tempXTheta_25.0_0.60-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_24-impFactAftJun_0.5-tracCapApr_", tracing, "-tracCapJun_", tracing, "/")
-
-# start from some earlier place:
-tracing <- 2400
-base <- paste0("output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapApr_", tracing, "-tracCapJun_", tracing, "/")
-
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_0/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_50/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_100/"
 #base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_200/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_400/"
 
-base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.5-tracCapType_PER_PERSON-tracCap_100/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.5-tracCapType_PER_PERSON-tracCap_100/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.5-tracCapType_PER_PERSON-tracCap_200/"
+
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_400/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_1.0-tracCapType_PER_PERSON-tracCap_400/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_0.5-grownUpAge_16-impFactAftJun_2.0-tracCapType_PER_PERSON-tracCap_400/"
+
+
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_0.0-tracCapType_PER_PERSON-tracCap_300/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_0.5-tracCapType_PER_PERSON-tracCap_300/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_1.0-tracCapType_PER_PERSON-tracCap_300/"
+#base <- "output/tempXTheta_25.0_0.7-tempPm_5.0-impFactBefJun_4.0-youthAge_7-youthSusc_1.0-grownUpAge_24-impFactAftJun_2.0-tracCapType_PER_PERSON-tracCap_300/"
+
+#base <- "output/tempXTheta_25.0_0.65-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapNInfections_0/"
+#base <- "output/tempXTheta_25.0_0.65-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapNInfections_0/"
+#base <- "output/tempXTheta_25.0_0.65-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapNInfections_0/"
+
+#base <- "output/tempXTheta_25.0_0.60-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.60-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.60-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+
+#base <- "output/tempXTheta_25.0_0.55-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+base <- "output/tempXTheta_25.0_0.55-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+base <- "output/tempXTheta_25.0_0.55-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+
+#base <- "output/tempXTheta_25.0_0.60-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.55-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.4-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.3-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.2-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_100/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_300/"
+
+base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.0-tracCapInf_100/"
+base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_0.5-tracCapInf_100/"
+base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_1.0-tracCapInf_100/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-impFactAftJun_2.0-tracCapInf_100/"
+
+#base <- "output/tempXTheta_25.0_0.55-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+
+base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.35-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.30-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 
 
 # ---
@@ -72,7 +141,7 @@ infections2 <- infections %>%
   mutate( newShowingSymptoms=nShowingSymptomsCumulative-lag(nShowingSymptomsCumulative)) %>%
   mutate( week = isoweek(date) ) %>%
   group_by( week ) %>%
-  summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date))
+  summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date), newNSeriouslySick=mean(nSeriouslySick) )
 
 # ---
 
@@ -104,19 +173,40 @@ restrictions2 <- separate(restrictions,"leisure", into = c("leisure", NA, NA), s
 
 # ---
 
-ggplot() + scale_y_log10() +
+p1 <- ggplot() + # scale_y_log10() +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
-  geom_point(data=ee2,mapping=aes(x=date,y=4*170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
+  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-3*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+3*sqrt(newShowingSymptoms)), size=1., color="orange") +
-  geom_point(data=outdoors2, mapping = aes(x=date,y=10^mean),size=2,color="green4") +
+  geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2020-12-31')), expand = expansion() ) +
-  geom_point(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=2) +
-  geom_point(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=2)
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
+  geom_line(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
+  geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
+
+p2 <- ggplot() + # scale_y_log10() +
+  geom_point( data=hospital2, mapping=aes(x=date,y=mean)) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
+  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newNSeriouslySick-3*sqrt(newNSeriouslySick)), ymax=newNSeriouslySick+3*sqrt(newNSeriouslySick)), size=1., color="orange")
+
+plot_grid( p1, p2, ncol = 1 )
+
+# library(sf)
+
+# library(tmap)
+
+# library(quickmap)
 
 
+#  library(nycflights13)
 
+# left_join: keep all rows in x
+# right_join: keep all rows in y
+# inner_join: keep all rows that are in both
+# full_join: keep all observations
+
+# semi_join: keep all rows in x that have a match in y
+# anti_join: drop all rows in x that have a match in y
 
 # scale_y_log10() +
 
