@@ -123,12 +123,58 @@ base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.5-im
 
 #base <- "output/tempXTheta_25.0_0.55-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 
-base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
-#base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 #base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 #base <- "output/tempXTheta_25.0_0.35-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 #base <- "output/tempXTheta_25.0_0.30-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 
+# 0.40:
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_100/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_300/"
+
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_200/"
+
+base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_1.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_2.0-tracCapInf_200/"
+
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_1.0-tracCapInf_300/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_2.0-tracCapInf_300/" #(*)
+
+# tracing caps of 400 or more, as are necessary in the following, are not plausible.
+
+# 0.45:
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_50/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_100/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_400/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_600/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_800/"
+
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.5-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_1.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_2.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.45-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_4.0-tracCapInf_200/"
+
+# 0.50:
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_50/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_100/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_400/"
+#base <- "output/tempXTheta_25.0_0.50-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_800/"
+
+# date-dependent tMid:
+#base <- "output/theta_0.5-tMidSpring_15.0-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
+
+base <- "output/theta_0.8-tMidSpring_15.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+
+# otherwise back to normal:
+base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
 
 # ---
 
@@ -173,21 +219,21 @@ restrictions2 <- separate(restrictions,"leisure", into = c("leisure", NA, NA), s
 
 # ---
 
-p1 <- ggplot() + # scale_y_log10() +
+p1 <- ggplot() + scale_y_log10() +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
-  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-3*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+3*sqrt(newShowingSymptoms)), size=1., color="orange") +
+  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
   geom_line(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
 
-p2 <- ggplot() + # scale_y_log10() +
+p2 <- ggplot() + scale_y_log10() +
   geom_point( data=hospital2, mapping=aes(x=date,y=mean)) +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
-  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newNSeriouslySick-3*sqrt(newNSeriouslySick)), ymax=newNSeriouslySick+3*sqrt(newNSeriouslySick)), size=1., color="orange")
+  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newNSeriouslySick-6*sqrt(newNSeriouslySick)), ymax=newNSeriouslySick+6*sqrt(newNSeriouslySick)), size=1., color="orange")
 
 plot_grid( p1, p2, ncol = 1 )
 

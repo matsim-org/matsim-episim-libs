@@ -28,6 +28,7 @@ import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
  */
 public class KNBatch implements BatchRun<KNBatch.Params> {
 	private static final int IMPORT_OFFSET = 0;
+
 //	private static final Snapshot snapshot = Snapshot.episim_snapshot_120_2020_06_14;
 	private static final Snapshot SNAPSHOT = Snapshot.no;
 
@@ -54,35 +55,15 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		Config config = module.config();
 		config.global().setRandomSeed(4711);
 
-		String[] tempXTheta = params.tempXTheta.split( "_" );
-		double tempMidPoint = Double.parseDouble( tempXTheta[0] );
-		double theta = Double.parseDouble( tempXTheta[1] );
-
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * theta );
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta );
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 //		episimConfig.setSnapshotInterval( 30 );
 
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(params.ciLsrFct*9.24);
 
-
-//		episimConfig.getAgeInfectivity().replaceAll((k,v) ->  k < 20 ? v * params.childInfectivitySusceptibility : 1);
-//		episimConfig.getAgeSusceptibility().replaceAll((k,v) -> k < 20 ? v * params.childInfectivitySusceptibility : 1);
-
-		// The following are actually the wrong way round, influencing many of my tryout runs.  kai, dec'20
-//		double newbornInfect=0.;
-//		double newbornSuscept=0.7;
-
-
-//		episimConfig.setAgeInfectivity( Map.of(
-//				0,0.,
-//				params.youthAge-1,0.,
-//				params.youthAge,1.,
-//				params.grownUpAge,1.
-//						      ) );
-
-		Integer youthAge = 7;
+		int youthAge = 7;
 		episimConfig.setAgeSusceptibility( Map.of(
 				0,0., youthAge-1,0.,
 				youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
@@ -92,9 +73,12 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 //		if (params.summerEnd.equals("fromWeather" )) {
 			try {
-				double tempPm = 5.;
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
-						2, tempMidPoint-tempPm, tempMidPoint+tempPm );
+//				double tempPm = 5.;
+//				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
+//						2, tempMidPoint-tempPm, tempMidPoint+tempPm );
+				Map<LocalDate,Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( "berlinWeather.csv",
+						2, params.tMidSpring, 25. );
+				System.out.println( outdoorFractions );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch ( IOException e) {
 				throw new RuntimeException( e );
@@ -154,30 +138,13 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	public static final class Params {
 
-		@StringParameter({
-//				"15.0_1.0",
-//				"17.5_0.8",
-//				"20.0_0.75",
-//				"22.5_0.7",
-//				"25.0_0.7",
-//				"25.0_0.65" // child/youth inf = 0
-//				"25.0_0.60"
-//				"25.0_0.55"
-//				"25.0_0.50",
-//				"25.0_0.45",
-				"25.0_0.40"
-//				"25.0_0.35",
-//				"25.0_0.30"
-		}) String tempXTheta;
-//		@Parameter( { 5. } ) double tempPm;
-//		@Parameter({4.0}) double impFactBefJun;
-//		@IntParameter( {7} ) int youthAge;
-		@Parameter({0.5}) double youthSusc;
+		@Parameter({0.65, 0.7}) double theta;
+		@Parameter({20.}) double tMidSpring;
+		@Parameter({0.0}) double youthSusc;
 		@IntParameter( {16} ) int grownUpAge;
-		@Parameter({2.0}) double ciLsrFct;
+		@Parameter({1.0}) double ciLsrFct;
 		@Parameter({0.}) double impFactAftJun;
-//		@StringParameter( { "PER_PERSON" } ) String tracCapType;
-		@IntParameter({100,200,300}) int tracCapInf;
+		@IntParameter({0}) int tracCapInf;
 
 
 //		@GenerateSeeds(1) long seed;
@@ -192,16 +159,13 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	}
 
-	@Override
-	public int getOffset() {
-		return 400;
-	}
+	@Override public int getOffset() { return 400; }
 
 	public static void main( String[] args ){
 		String [] args2 = {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString( 3 ),
+				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
 				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
 				RunParallel.OPTION_METADATA
 		};
