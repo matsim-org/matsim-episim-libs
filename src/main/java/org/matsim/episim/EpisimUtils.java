@@ -52,10 +52,7 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.time.LocalTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -731,13 +728,14 @@ public final class EpisimUtils {
 		return age;
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( String weatherDataPath, double rainThreshold, Double temperature0, Double temperature1 ) throws IOException {
-		if ( (temperature0==null && temperature1!=null) || (temperature0!=null && temperature1==null ) ) {
+	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( String weatherDataPath, double rainThreshold,
+										 Double temperatureIn, Double temperatureOut ) throws IOException {
+		if ( (temperatureIn==null && temperatureOut!=null) || (temperatureIn!=null && temperatureOut==null ) ) {
 			throw new RuntimeException( "one temperature is null, the other one is given; don't know how to interpret that; aborting ..." );
 		}
-		if ( temperature0==null ) {
-			temperature0 = 1.5;
-			temperature1 = 30.5;
+		if ( temperatureIn==null ) {
+			temperatureIn = 1.5;
+			temperatureOut = 30.5;
 			// should correspond to 0.0344 * tMax - 0.0518, which is what I found.  kai, nov'20
 		}
 
@@ -751,14 +749,14 @@ public final class EpisimUtils {
 		for (CSVRecord record : records) {
 			date = LocalDate.parse(record.get("date"), fmt);
 			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
-//				System.out.println("Scipping day because tmax or prcp data is not available. Date: " + date.toString());
+//				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
 				continue;
 			}
 
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
 
-			double outDoorFraction = (tMax-temperature0)/(temperature1-temperature0);
+			double outDoorFraction = (tMax-temperatureIn)/(temperatureOut-temperatureIn);
 
 			if (prcp > rainThreshold) {
 				outDoorFraction = outDoorFraction * 0.5;
@@ -774,6 +772,63 @@ public final class EpisimUtils {
 			}
 			outdoorFractions.put(date, outDoorFraction);
 		}
+		return outdoorFractions;
+	}
+
+	public static Map<LocalDate, Double> getOutdoorFractions2( String weatherDataPath, double rainThreshold, Double temperatureSpring, Double temperatureFall ) throws IOException{
+
+		final double tPm = 5.;
+
+		Reader in = new FileReader( weatherDataPath );
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
+		for (CSVRecord record : records) {
+//			System.out.println( record );
+			LocalDate date = LocalDate.parse( record.get( "date" ), fmt );
+			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
+//				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
+				continue;
+			}
+
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+
+			double tMid;
+			final LocalDate date1 = LocalDate.of( 2020, 6, 1 );
+			final LocalDate date2 = LocalDate.of( 2020, 8, 1 );
+			if ( date.isBefore( date1 ) ) {
+				tMid = temperatureSpring;
+			} else if ( date.isAfter( date2 ) ) {
+				tMid = temperatureFall;
+			} else {
+				double fraction = 1. * ChronoUnit.DAYS.between( date1, date ) / ChronoUnit.DAYS.between( date1, date2 );
+				tMid = (1.-fraction)* temperatureSpring + fraction * temperatureFall;
+			}
+			double tAllIn = tMid - tPm;
+			double tAllOut = tMid + tPm;
+
+			double outDoorFraction = (tMax-tAllIn)/(tAllOut-tAllIn);
+
+			if (prcp > rainThreshold) {
+				outDoorFraction = outDoorFraction * 0.5;
+			}
+
+			if (outDoorFraction > 1.) {
+				outDoorFraction = 1.;
+//				System.out.println("outDoorFraction is > 1. Setting to 1. Date: " + date.toString());
+			}
+			if (outDoorFraction < 0.) {
+				outDoorFraction = 0.;
+//				System.out.println("outDoorFraction is < 1. Setting to 0. Date: " + date.toString());
+			}
+
+			System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
+
+			outdoorFractions.put(date, outDoorFraction);
+		}
+//		System.exit(-1);
 		return outdoorFractions;
 	}
 }
