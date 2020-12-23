@@ -38,7 +38,8 @@ import java.util.function.Consumer;
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
  */
-public class FixedPolicy extends ShutdownPolicy {
+public final class FixedPolicy extends ShutdownPolicy {
+	// Classes should be final or non-public if not explicitly designed for inheritance.  kai, dec'20
 
 	/**
 	 * Constructor.
