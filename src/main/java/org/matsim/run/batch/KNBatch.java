@@ -10,6 +10,8 @@ import org.matsim.episim.*;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
@@ -61,15 +63,17 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 //		episimConfig.setSnapshotInterval( 30 );
 
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(params.ciLsrFct*9.24);
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24);
 
 		int youthAge = 7;
-		episimConfig.setAgeSusceptibility( Map.of(
-				0,0., youthAge-1,0.,
-				youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
-				params.grownUpAge,1.
-							 ) );
+		episimConfig.setAgeSusceptibility( Map.of( 0,0., youthAge-1,0., youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
+				params.grownUpAge,1. ) );
 
+		{
+			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse( episimConfig.getPolicy() );
+			builder.restrict("2020-11-01", Restriction.ofCiCorrection( params.ciCorrLeisFrmNov ), "leisure" );
+			episimConfig.setPolicy( FixedPolicy.class, builder.build() );
+		}
 
 //		if (params.summerEnd.equals("fromWeather" )) {
 			try {
@@ -100,14 +104,13 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		int importOffset = 0;
 		{
 			double impFactBefJun = 4.;
-			double importFactor = impFactBefJun;
 			importMap.put( episimConfig.getStartDate(), Math.max( 1, (int) Math.round( 0.9 * 1 ) ) );
-			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ), LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
-			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
-			interpolateImport( importMap, importFactor, LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
+			interpolateImport( importMap, impFactBefJun, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ), LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
+			interpolateImport( importMap, impFactBefJun, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
+			interpolateImport( importMap, impFactBefJun, LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
 		}
 		{
-			double importFactor = params.impFactAftJun;
+			double importFactor = params.imprtFctAftJun;
 			if( importFactor == 0. ){
 				importMap.put( LocalDate.parse( "2020-06-08" ), 1 );
 			} else{
@@ -138,12 +141,13 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	public static final class Params {
 
-		@Parameter({0.65, 0.7}) double theta;
+		@Parameter({0.65}) double theta;
 		@Parameter({20.}) double tMidSpring;
 		@Parameter({0.0}) double youthSusc;
 		@IntParameter( {16} ) int grownUpAge;
-		@Parameter({1.0}) double ciLsrFct;
-		@Parameter({0.}) double impFactAftJun;
+//		@Parameter({1.0}) double ciLsrFct;
+		@Parameter ({1.0,0.8}) double ciCorrLeisFrmNov;
+		@Parameter({2.}) double imprtFctAftJun;
 		@IntParameter({0}) int tracCapInf;
 
 

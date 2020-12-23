@@ -171,10 +171,31 @@ base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-im
 # date-dependent tMid:
 #base <- "output/theta_0.5-tMidSpring_15.0-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_0/"
 
-base <- "output/theta_0.8-tMidSpring_15.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
-
 # otherwise back to normal:
+#base <- "output/theta_0.8-tMidSpring_15.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+
+# ---
+
+# less extreme Tmid in spring:
 base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.8-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+
+# no youth susceptibility:
+base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+# # (ziemlich gut overall; kein "dip" bei Herbstferien; Herbstanstieg leicht zu stark; Knick Anfang Nov nicht ausreichend)
+#base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+
+# assume increased reduction of critical leisure acts from nov on:
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_1.0-imprtFctAftJun_0.0-tracCapInf_0/"
+base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.9-imprtFctAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.8-imprtFctAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.7-imprtFctAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.6-imprtFctAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.5-imprtFctAftJun_0.0-tracCapInf_0/"
+#
+#base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_1.0-imprtFctAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.5-imprtFctAftJun_0.0-tracCapInf_0/"
 
 # ---
 
@@ -223,6 +244,8 @@ p1 <- ggplot() + scale_y_log10() +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
+  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil positiver Tests Lagebericht`), color="red", size=2, show.legend = TRUE) +
+  geom_point(data=infections2, mapping = aes(x=date,y=newShowingSymptoms), color="orange", size=2 ) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
@@ -231,8 +254,9 @@ p1 <- ggplot() + scale_y_log10() +
   geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
 
 p2 <- ggplot() + scale_y_log10() +
-  geom_point( data=hospital2, mapping=aes(x=date,y=mean)) +
+  geom_point( data=hospital2, mapping=aes(x=date,y=mean),size=3) +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
+  geom_point( data=infections2, mapping = aes(x=date, y=`newNSeriouslySick`), color="orange", size=2) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newNSeriouslySick-6*sqrt(newNSeriouslySick)), ymax=newNSeriouslySick+6*sqrt(newNSeriouslySick)), size=1., color="orange")
 
 plot_grid( p1, p2, ncol = 1 )
