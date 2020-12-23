@@ -20,9 +20,7 @@
  */
 package org.matsim.episim;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.io.Resources;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.csv.CSVFormat;
@@ -38,7 +36,6 @@ import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
 import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
 import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Pair;
 import org.matsim.core.config.Config;
@@ -56,7 +53,6 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Common utility class for episim.
@@ -334,10 +330,13 @@ public final class EpisimUtils {
 	 * Creates restrictions from csv from Senozon data.
 	 * Restrictions at educational facilites are created manually.
 	 * Weekends and bank holidays in 2020 are interpolated.
+	 *
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	@Deprecated
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha, LocalDate changeDate,
 																	  double changedExposure) throws IOException {
+		// yyyy there are three "createRestrictionsFromCSV" methods.  Could we please combine them into a configurable class?  kai, dec'20
 
 		HashSet<String> activities = new HashSet<String>();
 
@@ -455,8 +454,15 @@ public final class EpisimUtils {
 	 * Read in restrictions from csv file. A support point will be calculated and intermediate values calculated for each week.
 	 *
 	 * @param alpha modulate the amount reduction
+	 *
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+		// yyyy In principle this should be
+		//
+		// 	return new CreateRestrictionsFromCSV(episimConfig).setInput( input ).setAlpha( alpha ).createPolicyConfigBuilder();
+		//
+		// but the code is not exactly the same so I do not know if they have the same functionalities.  kai, dec'20
 
 		Reader in = new FileReader(input);
 		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
@@ -528,110 +534,12 @@ public final class EpisimUtils {
 	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
 	 *
 	 * @param alpha modulate the amount reduction
+	 *
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
 																	   Extrapolation extrapolate) throws IOException {
-
-		Reader in = new FileReader(input);
-		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
-		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-		// activity reduction for notAtHome each day
-		Map<LocalDate, Double> days = new LinkedHashMap<>();
-
-		for (CSVRecord record : parser) {
-			LocalDate date = LocalDate.parse(record.get(0), fmt);
-
-			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
-
-			double remainingFraction = 1. + (value / 100.);
-			// modulate reduction with alpha
-			double reduction = Math.min(1., alpha * (1. - remainingFraction));
-			days.put(date, Math.min(1, 1 - reduction));
-		}
-
-		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
-				.stream().map(LocalDate::parse).collect(Collectors.toSet());
-
-		// activities to set
-		String[] act = episimConfig.getInfectionParams().stream()
-				.map(EpisimConfigGroup.InfectionParams::getContainerName)
-				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
-				.toArray(String[]::new);
-
-		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
-		LocalDate end = Iterables.getLast(days.keySet());
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-
-		// trend used for extrapolation
-		List<Double> trend = new ArrayList<>();
-
-		while (start.isBefore(end)) {
-
-			List<Double> values = new ArrayList<>();
-			for (int i = 0; i < 7; i++) {
-				LocalDate day = start.plusDays(i);
-				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
-						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
-					values.add(days.get(day));
-				}
-			}
-
-			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
-			trend.add(avg);
-
-			// Calc next sunday
-			int n = 7 - start.getDayOfWeek().getValue() % 7;
-			builder.restrict(start, avg, act);
-			start = start.plusDays(n);
-		}
-
-
-		// Use last weeks for the trend
-		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
-		start = start.plusDays(7);
-
-		if (extrapolate == Extrapolation.linear) {
-
-			int n = trend.size();
-			SimpleRegression reg = new SimpleRegression();
-			for (int i = 0; i < n; i++) {
-				reg.addData(i, trend.get(i));
-			}
-
-			// continue the trend
-			for (int i = 0; i < 8; i++) {
-				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
-				// System.out.println(start + " " + reg.predict(n + i));
-				start = start.plusDays(7);
-			}
-
-		} else if (extrapolate == Extrapolation.exponential) {
-
-			List<WeightedObservedPoint> points = new ArrayList<>();
-
-			int n = trend.size();
-			for (int i = 0; i < n; i++) {
-				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
-			}
-
-			Exponential f = new Exponential();
-			FuncFitter fitter = new FuncFitter(f);
-			double[] coeff = fitter.fit(points);
-
-			// continue the trend
-			for (int i = 0; i < 25; i++) {
-
-				double predict = f.value(i + n, coeff);
-				// System.out.println(start + " " + predict);
-				builder.restrict(start, Math.min(predict, 1), act);
-				start = start.plusDays(7);
-			}
-		}
-
-
-		return builder;
+		return new CreateRestrictionsFromCSV(episimConfig).setInput( input ).setAlpha( alpha ).setExtrapolation( extrapolate ).createPolicyConfigBuilder();
 	}
 
 	/**
@@ -694,7 +602,7 @@ public final class EpisimUtils {
 	/**
 	 * Exponential function in the form of 1 - a * exp(-x / b).
 	 */
-	private static final class Exponential implements ParametricUnivariateFunction {
+	static final class Exponential implements ParametricUnivariateFunction {
 
 		@Override
 		public double value(double x, double... parameters) {
