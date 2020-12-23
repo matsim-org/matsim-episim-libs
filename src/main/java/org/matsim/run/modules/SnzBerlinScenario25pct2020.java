@@ -49,8 +49,8 @@ import static org.matsim.episim.model.Transition.to;
  *
  * @see AbstractSnzScenario
  */
-public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
-
+public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
+	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -60,9 +60,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
-														Map<String, Double> ciCorrections, Extrapolation extrapolation,
-														long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare, boolean restrictUniversities) throws IOException {
+	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha, Map<String, Double> ciCorrections,
+							    Extrapolation extrapolation, long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+							    boolean restrictUniversities) throws IOException {
+		// note that there is already a builder around this
+
 		ConfigBuilder restrictions; 
 		
 		if (csv == null) restrictions = FixedPolicy.config();
