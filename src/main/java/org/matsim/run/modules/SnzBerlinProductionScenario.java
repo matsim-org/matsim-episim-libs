@@ -49,7 +49,9 @@ import java.util.Map;
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
  */
-public class SnzBerlinProductionScenario extends AbstractModule {
+public final class SnzBerlinProductionScenario extends AbstractModule {
+	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
+
 	private final int importOffset;
 
 	public static class Builder{
