@@ -683,9 +683,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractions2( String weatherDataPath, double rainThreshold, Double temperatureSpring, Double temperatureFall ) throws IOException{
-
-		final double tPm = 5.;
+	public static Map<LocalDate, Double> getOutdoorFractions2( String weatherDataPath, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange ) throws IOException{
 
 		Reader in = new FileReader( weatherDataPath );
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
@@ -707,15 +705,15 @@ public final class EpisimUtils {
 			final LocalDate date1 = LocalDate.of( 2020, 6, 1 );
 			final LocalDate date2 = LocalDate.of( 2020, 8, 1 );
 			if ( date.isBefore( date1 ) ) {
-				tMid = temperatureSpring;
+				tMid = TmidSpring;
 			} else if ( date.isAfter( date2 ) ) {
-				tMid = temperatureFall;
+				tMid = TmidFall;
 			} else {
 				double fraction = 1. * ChronoUnit.DAYS.between( date1, date ) / ChronoUnit.DAYS.between( date1, date2 );
-				tMid = (1.-fraction)* temperatureSpring + fraction * temperatureFall;
+				tMid = (1.-fraction)* TmidSpring + fraction * TmidFall;
 			}
-			double tAllIn = tMid - tPm;
-			double tAllOut = tMid + tPm;
+			double tAllIn = tMid - Trange;
+			double tAllOut = tMid + Trange;
 
 			double outDoorFraction = (tMax-tAllIn)/(tAllOut-tAllIn);
 
