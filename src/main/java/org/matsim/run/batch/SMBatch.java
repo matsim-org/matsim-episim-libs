@@ -10,6 +10,7 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
+import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
@@ -18,8 +19,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
-
 
 
 /**
@@ -77,7 +76,12 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		try {
 //			double weatherMidPont = Double.parseDouble(params.weatherMidPoint_Theta.split("_")[0]);
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", params.rainThreshold, params.weatherMidPont-params.weatherSlope, params.weatherMidPont+params.weatherSlope );
+//			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", params.rainThreshold, params.weatherMidPoint -params.weatherSlope, params.weatherMidPoint +params.weatherSlope );
+
+			double weatherMidPointSpring = Double.parseDouble( params.weatherMidPoints.split( "_" )[0] );
+			double weatherMidPointFall = Double.parseDouble( params.weatherMidPoints.split( "_" )[1] );
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( "berlinWeather.csv", params.rainThreshold, weatherMidPointSpring, weatherMidPointFall,
+					(double) params.weatherSlope );
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -131,10 +135,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@GenerateSeeds(1)
 		public long seed;
 		
-		@Parameter({0.55, 0.6, 0.65, 0.7})
+		@Parameter({0.5,0.55, 0.6, 0.65, 0.7,0.75,0.8})
 		double theta;
 		
-		@Parameter({1., 1.5, 2., 2.5, 3.})
+		@Parameter({1.})
 		double leisureFactor;
 		
 		@Parameter({0.5})
@@ -145,14 +149,19 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		
 		@Parameter({0., 0.25})
 		double importFactorAfterJune;
-		
-		@Parameter({25.})
-		double weatherMidPont;
-		
+
+		@StringParameter( {
+				"20.0_20.0","20.0_22.5","20.0_25.0",
+				"22.5_25.0","25.0_25.0"
+		} ) public String weatherMidPoints ;
+
+//		@Parameter({25.})
+//		double weatherMidPoint;
+//
 		@Parameter({0.5})
 		double hospitalFactor;
 		
-		@IntParameter({5})
+		@IntParameter({0,5,10})
 		int weatherSlope;
 		
 //		@StringParameter({
@@ -165,13 +174,25 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@StringParameter({"0", "current", "linear"})
 		public String childSusInf;
 		
-		@IntParameter({0, 600, 1200})
+		@IntParameter({0})
 		int tracingCapacitySpring;
 		
-		@IntParameter({0, 2000, 5000})
+		@IntParameter({0})
 		int tracingCapacityAfterJune;
 		
 
+	}
+
+	public static void main( String[] args ){
+		String [] args2 = {
+				RunParallel.OPTION_SETUP, SMBatch.class.getName(),
+				RunParallel.OPTION_PARAMS, Params.class.getName(),
+				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
+				RunParallel.OPTION_METADATA
+		};
+
+		RunParallel.main( args2 );
 	}
 
 

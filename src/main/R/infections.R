@@ -18,6 +18,16 @@ dd2 <- rkiCasesReportingDate %>%
   group_by(week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
+reducedActParticip <- read_tsv("~/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20201227.csv")
+reducedActParticip2 <- reducedActParticip %>%
+  mutate( date=ymd(date)) %>%
+  filter( !wday(date) %in% c(1,6,7) ) %>%
+  filter( !date %in% c( as.Date("2020-04-09"), as.Date("2020-04-13"), as.Date("2020-04-30"), as.Date("2020-05-07") ) ) %>%
+  mutate( week = isoweek(date) ) %>%
+  group_by(week) %>%
+  summarise(mean=1+0.01*mean(notAtHomeExceptLeisureAndEdu),date=mean(date))
+reducedActParticip2
+
 rkiSurveillance <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv")
 rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(Datum) )
 
@@ -208,7 +218,7 @@ infections2 <- infections %>%
   mutate( newShowingSymptoms=nShowingSymptomsCumulative-lag(nShowingSymptomsCumulative)) %>%
   mutate( week = isoweek(date) ) %>%
   group_by( week ) %>%
-  summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date), newNSeriouslySick=mean(nSeriouslySick) )
+  summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date), nSeriouslySick=mean(nSeriouslySick) )
 
 # ---
 
@@ -251,13 +261,14 @@ p1 <- ggplot() + scale_y_log10() +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
   geom_line(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
+  geom_point(data=reducedActParticip2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
 
 p2 <- ggplot() + scale_y_log10() +
   geom_point( data=hospital2, mapping=aes(x=date,y=mean),size=3) +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
-  geom_point( data=infections2, mapping = aes(x=date, y=`newNSeriouslySick`), color="orange", size=2) +
-  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newNSeriouslySick-6*sqrt(newNSeriouslySick)), ymax=newNSeriouslySick+6*sqrt(newNSeriouslySick)), size=1., color="orange")
+  geom_point( data=infections2, mapping = aes(x=date, y=nSeriouslySick), color="orange", size=2) +
+  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,nSeriouslySick-6*sqrt(nSeriouslySick)), ymax=nSeriouslySick+6*sqrt(nSeriouslySick)), size=1., color="orange")
 
 plot_grid( p1, p2, ncol = 1 )
 

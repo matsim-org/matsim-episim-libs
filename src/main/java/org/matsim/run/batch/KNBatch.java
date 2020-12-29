@@ -168,7 +168,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	public static void main( String[] args ){
 		String [] args2 = {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
-				RunParallel.OPTION_PARAMS, KNBatch.Params.class.getName(),
+				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
 				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
 				RunParallel.OPTION_METADATA

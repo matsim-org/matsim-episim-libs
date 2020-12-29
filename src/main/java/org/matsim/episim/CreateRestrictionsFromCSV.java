@@ -61,9 +61,11 @@ class CreateRestrictionsFromCSV{
 			LocalDate date = LocalDate.parse(record.get(0), fmt);
 
 			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
+			// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
 
 			double remainingFraction = 1. + (value / 100.);
-			// modulate reduction with alpha
+
+			// modulate reduction with alpha:
 			double reduction = Math.min(1., alpha * (1. - remainingFraction));
 			days.put(date, Math.min(1, 1 - reduction));
 		}
@@ -71,7 +73,7 @@ class CreateRestrictionsFromCSV{
 		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt" ), StandardCharsets.UTF_8 )
 						  .stream().map(LocalDate::parse).collect( Collectors.toSet() );
 
-		// activities to set
+		// activities to set:
 		String[] act = episimConfig.getInfectionParams().stream()
 				.map(EpisimConfigGroup.InfectionParams::getContainerName)
 				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
@@ -95,11 +97,12 @@ class CreateRestrictionsFromCSV{
 					values.add(days.get(day));
 				}
 			}
-
 			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
+
 			trend.add(avg);
 
-			// Calc next sunday
+			// calc next sunday:
 			int n = 7 - start.getDayOfWeek().getValue() % 7;
 			builder.restrict(start, avg, act);
 			start = start.plusDays(n);
@@ -111,8 +114,8 @@ class CreateRestrictionsFromCSV{
 		start = start.plusDays(7);
 
 		if ( extrapolation == EpisimUtils.Extrapolation.linear) {
-
 			int n = trend.size();
+
 			SimpleRegression reg = new SimpleRegression();
 			for (int i = 0; i < n; i++) {
 				reg.addData(i, trend.get(i));
@@ -126,22 +129,21 @@ class CreateRestrictionsFromCSV{
 			}
 
 		} else if ( extrapolation == EpisimUtils.Extrapolation.exponential) {
+			int n = trend.size();
 
 			List<WeightedObservedPoint> points = new ArrayList<>();
-
-			int n = trend.size();
 			for (int i = 0; i < n; i++) {
 				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
 			}
 
-			EpisimUtils.Exponential f = new EpisimUtils.Exponential();
-			EpisimUtils.FuncFitter fitter = new EpisimUtils.FuncFitter(f);
+			EpisimUtils.Exponential expFunction = new EpisimUtils.Exponential();
+			EpisimUtils.FuncFitter fitter = new EpisimUtils.FuncFitter(expFunction);
 			double[] coeff = fitter.fit(points);
 
 			// continue the trend
 			for (int i = 0; i < 25; i++) {
 
-				double predict = f.value(i + n, coeff);
+				double predict = expFunction.value(i + n, coeff);
 				// System.out.println(start + " " + predict);
 				builder.restrict(start, Math.min(predict, 1), act);
 				start = start.plusDays(7);
