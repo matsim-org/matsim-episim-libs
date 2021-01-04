@@ -52,21 +52,21 @@ import java.util.concurrent.Callable;
 		name = "AnalyzeSnzPersonsStat",
 		description = "Aggregate snz person statistics of the daily mobility data."
 )
-class AnalyzeSnzPersonsStat implements Callable<Integer> {
+class AnalyzeSnzDataPersonsStat implements Callable<Integer> {
 
-	private static final Logger log = LogManager.getLogger(AnalyzeSnzPersonsStat.class);
+	private static final Logger log = LogManager.getLogger(AnalyzeSnzDataPersonsStat.class);
 
 	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
 	private static final Joiner JOIN = Joiner.on("\t");
 
-	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
+	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/Vergleich2017/")
 	private Path inputFolder;
 
 	@CommandLine.Option(names = "--output", defaultValue = "output")
 	private Path outputFolder;
 
 	public static void main(String[] args) {
-		System.exit(new CommandLine(new AnalyzeSnzPersonsStat()).execute(args));
+		System.exit(new CommandLine(new AnalyzeSnzDataPersonsStat()).execute(args));
 	}
 
 	/**
@@ -130,7 +130,7 @@ class AnalyzeSnzPersonsStat implements Callable<Integer> {
 
 		log.info("Analyze data for " + area);
 
-		Path outputFile = outputFolder.resolve(area + "SnzDataPersonStats_daily_until.csv");
+		Path outputFile = outputFolder.resolve(area + "SnzDataPersonStats_daily2017_until.csv");
 
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
 		try {

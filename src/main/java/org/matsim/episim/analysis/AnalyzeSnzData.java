@@ -103,7 +103,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		IntSet zipCodesGER = new IntOpenHashSet();
 		for (int i = 0; i <= 99999; i++)
 			zipCodesGER.add(i);
-		
+
 		// zip codes for Berlin
 		IntSet zipCodesBerlin = new IntOpenHashSet();
 		for (int i = 10115; i <= 14199; i++)
@@ -119,8 +119,8 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 //		analyzeDataForCertainArea(zipCodesDE, "Germany", filesWithData);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
-		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
-		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
+//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
+//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
 
 		log.info("Done!");
 
@@ -189,19 +189,23 @@ class AnalyzeSnzData implements Callable<Integer> {
 							if (!actType.equals("education") && !actType.equals("leisure")) {
 								sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
 							}
+							if (!actType.equals("education")) {
+								sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+							}
 						}
 					}
 				}
 
 				DayOfWeek day = date.getDayOfWeek();
 
-				// week days are compared to weekends if they are holidays
-				if (day != DayOfWeek.SATURDAY && day != DayOfWeek.SUNDAY) {
-					if (holidays.contains(date)) {
+				// week days are compared to Sunday if they are holidays. NYE and  Dec. 24th are compared to Saturday because some stores are still opened.
+				if (day != DayOfWeek.SUNDAY) {
+					if (holidays.contains(date))
+						day = DayOfWeek.SUNDAY;
+					if (dateString.contains("20171224") || dateString.contains("20201224")
+							|| dateString.contains("20201231"))
 						day = DayOfWeek.SATURDAY;
-					}
 				}
-
 				// set base
 				if (base.get(day).isEmpty())
 					base.get(day).putAll(sums);
@@ -235,6 +239,6 @@ class AnalyzeSnzData implements Callable<Integer> {
 	}
 
 	private enum Types {
-		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit, work, notAtHome, notAtHomeExceptLeisureAndEdu
+		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit,work, notAtHome, notAtHomeExceptLeisureAndEdu, notAtHomeExceptEdu
 	}
 }
