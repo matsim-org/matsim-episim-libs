@@ -20,6 +20,7 @@
  */
 package org.matsim.episim.policy;
 
+import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
@@ -31,11 +32,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
  */
-public class FixedPolicy extends ShutdownPolicy {
+public final class FixedPolicy extends ShutdownPolicy {
+	// Classes should be final or non-public if not explicitly designed for inheritance.  kai, dec'20
 
 	/**
 	 * Constructor.
@@ -110,7 +114,7 @@ public class FixedPolicy extends ShutdownPolicy {
 	/**
 	 * Builder for {@link FixedPolicy} config.
 	 */
-	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder {
+	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder<Map<String, ?>> {
 
 		private ConfigBuilder() {
 		}
@@ -118,7 +122,7 @@ public class FixedPolicy extends ShutdownPolicy {
 		private ConfigBuilder(Config config) {
 			for (Map.Entry<String, ConfigValue> e : config.root().entrySet()) {
 				Object value = config.getValue(e.getKey()).unwrapped();
-				params.put(e.getKey(), value);
+				params.put(e.getKey(), (Map<String, ?>) value);
 			}
 		}
 
@@ -242,7 +246,7 @@ public class FixedPolicy extends ShutdownPolicy {
 		 * All start and end values are inclusive.
 		 *
 		 * @param start          starting date
-		 * @param end            end tate
+		 * @param end            end date
 		 * @param restriction    starting restriction at start date
 		 * @param restrictionEnd remaining fraction / ci corr at end date
 		 * @param activities     activities to restrict
@@ -283,6 +287,34 @@ public class FixedPolicy extends ShutdownPolicy {
 			return interpolate(LocalDate.parse(start), LocalDate.parse(end), restriction, restrictionEnd, activities);
 		}
 
+		/**
+		 * Applies a function on the raw config for certain acitivies.
+		 *
+		 * @param from from date (inclusive)
+		 * @param to to date (inclusive)
+		 * @param activities activities where to apply
+		 * @implNote Unstable API that might be removed,
+		 */
+		@Beta
+		public ConfigBuilder apply(String from, String to, BiConsumer<LocalDate, Map<String, Object>> f, String... activities) {
+
+			LocalDate fromDate = LocalDate.parse(from);
+			LocalDate toDate = LocalDate.parse(to);
+
+			for (String act : activities) {
+				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.get(act);
+
+				for (Map.Entry<String, Map<String, Object>> e : p.entrySet()) {
+					LocalDate other = LocalDate.parse(e.getKey());
+
+					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) && (other.isEqual(toDate) || other.isBefore(toDate)))
+						f.accept(other, e.getValue());
+
+				}
+			}
+
+			return this;
+		}
 	}
 
 }

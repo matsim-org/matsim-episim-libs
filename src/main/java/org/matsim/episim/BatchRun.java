@@ -197,7 +197,7 @@ public interface BatchRun<T> {
 
 		List<List<Object>> combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));
 
-		int id = 0;
+		int id = setup.getOffset();
 		for (List<Object> params : combinations) {
 
 			try {
@@ -237,6 +237,14 @@ public interface BatchRun<T> {
 
 		// convert windows path separators
 		return input.resolve(name).toString().replace("\\", "/");
+	}
+
+	/**
+	 * Get the offset for this run, that is used to generate ids.
+	 * This can be used to concatenate multiple runs together if they have disjunkt ids.
+	 */
+	default int getOffset() {
+		return 0;
 	}
 
 	/**

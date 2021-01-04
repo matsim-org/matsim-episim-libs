@@ -30,7 +30,7 @@ import javax.annotation.Nullable;
 /**
  * Vaccination runs for symmetric Berlin week model
  */
-public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
+public class BerlinVaccinationsWinterEnd implements BatchRun<BerlinVaccinationsWinterEnd.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
@@ -46,7 +46,7 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "vaccinations");
+		return Metadata.of("berlin", "vaccinations&winterEnd");
 	}
 
 	@Override
@@ -61,7 +61,7 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		
@@ -104,16 +104,26 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 
 		VaccinationConfigGroup vaccinationConfigGroup = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		
-		vaccinationConfigGroup.setEffectiveness(params.effectiveness);
-		vaccinationConfigGroup.setDaysBeforeFullEffect(params.daysBeforeFullEffect);
+		vaccinationConfigGroup.setEffectiveness(0.9);
+		vaccinationConfigGroup.setDaysBeforeFullEffect(28);
 		
 		if (!params.vaccinationsAfter.equals("never")) {
 			vaccinationConfigGroup.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
-					LocalDate.parse(params.vaccinationsAfter), (int) (params.dailyCapacity * 4./3.),
-					LocalDate.parse(params.vaccinationsAfter).plusDays((int) params.totalCapacity / params.dailyCapacity), 0
+					LocalDate.parse(params.vaccinationsAfter), (int) (10000 * 4./3.),
+					LocalDate.parse(params.vaccinationsAfter).plusDays((int) params.totalCapacity / 10000), 0
 					));
 		}
+		
+		episimConfig.setLeisureOutdoorFraction(Map.of(
+			LocalDate.parse("2020-01-15"), 0.1,
+			LocalDate.parse("2020-04-15"), 0.8,
+			LocalDate.parse("2020-09-15"), 0.8,
+			LocalDate.parse("2020-11-15"), 0.1,
+			LocalDate.parse(params.winterEnd), 0.1,
+			LocalDate.parse(params.winterEnd).plusMonths(2), 0.8,
+			LocalDate.parse("2021-09-15"), 0.8)
+	);
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -122,7 +132,7 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(2)
 		public long seed;
 		
 		@StringParameter({"VaccinationByAge", "RandomVaccination"})
@@ -131,20 +141,23 @@ public class BerlinVaccinations implements BatchRun<BerlinVaccinations.Params> {
 		@Parameter({0.49, 0.59, 0.69})
 		public double outOfHomeFraction;
 		
-		@Parameter({0.9, 0.45})
-		public double effectiveness;
+//		@Parameter({0.9, 0.45})
+//		public double effectiveness;
 		
-		@IntParameter({21, 42})
-		public int daysBeforeFullEffect;
+//		@IntParameter({21, 42})
+//		public int daysBeforeFullEffect;
 		
-		@StringParameter({"never", "2021-01-04", "2021-02-01"})
+		@StringParameter({"never", "2021-01-04"})
 		public String vaccinationsAfter;
 		
-		@IntParameter({5000, 10000, 20000})
-		public int dailyCapacity;
+//		@IntParameter({5000, 10000, 20000})
+//		public int dailyCapacity;
 		
 		@IntParameter({400000, 800000, 10000000})
 		public int totalCapacity;
+		
+		@StringParameter({"2021-02-15", "2021-03-15", "2021-04-15"})
+		public String winterEnd;
 	}
 
 

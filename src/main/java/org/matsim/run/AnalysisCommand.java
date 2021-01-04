@@ -28,6 +28,7 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.analysis.CreateContactGraph;
+import org.matsim.episim.analysis.ExtractInfectionGraph;
 import org.matsim.episim.analysis.ExtractInfectionsByAge;
 import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.events.EpisimEventsReader;
@@ -52,8 +53,11 @@ import java.util.stream.Collectors;
 		description = "Analysis tool for Episim offering various subcommands.",
 		mixinStandardHelpOptions = true,
 		usageHelpWidth = 120,
-		subcommands = {CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
-				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class},
+		subcommands = {
+				CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
+				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class,
+				ExtractInfectionGraph.class
+		},
 		subcommandsRepeatable = true
 )
 public class AnalysisCommand implements Runnable {
@@ -143,6 +147,7 @@ public class AnalysisCommand implements Runnable {
 
 	/**
 	 * Tries to determine the run id from given folder and files present within it.
+	 *
 	 * @return empty string or prefix for scenario file that ends with "."
 	 */
 	public static String getScenarioPrefix(Path scenario) throws IOException {
@@ -150,6 +155,11 @@ public class AnalysisCommand implements Runnable {
 		// find prefixed *config.xml
 		Optional<Path> config = Files.find(scenario, 1,
 				(path, attr) -> !path.getFileName().toString().equals("config.xml") && path.toString().endsWith("config.xml")).findFirst();
+
+		// If nothing was found, also try with events file
+		if (config.isEmpty())
+			config =  Files.find(scenario, 1,
+					(path, attr) -> path.toString().endsWith("infectionEvents.txt")).findFirst();
 
 		if (config.isEmpty()) {
 			return "";

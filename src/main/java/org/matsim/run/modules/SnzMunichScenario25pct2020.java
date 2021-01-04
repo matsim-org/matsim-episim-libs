@@ -49,7 +49,8 @@ import static org.matsim.episim.model.Transition.to;
  *
  * @see AbstractSnzScenario
  */
-public class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
+public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
+	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.

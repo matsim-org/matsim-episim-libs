@@ -49,8 +49,8 @@ import static org.matsim.episim.model.Transition.to;
  *
  * @see AbstractSnzScenario
  */
-public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
-
+public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
+	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -60,9 +60,11 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
-														Map<String, Double> ciCorrections, Extrapolation extrapolation,
-														long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare, boolean restrictUniversities) throws IOException {
+	private static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha, Map<String, Double> ciCorrections,
+							    Extrapolation extrapolation, long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+							    boolean restrictUniversities) throws IOException {
+		// note that there is already a builder around this
+
 		ConfigBuilder restrictions; 
 		
 		if (csv == null) restrictions = FixedPolicy.config();
@@ -122,13 +124,13 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		for (int ii = 0; ii <= introductionPeriod; ii++) {
 			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
 			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
-					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other", "errands");
 		}
 
 		// mask compliance according to bvg
-		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
-		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other");
-		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other");
+		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
 
 		return restrictions;
 	}
@@ -193,7 +195,7 @@ public class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1.;
 		private Extrapolation extrapolation = Extrapolation.none;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20201128.csv");
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20201227.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
 		private boolean restrictSchoolsAndDayCare = true;
