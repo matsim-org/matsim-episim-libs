@@ -80,7 +80,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 //				double tempPm = 5.;
 //				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
 //						2, tempMidPoint-tempPm, tempMidPoint+tempPm );
-				Map<LocalDate,Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( "berlinWeather.csv",
+				Map<LocalDate,Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(),
 						2, params.tMidSpring, 25., 5. );
 				System.out.println( outdoorFractions );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);

@@ -636,7 +636,7 @@ public final class EpisimUtils {
 		return age;
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( String weatherDataPath, double rainThreshold,
+	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( File weatherCSV, double rainThreshold,
 										 Double temperatureIn, Double temperatureOut ) throws IOException {
 		if ( (temperatureIn==null && temperatureOut!=null) || (temperatureIn!=null && temperatureOut==null ) ) {
 			throw new RuntimeException( "one temperature is null, the other one is given; don't know how to interpret that; aborting ..." );
@@ -648,7 +648,7 @@ public final class EpisimUtils {
 		}
 
 
-		Reader in = new FileReader(weatherDataPath);
+		Reader in = new FileReader(weatherCSV);
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -683,9 +683,9 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractions2( String weatherDataPath, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange ) throws IOException{
+	public static Map<LocalDate, Double> getOutdoorFractions2( File weatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange ) throws IOException{
 
-		Reader in = new FileReader( weatherDataPath );
+		Reader in = new FileReader( weatherCSV );
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
@@ -704,7 +704,8 @@ public final class EpisimUtils {
 			double tMid;
 			final LocalDate date1 = LocalDate.of( 2020, 6, 1 );
 			final LocalDate date2 = LocalDate.of( 2020, 8, 1 );
-			if ( date.isBefore( date1 ) ) {
+			final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
+			if ( date.isBefore( date1 ) || date.isAfter( date3 ) ) {
 				tMid = TmidSpring;
 			} else if ( date.isAfter( date2 ) ) {
 				tMid = TmidFall;
