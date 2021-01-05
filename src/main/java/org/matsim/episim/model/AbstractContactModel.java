@@ -326,8 +326,9 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		String infType = infectionType.toString();
 
-		reporting.reportInfection(personWrapper, infector, now, infType, container);
+		reporting.reportInfection(personWrapper, infector, now, infType, infector.getVirusStrain(), container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		personWrapper.setVirusStrain(infector.getVirusStrain());
 		personWrapper.setInfectionContainer(container);
 		personWrapper.setInfectionType(infType);
 

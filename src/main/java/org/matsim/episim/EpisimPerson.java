@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -117,6 +118,11 @@ public final class EpisimPerson implements Attributable {
 	private QuarantineStatus quarantineStatus = QuarantineStatus.no;
 
 	/**
+	 * Strain of the virus the person was infected with.
+	 */
+	private VirusStrain virusStrain = VirusStrain.SARS_CoV_2;
+
+	/**
 	 * Current {@link VaccinationStatus}.
 	 */
 	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
@@ -201,6 +207,7 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		status = DiseaseStatus.values()[in.readInt()];
+		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
@@ -250,6 +257,7 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(status.ordinal());
+		out.writeInt(virusStrain.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(vaccinationStatus.ordinal());
@@ -285,6 +293,14 @@ public final class EpisimPerson implements Attributable {
 		// this function should receive now instead of iteration
 		// only for testing currently
 		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
+	}
+
+	public void setVirusStrain(VirusStrain virusStrain) {
+		this.virusStrain = virusStrain;
+	}
+
+	public VirusStrain getVirusStrain() {
+		return virusStrain;
 	}
 
 	public VaccinationStatus getVaccinationStatus() {

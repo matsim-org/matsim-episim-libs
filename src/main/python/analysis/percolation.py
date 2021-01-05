@@ -29,9 +29,11 @@ sns.set_palette("deep")
 
 #%%
 
-output = "C:/Users/chris/Development/matsim-org/matsim-episim/output"
+output = "C:/Users/chris/Development/matsim-org/matsim-episim/graphs"
 
 G = {
+     "0.07": nx.DiGraph(),
+     "0.08": nx.DiGraph(),
      "0.09": nx.DiGraph(),
      "0.1": nx.DiGraph(),
      "0.11": nx.DiGraph()
@@ -46,12 +48,12 @@ for d in listdir(output):
     seed = int(seed.split("_")[1])
     frac = frac.split("_")[1]
     
-    ev = glob(path.join(output, d, "*.infectionEvents.txt"))[0]
+    #ev = glob(path.join(output, d, "*.infectionEvents.txt"))[0]
     
     i = 0
-    with open(ev) as f:
-        for x in f.readlines():
-            i+=1
+    #with open(ev) as f:
+    #    for x in f.readlines():
+    #        i+=1
    
     data.append({
         "seed": seed,
