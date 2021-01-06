@@ -81,7 +81,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 			double weatherMidPointSpring = Double.parseDouble( params.weatherMidPoints.split( "_" )[0] );
 			double weatherMidPointFall = Double.parseDouble( params.weatherMidPoints.split( "_" )[1] );
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), params.rainThreshold, weatherMidPointSpring, weatherMidPointFall,
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), params.rainThreshold, weatherMidPointSpring, weatherMidPointFall,
 					(double) params.weatherSlope );
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {

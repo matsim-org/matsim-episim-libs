@@ -683,12 +683,13 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractions2( File weatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange ) throws IOException{
+	public static Map<LocalDate, Double> getOutdoorFractions2( File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange ) throws IOException{
 
 		Reader in = new FileReader( weatherCSV );
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
+		
+		LocalDate lastDate = null;
 		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
 		for (CSVRecord record : records) {
 //			System.out.println( record );
@@ -697,45 +698,71 @@ public final class EpisimUtils {
 //				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
 				continue;
 			}
-
+			
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
 
-			double tMid;
-			final LocalDate date1 = LocalDate.of( 2020, 6, 1 );
-			final LocalDate date2 = LocalDate.of( 2020, 8, 1 );
-			final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
-			if ( date.isBefore( date1 ) || date.isAfter( date3 ) ) {
-				tMid = TmidSpring;
-			} else if ( date.isAfter( date2 ) ) {
-				tMid = TmidFall;
-			} else {
-				double fraction = 1. * ChronoUnit.DAYS.between( date1, date ) / ChronoUnit.DAYS.between( date1, date2 );
-				tMid = (1.-fraction)* TmidSpring + fraction * TmidFall;
-			}
-			double tAllIn = tMid - Trange;
-			double tAllOut = tMid + Trange;
-
-			double outDoorFraction = (tMax-tAllIn)/(tAllOut-tAllIn);
-
-			if (prcp > rainThreshold) {
-				outDoorFraction = outDoorFraction * 0.5;
-			}
-
-			if (outDoorFraction > 1.) {
-				outDoorFraction = 1.;
-//				System.out.println("outDoorFraction is > 1. Setting to 1. Date: " + date.toString());
-			}
-			if (outDoorFraction < 0.) {
-				outDoorFraction = 0.;
-//				System.out.println("outDoorFraction is < 1. Setting to 0. Date: " + date.toString());
-			}
-
-			System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
-
-			outdoorFractions.put(date, outDoorFraction);
+			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));
+			lastDate = date;
 		}
+		
+		in = new FileReader( avgWeatherCSV );
+		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
+		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
+		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+
+		for (CSVRecord record : records) {
+			String monthDay = record.get("monthDay");
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+			tmaxPerDay.put(monthDay, tMax);
+			prcpPerDay.put(monthDay, prcp);
+		}
+		
+		for (int i = 1; i<365; i++) {
+			LocalDate date = lastDate.plusDays(i);
+			int month = date.getMonth().getValue();
+			int day = date.getDayOfMonth();
+			String monthDay = month + "-" + day;
+			double tMax = tmaxPerDay.get(monthDay);
+			double prcp = prcpPerDay.get(monthDay);
+			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));	
+		}
+		
 //		System.exit(-1);
 		return outdoorFractions;
+	}
+	
+	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
+		
+		double tMid;
+		int date1 = 152; //01.06.
+		int date2 = 213; //01.08.
+		if (date.isLeapYear() ) {
+			date1++;
+			date2++;
+		}
+//		final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
+		if ( date.getDayOfYear() < date1 ) {
+			tMid = TmidSpring;
+		} else if ( date.getDayOfYear() > date2  ) {
+			tMid = TmidFall;
+		} else {
+			double fraction = 1. * (date.getDayOfYear() - date1) / (date2 - date1);
+			tMid = (1.-fraction)* TmidSpring + fraction * TmidFall;
+		}
+		double tAllIn = tMid - Trange;
+		double tAllOut = tMid + Trange;
+
+		double outDoorFraction = (tMax-tAllIn)/(tAllOut-tAllIn);
+
+		if (prcp > rainThreshold) outDoorFraction = outDoorFraction * 0.5;
+		if (outDoorFraction > 1.) outDoorFraction = 1.;
+		if (outDoorFraction < 0.) outDoorFraction = 0.;
+
+		System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
+		
+		
+		return outDoorFraction;
 	}
 }
