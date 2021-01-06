@@ -50,7 +50,7 @@ import java.util.stream.Collectors;
 
 /**
  * @author: rewert
- * This class reads the SENEZON data for every day. The data is filtered by the
+ * This class reads the SENOZON data for every day. The data is filtered by the
  * zip codes of every area. The base line is always the first day. The results
  * for every day are the percentile of the changes compared to the base.
  */
@@ -97,6 +97,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		log.info("Searching for files in the folder: " + inputFolder);
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+		Collections.sort(filesWithData);
 		log.info("Amount of found files: " + filesWithData.size());
 
 		// zip codes for Germany
@@ -113,13 +114,29 @@ class AnalyzeSnzData implements Callable<Integer> {
 		IntSet zipCodesMunich = new IntOpenHashSet();
 		for (int i = 80331; i <= 81929; i++)
 			zipCodesMunich.add(i);
+		
+		// zip codes for Hamburg
+		IntSet zipCodesHamburg = new IntOpenHashSet();
+		for (int i = 22000; i <= 22999; i++)
+			zipCodesHamburg.add(i);
+		
+		// zip codes for Bonn
+		IntSet zipCodesBonn = new IntOpenHashSet();
+		for (int i = 53100; i <= 53299; i++)
+			zipCodesBonn.add(i);
 
 		// zip codes for the district "Kreis Heinsberg"
 		IntSet zipCodesHeinsberg = new IntOpenHashSet(List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
+		
+		// zip codes for district "Berchtesgadener Land"
+		IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435, 83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 
-//		analyzeDataForCertainArea(zipCodesDE, "Germany", filesWithData);
+//		analyzeDataForCertainArea(zipCodesGER, "Germany", filesWithData);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
 //		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
+//		analyzeDataForCertainArea(zipCodesHamburg, "Hamburg", filesWithData);
+//		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData);
+//		analyzeDataForCertainArea(zipCodesBerchtesgaden, "Berchtesgaden", filesWithData);
 //		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
 
 		log.info("Done!");
