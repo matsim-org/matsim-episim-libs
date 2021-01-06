@@ -129,8 +129,9 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	 * Empty constructor is needed for running scenario from command line.
 	 */
 	@SuppressWarnings("unused")
+	// sample 10, 5, 1 (1 nur als test)
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(10, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 	}
 
 	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot,
@@ -150,7 +151,11 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;
-			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
+			int round = (int) Math.round(importFactor * (a + fraction * (b - a)));
+			if (round == 0) {
+				round = 1;
+			}
+			importMap.put(start.plusDays(i), round);
 		}
 		return importMap;
 	}
@@ -175,7 +180,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -193,7 +198,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
-
+		// calibration prameter muss angepasst werden
 		episimConfig.setCalibrationParameter(1.7E-5);
 		episimConfig.setStartDate("2020-02-16");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
@@ -210,6 +215,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.diseaseImport == DiseaseImport.yes) {
 			episimConfig.setInitialInfectionDistrict(null);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
+			// 25 = 1 ---> 10 = 2/5 ---> 5 = 1/5
 			double importFactor = 1.;
 			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
