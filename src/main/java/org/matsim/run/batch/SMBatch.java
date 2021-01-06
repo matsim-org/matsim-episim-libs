@@ -8,6 +8,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.run.RunParallel;
@@ -119,6 +120,8 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		
+		tracingConfig.setCapacityType(CapacityType.PER_PERSON);
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), params.tracingCapacitySpring,
@@ -135,10 +138,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@GenerateSeeds(2)
 		public long seed;
 		
-		@Parameter({0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8})
+		@Parameter({0.7, 0.75, 0.8, 0.85})
 		double theta;
 		
-		@Parameter({1., 1.5, 2.})
+		@Parameter({1., 1.25, 1.5, 2.})
 		double leisureFactor;
 		
 		@Parameter({0.5})
@@ -159,7 +162,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@Parameter({0.5})
 		double hospitalFactor;
 		
-		@IntParameter({5, 10})
+		@IntParameter({5})
 		int weatherSlope;
 		
 //		@StringParameter({
@@ -170,13 +173,13 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 //		public String weatherMidPoint_Theta;
 		
 //		@StringParameter({"0", "current", "linear"})
-		@StringParameter({"0", "current"})
+		@StringParameter({"current"})
 		public String childSusInf;
 		
-		@IntParameter({0})
+		@IntParameter({0, 25})
 		int tracingCapacitySpring;
 		
-		@IntParameter({0})
+		@IntParameter({0, 150, 250})
 		int tracingCapacityAfterJune;
 		
 
