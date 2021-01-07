@@ -15,6 +15,7 @@ import org.matsim.episim.EpisimUtils;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SplittableRandom;
 import java.util.stream.Collectors;
 
@@ -50,31 +51,37 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
-		int numInfections = EpisimUtils.findValidEntry(episimConfig.getInfections_pers_per_day(), 1, date);
-
-		List<EpisimPerson> candidates = persons.values().stream()
-				.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
-				.filter(p -> lowerAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") >= lowerAgeBoundaryForInitInfections)
-				.filter(p -> upperAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") <= upperAgeBoundaryForInitInfections)
-				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-				.collect(Collectors.toList());
-
-		if (candidates.size() < numInfections) {
-			log.warn("Not enough persons match the initial infection requirement, using whole population...");
-			candidates = Lists.newArrayList(persons.values());
-		}
-
 		int infected = 0;
-		while (numInfections > 0 && initialInfectionsLeft > 0) {
-			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
-			if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
-				randomPerson.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
-				log.warn("Person {} has initial infection.", randomPerson.getPersonId());
-				initialInfectionsLeft--;
-				numInfections--;
-				infected++;
+
+		for (Map.Entry<VirusStrain, NavigableMap<LocalDate, Integer>> e : episimConfig.getInfections_pers_per_day().entrySet()) {
+
+			int numInfections = EpisimUtils.findValidEntry(e.getValue(), 1, date);
+
+			List<EpisimPerson> candidates = persons.values().stream()
+					.filter(p -> district == null || district.equals(p.getAttributes().getAttribute("district")))
+					.filter(p -> lowerAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") >= lowerAgeBoundaryForInitInfections)
+					.filter(p -> upperAgeBoundaryForInitInfections == -1 || (int) p.getAttributes().getAttribute("microm:modeled:age") <= upperAgeBoundaryForInitInfections)
+					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
+					.collect(Collectors.toList());
+
+			if (candidates.size() < numInfections) {
+				log.warn("Not enough persons match the initial infection requirement, using whole population...");
+				candidates = Lists.newArrayList(persons.values());
+			}
+
+			while (numInfections > 0 && initialInfectionsLeft > 0) {
+				EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
+				if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
+					randomPerson.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+					randomPerson.setVirusStrain(e.getKey());
+					log.warn("Person {} has initial infection with {}.", randomPerson.getPersonId(), e.getKey());
+					initialInfectionsLeft--;
+					numInfections--;
+					infected++;
+				}
 			}
 		}
+
 
 		return infected;
 	}

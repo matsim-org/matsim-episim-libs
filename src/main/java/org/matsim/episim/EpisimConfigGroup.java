@@ -34,6 +34,7 @@ import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -76,10 +77,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String GROUPNAME = "episim";
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
+
 	/**
 	 * Number of initial infections per day.
+	 * Default is 1 infection per day for {@link VirusStrain#SARS_CoV_2}.
 	 */
-	private final Map<LocalDate, Integer> infectionsPerDay = new TreeMap<>();
+	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
+
 	/**
 	 * Leisure outdoor fractions per day.
 	 */
@@ -251,7 +255,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.upperAgeBoundaryForInitInfections = upperAgeBoundaryForInitInfections;
 	}
 
-	public Map<LocalDate, Integer> getInfections_pers_per_day() {
+	public Map<VirusStrain, NavigableMap<LocalDate, Integer>> getInfections_pers_per_day() {
 		return infectionsPerDay;
 	}
 
@@ -259,26 +263,46 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * @param infectionsPerDay -- From each given date, this will be the number of infections.  Until {@link #setInitialInfections(int)} are used up.
 	 */
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
+		this.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infectionsPerDay);
+	}
+
+	public void setInfections_pers_per_day(VirusStrain strain, Map<LocalDate, Integer> infectionsPerDay) {
+
+		Map<LocalDate, Integer> perDay = this.infectionsPerDay.computeIfAbsent(strain, (k) -> new TreeMap<>());
+
 		// yyyy Is it really so plausible to have this here _and_ the plain integer initial infections?  kai, oct'20
 		// yyyyyy Is it correct that the default of this is empty, so even if someone sets the initial infections to some number, this will not have any effect?  kai, nov'20
 		// No, If no entry is present, 1 will be assumed (because this was default at some point).
 		// This logic of handling no entries is not part of the config, but the initial infection handler  - cr, nov'20
-		this.infectionsPerDay.clear();
-		this.infectionsPerDay.putAll(infectionsPerDay);
+		perDay.clear();
+		perDay.putAll(infectionsPerDay);
 	}
 
 	@StringGetter(INFECTIONS_PER_DAY)
 	String getInfectionsPerDay() {
-		return JOINER.join(infectionsPerDay);
+		Map<VirusStrain, String> collect =
+				infectionsPerDay.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+		return Joiner.on("|").withKeyValueSeparator(">").join(collect);
 	}
 
 	@StringSetter(INFECTIONS_PER_DAY)
 	void setInfectionsPerDay(String capacity) {
 
-		Map<String, String> map = SPLITTER.split(capacity);
-		setInfections_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
-				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
-		)));
+		Map<String, String> cap = Splitter.on("|").withKeyValueSeparator(">").split(capacity);
+
+		for (Map.Entry<String, String> v : cap.entrySet()) {
+
+			if (v.getValue().isBlank()) {
+				setInfections_pers_per_day(VirusStrain.valueOf(v.getKey()), new TreeMap<>());
+				continue;
+			}
+
+			Map<String, String> map = SPLITTER.split(v.getValue());
+			setInfections_pers_per_day(VirusStrain.valueOf(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(
+					e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+			)));
+		}
 	}
 
 	@StringGetter(INITIAL_INFECTION_DISTRICT)
