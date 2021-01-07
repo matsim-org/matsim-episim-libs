@@ -246,6 +246,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			}
 		}
 
+		// 20 = 1 ---> 10
 		int spaces = 20;
 		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
