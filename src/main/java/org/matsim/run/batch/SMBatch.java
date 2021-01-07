@@ -124,7 +124,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		tracingConfig.setCapacityType(CapacityType.PER_PERSON);
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), params.tracingCapacitySpring,
+				LocalDate.of(2020, 4, 1), (int) (params.tracingCapacityAfterJune * 0.2),
 				LocalDate.of(2020, 6, 15), params.tracingCapacityAfterJune
 		));
 		
@@ -141,7 +141,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@Parameter({0.7, 0.75, 0.8, 0.85})
 		double theta;
 		
-		@Parameter({1., 1.25, 1.5, 2.})
+		@Parameter({1., 1.5})
 		double leisureFactor;
 		
 		@Parameter({0.5})
@@ -150,10 +150,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@Parameter({4.})
 		double importFactorSpring;
 		
-		@Parameter({0.})
+		@Parameter({0., 0.25, 0.5})
 		double importFactorAfterJune;
 
-		@StringParameter( {"17.5_22.5","17.5_25.0","20.0_25.0"}) 
+		@StringParameter( {"15.0_25.0", "17.5_22.5","17.5_25.0","20.0_25.0"}) 
 		String weatherMidPoints ;
 
 //		@Parameter({25.})
@@ -176,10 +176,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@StringParameter({"current"})
 		public String childSusInf;
 		
-		@IntParameter({0, 25})
-		int tracingCapacitySpring;
+//		@IntParameter({0, 25})
+//		int tracingCapacitySpring;
 		
-		@IntParameter({0, 150, 250})
+		@IntParameter({0, 60, 120})
 		int tracingCapacityAfterJune;
 		
 
