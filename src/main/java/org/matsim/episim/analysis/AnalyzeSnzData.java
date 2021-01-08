@@ -135,7 +135,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		// setBaseIn2018: set true if you use selected days of 2018 as base days
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
 		boolean setBaseIn2018 = false;
-		boolean getPercentageResults = false;
+		boolean getPercentageResults = true;
 
 //		analyzeDataForCertainArea(zipCodesGER, "Germany", filesWithData,getPercentageResults, setBaseIn2018);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData, getPercentageResults, setBaseIn2018);
