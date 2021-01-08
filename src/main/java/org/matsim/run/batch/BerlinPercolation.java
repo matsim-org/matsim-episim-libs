@@ -16,6 +16,7 @@ import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
 import java.time.DayOfWeek;
@@ -43,13 +44,15 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 	@Nullable
 	@Override
 	public Module getBindings(int id, @Nullable Params params) {
-		return new Binding();
+		/// TODO hardcoded now and needs to be adjusted before runs
+		/// XXX
+		return new Binding(Params.OLD);
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		Config config = new Binding().config();
+		Config config = new Binding(params.contactModel).config();
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -64,8 +67,15 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		episimConfig.setInitialInfections(1);
 		episimConfig.setInitialInfectionDistrict(null);
 
-		// reduced calib param
-		episimConfig.setCalibrationParameter(2.54e-5 * params.fraction);
+
+		if (params.contactModel.equals(Params.OLD)) {
+
+			episimConfig.setCalibrationParameter(1.07e-5 * params.fraction);
+
+		} else {
+			// reduced calib param
+			episimConfig.setCalibrationParameter(2.54e-5 * params.fraction);
+		}
 
 		// no tracing and vaccinations
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
@@ -81,10 +91,15 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 
 	public static final class Params {
 
+		private final static String OLD = "oldSymmetric";
+
 		@GenerateSeeds(value = 1500)
 		public long seed;
 
-		@Parameter({0.07, 0.08})
+		@StringParameter(OLD)
+		public String contactModel;
+
+		@Parameter({0.07, 0.08, 0.09, 0.10, 0.11})
 		public double fraction;
 
 	}
@@ -94,12 +109,22 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 	 */
 	private static final class Binding extends AbstractModule {
 
-		private final SnzBerlinProductionScenario delegate = new SnzBerlinProductionScenario.Builder()
-				.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.no)
-				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
-				.setTracing(SnzBerlinProductionScenario.Tracing.no)
-				.setInfectionModel(DefaultInfectionModel.class)
-				.createSnzBerlinProductionScenario();
+		private final AbstractModule delegate;
+
+		public Binding(String contactModel) {
+
+			if (contactModel.equals(Params.OLD))
+				delegate = new SnzBerlinWeekScenario2020(25, false, false, OldSymmetricContactModel.class);
+			else
+				delegate = new SnzBerlinProductionScenario.Builder()
+						.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.no)
+						.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
+						.setTracing(SnzBerlinProductionScenario.Tracing.no)
+						.setInfectionModel(DefaultInfectionModel.class)
+						.createSnzBerlinProductionScenario();
+
+
+		}
 
 		@Override
 		protected void configure() {
@@ -112,7 +137,12 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		@Singleton
 		public Config config() {
 
-			Config config = delegate.config();
+			Config config;
+
+			if (delegate instanceof SnzBerlinWeekScenario2020)
+				config = ((SnzBerlinWeekScenario2020) delegate).config();
+			else
+				config = ((SnzBerlinProductionScenario) delegate).config();
 
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 			episimConfig.clearInputEventsFiles();
@@ -125,7 +155,10 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		@Provides
 		@Singleton
 		public Scenario scenario(Config config) {
-			return delegate.scenario(config);
+			if (delegate instanceof SnzBerlinWeekScenario2020)
+				return ((SnzBerlinWeekScenario2020) delegate).scenario(config);
+			else
+				return ((SnzBerlinProductionScenario) delegate).scenario(config);
 		}
 
 	}

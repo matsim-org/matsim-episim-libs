@@ -69,8 +69,8 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 				candidates = Lists.newArrayList(persons.values());
 			}
 
-			while (numInfections > 0 && initialInfectionsLeft > 0) {
-				EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
+			while (numInfections > 0 && initialInfectionsLeft > 0 && candidates.size() > 0) {
+				EpisimPerson randomPerson = candidates.remove(rnd.nextInt(candidates.size()));
 				if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
 					randomPerson.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 					randomPerson.setVirusStrain(e.getKey());
