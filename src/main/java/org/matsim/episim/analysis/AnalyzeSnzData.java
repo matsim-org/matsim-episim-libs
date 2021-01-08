@@ -40,6 +40,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -114,12 +115,12 @@ class AnalyzeSnzData implements Callable<Integer> {
 		IntSet zipCodesMunich = new IntOpenHashSet();
 		for (int i = 80331; i <= 81929; i++)
 			zipCodesMunich.add(i);
-		
+
 		// zip codes for Hamburg
 		IntSet zipCodesHamburg = new IntOpenHashSet();
 		for (int i = 22000; i <= 22999; i++)
 			zipCodesHamburg.add(i);
-		
+
 		// zip codes for Bonn
 		IntSet zipCodesBonn = new IntOpenHashSet();
 		for (int i = 53100; i <= 53299; i++)
@@ -127,24 +128,30 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		// zip codes for the district "Kreis Heinsberg"
 		IntSet zipCodesHeinsberg = new IntOpenHashSet(List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
-		
-		// zip codes for district "Berchtesgadener Land"
-		IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435, 83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 
-//		analyzeDataForCertainArea(zipCodesGER, "Germany", filesWithData);
-		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
-//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
-//		analyzeDataForCertainArea(zipCodesHamburg, "Hamburg", filesWithData);
-//		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData);
-//		analyzeDataForCertainArea(zipCodesBerchtesgaden, "Berchtesgaden", filesWithData);
-//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
+		// zip codes for district "Berchtesgadener Land"
+		IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
+
+		// setBaseIn2018: set true if you use selected days of 2018 as base days
+		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
+		boolean setBaseIn2018 = false;
+		boolean getPercentageResults = false;
+
+//		analyzeDataForCertainArea(zipCodesGER, "Germany", filesWithData,getPercentageResults, setBaseIn2018);
+		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData, getPercentageResults, setBaseIn2018);
+//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData, getPercentageResults, setBaseIn2018);
+//		analyzeDataForCertainArea(zipCodesHamburg, "Hamburg", filesWithData, getPercentageResults, setBaseIn2018);
+//		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData, getPercentageResults, setBaseIn2018);
+//		analyzeDataForCertainArea(zipCodesBerchtesgaden, "Berchtesgaden", filesWithData, getPercentageResults, setBaseIn2018);
+//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData, getPercentageResults, setBaseIn2018);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private void analyzeDataForCertainArea(IntSet zipCodes, String area, List<File> filesWithData) throws IOException {
+	private void analyzeDataForCertainArea(IntSet zipCodes, String area, List<File> filesWithData,
+			boolean getPercentageResults, boolean setBaseIn2018) throws IOException {
 
 		log.info("Analyze data for " + area);
 
@@ -180,6 +187,66 @@ class AnalyzeSnzData implements Callable<Integer> {
 			// will contain the last parsed date
 			String dateString = "";
 
+			// set base from days in 2018
+			if (setBaseIn2018) {
+				Path baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/Vergleich2017/");
+				String weekdayBase = "20180131";
+				String saturdayBase = "";
+				String sundayBase = "20180114";
+				List<String> baseDays = Arrays.asList(weekdayBase, saturdayBase, sundayBase);
+
+				log.info("Setting weekday base from: " + baseFile);
+				for (File folder : Objects.requireNonNull(baseFile.toFile().listFiles())) {
+					if (folder.isDirectory()) {
+						for (File file : Objects.requireNonNull(folder.listFiles())) {
+							if (file.getName().contains("_zipCode.csv.gz")) {
+								Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+
+								dateString = file.getName().split("_")[0];
+								if (baseDays.contains(dateString)) {
+									LocalDate date = LocalDate.parse(dateString, FMT);
+
+									CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+											.parse(IOUtils.getBufferedReader(file.toString()));
+
+									for (CSVRecord record : parse) {
+
+										int zipCode = Integer.parseInt(record.get("zipCode"));
+										if (zipCodes.contains(zipCode)) {
+
+											double duration = Double.parseDouble(record.get("durationSum"));
+											String actType = record.get("actType");
+
+											sums.mergeDouble(actType, duration, Double::sum);
+
+											if (!actType.equals("home")) {
+
+												sums.mergeDouble("notAtHome", duration, Double::sum);
+
+												if (!actType.equals("education") && !actType.equals("leisure")) {
+													sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration,
+															Double::sum);
+												}
+												if (!actType.equals("education")) {
+													sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+												}
+											}
+										}
+									}
+
+									DayOfWeek day = date.getDayOfWeek();
+
+									// set base
+									if (base.get(day).isEmpty())
+										base.get(day).putAll(sums);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
 
 				Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
@@ -215,7 +282,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 				DayOfWeek day = date.getDayOfWeek();
 
-				// week days are compared to Sunday if they are holidays. NYE and  Dec. 24th are compared to Saturday because some stores are still opened.
+				// week days are compared to Sunday if they are holidays. NYE and Dec. 24th are compared to Saturday because some stores are still opened.
 				if (day != DayOfWeek.SUNDAY) {
 					if (holidays.contains(date))
 						day = DayOfWeek.SUNDAY;
@@ -233,7 +300,11 @@ class AnalyzeSnzData implements Callable<Integer> {
 				for (int i = 1; i < Types.values().length; i++) {
 
 					String actType = Types.values()[i].toString();
-					row.add(String.valueOf(Math.round((sums.getDouble(actType) / base.get(day).getDouble(actType) - 1) * 100)));
+					if (getPercentageResults)
+						row.add(String.valueOf(
+								Math.round((sums.getDouble(actType) / base.get(day).getDouble(actType) - 1) * 100)));
+					else
+						row.add(String.valueOf(sums.getDouble(actType)));
 				}
 
 				JOIN.appendTo(writer, row);
