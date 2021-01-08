@@ -33,6 +33,8 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.reporting.AsyncEpisimWriter;
+import org.matsim.episim.reporting.EpisimWriter;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
@@ -72,11 +74,11 @@ public class RunParallel<T> implements Callable<Integer> {
 	private Path output;
 
 	public static final String OPTION_SETUP = "--setup";
-	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.BerlinPercolation}")
+	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.SMBatch}")
 	private Class<? extends BatchRun<T>> setup;
 
 	public static final String OPTION_PARAMS = "--params";
-	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.BerlinPercolation$Params}")
+	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.SMBatch$Params}")
 	private Class<T> params;
 
 	public static final String OPTION_THREADS = "--threads";
@@ -102,6 +104,9 @@ public class RunParallel<T> implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
 	private boolean noReuse;
+
+	@CommandLine.Option(names = "--async-io", defaultValue = "false", description = "Write files asynchronously.")
+	private boolean asyncIO;
 
 	@CommandLine.Option(names = "--silent", defaultValue = "false", description = "Disable info and warn logging")
 	private boolean silent;
@@ -144,6 +149,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		Scenario scenario = null;
 		ReplayHandler replay = null;
+		AsyncEpisimWriter writer = asyncIO ? new AsyncEpisimWriter(threads) : null;
 
 		if (noReuse) {
 			log.info("Reusing scenario and events is disabled.");
@@ -198,7 +204,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(
-					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
+					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay, writer), maxIterations), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
@@ -221,6 +227,9 @@ public class RunParallel<T> implements Callable<Integer> {
 		log.info("Finished all tasks");
 		executor.shutdown();
 
+		if (writer != null)
+			writer.close();
+
 		return 0;
 	}
 
@@ -229,11 +238,13 @@ public class RunParallel<T> implements Callable<Integer> {
 		private final Config config;
 		private final Scenario scenario;
 		private final ReplayHandler replay;
+		private final AsyncEpisimWriter writer;
 
-		private ParallelModule(Config config, @Nullable Scenario scenario, ReplayHandler replay) {
+		private ParallelModule(Config config, @Nullable Scenario scenario, ReplayHandler replay, AsyncEpisimWriter writer) {
 			this.scenario = scenario;
 			this.config = config;
 			this.replay = replay;
+			this.writer = writer;
 		}
 
 		@Override
@@ -243,6 +254,10 @@ public class RunParallel<T> implements Callable<Integer> {
 			if (scenario != null) {
 				bind(Scenario.class).toInstance(scenario);
 				bind(ReplayHandler.class).toInstance(replay);
+			}
+
+			if (writer != null) {
+				bind(EpisimWriter.class).toInstance(writer);
 			}
 		}
 	}
