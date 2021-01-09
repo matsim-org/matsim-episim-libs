@@ -225,7 +225,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
 					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
-					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
+					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-10-26").plusDays(importOffset),
+					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 			episimConfig.setInfections_pers_per_day(importMap);
 		}
 		else {
@@ -270,7 +272,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
-		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		//tracing
@@ -278,17 +279,18 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-			tracingConfig.setTracingProbability(0.6);
+			tracingConfig.setTracingProbability(0.5);
 			tracingConfig.setTracingPeriod_days(2);
 			tracingConfig.setMinContactDuration_sec(15 * 60.);
 			tracingConfig.setQuarantineHouseholdMembers(true);
 			tracingConfig.setEquipmentRate(1.);
-			tracingConfig.setTracingDelay_days(4);
+			tracingConfig.setTracingDelay_days(5);
 			tracingConfig.setTraceSusceptible(true);
-			tracingConfig.setCapacityType(CapacityType.PER_CONTACT_PERSON);
+			tracingConfig.setCapacityType(CapacityType.PER_PERSON);
+			int tracingCapacity = 60;
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-					LocalDate.of(2020, 4, 1), 300,
-					LocalDate.of(2020, 6, 15), 2000
+					LocalDate.of(2020, 4, 1), (int) (0.2 * tracingCapacity),
+					LocalDate.of(2020, 6, 15), tracingCapacity
 			));
 		}
 
