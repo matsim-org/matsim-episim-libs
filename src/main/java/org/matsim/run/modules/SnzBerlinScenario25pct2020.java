@@ -82,18 +82,20 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			.restrict("2020-06-25", 0.2, "educ_primary")
 			//Ende der Sommerferien
 			.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Lueften nach den Sommerferien
+			.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 			//Herbstferien
 			.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			//Weihnachtsferien
 			.restrict("2020-12-21", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			//Winterferien
-			.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			//Osterferien
-			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			//Winterferien
+//			.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			//Osterferien
+//			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			;
 		}
 		
@@ -131,6 +133,8 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
 		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
 		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		
+		restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
 
 		return restrictions;
 	}

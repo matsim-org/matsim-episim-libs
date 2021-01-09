@@ -760,7 +760,7 @@ public final class EpisimUtils {
 		if (outDoorFraction > 1.) outDoorFraction = 1.;
 		if (outDoorFraction < 0.) outDoorFraction = 0.;
 
-		System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
+//		System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
 		
 		
 		return outDoorFraction;

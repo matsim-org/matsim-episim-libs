@@ -71,7 +71,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
-	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-15")
+	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
 	private LocalDate startDate;
 
 
@@ -151,7 +151,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 		int rollingAveragae = 3;
 		for (int i = 0 + rollingAveragae; i <= eventFiles.size() - rollingAveragae; i++) {
 			for (Entry<String, Int2IntMap> e : infHandler.infectionsPerActivity.entrySet()) {
-				if (!e.getKey().equals("total") && !e.getKey().equals("home")) {
+				if (!e.getKey().equals("total")) {
 					int infections = 0;
 					int totalInfections = 0;
 					double infectionsShare = 0.;
