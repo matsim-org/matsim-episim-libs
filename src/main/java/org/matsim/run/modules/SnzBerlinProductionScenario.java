@@ -35,7 +35,6 @@ import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020.BasePolicyBuilder;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -262,10 +261,16 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1);
 
 		//restrictions and masks
-		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) basePolicyBuilder.setCsv(null);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) basePolicyBuilder.setRestrictUniversities(false);
+		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
+			basePolicyBuilder.setCsv(null);
+		}
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) {
+			basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
+		}
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) {
+			basePolicyBuilder.setRestrictUniversities(false);
+		}
 
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
