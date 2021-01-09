@@ -253,6 +253,9 @@ base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-im
 #base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.4-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
 #base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.6-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
 
+base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.5-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_2.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+
 # ---
 
 infectionsFilename <- Sys.glob(file.path(base, "*infections.txt" ) )
