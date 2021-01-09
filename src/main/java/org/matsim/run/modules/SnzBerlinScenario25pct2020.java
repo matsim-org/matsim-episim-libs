@@ -195,7 +195,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1.;
 		private Extrapolation extrapolation = Extrapolation.none;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20201227.csv");
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20210101.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
 		private boolean restrictSchoolsAndDayCare = true;
