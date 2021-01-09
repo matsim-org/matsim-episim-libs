@@ -22,14 +22,15 @@ reducedActParticip <- read_tsv("~/shared-svn/projects/episim/matsim-files/snz/Be
 reducedActParticip2 <- reducedActParticip %>%
   mutate( date=ymd(date)) %>%
   filter( !wday(date) %in% c(1,6,7) ) %>%
-  filter( !date %in% c( as.Date("2020-04-09"), as.Date("2020-04-13"), as.Date("2020-04-30"), as.Date("2020-05-07") ) ) %>%
+  filter( !date %in% c( as.Date("2020-04-09"), as.Date("2020-04-13"), as.Date("2020-04-30"), as.Date("2020-05-07"), as.Date("2020-05-21"),
+                        as.Date("2020-06-01"),as.Date("2020-06-02") ) ) %>%
   mutate( week = isoweek(date) ) %>%
   group_by(week) %>%
   summarise(mean=1+0.01*mean(notAtHomeExceptLeisureAndEdu),date=mean(date))
 reducedActParticip2
 
-rkiSurveillance <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv")
-rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(Datum) )
+rkiSurveillance <- read_delim("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv",";")
+rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(`Beginn Meldewoche`) )
 
 hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv')
 hospital2 <- hospital %>%
@@ -147,7 +148,7 @@ base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-im
 
 #base <- "output/tempXTheta_25.0_0.40-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_0.0-tracCapInf_200/"
 
-base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_1.0-tracCapInf_200/"
+#base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_1.0-tracCapInf_200/"
 #base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_2.0-tracCapInf_200/"
 
 #base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-impFactAftJun_1.0-tracCapInf_300/"
@@ -187,18 +188,18 @@ base <- "output/tempXTheta_25.0_0.40-youthSusc_1.0-grownUpAge_16-ciLsrFct_2.0-im
 # ---
 
 # less extreme Tmid in spring:
-base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
-base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
 #base <- "output/theta_0.8-tMidSpring_20.0-youthSusc_0.5-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
 
 # no youth susceptibility:
-base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
 # # (ziemlich gut overall; kein "dip" bei Herbstferien; Herbstanstieg leicht zu stark; Knick Anfang Nov nicht ausreichend)
 #base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciLsrFct_1.0-impFactAftJun_0.0-tracCapInf_0/"
 
 # assume increased reduction of critical leisure acts from nov on:
 #base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_1.0-imprtFctAftJun_0.0-tracCapInf_0/"
-base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.9-imprtFctAftJun_0.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.9-imprtFctAftJun_0.0-tracCapInf_0/"
 #base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.8-imprtFctAftJun_0.0-tracCapInf_0/"
 #base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.7-imprtFctAftJun_0.0-tracCapInf_0/"
 #base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.6-imprtFctAftJun_0.0-tracCapInf_0/"
@@ -206,6 +207,48 @@ base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLei
 #
 #base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_1.0-imprtFctAftJun_0.0-tracCapInf_0/"
 #base <- "output/theta_0.7-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-ciCorrLeisFrmNov_0.5-imprtFctAftJun_0.0-tracCapInf_0/"
+
+# aus Versehen gestartet; disease import sehr deutlich sichtbar:
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_2.0-tracCapInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-leisFctAftSummer_1.5-imprtFctAftJun_2.0-tracCapInf_0/"
+
+#base <- "output/theta_0.65-tMidSpring_20.0-youthSusc_0.0-grownUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-tracCapInf_0/"
+
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.1-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.2-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.3-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.4-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.5-imprtFctAftJun_0.0-trcCapNInf_0/"
+
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_4711/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_7564655870752979346/"
+#base <- "output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_3831662765844904176/"
+#
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_4711/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_7564655870752979346/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_3831662765844904176/"
+
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.1-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.2-imprtFctAftJun_0.0-trcCapNInf_0/"
+
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFct_1.1-leisFctDate_2020-11-01-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFct_1.2-leisFctDate_2020-11-01-imprtFctAftJun_0.0-trcCapNInf_0/"
+
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFct_1.1-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFct_1.2-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+
+#base <- "output/theta_0.7-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_0.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_0.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_0.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+
+base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.1-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.2-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
 
 # ---
 
@@ -254,21 +297,30 @@ p1 <- ggplot() + scale_y_log10() +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
-  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil positiver Tests Lagebericht`), color="red", size=2, show.legend = TRUE) +
+  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=150*`Anteil positiver Tests Lagebericht`), color="purple", size=2, show.legend = TRUE) +
   geom_point(data=infections2, mapping = aes(x=date,y=newShowingSymptoms), color="orange", size=2 ) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-03-01')), expand = expansion() ) +
   geom_line(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_point(data=reducedActParticip2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
 
+#Sys.setlocale("LC_ALL", locale = "DE")
+
+# viridis::scale_fill_iridis()
+
+#labels <- tibble( text=c("abc","def"),date=c(as.Date("2020-04-01"),as.Date("2020-05-01")), ypos=c(10,100) )
+
 p2 <- ggplot() + scale_y_log10() +
   geom_point( data=hospital2, mapping=aes(x=date,y=mean),size=3) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-02-01')), expand = expansion() ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-03-01')), expand = expansion() ) +
   geom_point( data=infections2, mapping = aes(x=date, y=nSeriouslySick), color="orange", size=2) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,nSeriouslySick-6*sqrt(nSeriouslySick)), ymax=nSeriouslySick+6*sqrt(nSeriouslySick)), size=1., color="orange")
+
+#+
+#  geom_label( data = labels, mapping = aes(x=date,y=ypos,label=text) )
 
 plot_grid( p1, p2, ncol = 1 )
 

@@ -202,6 +202,8 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 		/**
 		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
 		 */
 		public ConfigBuilder restrict(String date, double fraction, String... activities) {
 			// check if date is valid
@@ -210,6 +212,8 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 		/**
 		 * See {@link #restrict(String, Restriction, String...)}.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, Restriction, String...)}
 		 */
 		public ConfigBuilder restrict(long day, Restriction restriction, String... activities) {
 			if (day <= 0) throw new IllegalArgumentException("Day must be larger than 0");
@@ -219,6 +223,9 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 		/**
 		 * Same as {@link #restrict(long, Restriction, String...)}  with default values.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
+		 *
 		 */
 		public ConfigBuilder restrict(long day, double fraction, String... activities) {
 			return restrict(day, Restriction.of(fraction), activities);
@@ -226,6 +233,8 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 		/**
 		 * Shutdown activities completely after certain day.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
 		 */
 		public ConfigBuilder shutdown(long day, String... activities) {
 			return this.restrict(day, Restriction.of(0), activities);
@@ -233,6 +242,8 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 		/**
 		 * Open activities freely after certain day.
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
 		 */
 		public ConfigBuilder open(long day, String... activities) {
 			return this.restrict(day, Restriction.none(), activities);
@@ -294,6 +305,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @param to to date (inclusive)
 		 * @param activities activities where to apply
 		 * @implNote Unstable API that might be removed,
+		 * @deprecated unstable API
 		 */
 		@Beta
 		public ConfigBuilder apply(String from, String to, BiConsumer<LocalDate, Map<String, Object>> f, String... activities) {

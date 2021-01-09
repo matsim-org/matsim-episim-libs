@@ -11,7 +11,6 @@ import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
@@ -32,12 +31,12 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	private static final int IMPORT_OFFSET = 0;
 
 //	private static final Snapshot snapshot = Snapshot.episim_snapshot_120_2020_06_14;
-	private static final Snapshot SNAPSHOT = Snapshot.no;
+//	private static final Snapshot SNAPSHOT = Snapshot.no;
 
 	@Override
 	public AbstractModule getBindings( int id, @Nullable Params params ) {
 		return new Builder()
-				       .setSnapshot( SNAPSHOT )
+//				       .setSnapshot( SNAPSHOT )
 				       .setImportOffset( IMPORT_OFFSET )
 				       .createSnzBerlinProductionScenario();
 	};
@@ -50,55 +49,49 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 		SnzBerlinProductionScenario module = new Builder()
-								     .setSnapshot( SNAPSHOT )
+//								     .setSnapshot( SNAPSHOT )
 								     .setImportOffset( IMPORT_OFFSET )
 								     .createSnzBerlinProductionScenario();
 
 		Config config = module.config();
-		config.global().setRandomSeed(4711);
+//		config.global().setRandomSeed(params.seed);
 
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta );
-		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-//		episimConfig.setSnapshotInterval( 30 );
 
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24);
+//		episimConfig.setStartFromSnapshot(
+//				"output/theta_0.65-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0/" +
+//				"output/theta_0.7-tMidSpring_20.0-ythSusc_0.0-grwnUpAge_16-leisFctAftSummer_1.0-imprtFctAftJun_0.0-trcCapNInf_0-seed_3831662765844904176/" +
+//				"episim-snapshot-150-2020-07-14.zip"
+//				);
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta );
+		episimConfig.setSnapshotInterval( 30 );
+
+//		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24);
 
 		int youthAge = 7;
-		episimConfig.setAgeSusceptibility( Map.of( 0,0., youthAge-1,0., youthAge,params.youthSusc, params.grownUpAge-1,params.youthSusc,
-				params.grownUpAge,1. ) );
+		episimConfig.setAgeSusceptibility( Map.of( 0,0., youthAge-1,0., youthAge,params.ythSusc, params.grwnUpAge -1,params.ythSusc,
+				params.grwnUpAge,1. ) );
 
 		{
 			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse( episimConfig.getPolicy() );
-			builder.restrict("2020-11-01", Restriction.ofCiCorrection( params.ciCorrLeisFrmNov ), "leisure" );
+//			builder.restrict("2020-11-01", Restriction.ofCiCorrection( params.ciCorrLeisFrmNov ), "leisure" );
+			builder.apply(params.leisFctDate, "2021-12-31", (date, map) -> map.put("fraction", 1 - params.leisFct * (1 - (double) map.get("fraction" )) ) , "leisure" );
 			episimConfig.setPolicy( FixedPolicy.class, builder.build() );
 		}
 
-//		if (params.summerEnd.equals("fromWeather" )) {
-			try {
+		try {
 //				double tempPm = 5.;
 //				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv",
 //						2, tempMidPoint-tempPm, tempMidPoint+tempPm );
 				Map<LocalDate,Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(),
 						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 2, params.tMidSpring, 25., 5. );
-				System.out.println( outdoorFractions );
-				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
-			} catch ( IOException e) {
-				throw new RuntimeException( e );
-			}
-//		} else {
-//			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
-//					LocalDate.parse("2020-01-15"), 0.1,
-//					LocalDate.parse("2020-04-15"), 0.8,
-//					LocalDate.parse(params.summerEnd ), 0.8,
-//					LocalDate.parse("2020-11-15"), 0.1,
-//					LocalDate.parse("2021-02-15"), 0.1,
-//					LocalDate.parse("2021-04-15"), 0.8,
-//					LocalDate.parse("2021-09-15"), 0.8 )
-//			);
-//			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
-//		}
+			System.out.println( outdoorFractions );
+			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+		} catch ( IOException e) {
+			throw new RuntimeException( e );
+		}
 
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		int importOffset = 0;
@@ -125,7 +118,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class );
 		tracingConfig.setCapacityType( CapacityType.PER_PERSON );
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), params.tracCapInf
+				LocalDate.of(2020, 4, 1), params.trcCapNInf
 //				, LocalDate.of(2020, 6, 15), params.tracCapJun
 								     ) );
 
@@ -141,17 +134,16 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	public static final class Params {
 
-		@Parameter({0.65}) double theta;
-		@Parameter({20.}) double tMidSpring;
-		@Parameter({0.0}) double youthSusc;
-		@IntParameter( {16} ) int grownUpAge;
-//		@Parameter({1.0}) double ciLsrFct;
-		@Parameter ({1.0,0.8}) double ciCorrLeisFrmNov;
-		@Parameter({2.}) double imprtFctAftJun;
-		@IntParameter({0}) int tracCapInf;
-
-
+		@Parameter({0.75}) double theta;
+		@Parameter({17.5}) double tMidSpring;
+		@Parameter({0.0}) double ythSusc;
+		@IntParameter( {16} ) int grwnUpAge;
+		@Parameter({1.4,1.6}) double leisFct;
+		@StringParameter( {"2020-10-15"} ) String leisFctDate;
+		@Parameter({0.}) double imprtFctAftJun;
+		@IntParameter({0}) int trcCapNInf;
 //		@GenerateSeeds(1) long seed;
+
 //		@IntParameter({IMPORT_OFFSET}) int importOffset;
 //		@Parameter( { 15.,20.,25.,30. } ) double tempMidPoint; // an meinem Geb. waren tagsüber 23 Grad; Tiefstwert nachfolgende Nacht 6
 //		@Parameter({0.7}) double thetaFactor;
@@ -170,7 +162,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 				RunParallel.OPTION_SETUP, org.matsim.run.batch.KNBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
+				RunParallel.OPTION_ITERATIONS, Integer.toString( 360 ),
 				RunParallel.OPTION_METADATA
 		};
 
