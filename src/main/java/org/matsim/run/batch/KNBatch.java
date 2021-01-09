@@ -134,11 +134,11 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	public static final class Params {
 
-		@Parameter({0.75}) double theta;
+		@Parameter({0.8}) double theta;
 		@Parameter({17.5}) double tMidSpring;
 		@Parameter({0.0}) double ythSusc;
 		@IntParameter( {16} ) int grwnUpAge;
-		@Parameter({1.4,1.6}) double leisFct;
+		@Parameter({1.5}) double leisFct;
 		@StringParameter( {"2020-10-15"} ) String leisFctDate;
 		@Parameter({0.}) double imprtFctAftJun;
 		@IntParameter({0}) int trcCapNInf;
