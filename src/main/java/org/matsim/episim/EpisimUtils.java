@@ -47,9 +47,13 @@ import org.matsim.episim.policy.Restriction;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
-import java.time.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -170,9 +174,10 @@ public final class EpisimUtils {
 
 	/**
 	 * Find the current valid entry from a map of dates and values.
-	 * @param map map of values, assumed to be sorted by date
+	 *
+	 * @param map          map of values, assumed to be sorted by date
 	 * @param defaultValue default value
-	 * @param date date to search for
+	 * @param date         date to search for
 	 * @return value from the map larger or equal to {@code date}
 	 */
 	public static <T> T findValidEntry(Map<LocalDate, T> map, T defaultValue, LocalDate date) {
@@ -191,7 +196,7 @@ public final class EpisimUtils {
 	 * E.g. if there are the entries 01.01=1 and 10.01=10 then interpolation for
 	 * 05.01 will be 5
 	 *
-	 * @param map map of target values.
+	 * @param map  map of target values.
 	 * @param date date to interpolate.
 	 * @return interpolated values (or exact if entry is in map)
 	 */
@@ -213,7 +218,7 @@ public final class EpisimUtils {
 
 		double between = ChronoUnit.DAYS.between(floor.getKey(), ceil.getKey());
 		double diff = ChronoUnit.DAYS.between(floor.getKey(), date);
-		return floor.getValue().doubleValue() +  diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
+		return floor.getValue().doubleValue() + diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
 	}
 
 	/**
@@ -242,7 +247,7 @@ public final class EpisimUtils {
 
 		double between = floor.getKey().doubleValue() - ceil.getKey().doubleValue();
 		double diff = floor.getKey().doubleValue() - key.doubleValue();
-		return floor.getValue().doubleValue() +  diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
+		return floor.getValue().doubleValue() + diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
 	}
 
 	/**
@@ -454,7 +459,6 @@ public final class EpisimUtils {
 	 * Read in restrictions from csv file. A support point will be calculated and intermediate values calculated for each week.
 	 *
 	 * @param alpha modulate the amount reduction
-	 *
 	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
@@ -534,12 +538,11 @@ public final class EpisimUtils {
 	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
 	 *
 	 * @param alpha modulate the amount reduction
-	 *
 	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
 																	   Extrapolation extrapolate) throws IOException {
-		return new CreateRestrictionsFromCSV(episimConfig).setInput( input ).setAlpha( alpha ).setExtrapolation( extrapolate ).createPolicyConfigBuilder();
+		return new CreateRestrictionsFromCSV(episimConfig).setInput(input).setAlpha(alpha).setExtrapolation(extrapolate).createPolicyConfigBuilder();
 	}
 
 	/**
@@ -616,12 +619,37 @@ public final class EpisimUtils {
 		}
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( File weatherCSV, double rainThreshold,
-										 Double temperatureIn, Double temperatureOut ) throws IOException {
-		if ( (temperatureIn==null && temperatureOut!=null) || (temperatureIn!=null && temperatureOut==null ) ) {
-			throw new RuntimeException( "one temperature is null, the other one is given; don't know how to interpret that; aborting ..." );
+	/**
+	 * Read a csv with date column into a map.
+	 */
+	public static NavigableMap<LocalDate, Double> readCSV(Path csv, CSVFormat format, String dateColumn, String valueColumn) {
+
+		TreeMap<LocalDate, Double> map = new TreeMap<>();
+
+		try (BufferedReader in = Files.newBufferedReader(csv)) {
+
+			Iterable<CSVRecord> records = format.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+
+			for (CSVRecord r : records) {
+
+				LocalDate date = LocalDate.parse(r.get(dateColumn));
+				map.put(date, Double.parseDouble(r.get(valueColumn)));
+			}
+
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
-		if ( temperatureIn==null ) {
+
+
+		return map;
+	}
+
+	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(File weatherCSV, double rainThreshold,
+																			Double temperatureIn, Double temperatureOut) throws IOException {
+		if ((temperatureIn == null && temperatureOut != null) || (temperatureIn != null && temperatureOut == null)) {
+			throw new RuntimeException("one temperature is null, the other one is given; don't know how to interpret that; aborting ...");
+		}
+		if (temperatureIn == null) {
 			temperatureIn = 1.5;
 			temperatureOut = 30.5;
 			// should correspond to 0.0344 * tMax - 0.0518, which is what I found.  kai, nov'20
@@ -644,7 +672,7 @@ public final class EpisimUtils {
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
 
-			double outDoorFraction = (tMax-temperatureIn)/(temperatureOut-temperatureIn);
+			double outDoorFraction = (tMax - temperatureIn) / (temperatureOut - temperatureIn);
 
 			if (prcp > rainThreshold) {
 				outDoorFraction = outDoorFraction * 0.5;
@@ -663,17 +691,17 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutdoorFractions2( File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange ) throws IOException{
+	public static Map<LocalDate, Double> getOutdoorFractions2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange) throws IOException {
 
-		Reader in = new FileReader( weatherCSV );
-		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
+		Reader in = new FileReader(weatherCSV);
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 		LocalDate lastDate = null;
 		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
 		for (CSVRecord record : records) {
 //			System.out.println( record );
-			LocalDate date = LocalDate.parse( record.get( "date" ), fmt );
+			LocalDate date = LocalDate.parse(record.get("date"), fmt);
 			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
 //				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
 				continue;
@@ -686,8 +714,8 @@ public final class EpisimUtils {
 			lastDate = date;
 		}
 
-		in = new FileReader( avgWeatherCSV );
-		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
+		in = new FileReader(avgWeatherCSV);
+		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
 		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
 
@@ -699,7 +727,7 @@ public final class EpisimUtils {
 			prcpPerDay.put(monthDay, prcp);
 		}
 
-		for (int i = 1; i<365; i++) {
+		for (int i = 1; i < 365; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
 			int day = date.getDayOfMonth();
@@ -718,23 +746,23 @@ public final class EpisimUtils {
 		double tMid;
 		int date1 = 152; //01.06.
 		int date2 = 213; //01.08.
-		if (date.isLeapYear() ) {
+		if (date.isLeapYear()) {
 			date1++;
 			date2++;
 		}
 //		final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
-		if ( date.getDayOfYear() < date1 ) {
+		if (date.getDayOfYear() < date1) {
 			tMid = TmidSpring;
-		} else if ( date.getDayOfYear() > date2  ) {
+		} else if (date.getDayOfYear() > date2) {
 			tMid = TmidFall;
 		} else {
 			double fraction = 1. * (date.getDayOfYear() - date1) / (date2 - date1);
-			tMid = (1.-fraction)* TmidSpring + fraction * TmidFall;
+			tMid = (1. - fraction) * TmidSpring + fraction * TmidFall;
 		}
 		double tAllIn = tMid - Trange;
 		double tAllOut = tMid + Trange;
 
-		double outDoorFraction = (tMax-tAllIn)/(tAllOut-tAllIn);
+		double outDoorFraction = (tMax - tAllIn) / (tAllOut - tAllIn);
 
 		if (prcp > rainThreshold) outDoorFraction = outDoorFraction * 0.5;
 		if (outDoorFraction > 1.) outDoorFraction = 1.;

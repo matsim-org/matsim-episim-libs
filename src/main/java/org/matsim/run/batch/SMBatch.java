@@ -1,7 +1,7 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-
+import org.apache.commons.csv.CSVFormat;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
@@ -17,12 +17,13 @@ import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 
 /**
@@ -32,7 +33,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().setSnapshot( SnzBerlinProductionScenario.Snapshot.no ).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -44,19 +45,19 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 	public Config prepareConfig(int id, Params params) {
 
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no ).createSnzBerlinProductionScenario();
+				SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
-		
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.theta);
 		episimConfig.setStartDate("2020-02-25");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		episimConfig.setSnapshotInterval(120);
 		episimConfig.setHospitalFactor(0.5);
 
-		
+
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		int importOffset = 0;
 //		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * 1)));
@@ -66,11 +67,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
 		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 4., LocalDate.parse("2020-03-23").plusDays(importOffset),
 				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-		
+
 		if (params.importFactorAfterJune == 0.) {
 			importMap.put(LocalDate.parse("2020-06-08"), 1);
-		}
-		else {
+		} else {
 			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, params.importFactorAfterJune, LocalDate.parse("2020-06-08").plusDays(importOffset),
 					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
 			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, params.importFactorAfterJune, LocalDate.parse("2020-07-13").plusDays(importOffset),
@@ -80,68 +80,68 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, params.importFactorAfterJune, LocalDate.parse("2020-10-26").plusDays(importOffset),
 					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 		}
-		episimConfig.setInfections_pers_per_day(importMap);	
+		episimConfig.setInfections_pers_per_day(importMap);
 
 		try {
-			double weatherMidPointSpring = Double.parseDouble( params.weatherMidPoints.split( "_" )[0] );
-			double weatherMidPointFall = Double.parseDouble( params.weatherMidPoints.split( "_" )[1] );
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2( SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, weatherMidPointSpring, weatherMidPointFall,
-					(double) 5. );
+			double weatherMidPointSpring = Double.parseDouble(params.weatherMidPoints.split("_")[0]);
+			double weatherMidPointFall = Double.parseDouble(params.weatherMidPoints.split("_")[1]);
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, weatherMidPointSpring, weatherMidPointFall,
+					(double) 5.);
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		if (params.childSusInf.equals("0")) {
 			episimConfig.setAgeInfectivity(Map.of(
 					24, 0.,
 					25, 1d
-					));
+			));
 			episimConfig.setAgeSusceptibility(Map.of(
 					24, 0.,
 					25, 1d
-					));
+			));
 		}
 		if (params.childSusInf.equals("linear")) {
 			episimConfig.setAgeInfectivity(Map.of(
 					0, 0.,
 					20, 1d
-					));
+			));
 			episimConfig.setAgeSusceptibility(Map.of(
 					0, 0.7,
 					20, 1d
-					));
-		}		
-		
+			));
+		}
+
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		
+
 		//leisure factor
-		builder.apply(params.leisureFactorDate, "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))) , "leisure");
-		
+		builder.apply(params.leisureFactorDate, "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+
 		//christmas model
 		{
 			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
-			
+
 			christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
-			
+
 			christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
 			christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
 			christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
-			
+
 			episimConfig.setInputDays(christmasInputDays);
-			
+
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				double fraction = 0.6475;
 				if (act.contains("leisure")) fraction = 1 - params.leisureFactor * (1 - fraction);
-				
+
 				if (params.christmasModel.equals("restrictive")) {
 					builder.restrict("2020-12-24", 1.0, act);
 					builder.restrict("2020-12-27", fraction, act);
@@ -154,26 +154,35 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 				}
 			}
 		}
-		
-		
+
+
+		Map<LocalDate, Integer> vacMap = EpisimUtils.readCSV(Path.of("germanyVaccinations.csv"),
+				CSVFormat.DEFAULT, "date", "nVaccinated").entrySet().stream()
+				.collect(Collectors.toMap(Map.Entry::getKey,
+						e -> (int) ((e.getValue() * episimConfig.getSampleSize()) / (81_100_000 / 4_800_000)))
+				);
+
+		System.out.println(vacMap);
+		// TODO: check vac map and put into model
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		
+
 		tracingConfig.setCapacityType(CapacityType.PER_PERSON);
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 				LocalDate.of(2020, 4, 1), (int) (params.tracingCapacity * 0.2),
 				LocalDate.of(2020, 6, 15), params.tracingCapacity
 		));
-		
+
 		if (!params.newVariantDate.equals("never")) {
 			Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 			infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
 		}
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		return config;
 	}
 
@@ -181,47 +190,47 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		@GenerateSeeds(1)
 		public long seed;
-		
+
 		@Parameter({0.75, 0.8})
 		double theta;
-		
+
 		@Parameter({1.3, 1.6})
 		double leisureFactor;
-		
-		@StringParameter( {"2020-09-15", "2020-10-15"}) 
+
+		@StringParameter({"2020-09-15", "2020-10-15"})
 		String leisureFactorDate;
-		
+
 		@Parameter({0.5})
 		double importFactorAfterJune;
 
-		@StringParameter( {"17.5_25.0"}) 
-		String weatherMidPoints ;
+		@StringParameter({"17.5_25.0"})
+		String weatherMidPoints;
 
-//		@StringParameter({"0", "current", "linear"})
+		//		@StringParameter({"0", "current", "linear"})
 		@StringParameter({"current"})
 		public String childSusInf;
-		
+
 		@IntParameter({0, 100, 200})
 		int tracingCapacity;
-		
+
 		@StringParameter({"no", "restrictive", "permissive"})
 		public String christmasModel;
-		
-		@StringParameter( {"2020-12-15","2020-11-15", "2020-10-15", "2020-09-15"}) 
+
+		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15", "2020-09-15"})
 		String newVariantDate;
 
 	}
 
-	public static void main( String[] args ){
-		String [] args2 = {
+	public static void main(String[] args) {
+		String[] args2 = {
 				RunParallel.OPTION_SETUP, SMBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString( 1 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString( 330 ),
+				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
 				RunParallel.OPTION_METADATA
 		};
 
-		RunParallel.main( args2 );
+		RunParallel.main(args2);
 	}
 
 
