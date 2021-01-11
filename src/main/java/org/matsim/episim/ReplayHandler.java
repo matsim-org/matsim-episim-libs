@@ -30,6 +30,8 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
 import org.matsim.api.core.v01.events.Event;
+import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
+import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -66,7 +68,12 @@ public final class ReplayHandler {
 	 * Number of adjusted leisure activities.
 	 */
 	private int adjusted = 0;
-
+	/**
+	 * To call the events directly in replayEvents, we need a reference to the
+	 * InfectionEventHandler.
+	 */
+	private InfectionEventHandler infectionHandler = null;
+	
 	private final Scenario scenario;
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
 
@@ -125,9 +132,16 @@ public final class ReplayHandler {
 	 * Replays event add modifies attributes based on current iteration.
 	 */
 	public void replayEvents(final EventsManager manager, DayOfWeek day) {
-
 		for (final Event e : events.get(day)) {
-			manager.processEvent(e);
+			if (e instanceof ActivityStartEvent) {
+				infectionHandler.handleEvent((ActivityStartEvent) e);
+			} else if (e instanceof ActivityEndEvent) {
+				infectionHandler.handleEvent((ActivityEndEvent) e);
+			} else if (e instanceof PersonEntersVehicleEvent) {
+				infectionHandler.handleEvent((PersonEntersVehicleEvent) e);
+			} else {
+				infectionHandler.handleEvent((PersonLeavesVehicleEvent) e);
+			};
 		}
 	}
 
@@ -136,6 +150,10 @@ public final class ReplayHandler {
 	 */
 	public Map<DayOfWeek, List<Event>> getEvents() {
 		return new EnumMap<>(events);
+	}
+
+	public void setInfectionsHandler(InfectionEventHandler infectionHandler) {
+		this.infectionHandler = infectionHandler;
 	}
 
 	/**

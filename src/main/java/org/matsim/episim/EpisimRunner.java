@@ -82,6 +82,8 @@ public final class EpisimRunner {
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
 
+		replay.setInfectionsHandler(handler);
+
 		// reporting will write events if necessary
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
