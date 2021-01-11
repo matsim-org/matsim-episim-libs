@@ -87,15 +87,15 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			//Herbstferien
 			.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			//Weihnachtsferien
-			.restrict("2020-12-21", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Weihnachtsferien (vorgezogen)
+			.restrict("2020-12-16", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 //			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 //			//Winterferien
-//			.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-//			.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-//			//Osterferien
-//			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-//			.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-02-01", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-02-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Osterferien
+			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			;
 		}
 		
@@ -199,7 +199,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
 		private double alpha = 1.;
 		private Extrapolation extrapolation = Extrapolation.none;
-		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20210101.csv");
+		private Path csv = INPUT.resolve("BerlinSnzData_daily_until20210109.csv");
 		private long introductionPeriod = 14;
 		private double maskCompliance = 0.95;
 		private boolean restrictSchoolsAndDayCare = true;
