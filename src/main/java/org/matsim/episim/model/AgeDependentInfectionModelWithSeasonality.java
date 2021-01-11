@@ -57,9 +57,9 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
-		int ageTarget = EpisimUtils.getAge(target);
+		int ageTarget = target.getAge();
 
-		int ageInfector = EpisimUtils.getAge(infector);
+		int ageInfector = infector.getAge();
 
 		double susceptibility = this.susceptibility[ageTarget];
 		double infectivity = this.infectivity[ageInfector];

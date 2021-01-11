@@ -25,7 +25,7 @@ public class VaccinationByAge implements VaccinationModel {
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
 				.filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
-				.sorted(Comparator.comparingInt(EpisimUtils::getAge).reversed())
+				.sorted(Comparator.comparingInt(EpisimPerson::getAge).reversed())
 				.collect(Collectors.toList());
 
 		int vaccinationsLeft = availableVaccinations;

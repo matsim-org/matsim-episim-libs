@@ -616,26 +616,6 @@ public final class EpisimUtils {
 		}
 	}
 
-	public static int getAge( EpisimPerson person ){
-		int age = -1;
-
-		for( String attr : person.getAttributes().getAsMap().keySet() ){
-			if( attr.contains( "age" ) ){
-				age = (int) person.getAttributes().getAttribute( attr );
-				break;
-			}
-		}
-
-		if( age == -1 ){
-			throw new RuntimeException( "Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible." );
-		}
-
-		if( age < 0 || age > 120 ){
-			throw new RuntimeException( "Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age );
-		}
-		return age;
-	}
-
 	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData( File weatherCSV, double rainThreshold,
 										 Double temperatureIn, Double temperatureOut ) throws IOException {
 		if ( (temperatureIn==null && temperatureOut!=null) || (temperatureIn!=null && temperatureOut==null ) ) {
@@ -688,7 +668,7 @@ public final class EpisimUtils {
 		Reader in = new FileReader( weatherCSV );
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
 		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-		
+
 		LocalDate lastDate = null;
 		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
 		for (CSVRecord record : records) {
@@ -698,14 +678,14 @@ public final class EpisimUtils {
 //				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
 				continue;
 			}
-			
+
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
 
 			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));
 			lastDate = date;
 		}
-		
+
 		in = new FileReader( avgWeatherCSV );
 		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker( '#' ).parse( in );
 		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
@@ -718,7 +698,7 @@ public final class EpisimUtils {
 			tmaxPerDay.put(monthDay, tMax);
 			prcpPerDay.put(monthDay, prcp);
 		}
-		
+
 		for (int i = 1; i<365; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
@@ -726,15 +706,15 @@ public final class EpisimUtils {
 			String monthDay = month + "-" + day;
 			double tMax = tmaxPerDay.get(monthDay);
 			double prcp = prcpPerDay.get(monthDay);
-			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));	
+			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));
 		}
-		
+
 //		System.exit(-1);
 		return outdoorFractions;
 	}
-	
+
 	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
-		
+
 		double tMid;
 		int date1 = 152; //01.06.
 		int date2 = 213; //01.08.
@@ -761,8 +741,8 @@ public final class EpisimUtils {
 		if (outDoorFraction < 0.) outDoorFraction = 0.;
 
 //		System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
-		
-		
+
+
 		return outDoorFraction;
 	}
 }
