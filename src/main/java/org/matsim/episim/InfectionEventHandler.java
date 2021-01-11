@@ -506,12 +506,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		}
 
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
-		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
 		EpisimFacility episimFacility = (EpisimFacility) episimPerson.getCurrentContainer();
-		if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
-			throw new IllegalStateException("Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" + episimFacilityId + " but actually is at facility=" + episimFacility.getContainerId().toString());
-		}
+		assert (episimFacility.equals(pseudoFacilityMap.get(createEpisimFacilityId(activityEndEvent)))) :
+				"Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" +
+						createEpisimFacilityId(activityEndEvent) + " but actually is at facility=" + episimFacility.getContainerId().toString();
+
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
 
