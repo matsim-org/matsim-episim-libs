@@ -14,8 +14,8 @@ jobs:
       matrix:
         java: [11, 13]
         module:
-          - TEST=org.matsim.run.**
-          - TEST=org.matsim.episim.**
+          - org.matsim.run.**
+          - org.matsim.episim.**
 
     steps:
       - uses: actions/checkout@v2
