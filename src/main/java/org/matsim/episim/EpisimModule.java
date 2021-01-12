@@ -53,6 +53,7 @@ public class EpisimModule extends AbstractModule {
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);
+		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);
 
 		// Internal classes, should rarely be needed to be reconfigured
 		bind(EpisimRunner.class).in(Singleton.class);
@@ -86,11 +87,16 @@ public class EpisimModule extends AbstractModule {
 		return ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 	}
 
-
 	@Provides
 	@Singleton
 	public TracingConfigGroup tracingConfigGroup(Config config) {
 		return ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+	}
+
+	@Provides
+	@Singleton
+	public VaccinationConfigGroup vaccinationConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 	}
 
 	@Provides

@@ -9,6 +9,8 @@ import org.apache.logging.log4j.Logger;
 import org.assertj.core.data.Percentage;
 import org.junit.Assume;
 import org.junit.Test;
+import org.matsim.core.config.Config;
+import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
@@ -29,8 +31,23 @@ public class EpisimUtilsTest {
 	@Test
 	public void dayOfWeek() {
 
-		assertThat(EpisimUtils.getDayOfWeek(LocalDate.of(2020, 7, 1), 1))
-				.isEqualTo(DayOfWeek.WEDNESDAY);
+		Config testConfig = EpisimTestUtils.createTestConfig();
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(testConfig, EpisimConfigGroup.class);
+
+		episimConfig.setStartDate(LocalDate.of(2020, 7, 1));
+
+		assertThat(EpisimUtils.getDayOfWeek(episimConfig, 1)).isEqualTo(DayOfWeek.WEDNESDAY);
+		assertThat(EpisimUtils.getDayOfWeek(episimConfig, 5)).isEqualTo(DayOfWeek.SUNDAY);
+		assertThat(EpisimUtils.getDayOfWeek(episimConfig, 6)).isEqualTo(DayOfWeek.MONDAY);
+
+		// set 6th and 7th july as sunday
+		episimConfig.setInputDays(Map.of(
+				LocalDate.of(2020,7,6), DayOfWeek.SUNDAY,
+				LocalDate.of(2020,7,7), DayOfWeek.SUNDAY
+		));
+
+		assertThat(EpisimUtils.getDayOfWeek(episimConfig, 6)).isEqualTo(DayOfWeek.SUNDAY);
+		assertThat(EpisimUtils.getDayOfWeek(episimConfig, 7)).isEqualTo(DayOfWeek.SUNDAY);
 	}
 
 	@Test
@@ -147,6 +164,29 @@ public class EpisimUtilsTest {
 
 		assertThat(EpisimUtils.interpolateEntry(map, LocalDate.of(2020, 2, 23)))
 				.isEqualTo(10d);
+
+	}
+
+	@Test
+	public void interpolateNumber() {
+
+		TreeMap<Integer, Double> map = new TreeMap<>(Map.of(
+				5, 0.5d,
+				20, 20d,
+				30, 30d
+		));
+
+		assertThat(EpisimUtils.interpolateEntry(map, 1))
+				.isEqualTo(0.5);
+
+		assertThat(EpisimUtils.interpolateEntry(map, 10))
+				.isEqualTo(7);
+
+		assertThat(EpisimUtils.interpolateEntry(map, 25))
+				.isEqualTo(25);
+
+		assertThat(EpisimUtils.interpolateEntry(map, 35))
+				.isEqualTo(30);
 
 	}
 }

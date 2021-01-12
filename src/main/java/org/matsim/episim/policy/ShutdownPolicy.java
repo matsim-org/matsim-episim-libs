@@ -71,9 +71,12 @@ public abstract class ShutdownPolicy {
 	/**
 	 * Helper base class for config builders.
 	 */
-	static class ConfigBuilder {
+	static class ConfigBuilder<T> {
 
-		protected Map<String, Object> params = new HashMap<>();
+		/**
+		 * Maps activities to config objects.
+		 */
+		protected Map<String, T> params = new HashMap<>();
 
 		public Config build() {
 			return ConfigFactory.parseMap(params);

@@ -15,6 +15,7 @@ public class EpisimTestUtils {
 
 	public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
 	public static final Consumer<EpisimPerson> SYMPTOMS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.showingSymptoms);
+	public static final Consumer<EpisimPerson> VACCINATED = person -> person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 
 	public static final Consumer<EpisimPerson> FULL_QUARANTINE = person -> {
 		person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);

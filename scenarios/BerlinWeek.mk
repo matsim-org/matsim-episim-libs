@@ -49,6 +49,16 @@ $(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(
 	 --shape-file $(out)/../shape-File/dilutionArea.shp\
 	 --output $(out)
 
+$(out)/wLeisure/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz $(out)/wLeisure/be_2020-week_snz_episim_events_wt_25pt_split.xml.gz &: \
+$(out)/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz $(out)/be_2020-week_snz_episim_events_wt_25pt.xml.gz
+	$(sc) splitHomeFacilities $<\
+	 --events $(out)/be_2020-week_snz_episim_events_wt_25pt.xml.gz\
+	 --events $(out)/be_2020-week_snz_episim_events_sa_25pt.xml.gz\
+	 --events $(out)/be_2020-week_snz_episim_events_so_25pt.xml.gz\
+	 --shape-file $(out)/../shape-File/dilutionArea.shp\
+	 --remap visit --remap leisure\
+	 --output $(out)/wLeisure
+
 ###########
 # 100 pct
 ###########

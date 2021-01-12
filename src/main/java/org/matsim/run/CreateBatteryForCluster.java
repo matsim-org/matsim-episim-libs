@@ -38,11 +38,10 @@ import org.matsim.episim.PreparedRun;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
-import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.text.DecimalFormat;
 import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -76,19 +75,19 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v14")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v15")
 	private String runVersion;
 
-	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "44")
+	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "36")
 	private int stepSize;
 
-	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms84G -Xmx84G -XX:+UseParallelGC")
+	@CommandLine.Option(names = "--jvm-opts", description = "Additional options for JVM", defaultValue = "-Xms85G -Xmx85G -XX:+UseParallelGC")
 	private String jvmOpts;
 
-	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.ContactModels")
+	@CommandLine.Option(names = "--setup", defaultValue = "org.matsim.run.batch.SMBatch")
 	private Class<? extends BatchRun<T>> setup;
 
-	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.ContactModels$Params")
+	@CommandLine.Option(names = "--params", defaultValue = "org.matsim.run.batch.SMBatch$Params")
 	private Class<T> params;
 
 	@SuppressWarnings("rawtypes")
@@ -117,35 +116,12 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 			Files.copy(Resources.getResource(name).openStream(), dir.resolve(name), StandardCopyOption.REPLACE_EXISTING);
 		}
 
-		BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dir.resolve("_info.txt").toFile()));
-		BufferedWriter yamlWriter = new BufferedWriter(new FileWriter(dir.resolve("metadata.yaml").toFile()));
-
-
-		List<String> header = Lists.newArrayList("RunScript", "Config", "RunId", "Output");
-		header.addAll(prepare.parameter);
-
-		infoWriter.write(Joiner.on(";").join(header));
-		infoWriter.newLine();
-
-		ObjectMapper mapper = new ObjectMapper(new YAMLFactory()
-				.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES))
-				.registerModule(new JavaTimeModule())
-				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
-		Map<String, Object> metadata = new LinkedHashMap<>();
-
-		metadata.put("readme", runVersion + "-notes.md");
-		metadata.put("zip", runVersion + "-data-" + runName + ".zip");
-		metadata.put("info", runVersion + "-info-" + runName + ".txt");
-		metadata.put("timestamp", LocalDate.now());
-
-		metadata.putAll(prepare.getMetadata());
-		mapper.writeValue(yamlWriter, metadata);
+		writeMetadata(dir, prepare);
+		BufferedWriter infoWriter = writeInfoHeader(dir, prepare);
 
 		for (PreparedRun.Run run : prepare.runs) {
 
-			String runId = runName + run.id;
-			String configFileName = "config_" + runName + run.id + ".xml";
+			String configFileName = writeRunToInfo(infoWriter, batchOutput, prepare, run, runName);
 
 			noBindings &= ((BatchRun) prepare.setup).getBindings(run.id, run.args) == null;
 
@@ -156,15 +132,6 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 				prepare.setup.writeAuxiliaryFiles(dir, run.config);
 				ConfigUtils.writeConfig(run.config, input.resolve(configFileName).toString());
-			}
-
-			List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
-			line.addAll(run.params.stream().map(EpisimUtils::asString).collect(Collectors.toList()));
-
-			// base case is not contained in the info file
-			if (run.id > 0) {
-				infoWriter.write(Joiner.on(";").join(line));
-				infoWriter.newLine();
 			}
 		}
 
@@ -234,4 +201,67 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 		return 0;
 	}
+
+	/**
+	 * Writes the header of _info.txt into {@code dir}.
+	 */
+	static BufferedWriter writeInfoHeader(Path dir, PreparedRun prepare) throws IOException {
+		BufferedWriter infoWriter = Files.newBufferedWriter(dir.resolve("_info.txt"));
+
+		List<String> header = Lists.newArrayList("RunScript", "Config", "RunId", "Output");
+		header.addAll(prepare.parameter);
+
+		infoWriter.write(Joiner.on(";").join(header));
+		infoWriter.newLine();
+
+		return infoWriter;
+	}
+
+	/**
+	 * Writes one line into the info.txt for one run.
+	 * @return config file name
+	 */
+	static String  writeRunToInfo(BufferedWriter infoWriter, Path batchOutput, PreparedRun prepare, PreparedRun.Run run, String runName) throws IOException {
+		String runId = runName + run.id;
+		String configFileName = "config_" + runName + run.id + ".xml";
+
+		String outputPath = batchOutput + "/" + prepare.getOutputName(run);
+
+		List<String> line = Lists.newArrayList("run.sh", configFileName, runId, outputPath);
+		line.addAll(run.params.stream().map(EpisimUtils::asString).collect(Collectors.toList()));
+
+		// base case is not contained in the info file
+		if (run.id > 0) {
+			infoWriter.write(Joiner.on(";").join(line));
+			infoWriter.newLine();
+		}
+
+		return configFileName;
+	}
+
+	/**
+	 * Write metadata.yaml into {@code dir}.
+	 */
+	static void writeMetadata(Path dir, PreparedRun run) throws IOException {
+
+		BufferedWriter yamlWriter = Files.newBufferedWriter(dir.resolve("metadata.yaml"));
+
+		ObjectMapper mapper = new ObjectMapper(new YAMLFactory()
+				.enable(YAMLGenerator.Feature.MINIMIZE_QUOTES))
+				.registerModule(new JavaTimeModule())
+				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
+		Map<String, Object> metadata = new LinkedHashMap<>();
+
+		metadata.put("readme", "notes.md");
+		metadata.put("zip", "summaries.zip");
+		metadata.put("info", "_info.txt");
+		metadata.put("zipFolder", "summaries");
+		metadata.put("timestamp", LocalDate.now());
+
+		metadata.putAll(run.getMetadata());
+		mapper.writeValue(yamlWriter, metadata);
+		yamlWriter.close();
+	}
+
 }

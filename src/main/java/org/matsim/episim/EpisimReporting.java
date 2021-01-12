@@ -39,6 +39,7 @@ import org.matsim.episim.events.EpisimContactEvent;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.events.EpisimTracingEvent;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.EpisimWriter;
 
@@ -81,6 +82,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCases = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
 
 	/**
+	 * Number of daily infections per virus strain.
+	 */
+	public final Object2IntMap<VirusStrain> strains = new Object2IntOpenHashMap<>();
+
+	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
@@ -97,6 +103,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter restrictionReport;
 	private BufferedWriter timeUse;
 	private BufferedWriter diseaseImport;
+	private BufferedWriter outdoorFraction;
+	private BufferedWriter virusStrains;
 
 	private String memorizedDate = null;
 
@@ -136,6 +144,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
+		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
+		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -179,7 +189,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
-			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv")) {
+			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
+					"outdoorFraction.tsv", "strains.tsv")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -191,6 +202,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
+		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
+		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
@@ -273,6 +286,16 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				default:
 					throw new IllegalStateException("Unexpected value: " + person.getQuarantineStatus());
 			}
+
+			switch (person.getVaccinationStatus()) {
+				case yes:
+					report.nVaccinated++;
+					district.nVaccinated++;
+				case no:
+					break;
+				default:
+					throw new IllegalArgumentException("Unexpected value: " + person.getVaccinationStatus());
+			}
 		}
 
 		for (String district : reports.keySet()) {
@@ -317,11 +340,21 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		log.warn("No of susceptible persons={} / {}%", decimalFormat.format(t.nSusceptible), 100 * t.nSusceptible / t.nTotal());
 		log.warn("No of infected persons={} / {}%", decimalFormat.format(t.nTotalInfected), 100 * t.nTotalInfected / t.nTotal());
 		log.warn("No of recovered persons={} / {}%", decimalFormat.format(t.nRecovered), 100 * t.nRecovered / t.nTotal());
+		log.warn("No of vaccinated persons={} / {}%", decimalFormat.format(t.nVaccinated), 100 * t.nVaccinated / t.nTotal());
 		log.warn("---");
 		log.warn("No of persons in quarantineFull={} / {}%", decimalFormat.format(t.nInQuarantineFull), 100 * t.nInQuarantineFull / t.nTotal());
 		log.warn("No of persons in quarantineHome (through tracing)={} / {}%", decimalFormat.format(t.nInQuarantineHome), 100 * t.nInQuarantineHome / t.nTotal());
 		log.warn("100 persons={} agents", sampleSize * 100);
 		log.warn("===============================");
+
+		String[] strainOut = new String[VirusStrain.values().length + 2];
+		strainOut[0] = String.valueOf(iteration);
+		strainOut[1] = date;
+		for (int i = 0; i < VirusStrain.values().length; i++) {
+			strainOut[i + 2] = String.valueOf(strains.getOrDefault(VirusStrain.values()[i], 0) * (1 / sampleSize));
+		}
+		writer.append(virusStrains, strainOut);
+		strains.clear();
 
 		// Write all reports for each district
 		for (InfectionReport r : reports.values()) {
@@ -349,6 +382,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);
 			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
 			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);
+
+			array[InfectionsWriterFields.nVaccinated.ordinal()] = Long.toString(r.nVaccinated);
+
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
 			writer.append(infectionReport, array);
@@ -362,7 +398,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @param infector      infector
 	 * @param infectionType activities of both persons
 	 */
-	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType, EpisimContainer<?> container) {
+	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType,
+								VirusStrain strain, EpisimContainer<?> container) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -372,6 +409,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
+		strains.mergeInt(strain, 1, Integer::sum);
 		manager.processEvent(new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
 				personWrapper.getCurrentContainer().getContainerId(), infectionType));
 
@@ -384,6 +422,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;
 		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(container.getPersons().size());
 		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
+		array[InfectionEventsWriterFields.virusStrain.ordinal()] = strain.toString();
 
 		writer.append(infectionEvents, array);
 	}
@@ -501,6 +540,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
 	}
 
+	/**
+	 * Write outdoor fraction for each day.
+	 */
+	public void reportOutdoorFraction(double outdoorFraction, int iteration) {
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+		writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+	}
+
 	@Override
 	public void close() {
 
@@ -509,6 +556,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(restrictionReport);
 		writer.close(timeUse);
 		writer.close(diseaseImport);
+		writer.close(outdoorFraction);
+		writer.close(virusStrains);
 
 	}
 
@@ -576,6 +625,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				out.writeInt(kv.getIntValue());
 			}
 		}
+
+		for (VirusStrain value : VirusStrain.values()) {
+			out.writeInt(strains.getInt(value));
+		}
 	}
 
 	@Override
@@ -590,15 +643,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				cumulativeCases.get(state).put(key, in.readInt());
 			}
 		}
+
+		for (VirusStrain value : VirusStrain.values()) {
+			strains.put(value, in.readInt());
+		}
 	}
 
 	enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
 		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
-		nRecovered, nInQuarantineFull, nInQuarantineHome, district
+		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, district
 	}
 
-	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility}
+	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain}
 
 	/**
 	 * Detailed infection report for the end of a day.
@@ -625,6 +682,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		public long nRecovered = 0;
 		public long nInQuarantineFull = 0;
 		public long nInQuarantineHome = 0;
+		public long nVaccinated = 0;
 
 		/**
 		 * Constructor.
@@ -658,6 +716,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			nRecovered *= factor;
 			nInQuarantineFull *= factor;
 			nInQuarantineHome *= factor;
+			nVaccinated *= factor;
 		}
 	}
 }

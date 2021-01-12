@@ -33,15 +33,19 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.reporting.AsyncEpisimWriter;
+import org.matsim.episim.reporting.EpisimWriter;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -70,11 +74,11 @@ public class RunParallel<T> implements Callable<Integer> {
 	private Path output;
 
 	public static final String OPTION_SETUP = "--setup";
-	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.Percolation}")
+	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.SMBatch}")
 	private Class<? extends BatchRun<T>> setup;
 
 	public static final String OPTION_PARAMS = "--params";
-	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.Percolation$Params}")
+	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.SMBatch$Params}")
 	private Class<T> params;
 
 	public static final String OPTION_THREADS = "--threads";
@@ -101,8 +105,15 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--no-reuse", defaultValue = "false", description = "Don't reuse the scenario and events for the runs.")
 	private boolean noReuse;
 
+	@CommandLine.Option(names = "--async-io", defaultValue = "false", description = "Write files asynchronously.")
+	private boolean asyncIO;
+
 	@CommandLine.Option(names = "--silent", defaultValue = "false", description = "Disable info and warn logging")
 	private boolean silent;
+
+	public static final String OPTION_METADATA = "--write-metadata";
+	@CommandLine.Option(names = OPTION_METADATA, description = "Write metadata to output directory.", defaultValue = "false")
+	private boolean writeMetadata;
 
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
@@ -138,6 +149,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		Scenario scenario = null;
 		ReplayHandler replay = null;
+		AsyncEpisimWriter writer = asyncIO ? new AsyncEpisimWriter(threads) : null;
 
 		if (noReuse) {
 			log.info("Reusing scenario and events is disabled.");
@@ -152,8 +164,19 @@ public class RunParallel<T> implements Callable<Integer> {
 			replay = injector.getInstance(ReplayHandler.class);
 		}
 
+		BufferedWriter infoWriter = null;
+		if (writeMetadata) {
+			CreateBatteryForCluster.writeMetadata(output, prepare);
+			infoWriter = CreateBatteryForCluster.writeInfoHeader(output, prepare);
+		}
+
 		int i = 0;
 		for (PreparedRun.Run run : prepare.runs) {
+
+			if (writeMetadata) {
+				CreateBatteryForCluster.writeRunToInfo(infoWriter, output, prepare, run, prepare.getName());
+			}
+
 			if (i++ % totalWorker != workerIndex)
 				continue;
 
@@ -165,7 +188,11 @@ public class RunParallel<T> implements Callable<Integer> {
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
 
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
-								episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+					episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+
+			sameInput &= Objects.equals(baseConfig.vehicles().getVehiclesFile(), run.config.vehicles().getVehiclesFile());
+			sameInput &= Objects.equals(baseConfig.plans().getInputFile(), run.config.plans().getInputFile());
+
 			if (!noReuse && !sameInput) {
 				log.error("Input files differs for run {}", run.id);
 				return 1;
@@ -177,20 +204,31 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.setContext(context);
 
 			futures.add(CompletableFuture.runAsync(
-					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay), maxIterations), executor)
+					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay, writer), maxIterations), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
 					}));
 		}
 
+		if (writeMetadata) {
+			infoWriter.close();
+		}
+
 		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
 
 		// Wait for all futures to complete
-		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).exceptionally( e -> {
+			log.error("Tasks finished with error", e);
+			return null;
+		}
+		).join();
 
 		log.info("Finished all tasks");
 		executor.shutdown();
+
+		if (writer != null)
+			writer.close();
 
 		return 0;
 	}
@@ -200,11 +238,13 @@ public class RunParallel<T> implements Callable<Integer> {
 		private final Config config;
 		private final Scenario scenario;
 		private final ReplayHandler replay;
+		private final AsyncEpisimWriter writer;
 
-		private ParallelModule(Config config, @Nullable Scenario scenario, ReplayHandler replay) {
+		private ParallelModule(Config config, @Nullable Scenario scenario, ReplayHandler replay, AsyncEpisimWriter writer) {
 			this.scenario = scenario;
 			this.config = config;
 			this.replay = replay;
+			this.writer = writer;
 		}
 
 		@Override
@@ -214,6 +254,10 @@ public class RunParallel<T> implements Callable<Integer> {
 			if (scenario != null) {
 				bind(Scenario.class).toInstance(scenario);
 				bind(ReplayHandler.class).toInstance(replay);
+			}
+
+			if (writer != null) {
+				bind(EpisimWriter.class).toInstance(writer);
 			}
 		}
 	}

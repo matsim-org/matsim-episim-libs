@@ -321,6 +321,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	public enum Strategy {
 
 		/**
+		 * No tracing.
+		 */
+		NONE,
+
+		/**
 		 * Trace contacts of individual persons.
 		 */
 		INDIVIDUAL_ONLY,

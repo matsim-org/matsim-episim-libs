@@ -179,6 +179,18 @@ public abstract class AbstractContactModel implements ContactModel {
 				container.getMaxGroupSize() > r.getMaxGroupSize())
 			return false;
 
+		// reduce group size probabilistically
+		Integer reducedGroupSize = r.getReducedGroupSize();
+		if (reducedGroupSize != null && reducedGroupSize > -1 && reducedGroupSize != Integer.MAX_VALUE) {
+			double current = (container.getPersons().size() * episimConfig.getSampleSize()) / container.getNumSpaces();
+
+			// always false if current < reduced size
+			boolean out = rnd.nextDouble() > reducedGroupSize / current;
+
+			// don'T return true, other conditions might be false
+			if (out) return false;
+		}
+
 		if (r.isClosed(container.getContainerId()))
 			return false;
 
@@ -258,7 +270,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 		// no closing hour set
-		if (r.getClosingHours() == null) {
+		if (!r.hasClosingHours()) {
 			return now - max;
 		}
 
@@ -314,8 +326,9 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		String infType = infectionType.toString();
 
-		reporting.reportInfection(personWrapper, infector, now, infType, container);
+		reporting.reportInfection(personWrapper, infector, now, infType, infector.getVirusStrain(), container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		personWrapper.setVirusStrain(infector.getVirusStrain());
 		personWrapper.setInfectionContainer(container);
 		personWrapper.setInfectionType(infType);
 

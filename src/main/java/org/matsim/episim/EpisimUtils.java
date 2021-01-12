@@ -20,9 +20,7 @@
  */
 package org.matsim.episim;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.io.Resources;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.csv.CSVFormat;
@@ -38,7 +36,6 @@ import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
 import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
 import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.Pair;
 import org.matsim.core.config.Config;
@@ -50,6 +47,7 @@ import org.matsim.episim.policy.Restriction;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.time.DayOfWeek;
@@ -59,7 +57,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * Common utility class for episim.
@@ -73,9 +70,16 @@ public final class EpisimUtils {
 
 	/**
 	 * Gets the day of a week for a certain start day and current iteration.
+	 * The {@link DayOfWeek} can be overwritten by the input config and does not necessarily match the reality.
 	 */
-	public static DayOfWeek getDayOfWeek(LocalDate startDate, long iteration) {
-		return startDate.plusDays(iteration - 1).getDayOfWeek();
+	public static DayOfWeek getDayOfWeek(EpisimConfigGroup config, long iteration) {
+		LocalDate date = config.getStartDate().plusDays(iteration - 1);
+
+		// check if date was re-mapped
+		if (config.getInputDays().containsKey(date))
+			return config.getInputDays().get(date);
+
+		return date.getDayOfWeek();
 	}
 
 	/**
@@ -170,9 +174,10 @@ public final class EpisimUtils {
 
 	/**
 	 * Find the current valid entry from a map of dates and values.
-	 * @param map map of values, assumed to be sorted by date
+	 *
+	 * @param map          map of values, assumed to be sorted by date
 	 * @param defaultValue default value
-	 * @param date date to search for
+	 * @param date         date to search for
 	 * @return value from the map larger or equal to {@code date}
 	 */
 	public static <T> T findValidEntry(Map<LocalDate, T> map, T defaultValue, LocalDate date) {
@@ -191,13 +196,17 @@ public final class EpisimUtils {
 	 * E.g. if there are the entries 01.01=1 and 10.01=10 then interpolation for
 	 * 05.01 will be 5
 	 *
-	 * @param map map of target values.
+	 * @param map  map of target values.
 	 * @param date date to interpolate.
 	 * @return interpolated values (or exact if entry is in map)
 	 */
 	public static double interpolateEntry(NavigableMap<LocalDate, ? extends Number> map, LocalDate date) {
 
 		Map.Entry<LocalDate, ? extends Number> floor = map.floorEntry(date);
+
+		if (floor == null)
+			return map.firstEntry().getValue().doubleValue();
+
 		if (floor.getKey().equals(date))
 			return floor.getValue().doubleValue();
 
@@ -209,7 +218,36 @@ public final class EpisimUtils {
 
 		double between = ChronoUnit.DAYS.between(floor.getKey(), ceil.getKey());
 		double diff = ChronoUnit.DAYS.between(floor.getKey(), date);
-		return floor.getValue().doubleValue() +  diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
+		return floor.getValue().doubleValue() + diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
+	}
+
+	/**
+	 * Interpolate a value for specific key from a map of target keys and values.
+	 *
+	 * @param map map of target values.
+	 * @param key key to interpolate.
+	 * @return interpolated values (or exact if entry is in map)
+	 * @see #interpolateEntry(NavigableMap, LocalDate)
+	 */
+	public static <T extends Number> double interpolateEntry(NavigableMap<T, ? extends Number> map, T key) {
+
+		Map.Entry<T, ? extends Number> floor = map.floorEntry(key);
+
+		if (floor == null)
+			return map.firstEntry().getValue().doubleValue();
+
+		if (floor.getKey().equals(key))
+			return floor.getValue().doubleValue();
+
+		Map.Entry<T, ? extends Number> ceil = map.ceilingEntry(key);
+
+		// there is no higher entry to interpolate
+		if (ceil == null)
+			return floor.getValue().doubleValue();
+
+		double between = floor.getKey().doubleValue() - ceil.getKey().doubleValue();
+		double diff = floor.getKey().doubleValue() - key.doubleValue();
+		return floor.getValue().doubleValue() + diff * (ceil.getValue().doubleValue() - floor.getValue().doubleValue()) / between;
 	}
 
 	/**
@@ -297,10 +335,13 @@ public final class EpisimUtils {
 	 * Creates restrictions from csv from Senozon data.
 	 * Restrictions at educational facilites are created manually.
 	 * Weekends and bank holidays in 2020 are interpolated.
+	 *
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	@Deprecated
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha, LocalDate changeDate,
 																	  double changedExposure) throws IOException {
+		// yyyy there are three "createRestrictionsFromCSV" methods.  Could we please combine them into a configurable class?  kai, dec'20
 
 		HashSet<String> activities = new HashSet<String>();
 
@@ -418,8 +459,14 @@ public final class EpisimUtils {
 	 * Read in restrictions from csv file. A support point will be calculated and intermediate values calculated for each week.
 	 *
 	 * @param alpha modulate the amount reduction
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
+		// yyyy In principle this should be
+		//
+		// 	return new CreateRestrictionsFromCSV(episimConfig).setInput( input ).setAlpha( alpha ).createPolicyConfigBuilder();
+		//
+		// but the code is not exactly the same so I do not know if they have the same functionalities.  kai, dec'20
 
 		Reader in = new FileReader(input);
 		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
@@ -491,110 +538,11 @@ public final class EpisimUtils {
 	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
 	 *
 	 * @param alpha modulate the amount reduction
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
 	 */
 	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
 																	   Extrapolation extrapolate) throws IOException {
-
-		Reader in = new FileReader(input);
-		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
-		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-		// activity reduction for notAtHome each day
-		Map<LocalDate, Double> days = new LinkedHashMap<>();
-
-		for (CSVRecord record : parser) {
-			LocalDate date = LocalDate.parse(record.get(0), fmt);
-
-			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
-
-			double remainingFraction = 1. + (value / 100.);
-			// modulate reduction with alpha
-			double reduction = Math.min(1., alpha * (1. - remainingFraction));
-			days.put(date, Math.min(1, 1 - reduction));
-		}
-
-		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
-				.stream().map(LocalDate::parse).collect(Collectors.toSet());
-
-		// activities to set
-		String[] act = episimConfig.getInfectionParams().stream()
-				.map(EpisimConfigGroup.InfectionParams::getContainerName)
-				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
-				.toArray(String[]::new);
-
-		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
-		LocalDate end = Iterables.getLast(days.keySet());
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-
-		// trend used for extrapolation
-		List<Double> trend = new ArrayList<>();
-
-		while (start.isBefore(end)) {
-
-			List<Double> values = new ArrayList<>();
-			for (int i = 0; i < 7; i++) {
-				LocalDate day = start.plusDays(i);
-				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
-						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
-					values.add(days.get(day));
-				}
-			}
-
-			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
-			trend.add(avg);
-
-			// Calc next sunday
-			int n = 7 - start.getDayOfWeek().getValue() % 7;
-			builder.restrict(start, avg, act);
-			start = start.plusDays(n);
-		}
-
-
-		// Use last weeks for the trend
-		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
-		start = start.plusDays(7);
-
-		if (extrapolate == Extrapolation.linear) {
-
-			int n = trend.size();
-			SimpleRegression reg = new SimpleRegression();
-			for (int i = 0; i < n; i++) {
-				reg.addData(i, trend.get(i));
-			}
-
-			// continue the trend
-			for (int i = 0; i < 8; i++) {
-				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
-				// System.out.println(start + " " + reg.predict(n + i));
-				start = start.plusDays(7);
-			}
-
-		} else if (extrapolate == Extrapolation.exponential) {
-
-			List<WeightedObservedPoint> points = new ArrayList<>();
-
-			int n = trend.size();
-			for (int i = 0; i < n; i++) {
-				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
-			}
-
-			Exponential f = new Exponential();
-			FuncFitter fitter = new FuncFitter(f);
-			double[] coeff = fitter.fit(points);
-
-			// continue the trend
-			for (int i = 0; i < 25; i++) {
-
-				double predict = f.value(i + n, coeff);
-				// System.out.println(start + " " + predict);
-				builder.restrict(start, Math.min(predict, 1), act);
-				start = start.plusDays(7);
-			}
-		}
-
-
-		return builder;
+		return new CreateRestrictionsFromCSV(episimConfig).setInput(input).setAlpha(alpha).setExtrapolation(extrapolate).createPolicyConfigBuilder();
 	}
 
 	/**
@@ -657,7 +605,7 @@ public final class EpisimUtils {
 	/**
 	 * Exponential function in the form of 1 - a * exp(-x / b).
 	 */
-	private static final class Exponential implements ParametricUnivariateFunction {
+	static final class Exponential implements ParametricUnivariateFunction {
 
 		@Override
 		public double value(double x, double... parameters) {
@@ -671,23 +619,158 @@ public final class EpisimUtils {
 		}
 	}
 
-	public static int getAge( EpisimPerson person ){
-		int age = -1;
+	/**
+	 * Read a csv with date column into a map.
+	 */
+	public static NavigableMap<LocalDate, Double> readCSV(Path csv, CSVFormat format, String dateColumn, String valueColumn) {
 
-		for( String attr : person.getAttributes().getAsMap().keySet() ){
-			if( attr.contains( "age" ) ){
-				age = (int) person.getAttributes().getAttribute( attr );
-				break;
+		TreeMap<LocalDate, Double> map = new TreeMap<>();
+
+		try (BufferedReader in = Files.newBufferedReader(csv)) {
+
+			Iterable<CSVRecord> records = format.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+
+			for (CSVRecord r : records) {
+
+				LocalDate date = LocalDate.parse(r.get(dateColumn));
+				map.put(date, Double.parseDouble(r.get(valueColumn)));
 			}
+
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
 
-		if( age == -1 ){
-			throw new RuntimeException( "Person=" + person.getPersonId().toString() + " has no age. Age dependent progression is not possible." );
+
+		return map;
+	}
+
+	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(File weatherCSV, double rainThreshold,
+																			Double temperatureIn, Double temperatureOut) throws IOException {
+		if ((temperatureIn == null && temperatureOut != null) || (temperatureIn != null && temperatureOut == null)) {
+			throw new RuntimeException("one temperature is null, the other one is given; don't know how to interpret that; aborting ...");
+		}
+		if (temperatureIn == null) {
+			temperatureIn = 1.5;
+			temperatureOut = 30.5;
+			// should correspond to 0.0344 * tMax - 0.0518, which is what I found.  kai, nov'20
 		}
 
-		if( age < 0 || age > 120 ){
-			throw new RuntimeException( "Age of person=" + person.getPersonId().toString() + " is not plausible. Age is=" + age );
+
+		Reader in = new FileReader(weatherCSV);
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
+		LocalDate date = null;
+		for (CSVRecord record : records) {
+			date = LocalDate.parse(record.get("date"), fmt);
+			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
+//				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
+				continue;
+			}
+
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+
+			double outDoorFraction = (tMax - temperatureIn) / (temperatureOut - temperatureIn);
+
+			if (prcp > rainThreshold) {
+				outDoorFraction = outDoorFraction * 0.5;
+			}
+
+			if (outDoorFraction > 1.) {
+				outDoorFraction = 1.;
+//				System.out.println("outDoorFraction is > 1. Setting to 1. Date: " + date.toString());
+			}
+			if (outDoorFraction < 0.) {
+				outDoorFraction = 0.;
+//				System.out.println("outDoorFraction is < 1. Setting to 0. Date: " + date.toString());
+			}
+			outdoorFractions.put(date, outDoorFraction);
 		}
-		return age;
+		return outdoorFractions;
+	}
+
+	public static Map<LocalDate, Double> getOutdoorFractions2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange) throws IOException {
+
+		Reader in = new FileReader(weatherCSV);
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		LocalDate lastDate = null;
+		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
+		for (CSVRecord record : records) {
+//			System.out.println( record );
+			LocalDate date = LocalDate.parse(record.get("date"), fmt);
+			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
+//				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
+				continue;
+			}
+
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+
+			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));
+			lastDate = date;
+		}
+
+		in = new FileReader(avgWeatherCSV);
+		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
+		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+
+		for (CSVRecord record : records) {
+			String monthDay = record.get("monthDay");
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+			tmaxPerDay.put(monthDay, tMax);
+			prcpPerDay.put(monthDay, prcp);
+		}
+
+		for (int i = 1; i < 365; i++) {
+			LocalDate date = lastDate.plusDays(i);
+			int month = date.getMonth().getValue();
+			int day = date.getDayOfMonth();
+			String monthDay = month + "-" + day;
+			double tMax = tmaxPerDay.get(monthDay);
+			double prcp = prcpPerDay.get(monthDay);
+			outdoorFractions.put(date, getOutDoorFraction(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold));
+		}
+
+//		System.exit(-1);
+		return outdoorFractions;
+	}
+
+	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
+
+		double tMid;
+		int date1 = 152; //01.06.
+		int date2 = 213; //01.08.
+		if (date.isLeapYear()) {
+			date1++;
+			date2++;
+		}
+//		final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
+		if (date.getDayOfYear() < date1) {
+			tMid = TmidSpring;
+		} else if (date.getDayOfYear() > date2) {
+			tMid = TmidFall;
+		} else {
+			double fraction = 1. * (date.getDayOfYear() - date1) / (date2 - date1);
+			tMid = (1. - fraction) * TmidSpring + fraction * TmidFall;
+		}
+		double tAllIn = tMid - Trange;
+		double tAllOut = tMid + Trange;
+
+		double outDoorFraction = (tMax - tAllIn) / (tAllOut - tAllIn);
+
+		if (prcp > rainThreshold) outDoorFraction = outDoorFraction * 0.5;
+		if (outDoorFraction > 1.) outDoorFraction = 1.;
+		if (outDoorFraction < 0.) outDoorFraction = 0.;
+
+//		System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
+
+
+		return outDoorFraction;
 	}
 }

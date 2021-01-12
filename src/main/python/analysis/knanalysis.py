@@ -2,26 +2,37 @@
 # coding: utf-8
 
 # In[]:
-
+import glob
 import pandas as pd
 import matplotlib.pyplot as pyplot
 import numpy as np
 from cycler import cycler
-import scipy as sp
-import matsim as ms
-
-# todo: https??
-hh = pd.read_csv('../covid-sim/src/assets/' + 'berlin-hospital.csv', sep=",").fillna(value=0.)
-# hh = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/10052020_TaSpi.csv', sep=";").fillna(value=0.)
-hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
-
-cc = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv', sep=",").fillna(value=0.)
-cc.index = pd.date_range(start='2020-02-21', periods=cc.index.size)
+# import matsim as ms
 
 # In[]:
 
+rkiDiseaseImport = pd.read_csv('rkiDiseaseImport.tsv', sep='\t', parse_dates=['date']).fillna(value=0.)
+rkiDiseaseImport.set_index('date', inplace=True)
+
+casesReferenceDate = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv', sep=",").fillna(value=0.)
+casesReferenceDate.index = pd.to_datetime(casesReferenceDate['year'].apply(str) + '-' + casesReferenceDate['month'].apply(str) + '-' + casesReferenceDate['day'].apply(str))
+casesReferenceDate2 = pd.concat( [casesReferenceDate,rkiDiseaseImport]).fillna(value=0.)
+casesReferenceDate.drop(casesReferenceDate.index, inplace=True)
+
+casesReportingDate = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv', sep=",").fillna(value=0.)
+casesReportingDate.index = pd.to_datetime(casesReportingDate['year'].apply(str) + '-' + casesReportingDate['month'].apply(str) + '-' + casesReportingDate['day'].apply(str))
+casesReportingDate2 = pd.concat( [casesReportingDate,rkiDiseaseImport]).fillna(value=0.)
+casesReportingDate.drop(casesReportingDate.index, inplace=True)
+
+
 ss = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv', sep=",",parse_dates=['Datum'],dayfirst=True).fillna(value=0.)
 ss.index = pd.to_datetime(ss['Datum'])
+
+# todo: https??
+hh = pd.read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv', sep=",").fillna(value=0.)
+# hh = pd.read_csv('/Users/kainagel/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/10052020_TaSpi.csv', sep=";").fillna(value=0.)
+hh.index = pd.date_range(start='2020-03-01', periods=hh.index.size)
+# hh.index = pd.to_datetime( hh['year'].apply(str) + '-' + hh['month'].apply(str) + '-' + hh['day'].apply(str) )
 
 # In[]:
 
@@ -200,7 +211,7 @@ ss.index = pd.to_datetime(ss['Datum'])
 # base = 'output/2020-09-23_21-34-24__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}__trStrt46/'
 # base = 'output/2020-09-23_23-02-01__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst3_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
 
-base = '0output/zz_archive-2020-10-04/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
+# base = '0output/zz_archive-2020-10-04/2020-09-24_12-37-12__oldSymmetric__fromConfig__theta5.0E-6@3.0_seed4711_strtDt2020-02-18_imprtOffst0_trCap{2020-04-01=30, 2020-06-15=2147483647}_quStrt2020-04-04/'
 
 # base = 'output/2020-10-04_16-24-49__symmetric__fromConfig__theta2.1E-5@NaN_seed0_strtDt2020-02-18_imprtOffst0_trCap{1970-01-01=0}_quStrt+5881630-08-28/'
 
@@ -218,15 +229,81 @@ base = '0output/zz_archive-2020-10-04/2020-09-24_12-37-12__oldSymmetric__fromCon
 
 # base = 'output/seed_4711-factor_0.01/weekSymmetric1.'
 
-#
-rr = pd.read_csv(base + 'infections.txt', sep='\t')
-rr['date'] = pd.to_datetime(rr['date'])
-rr.set_index('date',inplace=True)
+# base = 'output/importOffset_-14-theta_0.9/calibration1.'
+# base = 'output/importOffset_-14-theta_0.9-tracingDelay_4/calibration3.'
+# base = 'output/importOffset_-14-theta_0.9-tracingDelay_3/calibration2.'
+# base = 'output/importOffset_-14-theta_0.9-tracingDelay_2/calibration1.'
 
-infectedCumulative = rr.loc[rr['district'] == 'Berlin', ['nInfectedCumulative']]
-nContagious = rr.loc[rr['district'] == 'Berlin', ['nContagiousCumulative']]
-nShowingSymptoms = rr.loc[rr['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
-nTotalInfected = rr.loc[rr['district'] == 'Berlin', ['nTotalInfected']]
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_2020-08-15/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_2020-09-01/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_2020-09-15/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_2020-09-30/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_fromWeather/calibration1.'
+
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_2020-11-14/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.5-summerEnd_2020-11-14/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_2020-11-14/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.5-summerEnd_2020-11-14/calibration1.'
+
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_0.5-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.5-summerEnd_fromWeather/calibration1.'
+
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_1.05-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_1.1-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+
+# base = 'output/importOffset_0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.2-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.4-summerEnd_fromWeather/calibration1.'
+
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.2-summerEnd_fromWeather/calibration1.'
+# base = 'output/importOffset_0-theta_0.9-tracingDelay_4-childInfectivitySusceptibility_1.4-summerEnd_fromWeather/calibration1.'
+
+# base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_0.0-summerEnd_fromWeather/calibration1.'
+# base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_0.5-summerEnd_fromWeather/calibration1.'
+# base = 'output/temperature0_15.0-temperature1_30.0-theta_1.0-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration1.'
+
+# base = 'output/temperature0_10.0-temperature1_20.0-thetaFactor_0.9-tracingDelay_4-childInfectivitySusceptibility_1.0-summerEnd_fromWeather/calibration*.'
+
+# base = 'output/temperature0_12.5-temperature1_32.5-thetaFactor_0.7-childInfectivitySusceptibility_1.0-tracingCap_500-importFactorAfterJune_0.25/calibration*.'
+
+# base = 'output/temperatureMidPoint_22.5-thetaFactor_0.7-tracingCap_500-importFactorAfterJune_0.0-newbornSusceptibility_0.0-newbornInfectivity_0.7-grownUpAge_16/calibration*.'
+
+# base = 'output/tempMidPoint_20.0-tempPm_0.0-thetaFactor_0.7-tracingCap_500-impFactAftJun_0.25/calibration*.'
+
+# base = 'output/tempXTheta_15.0_1.0-tempPm_0.0-tracingCap_2000-impFactAftJun_0.25-grownUpAge_16/calibration*.'
+# base = 'output/tempXTheta_25.0_0.65-tempPm_0.0-tracingCap_200-impFactAftJun_0.0-grownUpAge_24/calibration*.'
+# base = 'output/tempXTheta_25.0_0.65-tempPm_0.0-impFactBefJun_4.0-youthAge_7-youthSuscept_1.0-grownUpAge_16-impFactAftJun_0.0-tracingCap_2000/calibration*.'
+
+base = 'output/tempXTheta_25.0_0.65-tempPm_0.0-impFactBefJun_4.0-childSusc_0.0-youthAge_7-youthSusc_0.0-grownUpAge_24-impFactAftJun_0.0-tracCapApr_300-tracCapJun_0/calibration*.'
+
+glob_glob = glob.glob(base + 'infections.txt')
+print(glob_glob)
+assert( len(glob_glob) == 1 )
+
+for textfile in glob_glob:
+    infections = pd.read_csv(textfile, sep='\t')
+infections['date'] = pd.to_datetime(infections['date'])
+infections.set_index('date', inplace=True)
+
+for textfile in glob.glob(base + 'diseaseImport.tsv'):
+    diseaseImport = pd.read_csv(textfile, sep='\t')
+diseaseImport['date'] = pd.to_datetime(diseaseImport['date'])
+diseaseImport.set_index('date', inplace=True)
+
+for textfile in glob.glob(base + 'outdoorFraction.tsv'):
+    outdoorFraction = pd.read_csv(textfile, sep='\t')
+outdoorFraction['date'] = pd.to_datetime(outdoorFraction['date'])
+outdoorFraction.set_index('date', inplace=True)
+
+infectedCumulative = infections.loc[infections['district'] == 'Berlin', ['nInfectedCumulative']]
+nContagious = infections.loc[infections['district'] == 'Berlin', ['nContagiousCumulative']]
+nShowingSymptoms = infections.loc[infections['district'] == 'Berlin', ['nShowingSymptomsCumulative']]
+nTotalInfected = infections.loc[infections['district'] == 'Berlin', ['nTotalInfected']]
 # infectedCumulative = rr.loc[rr['district'] == 'unknown', ['nInfectedCumulative']]
 # nContagious = rr.loc[rr['district'] == 'unknown', ['nContagiousCumulative']]
 # nShowingSymptoms = rr.loc[rr['district'] == 'unknown', ['nShowingSymptomsCumulative']]
@@ -251,34 +328,40 @@ fit5.index = pd.date_range(start="2020-07-01", periods=fit5.size)
 fit6 = pd.Series(42 * np.exp(np.arange(0, 300, 1) * np.log(2.) / 20))
 fit6.index = pd.date_range(start="2020-08-20", periods=fit6.size)
 
-rr3 = pd.concat([cc['cases'].rolling('7D').mean(), infectedCumulative.diff(), nContagious.diff(), nShowingSymptoms.diff().rolling('7D').mean(), ss['Anteil Positiv Berlin Meldewoche'] * 25, nTotalInfected, fit4, fit5, fit6], axis=1)
-# rr3 = pd.concat([cc['cases'], infectedCumulative.diff(),nContagious.diff(), nShowingSymptoms.diff(),fit,fit2,fit3], axis=1)
-# rr3 = pd.concat([cc['cases']])
+rr3 = pd.concat([
+    (casesReferenceDate2['cases'] - casesReferenceDate2['nInfected']).resample('W').mean(),
+    infectedCumulative.diff().rolling('7D').mean(),
+    nContagious.diff().rolling('7D').mean(),
+    nShowingSymptoms.diff().resample('7D').mean(),
+    ss['Anteil Positiv Berlin Meldewoche'] * 70,
+    nTotalInfected,
+    #fit4, fit5, fit6,
+    diseaseImport['nInfected'],
+    (casesReportingDate2['cases'] - casesReportingDate2['nInfected']).resample('W').mean(),
+    (1.-0.99*outdoorFraction['outdoorFraction'].resample('W').mean()) * 10
+], axis=1)
 
 # disease import:
-rr3.at[pd.to_datetime("2020-02-24"),'diseaseImport'] = 0.9
-rr3.at[pd.to_datetime("2020-03-09"),'diseaseImport'] = 23.1
-rr3.at[pd.to_datetime("2020-03-23"),'diseaseImport'] = 3.9
-rr3.at[pd.to_datetime("2020-06-08"),'diseaseImport'] = 0.1
-rr3.at[pd.to_datetime("2020-07-13"),'diseaseImport'] = 0.9
-rr3.at[pd.to_datetime("2020-08-10"),'diseaseImport'] = 17.9
-rr3.at[pd.to_datetime("2020-09-07"),'diseaseImport'] = 5.4
-
-rr3['diseaseImport'].interpolate(inplace=True)
-
+# rr3.at[pd.to_datetime("2020-02-24"),'diseaseImport'] = 0.9
+# ...
+# rr3['diseaseImport'].interpolate(inplace=True)
 
 pyplot.close('all')
+pyplot.rcParams['figure.figsize']=[12, 5]
 
-# surveillance:
-# offset = -0
-# pyplot.plot( pd.to_datetime("2020-02-24") + pd.DateOffset(offset), 0.9, 'bo');
-# pyplot.plot( pd.to_datetime("2020-03-09") + pd.DateOffset(offset), 23.1, 'bo');
-# pyplot.plot( pd.to_datetime("2020-03-23") + pd.DateOffset(offset), 3.9, 'bo');
-# #pyplot.plot( pd.to_datetime("2020-06-08") + pd.DateOffset(offset), 0.1, 'bo');
-# pyplot.plot( pd.to_datetime("2020-06-08") + pd.DateOffset(offset), 0.9, 'bo');
-# pyplot.plot( pd.to_datetime("2020-07-13") + pd.DateOffset(offset), 2.7, 'bo');
-# pyplot.plot( pd.to_datetime("2020-08-10") + pd.DateOffset(offset), 17.9, 'bo');
-# pyplot.plot( pd.to_datetime("2020-08-24") + pd.DateOffset(offset), 8.6, 'bo');
+default_cycler = ( cycler(color=      ['r', 'g', 'b', 'y','purple','purple','orange','cyan','brown','r','orange']) +
+                             cycler(linestyle= ['','', '', '','','','-','','','-','']) +
+                             cycler(marker=  ['.','','','','.','','','.','o','','.']))
+pyplot.rc('axes', prop_cycle=default_cycler)
+axes = rr3.plot(logy=True,grid=True,legend=None)
+axes.set_ylim(0.9,4000)
+axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-12-01'))
+pyplot.errorbar(rr3.index,rr3['nShowingSymptomsCumulative'],yerr=3*np.sqrt(rr3['nShowingSymptomsCumulative']) )
+
+# pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
+# pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
+# pyplot.axhline(32,color='gray',linestyle='dotted')
 
 # pyplot.plot( pd.to_datetime('2020-03-07'), 1000, 'yo' )
 # pyplot.text( pd.to_datetime('2020-03-07'), 1000, '1st day of home office (sat)')
@@ -286,43 +369,53 @@ pyplot.close('all')
 # pyplot.plot( pd.to_datetime('2020-03-14'), 800, 'ro' )
 # pyplot.text( pd.to_datetime('2020-03-14'), 800, '1st day of school closures (sat)')
 
-pyplot.rcParams['figure.figsize']=[12, 5]
-default_cycler = ( cycler(color=      ['r', 'g', 'b', 'y','purple','purple','orange','cyan','brown','tab:red']) +
-                             cycler(linestyle= ['' ,  '', '', '','','','-','-','-','-']) +
-                             cycler(marker=  ['.' , '','','','','','','','','']))
-pyplot.rc('axes', prop_cycle=default_cycler)
-axes = rr3.plot(logy=True,grid=True)
-axes.set_ylim(0.9,600)
-axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-11-01'))
-# pyplot.axvline(pd.to_datetime('2020-03-10'), color='gray', linestyle=':', lw=1)
-# pyplot.axvline(pd.to_datetime('2020-03-17'), color='gray', linestyle=':', lw=1)
-# pyplot.axvline(pd.to_datetime('2020-03-22'), color='gray', linestyle=':', lw=1)
-# pyplot.axhline(32,color='gray',linestyle='dotted')
+# noinspection PyUnresolvedReferences
+pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':10})
+pyplot.plot( pd.to_datetime('2020-05-14'), 800, 'yo')
+pyplot.text( pd.to_datetime('2020-05-14'), 800, 'KW 20 mid')
+pyplot.plot( pd.to_datetime('2020-10-01'), 800, 'yo')
+pyplot.text( pd.to_datetime('2020-10-01'), 800, 'KW 40 mid')
+# pyplot.legend(loc='upper center')
 
 pyplot.show()
-
+############################################
+############################################
 # In[]:
+#
 
 # --
 
-infected = rr.loc[rr['district'] == 'Berlin' , ['nSeriouslySick','nCritical']]
+infected = infections.loc[infections['district'] == 'Berlin' , ['nSeriouslySick', 'nCritical']]
 
 
 infected['shouldBeInHospital'] = infected['nSeriouslySick'] + infected['nCritical']
 
-rr3 = pd.concat([hh['Stationäre Behandlung'], hh['Intensivmedizin'], infected['shouldBeInHospital'], infected['nCritical']], axis=1).fillna(value=0.)
+fact = 4
+rr3 = pd.concat([
+    hh['Stationäre Behandlung'].resample('7D').mean() * fact,
+    hh['Intensivmedizin'].resample('7D').mean() * fact,
+    infected['shouldBeInHospital'].resample('7D').mean(),
+    infected['nCritical'].resample('7D').mean()
+], axis=1).fillna(value=0.)
 
-pyplot.close('all')
+# pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
-default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple','orange','cyan','tab:red']) +
-                  cycler(linestyle=['', '', '', '','-','','','','']) +
-                  cycler(marker=['.','.','.','.',",",'','o','','']))
+default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple','orange','cyan','r','g']) +
+                  cycler(linestyle=['', '', '', '','','','','','-','']) +
+                  cycler(marker=['.','.','','',",",'','o','','','o']))
 pyplot.rc('axes', prop_cycle=default_cycler)
 axes = rr3.plot(logy=True,grid=True)
-axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2020-05-15'))
-axes.set_ylim(4.1,1000)
+axes.set_xlim(pd.to_datetime('2020-02-10'),pd.to_datetime('2021-01-01'))
+axes.set_ylim(4.1,5000)
+pyplot.title( base.removeprefix('output/').removesuffix('/calibration*.'), fontdict={'fontsize':10})
+pyplot.plot( pd.to_datetime('2020-10-01'), 10, 'yo')
+pyplot.text( pd.to_datetime('2020-10-01'), 10, 'KW 40 mid')
+pyplot.errorbar(rr3.index,rr3['shouldBeInHospital'],yerr=3*np.sqrt(rr3['shouldBeInHospital']) )
+pyplot.errorbar(rr3.index,rr3['nCritical'],yerr=3*np.sqrt(rr3['nCritical']) )
 pyplot.show()
 
+############################################
+############################################
 # In[]:
 
 # infectedCumulative = rr.loc[rr['district'] == 'Berlin' , ['day', 'nInfectedCumulative']]
@@ -334,7 +427,7 @@ fit.index = pd.date_range(start="2020-02-15", periods=60)
 
 rr3 = pd.concat([rr2b, fit], axis=1)
 
-pyplot.close('all')
+# pyplot.close('all')
 pyplot.rcParams['figure.figsize']=[12, 5]
 default_cycler = (cycler(color=['r', 'g', 'b', 'y','pink','purple']) +
                   cycler(linestyle=['-', '-', '-', '-','-','']) +
@@ -386,7 +479,7 @@ pyplot.show()
 infectionEvents = pd.read_csv(base + "infectionEvents.txt", sep="\t")
 
 # In[]:
-plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz", selectedPlansOnly = True )
+# plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_v2_snz_entirePopulation_emptyPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/testPlans_withDistricts.xml.gz", selectedPlansOnly = True )
 # plans = ms.plan_reader( "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/test2.xml", selectedPlansOnly = True )
 
