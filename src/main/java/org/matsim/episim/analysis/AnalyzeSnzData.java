@@ -191,7 +191,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			if (setBaseIn2018) {
 				Path baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/Vergleich2017/");
 				String weekdayBase = "20180131";
-				String saturdayBase = "";
+				String saturdayBase = "20180127";
 				String sundayBase = "20180114";
 				List<String> baseDays = Arrays.asList(weekdayBase, saturdayBase, sundayBase);
 
