@@ -66,6 +66,11 @@ public final class ReplayHandler {
 	 * Number of adjusted leisure activities.
 	 */
 	private int adjusted = 0;
+	/**
+	 * Used when calling createEpisimFacilityId.
+	 */
+	private final EpisimConfigGroup episimConfig;
+
 
 	private final Scenario scenario;
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
@@ -76,6 +81,7 @@ public final class ReplayHandler {
 	@Inject
 	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
 		this.scenario = scenario;
+		this.episimConfig = config;
 
 		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
 
@@ -119,6 +125,7 @@ public final class ReplayHandler {
 	public ReplayHandler(Map<DayOfWeek, List<Event>> events) {
 		this.events.putAll(events);
 		this.scenario = null;
+		this.episimConfig = null;
 	}
 
 	/**
@@ -165,7 +172,9 @@ public final class ReplayHandler {
 					started.add(e.getPersonId());
 				}
 
-				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern(), coord);
+				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(),
+						                       InfectionEventHandler.createEpisimFacilityId(e, episimConfig),
+						                       e.getActType().intern(), coord);
 			} else if (event instanceof ActivityEndEvent) {
 				ActivityEndEvent e = (ActivityEndEvent) event;
 				String actType = e.getActType().intern();
@@ -183,7 +192,9 @@ public final class ReplayHandler {
 					}
 				}
 
-				event = new ActivityEndEvent(time, e.getPersonId(), e.getLinkId(), e.getFacilityId(), actType);
+				event = new ActivityEndEvent(time, e.getPersonId(), e.getLinkId(),
+						InfectionEventHandler.createEpisimFacilityId(e, episimConfig),
+						actType);
 			}
 
 			events.add(event);

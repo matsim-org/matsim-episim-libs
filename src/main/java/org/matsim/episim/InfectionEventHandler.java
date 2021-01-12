@@ -259,7 +259,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				}
 
 				if (event instanceof HasFacilityId) {
-					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
+					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event, episimConfig);
 					facility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
 				}
 
@@ -389,7 +389,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			for (Event event : eventsForDay) {
 				if (event instanceof HasFacilityId && event instanceof HasPersonId) {
-					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
+					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event, episimConfig);
 					EpisimFacility facility = pseudoFacilityMap.get(episimFacilityId);
 
 					// happens on filtered events that are not relevant
@@ -482,7 +482,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
 
 		// create pseudo facility id that includes the activity type:
-		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityStartEvent);
+		Id<ActivityFacility> episimFacilityId = activityStartEvent.getFacilityId();
 
 		// find the facility
 		EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
@@ -508,9 +508,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
 
 		EpisimFacility episimFacility = (EpisimFacility) episimPerson.getCurrentContainer();
-		assert (episimFacility.equals(pseudoFacilityMap.get(createEpisimFacilityId(activityEndEvent)))) :
+		assert (episimFacility.equals(pseudoFacilityMap.get(activityEndEvent.getFacilityId()))) :
 				"Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" +
-						createEpisimFacilityId(activityEndEvent) + " but actually is at facility=" + episimFacility.getContainerId().toString();
+						activityEndEvent.getFacilityId() + " but actually is at facility=" + episimFacility.getContainerId().toString();
 
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
@@ -608,7 +608,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		return new EpisimPerson.Activity(actType, episimConfig.selectInfectionParams(actType));
 	}
 
-	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
+	static Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event, EpisimConfigGroup episimConfig) {
 		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
 			Id<ActivityFacility> id = event.getFacilityId();
 			if (id == null)
@@ -616,7 +616,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			return id;
 		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
-			// TODO: this has poor performance and should be preprocessing...
 			if (event instanceof ActivityStartEvent) {
 				ActivityStartEvent theEvent = (ActivityStartEvent) event;
 				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
