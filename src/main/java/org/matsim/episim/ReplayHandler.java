@@ -27,9 +27,11 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
+import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.Event;
+import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
+import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
 import org.matsim.api.core.v01.network.Link;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -155,6 +157,11 @@ public final class ReplayHandler {
 			// Add coordinate information if not present
 			if (event instanceof ActivityStartEvent) {
 				ActivityStartEvent e = (ActivityStartEvent) event;
+
+				if (!InfectionEventHandler.shouldHandleActivityEvent(e, e.getActType())) {
+					return;
+				}
+
 				Coord coord = e.getCoord();
 				if (coord == null && scenario != null && scenario.getNetwork().getLinks().containsKey(e.getLinkId())) {
 					Link link = scenario.getNetwork().getLinks().get(e.getLinkId());
@@ -168,6 +175,11 @@ public final class ReplayHandler {
 				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(), e.getFacilityId(), e.getActType().intern(), coord);
 			} else if (event instanceof ActivityEndEvent) {
 				ActivityEndEvent e = (ActivityEndEvent) event;
+
+				if (!InfectionEventHandler.shouldHandleActivityEvent(e, e.getActType())) {
+					return;
+				}
+
 				String actType = e.getActType().intern();
 				double time = e.getTime();
 
@@ -184,10 +196,22 @@ public final class ReplayHandler {
 				}
 
 				event = new ActivityEndEvent(time, e.getPersonId(), e.getLinkId(), e.getFacilityId(), actType);
+			} else if (event instanceof PersonEntersVehicleEvent) {
+				if (!InfectionEventHandler.shouldHandlePersonEvent((PersonEntersVehicleEvent) event)) {
+					return;
+				}
+			} else if (event instanceof PersonLeavesVehicleEvent) {
+				if (!InfectionEventHandler.shouldHandlePersonEvent((PersonLeavesVehicleEvent) event)) {
+					return;
+				}
 			}
 
 			events.add(event);
 		}
+
+
 	}
+
+
 
 }

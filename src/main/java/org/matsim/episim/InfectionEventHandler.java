@@ -474,10 +474,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
 
-		if (!shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType())) {
-			return;
-		}
-
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
 
@@ -500,11 +496,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 //		double now = activityEndEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
 
-
-		if (!shouldHandleActivityEvent(activityEndEvent, activityEndEvent.getActType())) {
-			return;
-		}
-
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
 		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
@@ -521,18 +512,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		episimFacility.removePerson(episimPerson);
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
-
 	}
 
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent entersVehicleEvent) {
 //		double now = entersVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);
-
-
-		if (!shouldHandlePersonEvent(entersVehicleEvent)) {
-			return;
-		}
 
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());
@@ -550,11 +535,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
 //		double now = leavesVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);
-
-
-		if (!shouldHandlePersonEvent(leavesVehicleEvent)) {
-			return;
-		}
 
 		// find vehicle:
 		EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());
