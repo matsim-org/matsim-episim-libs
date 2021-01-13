@@ -46,6 +46,7 @@ import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InitialInfectionHandler;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.model.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -57,6 +58,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.*;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -125,6 +127,11 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final InitialInfectionHandler initialInfections;
 
 	/**
+	 * Handle vaccinations.
+	 */
+	private final VaccinationModel vaccinationModel;
+
+	/**
 	 * Scenario with population information.
 	 */
 	private final Scenario scenario;
@@ -132,6 +139,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 
@@ -150,10 +158,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 	@Inject
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
-								 InitialInfectionHandler initialInfections, ContactModel contactModel, SplittableRandom rnd) {
+								 InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
+								 SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.scenario = scenario;
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
@@ -164,6 +174,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		this.contactModel = contactModel;
 		this.initialInfections = initialInfections;
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
+		this.vaccinationModel = vaccinationModel;
 	}
 
 	/**
@@ -697,7 +708,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		if (paramsMap.size() > 1000)
 			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
-		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig.getStartDate(), iteration);
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
+		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
@@ -706,6 +719,9 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 			person.resetCurrentPositionInTrajectory(day);
 			progressionModel.updateState(person, iteration);
 		}
+
+		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(),  0, date);
+		vaccinationModel.handleVaccination(personMap, (int) (available * episimConfig.getSampleSize()), iteration, now);
 
 		this.iteration = iteration;
 

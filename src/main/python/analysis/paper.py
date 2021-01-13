@@ -137,3 +137,37 @@ plt.ylim(bottom=1, top=10000)
 plt.ylabel("Hospitalized persons")
 plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
 plt.legend(loc="upper left")
+
+#%% Fig 8
+
+df = pd.read_csv("data/0.rValues.txt.csv", index_col="date", parse_dates=True, sep="\t")
+rf = df.rolling(7, center=True).mean()
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+
+sns.scatterplot(x="date", y="rValue", s=5, ax=ax, data=df, label="Daily R value")
+sns.lineplot(x="date", y="rValue", ax=ax, data=rf, color=palette[1], label="7-day average R-value")
+
+plt.axhline(1, color="gray", linewidth=1, linestyle="--", alpha=0.8)
+
+plt.xlim(datetime.fromisoformat("2020-02-16"), datetime.fromisoformat("2020-10-31"))
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+
+#%% Activities 
+
+df = pd.read_csv("data/0.infectionsPerActivity.txt.tsv", index_col="date", parse_dates=True, sep="\t")
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+
+g = sns.lineplot(x="date", y="infections", hue="activity", data=df, ax=ax)
+
+g.set(yscale="symlog")
+ax.yaxis.set_major_formatter(ScalarFormatter())
+ax.xaxis.set_major_formatter(dateFormater)
+plt.xlim(datetime.fromisoformat("2020-02-16"), datetime.fromisoformat("2020-10-31"))
+
+plt.ylim(bottom=0, top=1000)
+
+plt.legend(loc="best")

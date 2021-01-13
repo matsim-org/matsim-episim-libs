@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.common.collect.Lists;
 import com.google.inject.Module;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -155,7 +156,11 @@ public interface BatchRun<T> {
 				try {
 					Method m = enumParam.value().getDeclaredMethod("values");
 					Object[] invoke = (Object[]) m.invoke(null);
-					allParams.add(Arrays.asList(invoke));
+					List<Object> enums = Lists.newArrayList(invoke);
+					// remove the ignored enums
+					enums.removeIf(p -> ArrayUtils.indexOf(enumParam.ignore(), p.toString()) > -1);
+
+					allParams.add(enums);
 					fields.add(field);
 				} catch (ReflectiveOperationException e) {
 					throw new IllegalStateException(e);
@@ -192,7 +197,7 @@ public interface BatchRun<T> {
 
 		List<List<Object>> combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));
 
-		int id = 0;
+		int id = setup.getOffset();
 		for (List<Object> params : combinations) {
 
 			try {
@@ -232,6 +237,14 @@ public interface BatchRun<T> {
 
 		// convert windows path separators
 		return input.resolve(name).toString().replace("\\", "/");
+	}
+
+	/**
+	 * Get the offset for this run, that is used to generate ids.
+	 * This can be used to concatenate multiple runs together if they have disjunkt ids.
+	 */
+	default int getOffset() {
+		return 0;
 	}
 
 	/**
@@ -352,7 +365,7 @@ public interface BatchRun<T> {
 		 * Desired enum class, by default all values will be used.
 		 */
 		Class<? extends Enum<?>> value();
-		//String[] ignore() default {};
+		String[] ignore() default {};
 	}
 
 	/**

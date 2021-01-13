@@ -22,6 +22,7 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.Streams;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -67,6 +68,12 @@ public final class PreparedRun {
 		this.runs = runs;
 	}
 
+	/**
+	 * Name of the run.
+	 */
+	public String getName() {
+		return setup.getMetadata().name;
+	}
 
 	/**
 	 * Returns metadata information of this run that can be written in desired format.
@@ -98,7 +105,13 @@ public final class PreparedRun {
 		// Check if parameters have been described in the options
 		Set<String> describedParams = new HashSet<>();
 
-		for (BatchRun.Option option : setup.getOptions()) {
+		List<BatchRun.Option> options;
+		if (setup.getOptions().isEmpty())
+			options = generateOptions();
+		else
+			options = setup.getOptions();
+
+		for (BatchRun.Option option : options) {
 
 			Map<String, Object> byDay = new LinkedHashMap<>();
 
@@ -135,6 +148,20 @@ public final class PreparedRun {
 		data.put("optionGroups", opts);
 
 		return data;
+	}
+
+	/**
+	 * Generates default options.
+	 */
+	private List<BatchRun.Option> generateOptions() {
+		BatchRun.Option opt = BatchRun.Option.of("", "", -1);
+
+		for (String p : parameter) {
+			String[] words = StringUtils.splitByCharacterTypeCamelCase(p);
+			opt.measure(StringUtils.capitalize(Joiner.on(' ').join(words)), p);
+		}
+
+		return List.of(opt);
 	}
 
 	/**

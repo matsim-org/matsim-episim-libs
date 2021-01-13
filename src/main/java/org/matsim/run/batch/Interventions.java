@@ -39,7 +39,8 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		if (params == null)
 			return new SnzBerlinWeekScenario2020();
 
-		return new SnzBerlinProductionScenario(25, DiseaseImport.no, Restrictions.no, Masks.no, Tracing.no, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
+		return new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.no ).setRestrictions( Restrictions.no ).setMasks( Masks.no ).setTracing( Tracing.no ).setSnapshot(
+				Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -50,8 +51,9 @@ public class Interventions implements BatchRun<Interventions.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = 
-				new SnzBerlinProductionScenario(25, DiseaseImport.no, Restrictions.no, Masks.no, Tracing.no, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
+		SnzBerlinProductionScenario module =
+				new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.no ).setRestrictions( Restrictions.no ).setMasks( Masks.no ).setTracing(
+						Tracing.no ).setSnapshot( Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 		
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);

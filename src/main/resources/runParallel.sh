@@ -39,6 +39,10 @@ echo "setup=$EPISIM_SETUP, params=$EPISIM_PARAMS"
 let numaIndex=$((nNuma - 1))
 for sId in $(seq 0 $numaIndex); do
 
+  # Add these to command if needed
+  MONITOR="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=$(( 9010 + (sId * 2) )) -Dcom.sun.management.jmxremote.rmi.port=$(( 9011 + (sId * 2) ))  -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.net.preferIPv4Stack=true -Djava.rmi.server.hostname=0.0.0.0"
+  DEBUG="-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:$(( 5005 + sId ))"
+
   # Needs to be unique among all processes
   let workerId=offset+sId
   arguments="--threads $SLURM_NTASKS_PER_SOCKET --total-worker $totalWorker --worker-index $workerId"

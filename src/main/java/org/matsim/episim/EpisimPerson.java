@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -117,15 +118,51 @@ public final class EpisimPerson implements Attributable {
 	private QuarantineStatus quarantineStatus = QuarantineStatus.no;
 
 	/**
+	 * Strain of the virus the person was infected with.
+	 */
+	private VirusStrain virusStrain = VirusStrain.SARS_CoV_2;
+
+	/**
+	 * Current {@link VaccinationStatus}.
+	 */
+	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
+
+	/**
+	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
+	 */
+	private int vaccinationDate = -1;
+
+	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
 	private int quarantineDate = -1;
 	private int currentPositionInTrajectory;
 
 	/**
+	 * Age of the person in years.
+	 */
+	private final int age;
+
+	/**
 	 * Whether this person can be traced.
 	 */
 	private boolean traceable;
+
+	/**
+	 * Lookup age from attributes.
+	 */
+	private static int getAge( Attributes attrs ){
+		int age = -1;
+
+		for( String attr : attrs.getAsMap().keySet() ){
+			if( attr.contains( "age" ) ){
+				age = (int) attrs.getAttribute( attr );
+				break;
+			}
+		}
+
+		return age;
+	}
 
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
@@ -135,6 +172,7 @@ public final class EpisimPerson implements Attributable {
 		this.personId = personId;
 		this.attributes = attrs;
 		this.traceable = traceable;
+		this.age = getAge(attrs);
 		this.reporting = reporting;
 	}
 
@@ -191,8 +229,11 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		status = DiseaseStatus.values()[in.readInt()];
+		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
+		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
+		vaccinationDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
 	}
@@ -238,8 +279,11 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(status.ordinal());
+		out.writeInt(virusStrain.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
+		out.writeInt(vaccinationStatus.ordinal());
+		out.writeInt(vaccinationDate);
 		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
 	}
@@ -273,6 +317,24 @@ public final class EpisimPerson implements Attributable {
 		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
 	}
 
+	public void setVirusStrain(VirusStrain virusStrain) {
+		this.virusStrain = virusStrain;
+	}
+
+	public VirusStrain getVirusStrain() {
+		return virusStrain;
+	}
+
+	public VaccinationStatus getVaccinationStatus() {
+		return vaccinationStatus;
+	}
+
+	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
+		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
+
+		this.vaccinationStatus = vaccinationStatus;
+		this.vaccinationDate = iteration;
+	}
 
 	/**
 	 * Days elapsed since a certain status was set.
@@ -311,6 +373,18 @@ public final class EpisimPerson implements Attributable {
 		if (quarantineDate < 0) throw new IllegalStateException("Person was never quarantined");
 
 		return currentDay - quarantineDate;
+	}
+
+	/**
+	 * Days elapsed since person got its first vaccination.
+	 *
+	 * @param currentDay current day (iteration)
+	 */
+	public int daysSince(VaccinationStatus status, int currentDay) {
+		if (status != VaccinationStatus.yes) throw new IllegalArgumentException("Only supports querying when person was vaccinated");
+		if (currentDay < 0) throw new IllegalStateException("Person was never vaccinated");
+
+		return currentDay - vaccinationDate;
 	}
 
 	int getQuarantineDate() {
@@ -430,6 +504,13 @@ public final class EpisimPerson implements Attributable {
 		return attributes;
 	}
 
+	public int getAge() {
+		assert age != -1 : "Person=" + getPersonId().toString() + " has no age. Age dependent progression is not possible.";
+		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
+
+		return age;
+	}
+
 	/**
 	 * Whether person is currently in a container.
 	 */
@@ -501,6 +582,11 @@ public final class EpisimPerson implements Attributable {
 	 * Quarantine status of a person.
 	 */
 	public enum QuarantineStatus {full, atHome, no}
+
+	/**
+	 * Status of vaccination.
+	 */
+	public enum VaccinationStatus {yes, no}
 
 	/**
 	 * Activity performed by a person. Holds the type and its infection params.

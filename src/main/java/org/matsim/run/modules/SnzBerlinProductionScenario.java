@@ -31,10 +31,10 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinScenario25pct2020.BasePolicyBuilder;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -48,13 +48,68 @@ import java.util.Map;
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
  */
-public class SnzBerlinProductionScenario extends AbstractModule {
+public final class SnzBerlinProductionScenario extends AbstractModule {
+	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
+
+	private final int importOffset;
+
+	public static class Builder{
+		private int importOffset = 0;
+		private int sample = 25;
+		private DiseaseImport diseaseImport = DiseaseImport.yes;
+		private Restrictions restrictions = Restrictions.yes;
+		private Masks masks = Masks.yes;
+		private Tracing tracing = Tracing.yes;
+		private Snapshot snapshot = Snapshot.no;
+		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
+		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
+		public Builder setSample( int sample ){
+			this.sample = sample;
+			return this;
+		}
+		public Builder setDiseaseImport( DiseaseImport diseaseImport ){
+			this.diseaseImport = diseaseImport;
+			return this;
+		}
+		public Builder setRestrictions( Restrictions restrictions ){
+			this.restrictions = restrictions;
+			return this;
+		}
+		public Builder setMasks( Masks masks ){
+			this.masks = masks;
+			return this;
+		}
+		public Builder setTracing( Tracing tracing ){
+			this.tracing = tracing;
+			return this;
+		}
+		public Builder setSnapshot( Snapshot snapshot ){
+			this.snapshot = snapshot;
+			return this;
+		}
+		public Builder setInfectionModel( Class<? extends InfectionModel> infectionModel ){
+			this.infectionModel = infectionModel;
+			return this;
+		}
+		public Builder setVaccinationModel( Class<? extends VaccinationModel> vaccinationModel ){
+			this.vaccinationModel = vaccinationModel;
+			return this;
+		}
+		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, snapshot, infectionModel, importOffset, vaccinationModel );
+		}
+		public Builder setImportOffset( int importOffset ){
+			this.importOffset = importOffset;
+			return this;
+		}
+	}
+
 
 	public static enum DiseaseImport {yes, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
-	public static enum Snapshot {no, snapshot20200314, snapshot20200411, snapshot20200509, snapshot20200606}
+	public static enum Snapshot {no, episim_snapshot_030_2020_03_16, episim_snapshot_060_2020_04_15, episim_snapshot_090_2020_05_15, episim_snapshot_120_2020_06_14, episim_snapshot_150_2020_07_14, episim_snapshot_180_2020_08_13, episim_snapshot_210_2020_09_12, episim_snapshot_240_2020_10_12}
 
 	private final int sample;
 	private final DiseaseImport diseaseImport;
@@ -63,18 +118,24 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	private final Tracing tracing;
 	private final Snapshot snapshot;
 	private final Class<? extends InfectionModel> infectionModel;
+	private final Class<? extends VaccinationModel> vaccinationModel;
 
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	private static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
-	public SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class);
+	/**
+	 * Empty constructor is needed for running scenario from command line.
+	 */
+	@SuppressWarnings("unused")
+	private SnzBerlinProductionScenario() {
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 	}
 
-	public SnzBerlinProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot, Class<? extends InfectionModel> infectionModel) {
+	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot,
+					    Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -82,9 +143,11 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		this.tracing = tracing;
 		this.snapshot = snapshot;
 		this.infectionModel = infectionModel;
+		this.importOffset = importOffset;
+		this.vaccinationModel = vaccinationModel;
 	}
 
-	private static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
+	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;
@@ -106,6 +169,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
+		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 	}
 
 	@Provides
@@ -138,8 +202,9 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setHospitalFactor(1.);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 
-		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/snapshots/" + snapshot + ".zip");
-//		episimConfig.setSnapshotInterval(14);
+		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
+
+//		episimConfig.setSnapshotInterval(30);
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
@@ -148,7 +213,6 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			Map<LocalDate, Integer> importMap = new HashMap<>();
 			double importFactor = 1.;
 			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
-			int importOffset = 0;
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
 					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-09").plusDays(importOffset),
@@ -160,7 +224,9 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
 					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
-					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
+					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
+			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-10-26").plusDays(importOffset),
+					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 			episimConfig.setInfections_pers_per_day(importMap);
 		}
 		else {
@@ -197,15 +263,20 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1);
 
 		//restrictions and masks
-		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) basePolicyBuilder.setCsv(null);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
-		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) basePolicyBuilder.setRestrictUniversities(false);
+		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
+			basePolicyBuilder.setCsv(null);
+		}
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) {
+			basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
+		}
+		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) {
+			basePolicyBuilder.setRestrictUniversities(false);
+		}
 
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
-		builder.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		//tracing
@@ -213,16 +284,18 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-			tracingConfig.setTracingProbability(0.6);
+			tracingConfig.setTracingProbability(0.5);
 			tracingConfig.setTracingPeriod_days(2);
 			tracingConfig.setMinContactDuration_sec(15 * 60.);
 			tracingConfig.setQuarantineHouseholdMembers(true);
 			tracingConfig.setEquipmentRate(1.);
-			tracingConfig.setTracingDelay_days(4);
+			tracingConfig.setTracingDelay_days(5);
 			tracingConfig.setTraceSusceptible(true);
+			tracingConfig.setCapacityType(CapacityType.PER_PERSON);
+			int tracingCapacity = 60;
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-					LocalDate.of(2020, 4, 1), 30,
-					LocalDate.of(2020, 6, 15), 200
+					LocalDate.of(2020, 4, 1), (int) (0.2 * tracingCapacity),
+					LocalDate.of(2020, 6, 15), tracingCapacity
 			));
 		}
 
@@ -233,7 +306,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 
 	@Provides
 	@Singleton
-	private Scenario scenario(Config config) {
+	public Scenario scenario(Config config) {
 
 		// guice will use no args constructor by default, we check if this config was initialized
 		// this is only the case when no explicit binding are required

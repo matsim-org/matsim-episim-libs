@@ -30,12 +30,12 @@ import com.google.inject.Inject;
 import java.util.SplittableRandom;
 
 /**
- * Works exactly as the {@link DefaultProgressionModel}, but with age dependent transitions.
+ * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
  */
-public final class AgeDependentProgressionModel extends ConfigurableProgressionModel {
+public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 
 	/**
-	 * Constructor as in {@link DefaultProgressionModel}.
+	 * Constructor as in {@link ConfigurableProgressionModel}.
 	 */
 	@Inject
 	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
@@ -107,7 +107,7 @@ public final class AgeDependentProgressionModel extends ConfigurableProgressionM
 
 		double proba = -1;
 
-		int age = EpisimUtils.getAge( person );
+		int age = person.getAge();
 
 		if (age < 10) {
 			proba = 0.1 / 100;
@@ -136,7 +136,7 @@ public final class AgeDependentProgressionModel extends ConfigurableProgressionM
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
 		double proba = -1;
 
-		int age = EpisimUtils.getAge( person );
+		int age = person.getAge();
 
 		if (age < 40) {
 			proba = 5. / 100;

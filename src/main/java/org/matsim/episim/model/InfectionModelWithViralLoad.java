@@ -43,6 +43,7 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 		double infectability = (double) infector.getAttributes().getAttribute(VIRAL_LOAD);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer * ciCorrection
+				* infector.getVirusStrain().infectiousness
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 		);
