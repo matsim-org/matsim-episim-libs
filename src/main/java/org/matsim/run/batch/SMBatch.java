@@ -43,6 +43,11 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
+	
+//	@Override
+//	public int getOffset() {
+//		return 600;
+//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
@@ -122,9 +127,6 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		//leisure factor
-		builder.apply(params.leisureFactorDate, "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
-
 		//christmas model
 		{
 			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
@@ -147,20 +149,36 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				double fraction = 0.5925;
-				if (act.contains("leisure")) fraction = 1 - params.leisureFactor * (1 - fraction);
 
 				if (params.christmasModel.equals("restrictive")) {
 					builder.restrict("2020-12-24", 1.0, act);
-//					builder.restrict("2020-12-27", fraction, act);
 				}
 				if (params.christmasModel.equals("permissive")) {
 					builder.restrict("2020-12-24", 1.0, act);
-//					builder.restrict("2020-12-27", fraction, act);
 					builder.restrict("2020-12-31", 1.0, act);
 					builder.restrict("2021-01-02", fraction, act);
 				}
 			}
 		}
+		
+		//interpolate restrictions and manually set restriction of 10.01.
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			builder.restrict("2021-01-10", 0.68, act);
+			if (params.interpolateRestrictions.equals("yes")) {
+				builder.restrict("2021-01-17", 0.72, act);
+				builder.restrict("2021-01-24", 0.76, act);
+				builder.restrict("2021-01-31", 0.8, act);
+				builder.restrict("2021-02-07", 0.84, act);
+				builder.restrict("2021-02-14", 0.88, act);
+				builder.restrict("2021-02-21", 0.92, act);
+				builder.restrict("2021-02-28", 0.96, act);
+				builder.restrict("2021-03-07", 1., act);
+			}
+		}
+		
+		//leisure factor
+		builder.apply("2020-10-15", "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 		
 		//school reopening
 		if (params.schools.equals("open")) builder.restrict("2021-01-25", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
@@ -172,6 +190,9 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		}
 		if (params.schools.equals("closed")) builder.clearAfter("2021-01-25", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 
+		//masks at work
+		if (params.ffpAtWork.equals("yes")) builder.restrict("2021-01-25", Restriction.ofMask(FaceMask.N95, 0.9), "work");
+		
 //		Map<LocalDate, Integer> vacMap = EpisimUtils.readCSV(Path.of("germanyVaccinations.csv"),
 //				CSVFormat.DEFAULT, "date", "nVaccinated").entrySet().stream()
 //				.collect(Collectors.toMap(Map.Entry::getKey,
@@ -185,8 +206,8 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		vaccinationConfig.setEffectiveness(0.9);
 		vaccinationConfig.setDaysBeforeFullEffect(28);
 		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
-		// 0.25 for 25% sample, 4/3 because model is bigger than just Berlin
-		int base = (int) (0.25 * 2000 * 4./3.);
+		// 4/3 because model is bigger than just Berlin
+		int base = (int) (2000 * 4./3.);
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 				episimConfig.getStartDate(), 0,
 				LocalDate.parse("2020-12-27"), base
@@ -222,17 +243,11 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(2)
+		@GenerateSeeds(1)
 		public long seed;
 
-//		@Parameter({0.75, 0.8})
-//		double theta;
-
-		@Parameter({1.3, 1.6})
+		@Parameter({1.6, 1.8, 2.})
 		double leisureFactor;
-
-		@StringParameter({"2020-09-15", "2020-10-15"})
-		String leisureFactorDate;
 
 //		//@StringParameter({"0", "current", "linear"})
 //		@StringParameter({"current"})
@@ -241,14 +256,20 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@IntParameter({1, 5})
 		int vaccinationFactor;
 		
-		@StringParameter({"no", "restrictive", "permissive"})
+		@StringParameter({"restrictive", "permissive"})
 		public String christmasModel;
 		
 		@StringParameter({"closed", "open", "50%&masks"})
 		public String schools;
+		
+		@StringParameter({"no", "yes"})
+		public String ffpAtWork;
 
-		@StringParameter({"2020-12-15", "2020-12-01", "2020-11-15", "2020-11-01", "2020-10-15", "2020-10-01", "2020-09-15"})
+		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15", "2020-09-15"})
 		String newVariantDate;
+		
+		@StringParameter({"no", "yes"})
+		String interpolateRestrictions;
 
 	}
 
