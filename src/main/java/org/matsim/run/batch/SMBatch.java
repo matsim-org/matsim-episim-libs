@@ -170,7 +170,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			builder.restrict("2021-02-07", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict("2021-04-11", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		}
-
+		if (params.schools.equals("closed")) builder.clearAfter("2021-01-25", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 
 //		Map<LocalDate, Integer> vacMap = EpisimUtils.readCSV(Path.of("germanyVaccinations.csv"),
 //				CSVFormat.DEFAULT, "date", "nVaccinated").entrySet().stream()
@@ -204,8 +204,8 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		tracingConfig.setCapacityType(CapacityType.PER_PERSON);
 
 		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), (int) (params.tracingCapacity * 0.2),
-				LocalDate.of(2020, 6, 15), params.tracingCapacity
+				LocalDate.of(2020, 4, 1), (int) (200 * 0.2),
+				LocalDate.of(2020, 6, 15), 200
 		));
 
 		if (!params.newVariantDate.equals("never")) {
@@ -222,7 +222,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(2)
 		public long seed;
 
 //		@Parameter({0.75, 0.8})
@@ -238,10 +238,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 //		@StringParameter({"current"})
 //		public String childSusInf;
 
-		@IntParameter({200, 400})
-		int tracingCapacity;
-
-		@IntParameter({1, 2, 10})
+		@IntParameter({1, 5})
 		int vaccinationFactor;
 		
 		@StringParameter({"no", "restrictive", "permissive"})
@@ -250,7 +247,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@StringParameter({"closed", "open", "50%&masks"})
 		public String schools;
 
-		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15", "2020-09-15"})
+		@StringParameter({"2020-12-15", "2020-12-01", "2020-11-15", "2020-11-01", "2020-10-15", "2020-10-01", "2020-09-15"})
 		String newVariantDate;
 
 	}
