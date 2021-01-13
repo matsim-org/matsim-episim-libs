@@ -233,7 +233,7 @@ public interface BatchRun<T> {
 	 */
 	static String resolveForCluster(Path input, String name) {
 		if (System.getProperty("EPISIM_ON_CLUSTER", "false").equals("true"))
-			input = Path.of("/scratch/usr/bebchrak/episim/episim-input");
+			input = Path.of("/scratch/projects/bzz0020/episim-input");
 
 		// convert windows path separators
 		return input.resolve(name).toString().replace("\\", "/");

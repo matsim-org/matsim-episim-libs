@@ -165,7 +165,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 				// Dollar signs must be escaped
 				"export EPISIM_SETUP='" + setup.getName() + "'",
 				"export EPISIM_PARAMS='" + params.getName() + "'",
-				"export EPISIM_INPUT='/scratch/usr/bebchrak/episim/episim-input'",
+				"export EPISIM_INPUT='/scratch/projects/bzz0020/episim-input'",
 				"export EPISIM_OUTPUT='" + batchOutput.toString() + "'",
 				"",
 				String.format("jid=$(sbatch --parsable --export=ALL --array=1-%d --ntasks-per-socket=%d --job-name=%s runParallel.sh)",
