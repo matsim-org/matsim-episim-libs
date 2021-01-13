@@ -26,7 +26,6 @@ import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -41,8 +40,6 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.gbl.Gbl;
-import org.matsim.core.router.TripStructureUtils;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InitialInfectionHandler;
 import org.matsim.episim.model.ProgressionModel;
@@ -167,26 +164,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	}
 
 	/**
-	 * Whether {@code event} should be handled.
-	 *
-	 * @param actType activity type
-	 */
-	public static boolean shouldHandleActivityEvent(HasPersonId event, String actType) {
-		// ignore drt and stage activities
-		return !event.getPersonId().toString().startsWith("drt") && !event.getPersonId().toString().startsWith("rt")
-				&& !TripStructureUtils.isStageActivityType(actType);
-	}
-
-	/**
-	 * Whether a Person event (e.g. {@link PersonEntersVehicleEvent} should be handled.
-	 */
-	public static boolean shouldHandlePersonEvent(HasPersonId event) {
-		// ignore pt drivers and drt
-		String id = event.getPersonId().toString();
-		return !id.startsWith("pt_pt") && !id.startsWith("pt_tr") && !id.startsWith("drt") && !id.startsWith("rt");
-	}
-
-	/**
 	 * Returns the last {@link EpisimReporting.InfectionReport}.
 	 */
 	public EpisimReporting.InfectionReport getReport() {
@@ -241,8 +218,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 				// Add all person and facilities
 				if (event instanceof HasPersonId) {
-					if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
-
 					person = this.personMap.computeIfAbsent(((HasPersonId) event).getPersonId(), this::createPerson);
 
 					// If a person was added late, previous days are initialized at home
@@ -259,15 +234,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				}
 
 				if (event instanceof HasFacilityId) {
-					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
+					Id<ActivityFacility> episimFacilityId = ((HasFacilityId) event).getFacilityId();
 					facility = this.pseudoFacilityMap.computeIfAbsent(episimFacilityId, EpisimFacility::new);
 				}
 
 				if (event instanceof ActivityStartEvent) {
 
 					String actType = ((ActivityStartEvent) event).getActType();
-					if (!shouldHandleActivityEvent((HasPersonId) event, actType))
-						continue;
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
@@ -276,8 +249,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
-					if (!shouldHandleActivityEvent((HasPersonId) event, actType))
-						continue;
 
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
@@ -301,8 +272,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 				}
 
 				if (event instanceof PersonEntersVehicleEvent) {
-					if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
-
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonEntersVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 
 					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
@@ -311,8 +280,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 					handleEvent((PersonEntersVehicleEvent) event);
 
 				} else if (event instanceof PersonLeavesVehicleEvent) {
-					if (!shouldHandlePersonEvent((HasPersonId) event)) continue;
-
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 					groupSize.mergeInt(vehicle, -1, Integer::sum);
 					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
@@ -389,7 +356,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 
 			for (Event event : eventsForDay) {
 				if (event instanceof HasFacilityId && event instanceof HasPersonId) {
-					Id<ActivityFacility> episimFacilityId = createEpisimFacilityId((HasFacilityId) event);
+					Id<ActivityFacility> episimFacilityId = ((HasFacilityId) event).getFacilityId();
 					EpisimFacility facility = pseudoFacilityMap.get(episimFacilityId);
 
 					// happens on filtered events that are not relevant
@@ -468,21 +435,16 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		init = true;
 	}
 
-
 	@Override
 	public void handleEvent(ActivityStartEvent activityStartEvent) {
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
 
-		if (!shouldHandleActivityEvent(activityStartEvent, activityStartEvent.getActType())) {
-			return;
-		}
-
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
 
 		// create pseudo facility id that includes the activity type:
-		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityStartEvent);
+		Id<ActivityFacility> episimFacilityId = activityStartEvent.getFacilityId();
 
 		// find the facility
 		EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
@@ -500,18 +462,13 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 //		double now = activityEndEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
 
-
-		if (!shouldHandleActivityEvent(activityEndEvent, activityEndEvent.getActType())) {
-			return;
-		}
-
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
-		Id<ActivityFacility> episimFacilityId = createEpisimFacilityId(activityEndEvent);
 
 		EpisimFacility episimFacility = (EpisimFacility) episimPerson.getCurrentContainer();
-		if (!episimFacility.equals(pseudoFacilityMap.get(episimFacilityId))) {
-			throw new IllegalStateException("Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" + episimFacilityId + " but actually is at facility=" + episimFacility.getContainerId().toString());
-		}
+		assert (episimFacility.equals(pseudoFacilityMap.get(activityEndEvent.getFacilityId()))) :
+				"Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" +
+						activityEndEvent.getFacilityId() + " but actually is at facility=" + episimFacility.getContainerId().toString();
+
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
 
@@ -521,18 +478,12 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		episimFacility.removePerson(episimPerson);
 
 		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
-
 	}
 
 	@Override
 	public void handleEvent(PersonEntersVehicleEvent entersVehicleEvent) {
 //		double now = entersVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);
-
-
-		if (!shouldHandlePersonEvent(entersVehicleEvent)) {
-			return;
-		}
 
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());
@@ -550,11 +501,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
 //		double now = leavesVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);
-
-
-		if (!shouldHandlePersonEvent(leavesVehicleEvent)) {
-			return;
-		}
 
 		// find vehicle:
 		EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());
@@ -608,29 +554,7 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		return new EpisimPerson.Activity(actType, episimConfig.selectInfectionParams(actType));
 	}
 
-	private Id<ActivityFacility> createEpisimFacilityId(HasFacilityId event) {
-		if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.snz) {
-			Id<ActivityFacility> id = event.getFacilityId();
-			if (id == null)
-				throw new IllegalStateException("No facility id present. Please switch to episimConfig.setFacilitiesHandling( EpisimConfigGroup.FacilitiesHandling.bln ) ");
 
-			return id;
-		} else if (episimConfig.getFacilitiesHandling() == EpisimConfigGroup.FacilitiesHandling.bln) {
-			// TODO: this has poor performance and should be preprocessing...
-			if (event instanceof ActivityStartEvent) {
-				ActivityStartEvent theEvent = (ActivityStartEvent) event;
-				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
-			} else if (event instanceof ActivityEndEvent) {
-				ActivityEndEvent theEvent = (ActivityEndEvent) event;
-				return Id.create(theEvent.getActType().split("_")[0] + "_" + theEvent.getLinkId().toString(), ActivityFacility.class);
-			} else {
-				throw new IllegalStateException("unexpected event type=" + ((Event) event).getEventType());
-			}
-		} else {
-			throw new NotImplementedException(Gbl.NOT_IMPLEMENTED);
-		}
-
-	}
 
 	private void handlePersonTrajectory(Id<Person> personId, String trajectoryElement) {
 		EpisimPerson person = personMap.get(personId);
