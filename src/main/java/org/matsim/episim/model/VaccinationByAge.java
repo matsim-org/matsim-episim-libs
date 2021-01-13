@@ -4,6 +4,7 @@ import com.google.inject.Inject;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -27,7 +28,7 @@ public class VaccinationByAge implements VaccinationModel {
 				.filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 				.collect(Collectors.toList());
 
-		Collections.shuffle(candidates, new Random(rnd.nextLong()));
+		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
 		candidates = candidates.stream()
 				.sorted(Comparator.comparingInt(EpisimPerson::getAge).reversed())
 				.collect(Collectors.toList());
