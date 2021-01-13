@@ -45,23 +45,27 @@ public class InfectionModelWithSeasonalityTest {
 		target.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 
 		model.setIteration(1);
-		double prob = model.calcInfectionProbability(target, infector, restrictions, act, act, Duration.ofHours(1).getSeconds());
+		double prob = model.calcInfectionProbability(target, infector, restrictions, act, act,
+				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		model.setIteration(7);
-		double prob2 = model.calcInfectionProbability(target, infector, restrictions, act, act, Duration.ofHours(1).getSeconds());
+		double prob2 = model.calcInfectionProbability(target, infector, restrictions, act, act,
+				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob2)
 				.isLessThan(prob);
 
 		model.setIteration(15);
-		double prob3 = model.calcInfectionProbability(target, infector, restrictions, act, act, Duration.ofHours(1).getSeconds());
+		double prob3 = model.calcInfectionProbability(target, infector, restrictions, act, act,
+				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob3)
 				.isLessThan(prob2);
 
 
 		model.setIteration(20);
-		double prob4 = model.calcInfectionProbability(target, infector, restrictions, act, act, Duration.ofHours(1).getSeconds());
+		double prob4 = model.calcInfectionProbability(target, infector, restrictions, act, act,
+				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob4)
 				.isEqualTo(prob3);

@@ -970,15 +970,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		/**
-		 * Create a copy of the this infection params.
-		 *
-		 * @return new contact intensity to set
-		 */
-		public InfectionParams copy(double contactIntensity) {
-			return new InfectionParams(this).setContactIntensity(contactIntensity);
-		}
-
-		/**
 		 * Check whether an activity belong to this container group.
 		 */
 		public boolean includesActivity(String actType) {
