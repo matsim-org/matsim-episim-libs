@@ -33,6 +33,7 @@ public class RunSnzIntegrationTest {
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
 	private VaccinationConfigGroup vaccinationConfig;
+	private boolean skipped = true;
 
 	@Before
 	public void setup() {
@@ -40,6 +41,7 @@ public class RunSnzIntegrationTest {
 
 		// Run only if inut is present
 		Assume.assumeTrue(Files.exists(INPUT) && Files.isDirectory(INPUT));
+		skipped = false;
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzTestScenario(utils)));
 
@@ -51,7 +53,8 @@ public class RunSnzIntegrationTest {
 
 	@After
 	public void tearDown() {
-		assertSimulationOutput(utils);
+		if (!skipped)
+			assertSimulationOutput(utils);
 	}
 
 	@Test

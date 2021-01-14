@@ -4,7 +4,10 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
-import org.junit.*;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Rule;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.matsim.core.config.Config;
@@ -18,9 +21,7 @@ import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Objects;
+import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,12 +42,19 @@ public class RunEpisimSnapshotTest {
 
 	@Parameterized.Parameters(name = "tracing-{0}-{1}")
 	public static Collection<Object[]> parameters() {
-		return Arrays.asList(new Object[][]{
+		List<Object[]> args = new ArrayList<>(Arrays.asList(new Object[][]{
 				{TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "bln"},
-				{TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "snz"},
 				{TracingConfigGroup.Strategy.LOCATION_WITH_TESTING, "bln"},
 				{TracingConfigGroup.Strategy.IDENTIFY_SOURCE, "bln"}
-		});
+		}));
+
+		if (Files.exists(RunSnzIntegrationTest.INPUT) && Files.isDirectory(RunSnzIntegrationTest.INPUT)) {
+			args.add(new Object[]{
+					TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "snz"
+			});
+		}
+
+		return args;
 	}
 
 	private String snapshotName() {
@@ -56,8 +64,6 @@ public class RunEpisimSnapshotTest {
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-
-		Assume.assumeTrue(model.equals("bln") || Files.exists(RunSnzIntegrationTest.INPUT));
 
 		AbstractModule testScenario = model.equals("snz") ? new RunSnzIntegrationTest.SnzTestScenario(utils) : new RunEpisimIntegrationTest.TestScenario(utils);
 
