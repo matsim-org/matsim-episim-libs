@@ -53,8 +53,6 @@ public class BenchmarkIteration {
 		handler = injector.getInstance(InfectionEventHandler.class);
 		reporting = injector.getInstance(EpisimReporting.class);
 
-		injector.getInstance(EventsManager.class).addHandler(handler);
-
 		// benchmark with event writing
 		// injector.getInstance(EventsManager.class).addHandler(reporting);
 

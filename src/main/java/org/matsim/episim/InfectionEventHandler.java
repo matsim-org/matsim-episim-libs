@@ -66,9 +66,11 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  * It consumes the events of a standard MATSim run and puts {@link EpisimPerson}s into {@link EpisimContainer}s during their activity.
  * At the end of activities an {@link ContactModel} is executed and also a {@link ProgressionModel} at the end of the day.
  * See {@link EpisimModule} for which components may be substituted.
+ *
+ * This handler should be used in conjunction with a {@link ReplayHandler}, which filters and preprocesses events.
+ * For performance reasons it is not used with the {@link org.matsim.core.api.experimental.events.EventsManager}.
  */
-public final class InfectionEventHandler implements ActivityEndEventHandler, PersonEntersVehicleEventHandler, PersonLeavesVehicleEventHandler, ActivityStartEventHandler,
-		Externalizable {
+public final class InfectionEventHandler implements Externalizable {
 	// Some notes:
 
 	// * Especially if we repeat the same events file, then we do not have complete mixing.  So it may happen that only some subpopulations gets infected.
@@ -446,7 +448,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		init = true;
 	}
 
-	@Override
 	public void handleEvent(ActivityStartEvent activityStartEvent) {
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
@@ -468,7 +469,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		contactModel.notifyEnterFacility(episimPerson, episimFacility, now);
 	}
 
-	@Override
 	public void handleEvent(ActivityEndEvent activityEndEvent) {
 //		double now = activityEndEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
@@ -491,7 +491,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
 	}
 
-	@Override
 	public void handleEvent(PersonEntersVehicleEvent entersVehicleEvent) {
 //		double now = entersVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);
@@ -508,7 +507,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		contactModel.notifyEnterVehicle( episimPerson, episimVehicle, now );
 	}
 
-	@Override
 	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
 //		double now = leavesVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);
@@ -621,7 +619,6 @@ public final class InfectionEventHandler implements ActivityEndEventHandler, Per
 		log.info("Inserted {} stationary agents, total = {}", inserted, personMap.size());
 	}
 
-	@Override
 	public void reset(int iteration) {
 
 		// safety checks

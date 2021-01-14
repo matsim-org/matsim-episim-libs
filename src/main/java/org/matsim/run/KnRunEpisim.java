@@ -357,8 +357,6 @@ public class KnRunEpisim {
 			final InfectionEventHandler handler = injector.getInstance( InfectionEventHandler.class );
 			final EventsManager manager = injector.getInstance( EventsManager.class );
 
-			manager.addHandler( handler );
-
 			ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "Just before running init" );
 
 			handler.init( replay.getEvents() );

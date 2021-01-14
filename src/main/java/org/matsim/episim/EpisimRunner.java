@@ -88,9 +88,6 @@ public final class EpisimRunner {
 		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
 			manager.addHandler(reporting);
 
-		// needs to be after reporting
-		manager.addHandler(handler);
-
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
 		handler.init(replay.getEvents());
@@ -136,6 +133,8 @@ public final class EpisimRunner {
 	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
 
 		manager.resetHandlers(iteration);
+		handler.reset(iteration);
+
 		if (handler.isFinished())
 			return false;
 
