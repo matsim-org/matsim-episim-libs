@@ -1,12 +1,10 @@
 package org.matsim.run;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.matsim.core.config.Config;
@@ -19,7 +17,9 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,15 +36,32 @@ public class RunEpisimSnapshotTest {
 	@Parameterized.Parameter
 	public TracingConfigGroup.Strategy strategy;
 
-	@Parameterized.Parameters(name = "tracing-{0}")
-	public static Iterable<TracingConfigGroup.Strategy> parameters() {
-		return Arrays.asList(TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, TracingConfigGroup.Strategy.LOCATION_WITH_TESTING, TracingConfigGroup.Strategy.IDENTIFY_SOURCE);
+	@Parameterized.Parameter(1)
+	public String model;
+
+	@Parameterized.Parameters(name = "tracing-{0}-{1}")
+	public static Collection<Object[]> parameters() {
+		return Arrays.asList(new Object[][]{
+				{TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "bln"},
+				{TracingConfigGroup.Strategy.INDIVIDUAL_ONLY, "snz"},
+				{TracingConfigGroup.Strategy.LOCATION_WITH_TESTING, "bln"},
+				{TracingConfigGroup.Strategy.IDENTIFY_SOURCE, "bln"}
+		});
+	}
+
+	private String snapshotName() {
+		return String.format("episim-snapshot-%03d-%s.zip", 15, episimConfig.getStartDate().plusDays(14).toString());
 	}
 
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new RunEpisimIntegrationTest.TestScenario(utils)));
+
+		Assume.assumeTrue(model.equals("bln") || Files.exists(RunSnzIntegrationTest.INPUT));
+
+		AbstractModule testScenario = model.equals("snz") ? new RunSnzIntegrationTest.SnzTestScenario(utils) : new RunEpisimIntegrationTest.TestScenario(utils);
+
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(testScenario));
 
 		config = injector.getInstance(Config.class);
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
@@ -75,7 +92,7 @@ public class RunEpisimSnapshotTest {
 		setup();
 
 		String fromSnapshot = utils.getOutputDirectory().replace(utils.getMethodName(), "fromSnapshot");
-		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + "episim-snapshot-015-1970-01-15.zip");
+		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + snapshotName());
 		config.controler().setOutputDirectory(fromSnapshot);
 
 		runner.run(30);
@@ -86,7 +103,7 @@ public class RunEpisimSnapshotTest {
 			if (file.getName().equals("events")) {
 				for (File event : Objects.requireNonNull(file.listFiles())) {
 					assertThat(event)
-							.hasSameBinaryContentAs(new File(fromSnapshot, "events/" +  event.getName()));
+							.hasSameBinaryContentAs(new File(fromSnapshot, "events/" + event.getName()));
 				}
 			}
 
@@ -102,7 +119,7 @@ public class RunEpisimSnapshotTest {
 	@Ignore("Snapshot file not checked into git because of its size")
 	public void fixedSnapshot() {
 
-		episimConfig.setStartFromSnapshot(utils.getInputDirectory() + "episim-snapshot-015-1970-01-15.zip");
+		episimConfig.setStartFromSnapshot(utils.getInputDirectory() + snapshotName());
 		runner.run(30);
 
 		RunEpisimIntegrationTest.assertSimulationOutput(utils);
