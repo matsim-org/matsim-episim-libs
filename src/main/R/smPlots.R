@@ -18,14 +18,22 @@ weatherData <- read_delim("https://bulk.meteostat.net/daily/10382.csv.gz", delim
 )) 
 colnames(weatherData) <- c("date", "tavg", "tmin", "tmax", "prcp", "snow", "wdir", "wspd", "wpgt", "pres", "tsun")
 
-weatherData <- weatherData %>%
+weatherDataByWeek <- weatherData %>%
   mutate( week = paste0(isoweek(date), "-", isoyear(date))) %>%
   group_by( week ) %>%
   summarize( date=mean(date), tavg=mean(tavg), tmin=mean(tmin), tmax=mean(tmax), prcp=mean(prcp), snow=mean(snow), wdir=mean(wdir), wspd=mean(wspd), wpgt=mean(wpgt), pres=mean(pres), tsun=mean(tsun))
 
+weatherDataAvg20002020 <- weatherData %>%
+  mutate( year = isoyear(date)) %>%
+  filter( year > 1999 & year < 2021) %>%
+  mutate( monthDay = paste0 (month(date), "-", day(date))) %>%
+  group_by( monthDay ) %>%
+  summarise_each(funs(mean(., na.rm = TRUE)))
+write_csv(weatherDataAvg20002020, "weatherDataAvg2000-2020.csv")
+
 
 # Senozon Restrictions
-snzRestrictionsFile <- "BerlinSnzData_daily_until20210101.csv"
+snzRestrictionsFile <- "BerlinSnzData_daily_until20210111.csv"
 svnLocation <- "/Users/sebastianmuller/git/shared-svn/"
 
 snzRestrictions <- read_delim(paste0(svnLocation, "projects/episim/matsim-files/snz/BerlinV2/episim-input/", snzRestrictionsFile), delim = "\t") %>%
@@ -94,21 +102,22 @@ ggplot(data = snzRestrictions, mapping=aes(x = newDate)) +
     caption="Source: Senozon, VSP TU Berlin",
     x="date", y="Reduction") +
   geom_point(mapping=aes(y = restriction, colour = type)) +
-  ylim(-50, 25)
-# geom_vline(xintercept = as.Date("2020-12-15"))
+  ylim(-50, 25) +
+  theme(legend.position = "bottom")
+  geom_vline(xintercept = as.Date("2021-01-06"))
 
 
 # Google Mobility Report 
 ggplot(data = googleMobilityReport, mapping=aes(x = date)) +
   geom_point(mapping=aes(y = restriction, colour = type)) +
   theme(legend.position = "bottom") +
-  geom_vline(xintercept = as.Date("2020-12-24"))
+  geom_vline(xintercept = as.Date("2020-10-22"))
 
 
 # Google Mobility and weather
 ggplot() +
   geom_point(data = googleMobilityReport, mapping=aes(x = date, y = restriction, colour = type)) +
-  geom_point(data = weatherData, mapping=aes(x = date, y = tmax)) +
+  geom_point(data = weatherDataByWeek, mapping=aes(x = date, y = tmax)) +
   theme(legend.position = "bottom") +
   xlim(c(as.Date("2020-02-24"), as.Date("2020-12-31")))
 
@@ -116,14 +125,16 @@ ggplot() +
 # Apple Mobility Trends
 ggplot(data = appleMobilityReport, mapping=aes(x = newDate)) +
   geom_point(mapping=aes(y = restriction, colour = transportation_type)) +
-  theme(legend.position = "bottom")
-# geom_vline(xintercept = as.Date("2020-12-24"))
+  theme(legend.position = "bottom") +
+geom_vline(xintercept = as.Date("2020-12-24"))
 
 
 # rValues per Activity
-ggplot(data = rValues, mapping=aes(x = date,y = rValue, fill = type)) + 
-  # geom_bar(position="stack", stat="identity") +
+ggplot(data = rValues, mapping=aes(x = date,y = rValue, fill = factor(type, levels=c("pt", "other", "leisure", "day care", "schools", "university", "work&business", "home")))) + 
+  geom_bar(position="stack", stat="identity") +
   geom_line(mapping=aes(colour=type)) +
-  xlim(c(as.Date("2020-02-24"), as.Date("2020-12-31")))
+  xlim(c(as.Date("2020-02-24"), as.Date("2020-12-31"))) +
+  labs(fill = "Activity")
+
 
 
