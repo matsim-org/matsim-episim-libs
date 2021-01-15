@@ -32,10 +32,6 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.IdMap;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.events.*;
-import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
-import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
-import org.matsim.api.core.v01.events.handler.PersonEntersVehicleEventHandler;
-import org.matsim.api.core.v01.events.handler.PersonLeavesVehicleEventHandler;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
@@ -66,7 +62,7 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  * It consumes the events of a standard MATSim run and puts {@link EpisimPerson}s into {@link EpisimContainer}s during their activity.
  * At the end of activities an {@link ContactModel} is executed and also a {@link ProgressionModel} at the end of the day.
  * See {@link EpisimModule} for which components may be substituted.
- *
+ * <p>
  * This handler should be used in conjunction with a {@link ReplayHandler}, which filters and preprocesses events.
  * For performance reasons it is not used with the {@link org.matsim.core.api.experimental.events.EventsManager}.
  */
@@ -433,7 +429,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 				if (vehicle == null) {
 					log.warn("No type found for vehicleId={}; using capacity of 150.", vehicleId);
-					container.setTypicalCapacity(150 );
+					container.setTypicalCapacity(150);
 				} else {
 					int capacity = vehicle.getType().getCapacity().getStandingRoom() + vehicle.getType().getCapacity().getSeats();
 					container.setTypicalCapacity(capacity);
@@ -504,7 +500,7 @@ public final class InfectionEventHandler implements Externalizable {
 		// add person to vehicle and memorize entering time:
 		episimVehicle.addPerson(episimPerson, now);
 
-		contactModel.notifyEnterVehicle( episimPerson, episimVehicle, now );
+		contactModel.notifyEnterVehicle(episimPerson, episimVehicle, now);
 	}
 
 	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
@@ -562,7 +558,6 @@ public final class InfectionEventHandler implements Externalizable {
 	private EpisimPerson.Activity createActivityType(String actType) {
 		return new EpisimPerson.Activity(actType, episimConfig.selectInfectionParams(actType));
 	}
-
 
 
 	private void handlePersonTrajectory(Id<Person> personId, String trajectoryElement) {
@@ -641,7 +636,7 @@ public final class InfectionEventHandler implements Externalizable {
 			progressionModel.updateState(person, iteration);
 		}
 
-		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(),  0, date);
+		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);
 		vaccinationModel.handleVaccination(personMap, (int) (available * episimConfig.getSampleSize()), iteration, now);
 
 		this.iteration = iteration;
@@ -752,7 +747,6 @@ public final class InfectionEventHandler implements Externalizable {
 			writeChars(out, e.getKey().toString());
 			e.getValue().write(out);
 		}
-
 	}
 
 	@Override
@@ -792,6 +786,9 @@ public final class InfectionEventHandler implements Externalizable {
 			Id<ActivityFacility> id = Id.create(readChars(in), ActivityFacility.class);
 			pseudoFacilityMap.get(id).read(in, personMap);
 		}
+
+		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
+		contactModel.setRestrictionsForIteration(iteration, im);
 	}
 
 	/**
