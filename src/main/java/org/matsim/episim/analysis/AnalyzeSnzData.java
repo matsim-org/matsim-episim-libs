@@ -257,24 +257,25 @@ class AnalyzeSnzData implements Callable<Integer> {
 				CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(IOUtils.getBufferedReader(file.toString()));
 
 				for (CSVRecord record : parse) {
+					if (!record.get("zipCode").contains("NULL")) {
+						int zipCode = Integer.parseInt(record.get("zipCode"));
+						if (zipCodes.contains(zipCode)) {
 
-					int zipCode = Integer.parseInt(record.get("zipCode"));
-					if (zipCodes.contains(zipCode)) {
+							double duration = Double.parseDouble(record.get("durationSum"));
+							String actType = record.get("actType");
 
-						double duration = Double.parseDouble(record.get("durationSum"));
-						String actType = record.get("actType");
+							sums.mergeDouble(actType, duration, Double::sum);
 
-						sums.mergeDouble(actType, duration, Double::sum);
+							if (!actType.equals("home")) {
 
-						if (!actType.equals("home")) {
+								sums.mergeDouble("notAtHome", duration, Double::sum);
 
-							sums.mergeDouble("notAtHome", duration, Double::sum);
-
-							if (!actType.equals("education") && !actType.equals("leisure")) {
-								sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
-							}
-							if (!actType.equals("education")) {
-								sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+								if (!actType.equals("education") && !actType.equals("leisure")) {
+									sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
+								}
+								if (!actType.equals("education")) {
+									sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+								}
 							}
 						}
 					}
@@ -327,6 +328,6 @@ class AnalyzeSnzData implements Callable<Integer> {
 	}
 
 	private enum Types {
-		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit,work, notAtHome, notAtHomeExceptLeisureAndEdu, notAtHomeExceptEdu
+		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit, work, notAtHome, notAtHomeExceptLeisureAndEdu, notAtHomeExceptEdu
 	}
 }
