@@ -55,7 +55,9 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
 				SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
 		Config config = module.config();
-		config.global().setRandomSeed(params.seed);
+//		config.global().setRandomSeed(params.seed);
+
+		config.global().setRandomSeed(7564655870752979346L);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		
@@ -165,20 +167,29 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
 			builder.restrict("2021-01-10", 0.68, act);
-			if (params.interpolateRestrictions.equals("yes")) {
+			if (params.extrapolateRestrictions.contains("yes")) {
 				builder.restrict("2021-01-17", 0.72, act);
 				builder.restrict("2021-01-24", 0.76, act);
 				builder.restrict("2021-01-31", 0.8, act);
-				builder.restrict("2021-02-07", 0.84, act);
-				builder.restrict("2021-02-14", 0.88, act);
-				builder.restrict("2021-02-21", 0.92, act);
-				builder.restrict("2021-02-28", 0.96, act);
-				builder.restrict("2021-03-07", 1., act);
+				if (params.extrapolateRestrictions.equals("yes")) {
+					builder.restrict("2021-02-07", 0.84, act);
+					builder.restrict("2021-02-14", 0.88, act);
+					builder.restrict("2021-02-21", 0.92, act);
+					builder.restrict("2021-02-28", 0.96, act);
+					builder.restrict("2021-03-07", 1., act);
+				}
 			}
 		}
 		
 		//leisure factor
 		builder.apply("2020-10-15", "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+		
+		//curfew
+		if (params.curfew.equals("18-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(18, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.curfew.equals("19-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(19, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.curfew.equals("20-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(20, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.curfew.equals("21-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(21, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.curfew.equals("22-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(22, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		
 		//school reopening
 		if (params.schools.equals("open")) builder.restrict("2021-01-25", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
@@ -243,10 +254,10 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(1)
-		public long seed;
+//		@GenerateSeeds(2)
+//		public long seed;
 
-		@Parameter({1.6, 1.8, 2.})
+		@Parameter({1.6})
 		double leisureFactor;
 
 //		//@StringParameter({"0", "current", "linear"})
@@ -256,7 +267,8 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@IntParameter({1, 5})
 		int vaccinationFactor;
 		
-		@StringParameter({"restrictive", "permissive"})
+		@StringParameter({"permissive"})
+//		@StringParameter({"restrictive", "permissive"})
 		public String christmasModel;
 		
 		@StringParameter({"closed", "open", "50%&masks"})
@@ -265,11 +277,16 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		@StringParameter({"no", "yes"})
 		public String ffpAtWork;
 
-		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15", "2020-09-15"})
+//		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15", "2020-09-15"})
+		@StringParameter({"2020-10-15", "2020-09-15"})
 		String newVariantDate;
 		
-		@StringParameter({"no", "yes"})
-		String interpolateRestrictions;
+		@StringParameter({"no", "yes", "yesUntil80"})
+		String extrapolateRestrictions;
+		
+//		@StringParameter({"no", "18-5", "19-5", "20-5", "21-5", "22-5"})
+		@StringParameter({"no", "18-5", "20-5", "21-5", "22-5"})
+		String curfew;
 
 	}
 
