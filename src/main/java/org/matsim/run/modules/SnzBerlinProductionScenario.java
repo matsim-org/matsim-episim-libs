@@ -55,7 +55,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	public static class Builder{
 		private int importOffset = 0;
 		// sample
-		private int sample = 10;
+		private int sample = 5;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
 		private Masks masks = Masks.yes;
@@ -133,8 +133,8 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 	// sample 10, 5, 1 (1 nur als test)
 	private SnzBerlinProductionScenario() {
 //		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
-		this(10, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
-//		this(5, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+//		this(10, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(5, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 //		this(1, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 	}
 
@@ -204,7 +204,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 				.addDays(DayOfWeek.SUNDAY);
 		// calibration prameter muss angepasst werden
 //		episimConfig.setCalibrationParameter(1.7E-5);
-		episimConfig.setCalibrationParameter(0.000017);
+		episimConfig.setCalibrationParameter(0.000015);
 		episimConfig.setStartDate("2020-02-16");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		episimConfig.setSampleSize(this.sample / 100.);
@@ -225,7 +225,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 			// 0,1 = 0,4
 			// 0,05 = 0,2
 			// 0,01 = 0,04
-			double importFactor = 0.4;
+			double importFactor = 0.2;
 			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
 			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
 					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
@@ -260,7 +260,7 @@ public class SnzBerlinProductionScenario extends AbstractModule {
 		// 0,1 = 8
 		// 0,05 = 4
 		// 0,01 = 0,8
-		int spaces = 8;
+		int spaces = 4;
 		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
