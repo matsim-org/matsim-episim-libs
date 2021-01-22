@@ -166,7 +166,6 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		//interpolate restrictions and manually set restriction of 10.01.
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
-			builder.restrict("2021-01-10", 0.68, act);
 			if (params.extrapolateRestrictions.contains("yes")) {
 				builder.restrict("2021-01-17", 0.72, act);
 				builder.restrict("2021-01-24", 0.76, act);
@@ -192,14 +191,13 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		if (params.curfew.equals("22-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(22, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		
 		//school reopening
-		if (params.schools.equals("open")) builder.restrict("2021-01-25", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+//		if (params.schools.equals("open")) builder.restrict("2021-02-15", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		if (params.schools.equals("50%&masks")) {
-			builder.restrict(LocalDate.parse("2021-01-25"), Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "educ_primary", "educ_secondary");
-			builder.restrict("2021-01-25", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-			builder.restrict("2021-02-07", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2021-02-15"), Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "educ_primary", "educ_secondary");
+			builder.restrict("2021-02-15", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 			builder.restrict("2021-04-11", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		}
-		if (params.schools.equals("closed")) builder.clearAfter("2021-01-25", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+		if (params.schools.equals("closed")) builder.clearAfter("2021-02-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 
 		//masks at work
 		if (params.ffpAtWork.equals("yes")) builder.restrict("2021-01-25", Restriction.ofMask(FaceMask.N95, 0.9), "work");
