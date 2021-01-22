@@ -280,7 +280,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		//tracing
 		if (this.tracing == Tracing.yes) {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+//			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+			int offset = 46;
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 			tracingConfig.setTracingProbability(0.5);
 			tracingConfig.setTracingPeriod_days(2);
