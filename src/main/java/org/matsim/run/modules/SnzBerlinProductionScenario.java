@@ -38,6 +38,8 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
+
+import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -195,37 +197,33 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
 
-		episimConfig.setCalibrationParameter(1.7E-5);
-		episimConfig.setStartDate("2020-02-16");
+		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
+		episimConfig.setStartDate("2020-02-25");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		episimConfig.setSampleSize(this.sample / 100.);
-		episimConfig.setHospitalFactor(1.);
+		episimConfig.setHospitalFactor(0.5);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 
 		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
-
-//		episimConfig.setSnapshotInterval(30);
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		if (this.diseaseImport == DiseaseImport.yes) {
 			episimConfig.setInitialInfectionDistrict(null);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
-			double importFactor = 1.;
-			importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * importFactor)));
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-02-24").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-02-24").plusDays(importOffset),
 					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-09").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-09").plusDays(importOffset),
 					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-03-23").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-23").plusDays(importOffset),
 					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-06-08").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-06-08").plusDays(importOffset),
 					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-07-13").plusDays(importOffset),
 					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-08-10").plusDays(importOffset),
 					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
-			importMap = interpolateImport(importMap, importFactor, LocalDate.parse("2020-10-26").plusDays(importOffset),
+			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-10-26").plusDays(importOffset),
 					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 			episimConfig.setInfections_pers_per_day(importMap);
 		}
@@ -292,11 +290,19 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			tracingConfig.setTracingDelay_days(5);
 			tracingConfig.setTraceSusceptible(true);
 			tracingConfig.setCapacityType(CapacityType.PER_PERSON);
-			int tracingCapacity = 60;
+			int tracingCapacity = 200;
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-					LocalDate.of(2020, 4, 1), (int) (0.2 * tracingCapacity),
+					LocalDate.of(2020, 4, 1), (int) (tracingCapacity * 0.2),
 					LocalDate.of(2020, 6, 15), tracingCapacity
 			));
+		}
+		
+		try {
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, 17.5, 25.0,
+					(double) 5.);
+			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");

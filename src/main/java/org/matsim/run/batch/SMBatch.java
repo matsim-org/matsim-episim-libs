@@ -61,71 +61,8 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		
-		double theta = 0;
-		if (params.leisureFactor > 1.5) theta = 0.8;
-		else theta = 0.75;
-		
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * theta);
-		episimConfig.setStartDate("2020-02-25");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		episimConfig.setSnapshotInterval(120);
-		episimConfig.setHospitalFactor(0.5);
-
-
-		Map<LocalDate, Integer> importMap = new HashMap<>();
-		int importOffset = 0;
-//		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * 1)));
-		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 4., LocalDate.parse("2020-02-24").plusDays(importOffset),
-				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 4., LocalDate.parse("2020-03-09").plusDays(importOffset),
-				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 4., LocalDate.parse("2020-03-23").plusDays(importOffset),
-				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-		double importFactorAfterJune = 0.5;
-		if (importFactorAfterJune == 0.) {
-			importMap.put(LocalDate.parse("2020-06-08"), 1);
-		} else {
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactorAfterJune, LocalDate.parse("2020-06-08").plusDays(importOffset),
-					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactorAfterJune, LocalDate.parse("2020-07-13").plusDays(importOffset),
-					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactorAfterJune, LocalDate.parse("2020-08-10").plusDays(importOffset),
-					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactorAfterJune, LocalDate.parse("2020-10-26").plusDays(importOffset),
-					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
-		}
-		episimConfig.setInfections_pers_per_day(importMap);
-
-		try {
-//			double weatherMidPointSpring = Double.parseDouble(params.weatherMidPoints.split("_")[0]);
-//			double weatherMidPointFall = Double.parseDouble(params.weatherMidPoints.split("_")[1]);
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, 17.5, 25.0,
-					(double) 5.);
-			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-//		if (params.childSusInf.equals("0")) {
-//			episimConfig.setAgeInfectivity(Map.of(
-//					24, 0.,
-//					25, 1d
-//			));
-//			episimConfig.setAgeSusceptibility(Map.of(
-//					24, 0.,
-//					25, 1d
-//			));
-//		}
-//		if (params.childSusInf.equals("linear")) {
-//			episimConfig.setAgeInfectivity(Map.of(
-//					0, 0.,
-//					20, 1d
-//			));
-//			episimConfig.setAgeSusceptibility(Map.of(
-//					0, 0.7,
-//					20, 1d
-//			));
-//		}
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
@@ -163,7 +100,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			}
 		}
 		
-		//interpolate restrictions and manually set restriction of 10.01.
+		//extrapolate restrictions after 17.01.
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
 			if (params.extrapolateRestrictions.contains("yes")) {
@@ -228,15 +165,6 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 				,LocalDate.parse("2021-01-28"), base + (int) ((params.vaccinationFactor * base - base) * 6./7.)
 				,LocalDate.parse("2021-01-30"), base + (int) ((params.vaccinationFactor * base - base))
 				));
-				
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-
-		tracingConfig.setCapacityType(CapacityType.PER_PERSON);
-
-		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), (int) (200 * 0.2),
-				LocalDate.of(2020, 6, 15), 200
-		));
 
 		if (!params.newVariantDate.equals("never")) {
 			Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
@@ -257,10 +185,6 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		@Parameter({1.6})
 		double leisureFactor;
-
-//		//@StringParameter({"0", "current", "linear"})
-//		@StringParameter({"current"})
-//		public String childSusInf;
 
 		@IntParameter({1, 5})
 		int vaccinationFactor;
