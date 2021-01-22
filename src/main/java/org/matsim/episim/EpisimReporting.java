@@ -545,7 +545,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	public void reportOutdoorFraction(double outdoorFraction, int iteration) {
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
-		writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+
+		try {
+			this.outdoorFraction.flush();
+			writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+		} catch (IOException e) {
+			// will only write to the writer if it is still open
+			// when reading snapshot there may be a situation where it is closed
+		}
+
 	}
 
 	@Override
