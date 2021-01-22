@@ -99,7 +99,7 @@ public final class EpisimRunner {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
 			try {
-				reporting.append();
+				reporting.append(episimConfig.getStartDate().plusDays(iteration - 1).toString());
 			} catch (IOException e) {
 				log.error("Snapshot output could not be created", e);
 				return;

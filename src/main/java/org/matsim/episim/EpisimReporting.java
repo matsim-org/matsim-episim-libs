@@ -185,7 +185,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Opens files for output in append mode.
 	 */
-	void append() throws IOException {
+	void append(String date) throws IOException {
 
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
@@ -204,6 +204,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
+		memorizedDate = date;
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
