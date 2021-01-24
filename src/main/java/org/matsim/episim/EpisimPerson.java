@@ -156,7 +156,7 @@ public final class EpisimPerson implements Attributable {
 
 		for( String attr : attrs.getAsMap().keySet() ){
 			if( attr.contains( "age" ) ){
-				age = (int) attrs.getAttribute( attr );
+				age = Integer.parseInt(attrs.getAttribute( attr ).toString());
 				break;
 			}
 		}
