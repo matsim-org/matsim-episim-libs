@@ -1,1 +1,1 @@
-time	infector	infected	infectionType	date	groupSize	facility	virusStrain
+time	infector	infected	infectionType	date	groupSize	facility	virusStrain	probability

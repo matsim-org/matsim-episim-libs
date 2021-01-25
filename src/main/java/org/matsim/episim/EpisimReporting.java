@@ -400,7 +400,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @param infectionType activities of both persons
 	 */
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType,
-								VirusStrain strain, EpisimContainer<?> container) {
+								VirusStrain strain, double prob, EpisimContainer<?> container) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -424,6 +424,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(container.getPersons().size());
 		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
 		array[InfectionEventsWriterFields.virusStrain.ordinal()] = strain.toString();
+		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(prob);
 
 		writer.append(infectionEvents, array);
 	}
@@ -664,7 +665,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, district
 	}
 
-	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain}
+	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}
 
 	/**
 	 * Detailed infection report for the end of a day.

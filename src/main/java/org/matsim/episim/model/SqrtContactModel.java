@@ -185,14 +185,14 @@ public final class SqrtContactModel extends AbstractContactModel {
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
 				if (rnd.nextDouble() < prob)
-					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
+					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
 						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
+					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}
 	}
