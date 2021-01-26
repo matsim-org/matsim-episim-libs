@@ -55,15 +55,14 @@ public class InfectionModelWithSeasonalityTest {
 		assertThat(prob2)
 				.isLessThan(prob);
 
-		model.setIteration(15);
+		model.setIteration(40);
 		double prob3 = model.calcInfectionProbability(target, infector, restrictions, act, act,
 				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
 		assertThat(prob3)
 				.isLessThan(prob2);
 
-
-		model.setIteration(20);
+		model.setIteration(45);
 		double prob4 = model.calcInfectionProbability(target, infector, restrictions, act, act,
 				act.getContactIntensity(), Duration.ofHours(1).getSeconds());
 
