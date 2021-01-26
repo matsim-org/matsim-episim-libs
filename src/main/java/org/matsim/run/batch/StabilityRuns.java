@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
@@ -38,7 +39,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 
-		basePolicyBuilder.setAlpha(params.alpha);
+		((CreateRestrictionsFromCSV) basePolicyBuilder.getActivityParticipation()).setAlpha(params.alpha);
 
 		double ci;
 		if (params.alpha == 1.0) {
@@ -51,7 +52,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 			ci = 1;
 		} else if (params.alpha == 0) {
 			// special case with no correction
-			basePolicyBuilder.setAlpha(1);
+			((CreateRestrictionsFromCSV) basePolicyBuilder.getActivityParticipation()).setAlpha(1);
 			ci = 1;
 		} else if (params.alpha == -1) {
 			ci = Double.NaN;

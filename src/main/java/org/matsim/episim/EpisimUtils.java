@@ -20,16 +20,12 @@
  */
 package org.matsim.episim;
 
-import com.google.common.collect.Lists;
 import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.ArchiveOutputStream;
 import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
-import org.apache.commons.math3.analysis.interpolation.LinearInterpolator;
-import org.apache.commons.math3.analysis.polynomials.PolynomialSplineFunction;
 import org.apache.commons.math3.fitting.AbstractCurveFitter;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.fitting.leastsquares.LeastSquaresBuilder;
@@ -37,12 +33,10 @@ import org.apache.commons.math3.fitting.leastsquares.LeastSquaresProblem;
 import org.apache.commons.math3.linear.DiagonalMatrix;
 import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.Pair;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 
 import java.io.*;
 import java.lang.reflect.Field;
@@ -62,8 +56,6 @@ import java.util.*;
  * Common utility class for episim.
  */
 public final class EpisimUtils {
-
-	private static final DecimalFormat FMT = new DecimalFormat();
 
 	private EpisimUtils() {
 	}
@@ -332,220 +324,6 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Creates restrictions from csv from Senozon data.
-	 * Restrictions at educational facilites are created manually.
-	 * Weekends and bank holidays in 2020 are interpolated.
-	 *
-	 * @deprecated use {@link CreateRestrictionsFromCSV}
-	 */
-	@Deprecated
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, double alpha, LocalDate changeDate,
-																	  double changedExposure) throws IOException {
-		// yyyy there are three "createRestrictionsFromCSV" methods.  Could we please combine them into a configurable class?  kai, dec'20
-
-		HashSet<String> activities = new HashSet<String>();
-
-		HashSet<String> bankHolidays = new HashSet<String>();
-		bankHolidays.add("2020-04-09"); // one before Karfreitag
-		bankHolidays.add("2020-04-10"); //Karfreitag
-		bankHolidays.add("2020-04-13"); //Ostermontag
-		bankHolidays.add("2020-04-30"); // one before Tag der Arbeit
-		bankHolidays.add("2020-05-01"); //Tag der Arbeit
-		bankHolidays.add("2020-05-07"); // one before Tag der Befreiung
-		bankHolidays.add("2020-05-08"); //Tag der Befreiung
-		bankHolidays.add("2020-05-20"); // one before Himmelfahrt
-		bankHolidays.add("2020-05-21"); //Himmelfahrt
-		bankHolidays.add("2020-05-22"); //Brueckentag
-		bankHolidays.add("2020-06-01"); //Pfingsten
-
-		bankHolidays.add("2020-05-01");
-		bankHolidays.add("2020-05-02");
-		bankHolidays.add("2020-05-03");
-		bankHolidays.add("2020-05-04");
-		bankHolidays.add("2020-05-05");
-		bankHolidays.add("2020-05-06");
-		bankHolidays.add("2020-05-07");
-		bankHolidays.add("2020-05-08");
-		bankHolidays.add("2020-05-09");
-		bankHolidays.add("2020-05-10");
-		bankHolidays.add("2020-05-11");
-		bankHolidays.add("2020-05-12");
-		bankHolidays.add("2020-05-13");
-		bankHolidays.add("2020-05-14");
-		bankHolidays.add("2020-05-15");
-
-		for (ConfigGroup a : episimConfig.getParameterSets().get("infectionParams")) {
-			activities.add(a.getParams().get("activityType"));
-		}
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-
-		Reader in = new FileReader("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20200517.csv");
-		Iterable<CSVRecord> records = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
-
-		HashMap<String, Double> lastRestrictions = new HashMap<String, Double>();
-		boolean didRestriction = true;
-		boolean doInterpolation = false; // == "interpolationOverWeekendsAndHolidays"?  yyyy  kai, may'20
-		String lastDate = null;
-		double exposure = 1.;
-		for (CSVRecord record : records) {
-
-			String date = record.get("date");
-			String y = date.substring(0, 4);
-			String m = date.substring(4, 6);
-			String d = date.substring(6, 8);
-			String corrDate = y + "-" + m + "-" + d;
-
-			if (LocalDate.parse(corrDate).isEqual(changeDate) || LocalDate.parse(corrDate).isAfter(changeDate)) {
-				exposure = changedExposure;
-			}
-
-			doInterpolation = false;
-
-			if (!didRestriction && LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
-				// also exclude fridays.  also see below
-				doInterpolation = true;
-			}
-
-			didRestriction = false;
-
-			for (String activity : activities) {
-				if (record.toMap().keySet().contains(activity)) {
-
-					double remainingFraction = 1. + (Integer.parseInt(record.get(activity)) / 100.);
-
-					if (remainingFraction > 1) remainingFraction = 1;
-
-					if (!activity.contains("home")) {
-						if (LocalDate.parse(corrDate).getDayOfWeek().getValue() <= 4 && !bankHolidays.contains(corrDate)) {
-							// also exclude fridays.  also see above
-							double reduction = Math.min(1., alpha * (1. - remainingFraction));
-							builder.restrict(corrDate, Restriction.of(1. - reduction, exposure), activity);
-
-							if (doInterpolation) {
-								// yy why can't you use the interpolation facility provided by the framework?  kai, may'20
-								int ii = LocalDate.parse(lastDate).until(LocalDate.parse(corrDate)).getDays();
-								for (int jj = 1; jj < ii; jj++) {
-									double interpolatedRemainingFraction = lastRestrictions.get(activity) + (remainingFraction - lastRestrictions.get(activity)) * (1.0 * jj / (1.0 * ii));
-									double interpolatedReduction = Math.min(1., alpha * (1. - interpolatedRemainingFraction));
-									builder.restrict(LocalDate.parse(lastDate).plusDays(jj), Restriction.of(1. - interpolatedReduction, exposure), activity);
-									LocalDate.parse(lastDate).plusDays(jj);
-								}
-							}
-
-							lastRestrictions.putIfAbsent(activity, remainingFraction);
-							lastRestrictions.replace(activity, remainingFraction);
-							didRestriction = true;
-
-						}
-
-					}
-
-				}
-
-			}
-
-			if (didRestriction) lastDate = corrDate;
-
-		}
-
-		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-		return builder;
-	}
-
-	/**
-	 * Read in restrictions from csv file. A support point will be calculated and intermediate values calculated for each week.
-	 *
-	 * @param alpha modulate the amount reduction
-	 * @deprecated use {@link CreateRestrictionsFromCSV}
-	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV(EpisimConfigGroup episimConfig, File input, double alpha) throws IOException {
-		// yyyy In principle this should be
-		//
-		// 	return new CreateRestrictionsFromCSV(episimConfig).setInput( input ).setAlpha( alpha ).createPolicyConfigBuilder();
-		//
-		// but the code is not exactly the same so I do not know if they have the same functionalities.  kai, dec'20
-
-		Reader in = new FileReader(input);
-		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
-		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-		// Activity types to supporting points (x, y)
-		Map<String, List<Pair<Integer, Double>>> points = new HashMap<>();
-
-		// Init activity types
-		for (EpisimConfigGroup.InfectionParams param : episimConfig.getInfectionParams()) {
-			if (parser.getHeaderNames().contains(param.getContainerName()) && !param.getContainerName().equals("home"))
-				points.put(param.getContainerName(), Lists.newArrayList(Pair.create(0, 1d)));
-		}
-
-		// day index
-		int day = 0;
-
-		LocalDate start = null;
-		int last = 0;
-
-		for (CSVRecord record : parser) {
-
-			LocalDate date = LocalDate.parse(record.get(0), fmt);
-			if (start == null)
-				start = date;
-
-			// add supporting point
-			if (date.getDayOfWeek() == DayOfWeek.THURSDAY) {
-
-				// thursdays value will be the support value at saturday
-				for (Map.Entry<String, List<Pair<Integer, Double>>> e : points.entrySet()) {
-
-					double remainingFraction = 1. + (Integer.parseInt(record.get(e.getKey())) / 100.);
-					// modulate reduction with alpha
-					double reduction = Math.min(1., alpha * (1. - remainingFraction));
-
-					e.getValue().add(Pair.create(day + 2, 1 - reduction));
-
-					last = day + 2;
-				}
-			}
-
-			day++;
-		}
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-
-		LinearInterpolator p = new LinearInterpolator();
-
-		for (Map.Entry<String, List<Pair<Integer, Double>>> e : points.entrySet()) {
-
-			PolynomialSplineFunction f = p.interpolate(
-					e.getValue().stream().mapToDouble(Pair::getFirst).toArray(),
-					e.getValue().stream().mapToDouble(Pair::getSecond).toArray()
-			);
-
-			// Interpolate for each day
-			for (int i = 0; i < last; i++) {
-				// interpolation could be greater 1
-				double r = Math.min(1, f.value(i));
-				builder.restrict(start.plusDays(i), r, e.getKey());
-			}
-		}
-
-		return builder;
-	}
-
-	/**
-	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
-	 *
-	 * @param alpha modulate the amount reduction
-	 * @deprecated use {@link CreateRestrictionsFromCSV}
-	 */
-	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
-																	   Extrapolation extrapolate) throws IOException {
-		return new CreateRestrictionsFromCSV(episimConfig).setInput(input).setAlpha(alpha).setExtrapolation(extrapolate).createPolicyConfigBuilder();
-	}
-
-	/**
 	 * Resolves an input path that can be configured with the environment variable EPISIM_INPUT.
 	 *
 	 * @param defaultPath default path if nothing else is set
@@ -556,6 +334,17 @@ public final class EpisimUtils {
 		return Path.of(input != null ? input : defaultPath).toAbsolutePath().normalize();
 	}
 
+	/**
+	 * Read in restriction from csv by taking the average reduction of all not at home activities and apply them to all other activities.
+	 *
+	 * @param alpha modulate the amount reduction
+	 * @deprecated use {@link CreateRestrictionsFromCSV}
+	 */
+	@Deprecated
+	public static FixedPolicy.ConfigBuilder createRestrictionsFromCSV2(EpisimConfigGroup episimConfig, File input, double alpha,
+																	   Extrapolation extrapolate) throws IOException {
+		return new CreateRestrictionsFromCSV(episimConfig).setInput(input.toPath()).setAlpha(alpha).setExtrapolation(extrapolate).createPolicy();
+	}
 
 	/**
 	 * Type of interpolation of activity pattern.
@@ -600,23 +389,6 @@ public final class EpisimUtils {
 					build();
 		}
 
-	}
-
-	/**
-	 * Exponential function in the form of 1 - a * exp(-x / b).
-	 */
-	static final class Exponential implements ParametricUnivariateFunction {
-
-		@Override
-		public double value(double x, double... parameters) {
-			return 1 - parameters[0] * Math.exp(-x / parameters[1]);
-		}
-
-		@Override
-		public double[] gradient(double x, double... parameters) {
-			double exb = Math.exp(-x / parameters[1]);
-			return new double[]{-exb, -parameters[0] * x * exb / (parameters[1] * parameters[1])};
-		}
 	}
 
 	/**

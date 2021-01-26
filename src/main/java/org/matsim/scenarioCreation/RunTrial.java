@@ -12,6 +12,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunEpisim;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
@@ -113,7 +114,7 @@ public final class RunTrial implements Callable<Integer> {
 		} else if (alpha > -1 && correction > -1) {
 
 			SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
-			builder.setAlpha(alpha);
+			((CreateRestrictionsFromCSV) builder.getActivityParticipation()).setAlpha(alpha);
 
 			HashMap<String, Double> original = new HashMap<>(builder.getCiCorrections());
 			original.put(correctionStart, correction);

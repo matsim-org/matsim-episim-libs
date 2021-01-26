@@ -11,8 +11,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimTestUtils;
-import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.File;
@@ -152,10 +152,14 @@ public class FixedPolicyTest {
 //				f, 1.0, 1.0, "2020-03-10", EpisimUtils.Extrapolation.linear
 
 
-		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(
-				ConfigUtils.addOrGetModule( EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class ) );
-		builder.setCsv( f.toPath() );
-		builder.setAlpha( 1. );
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(EpisimTestUtils.createTestConfig(), EpisimConfigGroup.class);
+		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+
+		CreateRestrictionsFromCSV act = new CreateRestrictionsFromCSV(episimConfig);
+		act.setAlpha(1.);
+		act.setInput(f.toPath());
+		builder.setActivityParticipation(act);
+
 		builder.setCiCorrections(Map.of("2020-03-10", 1.));
 
 		String content = builder.build().build().root().render();

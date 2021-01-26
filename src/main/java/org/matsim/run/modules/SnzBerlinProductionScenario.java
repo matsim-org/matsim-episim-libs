@@ -263,7 +263,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		//restrictions and masks
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
-			basePolicyBuilder.setCsv(null);
+			basePolicyBuilder.setActivityParticipation(null);
 		}
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptSchoolsAndDayCare) {
 			basePolicyBuilder.setRestrictSchoolsAndDayCare(false);
