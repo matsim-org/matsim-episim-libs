@@ -68,19 +68,19 @@ class AnalyzeSnzData implements Callable<Integer> {
 		IntSet zipCodesBerlin = new IntOpenHashSet();
 		for (int i = 10115; i <= 14199; i++)
 			zipCodesBerlin.add(i);
-		
+
 		IntSet zipCodesBerlinInnenstadt = new IntOpenHashSet();
 		for (int i = 10000; i <= 10999; i++)
 			zipCodesBerlinInnenstadt.add(i);
-		
+
 		IntSet zipCodesBerlinSuedOsten = new IntOpenHashSet();
 		for (int i = 12000; i <= 12999; i++)
 			zipCodesBerlinSuedOsten.add(i);
-		
+
 		IntSet zipCodesBerlinNorden = new IntOpenHashSet();
 		for (int i = 13000; i <= 13999; i++)
 			zipCodesBerlinNorden.add(i);
-		
+
 		IntSet zipCodesBerlinSueWesten = new IntOpenHashSet();
 		for (int i = 14000; i <= 14999; i++)
 			zipCodesBerlinSueWesten.add(i);
@@ -106,6 +106,20 @@ class AnalyzeSnzData implements Callable<Integer> {
 		// zip codes for district "Berchtesgadener Land"
 		IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 
+		// zip codes for districts in Berlin
+		IntSet zipCodesMitte = new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119, 10785, 13359, 10178, 10787, 13405, 10179, 10963, 13407, 10435, 10969, 13409, 10557, 13353, 10555, 13351, 10553, 13349, 10551, 13347));
+		IntSet zipCodesFriedrichshain_Kreuzberg = new IntOpenHashSet(List.of(10179, 10967, 10243, 10969, 10245, 10997, 10247, 10999, 10249, 12045, 10367, 10785, 10961, 10963, 10965, 10178));
+		IntSet zipCodesPankow = new IntOpenHashSet(List.of(10119, 10247, 10249, 10405, 10407, 10409, 10435, 10437, 10439, 13051, 13053, 13086, 13088, 13089, 13125, 13127, 13129, 13156, 13158, 13159, 13187, 13189));
+		IntSet zipCodesCharlottenburg_Wilmersdorf = new IntOpenHashSet(List.of(10553, 10585, 10587, 10589, 10623, 10625, 10627, 10629, 10707, 10709, 10711, 10713, 10715, 10717, 10719, 10777, 10779, 10787, 10789, 10825, 13353, 13597, 13627, 13629, 14050, 14052, 14053, 14055, 14057, 14059, 14193, 14195, 14197, 14199));
+		IntSet zipCodesSpandau = new IntOpenHashSet(List.of(13581, 13583, 13585, 13587, 13589, 13591, 13593, 13595, 13597, 13599, 13627, 13629, 14052, 14089));
+		IntSet zipCodesSteglitz_Zehlendorf = new IntOpenHashSet(List.of(12157, 12161, 12163, 12165, 12167, 12169, 12203, 12205, 12207, 12209, 12247, 12249, 12277, 12279, 14109, 14129, 14163, 14165, 14167, 14169, 14193, 14195, 14197, 14199));
+		IntSet zipCodesTempelhof_Schoeneberg = new IntOpenHashSet(List.of(10777, 10779, 10781, 10783, 10785, 10787, 10789, 10823, 10825, 10827, 14197, 10829, 10965, 12099, 12101, 12103, 12105, 12107, 12109, 12157, 12159, 12161, 12163, 12169, 12249, 12277, 12279, 12305, 12307, 12309, 12347));
+		IntSet zipCodesNeukoelln = new IntOpenHashSet(List.of(10965, 10967, 12043, 12045, 12047, 12049, 12051, 12053, 12055, 12057, 12059, 12099, 12107, 12305, 12347, 12349, 12351, 12353, 12355, 12357, 12359));
+		IntSet zipCodesTreptow_Koepenick = new IntOpenHashSet(List.of(12435, 12437, 12439, 12459, 12487, 12489, 12524, 12526, 12527, 12555, 12557, 12559, 12587, 12589, 12623));
+		IntSet zipCodesMarzahn_Hellersdorf = new IntOpenHashSet(List.of(12555, 12619, 12621, 12623, 12627, 12629, 12679, 12681, 12683, 12685, 12687, 12689));
+		IntSet zipCodesLichtenberg = new IntOpenHashSet(List.of(10315, 13057, 10317, 10318, 10319, 10365, 10367, 10369, 13051, 13053, 13055, 13059));
+		IntSet zipCodesReinickendorf = new IntOpenHashSet(List.of(13403, 13405, 13407, 13409, 13435, 13437, 13439, 13465, 13467, 13469, 13503, 13505, 13507, 13509, 13599, 13629));
+
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
 		boolean getPercentageResults = true;
 		// setBaseIn2018: set true if you use selected days of 2018 as base days
@@ -121,7 +135,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 //		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData, getPercentageResults, setBaseIn2018);
 //		analyzeDataForCertainArea(zipCodesBerchtesgaden, "Berchtesgaden", filesWithData, getPercentageResults, setBaseIn2018);
 //		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData, getPercentageResults, setBaseIn2018);
-		
+
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinInnenstadtSnzData_daily_until.csv"), zipCodesBerlinInnenstadt, getPercentageResults, setBaseIn2018);
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinSuedOstenSnzData_daily_until.csv"), zipCodesBerlinSuedOsten, getPercentageResults, setBaseIn2018);
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinNordenSnzData_daily_until.csv"), zipCodesBerlinNorden, getPercentageResults, setBaseIn2018);
