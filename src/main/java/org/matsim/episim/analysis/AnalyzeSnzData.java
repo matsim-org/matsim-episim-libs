@@ -68,6 +68,22 @@ class AnalyzeSnzData implements Callable<Integer> {
 		IntSet zipCodesBerlin = new IntOpenHashSet();
 		for (int i = 10115; i <= 14199; i++)
 			zipCodesBerlin.add(i);
+		
+		IntSet zipCodesBerlinInnenstadt = new IntOpenHashSet();
+		for (int i = 10000; i <= 10999; i++)
+			zipCodesBerlinInnenstadt.add(i);
+		
+		IntSet zipCodesBerlinSuedOsten = new IntOpenHashSet();
+		for (int i = 12000; i <= 12999; i++)
+			zipCodesBerlinSuedOsten.add(i);
+		
+		IntSet zipCodesBerlinNorden = new IntOpenHashSet();
+		for (int i = 13000; i <= 13999; i++)
+			zipCodesBerlinNorden.add(i);
+		
+		IntSet zipCodesBerlinSueWesten = new IntOpenHashSet();
+		for (int i = 14000; i <= 14999; i++)
+			zipCodesBerlinSueWesten.add(i);
 
 		// zip codes for Munich
 		IntSet zipCodesMunich = new IntOpenHashSet();
@@ -105,6 +121,12 @@ class AnalyzeSnzData implements Callable<Integer> {
 //		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData, getPercentageResults, setBaseIn2018);
 //		analyzeDataForCertainArea(zipCodesBerchtesgaden, "Berchtesgaden", filesWithData, getPercentageResults, setBaseIn2018);
 //		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData, getPercentageResults, setBaseIn2018);
+		
+//		snz.writeDataForCertainArea(outputFolder.resolve("BerlinInnenstadtSnzData_daily_until.csv"), zipCodesBerlinInnenstadt, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("BerlinSuedOstenSnzData_daily_until.csv"), zipCodesBerlinSuedOsten, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("BerlinNordenSnzData_daily_until.csv"), zipCodesBerlinNorden, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("BerlinSueWestenSnzData_daily_until.csv"), zipCodesBerlinSueWesten, getPercentageResults, setBaseIn2018);
+
 
 		log.info("Done!");
 
