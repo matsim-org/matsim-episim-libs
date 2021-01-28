@@ -13,9 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.policy.FixedPolicy;
 
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -82,8 +80,8 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	/**
 	 * This method searches all files with an certain name in a given folder.
 	 */
-	private static List<File> findInputFiles(File inputFolder) {
-		List<File> fileData = new ArrayList<File>();
+	static List<File> findInputFiles(File inputFolder) {
+		List<File> fileData = new ArrayList<>();
 
 		for (File folder : Objects.requireNonNull(inputFolder.listFiles())) {
 			if (folder.isDirectory()) {
@@ -96,6 +94,64 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		return fileData;
 	}
 
+	/**
+	 * Read durations from a single input file for a day.
+	 */
+	static Object2DoubleMap<String> readDurations(File file, IntSet zipCodes) throws IOException {
+		Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(file.toString())) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+					.parse(reader);
+
+			for (CSVRecord record : parse) {
+
+				int zipCode = Integer.parseInt(record.get("zipCode"));
+				if (zipCodes.contains(zipCode)) {
+
+					double duration = Double.parseDouble(record.get("durationSum"));
+					String actType = record.get("actType");
+
+					sums.mergeDouble(actType, duration, Double::sum);
+
+					if (!actType.equals("home")) {
+
+						sums.mergeDouble("notAtHome", duration, Double::sum);
+
+						if (!actType.equals("education") && !actType.equals("leisure")) {
+							sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration,
+									Double::sum);
+						}
+						if (!actType.equals("education")) {
+							sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+						}
+					}
+				}
+			}
+		}
+
+		return sums;
+	}
+
+	/**
+	 * Read in all durations from input folder.
+	 */
+	static NavigableMap<LocalDate, Object2DoubleMap<String>> readAllDurations(Path input, IntSet zipCodes) {
+		return new TreeMap<>(findInputFiles(input.toFile()).stream().parallel().collect(Collectors.toMap(
+				file -> {
+					String dateString = file.getName().split("_")[0];
+					return LocalDate.parse(dateString, FMT);
+				},
+				file -> {
+					try {
+						return readDurations(file, zipCodes);
+					} catch (IOException e) {
+						throw new UncheckedIOException(e);
+					}
+				}
+		)));
+	}
 
 	/**
 	 * Analyze data and write result to {@code outputFile}.
@@ -150,39 +206,11 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 					if (folder.isDirectory()) {
 						for (File file : Objects.requireNonNull(folder.listFiles())) {
 							if (file.getName().contains("_zipCode.csv.gz")) {
-								Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
-
 								dateString = file.getName().split("_")[0];
 								if (baseDays.contains(dateString)) {
 									LocalDate date = LocalDate.parse(dateString, FMT);
 
-									CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
-											.parse(IOUtils.getBufferedReader(file.toString()));
-
-									for (CSVRecord record : parse) {
-
-										int zipCode = Integer.parseInt(record.get("zipCode"));
-										if (zipCodes.contains(zipCode)) {
-
-											double duration = Double.parseDouble(record.get("durationSum"));
-											String actType = record.get("actType");
-
-											sums.mergeDouble(actType, duration, Double::sum);
-
-											if (!actType.equals("home")) {
-
-												sums.mergeDouble("notAtHome", duration, Double::sum);
-
-												if (!actType.equals("education") && !actType.equals("leisure")) {
-													sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration,
-															Double::sum);
-												}
-												if (!actType.equals("education")) {
-													sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
-												}
-											}
-										}
-									}
+									Object2DoubleMap<String> sums = readDurations(file, zipCodes);
 
 									DayOfWeek day = date.getDayOfWeek();
 
@@ -199,37 +227,10 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
 
-				Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+				Object2DoubleMap<String> sums = readDurations(file, zipCodes);
 
 				dateString = file.getName().split("_")[0];
 				LocalDate date = LocalDate.parse(dateString, FMT);
-
-				CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(IOUtils.getBufferedReader(file.toString()));
-
-				for (CSVRecord record : parse) {
-					if (!record.get("zipCode").contains("NULL")) {
-						int zipCode = Integer.parseInt(record.get("zipCode"));
-						if (zipCodes.contains(zipCode)) {
-
-							double duration = Double.parseDouble(record.get("durationSum"));
-							String actType = record.get("actType");
-
-							sums.mergeDouble(actType, duration, Double::sum);
-
-							if (!actType.equals("home")) {
-
-								sums.mergeDouble("notAtHome", duration, Double::sum);
-
-								if (!actType.equals("education") && !actType.equals("leisure")) {
-									sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
-								}
-								if (!actType.equals("education")) {
-									sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
-								}
-							}
-						}
-					}
-				}
 
 				DayOfWeek day = date.getDayOfWeek();
 
