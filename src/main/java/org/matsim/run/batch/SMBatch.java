@@ -46,7 +46,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 	
 //	@Override
 //	public int getOffset() {
-//		return 600;
+//		return 400;
 //	}
 
 	@Override
@@ -100,19 +100,25 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			}
 		}
 		
+		//christmas factor
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			builder.apply("2020-12-19", "2021-01-02", (d, e) -> e.put("fraction", Math.min(1., 1 - params.christmasFactor * (1 - (double) e.get("fraction")))), act);
+		}
+		
 		//extrapolate restrictions after 17.01.
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
 			if (params.extrapolateRestrictions.contains("yes")) {
-				builder.restrict("2021-01-17", 0.72, act);
-				builder.restrict("2021-01-24", 0.76, act);
-				builder.restrict("2021-01-31", 0.8, act);
+				builder.restrict("2021-01-24", 0.72, act);
+				builder.restrict("2021-01-31", 0.76, act);
+				builder.restrict("2021-02-07", 0.8, act);
 				if (params.extrapolateRestrictions.equals("yes")) {
-					builder.restrict("2021-02-07", 0.84, act);
-					builder.restrict("2021-02-14", 0.88, act);
-					builder.restrict("2021-02-21", 0.92, act);
-					builder.restrict("2021-02-28", 0.96, act);
-					builder.restrict("2021-03-07", 1., act);
+					builder.restrict("2021-02-14", 0.84, act);
+					builder.restrict("2021-02-21", 0.88, act);
+					builder.restrict("2021-02-28", 0.92, act);
+					builder.restrict("2021-03-07", 0.96, act);
+					builder.restrict("2021-03-10", 1., act);
 				}
 			}
 		}
@@ -120,24 +126,30 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		//leisure factor
 		builder.apply("2020-10-15", "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 		
+		String restrictionDate = "2021-02-15";
 		//curfew
-		if (params.curfew.equals("18-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(18, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
-		if (params.curfew.equals("19-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(19, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
-		if (params.curfew.equals("20-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(20, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
-		if (params.curfew.equals("21-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(21, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
-		if (params.curfew.equals("22-5")) builder.restrict("2021-01-25", Restriction.ofClosingHours(22, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furtherMeasures.equals("curfew_18-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(18, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furtherMeasures.equals("curfew_19-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(19, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furtherMeasures.equals("curfew_20-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(20, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furtherMeasures.equals("curfew_21-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(21, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+		if (params.furtherMeasures.equals("curfew_22-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(22, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
 		
-		//school reopening
-//		if (params.schools.equals("open")) builder.restrict("2021-02-15", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-		if (params.schools.equals("50%&masks")) {
-			builder.restrict(LocalDate.parse("2021-02-15"), Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "educ_primary", "educ_secondary");
-			builder.restrict("2021-02-15", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+		//schools
+		if (params.furtherMeasures.equals("50%&masksAtSchool")) {
+			builder.restrict(LocalDate.parse(restrictionDate), Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "educ_primary", "educ_secondary");
+			builder.restrict(restrictionDate, .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 			builder.restrict("2021-04-11", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		}
-		if (params.schools.equals("closed")) builder.clearAfter("2021-02-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+		if (!params.furtherMeasures.equals("50%&masksAtSchool") && !params.furtherMeasures.equals("openSchools")) builder.clearAfter( "2021-02-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 
 		//masks at work
-		if (params.ffpAtWork.equals("yes")) builder.restrict("2021-01-25", Restriction.ofMask(FaceMask.N95, 0.9), "work");
+		if (params.furtherMeasures.equals("ffpAtWork")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "work");
+		
+		//closing PT
+		if (params.furtherMeasures.equals("closePublicTransport")) builder.restrict(restrictionDate, 0., "pt");
+		
+		//open Universities
+		if (params.furtherMeasures.equals("openUniversities")) builder.restrict(restrictionDate, 1., "educ_higher");
 		
 //		Map<LocalDate, Integer> vacMap = EpisimUtils.readCSV(Path.of("germanyVaccinations.csv"),
 //				CSVFormat.DEFAULT, "date", "nVaccinated").entrySet().stream()
@@ -153,17 +165,18 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		vaccinationConfig.setDaysBeforeFullEffect(28);
 		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 		// 4/3 because model is bigger than just Berlin
-		int base = (int) (2000 * 4./3.);
+		int base = (int) (3000 * 4./3.);
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 				episimConfig.getStartDate(), 0,
-				LocalDate.parse("2020-12-27"), base
-				,LocalDate.parse("2021-01-18"), base + (int) ((params.vaccinationFactor * base - base) * 1./7.)
-				,LocalDate.parse("2021-01-20"), base + (int) ((params.vaccinationFactor * base - base) * 2./7.)
-				,LocalDate.parse("2021-01-22"), base + (int) ((params.vaccinationFactor * base - base) * 3./7.)
-				,LocalDate.parse("2021-01-24"), base + (int) ((params.vaccinationFactor * base - base) * 4./7.)
-				,LocalDate.parse("2021-01-26"), base + (int) ((params.vaccinationFactor * base - base) * 5./7.)
-				,LocalDate.parse("2021-01-28"), base + (int) ((params.vaccinationFactor * base - base) * 6./7.)
-				,LocalDate.parse("2021-01-30"), base + (int) ((params.vaccinationFactor * base - base))
+				LocalDate.parse("2020-12-27"), (int) (2000 * 4./3.)
+				,LocalDate.parse("2021-01-25"), base
+				,LocalDate.parse("2021-02-01"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 1./7.)
+				,LocalDate.parse("2021-02-03"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 2./7.)
+				,LocalDate.parse("2021-02-05"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 3./7.)
+				,LocalDate.parse("2021-02-07"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 4./7.)
+				,LocalDate.parse("2021-02-09"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 5./7.)
+				,LocalDate.parse("2021-02-10"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 6./7.)
+				,LocalDate.parse("2021-02-12"), base + (int) ((4./3. * params.dailyInitialVaccinations - base))
 				));
 
 		if (!params.newVariantDate.equals("never")) {
@@ -185,31 +198,29 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 		@Parameter({1.6})
 		double leisureFactor;
+		
+		@Parameter({1., 0.5, 0.})
+		double christmasFactor;
 
-		@IntParameter({1, 5})
-		int vaccinationFactor;
+		@IntParameter({3000, 10000})
+		int dailyInitialVaccinations;
 		
 		@StringParameter({"permissive"})
 //		@StringParameter({"restrictive", "permissive"})
 		public String christmasModel;
 		
-		@StringParameter({"closed", "open", "50%&masks"})
-		public String schools;
-		
-		@StringParameter({"no", "yes"})
-		public String ffpAtWork;
+		@StringParameter({"no", "ffpAtWork", "openSchools", "50%&masksAtSchool", "curfew_18-5", "curfew_20-5", "curfew_22-5", "closePublicTransport", "openUniversities"})
+		public String furtherMeasures;
 
 //		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15", "2020-09-15"})
-		@StringParameter({"2020-10-15", "2020-09-15"})
+		@StringParameter({"2020-11-15", "2020-12-15"})
 		String newVariantDate;
 		
 		@StringParameter({"no", "yes", "yesUntil80"})
 		String extrapolateRestrictions;
 		
-//		@StringParameter({"no", "18-5", "19-5", "20-5", "21-5", "22-5"})
-		@StringParameter({"no", "18-5", "20-5", "21-5", "22-5"})
-		String curfew;
-
+		@Parameter({1.35})
+		double newVariantInfectiousness;
 	}
 
 	public static void main(String[] args) {
