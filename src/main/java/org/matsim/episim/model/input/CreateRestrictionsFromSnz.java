@@ -25,7 +25,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-
 /**
  * Class for reading and analyzing snz activity data.
  */
@@ -76,7 +75,6 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		return delegate.createPolicy();
 	}
 
-
 	/**
 	 * This method searches all files with an certain name in a given folder.
 	 */
@@ -100,31 +98,30 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	static Object2DoubleMap<String> readDurations(File file, IntSet zipCodes) throws IOException {
 		Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
 
-
 		try (BufferedReader reader = IOUtils.getBufferedReader(file.toString())) {
 			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
 					.parse(reader);
 
 			for (CSVRecord record : parse) {
+				if (!record.get("zipCode").contains("NULL")) {
+					int zipCode = Integer.parseInt(record.get("zipCode"));
+					if (zipCodes.contains(zipCode)) {
 
-				int zipCode = Integer.parseInt(record.get("zipCode"));
-				if (zipCodes.contains(zipCode)) {
+						double duration = Double.parseDouble(record.get("durationSum"));
+						String actType = record.get("actType");
 
-					double duration = Double.parseDouble(record.get("durationSum"));
-					String actType = record.get("actType");
+						sums.mergeDouble(actType, duration, Double::sum);
 
-					sums.mergeDouble(actType, duration, Double::sum);
+						if (!actType.equals("home")) {
 
-					if (!actType.equals("home")) {
+							sums.mergeDouble("notAtHome", duration, Double::sum);
 
-						sums.mergeDouble("notAtHome", duration, Double::sum);
-
-						if (!actType.equals("education") && !actType.equals("leisure")) {
-							sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration,
-									Double::sum);
-						}
-						if (!actType.equals("education")) {
-							sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+							if (!actType.equals("education") && !actType.equals("leisure")) {
+								sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
+							}
+							if (!actType.equals("education")) {
+								sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+							}
 						}
 					}
 				}
