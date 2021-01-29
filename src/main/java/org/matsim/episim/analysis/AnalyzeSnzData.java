@@ -131,13 +131,13 @@ class AnalyzeSnzData implements Callable<Integer> {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
 
-//		analyzeDataForCertainArea(zipCodesGER, "Germany", filesWithData,getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("GermanySnzData_daily_until.csv"), zipCodesGER, getPercentageResults, setBaseIn2018);
 		snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin, getPercentageResults, setBaseIn2018);
-//		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData, getPercentageResults, setBaseIn2018);
-//		analyzeDataForCertainArea(zipCodesHamburg, "Hamburg", filesWithData, getPercentageResults, setBaseIn2018);
-//		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData, getPercentageResults, setBaseIn2018);
-//		analyzeDataForCertainArea(zipCodesBerchtesgaden, "Berchtesgaden", filesWithData, getPercentageResults, setBaseIn2018);
-//		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("MunichSnzData_daily_until.csv"), zipCodesMunich, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("HamburgSnzData_daily_until.csv"), zipCodesHamburg, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("BonnSnzData_daily_until.csv"), zipCodesBonn, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("BerchtesgadenSnzData_daily_until.csv"), zipCodesBerchtesgaden, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("HeinsbergSnzData_daily_until.csv"), zipCodesHeinsberg, getPercentageResults, setBaseIn2018);
 		
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinInnenstadtSnzData_daily_until.csv"), zipCodesBerlinInnenstadt, getPercentageResults, setBaseIn2018);
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinSuedOstenSnzData_daily_until.csv"), zipCodesBerlinSuedOsten, getPercentageResults, setBaseIn2018);
