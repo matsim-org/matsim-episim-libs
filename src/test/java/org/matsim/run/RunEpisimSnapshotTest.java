@@ -17,6 +17,7 @@ import org.matsim.episim.EpisimModule;
 import org.matsim.episim.EpisimRunner;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
 import java.io.File;
@@ -65,7 +66,8 @@ public class RunEpisimSnapshotTest {
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 
-		AbstractModule testScenario = model.equals("snz") ? new RunSnzIntegrationTest.SnzTestScenario(utils) : new RunEpisimIntegrationTest.TestScenario(utils);
+		AbstractModule testScenario = model.equals("snz") ? new RunSnzIntegrationTest.SnzTestScenario(utils,
+				SnzBerlinProductionScenario.Restrictions.onlyEdu) : new RunEpisimIntegrationTest.TestScenario(utils);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(testScenario));
 
