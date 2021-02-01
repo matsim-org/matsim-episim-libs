@@ -36,7 +36,7 @@ import java.util.Map;
  * This policy enforces restrictions based on the number of available intensive care beds
  * and the number of persons that are in critical health state.
  */
-public class ICUDependentPolicy extends ShutdownPolicy {
+public final class ICUDependentPolicy extends ShutdownPolicy {
 
 	/**
 	 * Number of beds available for persons in critical state.

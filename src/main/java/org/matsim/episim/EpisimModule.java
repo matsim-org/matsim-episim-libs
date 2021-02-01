@@ -31,9 +31,12 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.model.*;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
+import javax.inject.Named;
 import java.util.SplittableRandom;
 
 /**
@@ -52,6 +55,7 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
+		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);
 		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);
 
@@ -121,6 +125,13 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public SplittableRandom splittableRandom(Config config) {
 		return new SplittableRandom(config.global().getRandomSeed());
+	}
+
+	@Provides
+	@Named("policy")
+	@Singleton
+	public com.typesafe.config.Config policyConfig(EpisimConfigGroup config) {
+		return config.getPolicy();
 	}
 
 }

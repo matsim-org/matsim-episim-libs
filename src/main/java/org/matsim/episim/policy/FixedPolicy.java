@@ -22,10 +22,12 @@ package org.matsim.episim.policy;
 
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import org.matsim.episim.EpisimReporting;
 
+import javax.inject.Named;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -39,12 +41,12 @@ import java.util.function.Consumer;
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
  */
 public final class FixedPolicy extends ShutdownPolicy {
-	// Classes should be final or non-public if not explicitly designed for inheritance.  kai, dec'20
 
 	/**
 	 * Constructor.
 	 */
-	public FixedPolicy(Config config) {
+	@Inject
+	public FixedPolicy(@Named("policy") Config config) {
 		super(config);
 	}
 
