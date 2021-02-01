@@ -1,6 +1,6 @@
 package org.matsim.episim.model.input;
 
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -18,5 +18,5 @@ public interface ActivityParticipation {
 	/**
 	 * Provide policy with activity reduction.
 	 */
-	ShutdownPolicy.ConfigBuilder<?> createPolicy() throws IOException;
+	FixedPolicy.ConfigBuilder createPolicy() throws IOException;
 }

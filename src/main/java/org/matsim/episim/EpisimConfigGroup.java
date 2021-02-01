@@ -141,6 +141,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
+	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -376,6 +377,21 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.sampleSize = sampleSize;
 	}
 
+	@StringGetter("policyClass")
+	public String getPolicyClass() {
+		return policyClass.getName();
+	}
+
+	@StringSetter("policyClass")
+	public void setPolicyClass(String policyClass) {
+		try {
+			this.policyClass = (Class<? extends ShutdownPolicy>) ClassLoader.getSystemClassLoader().loadClass(policyClass);
+		} catch (ClassNotFoundException e) {
+			log.error("Policy class not found", e);
+			throw new IllegalArgumentException(e);
+		}
+	}
+
 	@StringGetter("policyConfig")
 	public String getPolicyConfig() {
 		if (overwritePolicyLocation != null)
@@ -424,18 +440,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Sets policy class and desired config.
-	 * @deprecated set policy class via guice.
-	 * @see #setPolicy(Config)
 	 */
-	@Deprecated
 	public void setPolicy(Class<? extends ShutdownPolicy> policy, Config config) {
-		this.policyConfig = config;
-	}
-
-	/**
-	 * Sets policy config.
-	 */
-	public void setPolicy(Config config) {
+		this.policyClass = policy;
 		this.policyConfig = config;
 	}
 
@@ -598,6 +605,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(inputDays);
 	}
 
+
+	/**
+	 * Create a configured instance of the desired policy.
+	 */
+	public ShutdownPolicy createPolicyInstance() {
+		try {
+			return policyClass.getConstructor(Config.class).newInstance(policyConfig);
+		} catch (ReflectiveOperationException e) {
+			log.error("Could not create policy", e);
+			throw new IllegalStateException(e);
+		}
+	}
 
 	/**
 	 * Create restriction for each {@link InfectionParams}.

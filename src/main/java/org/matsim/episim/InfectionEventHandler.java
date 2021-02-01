@@ -23,7 +23,9 @@ package org.matsim.episim;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigFactory;
-import it.unimi.dsi.fastutil.objects.*;
+import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
+import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -150,7 +152,7 @@ public final class InfectionEventHandler implements Externalizable {
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting, ShutdownPolicy policy,
+	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
 								 InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
 								 SplittableRandom rnd) {
 		this.config = config;
@@ -158,7 +160,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.scenario = scenario;
-		this.policy = policy;
+		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = reporting;
 		this.rnd = rnd;

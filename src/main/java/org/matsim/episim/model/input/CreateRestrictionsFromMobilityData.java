@@ -73,9 +73,10 @@ public class CreateRestrictionsFromMobilityData implements ActivityParticipation
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
 		NavigableMap<LocalDate, Object2DoubleMap<String>> changes = readChanges();
+
 		System.out.println(changes);
 
-		throw new UnsupportedOperationException("Not implemented");
+		return null;
 	}
 
 	@Override

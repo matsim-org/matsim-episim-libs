@@ -19,10 +19,9 @@ public enum VirusStrain {
 	/**
 	 * Parameter controlling how infectious a strain is.
 	 */
-	public double infectiousness;
+	public final double infectiousness;
 
 	VirusStrain(double infectiousness) {
 		this.infectiousness = infectiousness;
 	}
-
 }

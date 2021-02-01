@@ -64,7 +64,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		ConfigBuilder restrictions;
 
 		if (activityParticipation == null) restrictions = FixedPolicy.config();
-		else restrictions = (ConfigBuilder) activityParticipation.createPolicy();
+		else restrictions = activityParticipation.createPolicy();
 
 		if (restrictSchoolsAndDayCare) {
 			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
