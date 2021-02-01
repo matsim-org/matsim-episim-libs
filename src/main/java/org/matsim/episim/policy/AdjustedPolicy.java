@@ -3,6 +3,7 @@ package org.matsim.episim.policy;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
+import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
@@ -32,9 +33,9 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 	private final ReplayHandler handler;
 
 	/**
-	 * Activity durations for all days.
+	 * Out-of-home durations for all days.
 	 */
-	private final NavigableMap<LocalDate, Object2DoubleMap<String>> durations = new TreeMap<>();
+	private final SortedMap<LocalDate, Double> outOfHome = new Object2DoubleAVLTreeMap<>();
 
 	/**
 	 * Mapping for base days.
@@ -45,6 +46,11 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 	 * Base duration of activities in the simulation.
 	 */
 	private final Map<DayOfWeek, Object2DoubleMap<String>> simDurations = new EnumMap<>(DayOfWeek.class);
+
+	/**
+	 * Activities to administrative periods. (dates as edges)
+	 */
+	private final Map<String, SortedSet<LocalDate>> periods = new HashMap<>();
 
 	/**
 	 * Config builder for fixed policy.
@@ -62,15 +68,24 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
 
-		for (Map.Entry<String, ConfigValue> e : config.getConfig("durations").root().entrySet()) {
+		for (Map.Entry<String, ConfigValue> e : config.getConfig("outOfHome").root().entrySet()) {
 			LocalDate date = LocalDate.parse(e.getKey());
-			Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<String>((Map) e.getValue().unwrapped());
-			durations.put(date, map);
+			outOfHome.put(date, (Double) e.getValue().unwrapped());
 		}
 
 		for (Map.Entry<String, ConfigValue> e : config.getConfig("baseDays").root().entrySet()) {
 			baseDay.put(DayOfWeek.valueOf(e.getKey()), LocalDate.parse((CharSequence) e.getValue().unwrapped()));
 		}
+
+		for (Map.Entry<String, ConfigValue> e : config.getConfig("periods").root().entrySet()) {
+
+			SortedSet<LocalDate> dates = new TreeSet<>();
+
+			((List<String>) e.getValue().unwrapped()).forEach(d -> dates.add(LocalDate.parse(d)));
+
+			periods.put(e.getKey(), dates);
+		}
+
 
 		// init base durations
 		for (Map.Entry<DayOfWeek, List<Event>> e : handler.getEvents().entrySet()) {
@@ -97,11 +112,60 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 			simDurations.put(e.getKey(), durations);
 		}
 
-
+		FixedPolicy.initRestrictions(start, restrictions, config.getConfig("administrative"));
 	}
 
 	@Override
 	public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
+
+		Config admin = config.getConfig("administrative");
+
+		LocalDate today = LocalDate.parse(report.date);
+
+		double baseDuration = simDurations.get(today.getDayOfWeek())
+				.object2DoubleEntrySet().stream()
+				.filter(e -> !e.getKey().contains("home"))
+				.mapToDouble(Object2DoubleMap.Entry::getDoubleValue).sum();
+
+		double outOfHomeDuration = baseDuration;
+
+		// store administrative activities for the day
+		Set<String> administrative = new HashSet<>();
+
+		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
+
+			SortedSet<LocalDate> periods = this.periods.get(e.getKey());
+
+			// check if in admin period, today must lie between two dates
+			if (periods == null || periods.headSet(today).size() % 2 == 0)
+				continue;
+
+			Restriction r = FixedPolicy.readForDay(report, admin, e.getKey());
+			if (r != null)
+				e.getValue().update(r);
+
+			double frac = e.getValue().getRemainingFraction();
+
+			administrative.add(e.getKey());
+
+			outOfHomeDuration -= (1 - frac) * simDurations.get(today.getDayOfWeek()).getDouble(e.getKey());
+
+		}
+
+		double frac = 1 - outOfHome.get(today) / outOfHome.get(baseDay.get(today.getDayOfWeek()));
+
+		frac = frac / (1 - outOfHomeDuration / baseDuration);
+
+		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
+
+			// skip administrative
+			if (administrative.contains(e.getKey()) || e.getKey().contains("home")) continue;
+
+			e.getValue().setRemainingFraction(1 - frac);
+
+
+		}
+
 
 	}
 
@@ -130,10 +194,11 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		 *
 		 * @param durations must contain durations for all activities for this day.
 		 */
-		public ConfigBuilder activityDurations(LocalDate date, Map<String, Double> durations) {
+		public ConfigBuilder outOfHomeDurations(Map<LocalDate, Double> durations) {
 
-			Map<String, Map<String, Double>> map = (Map<String, Map<String, Double>>) params.computeIfAbsent("durations", k -> new HashMap<>());
-			map.put(date.toString(), durations);
+			Map<String, Double> data = new HashMap<>();
+			durations.forEach((k, v) -> data.put(k.toString(), v));
+			params.put("outOfHome", data);
 
 			return this;
 		}
@@ -153,7 +218,7 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder administrativePeriod(String activity, LocalDate... periods) {
 
-			Map<String, List<String>> map = (Map<String, List<String>>) params.computeIfAbsent("intervals", k -> new HashMap<>());
+			Map<String, List<String>> map = (Map<String, List<String>>) params.computeIfAbsent("periods", k -> new HashMap<>());
 			map.put(activity, Arrays.stream(periods).map(LocalDate::toString).collect(Collectors.toList()));
 
 			return this;
