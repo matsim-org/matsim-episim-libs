@@ -24,14 +24,9 @@ public class AdjustedPolicyTest {
 
 	private AdjustedPolicy.ConfigBuilder createConfig() {
 		return AdjustedPolicy.config()
-				.outOfHomeDurations(Map.of(
-						LocalDate.parse("2020-02-01"), 2000.0,
-						LocalDate.parse("2020-02-02"), 400.0
-				))
-				.baseDays(Map.of(
-						DayOfWeek.SUNDAY, LocalDate.parse("2020-02-01"),
-						DayOfWeek.MONDAY, LocalDate.parse("2020-02-01"),
-						DayOfWeek.TUESDAY, LocalDate.parse("2020-02-01")
+				.outOfHomeFractions(Map.of(
+						LocalDate.parse("2020-02-01"), 1.0,
+						LocalDate.parse("2020-02-02"), 0.2
 				))
 				.administrativePeriod("edu", LocalDate.MIN, LocalDate.MAX)
 				.administrativePolicy(FixedPolicy.config()

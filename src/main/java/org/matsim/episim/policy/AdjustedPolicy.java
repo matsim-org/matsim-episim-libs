@@ -6,6 +6,8 @@ import com.typesafe.config.ConfigValue;
 import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
@@ -27,6 +29,8 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unchecked")
 public final class AdjustedPolicy extends ShutdownPolicy {
 
+	private static final Logger log = LogManager.getLogger(AdjustedPolicy.class);
+
 	/**
 	 * Handler with all events.
 	 */
@@ -36,11 +40,6 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 	 * Out-of-home durations for all days.
 	 */
 	private final SortedMap<LocalDate, Double> outOfHome = new Object2DoubleAVLTreeMap<>();
-
-	/**
-	 * Mapping for base days.
-	 */
-	private final Map<DayOfWeek, LocalDate> baseDay = new EnumMap<>(DayOfWeek.class);
 
 	/**
 	 * Base duration of activities in the simulation.
@@ -71,10 +70,6 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		for (Map.Entry<String, ConfigValue> e : config.getConfig("outOfHome").root().entrySet()) {
 			LocalDate date = LocalDate.parse(e.getKey());
 			outOfHome.put(date, (Double) e.getValue().unwrapped());
-		}
-
-		for (Map.Entry<String, ConfigValue> e : config.getConfig("baseDays").root().entrySet()) {
-			baseDay.put(DayOfWeek.valueOf(e.getKey()), LocalDate.parse((CharSequence) e.getValue().unwrapped()));
 		}
 
 		for (Map.Entry<String, ConfigValue> e : config.getConfig("periods").root().entrySet()) {
@@ -152,16 +147,35 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 
 		}
 
-		double frac = 1 - outOfHome.get(today) / outOfHome.get(baseDay.get(today.getDayOfWeek()));
+		// use fraction for today or previous fraction
+		double frac;
+		if (outOfHome.containsKey(today))
+			frac = outOfHome.get(today);
+		else
+			frac = outOfHome.get(outOfHome.headMap(today).lastKey());
 
-		frac = frac / (1 - outOfHomeDuration / baseDuration);
+		double reducedTo = baseDuration * frac;
+
+		double remaining = outOfHomeDuration - reducedTo;
+		if (remaining <= 0) {
+			log.warn("Activities reduced by administrative measures above data by {}.", remaining);
+			return;
+		}
+
+		// available duration on all other activities
+		double available = simDurations.get(today.getDayOfWeek())
+				.object2DoubleEntrySet().stream()
+				.filter(e -> !e.getKey().contains("home") && !administrative.contains(e.getKey()))
+				.mapToDouble(Object2DoubleMap.Entry::getDoubleValue).sum();
+
+		double reducedFrac = remaining / available;
 
 		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
 
 			// skip administrative
 			if (administrative.contains(e.getKey()) || e.getKey().contains("home")) continue;
 
-			e.getValue().setRemainingFraction(1 - frac);
+			e.getValue().setRemainingFraction(1 - reducedFrac);
 
 
 		}
@@ -175,29 +189,13 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder<Map<String, ?>> {
 
 		/**
-		 * Specify the base days, i.e. default level of durations.
+		 * Set out-of-home fractions for specific dates.
 		 *
-		 * @param days map week day to date.
 		 */
-		public ConfigBuilder baseDays(Map<DayOfWeek, LocalDate> days) {
-
-			Map<String, String> data = new HashMap<>();
-			days.forEach((k, v) -> data.put(k.toString(), v.toString()));
-			params.put("baseDays", data);
-
-			return this;
-		}
-
-		/**
-		 * Set activity durations for one day for all activities.
-		 * Previously set durations for this day are overwritten.
-		 *
-		 * @param durations must contain durations for all activities for this day.
-		 */
-		public ConfigBuilder outOfHomeDurations(Map<LocalDate, Double> durations) {
+		public ConfigBuilder outOfHomeFractions(Map<LocalDate, Double> fractions) {
 
 			Map<String, Double> data = new HashMap<>();
-			durations.forEach((k, v) -> data.put(k.toString(), v));
+			fractions.forEach((k, v) -> data.put(k.toString(), v));
 			params.put("outOfHome", data);
 
 			return this;
