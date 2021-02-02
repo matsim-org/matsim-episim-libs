@@ -177,10 +177,7 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 
 			e.getValue().setRemainingFraction(1 - reducedFrac);
 
-
 		}
-
-
 	}
 
 	/**

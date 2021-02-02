@@ -78,6 +78,10 @@ public class AdjustedPolicyTest {
 		// update
 		policy.updateRestrictions(EpisimTestUtils.createReport("2020-02-02", 2), r);
 
+		// the total out of home duration is 2000
+		// according to data 0.2, it should be 400 on the next day
+		// 1500 is already "consumed" by edu closure, meaning 100 are left
+		// these are put into leisure by applying a fraction of 0.8 (x 500)
 
 		assertThat(r.get("home").getRemainingFraction()).isEqualTo(1.0);
 		assertThat(r.get("edu").getRemainingFraction()).isEqualTo(0);
