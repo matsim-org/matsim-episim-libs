@@ -221,7 +221,12 @@ def aggregate_batch_run(run):
             for filename, dfs in files.items():
                 concat = pd.concat(dfs)
                 by_row_index = concat.groupby(concat.index)
-                means = by_row_index.mean()
+
+                # Ignore files that can't be aggregated
+                try:
+                    means = by_row_index.mean()
+                except Exception as e:
+                    continue
 
                 # attach non numeric columns without aggregating
                 nonNumeric = dfs[0].columns.difference(means.columns)
