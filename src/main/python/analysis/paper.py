@@ -18,7 +18,7 @@ from plot import comparison_plots
 elif ci == "q95":
     q05 = grouped.quantile(0.05)
     q95 = grouped.quantile(0.95)
-    cis = pd.DataFrame(np.c_[est - q05, est + q95],
+    cis = pd.DataFrame(np.c_[q05, q95],
                        index=est.index,
                        columns=["low", "high"]).stack()
 """
@@ -75,9 +75,9 @@ aggregate_batch_run("data/paper.zip")
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
-df = df_base[(df_base.unrestricted=="yes") & (df_base.diseaseImport=="no") & (df_base.theta==1.36e-5)]
+df = df_base[(df_base.unrestricted=="yes") & (df_base.diseaseImport=="yes") & (df_base.theta==1.36e-5)]
 
-rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax)
 
 sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
              label=r"Calibrated $\theta$", data=df)
@@ -88,6 +88,7 @@ ax.yaxis.set_major_formatter(ScalarFormatter())
 plt.ylim(bottom=1)
 plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-11-01"))
 plt.legend(loc="upper left")
+plt.yscale("log")
 
 #######################################################################################################
 #%%
