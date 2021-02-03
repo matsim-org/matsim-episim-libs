@@ -129,15 +129,20 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 
 		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
 
-			SortedSet<LocalDate> periods = this.periods.get(e.getKey());
-
-			// check if in admin period, today must lie between two dates
-			if (periods == null || periods.headSet(today).size() % 2 == 0)
-				continue;
+			double oldFraction = e.getValue().getRemainingFraction();
 
 			Restriction r = FixedPolicy.readForDay(report, admin, e.getKey());
 			if (r != null)
 				e.getValue().update(r);
+
+			SortedSet<LocalDate> periods = this.periods.get(e.getKey());
+
+			// check if in admin period, today must lie between two dates
+			if (periods == null || periods.headSet(today).size() % 2 == 0) {
+				// if not administrative, the fraction from previous day is restored
+				e.getValue().setRemainingFraction(oldFraction);
+				continue;
+			}
 
 			double frac = e.getValue().getRemainingFraction();
 
@@ -157,18 +162,19 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		double reducedTo = baseDuration * frac;
 
 		double remaining = outOfHomeDuration - reducedTo;
-		if (remaining <= 0) {
-			log.warn("Activities reduced by administrative measures above data by {}.", remaining);
-			return;
-		}
-
 		// available duration on all other activities
 		double available = simDurations.get(today.getDayOfWeek())
 				.object2DoubleEntrySet().stream()
 				.filter(e -> !e.getKey().contains("home") && !administrative.contains(e.getKey()))
 				.mapToDouble(Object2DoubleMap.Entry::getDoubleValue).sum();
 
-		double reducedFrac = remaining / available;
+		double reducedFrac;
+		if (remaining < 0) {
+			log.warn("Activities reduced by administrative measures above data by {}.", remaining);
+			reducedFrac = 0;
+		} else {
+			reducedFrac = remaining / available;
+		}
 
 		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
 

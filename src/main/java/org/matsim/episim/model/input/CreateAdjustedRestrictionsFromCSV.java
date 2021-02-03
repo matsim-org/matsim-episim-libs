@@ -2,49 +2,57 @@ package org.matsim.episim.model.input;
 
 import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
-import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.policy.AdjustedPolicy;
 import org.matsim.episim.policy.FixedPolicy;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public final class CreateRestrictionsFromCSV implements ActivityParticipation {
+public final class CreateAdjustedRestrictionsFromCSV implements ActivityParticipation {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
 	// create method without damage.
 
-	private final EpisimConfigGroup episimConfig;
 	private Path input;
 	private double alpha = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
+	private FixedPolicy.ConfigBuilder policy;
 
-	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
-		this.episimConfig = episimConfig;
-	}
-
+	private Map<String, LocalDate[]> periods = new HashMap<>();
 
 	@Override
-	public CreateRestrictionsFromCSV setInput(Path input) {
-		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
+	public CreateAdjustedRestrictionsFromCSV setInput(Path input) {
 		this.input = input;
 		return this;
 	}
 
-	public CreateRestrictionsFromCSV setAlpha(double alpha) {
+	public CreateAdjustedRestrictionsFromCSV setAlpha(double alpha) {
 		this.alpha = alpha;
+		return this;
+	}
+
+	/**
+	 * Set the administrative policy.
+	 */
+	public CreateAdjustedRestrictionsFromCSV setPolicy(FixedPolicy.ConfigBuilder policy) {
+		this.policy = policy;
+		return this;
+	}
+
+	/**
+	 * Set the periods of the administrative policies.
+	 * @see AdjustedPolicy.ConfigBuilder#administrativePeriod(String, LocalDate...)
+	 * @param periods periods to set for all activities
+	 */
+	public CreateAdjustedRestrictionsFromCSV setAdministrativePeriods(Map<String, LocalDate[]> periods) {
+		this.periods = periods;
 		return this;
 	}
 
@@ -52,7 +60,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 		return alpha;
 	}
 
-	public CreateRestrictionsFromCSV setExtrapolation(EpisimUtils.Extrapolation extrapolation) {
+	public CreateAdjustedRestrictionsFromCSV setExtrapolation(EpisimUtils.Extrapolation extrapolation) {
 		this.extrapolation = extrapolation;
 		return this;
 	}
@@ -61,52 +69,22 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 		return extrapolation;
 	}
 
-	static Map<LocalDate, Double> readInput(Path input, String column, double alpha) throws IOException {
-
-		try (BufferedReader in = Files.newBufferedReader(input)) {
-
-			CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
-			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
-
-			// activity reduction for notAtHome each day
-			Map<LocalDate, Double> days = new LinkedHashMap<>();
-
-			for (CSVRecord record : parser) {
-				LocalDate date = LocalDate.parse(record.get(0), fmt);
-
-				int value = Integer.parseInt(record.get(column));
-
-				double remainingFraction = 1. + (value / 100.);
-
-				// modulate reduction with alpha:
-				double reduction = Math.min(1., alpha * (1. - remainingFraction));
-				days.put(date, Math.min(1, 1 - reduction));
-			}
-
-			return days;
-
-		}
-	}
-
 	@Override
-	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
+	public AdjustedPolicy.ConfigBuilder createPolicy() throws IOException {
 
-		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-		Map<LocalDate, Double> days = readInput(input, "notAtHomeExceptLeisureAndEdu", alpha);
+		Objects.requireNonNull(policy, "Administrative policy must be set beforehand");
+
+		Map<LocalDate, Double> days = CreateRestrictionsFromCSV.readInput(input, "notAtHome", alpha);
 
 		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
 				.stream().map(LocalDate::parse).collect(Collectors.toSet());
 
-		// activities to set:
-		String[] act = episimConfig.getInfectionParams().stream()
-				.map(EpisimConfigGroup.InfectionParams::getContainerName)
-				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
-				.toArray(String[]::new);
-
 		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
 		LocalDate end = Iterables.getLast(days.keySet());
 
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+		AdjustedPolicy.ConfigBuilder builder = AdjustedPolicy.config();
+
+		Map<LocalDate, Double> fractions = new HashMap<>();
 
 		// trend used for extrapolation
 		List<Double> trend = new ArrayList<>();
@@ -128,7 +106,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 
 			// calc next sunday:
 			int n = 7 - start.getDayOfWeek().getValue() % 7;
-			builder.restrict(start, avg, act);
+			fractions.put(start, avg);
 			start = start.plusDays(n);
 		}
 
@@ -147,7 +125,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 
 			// continue the trend
 			for (int i = 0; i < 8; i++) {
-				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
+				fractions.put(start, Math.min(reg.predict(n + i), 1));
 				// System.out.println(start + " " + reg.predict(n + i));
 				start = start.plusDays(7);
 			}
@@ -160,7 +138,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
 			}
 
-			Exponential expFunction = new Exponential();
+			CreateRestrictionsFromCSV.Exponential expFunction = new CreateRestrictionsFromCSV.Exponential();
 			EpisimUtils.FuncFitter fitter = new EpisimUtils.FuncFitter(expFunction);
 			double[] coeff = fitter.fit(points);
 
@@ -169,38 +147,27 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 
 				double predict = expFunction.value(i + n, coeff);
 				// System.out.println(start + " " + predict);
-				builder.restrict(start, Math.min(predict, 1), act);
+				fractions.put(start, Math.min(predict, 1));
 				start = start.plusDays(7);
 			}
 		}
 
+		builder.outOfHomeFractions(fractions);
+		builder.administrativePolicy(policy);
+
+		for (Map.Entry<String, LocalDate[]> e : periods.entrySet()) {
+			builder.administrativePeriod(e.getKey(), e.getValue());
+		}
 
 		return builder;
 	}
 
 	@Override
 	public String toString() {
-		return "fromCSV-" +
+		return "fromCSVAdjusted-" +
 				"alpha_" + alpha +
 				", extrapolation_" + extrapolation +
 				'}';
-	}
-
-	/**
-	 * Exponential function in the form of 1 - a * exp(-x / b).
-	 */
-	static final class Exponential implements ParametricUnivariateFunction {
-
-		@Override
-		public double value(double x, double... parameters) {
-			return 1 - parameters[0] * Math.exp(-x / parameters[1]);
-		}
-
-		@Override
-		public double[] gradient(double x, double... parameters) {
-			double exb = Math.exp(-x / parameters[1]);
-			return new double[]{-exb, -parameters[0] * x * exb / (parameters[1] * parameters[1])};
-		}
 	}
 
 }

@@ -111,6 +111,10 @@ public final class FixedPolicy extends ShutdownPolicy {
 	 */
 	@Nullable
 	static Restriction readForDay(EpisimReporting.InfectionReport report, Config config, String act) {
+
+		if (!config.hasPath(act))
+			return null;
+
 		Config actConfig = config.getConfig(act);
 		String dayKey = "day-" + report.day;
 		String dateKey = report.date;
