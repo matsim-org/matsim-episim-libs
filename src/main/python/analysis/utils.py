@@ -241,8 +241,15 @@ def aggregate_batch_run(run):
 
                     # attach non numeric columns without aggregating
                     nonNumeric = dfs[0].columns.difference(means.columns)
+
                     for column in nonNumeric:
                         means[column] = dfs[0][column]
+
+                    if "day" in means:
+                        # make sure days are integer
+                        if means.dtypes.day != np.int64:
+                            print("WARN: day is not integer in run: %s, file: %s" % (runId, filename))
+                            means.day = dfs[0].day
 
                     with zInner.open(str(runId) + "." + filename, "w") as zf:
                         buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
