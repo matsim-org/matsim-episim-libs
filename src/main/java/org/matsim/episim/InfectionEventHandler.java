@@ -236,9 +236,9 @@ public final class InfectionEventHandler implements Externalizable {
 							person.setFirstFacilityId(createHomeFacility(person).getContainerId(), it);
 							EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
 							person.addToTrajectory(home);
-							//person.incrementCurrentPositionInTrajectory();
+							person.incrementCurrentPositionInTrajectory();
 							// start of current day also needs to be shifted
-							//person.setStartOfDay(day, person.getCurrentPositionInTrajectory());
+							person.setStartOfDay(day, person.getCurrentPositionInTrajectory());
 						}
 					}
 				}

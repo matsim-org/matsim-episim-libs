@@ -62,7 +62,7 @@ public class StabilityRuns implements BatchRun<StabilityRuns.Params> {
 		basePolicyBuilder.setCiCorrections(Map.of("2020-03-07", ci));
 
 		if (params.alpha > -1) {
-			episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+			episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.buildFixed().build());
 		} else {
 			// Set unrestricted configuration
 			episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config().build());

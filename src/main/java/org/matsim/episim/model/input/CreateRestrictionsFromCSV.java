@@ -43,6 +43,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 		return this;
 	}
 
+	@Override
 	public CreateRestrictionsFromCSV setAlpha(double alpha) {
 		this.alpha = alpha;
 		return this;

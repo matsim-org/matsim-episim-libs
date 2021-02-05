@@ -16,6 +16,13 @@ public interface ActivityParticipation {
 	ActivityParticipation setInput(Path input);
 
 	/**
+	 * Parameter to modulates the activity participation.
+	 */
+	default ActivityParticipation setAlpha(double alpha) {
+		return this;
+	}
+
+	/**
 	 * Provide policy with activity reduction.
 	 */
 	ShutdownPolicy.ConfigBuilder<?> createPolicy() throws IOException;

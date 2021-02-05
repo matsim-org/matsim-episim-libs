@@ -29,13 +29,16 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -57,14 +60,17 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	private static FixedPolicy.ConfigBuilder basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
-			 											long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
-														boolean restrictUniversities) throws IOException {
+	private static ShutdownPolicy.ConfigBuilder<?> basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
+														   long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+														   boolean restrictUniversities) throws IOException {
 		// note that there is already a builder around this
 		ConfigBuilder restrictions;
 
-		if (activityParticipation == null) restrictions = FixedPolicy.config();
-		else restrictions = (ConfigBuilder) activityParticipation.createPolicy();
+		// adjusted restrictions must be created after policy was set, currently there is no nicer way to do this
+		if (activityParticipation == null || activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
+			restrictions = FixedPolicy.config();
+		} else
+			restrictions = (ConfigBuilder) activityParticipation.createPolicy();
 
 		if (restrictSchoolsAndDayCare) {
 			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
@@ -139,6 +145,22 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
 
+		if (activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
+			CreateAdjustedRestrictionsFromCSV adjusted = (CreateAdjustedRestrictionsFromCSV) activityParticipation;
+
+			LocalDate[] period = new LocalDate[] {LocalDate.MIN, LocalDate.MAX};
+			adjusted.setPolicy(restrictions);
+			adjusted.setAdministrativePeriods(Map.of(
+					"educ_primary", period,
+					"educ_secondary", period,
+					"educ_tertiary", period,
+					"educ_other", period,
+					"educ_kiga" , period
+			));
+
+			return activityParticipation.createPolicy();
+		}
+
 		return restrictions;
 	}
 
@@ -182,7 +204,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 
-		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.buildFixed().build());
 
 		config.controler().setOutputDirectory("./output-berlin-25pct-input-" + basePolicyBuilder.getActivityParticipation() + "-ciCorrections-" + basePolicyBuilder.getCiCorrections() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-" + episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
 
@@ -251,16 +273,33 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.restrictUniversities = restrictUniversities;
 		}
 
-		public ConfigBuilder build() {
-			ConfigBuilder configBuilder = null;
+		/**
+		 * Build a {@link FixedPolicy}.
+		 * @deprecated use {@link #build()}
+		 * @throws ClassCastException if the {@link ActivityParticipation} is not creating a {@link FixedPolicy}.
+		 */
+		public ConfigBuilder buildFixed() {
+			ConfigBuilder configBuilder;
+			try {
+				configBuilder = (ConfigBuilder) basePolicy(activityParticipation, ciCorrections,introductionPeriod,
+						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
+			return configBuilder;
+		}
+
+		public ShutdownPolicy.ConfigBuilder<?> build() {
+			ShutdownPolicy.ConfigBuilder<?> configBuilder;
 			try {
 				configBuilder = basePolicy(activityParticipation, ciCorrections,introductionPeriod,
 						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
 			} catch (IOException e) {
-				throw new RuntimeException(e);
+				throw new UncheckedIOException(e);
 			}
 			return configBuilder;
 		}
+
 	}
 
 }

@@ -33,17 +33,19 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.policy.AdjustedPolicy;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -55,52 +57,68 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 	private final int importOffset;
 
-	public static class Builder{
+	public static class Builder {
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
+		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
 		private Snapshot snapshot = Snapshot.no;
 		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
-		public Builder setSample( int sample ){
+
+		public Builder setSample(int sample) {
 			this.sample = sample;
 			return this;
 		}
-		public Builder setDiseaseImport( DiseaseImport diseaseImport ){
+
+		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
 			this.diseaseImport = diseaseImport;
 			return this;
 		}
-		public Builder setRestrictions( Restrictions restrictions ){
+
+		public Builder setRestrictions(Restrictions restrictions) {
 			this.restrictions = restrictions;
 			return this;
 		}
-		public Builder setMasks( Masks masks ){
+
+		public Builder setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
+			this.adjustRestrictions = adjustRestrictions;
+			return this;
+		}
+
+		public Builder setMasks(Masks masks) {
 			this.masks = masks;
 			return this;
 		}
-		public Builder setTracing( Tracing tracing ){
+
+		public Builder setTracing(Tracing tracing) {
 			this.tracing = tracing;
 			return this;
 		}
-		public Builder setSnapshot( Snapshot snapshot ){
+
+		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
 			return this;
 		}
-		public Builder setInfectionModel( Class<? extends InfectionModel> infectionModel ){
+
+		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
 			this.infectionModel = infectionModel;
 			return this;
 		}
-		public Builder setVaccinationModel( Class<? extends VaccinationModel> vaccinationModel ){
+
+		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
-		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, snapshot, infectionModel, importOffset, vaccinationModel );
+
+		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {
+			return new SnzBerlinProductionScenario(this);
 		}
-		public Builder setImportOffset( int importOffset ){
+
+		public Builder setImportOffset(int importOffset) {
 			this.importOffset = importOffset;
 			return this;
 		}
@@ -108,14 +126,21 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 
 	public static enum DiseaseImport {yes, no}
+
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+
 	public static enum Masks {yes, no}
+
 	public static enum Tracing {yes, no}
+
 	public static enum Snapshot {no, episim_snapshot_030_2020_03_16, episim_snapshot_060_2020_04_15, episim_snapshot_090_2020_05_15, episim_snapshot_120_2020_06_14, episim_snapshot_150_2020_07_14, episim_snapshot_180_2020_08_13, episim_snapshot_210_2020_09_12, episim_snapshot_240_2020_10_12}
+
+	public static enum AdjustRestrictions {yes, no}
 
 	private final int sample;
 	private final DiseaseImport diseaseImport;
 	private final Restrictions restrictions;
+	private final AdjustRestrictions adjustRestrictions;
 	private final Masks masks;
 	private final Tracing tracing;
 	private final Snapshot snapshot;
@@ -133,20 +158,20 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(new Builder());
 	}
 
-	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Snapshot snapshot,
-					    Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
-		this.sample = sample;
-		this.diseaseImport = diseaseImport;
-		this.restrictions = restrictions;
-		this.masks = masks;
-		this.tracing = tracing;
-		this.snapshot = snapshot;
-		this.infectionModel = infectionModel;
-		this.importOffset = importOffset;
-		this.vaccinationModel = vaccinationModel;
+	private SnzBerlinProductionScenario(Builder builder) {
+		this.sample = builder.sample;
+		this.diseaseImport = builder.diseaseImport;
+		this.restrictions = builder.restrictions;
+		this.adjustRestrictions = builder.adjustRestrictions;
+		this.masks = builder.masks;
+		this.tracing = builder.tracing;
+		this.snapshot = builder.snapshot;
+		this.infectionModel = builder.infectionModel;
+		this.importOffset = builder.importOffset;
+		this.vaccinationModel = builder.vaccinationModel;
 	}
 
 	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -172,13 +197,20 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
+
+		if (adjustRestrictions == AdjustRestrictions.yes)
+			bind(ShutdownPolicy.class).to(AdjustedPolicy.class).in(Singleton.class);
+		else
+			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
+
 	}
 
 	@Provides
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -226,8 +258,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-10-26").plusDays(importOffset),
 					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 			episimConfig.setInfections_pers_per_day(importMap);
-		}
-		else {
+		} else {
 			episimConfig.setInitialInfectionDistrict("Berlin");
 			episimConfig.setCalibrationParameter(2.54e-5);
 		}
@@ -235,8 +266,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
 			if (this.diseaseImport == DiseaseImport.yes) {
 				episimConfig.setCalibrationParameter(1.6E-5);
-			}
-			else {
+			} else {
 				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
 			}
 		}
@@ -261,7 +291,17 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1);
 
 		//restrictions and masks
+		ActivityParticipation activityParticipation;
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		if (adjustRestrictions == AdjustRestrictions.yes) {
+			activityParticipation = new CreateAdjustedRestrictionsFromCSV();
+		} else {
+			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+		}
+
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210124.csv"));
+		basePolicyBuilder.setActivityParticipation(activityParticipation);
+
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
 			basePolicyBuilder.setActivityParticipation(null);
 		}
@@ -274,8 +314,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
-		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
-		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+		ShutdownPolicy.ConfigBuilder<?> builder = basePolicyBuilder.build();
+		episimConfig.setPolicy(builder.build());
 
 		//tracing
 		if (this.tracing == Tracing.yes) {

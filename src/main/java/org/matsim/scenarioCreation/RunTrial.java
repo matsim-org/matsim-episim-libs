@@ -121,7 +121,7 @@ public final class RunTrial implements Callable<Integer> {
 
 			builder.setCiCorrections(original);
 
-			FixedPolicy.ConfigBuilder policyConf = builder.build();
+			FixedPolicy.ConfigBuilder policyConf = builder.buildFixed();
 
 			log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
 

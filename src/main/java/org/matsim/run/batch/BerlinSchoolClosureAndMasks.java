@@ -93,7 +93,7 @@ public final class BerlinSchoolClosureAndMasks implements BatchRun<BerlinSchoolC
 		episimConfig.setStartDate(params.startDate);
 
 
-		com.typesafe.config.Config policyConf = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig).build()
+		com.typesafe.config.Config policyConf = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig).buildFixed()
 
 				// Google mobility data currently stops at day 58 (18.04.2020)
 //				.restrict(58 - offset, params.remainingFractionWork, "work")
