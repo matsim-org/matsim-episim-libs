@@ -52,8 +52,26 @@ import java.util.Map;
  */
 public final class SnzBerlinProductionScenario extends AbstractModule {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
+	
+	public static enum DiseaseImport {yes, no}
+	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+	public static enum Masks {yes, no}
+	public static enum Tracing {yes, no}
+	public static enum ChristmasModel {no, restrictive, permissive}
+	public static enum WeatherModel {no, midpoints_175_250}
+	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
+	private final int sample;
 	private final int importOffset;
+	private final DiseaseImport diseaseImport;
+	private final Restrictions restrictions;
+	private final Masks masks;
+	private final Tracing tracing;
+	private final ChristmasModel christmasModel;
+	private final Snapshot snapshot;
+	private final WeatherModel weatherModel;
+	private final Class<? extends InfectionModel> infectionModel;
+	private final Class<? extends VaccinationModel> vaccinationModel;
 
 	public static class Builder{
 		private int importOffset = 0;
@@ -63,6 +81,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
+		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
 		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
@@ -90,6 +109,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.christmasModel = christmasModel;
 			return this;
 		}
+		public Builder setWeatherModel( WeatherModel weatherModel ){
+			this.weatherModel = weatherModel;
+			return this;
+		}
 		public Builder setSnapshot( Snapshot snapshot ){
 			this.snapshot = snapshot;
 			return this;
@@ -103,31 +126,13 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, snapshot, infectionModel, importOffset, vaccinationModel );
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot, infectionModel, importOffset, vaccinationModel );
 		}
 		public Builder setImportOffset( int importOffset ){
 			this.importOffset = importOffset;
 			return this;
 		}
 	}
-
-
-	public static enum DiseaseImport {yes, no}
-	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
-	public static enum Masks {yes, no}
-	public static enum Tracing {yes, no}
-	public static enum ChristmasModel {no, restrictive, permissive}
-	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
-
-	private final int sample;
-	private final DiseaseImport diseaseImport;
-	private final Restrictions restrictions;
-	private final Masks masks;
-	private final Tracing tracing;
-	private final ChristmasModel christmasModel;
-	private final Snapshot snapshot;
-	private final Class<? extends InfectionModel> infectionModel;
-	private final Class<? extends VaccinationModel> vaccinationModel;
 
 
 	/**
@@ -140,10 +145,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 	}
 
-	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, Snapshot snapshot,
+	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel, Snapshot snapshot,
 					    Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
@@ -151,6 +156,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.masks = masks;
 		this.tracing = tracing;
 		this.christmasModel = christmasModel;
+		this.weatherModel = weatherModel;
 		this.snapshot = snapshot;
 		this.infectionModel = infectionModel;
 		this.importOffset = importOffset;
@@ -352,14 +358,23 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 		
 		//outdoorFractions
-		try {
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, 17.5, 25.0,
-					(double) 5.);
-			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
-		} catch (IOException e) {
-			e.printStackTrace();
+		if (this.weatherModel != WeatherModel.no) {
+			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
+			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
+			try {
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2,
+						(double) 5.);
+				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
-		
+		else {
+			episimConfig.setLeisureOutdoorFraction(Map.of(
+					LocalDate.of(2020, 1, 1), 0.)
+			);
+		}
+
 		//leisure factor
 		double leisureFactor = 1.6;
 		builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
