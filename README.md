@@ -1,6 +1,6 @@
 # MATSim Episim
 
-[![Build Status](https://github.com/matsim-org/matsim-episim-libs/workflows/build/badge.svg?branch=master)
+![Build Status](https://github.com/matsim-org/matsim-episim-libs/workflows/build/badge.svg?branch=master)
 ![license](https://img.shields.io/github/license/matsim-org/matsim-episim.svg)
 ![JDK](https://img.shields.io/badge/JDK-11+-green.svg)
 
