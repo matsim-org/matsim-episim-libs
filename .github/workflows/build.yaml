@@ -1,4 +1,4 @@
-name: verify-push
+name: build
 
 on: [ push, pull_request ]
 

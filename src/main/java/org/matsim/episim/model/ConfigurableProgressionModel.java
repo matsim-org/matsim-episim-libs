@@ -149,7 +149,6 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	public final void updateState(EpisimPerson person, int day) {
 		super.updateState(person, day);
 
-
 		// A healthy quarantined person is dismissed from quarantine after some time
 		if (releasePerson(person) && person.daysSinceQuarantine(day) > tracingConfig.getQuarantineDuration()) {
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);

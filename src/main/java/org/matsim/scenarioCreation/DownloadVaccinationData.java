@@ -71,14 +71,14 @@ public class DownloadVaccinationData implements Callable<Integer> {
 		CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT.withCommentMarker('#').withHeaderComments(
 				"Source: https://www.rki.de/DE/Content/InfAZ/N/Neuartiges_Coronavirus/Daten/Impfquoten-Tab.html"
 		).withHeader(
-				"date", "nVaccinated")
+				"date", "nVaccinated", "nSecondVaccination")
 		);
 
 		try (var in = new URL(URL).openStream()) {
 
 			Workbook wb = WorkbookFactory.create(in);
 
-			Sheet sheet = wb.getSheetAt(2);
+			Sheet sheet = wb.getSheetAt(3);
 
 			for (Iterator<Row> it = sheet.rowIterator(); it.hasNext(); ) {
 
@@ -87,8 +87,9 @@ public class DownloadVaccinationData implements Callable<Integer> {
 				try {
 					LocalDateTime date = row.getCell(0).getLocalDateTimeCellValue();
 					double n = row.getCell(1).getNumericCellValue();
+					double n2 = row.getCell(2).getNumericCellValue();
 
-					printer.printRecord(date.toLocalDate().format(DateTimeFormatter.ISO_DATE), n);
+					printer.printRecord(date.toLocalDate().format(DateTimeFormatter.ISO_DATE), n, n2);
 				} catch (Exception e) {
 					// ignore
 				}

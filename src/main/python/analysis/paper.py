@@ -9,8 +9,19 @@ from matplotlib.ticker import ScalarFormatter
 from matplotlib.dates import AutoDateLocator, AutoDateFormatter, ConciseDateFormatter
 
 
-from utils import read_batch_run, read_case_data, read_run, infection_rate
+from utils import read_batch_run, aggregate_batch_run, read_case_data, read_run, infection_rate
 from plot import comparison_plots
+
+#%%
+# Code-snipped needed at seaborn}relational.py, ca. line 410
+"""
+elif ci == "q95":
+    q05 = grouped.quantile(0.05)
+    q95 = grouped.quantile(0.95)
+    cis = pd.DataFrame(np.c_[q05, q95],
+                       index=est.index,
+                       columns=["low", "high"]).stack()
+"""
 
 #%%
 
@@ -24,7 +35,7 @@ palette = sns.color_palette()
 
 #%%
 
-rki, hospital = read_case_data("berlin-cases.csv", "berlin-hospital.csv")
+rki, meldedatum, hospital = read_case_data("berlin-cases.csv", "berlin-cases-meldedatum.csv", "berlin-hospital.csv")
 
 #%% Activity participation
 
@@ -50,28 +61,36 @@ ax.xaxis.set_major_formatter(dateFormater)
 plt.ylabel("activity participation in %")
 plt.legend(loc="best")
 
-plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-07-01"))
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
 
-#%% Section 3-1
+#%% Base calibration
 
-df31 = read_batch_run("data/section-3-1.zip")
+df_base = read_batch_run("data/paper.zip")
+
+#%%
+
+aggregate_batch_run("data/paper.zip")
 
 #%%
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
-rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+df = df_base[(df_base.unrestricted=="yes") & (df_base.diseaseImport=="yes") & (df_base.theta==1.36e-5)]
 
-sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
-             label=r"Calibrated $\theta$", data=df31)
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
+             label=r"Calibrated $\theta$", data=df)
 
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())
 
 plt.ylim(bottom=1)
-plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
+plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-11-01"))
 plt.legend(loc="upper left")
+plt.yscale("log")
 
+#######################################################################################################
 #%%
 
 
@@ -81,9 +100,6 @@ df = read_batch_run("data/section3-3-data.zip")
 baseCase = df[df.alpha==1.0]
 
 #%%
-
-# NOTE: For ci="q95", the seaborn library was modified locally
-
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 

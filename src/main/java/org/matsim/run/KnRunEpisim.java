@@ -36,11 +36,11 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.core.events.EventsUtils;
-import org.matsim.core.gbl.Gbl;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
@@ -52,7 +52,6 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -298,13 +297,16 @@ public class KnRunEpisim {
 				} else if ( restrictionsType==RestrictionsType.fromSnz ){
 					SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder( episimConfig );
 					basePolicyBuilder.setCiCorrections( Map.of("2020-03-07", 0.25 ));
-					basePolicyBuilder.setAlpha( 1. );
+
+					CreateRestrictionsFromCSV r = new CreateRestrictionsFromCSV(episimConfig);
+					r.setAlpha(1.);
+					basePolicyBuilder.setActivityParticipation(r);
 
 					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
 					strb.append( "_ciCorr" ).append(Joiner.on("_").withKeyValueSeparator("@").join(basePolicyBuilder.getCiCorrections()));
-					strb.append( "_alph" ).append( basePolicyBuilder.getAlpha() );
+					strb.append( "_alph" ).append( r.getAlpha() );
 
 				} else if ( restrictionsType==RestrictionsType.unrestr ) {
 					final FixedPolicy.ConfigBuilder restrictions = FixedPolicy.config();
@@ -356,8 +358,6 @@ public class KnRunEpisim {
 			final ReplayHandler replay = injector.getInstance( ReplayHandler.class );
 			final InfectionEventHandler handler = injector.getInstance( InfectionEventHandler.class );
 			final EventsManager manager = injector.getInstance( EventsManager.class );
-
-			manager.addHandler( handler );
 
 			ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "Just before running init" );
 

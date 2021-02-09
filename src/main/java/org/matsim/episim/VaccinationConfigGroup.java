@@ -27,12 +27,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Number of days until vaccination goes into full effect.
 	 */
-	private int daysBeforeFullEffect = 14;
+	private int daysBeforeFullEffect = 21;
 
 	/**
 	 * Effectiveness, i.e. how much susceptibility is reduced.
 	 */
-	private double effectiveness = 0.9;
+	private double effectiveness = 0.96;
 
 	/**
 	 * Amount of vaccinations available per day.

@@ -88,9 +88,6 @@ public final class EpisimRunner {
 		if (episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.none)
 			manager.addHandler(reporting);
 
-		// needs to be after reporting
-		manager.addHandler(handler);
-
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "Just before starting iterations");
 
 		handler.init(replay.getEvents());
@@ -102,7 +99,7 @@ public final class EpisimRunner {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
 			try {
-				reporting.append();
+				reporting.append(episimConfig.getStartDate().plusDays(iteration - 1).toString());
 			} catch (IOException e) {
 				log.error("Snapshot output could not be created", e);
 				return;
@@ -136,13 +133,15 @@ public final class EpisimRunner {
 	boolean doStep(final ReplayHandler replay, final InfectionEventHandler handler, final EpisimReporting reporting, int iteration) {
 
 		manager.resetHandlers(iteration);
+		handler.reset(iteration);
+
 		if (handler.isFinished())
 			return false;
 
 		DayOfWeek day = EpisimUtils.getDayOfWeek(ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class), iteration);
 
 		// Process all events
-		replay.replayEvents(manager, day);
+		replay.replayEvents(handler, day);
 
 		reporting.flushEvents();
 
