@@ -53,12 +53,12 @@ import java.util.Map;
 public final class SnzBerlinProductionScenario extends AbstractModule {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 	
-	public static enum DiseaseImport {yes, no}
+	public static enum DiseaseImport {yes, onlySpring, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
 	public static enum ChristmasModel {no, restrictive, permissive}
-	public static enum WeatherModel {no, midpoints_175_250}
+	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
 	private final int sample;
@@ -233,7 +233,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
-		if (this.diseaseImport == DiseaseImport.yes) {
+		if (this.diseaseImport != DiseaseImport.no) {
 			episimConfig.setInitialInfectionDistrict(null);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
 			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-02-24").plusDays(importOffset),
@@ -242,14 +242,16 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
 			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-23").plusDays(importOffset),
 					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-06-08").plusDays(importOffset),
-					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-07-13").plusDays(importOffset),
-					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-08-10").plusDays(importOffset),
-					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
-			importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-10-26").plusDays(importOffset),
-					LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
+			if (this.diseaseImport == DiseaseImport.yes) {
+				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-06-08").plusDays(importOffset),
+						LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
+				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-07-13").plusDays(importOffset),
+						LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
+				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-08-10").plusDays(importOffset),
+						LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
+				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-10-26").plusDays(importOffset),
+						LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
+			}
 			episimConfig.setInfections_pers_per_day(importMap);
 		}
 		else {
@@ -377,7 +379,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//leisure factor
 		double leisureFactor = 1.6;
-		builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+		if (this.restrictions != Restrictions.no) builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
