@@ -53,7 +53,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		SnzBerlinProductionScenario.Builder scenario = new SnzBerlinProductionScenario.Builder();
 
 		if (params != null && params.unrestricted.equals("no"))
-			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_12);
+			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21);
 
 		return scenario.createSnzBerlinProductionScenario();
 	}

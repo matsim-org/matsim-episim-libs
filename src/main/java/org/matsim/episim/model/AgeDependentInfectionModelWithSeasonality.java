@@ -51,18 +51,14 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
-										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer) {
+										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   double contactIntensity, double jointTimeInContainer) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
-		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
-		int ageTarget = EpisimUtils.getAge(target);
-
-		int ageInfector = EpisimUtils.getAge(infector);
-
-		double susceptibility = this.susceptibility[ageTarget];
-		double infectivity = this.infectivity[ageInfector];
+		double susceptibility = this.susceptibility[target.getAge()];
+		double infectivity = this.infectivity[infector.getAge()];
 
 		// apply reduced susceptibility of vaccinated persons
 		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {

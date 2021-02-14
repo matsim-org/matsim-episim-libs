@@ -6,9 +6,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -16,8 +14,11 @@ import java.util.stream.Collectors;
  */
 public class VaccinationByAge implements VaccinationModel {
 
+	private final SplittableRandom rnd;
+
 	@Inject
-	public VaccinationByAge() {
+	public VaccinationByAge(SplittableRandom rnd) {
+		this.rnd = rnd;
 	}
 
 	@Override
@@ -25,7 +26,11 @@ public class VaccinationByAge implements VaccinationModel {
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
 				.filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
-				.sorted(Comparator.comparingInt(EpisimUtils::getAge).reversed())
+				.collect(Collectors.toList());
+
+		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
+		candidates = candidates.stream()
+				.sorted(Comparator.comparingInt(EpisimPerson::getAge).reversed())
 				.collect(Collectors.toList());
 
 		int vaccinationsLeft = availableVaccinations;

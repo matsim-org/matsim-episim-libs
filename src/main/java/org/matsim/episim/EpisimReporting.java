@@ -185,7 +185,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Opens files for output in append mode.
 	 */
-	void append() throws IOException {
+	void append(String date) throws IOException {
 
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
@@ -204,6 +204,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
+		memorizedDate = date;
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
@@ -399,7 +400,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @param infectionType activities of both persons
 	 */
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType,
-								VirusStrain strain, EpisimContainer<?> container) {
+								VirusStrain strain, double prob, EpisimContainer<?> container) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -423,6 +424,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(container.getPersons().size());
 		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
 		array[InfectionEventsWriterFields.virusStrain.ordinal()] = strain.toString();
+		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(prob);
 
 		writer.append(infectionEvents, array);
 	}
@@ -545,7 +547,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	public void reportOutdoorFraction(double outdoorFraction, int iteration) {
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
-		writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+
+		try {
+			this.outdoorFraction.flush();
+			writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+		} catch (IOException e) {
+			// will only write to the writer if it is still open
+			// when reading snapshot there may be a situation where it is closed
+		}
+
 	}
 
 	@Override
@@ -655,7 +665,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, district
 	}
 
-	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain}
+	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}
 
 	/**
 	 * Detailed infection report for the end of a day.

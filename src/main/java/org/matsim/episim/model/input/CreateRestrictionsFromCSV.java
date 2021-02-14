@@ -1,12 +1,15 @@
-package org.matsim.episim;
+package org.matsim.episim.model.input;
 
 import com.google.common.collect.Iterables;
 import com.google.common.io.Resources;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.File;
@@ -14,13 +17,14 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-class CreateRestrictionsFromCSV{
+public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
 	// create method without damage.
 
@@ -29,35 +33,46 @@ class CreateRestrictionsFromCSV{
 	private double alpha = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
 
-	CreateRestrictionsFromCSV( EpisimConfigGroup episimConfig ) {
+	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
 	}
 
-	public CreateRestrictionsFromCSV setInput( File input ){
+
+	@Override
+	public CreateRestrictionsFromCSV setInput(Path input) {
 		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
-		this.input = input;
+		this.input = input.toFile();
 		return this;
 	}
 
-	public CreateRestrictionsFromCSV setAlpha( double alpha ) {
+	public CreateRestrictionsFromCSV setAlpha(double alpha) {
 		this.alpha = alpha;
 		return this;
 	}
 
-	public CreateRestrictionsFromCSV setExtrapolation( EpisimUtils.Extrapolation extrapolation ) {
+	public double getAlpha() {
+		return alpha;
+	}
+
+	public CreateRestrictionsFromCSV setExtrapolation(EpisimUtils.Extrapolation extrapolation) {
 		this.extrapolation = extrapolation;
 		return this;
 	}
 
-	FixedPolicy.ConfigBuilder createPolicyConfigBuilder() throws IOException{
+	public EpisimUtils.Extrapolation getExtrapolation() {
+		return extrapolation;
+	}
+
+	@Override
+	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 		Reader in = new FileReader(input);
-		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t' ).parse(in );
-		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd" );
+		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
 
 		// activity reduction for notAtHome each day
 		Map<LocalDate, Double> days = new LinkedHashMap<>();
 
-		for ( CSVRecord record : parser) {
+		for (CSVRecord record : parser) {
 			LocalDate date = LocalDate.parse(record.get(0), fmt);
 
 			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
@@ -70,8 +85,8 @@ class CreateRestrictionsFromCSV{
 			days.put(date, Math.min(1, 1 - reduction));
 		}
 
-		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt" ), StandardCharsets.UTF_8 )
-						  .stream().map(LocalDate::parse).collect( Collectors.toSet() );
+		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
+				.stream().map(LocalDate::parse).collect(Collectors.toSet());
 
 		// activities to set:
 		String[] act = episimConfig.getInfectionParams().stream()
@@ -79,7 +94,7 @@ class CreateRestrictionsFromCSV{
 				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
 				.toArray(String[]::new);
 
-		LocalDate start = Objects.requireNonNull( Iterables.getFirst(days.keySet(), null ), "CSV is empty" );
+		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
 		LocalDate end = Iterables.getLast(days.keySet());
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
@@ -113,7 +128,7 @@ class CreateRestrictionsFromCSV{
 		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
 		start = start.plusDays(7);
 
-		if ( extrapolation == EpisimUtils.Extrapolation.linear) {
+		if (extrapolation == EpisimUtils.Extrapolation.linear) {
 			int n = trend.size();
 
 			SimpleRegression reg = new SimpleRegression();
@@ -128,7 +143,7 @@ class CreateRestrictionsFromCSV{
 				start = start.plusDays(7);
 			}
 
-		} else if ( extrapolation == EpisimUtils.Extrapolation.exponential) {
+		} else if (extrapolation == EpisimUtils.Extrapolation.exponential) {
 			int n = trend.size();
 
 			List<WeightedObservedPoint> points = new ArrayList<>();
@@ -136,7 +151,7 @@ class CreateRestrictionsFromCSV{
 				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
 			}
 
-			EpisimUtils.Exponential expFunction = new EpisimUtils.Exponential();
+			Exponential expFunction = new Exponential();
 			EpisimUtils.FuncFitter fitter = new EpisimUtils.FuncFitter(expFunction);
 			double[] coeff = fitter.fit(points);
 
@@ -153,4 +168,30 @@ class CreateRestrictionsFromCSV{
 
 		return builder;
 	}
+
+	@Override
+	public String toString() {
+		return "fromCSV-" +
+				"alpha_" + alpha +
+				", extrapolation_" + extrapolation +
+				'}';
+	}
+
+	/**
+	 * Exponential function in the form of 1 - a * exp(-x / b).
+	 */
+	static final class Exponential implements ParametricUnivariateFunction {
+
+		@Override
+		public double value(double x, double... parameters) {
+			return 1 - parameters[0] * Math.exp(-x / parameters[1]);
+		}
+
+		@Override
+		public double[] gradient(double x, double... parameters) {
+			double exb = Math.exp(-x / parameters[1]);
+			return new double[]{-exb, -parameters[0] * x * exb / (parameters[1] * parameters[1])};
+		}
+	}
+
 }

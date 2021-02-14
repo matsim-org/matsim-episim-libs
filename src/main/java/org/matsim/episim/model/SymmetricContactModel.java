@@ -205,35 +205,33 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			}
 
 			// Parameter will only be retrieved one time
-			if (leavingParams == null) {
-				EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
-
-				double ci = tmp.getContactIntensity();
-
-				// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
-				leavingParams = tmp.copy(ci / (maxPersonsInContainer / tmp.getSpacesPerFacility()));
-			}
+			if (leavingParams == null)
+				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams tmp = getInfectionParams(container, contactPerson, otherPersonsActivity);
-			double ci2 = tmp.getContactIntensity();
-			EpisimConfigGroup.InfectionParams contactParams = tmp.copy(ci2 / (maxPersonsInContainer / nSpacesPerFacility));
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
+
 			// (same computation as above; could just memorize)
+			// this is currently 1 / (sqmPerPerson * airExchangeRate).  Need to multiply sqmPerPerson with maxPersonsInSpace to obtain room size:
+			double contactIntensity = Math.min(
+					leavingParams.getContactIntensity() / (maxPersonsInContainer / leavingParams.getSpacesPerFacility()),
+					contactParams.getContactIntensity() / (maxPersonsInContainer / nSpacesPerFacility)
+			);
 
 			// need to differentiate which person might be the infector
 			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-						leavingParams, contactParams, jointTimeInContainer);
+						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
 				if (rnd.nextDouble() < prob)
-					infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
+					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-						contactParams, leavingParams, jointTimeInContainer);
+						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
 				if (rnd.nextDouble() < prob)
-					infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
+					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}
 	}

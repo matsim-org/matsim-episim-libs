@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
@@ -43,7 +44,7 @@ public class ParamsBatch implements BatchRun<ParamsBatch.Params> {
 
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 
-		basePolicyBuilder.setAlpha(params.alpha);
+		((CreateRestrictionsFromCSV) basePolicyBuilder.getActivityParticipation()).setAlpha(params.alpha);
 		basePolicyBuilder.setCiCorrections(Map.of(params.ciDate, params.ci));
 
 		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());

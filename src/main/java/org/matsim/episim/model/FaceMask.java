@@ -11,6 +11,12 @@ public enum FaceMask {
 	CLOTH(0.6, 0.5),
 	SURGICAL(0.3, 0.2),
 	N95(0.15, 0.025);
+	
+	// values based on Kriegel
+//	CLOTH(0.8, 0.7),
+//	SURGICAL(0.8, 0.7),
+//	N95(0.6, 0.2);
+	
 	// http://dx.doi.org/10.1016/S0140-6736(20)31142-9 is good, but difficult to translate into what we need.  It only treats the intake side.  I first
 	// take from wikipedia
 	// RR ≈ OR / ( 1 - RC + (RC * OR) )

@@ -14,7 +14,7 @@ public enum VirusStrain {
 	 * More "infectious" variant B.1.1.7 that has been prevalent in the UK, starting during end of 2020.
 	 * Also known as VOC-202012/01.
 	 */
-	B117 (1.56); // TODO
+	B117 (1.35); // TODO
 
 	/**
 	 * Parameter controlling how infectious a strain is.

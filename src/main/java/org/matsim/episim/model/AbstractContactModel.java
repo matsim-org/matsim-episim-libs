@@ -298,8 +298,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
-								EpisimContainer<?> container) {
+	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType, double prob, EpisimContainer<?> container) {
 
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
@@ -326,7 +325,7 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		String infType = infectionType.toString();
 
-		reporting.reportInfection(personWrapper, infector, now, infType, infector.getVirusStrain(), container);
+		reporting.reportInfection(personWrapper, infector, now, infType, infector.getVirusStrain(), prob, container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 		personWrapper.setVirusStrain(infector.getVirusStrain());
 		personWrapper.setInfectionContainer(container);

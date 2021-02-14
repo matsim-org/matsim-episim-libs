@@ -107,7 +107,7 @@ public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 
 		double proba = -1;
 
-		int age = EpisimUtils.getAge( person );
+		int age = person.getAge();
 
 		if (age < 10) {
 			proba = 0.1 / 100;
@@ -136,7 +136,7 @@ public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
 		double proba = -1;
 
-		int age = EpisimUtils.getAge( person );
+		int age = person.getAge();
 
 		if (age < 40) {
 			proba = 5. / 100;

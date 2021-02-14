@@ -139,9 +139,30 @@ public final class EpisimPerson implements Attributable {
 	private int currentPositionInTrajectory;
 
 	/**
+	 * Age of the person in years.
+	 */
+	private final int age;
+
+	/**
 	 * Whether this person can be traced.
 	 */
 	private boolean traceable;
+
+	/**
+	 * Lookup age from attributes.
+	 */
+	private static int getAge( Attributes attrs ){
+		int age = -1;
+
+		for( String attr : attrs.getAsMap().keySet() ){
+			if( attr.contains( "age" ) ){
+				age = Integer.parseInt(attrs.getAttribute( attr ).toString());
+				break;
+			}
+		}
+
+		return age;
+	}
 
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
@@ -151,6 +172,7 @@ public final class EpisimPerson implements Attributable {
 		this.personId = personId;
 		this.attributes = attrs;
 		this.traceable = traceable;
+		this.age = getAge(attrs);
 		this.reporting = reporting;
 	}
 
@@ -480,6 +502,13 @@ public final class EpisimPerson implements Attributable {
 	@Override
 	public Attributes getAttributes() {
 		return attributes;
+	}
+
+	public int getAge() {
+		assert age != -1 : "Person=" + getPersonId().toString() + " has no age. Age dependent progression is not possible.";
+		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
+
+		return age;
 	}
 
 	/**

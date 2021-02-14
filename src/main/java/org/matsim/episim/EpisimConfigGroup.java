@@ -857,6 +857,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
 		public static final String SPACES_PER_FACILITY = "nSpacesPerFacility";
+		public static final String SEASONAL = "seasonal";
 		public static final String MAPPED_NAMES = "mappedNames";
 
 		static final String SET_TYPE = "infectionParams";
@@ -876,6 +877,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private double spacesPerFacility = 20.;
 
+		/**
+		 * This activity type is seasonal.
+		 */
+		private boolean seasonal = false;
 
 		/**
 		 * See {@link #InfectionParams(String, String...)}. Name itself will also be used as prefix.
@@ -897,17 +902,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			this.containerName = containerName;
 			this.mappedNames = mappedNames.length == 0 ?
 					Sets.newHashSet(containerName) : Sets.newHashSet(mappedNames);
-		}
-
-		/**
-		 * Copy constructor.
-		 */
-		private InfectionParams(InfectionParams other) {
-			this();
-			this.containerName = other.containerName;
-			this.mappedNames = other.mappedNames;
-			this.contactIntensity = other.contactIntensity;
-			this.spacesPerFacility = other.spacesPerFacility;
 		}
 
 		private InfectionParams() {
@@ -969,13 +963,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			return this;
 		}
 
+		@StringSetter(SEASONAL)
+		public InfectionParams setSeasonal(boolean seasonal) {
+			this.seasonal = seasonal;
+			return this;
+		}
+
 		/**
-		 * Create a copy of the this infection params.
-		 *
-		 * @return new contact intensity to set
+		 * Whether this activity has some seasonal effects.
 		 */
-		public InfectionParams copy(double contactIntensity) {
-			return new InfectionParams(this).setContactIntensity(contactIntensity);
+		@StringGetter(SEASONAL)
+		public boolean isSeasonal() {
+			return seasonal;
 		}
 
 		/**
