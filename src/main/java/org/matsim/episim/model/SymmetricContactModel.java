@@ -181,11 +181,11 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				continue;
 			}
 
-			// person can only infect others 4 days after being contagious
+			// person can only infect others x days after being contagious
 			if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &&
-					personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) > 4)
+					personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) > episimConfig.getDaysInfectious())
 					|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &&
-					contactPerson.daysSince(DiseaseStatus.contagious, iteration) > 4))
+					contactPerson.daysSince(DiseaseStatus.contagious, iteration) > episimConfig.getDaysInfectious()))
 				continue;
 
 			// persons leaving their first-ever activity have no starting time for that activity.  Need to hedge against that.  Since all persons

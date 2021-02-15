@@ -33,6 +33,13 @@ public class EpisimTestUtils {
 	public static final EpisimConfigGroup TEST_CONFIG = ConfigUtils.addOrGetModule( createTestConfig(), EpisimConfigGroup.class );
 
 	/**
+	 * Get the reporting stub.
+	 */
+	public static EpisimReporting getReporting() {
+		return reporting;
+	}
+
+	/**
 	 * Reset the person id counter.
 	 */
 	public static void resetIds() {
