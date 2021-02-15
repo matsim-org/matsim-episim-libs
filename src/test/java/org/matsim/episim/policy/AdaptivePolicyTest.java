@@ -39,22 +39,23 @@ public class AdaptivePolicyTest {
 		AdaptivePolicy policy = new AdaptivePolicy(config);
 		LocalDate date = LocalDate.now();
 		int day = 0;
+		int showingSymptoms = 0;
 
 		policy.init(date, r);
-
-		policy.updateRestrictions(EpisimTestUtils.createReport(date, day, 40), r);
 
 		assertThat(r.get("home").getRemainingFraction()).isEqualTo(1.0);
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(1.0);
 
-		day++;
-
-		policy.updateRestrictions(EpisimTestUtils.createReport(date.plusDays(day), day, 50), r);
+		for (; day < 8; day++) {
+			showingSymptoms += 60 / 7;
+			policy.updateRestrictions(EpisimTestUtils.createReport(date.plusDays(day), day, showingSymptoms), r);
+		}
 
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.2);
 
-		for (int i = 1; i < 15; i++) {
-			policy.updateRestrictions(EpisimTestUtils.createReport(date.plusDays(day + i), day + i, 20), r);
+		for (; day < 30; day++) {
+			showingSymptoms += 23 / 7;
+			policy.updateRestrictions(EpisimTestUtils.createReport(date.plusDays(day), day, showingSymptoms), r);
 		}
 
 		// open after 14 days of lockdown

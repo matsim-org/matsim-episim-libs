@@ -25,14 +25,11 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleSortedMap;
 import org.matsim.episim.EpisimReporting;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -69,7 +66,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Store incidence for each day.
 	 */
-	private final Object2DoubleSortedMap<LocalDate> incidence = new Object2DoubleAVLTreeMap<>();
+	private final Object2DoubleSortedMap<LocalDate> cumCases = new Object2DoubleAVLTreeMap<>();
 
 	/**
 	 * Whether currently in lockdown.
@@ -104,17 +101,32 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 		LocalDate date = LocalDate.parse(report.date);
 
-		calculateIncidence(report);
-		Object2DoubleSortedMap<LocalDate> hist = incidence.tailMap(date.minus(INTERVAL_DAY - 1, ChronoUnit.DAYS));
+		calculateCases(report);
+		Object2DoubleSortedMap<LocalDate> cases = cumCases.tailMap(date.minus(INTERVAL_DAY + 6, ChronoUnit.DAYS));
+
+		Object2DoubleSortedMap<LocalDate> incidence = new Object2DoubleAVLTreeMap<>();
+
+		for (Object2DoubleMap.Entry<LocalDate> from : cases.object2DoubleEntrySet()) {
+			LocalDate until = from.getKey().plusDays(7);
+			if (cases.containsKey(until)) {
+				incidence.put(until, cases.getDouble(until) - cases.getDouble(from.getKey()));
+			} else
+				// if until was not contained, the next ones will not be either
+				break;
+		}
+
+		// for first 7 days, restrictions will stay the same
+		if (incidence.isEmpty())
+			return;
 
 		if (inLockdown) {
-			if (hist.values().stream().allMatch(inc -> inc <= openAt)) {
+			if (incidence.values().stream().allMatch(inc -> inc <= openAt)) {
 				updateRestrictions(date, openPolicy, restrictions);
 				inLockdown = false;
 			}
 
 		} else {
-			if (hist.getDouble(hist.lastKey()) >= lockdownAt) {
+			if (incidence.getDouble(incidence.lastKey()) >= lockdownAt) {
 				updateRestrictions(date, lockdownPolicy, restrictions);
 				inLockdown = true;
 			}
@@ -124,9 +136,9 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Calculate incidence depending
 	 */
-	private void calculateIncidence(EpisimReporting.InfectionReport report) {
-		double incidence = report.nShowingSymptoms * (100_000d / report.nTotal());
-		this.incidence.put(LocalDate.parse(report.date), incidence);
+	private void calculateCases(EpisimReporting.InfectionReport report) {
+		double incidence = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());
+		this.cumCases.put(LocalDate.parse(report.date), incidence);
 	}
 
 	private void updateRestrictions(LocalDate start, Config policy, ImmutableMap<String, Restriction> restrictions) {

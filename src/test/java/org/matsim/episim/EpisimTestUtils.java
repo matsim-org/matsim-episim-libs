@@ -151,12 +151,11 @@ public class EpisimTestUtils {
 	/**
 	 * Report with incidence per 100k inhabitants.
 	 */
-	public static EpisimReporting.InfectionReport createReport(LocalDate date, long day, int incidence) {
+	public static EpisimReporting.InfectionReport createReport(LocalDate date, long day, int showingSymptoms) {
 		EpisimReporting.InfectionReport report = new EpisimReporting.InfectionReport("test", 0, date.toString(), day);
 
-		report.nSusceptible = 100_000 - incidence;
-		report.nTotalInfected = incidence;
-		report.nShowingSymptoms = incidence;
+		report.nSusceptible = 100_000;
+		report.nShowingSymptomsCumulative = showingSymptoms;
 
 		return report;
 	}
