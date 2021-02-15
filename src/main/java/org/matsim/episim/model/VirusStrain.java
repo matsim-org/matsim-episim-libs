@@ -8,20 +8,31 @@ public enum VirusStrain {
 	/**
 	 * This describes the base virus strain.
 	 */
-	SARS_CoV_2 (1.0),
+	SARS_CoV_2(1.0, 1.0),
 
 	/**
 	 * More "infectious" variant B.1.1.7 that has been prevalent in the UK, starting during end of 2020.
 	 * Also known as VOC-202012/01.
 	 */
-	B117 (1.35); // TODO
+	B117(1.35, 1.0),
+
+	/**
+	 * South-african variant also known as auch 501Y.V2.
+	 */
+	B1351(1.35, 0.5);
 
 	/**
 	 * Parameter controlling how infectious a strain is.
 	 */
 	public final double infectiousness;
 
-	VirusStrain(double infectiousness) {
+	/**
+	 * Effectiveness of vaccinations.
+	 */
+	public final double vaccineEffectiveness;
+
+	VirusStrain(double infectiousness, double vaccineEffectiveness) {
 		this.infectiousness = infectiousness;
+		this.vaccineEffectiveness = vaccineEffectiveness;
 	}
 }

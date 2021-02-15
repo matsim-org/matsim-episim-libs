@@ -62,7 +62,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		// apply reduced susceptibility of vaccinated persons
 		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
+			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(infector.getVirusStrain(), target, vaccinationConfig, iteration);
 		}
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
