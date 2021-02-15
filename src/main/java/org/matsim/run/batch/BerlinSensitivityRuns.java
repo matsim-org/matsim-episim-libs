@@ -37,6 +37,11 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "basePaper");
 	}
+	
+//	@Override
+//	public int getOffset() {
+//		return 1000;
+//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
@@ -82,8 +87,11 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 			restrictions = Restrictions.yes;
 			weatherModel = WeatherModel.midpoints_175_250;
 		}
-		if (params.withMasksAndTracing.contains("yes")) {
+
+		if (params.withMasks.contains("yes")) {
 			masks = Masks.yes;
+		}
+		if (params.withTracing.contains("yes")) {
 			tracing = Tracing.yes;
 		}
 		
@@ -104,9 +112,15 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 		public String run;
 		
 		@StringParameter({"no", "yes"})
-		public String withMasksAndTracing;
+		public String withMasks;
 		
-		@Parameter({0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2})
+		@StringParameter({"no", "yes"})
+		public String withTracing;
+		
+		@StringParameter({"no"})
+		public String withLeisureFactor;
+		
+		@Parameter({0.6, 0.8, 1.0, 1.2})
 		double thetaFactor;
 
 	}
