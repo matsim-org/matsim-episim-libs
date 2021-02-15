@@ -303,7 +303,7 @@ p1 <- ggplot() + scale_y_log10() +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
-  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=150*`Anteil positiver Tests Lagebericht`), color="purple", size=2, show.legend = TRUE) +
+  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=150*`Anteil positiver Tests Lagebericht Berlin`), color="purple", size=2, show.legend = TRUE) +
   geom_point(data=infections2, mapping = aes(x=date,y=newShowingSymptoms), color="orange", size=2 ) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
