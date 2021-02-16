@@ -87,7 +87,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		openAt = config.getDouble("open-trigger");
 		lockdownPolicy = config.getConfig("lockdown-policy");
 		openPolicy = config.getConfig("open-policy");
-		initialPolicy = config.getConfig("init-policy");
+		initialPolicy = config.hasPath("init-policy") ? config.getConfig("init-policy") : null;
 		inLockdown = config.getBoolean("start-in-lockdown");
 	}
 
@@ -100,7 +100,8 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
-		updateRestrictions(start, initialPolicy, restrictions);
+		if (initialPolicy != null && !initialPolicy.isEmpty())
+			updateRestrictions(start, initialPolicy, restrictions);
 	}
 
 	@Override
