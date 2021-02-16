@@ -54,6 +54,11 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	private final double openAt;
 
 	/**
+	 * Policy applied at the start.
+	 */
+	private final Config initialPolicy;
+
+	/**
 	 * Policy when shutdown is in effect.
 	 */
 	private final Config lockdownPolicy;
@@ -71,7 +76,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Whether currently in lockdown.
 	 */
-	private boolean inLockdown = false;
+	private boolean inLockdown;
 
 	/**
 	 * Constructor from config.
@@ -82,6 +87,8 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		openAt = config.getDouble("open-trigger");
 		lockdownPolicy = config.getConfig("lockdown-policy");
 		openPolicy = config.getConfig("open-policy");
+		initialPolicy = config.getConfig("init-policy");
+		inLockdown = config.getBoolean("start-in-lockdown");
 	}
 
 	/**
@@ -93,7 +100,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
-		// Nothing to init
+		updateRestrictions(start, initialPolicy, restrictions);
 	}
 
 	@Override
@@ -168,6 +175,21 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	public static final class ConfigBuilder extends ShutdownPolicy.ConfigBuilder<Object> {
 
 		/**
+		 * Use {@link #AdaptivePolicy#config()}.
+		 */
+		private ConfigBuilder() {
+			params.put("start-in-lockdown", false);
+		}
+
+		/**
+		 * Sets whether the policy already starts in lockdown mode.
+		 */
+		public ConfigBuilder startInLockdown(double value) {
+			params.put("start-in-lockdown", value);
+			return this;
+		}
+
+		/**
 		 * See {@link AdaptivePolicy#lockdownAt}.
 		 */
 		public ConfigBuilder lockdownAt(double incidence) {
@@ -180,6 +202,14 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		 */
 		public ConfigBuilder openAt(double incidence) {
 			params.put("open-trigger", incidence);
+			return this;
+		}
+
+		/**
+		 * Set the initial policy that is always applied.
+		 */
+		public ConfigBuilder initialPolicy(FixedPolicy.ConfigBuilder policy) {
+			params.put("init-policy", policy.params);
 			return this;
 		}
 
