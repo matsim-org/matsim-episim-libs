@@ -23,13 +23,13 @@ package org.matsim.episim.policy;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
-import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleSortedMap;
+import it.unimi.dsi.fastutil.objects.*;
 import org.matsim.episim.EpisimReporting;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,14 +44,9 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	private static final int INTERVAL_DAY = 14;
 
 	/**
-	 * Incidence which triggers a lockdown.
+	 * Incidences triggers for configured activities.
 	 */
-	private final double lockdownAt;
-
-	/**
-	 * Incidence after which everything opens again,
-	 */
-	private final double openAt;
+	private final Config incidenceTriggers;
 
 	/**
 	 * Policy applied at the start.
@@ -61,7 +56,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Policy when shutdown is in effect.
 	 */
-	private final Config lockdownPolicy;
+	private final Config restrictedPolicy;
 
 	/**
 	 * Policy when everything is open.
@@ -76,19 +71,17 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Whether currently in lockdown.
 	 */
-	private boolean inLockdown;
+	private Object2BooleanMap<String> inLockdown = new Object2BooleanOpenHashMap<>();
 
 	/**
 	 * Constructor from config.
 	 */
 	public AdaptivePolicy(Config config) {
 		super(config);
-		lockdownAt = config.getDouble("lockdown-trigger");
-		openAt = config.getDouble("open-trigger");
-		lockdownPolicy = config.getConfig("lockdown-policy");
+		incidenceTriggers = config.getConfig("incidences");
+		restrictedPolicy = config.getConfig("restricted-policy");
 		openPolicy = config.getConfig("open-policy");
 		initialPolicy = config.hasPath("init-policy") ? config.getConfig("init-policy") : null;
-		inLockdown = config.getBoolean("start-in-lockdown");
 	}
 
 	/**
@@ -100,8 +93,12 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
-		if (initialPolicy != null && !initialPolicy.isEmpty())
-			updateRestrictions(start, initialPolicy, restrictions);
+		if (initialPolicy != null && !initialPolicy.isEmpty()) {
+
+			for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
+				updateRestrictions(start, initialPolicy, e.getKey(), e.getValue());
+			}
+		}
 	}
 
 	@Override
@@ -127,16 +124,22 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		if (incidence.isEmpty())
 			return;
 
-		if (inLockdown) {
-			if (incidence.values().stream().allMatch(inc -> inc <= openAt)) {
-				updateRestrictions(date, openPolicy, restrictions);
-				inLockdown = false;
-			}
+		for (Map.Entry<String, ConfigValue> e : incidenceTriggers.entrySet()) {
 
-		} else {
-			if (incidence.getDouble(incidence.lastKey()) >= lockdownAt) {
-				updateRestrictions(date, lockdownPolicy, restrictions);
-				inLockdown = true;
+			String act = e.getKey();
+			List<Double> trigger = (List<Double>) e.getValue().unwrapped();
+
+			if (inLockdown.getBoolean(act)) {
+				if (incidence.values().stream().allMatch(inc -> inc <= trigger.get(0))) {
+					updateRestrictions(date, openPolicy, act, restrictions.get(act));
+					inLockdown.put(act, false);
+				}
+
+			} else {
+				if (incidence.getDouble(incidence.lastKey()) >= trigger.get(1)) {
+					updateRestrictions(date, restrictedPolicy, act, restrictions.get(act));
+					inLockdown.put(act, true);
+				}
 			}
 		}
 	}
@@ -145,26 +148,25 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	 * Calculate incidence depending
 	 */
 	private void calculateCases(EpisimReporting.InfectionReport report) {
-		double incidence = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());
-		this.cumCases.put(LocalDate.parse(report.date), incidence);
+		double cases = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());
+		this.cumCases.put(LocalDate.parse(report.date), cases);
 	}
 
-	private void updateRestrictions(LocalDate start, Config policy, ImmutableMap<String, Restriction> restrictions) {
-		for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
-			// activity name
-			if (!policy.hasPath(entry.getKey())) continue;
+	private void updateRestrictions(LocalDate start, Config policy, String act, Restriction restriction) {
 
-			Config actConfig = policy.getConfig(entry.getKey());
+		// activity name
+		if (!policy.hasPath(act))
+			return;
 
-			for (Map.Entry<String, ConfigValue> days : actConfig.root().entrySet()) {
+		Config actConfig = policy.getConfig(act);
 
-				if (days.getKey().startsWith("day")) continue;
+		for (Map.Entry<String, ConfigValue> days : actConfig.root().entrySet()) {
+			if (days.getKey().startsWith("day")) continue;
 
-				LocalDate date = LocalDate.parse(days.getKey());
-				if (date.isBefore(start)) {
-					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
-					entry.getValue().update(r);
-				}
+			LocalDate date = LocalDate.parse(days.getKey());
+			if (date.isBefore(start)) {
+				Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
+				restriction.update(r);
 			}
 		}
 	}
@@ -183,26 +185,22 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * Sets whether the policy already starts in lockdown mode.
+		 * Define trigger for weekly incidence and individual activities.
 		 */
-		public ConfigBuilder startInLockdown(double value) {
-			params.put("start-in-lockdown", value);
-			return this;
-		}
+		public ConfigBuilder incidenceTrigger(double openAt, double restrictAt, String... activities) {
 
-		/**
-		 * See {@link AdaptivePolicy#lockdownAt}.
-		 */
-		public ConfigBuilder lockdownAt(double incidence) {
-			params.put("lockdown-trigger", incidence);
-			return this;
-		}
+			if (restrictAt < openAt)
+				throw new IllegalArgumentException("Restrict threshold must be larger than open threshold");
 
-		/**
-		 * See {@link AdaptivePolicy#openAt}.
-		 */
-		public ConfigBuilder openAt(double incidence) {
-			params.put("open-trigger", incidence);
+			if (activities.length == 0)
+				throw new IllegalArgumentException("Activities can not be empty");
+
+
+			Map<String, List<Double>> incidences = (Map<String, List<Double>>) params.computeIfAbsent("incidences", (k) -> new HashMap<>());
+			for (String act : activities) {
+				incidences.put(act, List.of(openAt, restrictAt));
+			}
+
 			return this;
 		}
 
@@ -223,10 +221,10 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * See {@link AdaptivePolicy#lockdownPolicy}.
+		 * See {@link AdaptivePolicy#restrictedPolicy}.
 		 */
-		public ConfigBuilder lockdownPolicy(FixedPolicy.ConfigBuilder policy) {
-			params.put("lockdown-policy", policy.params);
+		public ConfigBuilder restrictedPolicy(FixedPolicy.ConfigBuilder policy) {
+			params.put("restricted-policy", policy.params);
 			return this;
 		}
 	}

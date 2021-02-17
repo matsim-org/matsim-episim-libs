@@ -19,6 +19,7 @@ public class AdaptivePolicyTest {
 		r = ImmutableMap.of(
 				"home", Restriction.none(),
 				"work", Restriction.none(),
+				"edu", Restriction.none(),
 				"pt", Restriction.none()
 		);
 	}
@@ -27,13 +28,16 @@ public class AdaptivePolicyTest {
 	public void policy() {
 
 		Config config = AdaptivePolicy.config()
-				.lockdownAt(50)
-				.openAt(35)
-				.lockdownPolicy(FixedPolicy.config()
+				.incidenceTrigger(35, 50, "work")
+				.incidenceTrigger(50, 50, "edu")
+				.restrictedPolicy(FixedPolicy.config()
 						.restrict(LocalDate.MIN, Restriction.of(0.2), "work")
+						.restrict(LocalDate.MIN, Restriction.of(0.0), "edu")
 				)
 				.openPolicy(FixedPolicy.config()
-						.restrict(LocalDate.MIN, Restriction.of(0.8), "work"))
+						.restrict(LocalDate.MIN, Restriction.of(0.8), "work")
+						.restrict(LocalDate.MIN, Restriction.of(1.0), "edu")
+				)
 				.build();
 
 		AdaptivePolicy policy = new AdaptivePolicy(config);
@@ -52,6 +56,7 @@ public class AdaptivePolicyTest {
 		}
 
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.2);
+		assertThat(r.get("edu").getRemainingFraction()).isEqualTo(0.0);
 
 		for (; day < 30; day++) {
 			showingSymptoms += 23 / 7;
@@ -60,6 +65,7 @@ public class AdaptivePolicyTest {
 
 		// open after 14 days of lockdown
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.8);
+		assertThat(r.get("edu").getRemainingFraction()).isEqualTo(1.0);
 
 	}
 }

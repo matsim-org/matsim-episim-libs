@@ -13,7 +13,7 @@ from utils import read_batch_run, aggregate_batch_run, read_case_data, read_run,
 from plot import comparison_plots
 
 #%%
-# Code-snipped needed at seaborn}relational.py, ca. line 410
+# Code-snipped needed at seaborn/relational.py, ca. line 410
 """
 elif ci == "q95":
     q05 = grouped.quantile(0.05)
@@ -36,6 +36,69 @@ palette = sns.color_palette()
 #%%
 
 rki, meldedatum, hospital = read_case_data("berlin-cases.csv", "berlin-cases-meldedatum.csv", "berlin-hospital.csv")
+
+
+#%%
+
+import zipfile
+
+z = zipfile.ZipFile("../../../../../public-svn/matsim/scenarios/countries/de/episim/battery/2021-02-09/paperAggr/summaries/79.zip")
+
+with z.open("79.outdoorFraction.tsv") as f:
+    df = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+
+with z.open("79.rValues.txt.csv") as f:
+    rf = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+    rf = rf.set_index("date", drop=False).resample("W").mean().reset_index()
+    rf = pd.melt(rf, id_vars=["date"],  value_name="reinfections",
+                 var_name="activity", value_vars=["home", "leisure", "schools", "day care", "university", "work&business", "pt", "other"])
+    
+with z.open("79.diseaseImport.tsv") as f:
+    ff = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+    
+z.close()
+
+#%%  Outdoor fraction
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
+
+sns.scatterplot(x="date", y="outdoorFraction", s=40, data=df, ax=ax)
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
+
+
+#%% Reinfections
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
+
+sns.lineplot(data=rf, x="date", y="reinfections", hue="activity", ax=ax)
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+# Put a legend below current axis
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=5)
+
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
+
+
+#%% Disease import
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
+
+sns.lineplot(data=ff, x="date", y="nInfected", ax=ax)
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-11-01"))
+
+plt.ylabel("Imported cases")
+
+
+#%% Mask compliance
+
+
 
 #%% Activity participation
 
