@@ -102,6 +102,11 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	}
 
 	@Override
+	public void restore(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
+		init(start, restrictions);
+	}
+
+	@Override
 	public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
 
 		LocalDate date = LocalDate.parse(report.date);

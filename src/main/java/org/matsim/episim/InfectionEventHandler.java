@@ -790,7 +790,11 @@ public final class InfectionEventHandler implements Externalizable {
 			pseudoFacilityMap.get(id).read(in, personMap);
 		}
 
+
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
+
+		policy.restore(episimConfig.getStartDate().plusDays(iteration), im);
+
 		contactModel.setRestrictionsForIteration(iteration, im);
 	}
 

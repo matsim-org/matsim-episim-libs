@@ -30,6 +30,9 @@ public class AdaptivePolicyTest {
 		Config config = AdaptivePolicy.config()
 				.incidenceTrigger(35, 50, "work")
 				.incidenceTrigger(50, 50, "edu")
+				.initialPolicy(FixedPolicy.config()
+						.restrict(LocalDate.MIN, Restriction.of(0.9), "work")
+				)
 				.restrictedPolicy(FixedPolicy.config()
 						.restrict(LocalDate.MIN, Restriction.of(0.2), "work")
 						.restrict(LocalDate.MIN, Restriction.of(0.0), "edu")
@@ -48,7 +51,7 @@ public class AdaptivePolicyTest {
 		policy.init(date, r);
 
 		assertThat(r.get("home").getRemainingFraction()).isEqualTo(1.0);
-		assertThat(r.get("work").getRemainingFraction()).isEqualTo(1.0);
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
 
 		for (; day < 8; day++) {
 			showingSymptoms += 60 / 7;
