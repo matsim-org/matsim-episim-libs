@@ -138,7 +138,7 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 			SortedSet<LocalDate> periods = this.periods.get(e.getKey());
 
 			// check if in admin period, today must lie between two dates
-			if (periods == null || periods.headSet(today).size() % 2 == 0) {
+			if (periods == null || periods.headSet(today.plusDays(1)).size() % 2 == 0) {
 				// if not administrative, the fraction from previous day is restored
 				e.getValue().setRemainingFraction(oldFraction);
 				continue;
@@ -159,7 +159,7 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		else {
 			SortedMap<LocalDate, Double> untilToday = outOfHome.headMap(today);
 			if (untilToday.isEmpty())
-				frac = outOfHome.get(outOfHome.lastKey());
+				frac = outOfHome.get(outOfHome.firstKey());
 			else
 				frac = outOfHome.get(untilToday.lastKey());
 		}
@@ -177,6 +177,9 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		if (remaining < 0) {
 			log.warn("Activities reduced by administrative measures above data by {}.", remaining);
 			reducedFrac = 0;
+		} else if (remaining > available) {
+			log.warn("Activity reduction would be negative: {}.", remaining / available);
+			reducedFrac = 0;
 		} else {
 			reducedFrac = remaining / available;
 		}
@@ -184,7 +187,7 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
 
 			// skip administrative
-			if (administrative.contains(e.getKey()) || e.getKey().contains("home")) continue;
+			if (administrative.contains(e.getKey()) || e.getKey().contains("home") || e.getKey().equals("pt")) continue;
 
 			e.getValue().setRemainingFraction(1 - reducedFrac);
 

@@ -29,10 +29,38 @@ public class AdjustedPolicyTest {
 						LocalDate.parse("2020-02-02"), 0.2
 				))
 				.administrativePeriod("edu", LocalDate.MIN, LocalDate.MAX)
+				.administrativePeriod("leisure", LocalDate.parse("2020-03-01"), LocalDate.parse("2020-03-05"))
 				.administrativePolicy(FixedPolicy.config()
 						.restrict("2020-02-02", Restriction.of(0.0), "edu")
+						.restrict("2020-03-01", Restriction.of(0.4), "leisure")
 				);
 
+	}
+
+	private ReplayHandler createHandler() {
+
+		// hard coded events
+		List<Event> events = List.of(
+				// home
+				new ActivityStartEvent(0, Id.createPersonId(1), null, null, "home", new Coord(0, 0)),
+				new ActivityEndEvent(1000, Id.createPersonId(1), null, null, "home"),
+				// edu
+				new ActivityStartEvent(0, Id.createPersonId(1), null, null, "edu", new Coord(0, 0)),
+				new ActivityEndEvent(1500, Id.createPersonId(1), null, null, "edu"),
+				// leisure
+				new ActivityStartEvent(0, Id.createPersonId(1), null, null, "leisure", new Coord(0, 0)),
+				new ActivityEndEvent(500, Id.createPersonId(1), null, null, "leisure")
+		);
+
+		return new ReplayHandler(Map.of(
+				DayOfWeek.MONDAY, events,
+				DayOfWeek.TUESDAY, events,
+				DayOfWeek.WEDNESDAY, events,
+				DayOfWeek.THURSDAY, events,
+				DayOfWeek.FRIDAY, events,
+				DayOfWeek.SATURDAY, events,
+				DayOfWeek.SUNDAY, events
+		));
 	}
 
 	@Before
@@ -53,23 +81,7 @@ public class AdjustedPolicyTest {
 	@Test
 	public void restriction() {
 
-		// hard coded events
-		List<Event> events = List.of(
-				// home
-				new ActivityStartEvent(0, Id.createPersonId(1), null, null, "home", new Coord(0, 0)),
-				new ActivityEndEvent(1000, Id.createPersonId(1), null, null, "home"),
-				// edu
-				new ActivityStartEvent(0, Id.createPersonId(1), null, null, "edu", new Coord(0, 0)),
-				new ActivityEndEvent(1500, Id.createPersonId(1), null, null, "edu"),
-				// leisure
-				new ActivityStartEvent(0, Id.createPersonId(1), null, null, "leisure", new Coord(0, 0)),
-				new ActivityEndEvent(500, Id.createPersonId(1), null, null, "leisure")
-		);
-
-		ReplayHandler handler = new ReplayHandler(Map.of(
-				DayOfWeek.SUNDAY, events,
-				DayOfWeek.MONDAY, events
-		));
+		ReplayHandler handler = createHandler();
 
 		AdjustedPolicy policy = new AdjustedPolicy(createConfig().build(), handler);
 
@@ -86,6 +98,32 @@ public class AdjustedPolicyTest {
 		assertThat(r.get("home").getRemainingFraction()).isEqualTo(1.0);
 		assertThat(r.get("edu").getRemainingFraction()).isEqualTo(0);
 		assertThat(r.get("leisure").getRemainingFraction()).isEqualTo(0.8);
+
+	}
+
+	@Test
+	public void adminInterval() {
+
+		ReplayHandler handler = createHandler();
+
+		AdjustedPolicy policy = new AdjustedPolicy(createConfig().build(), handler);
+
+		policy.init(LocalDate.parse("2020-02-01"), r);
+
+		assertThat(r.get("leisure").getRemainingFraction()).isEqualTo(1.0);
+
+		policy.updateRestrictions(EpisimTestUtils.createReport("2020-02-28", 1), r);
+
+		assertThat(r.get("leisure").getRemainingFraction()).isEqualTo(1.0);
+
+		policy.updateRestrictions(EpisimTestUtils.createReport("2020-03-01", 1), r);
+
+		assertThat(r.get("leisure").getRemainingFraction()).isEqualTo(0.4);
+
+		policy.updateRestrictions(EpisimTestUtils.createReport("2020-03-05", 1), r);
+
+		assertThat(r.get("leisure").getRemainingFraction()).isEqualTo(1.0);
+
 
 	}
 }
