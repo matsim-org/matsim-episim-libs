@@ -156,8 +156,13 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		double frac;
 		if (outOfHome.containsKey(today))
 			frac = outOfHome.get(today);
-		else
-			frac = outOfHome.get(outOfHome.headMap(today).lastKey());
+		else {
+			SortedMap<LocalDate, Double> untilToday = outOfHome.headMap(today);
+			if (untilToday.isEmpty())
+				frac = outOfHome.get(outOfHome.lastKey());
+			else
+				frac = outOfHome.get(untilToday.lastKey());
+		}
 
 		double reducedTo = baseDuration * frac;
 
@@ -193,7 +198,6 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 
 		/**
 		 * Set out-of-home fractions for specific dates.
-		 *
 		 */
 		public ConfigBuilder outOfHomeFractions(Map<LocalDate, Double> fractions) {
 
