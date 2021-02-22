@@ -20,10 +20,7 @@
  */
 package org.matsim.episim.model;
 
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 
 import com.google.inject.Inject;
 
@@ -38,8 +35,9 @@ public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 	 * Constructor as in {@link ConfigurableProgressionModel}.
 	 */
 	@Inject
-	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
-		super(rnd, episimConfig, tracingConfig);
+	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+										TestingConfigGroup testingConfig) {
+		super(rnd, episimConfig, tracingConfig, testingConfig);
 	}
 
 	@Override

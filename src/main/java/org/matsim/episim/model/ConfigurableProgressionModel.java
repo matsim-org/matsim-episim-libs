@@ -11,11 +11,13 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.EpisimPerson.TestStatus;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -66,7 +68,6 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	// yyyy Der obige Code existiert nochmals in AbstractSnzScenario2020.  Können wir in konsolidieren?  kai, oct'20
 
 
-
 	private static final Logger log = LogManager.getLogger(ConfigurableProgressionModel.class);
 
 	private static final double DAY = 24. * 3600;
@@ -77,6 +78,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
+	private final TestingConfigGroup testingConfig;
+
 	/**
 	 * Counts how many infections occurred at each location.
 	 */
@@ -98,6 +101,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private int tracingCapacity = Integer.MAX_VALUE;
 
 	/**
+	 * Testing capacity left for the day.
+	 */
+	private int testingCapacity = Integer.MAX_VALUE;
+
+	/**
 	 * Tracing probability for current day.
 	 */
 	private double tracingProb = 1;
@@ -113,9 +121,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private long prevShowingSymptoms;
 
 	@Inject
-	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
+	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
+										TracingConfigGroup tracingConfig, TestingConfigGroup testingConfig) {
 		super(rnd, episimConfig);
 		this.tracingConfig = tracingConfig;
+		this.testingConfig = testingConfig;
 
 		Config config = episimConfig.getProgressionConfig();
 
@@ -143,6 +153,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
 		tracingDelay = EpisimUtils.findValidEntry(tracingConfig.getTracingDelay(), 0, date);
+
+		testingCapacity = EpisimUtils.findValidEntry(testingConfig.getTestingCapacity(), 0, date);
+		if (testingCapacity != Integer.MAX_VALUE)
+			testingCapacity *= episimConfig.getSampleSize();
 	}
 
 	@Override
@@ -151,6 +165,14 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		// A healthy quarantined person is dismissed from quarantine after some time
 		if (releasePerson(person) && person.daysSinceQuarantine(day) > tracingConfig.getQuarantineDuration()) {
+			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
+			person.setTestStatus(TestStatus.negative, day - 1);
+		}
+
+		// person is reset to untested after two days of quarantine at home, if it was false positive
+		if (releasePerson(person) && person.getTestStatus() == TestStatus.positive && person.daysSinceTest(day) > 2) {
+			// test status will be back-dated no it won't interfere with reporting
+			person.setTestStatus(TestStatus.untested, day - 1);
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 		}
 
@@ -162,6 +184,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 			performTracing(person, now - tracingDelay * DAY, day);
 		}
+
+		performTesting(person, day);
 
 		// clear tracing if not relevant anymore
 		person.clearTraceableContractPersons(now - (tracingDelay + tracingConfig.getTracingDayDistance() + 1) * DAY);
@@ -301,7 +325,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				return DiseaseStatus.contagious;
 
 			case contagious:
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person ))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person))
 					return DiseaseStatus.showingSymptoms;
 				else
 					return DiseaseStatus.recovered;
@@ -357,7 +381,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		return 1.;
 	}
 
-	protected double getProbaOfTransitioningToShowingSymptoms( EpisimPerson person ) {
+	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
 		return 0.8;
 	}
 
@@ -414,6 +438,57 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (tracingCapacity == 0) {
 			log.debug("tracing capacity exhausted for day={}", now);
 		}
+	}
+
+	/**
+	 * Perform the testing procedure.
+	 */
+	private void performTesting(EpisimPerson person, int day) {
+
+		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
+			return;
+
+		if (testingCapacity <= 0)
+			return;
+
+		// person with positive test is not tested twice
+		// test status will be set when released from quarantine
+		if (person.getTestStatus() == TestStatus.positive)
+			return;
+
+		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day);
+
+		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS) {
+			if (dow == DayOfWeek.MONDAY || dow == DayOfWeek.THURSDAY) {
+				testAndQuarantine(person, day);
+			}
+		}
+	}
+
+	/**
+	 * Perform testing and quarantine person.
+	 */
+	private void testAndQuarantine(EpisimPerson person, int day) {
+
+		DiseaseStatus status = person.getDiseaseStatus();
+		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.recovered) {
+
+			TestStatus testStatus = rnd.nextDouble() < testingConfig.getFalsePositiveRate() ? TestStatus.negative : TestStatus.positive;
+			person.setTestStatus(testStatus, day);
+
+		} else if (status == DiseaseStatus.infectedButNotContagious ||
+				status == DiseaseStatus.contagious ||
+				status == DiseaseStatus.showingSymptoms) {
+
+			TestStatus testStatus = rnd.nextDouble() < testingConfig.getFalsePositiveRate() ? TestStatus.positive : TestStatus.negative;
+			person.setTestStatus(testStatus, day);
+		}
+
+		if (person.getTestStatus() == TestStatus.positive) {
+			quarantinePerson(person, day);
+		}
+
+		testingCapacity--;
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {

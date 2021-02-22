@@ -101,6 +101,12 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
+	public TestingConfigGroup testingConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
+	}
+
+	@Provides
+	@Singleton
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
 
 		// Async writer is used for huge event number

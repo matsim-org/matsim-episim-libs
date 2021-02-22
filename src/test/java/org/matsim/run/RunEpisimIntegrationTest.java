@@ -43,6 +43,7 @@ public class RunEpisimIntegrationTest {
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
 	private VaccinationConfigGroup vaccinationConfig;
+	private TestingConfigGroup testingConfig;
 	private EpisimRunner runner;
 
 	@Parameterized.Parameters(name = "it{0}")
@@ -70,6 +71,7 @@ public class RunEpisimIntegrationTest {
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
 		vaccinationConfig = injector.getInstance(VaccinationConfigGroup.class);
+		testingConfig = injector.getInstance(TestingConfigGroup.class);
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
@@ -168,6 +170,15 @@ public class RunEpisimIntegrationTest {
 		List<String> cmpLines = Files.readAllLines(Path.of(utils.getOutputDirectory(), "infections.txt"));
 
 		assertThat(baseLines).isNotEqualTo(cmpLines);
+	}
+
+	@Test
+	public void testTesting() {
+
+		testingConfig.setStrategy(TestingConfigGroup.Strategy.FIXED_DAYS);
+		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+
+		runner.run(it);
 	}
 
 	static class TestScenario extends AbstractModule {

@@ -297,6 +297,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				default:
 					throw new IllegalArgumentException("Unexpected value: " + person.getVaccinationStatus());
 			}
+
+			if (person.daysSinceTest(iteration) == 0) {
+				report.nTested++;
+				district.nTested++;
+			}
 		}
 
 		for (String district : reports.keySet()) {
@@ -385,6 +390,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);
 
 			array[InfectionsWriterFields.nVaccinated.ordinal()] = Long.toString(r.nVaccinated);
+			array[InfectionsWriterFields.nTested.ordinal()] = Long.toString(r.nTested);
 
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
@@ -662,7 +668,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
 		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
-		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, district
+		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, nTested, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}
@@ -693,6 +699,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		public long nInQuarantineFull = 0;
 		public long nInQuarantineHome = 0;
 		public long nVaccinated = 0;
+		public long nTested = 0;
 
 		/**
 		 * Constructor.
@@ -727,6 +734,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			nInQuarantineFull *= factor;
 			nInQuarantineHome *= factor;
 			nVaccinated *= factor;
+			nTested *= factor;
 		}
 	}
 }
