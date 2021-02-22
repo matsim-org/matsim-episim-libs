@@ -35,13 +35,13 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	public static final Config DEFAULT_CONFIG = Transition.config()
 			// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
 			.from(DiseaseStatus.infectedButNotContagious,
-					to(DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(4., 4.))) // 3 3
+					to(DiseaseStatus.contagious, Transition.logNormalWithMedianAndStd(0., 0.))) // 3 3
 
 // Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
 // Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
 			.from(DiseaseStatus.contagious,
-					to(DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(2., 2.)),    //80%
-					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(4., 4.)))            //20%
+					to(DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(6., 6.)),    //80%
+					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))            //20%
 
 // Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
 			.from(DiseaseStatus.showingSymptoms,
