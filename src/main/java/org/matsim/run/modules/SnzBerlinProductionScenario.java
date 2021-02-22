@@ -135,11 +135,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	}
 
 
-	public static enum DiseaseImport {yes, no}
+	public static enum DiseaseImport {yes, onlySpring, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
-	public static enum Snapshot {no, episim_snapshot_030_2020_03_16, episim_snapshot_060_2020_04_15, episim_snapshot_090_2020_05_15, episim_snapshot_120_2020_06_14, episim_snapshot_150_2020_07_14, episim_snapshot_180_2020_08_13, episim_snapshot_210_2020_09_12, episim_snapshot_240_2020_10_12}
+	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 	public static enum ChristmasModel {no, restrictive, permissive}
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
 	public static enum AdjustRestrictions {yes, no}
