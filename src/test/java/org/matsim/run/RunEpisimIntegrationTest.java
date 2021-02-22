@@ -175,7 +175,8 @@ public class RunEpisimIntegrationTest {
 	@Test
 	public void testTesting() {
 
-		testingConfig.setStrategy(TestingConfigGroup.Strategy.FIXED_DAYS);
+		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
+		testingConfig.setActivities(List.of("edu", "leisure"));
 		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
 
 		runner.run(it);

@@ -171,7 +171,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		// person is reset to untested after two days of quarantine at home, if it was false positive
 		if (releasePerson(person) && person.getTestStatus() == TestStatus.positive && person.daysSinceTest(day) > 2) {
-			// test status will be back-dated no it won't interfere with reporting
+			// test status will be reset and back-dated so it won't interfere with reporting
 			person.setTestStatus(TestStatus.untested, day - 1);
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 		}
@@ -456,12 +456,18 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (person.getTestStatus() == TestStatus.positive)
 			return;
 
-		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day);
+		// update is run at end of day, the test needs to be for the next day
+		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
 
 		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS) {
 			if (dow == DayOfWeek.MONDAY || dow == DayOfWeek.THURSDAY) {
 				testAndQuarantine(person, day);
 			}
+		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
+
+			if (person.hasActivity(dow, testingConfig.getActivities()))
+				testAndQuarantine(person, day);
+
 		}
 	}
 
@@ -470,9 +476,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private void testAndQuarantine(EpisimPerson person, int day) {
 
+		if (!(testingConfig.getTestingRate() == 1d && rnd.nextDouble() < testingConfig.getTestingRate()))
+			return;
+
 		DiseaseStatus status = person.getDiseaseStatus();
 		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.recovered) {
-
 			TestStatus testStatus = rnd.nextDouble() < testingConfig.getFalsePositiveRate() ? TestStatus.negative : TestStatus.positive;
 			person.setTestStatus(testStatus, day);
 

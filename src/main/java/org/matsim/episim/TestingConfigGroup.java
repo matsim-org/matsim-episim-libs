@@ -17,6 +17,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
 	private static final String CAPACITY = "testingCapacity";
+	private static final String RATE = "testingRate";
 	private static final String FALSE_POSITIVE_RATE = "falsePositiveRate";
 	private static final String FALSE_NEGATIVE_RATE = "falseNegativeRate";
 	private static final String ACTIVITIES = "activities";
@@ -38,6 +39,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Probability that an infected person is not identified.
 	 */
 	private double falseNegativeRate = 0.90;
+
+	/**
+	 * Share of people that are tested (if applicable for a test)
+	 */
+	private double testingRate = 1.0;
 
 	/**
 	 * Tracing and containment strategy.
@@ -92,6 +98,16 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(CAPACITY)
 	String getTracingCapacityString() {
 		return JOINER.join(testingCapacity);
+	}
+
+	@StringGetter(RATE)
+	public double getTestingRate() {
+		return testingRate;
+	}
+
+	@StringSetter(RATE)
+	public void setTestingRate(double testingRate) {
+		this.testingRate = testingRate;
 	}
 
 	@StringGetter(FALSE_POSITIVE_RATE)

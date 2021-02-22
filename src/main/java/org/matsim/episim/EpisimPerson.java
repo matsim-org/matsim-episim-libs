@@ -37,10 +37,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -503,6 +500,18 @@ public final class EpisimPerson implements Attributable {
 
 	int getEndOfDay(DayOfWeek day) {
 		return endOfDay[day.getValue() - 1];
+	}
+
+	/**
+	 * Check whether a person has one of the given activities on a certain week day.
+	 */
+	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			if (activities.contains(trajectory.get(i).params.getContainerName()))
+				return true;
+		}
+
+		return false;
 	}
 
 	/**
