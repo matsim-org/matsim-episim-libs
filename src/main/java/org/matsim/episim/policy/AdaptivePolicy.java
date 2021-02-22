@@ -71,7 +71,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Whether currently in lockdown.
 	 */
-	private Object2BooleanMap<String> inLockdown = new Object2BooleanOpenHashMap<>();
+	private final Object2BooleanMap<String> inLockdown = new Object2BooleanOpenHashMap<>();
 
 	/**
 	 * Constructor from config.
@@ -128,6 +128,8 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		// for first 7 days, restrictions will stay the same
 		if (incidence.isEmpty())
 			return;
+
+		// TODO: use first incidence to decide whether in lockdown or not
 
 		for (Map.Entry<String, ConfigValue> e : incidenceTriggers.entrySet()) {
 
