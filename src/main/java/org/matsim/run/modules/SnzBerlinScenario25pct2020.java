@@ -113,6 +113,10 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			.restrict("2020-05-11", 0.2, "educ_higher")
 			;
 		}
+		
+		restrictions.restrict("2020-03-22", 0., "restaurant");
+		restrictions.restrict("2020-11-02", 0., "restaurant");
+		
 
 		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
 
@@ -150,12 +154,14 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 			LocalDate[] period = new LocalDate[] {LocalDate.MIN, LocalDate.MAX};
 			adjusted.setPolicy(restrictions);
+			LocalDate[] restaurantPeriod = new LocalDate[] {LocalDate.parse("2020-03-22"), LocalDate.parse("2020-05-14"), LocalDate.parse("2020-11-02"), LocalDate.MAX};
 			adjusted.setAdministrativePeriods(Map.of(
 					"educ_primary", period,
 					"educ_secondary", period,
 					"educ_tertiary", period,
 					"educ_other", period,
-					"educ_kiga" , period
+					"educ_kiga" , period,
+					"restaurant", restaurantPeriod
 			));
 
 			return activityParticipation.createPolicy();

@@ -65,7 +65,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 	 * Activity types used by this analysis.
 	 */
 	private static final List<String> ACTIVITY_TYPES = List.of(
-			"home", "leisure", "schools", "day care", "university", "work&business", "pt", "other"
+			"home", "leisure", "restaurant", "schools", "day care", "university", "work&business", "pt", "other"
 	);
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
@@ -294,6 +294,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 		else if (infectionType.endsWith("educ_higher")) activityType = "university";
 		else if (infectionType.endsWith("educ_kiga")) activityType = "day care";
 		else if (infectionType.endsWith("leisure")) activityType = "leisure";
+		else if (infectionType.endsWith("restaurant")) activityType = "restaurant";
 		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
 		else if (infectionType.endsWith("home")) activityType = "home";
 		else if (infectionType.startsWith("pt")) activityType = "pt";

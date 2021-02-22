@@ -62,13 +62,13 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
-		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
+		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.yes;
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
-		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
+		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
 		public Builder setSample(int sample) {
@@ -232,23 +232,23 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.SATURDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.SUNDAY);
-
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
+
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+//
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.SATURDAY);
+//
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
@@ -300,7 +300,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
