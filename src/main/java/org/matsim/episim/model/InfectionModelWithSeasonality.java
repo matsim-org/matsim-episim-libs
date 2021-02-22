@@ -53,7 +53,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
-				: DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
+				: DefaultInfectionModel.getVaccinationEffectiveness(infector.getVirusStrain(), target, vaccinationConfig, iteration);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* susceptibility

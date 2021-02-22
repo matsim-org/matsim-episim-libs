@@ -124,14 +124,29 @@ class AnalyzeSnzDataPersonsStat implements Callable<Integer> {
 		// zip codes for the district "Kreis Heinsberg"
 		IntSet zipCodesHeinsberg = new IntOpenHashSet(
 				List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
+		
+		// zip codes for the district "Bonn"
+		IntSet zipCodesBonn = new IntOpenHashSet(
+				List.of(53111, 53113, 53115, 53117, 53119, 53121, 53123, 53125, 53127, 53129, 53173, 53175, 53177, 53179, 53225, 53227, 53229));
+		
+		// zip codes for the district "Mannheim"
+		IntSet zipCodesMannheim = new IntOpenHashSet(
+				List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219, 68229, 68239, 68259, 68305, 68307, 68309));
+		
+		// zip codes for the district "Wolfsburg"
+		IntSet zipCodesWolfsburg = new IntOpenHashSet(
+				List.of(38440, 38442, 38444, 38446, 38448));
 
 //		analyzeDataForCertainArea(zipCodesTest, "Test", filesWithData);
 //		analyzeDataForCertainArea(zipCodesDE, "Germany", filesWithData);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData);
 //		analyzeDataForCertainArea(zipCodesMunich, "Munich", filesWithData);
 //		analyzeDataForCertainArea(zipCodesHeinsberg, "Heinsberg", filesWithData);
-		for (Entry<String, IntSet> district : berlinDistricts.entrySet())
-			analyzeDataForCertainArea(district.getValue(), district.getKey(), filesWithData);
+		analyzeDataForCertainArea(zipCodesBonn, "Bonn", filesWithData);
+		analyzeDataForCertainArea(zipCodesMannheim, "Mannheim", filesWithData);
+		analyzeDataForCertainArea(zipCodesWolfsburg, "Wolfsburg", filesWithData);
+//		for (Entry<String, IntSet> district : berlinDistricts.entrySet())
+//			analyzeDataForCertainArea(district.getValue(), district.getKey(), filesWithData);
 
 		log.info("Done!");
 

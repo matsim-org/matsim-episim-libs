@@ -72,6 +72,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INPUT_DAYS = "inputDays";
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
+	private static final String DAYS_INFECTIOUS = "daysInfectious";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -142,6 +143,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
 	private double maxContacts = 3.;
+	private int daysInfectious = 4;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -481,6 +483,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(MAX_CONTACTS)
 	public void setMaxContacts(double maxContacts) {
 		this.maxContacts = maxContacts;
+	}
+
+	@StringGetter(DAYS_INFECTIOUS)
+	public int getDaysInfectious() {
+		return daysInfectious;
+	}
+
+	@StringSetter(DAYS_INFECTIOUS)
+	public void setDaysInfectious(int daysInfectious) {
+		this.daysInfectious = daysInfectious;
 	}
 
 	@StringGetter(AGE_SUSCEPTIBILITY)

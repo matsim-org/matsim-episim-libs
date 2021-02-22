@@ -47,7 +47,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
-				: getVaccinationEffectiveness(target, vaccinationConfig, iteration);
+				: getVaccinationEffectiveness(infector.getVirusStrain(), target, vaccinationConfig, iteration);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* susceptibility
@@ -60,19 +60,19 @@ public final class DefaultInfectionModel implements InfectionModel {
 	/**
 	 * Calculate the current effectiveness of vaccination.
 	 */
-	static double getVaccinationEffectiveness(EpisimPerson target, VaccinationConfigGroup config, int iteration) {
+	static double getVaccinationEffectiveness(VirusStrain virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
 		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 
 		// full effect
 		if (daysVaccinated >= config.getDaysBeforeFullEffect())
-			return 1 - config.getEffectiveness();
+			return 1 - config.getEffectiveness() * virusStrain.vaccineEffectiveness;
 
 		// slightly reduced but nearly full effect after 3 days
 		else if (daysVaccinated >= 3) {
-			return 1 - config.getEffectiveness() * 0.94;
+			return 1 - config.getEffectiveness() * 0.94 * virusStrain.vaccineEffectiveness;
 		}
 
-		return 1;
+		return 1 * virusStrain.vaccineEffectiveness;
 
 	}
 }

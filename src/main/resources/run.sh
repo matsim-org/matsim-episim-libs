@@ -11,7 +11,7 @@
 date
 hostname
 
-classpath="matsim-episim-1.0-SNAPSHOT.jar"
+classpath="matsim-episim-*-SNAPSHOT.jar"
 
 echo "***"
 echo "classpath: $classpath"

@@ -34,6 +34,7 @@ container = container.join(pd.DataFrame.from_dict(extra, orient="index")).sort_i
 
 #%%
 
+
 def read_events(f, act=None, lookup=True):
     data = []
 
@@ -49,7 +50,7 @@ def read_events(f, act=None, lookup=True):
     return pd.DataFrame(data).astype(dtype={"duration": "float", "groupSize": "int",
                                      "type": "str", "actType": "str", "container": "str"})
 
-events = read_events("data/groupSizes/day_wt.xml.gz")
+#events = read_events("data/groupSizes/day_wt.xml.gz")
 
 #%%
 
@@ -57,6 +58,65 @@ ev_work = events[events.actType.str.contains("work")].dropna()
 ev_leis = events[events.actType.str.contains("leisure")].dropna()
 ev_visit = events[events.actType.str.contains("visit")].dropna()
 ev_errands = events[events.actType.str.contains("errands")].dropna()
+
+#%%
+
+wt = read_events("C:/Users/chris/Development/matsim-org/matsim-episim/output-snzWeekScenario-25%/events/day_004.xml.gz", lookup=False)
+sa = read_events("C:/Users/chris/Development/matsim-org/matsim-episim/output-snzWeekScenario-25%/events/day_005.xml.gz", lookup=False)
+so = read_events("C:/Users/chris/Development/matsim-org/matsim-episim/output-snzWeekScenario-25%/events/day_006.xml.gz", lookup=False)
+
+#%%
+
+from collections import Counter
+
+def count_contacts(contacts, types):
+
+    data = {}
+    for t in types:
+        data[t] = Counter()
+    
+    for c in contacts.itertuples():
+        
+        for t in data.values():
+            if c.person not in t:
+                t[c.person] = 0
+                
+            if c.contactPerson not in t:
+                t[c.contactPerson] = 0
+        
+        for t in types:
+            if t in c.actType:
+                data[t][c.person] += 1
+                data[t][c.contactPerson] += 1
+
+            
+    df = None
+
+    for k,v in data.items():    
+        
+        series = pd.Series(v, name=k)
+        if df is None:
+            df = series.to_frame(k)
+        else:
+            df = df.append(series)
+
+    return df
+
+#%%
+
+wt_df = count_contacts(wt, ["leisure"]).rename(columns={"leisure" : "wt"})
+sa_df = count_contacts(sa, ["leisure"]).rename(columns={"leisure" : "sa"})
+so_df = count_contacts(so, ["leisure"]).rename(columns={"leisure" : "so"})
+
+#%%
+
+df = pd.concat([wt_df, sa_df, so_df], axis=1, join="inner").fillna(0)
+
+sns.histplot(df.melt(var_name="day", value_name="contacts"), 
+             x="contacts", binwidth=1, hue="day", multiple="dodge")
+plt.xlim(0, 15)
+
+#%%
 
 #%%
 

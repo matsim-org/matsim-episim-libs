@@ -176,11 +176,15 @@ def aggregate_batch_run(run):
     # run id to aggregated id
     idMap = {}
     info = None
+    metadata = None
 
     with zipfile.ZipFile(run) as z:
 
         with z.open("_info.txt") as f:
             info = pd.read_csv(f, sep=";")
+
+        with z.open("metadata.yaml") as f:
+            metadata = f.read()
 
         params = set(info.columns).difference({'RunScript', 'Config', 'RunId', 'Output'})
         woSeed = params.difference({'seed'})
@@ -217,21 +221,43 @@ def aggregate_batch_run(run):
                         sep=";", mode="w", line_terminator="\n", index=False)
             buf.flush()
 
+        with z.open("metadata.yaml", "w") as zf:
+            zf.write(metadata)
+
         for runId, files in runs.items():
-            for filename, dfs in files.items():
-                concat = pd.concat(dfs)
-                by_row_index = concat.groupby(concat.index)
-                means = by_row_index.mean()
 
-                # attach non numeric columns without aggregating
-                nonNumeric = dfs[0].columns.difference(means.columns)
-                for column in nonNumeric:
-                    means[column] = dfs[0][column]
+            zip_buffer = io.BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w", compresslevel=9, compression=zipfile.ZIP_DEFLATED) as zInner:
 
-                with z.open(str(runId) + "." + filename, "w") as zf:
-                    buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
-                    means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
-                    buf.flush()
+                for filename, dfs in files.items():
+                    concat = pd.concat(dfs)
+                    by_row_index = concat.groupby(concat.index)
+
+                    # Ignore files that can't be aggregated
+                    try:
+                        means = by_row_index.mean()
+                    except Exception as e:
+                        continue
+
+                    # attach non numeric columns without aggregating
+                    nonNumeric = dfs[0].columns.difference(means.columns)
+
+                    for column in nonNumeric:
+                        means[column] = dfs[0][column]
+
+                    if "day" in means:
+                        # make sure days are integer
+                        if means.dtypes.day != np.int64:
+                            print("WARN: day is not integer in run: %s, file: %s" % (runId, filename))
+                            means.day = dfs[0].day
+
+                    with zInner.open(str(runId) + "." + filename, "w") as zf:
+                        buf = io.TextIOWrapper(zf, encoding="utf8", newline="\n")
+                        means.to_csv(buf, sep="\t", columns=list(dfs[0].columns), mode="w", line_terminator="\n", index=False)
+                        buf.flush()
+
+            with z.open("summaries/" + str(runId) + ".zip", "w") as f:
+                f.write(zip_buffer.getvalue())
 
 
 def calc_r_reduction(base_case, base_variables, df, group_by=None):

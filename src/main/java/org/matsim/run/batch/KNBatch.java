@@ -78,6 +78,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse( episimConfig.getPolicy() );
 //			builder.restrict("2020-11-01", Restriction.ofCiCorrection( params.ciCorrLeisFrmNov ), "leisure" );
 			builder.apply(params.leisFctDate, "2021-12-31", (date, map) -> map.put("fraction", 1 - params.leisFct * (1 - (double) map.get("fraction" )) ) , "leisure" );
+			builder.apply( "2020-12-24","2020-12-26", (date,map) -> map.put("fraction",1.), "leisure");
 			episimConfig.setPolicy( FixedPolicy.class, builder.build() );
 		}
 
@@ -138,7 +139,7 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		@Parameter({17.5}) double tMidSpring;
 		@Parameter({0.0}) double ythSusc;
 		@IntParameter( {16} ) int grwnUpAge;
-		@Parameter({1.5}) double leisFct;
+		@Parameter({2.0}) double leisFct;
 		@StringParameter( {"2020-10-15"} ) String leisFctDate;
 		@Parameter({0.}) double imprtFctAftJun;
 		@IntParameter({0}) int trcCapNInf;
