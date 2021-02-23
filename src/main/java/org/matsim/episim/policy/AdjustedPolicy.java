@@ -52,6 +52,11 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 	private final Map<String, SortedSet<LocalDate>> periods = new HashMap<>();
 
 	/**
+	 * Activities excluded from reduction.
+	 */
+	private final Set<String> excluded = new HashSet<>();
+
+	/**
 	 * Config builder for fixed policy.
 	 */
 	public static ConfigBuilder config() {
@@ -79,6 +84,10 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 			((List<String>) e.getValue().unwrapped()).forEach(d -> dates.add(LocalDate.parse(d)));
 
 			periods.put(e.getKey(), dates);
+
+			if (config.getConfig("excluded").hasPath(e.getKey()))
+				excluded.add(e.getKey());
+
 		}
 
 
@@ -148,7 +157,8 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 
 			administrative.add(e.getKey());
 
-			outOfHomeDuration -= (1 - frac) * simDurations.get(today.getDayOfWeek()).getDouble(e.getKey());
+			if (!excluded.contains(e.getKey()))
+				outOfHomeDuration -= (1 - frac) * simDurations.get(today.getDayOfWeek()).getDouble(e.getKey());
 
 		}
 
@@ -225,9 +235,25 @@ public final class AdjustedPolicy extends ShutdownPolicy {
 		 * @param periods arguments of (multiple) from and to date
 		 */
 		public ConfigBuilder administrativePeriod(String activity, LocalDate... periods) {
+			administrativePeriod(activity, false, periods);
+			return this;
+		}
+
+		/**
+		 * Configure periods during which an activity will be restricted according to {@link #administrativePolicy(FixedPolicy.ConfigBuilder)}.
+		 *
+		 * @param excludeFromReduction the activity durations are not counted into the reduction
+		 * @param periods              arguments of (multiple) from and to date
+		 */
+		public ConfigBuilder administrativePeriod(String activity, boolean excludeFromReduction, LocalDate... periods) {
 
 			Map<String, List<String>> map = (Map<String, List<String>>) params.computeIfAbsent("periods", k -> new HashMap<>());
 			map.put(activity, Arrays.stream(periods).map(LocalDate::toString).collect(Collectors.toList()));
+
+			Map<String, Boolean> excluded = (Map<String, Boolean>) params.computeIfAbsent("excluded", k -> new HashMap<>());
+
+			if (excludeFromReduction)
+				excluded.put(activity, true);
 
 			return this;
 		}
