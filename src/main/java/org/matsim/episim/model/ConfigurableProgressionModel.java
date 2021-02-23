@@ -476,7 +476,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private void testAndQuarantine(EpisimPerson person, int day) {
 
-		if (!(testingConfig.getTestingRate() == 1d && rnd.nextDouble() < testingConfig.getTestingRate()))
+		if (testingConfig.getTestingRate() != 1d && rnd.nextDouble() >= testingConfig.getTestingRate())
 			return;
 
 		DiseaseStatus status = person.getDiseaseStatus();
