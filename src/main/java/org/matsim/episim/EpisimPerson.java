@@ -37,10 +37,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -128,6 +125,11 @@ public final class EpisimPerson implements Attributable {
 	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
 
 	/**
+	 * Current {@link TestStatus}.
+	 */
+	private TestStatus testStatus = TestStatus.untested;
+
+	/**
 	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
 	 */
 	private int vaccinationDate = -1;
@@ -136,6 +138,12 @@ public final class EpisimPerson implements Attributable {
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
 	private int quarantineDate = -1;
+
+	/**
+	 * Iteration when this person was tested. Negative if person was never tested.
+	 */
+	private int testDate = -1;
+
 	private int currentPositionInTrajectory;
 
 	/**
@@ -234,6 +242,8 @@ public final class EpisimPerson implements Attributable {
 		quarantineDate = in.readInt();
 		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
 		vaccinationDate = in.readInt();
+		testStatus = TestStatus.values()[in.readInt()];
+		testDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
 	}
@@ -284,6 +294,8 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(quarantineDate);
 		out.writeInt(vaccinationStatus.ordinal());
 		out.writeInt(vaccinationDate);
+		out.writeInt(testStatus.ordinal());
+		out.writeInt(testDate);
 		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
 	}
@@ -336,6 +348,15 @@ public final class EpisimPerson implements Attributable {
 		this.vaccinationDate = iteration;
 	}
 
+	public TestStatus getTestStatus() {
+		return testStatus;
+	}
+
+	public void setTestStatus(TestStatus testStatus, int iteration) {
+		this.testStatus = testStatus;
+		this.testDate = iteration;
+	}
+
 	/**
 	 * Days elapsed since a certain status was set.
 	 * This will always round the change as if it happened on the start of a day.
@@ -382,13 +403,21 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public int daysSince(VaccinationStatus status, int currentDay) {
 		if (status != VaccinationStatus.yes) throw new IllegalArgumentException("Only supports querying when person was vaccinated");
-		if (currentDay < 0) throw new IllegalStateException("Person was never vaccinated");
+		if (vaccinationDate < 0) throw new IllegalStateException("Person was never vaccinated");
 
 		return currentDay - vaccinationDate;
 	}
 
-	int getQuarantineDate() {
-		return this.quarantineDate;
+	/**
+	 * Days elapsed since person got its first vaccination.
+	 *
+	 * @param currentDay current day (iteration)
+	 */
+	public int daysSinceTest(int currentDay) {
+		if (testDate < 0)
+			return Integer.MAX_VALUE;
+
+		return currentDay - testDate;
 	}
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
@@ -471,6 +500,18 @@ public final class EpisimPerson implements Attributable {
 
 	int getEndOfDay(DayOfWeek day) {
 		return endOfDay[day.getValue() - 1];
+	}
+
+	/**
+	 * Check whether a person has one of the given activities on a certain week day.
+	 */
+	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			if (activities.contains(trajectory.get(i).params.getContainerName()))
+				return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -582,6 +623,11 @@ public final class EpisimPerson implements Attributable {
 	 * Quarantine status of a person.
 	 */
 	public enum QuarantineStatus {full, atHome, no}
+
+	/**
+	 * Latest test result of this persons.
+	 */
+	public enum TestStatus {untested, positive, negative}
 
 	/**
 	 * Status of vaccination.
