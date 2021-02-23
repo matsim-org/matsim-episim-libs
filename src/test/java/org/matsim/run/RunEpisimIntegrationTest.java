@@ -178,6 +178,7 @@ public class RunEpisimIntegrationTest {
 		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 		testingConfig.setActivities(List.of("edu", "leisure"));
 		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+		testingConfig.setTestingRate(0.8);
 
 		runner.run(it);
 	}
