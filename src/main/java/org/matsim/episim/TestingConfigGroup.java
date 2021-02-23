@@ -33,12 +33,12 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Probability that a not infected person is reported as positive.
 	 */
-	private double falsePositiveRate = 0.97;
+	private double falsePositiveRate = 0.03;
 
 	/**
 	 * Probability that an infected person is not identified.
 	 */
-	private double falseNegativeRate = 0.90;
+	private double falseNegativeRate = 0.1;
 
 	/**
 	 * Share of people that are tested (if applicable for a test)
