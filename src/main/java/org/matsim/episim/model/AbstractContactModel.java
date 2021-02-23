@@ -185,7 +185,7 @@ public abstract class AbstractContactModel implements ContactModel {
 			double current = (container.getPersons().size() * episimConfig.getSampleSize()) / container.getNumSpaces();
 
 			// always false if current < reduced size
-			boolean out = rnd.nextDouble() > reducedGroupSize / current;
+			boolean out = ReplayEventsTask.getThreadRnd(rnd).nextDouble() > reducedGroupSize / current;
 
 			// don'T return true, other conditions might be false
 			if (out) return false;
@@ -206,7 +206,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (r.getRemainingFraction() == 0)
 			return false;
 
-		return rnd.nextDouble() < r.getRemainingFraction();
+		return ReplayEventsTask.getThreadRnd(rnd).nextDouble() < r.getRemainingFraction();
 
 	}
 
@@ -299,46 +299,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	 * Sets the infection status of a person and reports the event.
 	 */
 	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType, double prob, EpisimContainer<?> container) {
-
-		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
-			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
-		}
-		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {
-			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
-		}
-		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
-			throw new IllegalStateException("Person to be infected is in full quarantine.");
-		}
-		if (infector.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
-			throw new IllegalStateException("Infector is in ful quarantine.");
-		}
-		if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
-			throw new IllegalStateException("Person and infector are not in same container!");
-		}
-
-		// TODO: during iteration persons can get infected after 24h
-		// this can lead to strange effects / ordering of events, because it is assumed one iteration is one day
-		// now is overwritten to be at the end of day
-		if (now >= EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60, iteration)) {
-			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
-		}
-
-		String infType = infectionType.toString();
-
-		reporting.reportInfection(personWrapper, infector, now, infType, infector.getVirusStrain(), prob, container);
-		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
-		personWrapper.setVirusStrain(infector.getVirusStrain());
-		personWrapper.setInfectionContainer(container);
-		personWrapper.setInfectionType(infType);
-
-		// TODO: Currently not in use, is it still needed?
-		// Necessary for the otfvis visualization (although it is unfortunately not working).  kai, apr'20
-		if (scenario != null) {
-			final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
-			if (person != null) {
-				person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
-			}
-		}
+		personWrapper.possibleInfection(new InfectionInfo(personWrapper, infector, now, infectionType, prob, container, episimConfig, iteration, scenario, reporting));
 	}
 
 	public Map<String, Restriction> getRestrictions() {

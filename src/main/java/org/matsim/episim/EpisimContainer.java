@@ -113,6 +113,11 @@ public class EpisimContainer<T> {
 		}
 	}
 
+	boolean containsPerson(EpisimPerson person) {
+		final int index = person.getPersonId().index();
+		return persons.contains(index);
+	}
+
 	void addPerson(EpisimPerson person, double now) {
 		final int index = person.getPersonId().index();
 

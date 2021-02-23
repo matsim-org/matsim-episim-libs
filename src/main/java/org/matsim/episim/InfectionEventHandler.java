@@ -265,7 +265,6 @@ public final class InfectionEventHandler implements Externalizable {
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
-					// Add person to container if it starts its day with end activity
 					if (person.getFirstFacilityId(day) == null) {
 						// person may already be there because of previous day
 						if (person.getCurrentContainer() != facility) {
@@ -279,6 +278,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 						person.setFirstFacilityId(facility.getContainerId(), day);
 					}
+					
 
 					handleEvent((ActivityEndEvent) event);
 				}
@@ -473,12 +473,11 @@ public final class InfectionEventHandler implements Externalizable {
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
 
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
+		// create pseudo facility id that includes the activity type:
+		Id<ActivityFacility> episimFacilityId = activityEndEvent.getFacilityId();
 
-		EpisimFacility episimFacility = (EpisimFacility) episimPerson.getCurrentContainer();
-		assert (episimFacility.equals(pseudoFacilityMap.get(activityEndEvent.getFacilityId()))) :
-				"Person=" + episimPerson.getPersonId().toString() + " has activity end event at facility=" +
-						activityEndEvent.getFacilityId() + " but actually is at facility=" + episimFacility.getContainerId().toString();
-
+		// find the facility
+		EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
 
@@ -631,6 +630,11 @@ public final class InfectionEventHandler implements Externalizable {
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
+		for (EpisimPerson person : personMap.values()) {
+			// stf: I think this must be done before the "beforeStateUpdates" call
+			person.checkInfection();
+		}
+		
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {

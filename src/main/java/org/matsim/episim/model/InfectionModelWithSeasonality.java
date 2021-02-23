@@ -78,7 +78,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		if (!act1.isSeasonal() && !act2.isSeasonal()) return 1.;
 
 		double indoorOutdoorFactor = 1.;
-		if (rnd.nextDouble() < outdoorFraction) {
+		if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < outdoorFraction) {
 			indoorOutdoorFactor = 0.1;
 		}
 

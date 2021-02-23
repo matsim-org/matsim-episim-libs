@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.InfectionInfo;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
@@ -41,6 +42,7 @@ import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -94,10 +96,21 @@ public final class EpisimPerson implements Attributable {
 	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
 
 	/**
-	 * The {@link EpisimContainer} the person is currently located in.
+	 * In the parallel version of the {@link ReplayHandler}, a person can 
+	 * be at different {@link EpisimContainer} at the same time. 	
+	 * With the currentContainers we track in which container is at the end of the day,
+	 * this information is used in checkAndHandleEndOfNonCircularTrajectory.	
 	 */
-	private EpisimContainer<?> currentContainer = null;
+	private ConcurrentLinkedQueue<EpisimContainer<?>> currentContainers = new ConcurrentLinkedQueue<EpisimContainer<?>>();
 
+	/**
+	 * In the parallel version of the {@link ReplayHandler}, the infections 
+	 * are not happen in a chronically order. The earliestInfections 
+	 * check therefore, that the first infection is valued as the important 
+	 * infection	
+	 */
+	private InfectionInfo earliestInfections = null;
+	
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
 	 */
@@ -203,15 +216,16 @@ public final class EpisimPerson implements Attributable {
 		if (in.readBoolean()) {
 			boolean isVehicle = in.readBoolean();
 			String name = readChars(in);
-			if (isVehicle) {
-				currentContainer = vehicles.get(Id.create(name, Vehicle.class));
-			} else
-				currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
+			// if (isVehicle) {
+			// 	currentContainer = vehicles.get(Id.create(name, Vehicle.class));
+			// } else
+			// 	currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
 
-			if (currentContainer == null)
-				throw new IllegalStateException("Could not reconstruct container: " + name);
-		} else
-			currentContainer = null;
+			// if (currentContainer == null)
+			// 	throw new IllegalStateException("Could not reconstruct container: " + name);
+		}
+		// else
+		// 	currentContainer = null;
 
 		if (in.readBoolean()){
 			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
@@ -255,11 +269,14 @@ public final class EpisimPerson implements Attributable {
 			out.writeDouble(e.getValue());
 		}
 
-		out.writeBoolean(currentContainer != null);
-		if (currentContainer != null) {
-			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
-			writeChars(out, currentContainer.getContainerId().toString());
-		}
+		// stf: can we change the stream (e.g. remove the following block here
+		// and the corresponding part for read) or will this break e.g. the tests?
+		//out.writeBoolean(currentContainer != null);
+		out.writeBoolean(false);
+		// if (currentContainer != null) {
+		// 	out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
+		// 	writeChars(out, currentContainer.getContainerId().toString());
+		// }
 
 		out.writeBoolean(infectionContainer != null);
 		if (infectionContainer != null) {
@@ -302,6 +319,17 @@ public final class EpisimPerson implements Attributable {
 			statusChanges.put(status, now);
 
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
+	}
+
+	synchronized public void possibleInfection(InfectionInfo info){
+		if (earliestInfections == null || info.getNow() < earliestInfections.getNow()) {
+			earliestInfections = info;
+		}
+	}
+	
+	public void checkInfection(){
+		if (earliestInfections != null)
+			earliestInfections.checkInfection();
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
@@ -391,7 +419,7 @@ public final class EpisimPerson implements Attributable {
 		return this.quarantineDate;
 	}
 
-	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
+	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
@@ -403,7 +431,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Get all traced contacts that happened after certain time.
 	 */
-	public List<EpisimPerson> getTraceableContactPersons(double after) {
+	public synchronized List<EpisimPerson> getTraceableContactPersons(double after) {
 		return traceableContactPersons.object2DoubleEntrySet()
 				.stream().filter(p -> p.getDoubleValue() >= after)
 				.map(Map.Entry::getKey)
@@ -482,23 +510,35 @@ public final class EpisimPerson implements Attributable {
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 	}
 
-	public EpisimContainer<?> getCurrentContainer() {
-		return currentContainer;
+	/**
+	 * Add the container to the currentContainers queue. This is called
+	 * from the multithreaded {@link ReplayHandler}, so it's possible 
+	 * that a person is in multiple containers at the same time.	
+	 */
+	public void setCurrentContainer(EpisimContainer<?> container) {
+		currentContainers.add(container);
+	}
+
+	public void removeCurrentContainer(EpisimContainer<?> container) {
+		boolean success = currentContainers.remove(container);
+		assert success : "Person=" + getPersonId().toString() + " should be removed from container "
+				+ container.getContainerId().toString() + " but this container is not in currentContainers";
+	}
+
+	public boolean isInContainer() {
+		return currentContainers.size() > 0;
 	}
 
 	/**
-	 * Set the container the person is currently contained in. {@link #removeCurrentContainer(EpisimContainer)} must be called before a new
-	 * container can be set.
-	 */
-	public void setCurrentContainer(EpisimContainer<?> container) {
-		if (this.currentContainer != null)
-			throw new IllegalStateException(String.format("Person in more than one container at once. Person=%s in %s and %s",
-					this.getPersonId(), container.getContainerId(), this.currentContainer.getContainerId()));
-
-
-		this.currentContainer = container;
+	 * This function returns only sensible results after the ReplayHandler.replayEvents 
+	 * method is finished	
+	 */	
+	public EpisimContainer<?> getCurrentContainer() {
+		assert currentContainers.size() < 2
+				: "getCurrentContainer should not be called in the parallel part of the code"; 
+		return currentContainers.peek();
 	}
-
+	
 	@Override
 	public Attributes getAttributes() {
 		return attributes;
@@ -514,17 +554,6 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Whether person is currently in a container.
 	 */
-	public boolean isInContainer() {
-		return currentContainer != null;
-	}
-
-	public void removeCurrentContainer(EpisimContainer<?> container) {
-		if (this.currentContainer != container)
-			throw new IllegalStateException(String.format("Person is currently in %s, but not in removed one %s", currentContainer, container));
-
-		this.currentContainer = null;
-	}
-
 	Id<ActivityFacility> getFirstFacilityId(DayOfWeek day) {
 		return firstFacilityId[day.getValue() - 1];
 	}
@@ -552,7 +581,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Add amount of time to spent time for an activity.
 	 */
-	public void addSpentTime(String actType, double timeSpent) {
+	public synchronized void addSpentTime(String actType, double timeSpent) {
 		spentTime.mergeDouble(actType, timeSpent, Double::sum);
 	}
 

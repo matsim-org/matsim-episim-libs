@@ -90,7 +90,7 @@ public final class SqrtContactModel extends AbstractContactModel {
 			Gbl.assertIf( maxPersonsInContainer>1 );
 			// ==1 should not happen because if ever not more than 1 person in container, then method exits already earlier.  ???
 
-			if ( rnd.nextDouble() >= episimConfig.getMaxContacts()/Math.sqrt(maxPersonsInContainer-1) ) {
+			if ( ReplayEventsTask.getThreadRnd(rnd).nextDouble() >= episimConfig.getMaxContacts()/Math.sqrt(maxPersonsInContainer-1) ) {
 				continue;
 			}
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
@@ -184,14 +184,14 @@ public final class SqrtContactModel extends AbstractContactModel {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-				if (rnd.nextDouble() < prob)
+				if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
 						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
-				if (rnd.nextDouble() < prob)
+				if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}

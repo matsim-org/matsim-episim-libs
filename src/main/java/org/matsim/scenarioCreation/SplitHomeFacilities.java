@@ -221,7 +221,7 @@ public class SplitHomeFacilities implements Callable<Integer> {
 			log.info("Processing event file {}", events);
 
 			episimConfig.setInputEventsFile(events.toString());
-			ReplayHandler replay = new ReplayHandler(episimConfig, null);
+			ReplayHandler replay = new ReplayHandler(rnd, episimConfig, null);
 			EventsManager manager = EventsUtils.createEventsManager();
 
 			String eventName = events.getFileName().toString().replace(".xml.gz", "") + "_split.xml.gz";

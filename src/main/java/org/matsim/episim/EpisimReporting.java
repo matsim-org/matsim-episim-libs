@@ -412,7 +412,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		strains.mergeInt(strain, 1, Integer::sum);
 		manager.processEvent(new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-				personWrapper.getCurrentContainer().getContainerId(), infectionType));
+													  container.getContainerId(), infectionType));
 
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];
@@ -435,7 +435,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 *
 	 * @see EpisimContactEvent
 	 */
-	public void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
+	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
 							  StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {

@@ -42,12 +42,14 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
+import org.matsim.episim.ReplayEventsTask;
+
 import org.matsim.facilities.ActivityFacility;
 
 import javax.annotation.Nullable;
 import java.time.DayOfWeek;
 import java.util.*;
-
+import java.util.concurrent.*;
 
 /**
  * Handler that replays events from {@link EpisimConfigGroup#getInputEventsFile()} with corrected time and attributes.
@@ -69,7 +71,7 @@ public final class ReplayHandler {
 	/**
 	 * Rng for leisure adjustment.
 	 */
-	private SplittableRandom rnd;
+	private SplittableRandom leisureRnd;
 	/**
 	 * Number of adjusted leisure activities.
 	 */
@@ -79,6 +81,9 @@ public final class ReplayHandler {
 	 */
 	private final EpisimConfigGroup episimConfig;
 
+	private static final int NUM_THREADS = 4;
+
+	private final SplittableRandom rnd;
 
 	private final Scenario scenario;
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
@@ -87,13 +92,14 @@ public final class ReplayHandler {
 	 * Constructor with optional scenario. Events will be read from given {@link EpisimConfigGroup#getInputEventsFiles()}.
 	 */
 	@Inject
-	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
+	public ReplayHandler(SplittableRandom rnd, EpisimConfigGroup config, @Nullable Scenario scenario) {
 		this.scenario = scenario;
 		this.episimConfig = config;
+		this.rnd = rnd;
 
 		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
 
-			rnd = new SplittableRandom(0);
+			leisureRnd = new SplittableRandom(0);
 
 			List<Event> eventsForDay = new ArrayList<>();
 			EventsManager manager = EventsUtils.createEventsManager();
@@ -130,27 +136,24 @@ public final class ReplayHandler {
 	 *
 	 * @param events ordered events for all weekdays
 	 */
-	public ReplayHandler(Map<DayOfWeek, List<Event>> events) {
+	public ReplayHandler(SplittableRandom rnd, Map<DayOfWeek, List<Event>> events) {
 		this.events.putAll(events);
 		this.scenario = null;
 		this.episimConfig = null;
+		this.rnd = rnd;
 	}
 
 	/**
 	 * Replays event add modifies attributes based on current iteration.
 	 */
 	public void replayEvents(final InfectionEventHandler infectionHandler, DayOfWeek day) {
-		for (final Event e : events.get(day)) {
-			if (e instanceof ActivityStartEvent) {
-				infectionHandler.handleEvent((ActivityStartEvent) e);
-			} else if (e instanceof ActivityEndEvent) {
-				infectionHandler.handleEvent((ActivityEndEvent) e);
-			} else if (e instanceof PersonEntersVehicleEvent) {
-				infectionHandler.handleEvent((PersonEntersVehicleEvent) e);
-			} else {
-				infectionHandler.handleEvent((PersonLeavesVehicleEvent) e);
-			}
+		var futures = new CompletableFuture[NUM_THREADS];
+		for (int i = 0; i < NUM_THREADS; i++) {
+			ReplayEventsTask task =  new ReplayEventsTask(infectionHandler, events.get(day), i, NUM_THREADS, rnd.split());
+			futures[i] = CompletableFuture.runAsync(task);
 		}
+
+		CompletableFuture.allOf(futures).join();
 	}
 
 	/**
@@ -212,7 +215,7 @@ public final class ReplayHandler {
 					// adjust person during the first 3.6h
 					// valid comparison because of .intern()
 					if (time < 13000 && actType.equals("leisure")) {
-						time -= Math.min(time - 1, 13000 * rnd.nextDouble());
+						time -= Math.min(time - 1, 13000 * leisureRnd.nextDouble());
 						adjusted++;
 					}
 				}
