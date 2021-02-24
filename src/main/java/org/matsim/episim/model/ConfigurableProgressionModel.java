@@ -448,7 +448,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
 			return;
 
-		if (testingCapacity <= 0)
+		if (testingCapacity <= 0 || testingConfig.getTestingRate() == 0)
 			return;
 
 		// person with positive test is not tested twice
