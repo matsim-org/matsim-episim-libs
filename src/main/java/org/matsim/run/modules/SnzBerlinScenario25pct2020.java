@@ -30,6 +30,7 @@ import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.input.ActivityParticipation;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
@@ -141,6 +142,94 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		return restrictions;
 	}
+
+
+	private static AdaptivePolicy.ConfigBuilder adaptivePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
+															   long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+															   boolean restrictUniversities) throws IOException {
+		// note that there is already a builder around this
+		AdaptivePolicy.ConfigBuilder restrictions;
+
+		if (activityParticipation == null) restrictions = AdaptivePolicy.config();
+		else restrictions = activityParticipation.createPolicy();
+
+		if (restrictSchoolsAndDayCare) {
+			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+					.restrict("2020-03-14", 0., "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2020-05-11", 0.3, "educ_primary")
+					.restrict("2020-05-11", 0.2, "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2020-05-25", 0.3, "educ_kiga")
+					.restrict("2020-06-08", 0.5, "educ_kiga")
+					.restrict("2020-06-22", 1., "educ_kiga")
+					//Sommerferien
+					.restrict("2020-06-25", 0.2, "educ_primary")
+					//Ende der Sommerferien
+					.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					//Lueften nach den Sommerferien
+					.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+					//Herbstferien
+					.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					//Weihnachtsferien (vorgezogen)
+					.restrict("2020-12-16", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					//			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2021-01-03", 0.5, "educ_kiga")
+					.restrict("2021-01-03", 0.3, "educ_primary")
+					//			//Winterferien
+					.restrict("2021-02-01", 0.2, "educ_primary")
+					.restrict("2021-02-07", 0.3, "educ_primary")
+
+					.restrict("2021-02-22", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other",  "educ_kiga")
+					//Osterferien
+					.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					//Sommerferien
+					.restrict("2021-06-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+					.restrict("2021-08-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			;
+		}
+
+		if (restrictUniversities ) {
+			restrictions.restrict("2020-03-14", 0., "educ_higher")
+					.restrict("2020-05-11", 0.2, "educ_higher")
+			;
+		}
+
+		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
+
+			String date = e.getKey();
+			Double ciCorrection = e.getValue();
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "pt");
+		}
+
+
+		if (maskCompliance == 0) return restrictions;
+
+		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
+		double clothFraction = maskCompliance * 0.9;
+		double surgicalFraction = maskCompliance * 0.1;
+		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
+		// in MUC and elsewhere!
+
+		for (int ii = 0; ii <= introductionPeriod; ii++) {
+			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
+			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other", "errands");
+		}
+
+		// mask compliance according to bvg
+		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+
+		restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
+
+		return restrictions;
+	}
+
+
 
 	@Provides
 	@Singleton
