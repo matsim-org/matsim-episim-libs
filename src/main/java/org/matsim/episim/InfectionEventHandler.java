@@ -451,6 +451,8 @@ public final class InfectionEventHandler implements Externalizable {
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
 
+		reporting.handleEvent(activityStartEvent);
+
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
 
@@ -471,6 +473,8 @@ public final class InfectionEventHandler implements Externalizable {
 	public void handleEvent(ActivityEndEvent activityEndEvent) {
 //		double now = activityEndEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
+
+		reporting.handleEvent(activityEndEvent);
 
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
 
@@ -494,6 +498,8 @@ public final class InfectionEventHandler implements Externalizable {
 //		double now = entersVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);
 
+		reporting.handleEvent(entersVehicleEvent);
+
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());
 
@@ -509,6 +515,8 @@ public final class InfectionEventHandler implements Externalizable {
 	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
 //		double now = leavesVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);
+
+		reporting.handleEvent(leavesVehicleEvent);
 
 		// find vehicle:
 		EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());

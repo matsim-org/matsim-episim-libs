@@ -593,7 +593,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			writer.append(events, event);
 
-		} else if (writeEvents == EpisimConfigGroup.WriteEvents.all) {
+		} else if (writeEvents == EpisimConfigGroup.WriteEvents.all || writeEvents == EpisimConfigGroup.WriteEvents.input) {
 
 			// All non-epism events need a corrected timestamp
 			writer.append(events, event,
