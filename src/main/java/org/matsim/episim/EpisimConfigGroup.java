@@ -837,6 +837,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Write basic events like infections or disease status change.
 		 */
 		episim,
+
+		/**
+		 * Write the input event each day.
+		 */
+		input,
+
 		/**
 		 * Write additional contact tracing events.
 		 */

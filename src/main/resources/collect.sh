@@ -46,6 +46,8 @@ aggregate_run() {
     copy_output *.diseaseImport.tsv $tmp/$run
     copy_output *.outdoorFraction.tsv $tmp/$run
     copy_output *.strains.tsv $tmp/$run
+    copy_output *.config.xml $tmp/$run
+
     for OUTPUT in *.post.*.*; do
         copy_output $OUTPUT $tmp/$run
     done
