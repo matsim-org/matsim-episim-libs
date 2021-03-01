@@ -1,26 +1,21 @@
 package org.matsim.episim.model.input;
 
 import com.google.common.collect.Iterables;
-import com.google.common.io.Resources;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.analysis.ParametricUnivariateFunction;
-import org.apache.commons.math3.fitting.WeightedObservedPoint;
-import org.apache.commons.math3.stat.regression.SimpleRegression;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.FixedPolicy;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
@@ -95,8 +90,6 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
 		Map<LocalDate, Double> days = readInput(input, "notAtHomeExceptLeisureAndEdu", alpha);
 
-		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
-				.stream().map(LocalDate::parse).collect(Collectors.toSet());
 
 		// activities to set:
 		String[] act = episimConfig.getInfectionParams().stream()
@@ -105,76 +98,25 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 				.toArray(String[]::new);
 
 		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
-		LocalDate end = Iterables.getLast(days.keySet());
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
 		// trend used for extrapolation
 		List<Double> trend = new ArrayList<>();
 
-		while (start.isBefore(end)) {
-
-			List<Double> values = new ArrayList<>();
-			for (int i = 0; i < 7; i++) {
-				LocalDate day = start.plusDays(i);
-				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
-						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
-					values.add(days.get(day));
-				}
-			}
-			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
-			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
-
+		ActivityParticipation.resampleAvgWeekday(days, start, (date, avg) -> {
 			trend.add(avg);
-
-			// calc next sunday:
-			int n = 7 - start.getDayOfWeek().getValue() % 7;
-			builder.restrict(start, avg, act);
-			start = start.plusDays(n);
-		}
-
+			builder.restrict(date, avg, act);
+		});
 
 		// Use last weeks for the trend
-		trend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
+		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
 		start = start.plusDays(7);
 
-		if (extrapolation == EpisimUtils.Extrapolation.linear) {
-			int n = trend.size();
-
-			SimpleRegression reg = new SimpleRegression();
-			for (int i = 0; i < n; i++) {
-				reg.addData(i, trend.get(i));
-			}
-
-			// continue the trend
-			for (int i = 0; i < 8; i++) {
-				builder.restrict(start, Math.min(reg.predict(n + i), 1), act);
-				// System.out.println(start + " " + reg.predict(n + i));
-				start = start.plusDays(7);
-			}
-
-		} else if (extrapolation == EpisimUtils.Extrapolation.exponential) {
-			int n = trend.size();
-
-			List<WeightedObservedPoint> points = new ArrayList<>();
-			for (int i = 0; i < n; i++) {
-				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
-			}
-
-			Exponential expFunction = new Exponential();
-			EpisimUtils.FuncFitter fitter = new EpisimUtils.FuncFitter(expFunction);
-			double[] coeff = fitter.fit(points);
-
-			// continue the trend
-			for (int i = 0; i < 25; i++) {
-
-				double predict = expFunction.value(i + n, coeff);
-				// System.out.println(start + " " + predict);
-				builder.restrict(start, Math.min(predict, 1), act);
-				start = start.plusDays(7);
-			}
+		for (Double predict : ActivityParticipation.extrapolate(recentTrend, 25, extrapolation)) {
+			builder.restrict(start, Math.min(predict, 1), act);
+			start = start.plusDays(7);
 		}
-
 
 		return builder;
 	}
