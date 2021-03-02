@@ -4,6 +4,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
+import org.matsim.episim.model.VirusStrain;
 
 import java.util.Map;
 
@@ -19,22 +20,33 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 	static final String INFECTOR = "infector";
 	static final String CONTAINER = "container";
 	static final String INFECTION_TYPE = "infectionType";
+	static final String VIRUS_STRAIN = "virusStrain";
+	static final String PROBABILITY = "probability";
+	static final String GROUP_SIZE = "groupSize";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
 	private final Id<?> containerId;
 	private final String infectionType;
+	private final int groupSize;
+	private final VirusStrain virusStrain;
+	private final double probability;
+
 
 	/**
 	 * Constructor.
 	 */
-	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType) {
+	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
+								int groupSize, VirusStrain strain, double probability) {
 		super(time);
 
 		this.personId = personId;
 		this.infectorId = infectorId;
 		this.containerId = containerId;
 		this.infectionType = infectionType;
+		this.groupSize = groupSize;
+		this.virusStrain = strain;
+		this.probability = probability;
 	}
 
 	@Override
@@ -72,6 +84,9 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 		attr.put(CONTAINER, containerId.toString());
 		attr.put(INFECTOR, infectorId.toString());
 		attr.put(INFECTION_TYPE, infectionType);
+		attr.put(GROUP_SIZE, Integer.toString(groupSize));
+		attr.put(PROBABILITY, Double.toString(probability));
+		attr.put(VIRUS_STRAIN, virusStrain.toString());
 
 		return attr;
 	}

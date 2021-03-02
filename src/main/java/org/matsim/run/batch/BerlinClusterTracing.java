@@ -27,10 +27,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -132,8 +129,8 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		@Inject
 		public CustomProgressionModel(
 				@Named("symptomatic") double symptomatic,
-				SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
-			super(rnd, episimConfig, tracingConfig);
+				SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, TestingConfigGroup testingConfigGroup) {
+			super(rnd, episimConfig, tracingConfig, testingConfigGroup);
 			this.symptomatic = symptomatic;
 		}
 

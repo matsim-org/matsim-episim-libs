@@ -27,6 +27,8 @@ elif ci == "q95":
 
 sns.set_style("whitegrid")
 sns.set_context("paper")
+sns.set_palette("deep")
+
 
 dateFormater = ConciseDateFormatter(AutoDateLocator())
 
@@ -56,6 +58,11 @@ with z.open("79.rValues.txt.csv") as f:
 with z.open("79.diseaseImport.tsv") as f:
     ff = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
     
+with z.open("79.infectionsPerActivity.txt.tsv") as f:
+    af = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+    
+act_order = sorted(set(af.activity))
+    
 z.close()
 
 #%%  Outdoor fraction
@@ -68,12 +75,33 @@ ax.xaxis.set_major_formatter(dateFormater)
 
 plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
 
+#%% Infections per activity
+
+
+fig, axes = plt.subplots(2,1, sharex=True, dpi=250, figsize=(7.5, 5.0))
+
+sns.lineplot(data=af, x="date", y="infections", hue="activity", hue_order=act_order, ax=axes[0])
+sns.lineplot(data=af, x="date", y="infectionsShare", hue="activity", hue_order=act_order, ax=axes[1])
+
+
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
+
+axes[0].set_yscale("symlog")
+
+axes[0].xaxis.set_major_formatter(dateFormater)
+axes[0].yaxis.set_major_formatter(ScalarFormatter())
+
+axes[0].get_legend().remove()
+axes[1].legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=5)
+axes[1].set_ylabel("infection share")
+
+
 
 #%% Reinfections
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
 
-sns.lineplot(data=rf, x="date", y="reinfections", hue="activity", ax=ax)
+sns.lineplot(data=rf, x="date", y="reinfections", hue="activity", hue_order=act_order, ax=ax)
 
 ax.xaxis.set_major_formatter(dateFormater)
 
@@ -92,7 +120,7 @@ sns.lineplot(data=ff, x="date", y="nInfected", ax=ax)
 ax.xaxis.set_major_formatter(dateFormater)
 
 plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-11-01"))
-
+    
 plt.ylabel("Imported cases")
 
 

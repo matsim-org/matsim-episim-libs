@@ -38,10 +38,7 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
@@ -96,21 +93,21 @@ public final class EpisimPerson implements Attributable {
 	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
 
 	/**
-	 * In the parallel version of the {@link ReplayHandler}, a person can 
-	 * be at different {@link EpisimContainer} at the same time. 	
+	 * In the parallel version of the {@link ReplayHandler}, a person can
+	 * be at different {@link EpisimContainer} at the same time.
 	 * With the currentContainers we track in which container is at the end of the day,
-	 * this information is used in checkAndHandleEndOfNonCircularTrajectory.	
+	 * this information is used in checkAndHandleEndOfNonCircularTrajectory.
 	 */
 	private ConcurrentLinkedQueue<EpisimContainer<?>> currentContainers = new ConcurrentLinkedQueue<EpisimContainer<?>>();
 
 	/**
-	 * In the parallel version of the {@link ReplayHandler}, the infections 
-	 * are not happen in a chronically order. The earliestInfections 
-	 * check therefore, that the first infection is valued as the important 
-	 * infection	
+	 * In the parallel version of the {@link ReplayHandler}, the infections
+	 * are not happen in a chronically order. The earliestInfections
+	 * check therefore, that the first infection is valued as the important
+	 * infection
 	 */
 	private InfectionInfo earliestInfections = null;
-	
+
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
 	 */
@@ -141,6 +138,11 @@ public final class EpisimPerson implements Attributable {
 	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
 
 	/**
+	 * Current {@link TestStatus}.
+	 */
+	private TestStatus testStatus = TestStatus.untested;
+
+	/**
 	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
 	 */
 	private int vaccinationDate = -1;
@@ -149,6 +151,12 @@ public final class EpisimPerson implements Attributable {
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
 	private int quarantineDate = -1;
+
+	/**
+	 * Iteration when this person was tested. Negative if person was never tested.
+	 */
+	private int testDate = -1;
+
 	private int currentPositionInTrajectory;
 
 	/**
@@ -248,6 +256,8 @@ public final class EpisimPerson implements Attributable {
 		quarantineDate = in.readInt();
 		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
 		vaccinationDate = in.readInt();
+		testStatus = TestStatus.values()[in.readInt()];
+		testDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
 	}
@@ -301,6 +311,8 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(quarantineDate);
 		out.writeInt(vaccinationStatus.ordinal());
 		out.writeInt(vaccinationDate);
+		out.writeInt(testStatus.ordinal());
+		out.writeInt(testDate);
 		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
 	}
@@ -326,7 +338,7 @@ public final class EpisimPerson implements Attributable {
 			earliestInfections = info;
 		}
 	}
-	
+
 	public void checkInfection(){
 		if (earliestInfections != null)
 			earliestInfections.checkInfection();
@@ -362,6 +374,15 @@ public final class EpisimPerson implements Attributable {
 
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
+	}
+
+	public TestStatus getTestStatus() {
+		return testStatus;
+	}
+
+	public void setTestStatus(TestStatus testStatus, int iteration) {
+		this.testStatus = testStatus;
+		this.testDate = iteration;
 	}
 
 	/**
@@ -410,13 +431,21 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public int daysSince(VaccinationStatus status, int currentDay) {
 		if (status != VaccinationStatus.yes) throw new IllegalArgumentException("Only supports querying when person was vaccinated");
-		if (currentDay < 0) throw new IllegalStateException("Person was never vaccinated");
+		if (vaccinationDate < 0) throw new IllegalStateException("Person was never vaccinated");
 
 		return currentDay - vaccinationDate;
 	}
 
-	int getQuarantineDate() {
-		return this.quarantineDate;
+	/**
+	 * Days elapsed since person got its first vaccination.
+	 *
+	 * @param currentDay current day (iteration)
+	 */
+	public int daysSinceTest(int currentDay) {
+		if (testDate < 0)
+			return Integer.MAX_VALUE;
+
+		return currentDay - testDate;
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
@@ -502,6 +531,18 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Check whether a person has one of the given activities on a certain week day.
+	 */
+	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			if (activities.contains(trajectory.get(i).params.getContainerName()))
+				return true;
+		}
+
+		return false;
+	}
+
+	/**
 	 * Defines that day {@code target} has the same trajectory as {@code source}.
 	 */
 	void duplicateDay(DayOfWeek target, DayOfWeek source) {
@@ -512,8 +553,8 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Add the container to the currentContainers queue. This is called
-	 * from the multithreaded {@link ReplayHandler}, so it's possible 
-	 * that a person is in multiple containers at the same time.	
+	 * from the multithreaded {@link ReplayHandler}, so it's possible
+	 * that a person is in multiple containers at the same time.
 	 */
 	public void setCurrentContainer(EpisimContainer<?> container) {
 		currentContainers.add(container);
@@ -530,15 +571,15 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * This function returns only sensible results after the ReplayHandler.replayEvents 
-	 * method is finished	
-	 */	
+	 * This function returns only sensible results after the ReplayHandler.replayEvents
+	 * method is finished
+	 */
 	public EpisimContainer<?> getCurrentContainer() {
 		assert currentContainers.size() < 2
-				: "getCurrentContainer should not be called in the parallel part of the code"; 
+				: "getCurrentContainer should not be called in the parallel part of the code";
 		return currentContainers.peek();
 	}
-	
+
 	@Override
 	public Attributes getAttributes() {
 		return attributes;
@@ -611,6 +652,11 @@ public final class EpisimPerson implements Attributable {
 	 * Quarantine status of a person.
 	 */
 	public enum QuarantineStatus {full, atHome, no}
+
+	/**
+	 * Latest test result of this persons.
+	 */
+	public enum TestStatus {untested, positive, negative}
 
 	/**
 	 * Status of vaccination.
