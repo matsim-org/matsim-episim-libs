@@ -28,7 +28,7 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
-import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -57,7 +57,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	private static FixedPolicy.ConfigBuilder basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
+	private static FixedPolicy.ConfigBuilder basePolicy(RestrictionInput activityParticipation, Map<String, Double> ciCorrections,
 			 											long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
 														boolean restrictUniversities) throws IOException {
 		// note that there is already a builder around this
@@ -204,7 +204,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private double maskCompliance = 0.95;
 		private boolean restrictSchoolsAndDayCare = true;
 		private boolean restrictUniversities = true;
-		private ActivityParticipation activityParticipation;
+		private RestrictionInput activityParticipation;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
@@ -220,11 +220,11 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.maskCompliance = maskCompliance;
 		}
 
-		public void setActivityParticipation(ActivityParticipation activityParticipation) {
+		public void setActivityParticipation(RestrictionInput activityParticipation) {
 			this.activityParticipation = activityParticipation;
 		}
 
-		public ActivityParticipation getActivityParticipation() {
+		public RestrictionInput getActivityParticipation() {
 			return activityParticipation;
 		}
 

@@ -59,31 +59,9 @@ public final class ReplayHandler {
 	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
 	/**
-	 * Experimental flag to adjust persons starting with leisure time during reading of events.
-	 * @implNote don't set to true
-	 */
-	@Beta
-	private static final boolean ADJUST_LEISURE = false;
-	/**
-	 * Used when adjust leisure is true. Mark persons that already started their day.
-	 */
-	private final Set<Id<Person>> started = Collections.newSetFromMap(new IdentityHashMap<>());
-	/**
-	 * Rng for leisure adjustment.
-	 */
-	private SplittableRandom leisureRnd;
-	/**
-	 * Number of adjusted leisure activities.
-	 */
-	private int adjusted = 0;
-	/**
 	 * Needed in createEpisimFacilityId.
 	 */
 	private final EpisimConfigGroup episimConfig;
-
-	private static final int NUM_THREADS = 4;
-
-	private final SplittableRandom rnd;
 
 	private final Scenario scenario;
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
@@ -92,14 +70,11 @@ public final class ReplayHandler {
 	 * Constructor with optional scenario. Events will be read from given {@link EpisimConfigGroup#getInputEventsFiles()}.
 	 */
 	@Inject
-	public ReplayHandler(SplittableRandom rnd, EpisimConfigGroup config, @Nullable Scenario scenario) {
+	public ReplayHandler(EpisimConfigGroup config, @Nullable Scenario scenario) {
 		this.scenario = scenario;
 		this.episimConfig = config;
-		this.rnd = rnd;
 
 		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
-
-			leisureRnd = new SplittableRandom(0);
 
 			List<Event> eventsForDay = new ArrayList<>();
 			EventsManager manager = EventsUtils.createEventsManager();
@@ -116,12 +91,6 @@ public final class ReplayHandler {
 
 				events.put(day, eventsForDay);
 			}
-
-			started.clear();
-		}
-
-		if (ADJUST_LEISURE) {
-			log.warn("Adjusted {} leisure activities", adjusted);
 		}
 
 		if (events.size() != 7) {
@@ -136,24 +105,17 @@ public final class ReplayHandler {
 	 *
 	 * @param events ordered events for all weekdays
 	 */
-	public ReplayHandler(SplittableRandom rnd, Map<DayOfWeek, List<Event>> events) {
+	public ReplayHandler(Map<DayOfWeek, List<Event>> events) {
 		this.events.putAll(events);
 		this.scenario = null;
 		this.episimConfig = null;
-		this.rnd = rnd;
 	}
 
 	/**
 	 * Replays event add modifies attributes based on current iteration.
 	 */
 	public void replayEvents(final InfectionEventHandler infectionHandler, DayOfWeek day) {
-		var futures = new CompletableFuture[NUM_THREADS];
-		for (int i = 0; i < NUM_THREADS; i++) {
-			ReplayEventsTask task =  new ReplayEventsTask(infectionHandler, events.get(day), i, NUM_THREADS, rnd.split());
-			futures[i] = CompletableFuture.runAsync(task);
-		}
-
-		CompletableFuture.allOf(futures).join();
+		infectionHandler.handleEvents(day, events.get(day));
 	}
 
 	/**
@@ -167,6 +129,26 @@ public final class ReplayHandler {
 	 * Helper class to read events one time.
 	 */
 	private final class EventReader implements BasicEventHandler {
+
+		/**
+		 * Experimental flag to adjust persons starting with leisure time during reading of events.
+		 * @implNote don't set to true
+		 */
+		@Beta
+		private static final boolean ADJUST_LEISURE = false;
+		/**
+		 * Used when adjust leisure is true. Mark persons that already started their day.
+		 */
+		private final Set<Id<Person>> started = Collections.newSetFromMap(new IdentityHashMap<>());
+
+		/**
+		 * Rng for leisure adjustment.
+		 */
+		private SplittableRandom leisureRnd = new SplittableRandom(0);
+		/**
+		 * Number of adjusted leisure activities.
+		 */
+		private int adjusted = 0;
 
 		private final List<Event> events;
 

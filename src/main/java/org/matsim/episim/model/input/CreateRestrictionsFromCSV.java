@@ -24,7 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public final class CreateRestrictionsFromCSV implements ActivityParticipation {
+public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
 	// create method without damage.
 

@@ -124,7 +124,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			*/
 
 			double nSpacesPerFacility = container.getNumSpaces();
-			if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
+			if (rnd.nextDouble() > 1. / nSpacesPerFacility) { // i.e. other person is in other space
 				continue;
 			}
 
@@ -223,14 +223,14 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-				if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < prob)
+				if (rnd.nextDouble() < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
 						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
-				if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < prob)
+				if (rnd.nextDouble() < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}

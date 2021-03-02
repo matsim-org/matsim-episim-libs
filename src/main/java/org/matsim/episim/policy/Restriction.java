@@ -4,7 +4,6 @@ import com.typesafe.config.Config;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
-import org.matsim.episim.ReplayEventsTask;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.facilities.ActivityFacility;
 
@@ -281,7 +280,7 @@ public final class Restriction {
 
 			if (e.getValue() == 1d) return e.getKey();
 			else if (Double.isNaN(p))
-				p = ReplayEventsTask.getThreadRnd(rnd).nextDouble();
+				p =rnd.nextDouble();
 
 			if (p < e.getValue())
 				return e.getKey();

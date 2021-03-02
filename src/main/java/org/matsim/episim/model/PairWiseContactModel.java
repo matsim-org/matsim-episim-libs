@@ -123,7 +123,7 @@ public final class PairWiseContactModel extends AbstractContactModel {
 		if (contactPersons.size() == 0)
 			return;
 
-		EpisimPerson contactPerson = contactPersons.get(ReplayEventsTask.getThreadRnd(rnd).nextInt(contactPersons.size()));
+		EpisimPerson contactPerson = contactPersons.get(rnd.nextInt(contactPersons.size()));
 		contacts.get(container).remove(contactPerson);
 		contactPersons.clear();
 
@@ -216,14 +216,14 @@ public final class PairWiseContactModel extends AbstractContactModel {
 
 			double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 					leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-			if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < prob)
+			if (rnd.nextDouble() < prob)
 				infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 		} else {
 			double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
 					contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
-			if (ReplayEventsTask.getThreadRnd(rnd).nextDouble() < prob)
+			if (rnd.nextDouble() < prob)
 				infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 		}
 //		}

@@ -8,12 +8,12 @@ import java.nio.file.Path;
 /**
  * Interface for providing activity participation data.
  */
-public interface ActivityParticipation {
+public interface RestrictionInput {
 
 	/**
 	 * Sets the input for this file.
 	 */
-	ActivityParticipation setInput(Path input);
+	RestrictionInput setInput(Path input);
 
 	/**
 	 * Provide policy with activity reduction.

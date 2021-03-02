@@ -21,7 +21,10 @@
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
+import com.google.inject.name.Names;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -53,6 +56,7 @@ import java.io.ObjectOutput;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -84,6 +88,16 @@ public final class InfectionEventHandler implements Externalizable {
 
 	private static final Logger log = LogManager.getLogger(InfectionEventHandler.class);
 
+	/**
+	 * Injector instance.
+	 */
+	private final Injector injector;
+
+	/**
+	 * List of trajectory handlers that can be run in parallel.
+	 */
+	private final List<TrajectoryHandler> handlers = new ArrayList<>();
+
 	private final Map<Id<Person>, EpisimPerson> personMap = new IdMap<>(Person.class);
 	private final Map<Id<Vehicle>, EpisimVehicle> vehicleMap = new IdMap<>(Vehicle.class);
 	private final Map<Id<ActivityFacility>, EpisimFacility> pseudoFacilityMap = new IdMap<>(ActivityFacility.class,
@@ -110,11 +124,6 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Progress of the sickness at the end of the day.
 	 */
 	private final ProgressionModel progressionModel;
-
-	/**
-	 * Models the process of persons infecting each other during activities.
-	 */
-	private final ContactModel contactModel;
 
 	/**
 	 * Handle initial infections.
@@ -152,24 +161,23 @@ public final class InfectionEventHandler implements Externalizable {
 	private EpisimReporting.InfectionReport report;
 
 	@Inject
-	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
-								 InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
-								 SplittableRandom rnd) {
-		this.config = config;
+	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
+		this.injector = injector;
+		this.rnd = rnd;
+
+		this.config = injector.getInstance(Config.class);
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		this.scenario = scenario;
+		this.scenario = injector.getInstance(Scenario.class);
 		this.policy = episimConfig.createPolicyInstance();
 		this.restrictions = episimConfig.createInitialRestrictions();
-		this.reporting = reporting;
-		this.rnd = rnd;
+		this.reporting = injector.getInstance(EpisimReporting.class);
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
-		this.progressionModel = progressionModel;
-		this.contactModel = contactModel;
-		this.initialInfections = initialInfections;
+		this.progressionModel = injector.getInstance(ProgressionModel.class);
+		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
-		this.vaccinationModel = vaccinationModel;
+		this.vaccinationModel = injector.getInstance(VaccinationModel.class);
 	}
 
 	/**
@@ -195,6 +203,8 @@ public final class InfectionEventHandler implements Externalizable {
 	public void init(Map<DayOfWeek, List<Event>> events) {
 
 		iteration = 0;
+
+		// TODO: don't rely on handleEvent anymore
 
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
@@ -257,7 +267,7 @@ public final class InfectionEventHandler implements Externalizable {
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
-					handleEvent((ActivityStartEvent) event);
+					//handleEvent((ActivityStartEvent) event);
 
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
@@ -278,9 +288,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 						person.setFirstFacilityId(facility.getContainerId(), day);
 					}
-					
-
-					handleEvent((ActivityEndEvent) event);
+					// TODO
+					//handleEvent((ActivityEndEvent) event);
 				}
 
 				if (event instanceof PersonEntersVehicleEvent) {
@@ -289,14 +298,16 @@ public final class InfectionEventHandler implements Externalizable {
 					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
 					totalUsers.mergeInt(vehicle, 1, Integer::sum);
 
-					handleEvent((PersonEntersVehicleEvent) event);
+					// TODO
+					//handleEvent((PersonEntersVehicleEvent) event);
 
 				} else if (event instanceof PersonLeavesVehicleEvent) {
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 					groupSize.mergeInt(vehicle, -1, Integer::sum);
 					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
 
-					handleEvent((PersonLeavesVehicleEvent) event);
+					// TODO
+					//handleEvent((PersonLeavesVehicleEvent) event);
 				}
 			}
 
@@ -360,7 +371,8 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 
 			personMap.values().forEach(p -> {
-				checkAndHandleEndOfNonCircularTrajectory(p, day);
+				// TODO
+				//checkAndHandleEndOfNonCircularTrajectory(p, day);
 				p.resetCurrentPositionInTrajectory(day);
 			});
 
@@ -376,10 +388,12 @@ public final class InfectionEventHandler implements Externalizable {
 						continue;
 
 					if (event instanceof ActivityStartEvent) {
-						handleEvent((ActivityStartEvent) event);
+						// TODO
+						//handleEvent((ActivityStartEvent) event);
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
-						handleEvent((ActivityEndEvent) event);
+						// TODO
+						//handleEvent((ActivityEndEvent) event);
 					}
 				}
 			}
@@ -444,93 +458,37 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// Clear time-use after first iteration
 		personMap.values().forEach(p -> p.getSpentTime().clear());
+
+		createTrajectoryHandlers();
+
 		init = true;
 	}
 
-	public void handleEvent(ActivityStartEvent activityStartEvent) {
-//		double now = activityStartEvent.getTime();
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
 
-		reporting.handleEvent(activityStartEvent);
+	/**
+	 * Create handlers for executing th
+	 */
+	protected void createTrajectoryHandlers() {
 
-		// find the person:
-		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
+		AbstractModule childModule = new AbstractModule() {
+			@Override
+			protected void configure() {
+				bind(SplittableRandom.class);
+				bind(Map.class).annotatedWith(Names.named("personMap")).toInstance(personMap);
+				bind(Map.class).annotatedWith(Names.named("vehicleMap")).toInstance(vehicleMap);
+				bind(Map.class).annotatedWith(Names.named("pseudoFacilityMap")).toInstance(pseudoFacilityMap);
+				bind(Map.class).annotatedWith(Names.named("paramsMap")).toInstance(paramsMap);
+			}
+		};
 
-		// create pseudo facility id that includes the activity type:
-		Id<ActivityFacility> episimFacilityId = activityStartEvent.getFacilityId();
+		// NUM_THREADS = 4
+		for (int i = 0; i < 4; i++) {
 
-		// find the facility
-		EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
+			Injector inj = injector.createChildInjector(childModule);
+			TrajectoryHandler handler = inj.getInstance(TrajectoryHandler.class);
+			handlers.add(handler);
+		}
 
-		// add person to facility
-		episimFacility.addPerson(episimPerson, now);
-
-		handlePersonTrajectory(episimPerson.getPersonId(), activityStartEvent.getActType());
-
-		contactModel.notifyEnterFacility(episimPerson, episimFacility, now);
-	}
-
-	public void handleEvent(ActivityEndEvent activityEndEvent) {
-//		double now = activityEndEvent.getTime();
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
-
-		reporting.handleEvent(activityEndEvent);
-
-		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
-		// create pseudo facility id that includes the activity type:
-		Id<ActivityFacility> episimFacilityId = activityEndEvent.getFacilityId();
-
-		// find the facility
-		EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
-
-		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
-
-		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
-		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
-
-		episimFacility.removePerson(episimPerson);
-
-		handlePersonTrajectory(episimPerson.getPersonId(), activityEndEvent.getActType());
-	}
-
-	public void handleEvent(PersonEntersVehicleEvent entersVehicleEvent) {
-//		double now = entersVehicleEvent.getTime();
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);
-
-		reporting.handleEvent(entersVehicleEvent);
-
-		// find the person:
-		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());
-
-		// find the vehicle:
-		EpisimVehicle episimVehicle = this.vehicleMap.get(entersVehicleEvent.getVehicleId());
-
-		// add person to vehicle and memorize entering time:
-		episimVehicle.addPerson(episimPerson, now);
-
-		contactModel.notifyEnterVehicle(episimPerson, episimVehicle, now);
-	}
-
-	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
-//		double now = leavesVehicleEvent.getTime();
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);
-
-		reporting.handleEvent(leavesVehicleEvent);
-
-		// find vehicle:
-		EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());
-
-		EpisimPerson episimPerson = this.personMap.get(leavesVehicleEvent.getPersonId());
-
-		contactModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
-
-		double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
-
-		// This type depends on the params defined in the scenario
-		episimPerson.addSpentTime("pt", timeSpent);
-
-		// remove person from vehicle:
-		episimVehicle.removePerson(episimPerson);
 	}
 
 
@@ -569,21 +527,6 @@ public final class InfectionEventHandler implements Externalizable {
 		return new EpisimPerson.Activity(actType, episimConfig.selectInfectionParams(actType));
 	}
 
-
-	private void handlePersonTrajectory(Id<Person> personId, String trajectoryElement) {
-		EpisimPerson person = personMap.get(personId);
-
-		if (person.getCurrentPositionInTrajectory() + 1 == person.getTrajectory().size()) {
-			return;
-		}
-		person.incrementCurrentPositionInTrajectory();
-		if (iteration > 0) {
-			return;
-		}
-
-		EpisimPerson.Activity act = paramsMap.get(trajectoryElement);
-		person.addToTrajectory(act);
-	}
 
 	/**
 	 * Insert agents that appear in the population, but not in the event file, into their home container.
@@ -642,11 +585,12 @@ public final class InfectionEventHandler implements Externalizable {
 			// stf: I think this must be done before the "beforeStateUpdates" call
 			person.checkInfection();
 		}
-		
+
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
-			checkAndHandleEndOfNonCircularTrajectory(person, day);
+			// TODO handle in trajectory?
+			// checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);
 			progressionModel.updateState(person, iteration);
 		}
@@ -667,65 +611,11 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
-		contactModel.setRestrictionsForIteration(iteration, im);
+
+		handlers.forEach(h -> h.setRestrictionsForIteration(iteration, im));
+
 		reporting.reportRestrictions(restrictions, iteration, report.date);
 
-	}
-
-	/**
-	 * Handle plans with "holes" in their trajectory.
-	 *
-	 * @param day day that is about to start
-	 */
-	private void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day) {
-		Id<ActivityFacility> firstFacilityId = person.getFirstFacilityId(day);
-
-		// now is the start of current day, when this is called iteration still has the value of the last day
-		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration + 1);
-
-		if (person.isInContainer()) {
-			EpisimContainer<?> container = person.getCurrentContainer();
-			Id<?> lastFacilityId = container.getContainerId();
-
-			if (container instanceof EpisimFacility && this.pseudoFacilityMap.containsKey(lastFacilityId) && !firstFacilityId.equals(lastFacilityId)) {
-				EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
-
-				// index of last activity at previous day
-				int index = person.getEndOfDay(day.minus(1));
-				String actType = person.getTrajectory().get(index).actType;
-
-				contactModel.infectionDynamicsFacility(person, lastFacility, now, actType);
-				double timeSpent = now - lastFacility.getContainerEnteringTime(person.getPersonId());
-				person.addSpentTime(actType, timeSpent);
-
-				if (iteration > 1 && timeSpent > 86400 && !actType.equals("home")) {
-					// there might be some implausible trajectories
-					log.trace("{} spent {} outside home", person, timeSpent);
-				}
-
-				lastFacility.removePerson(person);
-				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, now);
-
-				contactModel.notifyEnterFacility(person, firstFacility, now);
-
-			} else if (container instanceof EpisimVehicle && this.vehicleMap.containsKey(lastFacilityId)) {
-				EpisimVehicle lastVehicle = this.vehicleMap.get(lastFacilityId);
-				contactModel.infectionDynamicsVehicle(person, lastVehicle, now);
-				person.addSpentTime("pt", now - lastVehicle.getContainerEnteringTime(person.getPersonId()));
-
-				lastVehicle.removePerson(person);
-				EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, now);
-
-				contactModel.notifyEnterFacility(person, firstFacility, now);
-			}
-		} else {
-			EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-			firstFacility.addPerson(person, now);
-
-			contactModel.notifyEnterFacility(person, firstFacility, now);
-		}
 	}
 
 	public Collection<EpisimPerson> getPersons() {
@@ -806,8 +696,32 @@ public final class InfectionEventHandler implements Externalizable {
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 
 		policy.restore(episimConfig.getStartDate().plusDays(iteration), im);
+		handlers.forEach(h -> h.setRestrictionsForIteration(iteration, im));
+	}
 
-		contactModel.setRestrictionsForIteration(iteration, im);
+	/**
+	 * Execute trajectory events.
+	 *
+	 * @param day    current day
+	 * @param events events to execute
+	 */
+	void handleEvents(DayOfWeek day, List<Event> events) {
+
+		if (handlers.size() > 1) {
+			var futures = new CompletableFuture[handlers.size()];
+			for (int i = 0; i < handlers.size(); i++) {
+				ReplayEventsTask task = new ReplayEventsTask(handlers.get(i), events, i, handlers.size());
+				futures[i] = CompletableFuture.runAsync(task);
+			}
+
+			CompletableFuture.allOf(futures).join();
+		} else {
+
+			// single threaded task is run directly
+			ReplayEventsTask task = new ReplayEventsTask(handlers.get(0), events, 0, 1);
+			task.run();
+
+		}
 	}
 
 	/**

@@ -19,7 +19,7 @@ import java.util.TreeMap;
 /**
  * Create restrictions from google mobility report.
  */
-public class CreateRestrictionsFromMobilityData implements ActivityParticipation {
+public class CreateRestrictionsFromMobilityData implements RestrictionInput {
 
 	private static final String MARKER = "_percent_change_from_baseline";
 

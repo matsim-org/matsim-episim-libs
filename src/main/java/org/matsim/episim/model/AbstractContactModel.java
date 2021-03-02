@@ -185,7 +185,7 @@ public abstract class AbstractContactModel implements ContactModel {
 			double current = (container.getPersons().size() * episimConfig.getSampleSize()) / container.getNumSpaces();
 
 			// always false if current < reduced size
-			boolean out = ReplayEventsTask.getThreadRnd(rnd).nextDouble() > reducedGroupSize / current;
+			boolean out = rnd.nextDouble() > reducedGroupSize / current;
 
 			// don'T return true, other conditions might be false
 			if (out) return false;
@@ -206,7 +206,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (r.getRemainingFraction() == 0)
 			return false;
 
-		return ReplayEventsTask.getThreadRnd(rnd).nextDouble() < r.getRemainingFraction();
+		return rnd.nextDouble() < r.getRemainingFraction();
 
 	}
 

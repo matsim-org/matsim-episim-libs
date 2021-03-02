@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 /**
  * Class for reading and analyzing snz activity data.
  */
-public class CreateRestrictionsFromSnz implements ActivityParticipation {
+public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	private static final Logger log = LogManager.getLogger(CreateRestrictionsFromSnz.class);
 	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -54,7 +54,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	}
 
 	@Override
-	public ActivityParticipation setInput(Path input) {
+	public RestrictionInput setInput(Path input) {
 		this.inputFolder = input;
 		return this;
 	}
