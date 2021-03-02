@@ -20,12 +20,14 @@
  */
 package org.matsim.episim;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.*;
 
+import java.util.Collection;
 import java.util.List;
 
 /**
- * Replays all events for
+ * Replays all events for a single day to one {@link TrajectoryHandler}.
  */
 final public class ReplayEventsTask implements Runnable {
 
@@ -50,24 +52,34 @@ final public class ReplayEventsTask implements Runnable {
 		this.numThreads = numThreads;
 	}
 
+	/**
+	 * Check whether the handler is responsible for this event.
+	 */
+	boolean handles(Id<?> containerId) {
+		return Math.abs(containerId.hashCode()) % numThreads == taskId;
+	}
+
 	public void run() {
+
+		trajectoryHandler.onStartDay(this::handles);
+
 		for (final Event e : events) {
 			if (e instanceof ActivityStartEvent) {
 				ActivityStartEvent ase = (ActivityStartEvent) e;
-				if (Math.abs(ase.getFacilityId().hashCode()) % numThreads == taskId)
+				if (handles(ase.getFacilityId()))
 					trajectoryHandler.handleEvent(ase);
 			} else if (e instanceof ActivityEndEvent) {
 				ActivityEndEvent aee = (ActivityEndEvent) e;
-				if (Math.abs(aee.getFacilityId().hashCode()) % numThreads == taskId) {
+				if (handles(aee.getFacilityId())) {
 					trajectoryHandler.handleEvent(aee);
 				}
 			} else if (e instanceof PersonEntersVehicleEvent) {
 				PersonEntersVehicleEvent peve = (PersonEntersVehicleEvent) e;
-				if (Math.abs(peve.getVehicleId().hashCode()) % numThreads == taskId)
+				if (handles(peve.getVehicleId()))
 					trajectoryHandler.handleEvent(peve);
 			} else {
 				PersonLeavesVehicleEvent plve = (PersonLeavesVehicleEvent) e;
-				if (Math.abs(plve.getVehicleId().hashCode()) % numThreads == taskId)
+				if (handles(plve.getVehicleId()))
 					trajectoryHandler.handleEvent(plve);
 			}
 		}

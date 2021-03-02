@@ -79,7 +79,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, container, getRestrictions(), rnd)) {
 			return;
 		}
 
@@ -128,7 +128,7 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				continue;
 			}
 
-			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
+			if (!personRelevantForTrackingOrInfectionDynamics(now, contactPerson, container, getRestrictions(), rnd)) {
 				continue;
 			}
 
@@ -147,8 +147,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 					&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
 				continue;
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+			String leavingPersonsActivity = personLeavingContainer.getActivity(day, now).actType;
+			String otherPersonsActivity = contactPerson.getActivity(day, now).actType;
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 

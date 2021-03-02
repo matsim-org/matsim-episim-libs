@@ -128,7 +128,7 @@ public final class DirectContactModel extends AbstractContactModel {
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, container, getRestrictions(), rnd)) {
 			removePersonFromGroups(container, personLeavingContainer, now);
 			// yyyyyy hat in diesem Modell die Konsequenz, dass, wenn jemand zu Hause bleibt, die andere Person alleine rumsitzt.  Somewhat plausible in public
 			// transport; not plausible in restaurant.
@@ -142,7 +142,7 @@ public final class DirectContactModel extends AbstractContactModel {
 
 		EpisimPerson contactPerson = group.getKey();
 
-		if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(now, contactPerson, container, getRestrictions(), rnd)) {
 			return;
 		}
 
@@ -161,8 +161,8 @@ public final class DirectContactModel extends AbstractContactModel {
 				&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
 			return;
 
-		String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-		String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+		String leavingPersonsActivity = personLeavingContainer.getActivity(day, now).actType;
+		String otherPersonsActivity = contactPerson.getActivity(day, now).actType;
 
 		StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 

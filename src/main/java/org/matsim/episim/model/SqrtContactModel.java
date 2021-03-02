@@ -75,7 +75,7 @@ public final class SqrtContactModel extends AbstractContactModel {
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, container, getRestrictions(), rnd)) {
 			return;
 		}
 
@@ -96,7 +96,7 @@ public final class SqrtContactModel extends AbstractContactModel {
 			// since every pair of persons interacts only once, there is now a constant interaction probability per pair
 			// if we want superspreading events, then maxInteractions needs to be much larger than 3 or 10.
 
-			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
+			if (!personRelevantForTrackingOrInfectionDynamics(now, contactPerson, container, getRestrictions(), rnd)) {
 				continue;
 			}
 
@@ -113,8 +113,8 @@ public final class SqrtContactModel extends AbstractContactModel {
 				}
 			}
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+			String leavingPersonsActivity = personLeavingContainer.getActivity(day, now).actType;
+			String otherPersonsActivity = contactPerson.getActivity(day, now).actType;
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 

@@ -104,7 +104,7 @@ public class EpisimTestUtils {
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 
-		p.getTrajectory().add(new EpisimPerson.Activity(currentAct, TEST_CONFIG.selectInfectionParams(currentAct)));
+		p.addToTrajectory(0, new EpisimPerson.Activity(currentAct, TEST_CONFIG.selectInfectionParams(currentAct)));
 
 		if (container != null) {
 			container.addPerson(p, 0);

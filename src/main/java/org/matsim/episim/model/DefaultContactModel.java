@@ -81,7 +81,7 @@ public final class DefaultContactModel extends AbstractContactModel {
 			return;
 		}
 
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
+		if (!personRelevantForTrackingOrInfectionDynamics(now, personLeavingContainer, container, getRestrictions(), rnd)) {
 			return;
 		}
 
@@ -110,7 +110,7 @@ public final class DefaultContactModel extends AbstractContactModel {
 			EpisimPerson contactPerson = otherPersonsInContainer.remove(rnd.nextInt(otherPersonsInContainer.size()));
 
 
-			if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
+			if (!personRelevantForTrackingOrInfectionDynamics(now, contactPerson, container, getRestrictions(), rnd)) {
 				continue;
 			}
 
@@ -127,8 +127,8 @@ public final class DefaultContactModel extends AbstractContactModel {
 				}
 			}
 
-			String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-			String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+			String leavingPersonsActivity = personLeavingContainer.getActivity(day, now).actType;
+			String otherPersonsActivity = contactPerson.getActivity(day, now).actType;
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 

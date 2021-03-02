@@ -91,7 +91,7 @@ public final class PairWiseContactModel extends AbstractContactModel {
 
 	private void notifyEnterContainerGeneralized(EpisimPerson personEnteringContainer, EpisimContainer<?> container, double now) {
 		try {
-			if (checkPersonInContainer(personEnteringContainer, container, getRestrictions(), rnd)) {
+			if (checkPersonInContainer(now, personEnteringContainer, container, getRestrictions(), rnd)) {
 				contacts.computeIfAbsent(container, (k) -> new HashSet<>()).add(personEnteringContainer);
 			}
 		} catch (IndexOutOfBoundsException | NullPointerException e) {
@@ -146,8 +146,8 @@ public final class PairWiseContactModel extends AbstractContactModel {
 				&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
 			return;
 
-		String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-		String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
+		String leavingPersonsActivity = personLeavingContainer.getActivity(day, now).actType;
+		String otherPersonsActivity = contactPerson.getActivity(day, now).actType;
 
 		StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 

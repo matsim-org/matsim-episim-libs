@@ -204,8 +204,6 @@ public final class InfectionEventHandler implements Externalizable {
 
 		iteration = 0;
 
-		// TODO: don't rely on handleEvent anymore
-
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
@@ -228,7 +226,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 			log.info("Init day {}", day);
 
-			this.personMap.values().forEach(p -> p.setStartOfDay(day, p.getCurrentPositionInTrajectory()));
+			this.personMap.values().forEach(p -> p.setStartOfDay(day));
 
 			for (Event event : eventsForDay) {
 
@@ -243,14 +241,11 @@ public final class InfectionEventHandler implements Externalizable {
 					for (int i = 1; i < day.getValue(); i++) {
 						DayOfWeek it = DayOfWeek.of(i);
 						if (person.getFirstFacilityId(it) == null) {
-							person.setStartOfDay(it, person.getCurrentPositionInTrajectory());
-							person.setEndOfDay(it, person.getCurrentPositionInTrajectory());
+							person.setStartOfDay(it);
+							person.setEndOfDay(it);
 							person.setFirstFacilityId(createHomeFacility(person).getContainerId(), it);
 							EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
-							person.addToTrajectory(home);
-							//person.incrementCurrentPositionInTrajectory();
-							// start of current day also needs to be shifted
-							//person.setStartOfDay(day, person.getCurrentPositionInTrajectory());
+							person.addToTrajectory(0, home);
 						}
 					}
 				}
@@ -267,7 +262,10 @@ public final class InfectionEventHandler implements Externalizable {
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
-					//handleEvent((ActivityStartEvent) event);
+					person.addToTrajectory(event.getTime(), act);
+					if (person.getFirstFacilityId(day) == null)
+						person.setFirstFacilityId(facility.getContainerId(), day);
+
 
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
@@ -276,20 +274,9 @@ public final class InfectionEventHandler implements Externalizable {
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
 					if (person.getFirstFacilityId(day) == null) {
-						// person may already be there because of previous day
-						if (person.getCurrentContainer() != facility) {
-
-							// remove from old
-							if (person.getCurrentContainer() != null)
-								person.getCurrentContainer().removePerson(person);
-
-							facility.addPerson(person, 0);
-						}
-
+						person.addToTrajectory(0, act);
 						person.setFirstFacilityId(facility.getContainerId(), day);
 					}
-					// TODO
-					//handleEvent((ActivityEndEvent) event);
 				}
 
 				if (event instanceof PersonEntersVehicleEvent) {
@@ -298,43 +285,28 @@ public final class InfectionEventHandler implements Externalizable {
 					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
 					totalUsers.mergeInt(vehicle, 1, Integer::sum);
 
-					// TODO
-					//handleEvent((PersonEntersVehicleEvent) event);
-
 				} else if (event instanceof PersonLeavesVehicleEvent) {
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 					groupSize.mergeInt(vehicle, -1, Integer::sum);
 					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
-
-					// TODO
-					//handleEvent((PersonLeavesVehicleEvent) event);
 				}
 			}
 
 			int cnt = 0;
 			for (EpisimPerson person : this.personMap.values()) {
-				List<EpisimPerson.Activity> tj = person.getTrajectory();
 
 				// person that didn't move will be put at home the whole day
-				if (person.getFirstFacilityId(day) == null && person.getCurrentPositionInTrajectory() == person.getStartOfDay(day)) {
+				if (person.getFirstFacilityId(day) == null) {
+					person.setStartOfDay(day);
 					EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
-					person.addToTrajectory(home);
-					person.incrementCurrentPositionInTrajectory();
+					person.addToTrajectory(0, home);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
+					person.setFirstFacilityId(facility.getContainerId(), day);
 					cnt++;
+
+					person.setEndOfDay(day);
 				}
-
-				// close open trajectories by repeating last element
-				if (tj.size() == person.getCurrentPositionInTrajectory()) {
-					person.addToTrajectory(tj.get(tj.size() - 1));
-					person.incrementCurrentPositionInTrajectory();
-
-					if (person.getFirstFacilityId(day) == null)
-						person.setFirstFacilityId(createHomeFacility(person).getContainerId(), day);
-				}
-
-				person.setEndOfDay(day, tj.size() - 1);
 			}
 
 			log.info("Persons stationary on {}: {} ({}%)", day, cnt, cnt * 100.0 / personMap.size());
@@ -373,7 +345,6 @@ public final class InfectionEventHandler implements Externalizable {
 			personMap.values().forEach(p -> {
 				// TODO
 				//checkAndHandleEndOfNonCircularTrajectory(p, day);
-				p.resetCurrentPositionInTrajectory(day);
 			});
 
 			pseudoFacilityMap.forEach((k, v) -> maxGroupSize.mergeInt(v, v.getPersons().size(), Integer::max));
@@ -551,7 +522,7 @@ public final class InfectionEventHandler implements Externalizable {
 						episimPerson.setFirstFacilityId(facilityId, day);
 					}
 
-					episimPerson.addToTrajectory(new EpisimPerson.Activity("home", paramsMap.get("home").params));
+					episimPerson.addToTrajectory(0, new EpisimPerson.Activity("home", paramsMap.get("home").params));
 
 					facility.addPerson(episimPerson, 0);
 
@@ -591,7 +562,6 @@ public final class InfectionEventHandler implements Externalizable {
 		for (EpisimPerson person : personMap.values()) {
 			// TODO handle in trajectory?
 			// checkAndHandleEndOfNonCircularTrajectory(person, day);
-			person.resetCurrentPositionInTrajectory(day);
 			progressionModel.updateState(person, iteration);
 		}
 
@@ -677,7 +647,7 @@ public final class InfectionEventHandler implements Externalizable {
 		int persons = in.readInt();
 		for (int i = 0; i < persons; i++) {
 			Id<Person> id = Id.create(readChars(in), Person.class);
-			personMap.get(id).read(in, personMap, pseudoFacilityMap, vehicleMap);
+			personMap.get(id).read(in, personMap);
 		}
 
 		int vehicles = in.readInt();

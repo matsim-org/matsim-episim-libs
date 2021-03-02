@@ -126,7 +126,6 @@ public class EpisimContainer<T> {
 		persons.add(index);
 		personsAsList.add(person);
 		containerEnterTimes.put(index, now);
-		person.setCurrentContainer(this);
 	}
 
 	/**
@@ -139,7 +138,6 @@ public class EpisimContainer<T> {
 
 		containerEnterTimes.remove(index);
 		persons.remove(index);
-		person.removeCurrentContainer(this);
 		boolean wasRemoved = personsAsList.remove(person);
 		Gbl.assertIf(wasRemoved);
 	}

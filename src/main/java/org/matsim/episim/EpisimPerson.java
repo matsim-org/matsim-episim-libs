@@ -21,6 +21,8 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
+import it.unimi.dsi.fastutil.Pair;
+import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
@@ -32,14 +34,13 @@ import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
-import org.matsim.vehicles.Vehicle;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
 import java.util.*;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -57,8 +58,9 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Whole trajectory over all days of the week.
+	 * Entries contain the starting time of activities and the performed activity.
 	 */
-	private final List<Activity> trajectory = new ArrayList<>();
+	private final List<DoubleObjectPair<Activity>> trajectory = new ArrayList<>();
 
 	/**
 	 * The position in the trajectory at the start for each day of the week.
@@ -75,6 +77,10 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
 
+	/**
+	 * The last visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 */
+	private final Id<ActivityFacility>[] lastFacilityId = new Id[7];
 	// Fields above are initialized from the sim and not persisted
 
 	/**
@@ -91,14 +97,6 @@ public final class EpisimPerson implements Attributable {
 	 * Total spent time during activities.
 	 */
 	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
-
-	/**
-	 * In the parallel version of the {@link ReplayHandler}, a person can
-	 * be at different {@link EpisimContainer} at the same time.
-	 * With the currentContainers we track in which container is at the end of the day,
-	 * this information is used in checkAndHandleEndOfNonCircularTrajectory.
-	 */
-	private ConcurrentLinkedQueue<EpisimContainer<?>> currentContainers = new ConcurrentLinkedQueue<EpisimContainer<?>>();
 
 	/**
 	 * In the parallel version of the {@link ReplayHandler}, the infections
@@ -157,8 +155,6 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private int testDate = -1;
 
-	private int currentPositionInTrajectory;
-
 	/**
 	 * Age of the person in years.
 	 */
@@ -202,9 +198,7 @@ public final class EpisimPerson implements Attributable {
 	 *
 	 * @param persons map of all persons in the simulation
 	 */
-	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons,
-			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
-			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) throws IOException {
 
 		int n = in.readInt();
 		traceableContactPersons.clear();
@@ -219,21 +213,6 @@ public final class EpisimPerson implements Attributable {
 			int status = in.readInt();
 			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());
 		}
-
-		// Current container is set
-		if (in.readBoolean()) {
-			boolean isVehicle = in.readBoolean();
-			String name = readChars(in);
-			// if (isVehicle) {
-			// 	currentContainer = vehicles.get(Id.create(name, Vehicle.class));
-			// } else
-			// 	currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
-
-			// if (currentContainer == null)
-			// 	throw new IllegalStateException("Could not reconstruct container: " + name);
-		}
-		// else
-		// 	currentContainer = null;
 
 		if (in.readBoolean()){
 			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
@@ -258,7 +237,6 @@ public final class EpisimPerson implements Attributable {
 		vaccinationDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
-		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
 	}
 
@@ -278,15 +256,6 @@ public final class EpisimPerson implements Attributable {
 			out.writeInt(e.getKey().ordinal());
 			out.writeDouble(e.getValue());
 		}
-
-		// stf: can we change the stream (e.g. remove the following block here
-		// and the corresponding part for read) or will this break e.g. the tests?
-		//out.writeBoolean(currentContainer != null);
-		out.writeBoolean(false);
-		// if (currentContainer != null) {
-		// 	out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
-		// 	writeChars(out, currentContainer.getContainerId().toString());
-		// }
 
 		out.writeBoolean(infectionContainer != null);
 		if (infectionContainer != null) {
@@ -313,7 +282,6 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(vaccinationDate);
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
-		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
 	}
 
@@ -494,36 +462,20 @@ public final class EpisimPerson implements Attributable {
 		this.traceable = traceable;
 	}
 
-	void addToTrajectory(Activity trajectoryElement) {
-		trajectory.add(trajectoryElement);
+	void addToTrajectory(double time, Activity trajectoryElement) {
+		trajectory.add(DoubleObjectPair.of(time, trajectoryElement));
 	}
 
-	public List<Activity> getTrajectory() {
-		return trajectory;
-	}
-
-	public int getCurrentPositionInTrajectory() {
-		return this.currentPositionInTrajectory;
-	}
-
-	void incrementCurrentPositionInTrajectory() {
-		this.currentPositionInTrajectory++;
-	}
-
-	void resetCurrentPositionInTrajectory(DayOfWeek day) {
-		currentPositionInTrajectory = startOfDay[day.getValue() - 1];
-	}
-
-	void setStartOfDay(DayOfWeek day, int position) {
-		startOfDay[day.getValue() - 1] = position;
+	void setStartOfDay(DayOfWeek day) {
+		startOfDay[day.getValue() - 1] = trajectory.size();
 	}
 
 	int getStartOfDay(DayOfWeek day) {
 		return startOfDay[day.getValue() - 1];
 	}
 
-	void setEndOfDay(DayOfWeek day, int position) {
-		endOfDay[day.getValue() - 1] = position;
+	void setEndOfDay(DayOfWeek day) {
+		endOfDay[day.getValue() - 1] = trajectory.size();
 	}
 
 	int getEndOfDay(DayOfWeek day) {
@@ -535,7 +487,7 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
 		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
-			if (activities.contains(trajectory.get(i).params.getContainerName()))
+			if (activities.contains(trajectory.get(i).right().params.getContainerName()))
 				return true;
 		}
 
@@ -549,35 +501,7 @@ public final class EpisimPerson implements Attributable {
 		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];
 		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
-	}
-
-	/**
-	 * Add the container to the currentContainers queue. This is called
-	 * from the multithreaded {@link ReplayHandler}, so it's possible
-	 * that a person is in multiple containers at the same time.
-	 */
-	public void setCurrentContainer(EpisimContainer<?> container) {
-		currentContainers.add(container);
-	}
-
-	public void removeCurrentContainer(EpisimContainer<?> container) {
-		boolean success = currentContainers.remove(container);
-		assert success : "Person=" + getPersonId().toString() + " should be removed from container "
-				+ container.getContainerId().toString() + " but this container is not in currentContainers";
-	}
-
-	public boolean isInContainer() {
-		return currentContainers.size() > 0;
-	}
-
-	/**
-	 * This function returns only sensible results after the ReplayHandler.replayEvents
-	 * method is finished
-	 */
-	public EpisimContainer<?> getCurrentContainer() {
-		assert currentContainers.size() < 2
-				: "getCurrentContainer should not be called in the parallel part of the code";
-		return currentContainers.peek();
+		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];
 	}
 
 	@Override
@@ -592,15 +516,20 @@ public final class EpisimPerson implements Attributable {
 		return age;
 	}
 
-	/**
-	 * Whether person is currently in a container.
-	 */
 	Id<ActivityFacility> getFirstFacilityId(DayOfWeek day) {
 		return firstFacilityId[day.getValue() - 1];
 	}
 
 	void setFirstFacilityId(Id<ActivityFacility> firstFacilityId, DayOfWeek day) {
 		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;
+	}
+
+	Id<ActivityFacility> getLastFacilityId(DayOfWeek day) {
+		return lastFacilityId[day.getValue() - 1];
+	}
+
+	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day) {
+		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;
 	}
 
 	public void setInfectionContainer(EpisimContainer<?> container) {
@@ -638,6 +567,42 @@ public final class EpisimPerson implements Attributable {
 		return "EpisimPerson{" +
 				"personId=" + personId +
 				'}';
+	}
+
+	/**
+	 * Get the activity normally performed by a person on a specific day and time.
+	 */
+	public Activity getActivity(DayOfWeek day, double time) {
+
+		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		assert !sub.isEmpty() : "Trajectory for a day can not be empty";
+
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		return sub.get(idx).right();
+	}
+
+	/**
+	 * Get the next activity of a person.
+	 * @see #getActivity(DayOfWeek, double)
+	 */
+	@Nullable
+	public Activity getPrevActivity(DayOfWeek day, double time) {
+		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		return sub.get(idx-1).right();
+	}
+
+	/**
+	 * Get the previous activity of a person.
+	 * @see #getActivity(DayOfWeek, double)
+	 */
+	@Nullable
+	public Activity getNextActivity(DayOfWeek day, double time)  {
+		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		return sub.get(idx+1).right();
 	}
 
 	/**
