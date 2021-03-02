@@ -331,6 +331,8 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
+
+		// TODO: group sizes are not yet tracked correctly
 		// Go through each day again to compute max group sizes
 		sameDay.clear();
 		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
@@ -341,11 +343,6 @@ public final class InfectionEventHandler implements Externalizable {
 			if (sameDay.containsKey(eventsForDay)) {
 				continue;
 			}
-
-			personMap.values().forEach(p -> {
-				// TODO
-				//checkAndHandleEndOfNonCircularTrajectory(p, day);
-			});
 
 			pseudoFacilityMap.forEach((k, v) -> maxGroupSize.mergeInt(v, v.getPersons().size(), Integer::max));
 
@@ -444,11 +441,10 @@ public final class InfectionEventHandler implements Externalizable {
 		AbstractModule childModule = new AbstractModule() {
 			@Override
 			protected void configure() {
-				bind(SplittableRandom.class);
+				bind(SplittableRandom.class).toProvider(() -> new SplittableRandom(0));
 				bind(Map.class).annotatedWith(Names.named("personMap")).toInstance(personMap);
 				bind(Map.class).annotatedWith(Names.named("vehicleMap")).toInstance(vehicleMap);
 				bind(Map.class).annotatedWith(Names.named("pseudoFacilityMap")).toInstance(pseudoFacilityMap);
-				bind(Map.class).annotatedWith(Names.named("paramsMap")).toInstance(paramsMap);
 			}
 		};
 

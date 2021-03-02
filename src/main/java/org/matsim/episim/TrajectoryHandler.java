@@ -34,7 +34,6 @@ final class TrajectoryHandler {
 	private final Map<Id<Person>, EpisimPerson> personMap;
 	private final Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicleMap;
 	private final Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> pseudoFacilityMap;
-	private final Map<String, EpisimPerson.Activity> paramsMap;
 
 	/**
 	 * The "local" random instance, used for all submodels.
@@ -47,8 +46,7 @@ final class TrajectoryHandler {
 	public TrajectoryHandler(EpisimConfigGroup episimConfig, EpisimReporting reporting, ContactModel model, SplittableRandom rnd,
 							 @Named("personMap") Map<Id<Person>, EpisimPerson> personMap,
 							 @Named("vehicleMap") Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicleMap,
-							 @Named("pseudoFacilityMap") Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> pseudoFacilityMap,
-							 @Named("paramsMap") Map<String, EpisimPerson.Activity> paramsMap) {
+							 @Named("pseudoFacilityMap") Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> pseudoFacilityMap) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
 		this.reporting = reporting;
@@ -56,7 +54,6 @@ final class TrajectoryHandler {
 		this.personMap = personMap;
 		this.vehicleMap = vehicleMap;
 		this.pseudoFacilityMap = pseudoFacilityMap;
-		this.paramsMap = paramsMap;
 	}
 
 	SplittableRandom getRnd() {
@@ -72,7 +69,7 @@ final class TrajectoryHandler {
 	 * Handle plans with "holes" in their trajectory.
 	 *
 	 * @param day day that is about to start
-	 * @param responsible
+	 * @param responsible used for partitioning of trajectory handlers
 	 */
 	void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day, Predicate<Id<?>> responsible) {
 
@@ -85,8 +82,6 @@ final class TrajectoryHandler {
 		// TODO: are unclosed trajectories with PT possible?
 
 		if (!lastFacilityId.equals(firstFacilityId)) {
-			EpisimContainer<?> container = pseudoFacilityMap.get(lastFacilityId);
-
 			InfectionEventHandler.EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
 
 			// index of last activity at previous day
@@ -113,6 +108,7 @@ final class TrajectoryHandler {
 
 
 		} else {
+			// TODO: check if still needed
 			InfectionEventHandler.EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 
 			if (responsible.test(firstFacility.getContainerId())) {
