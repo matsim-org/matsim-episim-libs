@@ -130,26 +130,6 @@ public final class ReplayHandler {
 	 */
 	private final class EventReader implements BasicEventHandler {
 
-		/**
-		 * Experimental flag to adjust persons starting with leisure time during reading of events.
-		 * @implNote don't set to true
-		 */
-		@Beta
-		private static final boolean ADJUST_LEISURE = false;
-		/**
-		 * Used when adjust leisure is true. Mark persons that already started their day.
-		 */
-		private final Set<Id<Person>> started = Collections.newSetFromMap(new IdentityHashMap<>());
-
-		/**
-		 * Rng for leisure adjustment.
-		 */
-		private SplittableRandom leisureRnd = new SplittableRandom(0);
-		/**
-		 * Number of adjusted leisure activities.
-		 */
-		private int adjusted = 0;
-
 		private final List<Event> events;
 
 		private EventReader(List<Event> events) {
@@ -173,10 +153,6 @@ public final class ReplayHandler {
 					coord = link.getToNode().getCoord();
 				}
 
-				if (ADJUST_LEISURE) {
-					started.add(e.getPersonId());
-				}
-
 				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(),
 						                       createEpisimFacilityId(e),
 						                       e.getActType().intern(), coord);
@@ -189,19 +165,6 @@ public final class ReplayHandler {
 
 				String actType = e.getActType().intern();
 				double time = e.getTime();
-
-				// only persons starting their day with end leisure will be adjusted.
-				if (ADJUST_LEISURE && time < 13000 && !started.contains(e.getPersonId())) {
-					started.add(e.getPersonId());
-
-					// adjust person during the first 3.6h
-					// valid comparison because of .intern()
-					if (time < 13000 && actType.equals("leisure")) {
-						time -= Math.min(time - 1, 13000 * leisureRnd.nextDouble());
-						adjusted++;
-					}
-				}
-
 				event = new ActivityEndEvent(time, e.getPersonId(), e.getLinkId(),
 						createEpisimFacilityId(e),
 						actType);

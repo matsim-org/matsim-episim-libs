@@ -21,7 +21,6 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
-import it.unimi.dsi.fastutil.Pair;
 import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
@@ -74,11 +73,13 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * The first visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 * Can be null if person does not start in a container.
 	 */
 	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
 
 	/**
 	 * The last visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 * This is null if a person does not end its day in a container.
 	 */
 	private final Id<ActivityFacility>[] lastFacilityId = new Id[7];
 	// Fields above are initialized from the sim and not persisted
@@ -168,12 +169,12 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Lookup age from attributes.
 	 */
-	private static int getAge( Attributes attrs ){
+	private static int getAge(Attributes attrs) {
 		int age = -1;
 
-		for( String attr : attrs.getAsMap().keySet() ){
-			if( attr.contains( "age" ) ){
-				age = Integer.parseInt(attrs.getAttribute( attr ).toString());
+		for (String attr : attrs.getAsMap().keySet()) {
+			if (attr.contains("age")) {
+				age = Integer.parseInt(attrs.getAttribute(attr).toString());
 				break;
 			}
 		}
@@ -214,7 +215,7 @@ public final class EpisimPerson implements Attributable {
 			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());
 		}
 
-		if (in.readBoolean()){
+		if (in.readBoolean()) {
 			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
 		}
 
@@ -301,13 +302,13 @@ public final class EpisimPerson implements Attributable {
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
 	}
 
-	synchronized public void possibleInfection(InfectionInfo info){
+	synchronized public void possibleInfection(InfectionInfo info) {
 		if (earliestInfections == null || info.getNow() < earliestInfections.getNow()) {
 			earliestInfections = info;
 		}
 	}
 
-	public void checkInfection(){
+	public void checkInfection() {
 		if (earliestInfections != null)
 			earliestInfections.checkInfection();
 	}
@@ -364,7 +365,7 @@ public final class EpisimPerson implements Attributable {
 	public int daysSince(DiseaseStatus status, int currentDay) {
 		if (!statusChanges.containsKey(status)) throw new IllegalStateException("Person was never " + status);
 
-		double day = Math.floor(statusChanges.get(status) / 86400d);
+		double day = Math.floor(statusChanges.get(status) / EpisimUtils.DAY);
 
 		return currentDay - (int) day;
 	}
@@ -486,12 +487,20 @@ public final class EpisimPerson implements Attributable {
 	 * Check whether a person has one of the given activities on a certain week day.
 	 */
 	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
-		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+		for (int i = getStartOfDay(day); i < getEndOfDay(day) + 1; i++) {
 			if (activities.contains(trajectory.get(i).right().params.getContainerName()))
 				return true;
 		}
 
 		return false;
+	}
+
+	/**
+	 * Whether this person has any activity for given day.
+	 * Used during initialization. After that it should always return true.
+	 */
+	boolean hasActivity(DayOfWeek day) {
+		return getStartOfDay(day) < trajectory.size();
 	}
 
 	/**
@@ -574,35 +583,60 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public Activity getActivity(DayOfWeek day, double time) {
 
+		assert getStartOfDay(day) >= 0;
+		assert getEndOfDay(day) <= trajectory.size();
+
 		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
 		assert !sub.isEmpty() : "Trajectory for a day can not be empty";
 
-		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		// TODO: there might be a better/faster data structure to lookup activities for a certain time
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+
+		// reverse computation of insertion point
+		// chose the left activity before that
+		if (idx < 0) {
+			idx = -(idx + 1) - 1;
+		}
+
 		return sub.get(idx).right();
 	}
 
 	/**
-	 * Get the next activity of a person.
+	 * Get the previous activity of a person.
+	 *
 	 * @see #getActivity(DayOfWeek, double)
 	 */
 	@Nullable
 	public Activity getPrevActivity(DayOfWeek day, double time) {
 		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		if (idx < 0) {
+			idx = -(idx + 1) - 1;
+		}
 
-		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
-		return sub.get(idx-1).right();
+		if (idx - 1 < 0)
+			return null;
+
+		return sub.get(idx - 1).right();
 	}
 
 	/**
-	 * Get the previous activity of a person.
+	 * Get the next activity of a person.
+	 *
 	 * @see #getActivity(DayOfWeek, double)
 	 */
 	@Nullable
-	public Activity getNextActivity(DayOfWeek day, double time)  {
+	public Activity getNextActivity(DayOfWeek day, double time) {
 		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		if (idx < 0) {
+			idx = -(idx + 1) - 1;
+		}
 
-		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
-		return sub.get(idx+1).right();
+		if (idx + 1 >= sub.size())
+			return null;
+
+		return sub.get(idx + 1).right();
 	}
 
 	/**

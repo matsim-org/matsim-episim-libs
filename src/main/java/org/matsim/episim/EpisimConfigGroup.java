@@ -29,6 +29,7 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.poi.ss.formula.functions.T;
 import org.magnos.trie.Trie;
 import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
@@ -73,6 +74,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String THREADS = "threads";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -145,6 +147,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
+	private int threads = 1;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -188,6 +191,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		clearParameterSetsForType(EventFileParams.SET_TYPE);
 		addInputEventsFile(inputEventsFile)
 				.addDays(DayOfWeek.values());
+	}
+
+	@StringSetter(THREADS)
+	public void setThreads(int threads) {
+		this.threads = threads;
+	}
+
+	@StringGetter(THREADS)
+	public int getThreads() {
+		return threads;
 	}
 
 	@StringGetter(WRITE_EVENTS)

@@ -24,14 +24,16 @@ import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.gbl.Gbl;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -45,6 +47,8 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  */
 public class EpisimContainer<T> {
 	private final Id<T> containerId;
+
+	private static final Logger log = LogManager.getLogger(EpisimContainer.class);
 
 	/**
 	 * Persons currently in this container. Stored only as Ids.
@@ -121,7 +125,9 @@ public class EpisimContainer<T> {
 	void addPerson(EpisimPerson person, double now) {
 		final int index = person.getPersonId().index();
 
-		assert !persons.contains(index) : "Person already contained in this container.";
+		//assert !persons.contains(index) : "Person already contained in this container.";
+		if (persons.contains(index))
+			log.warn( "Person {} was already in container {}", person.getPersonId(), containerId);
 
 		persons.add(index);
 		personsAsList.add(person);
@@ -139,7 +145,20 @@ public class EpisimContainer<T> {
 		containerEnterTimes.remove(index);
 		persons.remove(index);
 		boolean wasRemoved = personsAsList.remove(person);
-		Gbl.assertIf(wasRemoved);
+		if (!wasRemoved)
+			log.warn( "Person {} was not in container {}", person.getPersonId(), containerId);
+	}
+
+	/**
+	 * Remove person using the iterator from {@link #getPersons()}.
+	 * This allows to remove persons while iterating through them.
+	 */
+	void removePerson(EpisimPerson person, Iterator<EpisimPerson> it) {
+		int index = person.getPersonId().index();
+
+		containerEnterTimes.remove(index);
+		persons.remove(index);
+		it.remove();
 	}
 
 	public Id<T> getContainerId() {

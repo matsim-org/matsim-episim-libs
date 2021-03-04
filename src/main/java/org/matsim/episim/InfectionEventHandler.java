@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
+import com.google.inject.TypeLiteral;
 import com.google.inject.name.Names;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
@@ -240,12 +241,13 @@ public final class InfectionEventHandler implements Externalizable {
 					// If a person was added late, previous days are initialized at home
 					for (int i = 1; i < day.getValue(); i++) {
 						DayOfWeek it = DayOfWeek.of(i);
-						if (person.getFirstFacilityId(it) == null) {
+						if (!person.hasActivity(it)) {
 							person.setStartOfDay(it);
-							person.setEndOfDay(it);
 							person.setFirstFacilityId(createHomeFacility(person).getContainerId(), it);
 							EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
 							person.addToTrajectory(0, home);
+							person.setEndOfDay(it);
+							person.setStartOfDay(it.plus(1));
 						}
 					}
 				}
@@ -263,9 +265,8 @@ public final class InfectionEventHandler implements Externalizable {
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
 					person.addToTrajectory(event.getTime(), act);
-					if (person.getFirstFacilityId(day) == null)
-						person.setFirstFacilityId(facility.getContainerId(), day);
 
+					person.setLastFacilityId(facility.getContainerId(), day);
 
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
@@ -273,10 +274,14 @@ public final class InfectionEventHandler implements Externalizable {
 					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
-					if (person.getFirstFacilityId(day) == null) {
+					// if this is the first event, container is saved and trajectory element created
+					if (!person.hasActivity(day)) {
 						person.addToTrajectory(0, act);
 						person.setFirstFacilityId(facility.getContainerId(), day);
 					}
+
+					// person is not in this container anymore
+					person.setLastFacilityId(null, day);
 				}
 
 				if (event instanceof PersonEntersVehicleEvent) {
@@ -296,17 +301,17 @@ public final class InfectionEventHandler implements Externalizable {
 			for (EpisimPerson person : this.personMap.values()) {
 
 				// person that didn't move will be put at home the whole day
-				if (person.getFirstFacilityId(day) == null) {
+				if (!person.hasActivity(day)) {
 					person.setStartOfDay(day);
 					EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
 					person.addToTrajectory(0, home);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
-					person.setFirstFacilityId(facility.getContainerId(), day);
+					person.setLastFacilityId(facility.getContainerId(), day);
 					cnt++;
-
-					person.setEndOfDay(day);
 				}
+
+				person.setEndOfDay(day);
 			}
 
 			log.info("Persons stationary on {}: {} ({}%)", day, cnt, cnt * 100.0 / personMap.size());
@@ -441,17 +446,27 @@ public final class InfectionEventHandler implements Externalizable {
 		AbstractModule childModule = new AbstractModule() {
 			@Override
 			protected void configure() {
-				bind(SplittableRandom.class).toProvider(() -> new SplittableRandom(0));
-				bind(Map.class).annotatedWith(Names.named("personMap")).toInstance(personMap);
-				bind(Map.class).annotatedWith(Names.named("vehicleMap")).toInstance(vehicleMap);
-				bind(Map.class).annotatedWith(Names.named("pseudoFacilityMap")).toInstance(pseudoFacilityMap);
+				// the seed state is set later by this class
+				//bind(SplittableRandom.class).toInstance(new SplittableRandom(0));
+				bind(TrajectoryHandler.class);
+
+				TypeLiteral<Map<Id<Person>, EpisimPerson>> pMap = new TypeLiteral<>() {
+				};
+				TypeLiteral<Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle>> vMap = new TypeLiteral<>() {
+				};
+				TypeLiteral<Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility>> fMap = new TypeLiteral<>() {
+				};
+
+				bind(pMap).annotatedWith(Names.named("personMap")).toInstance(personMap);
+				bind(vMap).annotatedWith(Names.named("vehicleMap")).toInstance(vehicleMap);
+				bind(fMap).annotatedWith(Names.named("pseudoFacilityMap")).toInstance(pseudoFacilityMap);
 			}
 		};
 
-		// NUM_THREADS = 4
-		for (int i = 0; i < 4; i++) {
+		for (int i = 0; i < episimConfig.getThreads(); i++) {
 
 			Injector inj = injector.createChildInjector(childModule);
+
 			TrajectoryHandler handler = inj.getInstance(TrajectoryHandler.class);
 			handlers.add(handler);
 		}
@@ -516,11 +531,16 @@ public final class InfectionEventHandler implements Externalizable {
 					// Person stays here the whole week
 					for (DayOfWeek day : DayOfWeek.values()) {
 						episimPerson.setFirstFacilityId(facilityId, day);
+						episimPerson.setStartOfDay(day);
 					}
 
 					episimPerson.addToTrajectory(0, new EpisimPerson.Activity("home", paramsMap.get("home").params));
-
 					facility.addPerson(episimPerson, 0);
+
+					// set end index
+					for (DayOfWeek day : DayOfWeek.values()) {
+						episimPerson.setEndOfDay(day);
+					}
 
 					inserted++;
 				} else
@@ -546,7 +566,6 @@ public final class InfectionEventHandler implements Externalizable {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
-		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		for (EpisimPerson person : personMap.values()) {
 			// stf: I think this must be done before the "beforeStateUpdates" call

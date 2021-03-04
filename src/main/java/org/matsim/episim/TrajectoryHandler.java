@@ -17,6 +17,7 @@ import org.matsim.vehicles.Vehicle;
 
 import javax.inject.Named;
 import java.time.DayOfWeek;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.function.Predicate;
@@ -67,8 +68,12 @@ final class TrajectoryHandler {
 
 	/**
 	 * Handle plans with "holes" in their trajectory.
+	 * <p>
+	 * In the data, activity start events at the beginning can be missing.
+	 * Likewise, activity end events at the end of a day might be missing.
+	 * This leads to implicitly given first and last containers of the day.
 	 *
-	 * @param day day that is about to start
+	 * @param day         day that is about to start
 	 * @param responsible used for partitioning of trajectory handlers
 	 */
 	void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day, Predicate<Id<?>> responsible) {
@@ -120,15 +125,72 @@ final class TrajectoryHandler {
 
 	/**
 	 * Called of start of day before any handleEvent method.
+	 *
 	 * @param responsible predicate for checking if the handler is responsible for a certain facility
 	 */
 	public void onStartDay(Predicate<Id<?>> responsible) {
 
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
+		DayOfWeek prevDay = day.minus(1);
+
+		// remove person from facilities that
+		for (InfectionEventHandler.EpisimFacility facility : pseudoFacilityMap.values()) {
+			if (!responsible.test(facility.getContainerId()))
+				continue;
+
+			Iterator<EpisimPerson> it = facility.getPersons().iterator();
+
+			while (it.hasNext()) {
+
+				EpisimPerson person = it.next();
+
+				// person needs to be at a different container and is removed here
+				if (person.getFirstFacilityId(day) != person.getLastFacilityId(prevDay)) {
+
+					// get the last activity of the day
+					EpisimPerson.Activity lastActivity = person.getActivity(prevDay, 86400);
+
+					double timeSpent = now - facility.getContainerEnteringTime(person.getPersonId());
+					person.addSpentTime(lastActivity.actType, timeSpent);
+
+					contactModel.infectionDynamicsFacility(person, facility, now, lastActivity.actType);
+					facility.removePerson(person, it);
+				}
+			}
+		}
+
+		// all persons still in vehicles are removed at the end of the day
+		for (InfectionEventHandler.EpisimVehicle vehicle : vehicleMap.values()) {
+			if (!responsible.test(vehicle.getContainerId()))
+				continue;
+
+			Iterator<EpisimPerson> it = vehicle.getPersons().iterator();
+			while (it.hasNext()) {
+				EpisimPerson person = it.next();
+				contactModel.infectionDynamicsVehicle(person, vehicle, now);
+				vehicle.removePerson(person, it);
+			}
+		}
+
 
 		for (EpisimPerson person : personMap.values()) {
 
-			checkAndHandleEndOfNonCircularTrajectory(person, day, responsible);
+			if (person.getFirstFacilityId(day) == null)
+				continue;
+
+			Id<ActivityFacility> firstFacilityId = person.getFirstFacilityId(day);
+			InfectionEventHandler.EpisimFacility facility = pseudoFacilityMap.get(firstFacilityId);
+
+			if (!responsible.test(firstFacilityId))
+				continue;
+
+			if (!facility.containsPerson(person)) {
+
+				facility.addPerson(person, now);
+				contactModel.notifyEnterFacility(person, facility, now);
+
+			}
 		}
 	}
 
