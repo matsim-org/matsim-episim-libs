@@ -337,7 +337,6 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 
-		// TODO: group sizes are not yet tracked correctly
 		// Go through each day again to compute max group sizes
 		sameDay.clear();
 		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
@@ -355,24 +354,29 @@ public final class InfectionEventHandler implements Externalizable {
 				if (event instanceof HasFacilityId && event instanceof HasPersonId) {
 					Id<ActivityFacility> episimFacilityId = ((HasFacilityId) event).getFacilityId();
 					EpisimFacility facility = pseudoFacilityMap.get(episimFacilityId);
+					EpisimPerson person = this.personMap.get(((HasPersonId) event).getPersonId());
 
 					// happens on filtered events that are not relevant
 					if (facility == null)
 						continue;
 
 					if (event instanceof ActivityStartEvent) {
-						// TODO
-						//handleEvent((ActivityStartEvent) event);
+						if (!facility.containsPerson(person))
+							facility.addPerson(person, 0.0);
+
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
-						// TODO
-						//handleEvent((ActivityEndEvent) event);
+						if (facility.containsPerson(person))
+							facility.removePerson(person);
 					}
 				}
 			}
 
 			sameDay.put(eventsForDay, day);
 		}
+
+		// reset state again
+		pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
 
 		log.info("Computed max group sizes");
 

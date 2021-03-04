@@ -52,7 +52,7 @@ import java.util.Map;
  */
 public final class SnzBerlinProductionScenario extends AbstractModule {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
-	
+
 	public static enum DiseaseImport {yes, onlySpring, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
@@ -192,12 +192,12 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		//if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		config.global().setRandomSeed(7564655870752979346L);
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
@@ -212,7 +212,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 //
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
 //				.addDays(DayOfWeek.SUNDAY);
-		
+
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
@@ -324,7 +324,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					LocalDate.of(2020, 6, 15), tracingCapacity
 			));
 		}
-		
+
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
 			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
@@ -358,7 +358,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 				}
 			}
 		}
-		
+
 		//outdoorFractions
 		if (this.weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
@@ -380,9 +380,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		//leisure factor
 		double leisureFactor = 1.6;
 		if (this.restrictions != Restrictions.no) builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		return config;
