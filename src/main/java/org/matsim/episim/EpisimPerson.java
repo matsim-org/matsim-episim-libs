@@ -598,6 +598,8 @@ public final class EpisimPerson implements Attributable {
 			idx = -(idx + 1) - 1;
 		}
 
+		assert idx >= 0;
+
 		return sub.get(idx).right();
 	}
 

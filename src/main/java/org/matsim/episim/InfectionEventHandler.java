@@ -40,10 +40,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.model.ContactModel;
-import org.matsim.episim.model.InitialInfectionHandler;
-import org.matsim.episim.model.ProgressionModel;
-import org.matsim.episim.model.VaccinationModel;
+import org.matsim.episim.model.*;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -447,29 +444,30 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	protected void createTrajectoryHandlers() {
 
-		AbstractModule childModule = new AbstractModule() {
-			@Override
-			protected void configure() {
-				// the seed state is set later by this class
-				//bind(SplittableRandom.class).toInstance(new SplittableRandom(0));
-				bind(TrajectoryHandler.class);
-
-				TypeLiteral<Map<Id<Person>, EpisimPerson>> pMap = new TypeLiteral<>() {
-				};
-				TypeLiteral<Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle>> vMap = new TypeLiteral<>() {
-				};
-				TypeLiteral<Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility>> fMap = new TypeLiteral<>() {
-				};
-
-				bind(pMap).annotatedWith(Names.named("personMap")).toInstance(personMap);
-				bind(vMap).annotatedWith(Names.named("vehicleMap")).toInstance(vehicleMap);
-				bind(fMap).annotatedWith(Names.named("pseudoFacilityMap")).toInstance(pseudoFacilityMap);
-			}
-		};
-
 		for (int i = 0; i < episimConfig.getThreads(); i++) {
 
-			Injector inj = injector.createChildInjector(childModule);
+			AbstractModule childModule = new AbstractModule() {
+				@Override
+				protected void configure() {
+					// the seed state is set later by this class
+					bind(SplittableRandom.class).toInstance(new SplittableRandom(rnd.nextLong()));
+					bind(TrajectoryHandler.class);
+
+					TypeLiteral<Map<Id<Person>, EpisimPerson>> pMap = new TypeLiteral<>() {
+					};
+					TypeLiteral<Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle>> vMap = new TypeLiteral<>() {
+					};
+					TypeLiteral<Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility>> fMap = new TypeLiteral<>() {
+					};
+
+					bind(pMap).annotatedWith(Names.named("personMap")).toInstance(personMap);
+					bind(vMap).annotatedWith(Names.named("vehicleMap")).toInstance(vehicleMap);
+					bind(fMap).annotatedWith(Names.named("pseudoFacilityMap")).toInstance(pseudoFacilityMap);
+				}
+			};
+
+			// create child injector with separate instance of models
+			Injector inj = GuiceUtils.createCopiedInjector(injector, List.of(childModule), ContactModel.class, InfectionModel.class);
 
 			TrajectoryHandler handler = inj.getInstance(TrajectoryHandler.class);
 			handlers.add(handler);
@@ -579,8 +577,6 @@ public final class InfectionEventHandler implements Externalizable {
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
-			// TODO handle in trajectory?
-			// checkAndHandleEndOfNonCircularTrajectory(person, day);
 			progressionModel.updateState(person, iteration);
 		}
 
@@ -601,7 +597,10 @@ public final class InfectionEventHandler implements Externalizable {
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
 
-		handlers.forEach(h -> h.setRestrictionsForIteration(iteration, im));
+		handlers.forEach(h -> {
+			h.setRestrictionsForIteration(iteration, im);
+			EpisimUtils.setSeed(h.getRnd(), rnd.nextLong());
+		});
 
 		reporting.reportRestrictions(restrictions, iteration, report.date);
 

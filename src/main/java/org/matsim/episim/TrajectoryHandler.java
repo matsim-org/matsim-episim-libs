@@ -76,6 +76,7 @@ final class TrajectoryHandler {
 	 * @param day         day that is about to start
 	 * @param responsible used for partitioning of trajectory handlers
 	 */
+	@Deprecated
 	void checkAndHandleEndOfNonCircularTrajectory(EpisimPerson person, DayOfWeek day, Predicate<Id<?>> responsible) {
 
 		Id<ActivityFacility> lastFacilityId = person.getLastFacilityId(day.minus(1));

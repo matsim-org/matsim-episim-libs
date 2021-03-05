@@ -37,8 +37,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static org.matsim.episim.EpisimUtils.readChars;
-import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.*;
 
 /**
  * Wrapper class for a specific location that keeps track of currently contained agents and entering times.
@@ -126,8 +125,7 @@ public class EpisimContainer<T> {
 		final int index = person.getPersonId().index();
 
 		//assert !persons.contains(index) : "Person already contained in this container.";
-		if (persons.contains(index))
-			log.warn( "Person {} was already in container {}", person.getPersonId(), containerId);
+		assert !persons.contains(index) : String.format("Person %s was already in container %s", person.getPersonId(), containerId);
 
 		persons.add(index);
 		personsAsList.add(person);
