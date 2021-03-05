@@ -97,11 +97,11 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		int importOffset = 0;
 		{
-			double impFactBefJun = 4.;
+			double imprtFctBefJun = params.imprtFctBefJun;
 			importMap.put( episimConfig.getStartDate(), Math.max( 1, (int) Math.round( 0.9 * 1 ) ) );
-			interpolateImport( importMap, impFactBefJun, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ), LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
-			interpolateImport( importMap, impFactBefJun, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
-			interpolateImport( importMap, impFactBefJun, LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
+			interpolateImport( importMap, imprtFctBefJun, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ), LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
+			interpolateImport( importMap, imprtFctBefJun, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
+			interpolateImport( importMap, imprtFctBefJun, LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
 		}
 		{
 			double importFactor = params.imprtFctAftJun;
@@ -140,7 +140,8 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 		@Parameter({0.0}) double ythSusc;
 		@IntParameter( {16} ) int grwnUpAge;
 		@Parameter({2.0}) double leisFct;
-		@StringParameter( {"2020-10-15"} ) String leisFctDate;
+//		@StringParameter( {"2020-10-15"} ) String leisFctDate;
+		@Parameter({0.}) double imprtFctBefJun;
 		@Parameter({0.}) double imprtFctAftJun;
 		@IntParameter({0}) int trcCapNInf;
 //		@GenerateSeeds(1) long seed;
