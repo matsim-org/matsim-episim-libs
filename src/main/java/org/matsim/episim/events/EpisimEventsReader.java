@@ -72,9 +72,9 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			String attr = attributes.get(EpisimInfectionEvent.PROBABILITY);
 			if (attr != null)
 				probability = Double.parseDouble(attr);
-			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);
 
 			int groupSize = -1;
+			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);
 			if (attr != null)
 				groupSize = Integer.parseInt(attr);
 
