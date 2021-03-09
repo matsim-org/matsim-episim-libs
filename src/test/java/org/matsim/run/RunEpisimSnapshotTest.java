@@ -107,6 +107,11 @@ public class RunEpisimSnapshotTest {
 
 		for (File file : Objects.requireNonNull(new File(utils.getOutputDirectory()).listFiles())) {
 
+			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")) continue;
+
+			assertThat(file)
+					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
+
 			// check event files
 			if (file.getName().equals("events")) {
 				for (File event : Objects.requireNonNull(file.listFiles())) {
@@ -115,10 +120,6 @@ public class RunEpisimSnapshotTest {
 				}
 			}
 
-			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")) continue;
-
-			assertThat(file)
-					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
 		}
 
 	}

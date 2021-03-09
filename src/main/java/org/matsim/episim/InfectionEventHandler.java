@@ -569,11 +569,6 @@ public final class InfectionEventHandler implements Externalizable {
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
-		for (EpisimPerson person : personMap.values()) {
-			// stf: I think this must be done before the "beforeStateUpdates" call
-			person.checkInfection();
-		}
-
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
@@ -709,6 +704,12 @@ public final class InfectionEventHandler implements Externalizable {
 			ReplayEventsTask task = new ReplayEventsTask(handlers.get(0), events, 0, 1);
 			task.run();
 
+		}
+
+		// "execute" collected infections
+		for (EpisimPerson person : personMap.values()) {
+			// stf: I think this must be done before the "beforeStateUpdates" call
+			person.checkInfection();
 		}
 	}
 
