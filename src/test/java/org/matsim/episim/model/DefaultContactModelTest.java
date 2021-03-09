@@ -9,6 +9,7 @@ import org.junit.Test;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.RestrictionTest;
 import org.mockito.Mockito;
@@ -412,14 +413,14 @@ public class DefaultContactModelTest {
 		assertThat(noTracking)
 				// Compares arguments of the calls [person1, person2, time, activity]
 				.usingElementComparator((o1, o2) -> {
-					EpisimPerson p1 = (EpisimPerson) o1[0];
-					EpisimPerson p2 = (EpisimPerson) o2[0];
+					EpisimInfectionEvent p1 = (EpisimInfectionEvent) o1[0];
+					EpisimInfectionEvent p2 = (EpisimInfectionEvent) o2[0];
 
 					boolean same = p1.getPersonId().equals(p2.getPersonId());
 					if (!same) return -1;
 
 					return ComparisonChain.start()
-							.compare((double) o1[2], (double) o2[2])
+							.compare(p1.getTime(), p2.getTime())
 							.result();
 				})
 				.hasSizeGreaterThan(0)

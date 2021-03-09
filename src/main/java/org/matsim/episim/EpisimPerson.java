@@ -27,8 +27,8 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.model.InfectionInfo;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
@@ -105,7 +105,7 @@ public final class EpisimPerson implements Attributable {
 	 * check therefore, that the first infection is valued as the important
 	 * infection
 	 */
-	private InfectionInfo earliestInfections = null;
+	private EpisimInfectionEvent earliestInfection = null;
 
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
@@ -302,15 +302,33 @@ public final class EpisimPerson implements Attributable {
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
 	}
 
-	synchronized public void possibleInfection(InfectionInfo info) {
-		if (earliestInfections == null || info.getNow() < earliestInfections.getNow()) {
-			earliestInfections = info;
+	/**
+	 * Adds an infection possibility to this persons. Will be executed in {@link #checkInfection()}
+	 */
+	synchronized public void possibleInfection(EpisimInfectionEvent event) {
+		if (earliestInfection == null || event.getTime() < earliestInfection.getTime()) {
+			earliestInfection = event;
 		}
 	}
 
-	public void checkInfection() {
-		if (earliestInfections != null)
-			earliestInfections.checkInfection();
+	/**
+	 * Update state with a stored {@link EpisimInfectionEvent}.
+	 * @return the event if an infection has occurred.
+	 */
+	public EpisimInfectionEvent checkInfection() {
+		if (earliestInfection != null) {
+
+			EpisimInfectionEvent event = this.earliestInfection;
+			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);
+			setVirusStrain(event.getVirusStrain());
+			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
+			setInfectionType(event.getInfectionType());
+
+			this.earliestInfection = null;
+			return event;
+		}
+
+		return null;
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
@@ -539,10 +557,6 @@ public final class EpisimPerson implements Attributable {
 
 	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day) {
 		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;
-	}
-
-	public void setInfectionContainer(EpisimContainer<?> container) {
-		this.infectionContainer = (Id<ActivityFacility>) container.getContainerId();
 	}
 
 	public Id<ActivityFacility> getInfectionContainer() {

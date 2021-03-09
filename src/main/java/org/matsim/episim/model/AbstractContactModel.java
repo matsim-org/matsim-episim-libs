@@ -24,6 +24,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.policy.Restriction;
 
 import java.time.DayOfWeek;
@@ -296,8 +297,41 @@ public abstract class AbstractContactModel implements ContactModel {
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType, double prob, EpisimContainer<?> container) {
-		personWrapper.possibleInfection(new InfectionInfo(personWrapper, infector, now, infectionType, prob, container, episimConfig, iteration, scenario, reporting));
+	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
+								double prob, EpisimContainer<?> container) {
+
+		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
+			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
+		}
+		if (infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.contagious && infector.getDiseaseStatus() != EpisimPerson.DiseaseStatus.showingSymptoms) {
+			throw new IllegalStateException("Infector is not contagious. Status is=" + infector.getDiseaseStatus());
+		}
+		if (personWrapper.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+			throw new IllegalStateException("Person to be infected is in full quarantine.");
+		}
+		if (infector.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+			throw new IllegalStateException("Infector is in ful quarantine.");
+		}
+		//		if (!personWrapper.getCurrentContainer().equals(infector.getCurrentContainer())) {
+		//			throw new IllegalStateException("Person and infector are not in same container!");
+		//		}
+
+		// TODO: during iteration persons can get infected after 24h
+		// this can lead to strange effects / ordering of events, because it is assumed one iteration is one day
+		// now is overwritten to be at the end of day
+		if (now >= EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60, iteration)) {
+			now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 24 * 60 * 60 - 1, iteration);
+		}
+
+		personWrapper.possibleInfection(
+				new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
+				container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob)
+		);
+
+		// check infection immediately if there is only one thread
+		if (episimConfig.getThreads() == 1)
+			reporting.reportInfection(personWrapper.checkInfection());
+
 	}
 
 	public Map<String, Restriction> getRestrictions() {

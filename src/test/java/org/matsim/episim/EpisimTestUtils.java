@@ -8,7 +8,9 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -59,6 +61,7 @@ public class EpisimTestUtils {
 		episimConfig.setSampleSize(1);
 		episimConfig.setMaxContacts(10);
 		episimConfig.setCalibrationParameter(0.001);
+		episimConfig.setThreads(1);
 
 		// No container name should be the prefix of another one
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c00").setContactIntensity(0));
@@ -104,7 +107,9 @@ public class EpisimTestUtils {
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 
+		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
 		p.addToTrajectory(0, new EpisimPerson.Activity(currentAct, TEST_CONFIG.selectInfectionParams(currentAct)));
+		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
 
 		if (container != null) {
 			container.addPerson(p, 0);

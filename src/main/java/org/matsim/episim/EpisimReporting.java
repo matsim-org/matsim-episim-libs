@@ -401,36 +401,32 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report the occurrence of an infection.
 	 *
-	 * @param personWrapper infected person
-	 * @param infector      infector
-	 * @param infectionType activities of both persons
+	 * @param event occurred infection event
 	 */
-	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType,
-								VirusStrain strain, double prob, EpisimContainer<?> container) {
+	public void reportInfection(EpisimInfectionEvent event) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
 		// race-conditions will occur, but the state will be eventually where we want it (threads stop logging)
 		if (cnt > 0) {
-			log.warn("Infection of personId={} by person={} at/in {}", personWrapper.getPersonId(), infector.getPersonId(), infectionType);
+			log.warn("Infection of personId={} by person={} at/in {}", event.getPersonId(), event.getInfectorId(), event.getInfectionType());
 			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
-		strains.mergeInt(strain, 1, Integer::sum);
-		manager.processEvent(new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-													  container.getContainerId(), infectionType, container.getPersons().size(), strain, prob));
+		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);
+		manager.processEvent(event);
 
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];
-		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(now);
-		array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
-		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
-		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
+		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(event.getTime());
+		array[InfectionEventsWriterFields.infector.ordinal()] = event.getInfectorId().toString();
+		array[InfectionEventsWriterFields.infected.ordinal()] = event.getPersonId().toString();
+		array[InfectionEventsWriterFields.infectionType.ordinal()] = event.getInfectionType();
 		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;
-		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(container.getPersons().size());
-		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
-		array[InfectionEventsWriterFields.virusStrain.ordinal()] = strain.toString();
-		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(prob);
+		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(event.getGroupSize());
+		array[InfectionEventsWriterFields.facility.ordinal()] = event.getContainerId().toString();
+		array[InfectionEventsWriterFields.virusStrain.ordinal()] = event.getVirusStrain().toString();
+		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(event.getProbability());
 
 		writer.append(infectionEvents, array);
 	}

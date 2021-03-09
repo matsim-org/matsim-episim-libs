@@ -40,6 +40,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -706,11 +707,19 @@ public final class InfectionEventHandler implements Externalizable {
 
 		}
 
+		// store the infections for a day
+		List<EpisimInfectionEvent> infections = new ArrayList<>();
+
 		// "execute" collected infections
 		for (EpisimPerson person : personMap.values()) {
-			// stf: I think this must be done before the "beforeStateUpdates" call
-			person.checkInfection();
+			EpisimInfectionEvent e;
+			if ((e = person.checkInfection()) != null)
+				infections.add(e);
 		}
+
+		// report infections in order
+		infections.stream().sorted(Comparator.comparingDouble(Event::getTime))
+				.forEach(reporting::reportInfection);
 	}
 
 	/**

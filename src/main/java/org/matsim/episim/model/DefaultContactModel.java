@@ -49,6 +49,7 @@ public final class DefaultContactModel extends AbstractContactModel {
 	/**
 	 * In order to avoid recreating a the list of other persons in the container every time it is stored as instance variable.
 	 */
+	List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
 
 	/**
 	 * This buffer is used to store the infection type.
@@ -90,7 +91,6 @@ public final class DefaultContactModel extends AbstractContactModel {
 
 		EpisimConfigGroup.InfectionParams leavingParams = null;
 
-		List<EpisimPerson> otherPersonsInContainer = new ArrayList<>();
 		otherPersonsInContainer.addAll(container.getPersons());
 		otherPersonsInContainer.remove(personLeavingContainer);
 
@@ -208,5 +208,9 @@ public final class DefaultContactModel extends AbstractContactModel {
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}
+
+		// Clear cached container
+		otherPersonsInContainer.clear();
 	}
+
 }

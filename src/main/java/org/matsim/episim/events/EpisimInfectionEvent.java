@@ -77,6 +77,18 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 		return infectionType;
 	}
 
+	public int getGroupSize() {
+		return groupSize;
+	}
+
+	public VirusStrain getVirusStrain() {
+		return virusStrain;
+	}
+
+	public double getProbability() {
+		return probability;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
