@@ -66,9 +66,23 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			Id<Person> infector = Id.createPersonId(attributes.get(EpisimInfectionEvent.INFECTOR));
 			Id<?> container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);
 			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);
-			double probability = Double.parseDouble(attributes.get(EpisimInfectionEvent.PROBABILITY));
-			int groupSize = Integer.parseInt(attributes.get(EpisimInfectionEvent.GROUP_SIZE));
-			VirusStrain virusStrain = VirusStrain.valueOf(attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+
+			// check for the presence of these attributes
+			double probability = -1;
+			String attr = attributes.get(EpisimInfectionEvent.PROBABILITY);
+			if (attr != null)
+				probability = Double.parseDouble(attr);
+
+			int groupSize = -1;
+			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);
+			if (attr != null)
+				groupSize = Integer.parseInt(attr);
+
+			VirusStrain virusStrain = null;
+			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);
+			if (attr != null)
+				virusStrain = VirusStrain.valueOf(attr);
+
 			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability);
 		};
 	}
