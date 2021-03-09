@@ -24,12 +24,18 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public VirusStrainConfigGroup() {
 		super(GROUPNAME);
+
+		// add default params
+		getOrAddParams(VirusStrain.SARS_CoV_2);
 	}
 
 	/**
 	 * Get config parameter for a specific strain.
 	 */
 	public StrainParams getParams(VirusStrain strain) {
+		if (!strains.containsKey(strain))
+			throw new IllegalStateException(("Virus strain " + strain + " is not configured."));
+
 		return strains.get(strain);
 	}
 
