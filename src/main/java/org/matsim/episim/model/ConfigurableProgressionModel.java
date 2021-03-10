@@ -465,10 +465,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			}
 		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
 
+			// TODO: out of bounds exception #####
 			if (person.hasActivity(dow, testingConfig.getActivities()))
 				testAndQuarantine(person, day);
 
 		}
+
 	}
 
 	/**

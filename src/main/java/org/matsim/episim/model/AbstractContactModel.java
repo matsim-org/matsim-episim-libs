@@ -251,6 +251,10 @@ public abstract class AbstractContactModel implements ContactModel {
 			return false;
 		}
 
+		// if activity participation was already handled, everything else is relevant
+		if (episimConfig.getActivityHandling() != EpisimConfigGroup.ActivityHandling.duringContact)
+			return true;
+
 		if (container instanceof EpisimFacility && activityRelevantForInfectionDynamics(time, person, container, restrictions, rnd)) {
 			return true;
 		}

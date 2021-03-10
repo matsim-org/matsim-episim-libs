@@ -42,6 +42,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -135,6 +136,11 @@ public final class InfectionEventHandler implements Externalizable {
 	private final VaccinationModel vaccinationModel;
 
 	/**
+	 * Activity participation.
+	 */
+	private final ActivityParticipationModel activityParticipationModel;
+
+	/**
 	 * Scenario with population information.
 	 */
 	private final Scenario scenario;
@@ -177,6 +183,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = injector.getInstance(VaccinationModel.class);
+		this.activityParticipationModel = injector.getInstance(ActivityParticipationModel.class);
 	}
 
 	/**
@@ -433,6 +440,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// Clear time-use after first iteration
 		personMap.values().forEach(p -> p.getSpentTime().clear());
+		personMap.values().forEach(EpisimPerson::initParticipation);
 
 		createTrajectoryHandlers();
 
@@ -573,6 +581,7 @@ public final class InfectionEventHandler implements Externalizable {
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
+			// TODO: testing should be performed after activity participation
 			progressionModel.updateState(person, iteration);
 		}
 
@@ -592,6 +601,15 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
+
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
+
+		for (EpisimPerson person : personMap.values()) {
+
+			// update person activity participation for the day
+			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),
+					person.getStartOfDay(day), person.getActivities(day));
+		}
 
 		handlers.forEach(h -> {
 			h.setRestrictionsForIteration(iteration, im);

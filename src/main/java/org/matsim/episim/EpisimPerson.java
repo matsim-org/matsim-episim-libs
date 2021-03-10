@@ -100,6 +100,11 @@ public final class EpisimPerson implements Attributable {
 	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
 
 	/**
+	 * Activity participation of the current day. Same length as {@link #trajectory}
+	 */
+	private BitSet activityParticipation;
+
+	/**
 	 * In the parallel version of the {@link ReplayHandler}, the infections
 	 * are not happen in a chronically order. The earliestInfections
 	 * check therefore, that the first infection is valued as the important
@@ -313,6 +318,7 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Update state with a stored {@link EpisimInfectionEvent}.
+	 *
 	 * @return the event if an infection has occurred.
 	 */
 	public EpisimInfectionEvent checkInfection() {
@@ -503,9 +509,13 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Check whether a person has one of the given activities on a certain week day.
+	 * This method takes {@link #activityParticipation} into account.
 	 */
 	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
-		for (int i = getStartOfDay(day); i < getEndOfDay(day) + 1; i++) {
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			if (!activityParticipation.get(i))
+				continue;
+
 			if (activities.contains(trajectory.get(i).right().params.getContainerName()))
 				return true;
 		}
@@ -519,6 +529,18 @@ public final class EpisimPerson implements Attributable {
 	 */
 	boolean hasActivity(DayOfWeek day) {
 		return getStartOfDay(day) < trajectory.size();
+	}
+
+	/**
+	 * Init participation bit set.
+	 */
+	void initParticipation() {
+		activityParticipation = new BitSet(trajectory.size());
+		activityParticipation.set(0, trajectory.size());
+	}
+
+	public BitSet getActivityParticipation() {
+		return activityParticipation;
 	}
 
 	/**
@@ -590,6 +612,24 @@ public final class EpisimPerson implements Attributable {
 		return "EpisimPerson{" +
 				"personId=" + personId +
 				'}';
+	}
+
+	/**
+	 * Checks whether a certain activity is performed.
+	 */
+	boolean checkActivity(DayOfWeek day, double time) {
+		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		int idx = Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble));
+		if (idx < 0) {
+			idx = -(idx + 1) - 1;
+		}
+
+		return activityParticipation.get(idx);
+	}
+
+	List<DoubleObjectPair<Activity>> getActivities(DayOfWeek day) {
+		int offset = getStartOfDay(day);
+		return trajectory.subList(offset, getEndOfDay(day));
 	}
 
 	/**

@@ -74,6 +74,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String ACTIVITY_HANDLING = "activityHandling";
 	private static final String THREADS = "threads";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
@@ -141,6 +142,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
+	private ActivityHandling activityHandling = ActivityHandling.duringContact;
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
@@ -662,6 +664,17 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.facilitiesHandling = facilitiesHandling;
 	}
 
+
+	@StringGetter(ACTIVITY_HANDLING)
+	public ActivityHandling getActivityHandling() {
+		return activityHandling;
+	}
+
+	@StringSetter(ACTIVITY_HANDLING)
+	public void setActivityHandling(ActivityHandling activityHandling) {
+		this.activityHandling = activityHandling;
+	}
+
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
 		// this is, I think, necessary for the automatic reading from file, and possibly for the commandline stuff.
@@ -879,6 +892,23 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Overwrite the rng state with a new seed taken from config.
 		 */
 		reseed,
+	}
+
+	/**
+	 * Defines how activity participation is handled.
+	 */
+	public enum ActivityHandling {
+
+		/**
+		 * Activity participation is randdom during each contact.
+		 */
+		duringContact,
+
+		/**
+		 * Activity participation is fixed at start of the day.
+		 */
+		startOfDay
+
 	}
 
 	/**
