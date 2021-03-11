@@ -53,7 +53,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
 		}
 
-		distribution = new NormalDistribution(0, 5);
+		distribution = new NormalDistribution(0.5, 2.6);
 		scale = 1 / distribution.density(distribution.getNumericalMean());
 	}
 

@@ -181,7 +181,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.scenario = injector.getInstance(Scenario.class);
-		this.policy = episimConfig.createPolicyInstance();
+		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
