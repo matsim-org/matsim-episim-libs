@@ -460,6 +460,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	protected void createTrajectoryHandlers() {
 
+		log.info("Initializing {} trajectory handlers", episimConfig.getThreads());
+
 		for (int i = 0; i < episimConfig.getThreads(); i++) {
 
 			AbstractModule childModule = new AbstractModule() {
