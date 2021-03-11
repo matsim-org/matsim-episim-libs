@@ -570,24 +570,33 @@ public final class InfectionEventHandler implements Externalizable {
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
+		reporting.reportCpuTime(iteration, "ProgressionModel", "start", -1);
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
 			progressionModel.updateState(person, iteration);
 		}
+		reporting.reportCpuTime(iteration, "ProgressionModel", "finished", -1);
 
+		reporting.reportCpuTime(iteration, "VaccinationModel", "start", -1);
 		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);
 		vaccinationModel.handleVaccination(personMap, (int) (available * episimConfig.getSampleSize()), iteration, now);
+		reporting.reportCpuTime(iteration, "VaccinationModel", "finished", -1);
 
 		this.iteration = iteration;
 
+		reporting.reportCpuTime(iteration, "HandleInfections", "start", -1);
 		int infected = this.initialInfections.handleInfections(personMap, iteration);
+		reporting.reportCpuTime(iteration, "HandleInfections", "finished", -1);
 
+		reporting.reportCpuTime(iteration, "Reporting", "start", -1);
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration, report.date);
+		reporting.reportCpuTime(iteration, "ReportTimeUse", "start", -1);
 		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);
+		reporting.reportCpuTime(iteration, "ReportTimeUse", "finished", -1);
 		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
@@ -599,7 +608,7 @@ public final class InfectionEventHandler implements Externalizable {
 		});
 
 		reporting.reportRestrictions(restrictions, iteration, report.date);
-
+		reporting.reportCpuTime(iteration, "Reporting", "finished", -1);
 	}
 
 	public Collection<EpisimPerson> getPersons() {

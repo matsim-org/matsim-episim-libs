@@ -105,6 +105,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter diseaseImport;
 	private BufferedWriter outdoorFraction;
 	private BufferedWriter virusStrains;
+	private BufferedWriter cpuTime;
 
 	private String memorizedDate = null;
 
@@ -146,7 +147,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
-
+		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
+		
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
 
@@ -560,6 +562,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	}
 
+	public synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
+		//		try {
+			writer.append(cpuTime, new String[] { String.valueOf(iteration),
+												 where,
+												 what,
+												 String.valueOf(System.currentTimeMillis()),
+												 String.valueOf(taskId)});
+			//			cpuTime.flush();
+			//		} catch (IOException e) {}
+	}
+
 	@Override
 	public void close() {
 
@@ -570,6 +583,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(diseaseImport);
 		writer.close(outdoorFraction);
 		writer.close(virusStrains);
+		writer.close(cpuTime);
 
 	}
 
