@@ -37,6 +37,8 @@ import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import java.util.SplittableRandom;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Provides the default bindings needed for Episim.
@@ -130,6 +132,17 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public SplittableRandom splittableRandom(Config config) {
 		return new SplittableRandom(config.global().getRandomSeed());
+	}
+
+
+	@Provides
+	@Singleton
+	public ExecutorService executorService(EpisimConfigGroup episimConfig) {
+
+		if (episimConfig.getThreads() > 1)
+			return Executors.newFixedThreadPool(episimConfig.getThreads());
+		else
+			return Executors.newSingleThreadScheduledExecutor();
 	}
 
 }

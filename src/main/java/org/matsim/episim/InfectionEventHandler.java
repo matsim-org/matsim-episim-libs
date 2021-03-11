@@ -57,6 +57,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -145,6 +146,11 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private final Scenario scenario;
 
+	/**
+	 * Executors for trajectories.
+	 */
+	private final ExecutorService executor;
+
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final TracingConfigGroup tracingConfig;
@@ -184,6 +190,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = injector.getInstance(VaccinationModel.class);
 		this.activityParticipationModel = injector.getInstance(ActivityParticipationModel.class);
+		this.executor = injector.getInstance(ExecutorService.class);
 	}
 
 	/**
@@ -713,7 +720,7 @@ public final class InfectionEventHandler implements Externalizable {
 			var futures = new CompletableFuture[handlers.size()];
 			for (int i = 0; i < handlers.size(); i++) {
 				ReplayEventsTask task = new ReplayEventsTask(handlers.get(i), events, i, handlers.size());
-				futures[i] = CompletableFuture.runAsync(task);
+				futures[i] = CompletableFuture.runAsync(task, executor);
 			}
 
 			CompletableFuture.allOf(futures).join();
