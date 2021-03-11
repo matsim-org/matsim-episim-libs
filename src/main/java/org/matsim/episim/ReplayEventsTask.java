@@ -60,7 +60,7 @@ final public class ReplayEventsTask implements Runnable {
 	}
 
 	public void run() {
-
+		trajectoryHandler.clock("start", taskId);
 		trajectoryHandler.onStartDay(this::handles);
 
 		for (final Event e : events) {
@@ -83,5 +83,7 @@ final public class ReplayEventsTask implements Runnable {
 					trajectoryHandler.handleEvent(plve);
 			}
 		}
+
+		trajectoryHandler.clock("finished", taskId);
 	}
 }
