@@ -21,13 +21,14 @@ def _generator(z):
         yield z
 
 
-def read_batch_run(run, r_values=False, age_groups=None):
+def read_batch_run(run, r_values=False, age_groups=None, infections=False):
     """ Reads one batch run from a directory with the _info and .zip file, or directly from the zip file.
 
     :param run path to folder or zip file of the run
     :param r_values whether to read r values from the file
     :param age_groups If given aggregates infections by age. Param needs to be array of monotonically increasing bin edges,
                     including the rightmost edge.
+    :param infections whether to read infection number and share
     """
 
     info = None
@@ -66,6 +67,20 @@ def read_batch_run(run, r_values=False, age_groups=None):
                             rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
                             df['rValue'] = rv.rValue
                             df['newContagious'] = rv.newContagious
+
+                            rv = rv.drop(columns=["rValue", "newContagious", "scenario", "day"])
+
+                            df = df.merge(rv.add_prefix('r_'), how="left", left_index=True, right_index=True)
+
+                    if infections:
+                        with z.open(idx + ".infectionsPerActivity.txt.tsv") as rCSV:
+                            rv = pd.read_csv(rCSV, sep="\t", parse_dates=True, index_col="date")
+
+                            rv = rv.pivot_table(index="date", values=["infections", "infectionsShare"], columns="activity")
+                            rv = rv.sort_index(axis=1, level=1)
+                            rv.columns = [f'{x}_{y}' for x, y in rv.columns]
+
+                            df = df.merge(rv, how="left", left_index=True, right_index=True)
 
                     if age_groups:
                         with z.open(idx + ".post.infectionsByAge.txt") as rCSV:
