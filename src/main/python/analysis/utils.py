@@ -199,7 +199,7 @@ def aggregate_batch_run(run):
         for z in zips:
             for f in z.namelist():
                 idx, _, filename = f.partition(".")
-                if idx not in idMap:
+                if idx not in idMap or f.endswith(".xml"):
                     continue
 
                 with z.open(f) as zf:
