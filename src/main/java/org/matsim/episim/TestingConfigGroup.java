@@ -18,6 +18,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String CAPACITY = "testingCapacity";
 	private static final String RATE = "testingRate";
+	private static final String RATE_PER_ACTIVITY = "testingRatePerActivity";
 	private static final String FALSE_POSITIVE_RATE = "falsePositiveRate";
 	private static final String FALSE_NEGATIVE_RATE = "falseNegativeRate";
 	private static final String ACTIVITIES = "activities";
@@ -45,6 +46,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Share of people that are tested (if applicable for a test)
 	 */
 	private double testingRate = 1.0;
+
+	/**
+	 * Separate testing rates for individual activities.
+	 */
+	private final Map<String, Double> ratePerActivity = new HashMap<>();
 
 	/**
 	 * Tracing and containment strategy.
@@ -114,6 +120,32 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(RATE)
 	public void setTestingRate(double testingRate) {
 		this.testingRate = testingRate;
+	}
+
+	public void setTestingRatePerActivity(Map<String, Double> rates) {
+		this.ratePerActivity.clear();
+		this.ratePerActivity.putAll(rates);
+	}
+
+	@StringSetter(RATE_PER_ACTIVITY)
+	void setRatePerActivity(String rates) {
+
+		Map<String, String> map = SPLITTER.split(rates);
+		setTestingRatePerActivity(map.entrySet().stream().collect(Collectors.toMap(
+				Map.Entry::getKey, e -> Double.parseDouble(e.getValue())
+		)));
+	}
+
+	@StringGetter(RATE_PER_ACTIVITY)
+	String getRatesPerActivity() {
+		return JOINER.join(ratePerActivity);
+	}
+
+	/**
+	 * Return the testing rate for a specific activity. If not configured the global testing rate will be returned.
+	 */
+	public double getTestingRateForActivity(String act) {
+		return ratePerActivity.getOrDefault(act, testingRate);
 	}
 
 	@StringGetter(FALSE_POSITIVE_RATE)
@@ -203,7 +235,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Only persons with covid like symptoms are tested.
 		 */
-		SYMPTOMS_ONLY
+		//SYMPTOMS_ONLY
 
 	}
 

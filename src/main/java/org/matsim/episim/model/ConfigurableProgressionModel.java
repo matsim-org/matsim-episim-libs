@@ -448,7 +448,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
 			return;
 
-		if (testingCapacity <= 0 || testingConfig.getTestingRate() == 0)
+		if (testingCapacity <= 0)
 			return;
 
 		// person with positive test is not tested twice
@@ -461,22 +461,26 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS) {
 			if (dow == DayOfWeek.MONDAY || dow == DayOfWeek.THURSDAY) {
-				testAndQuarantine(person, day);
+				testAndQuarantine(person, day, testingConfig.getTestingRate());
 			}
 		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
 
-			if (person.hasActivity(dow, testingConfig.getActivities()))
-				testAndQuarantine(person, day);
+			double rate = person.matchActivities(dow, testingConfig.getActivities(),
+					(act, v) -> Math.max(v, testingConfig.getTestingRateForActivity(act)), 0d);
 
+			testAndQuarantine(person, day, rate);
 		}
 	}
 
 	/**
 	 * Perform testing and quarantine person.
 	 */
-	private void testAndQuarantine(EpisimPerson person, int day) {
+	private void testAndQuarantine(EpisimPerson person, int day, double testingRate) {
 
-		if (testingConfig.getTestingRate() != 1d && rnd.nextDouble() >= testingConfig.getTestingRate())
+		if (testingRate == 0)
+			return;
+
+		if (testingRate != 1d && rnd.nextDouble() >= testingRate)
 			return;
 
 		DiseaseStatus status = person.getDiseaseStatus();

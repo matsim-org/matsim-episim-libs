@@ -38,6 +38,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -512,6 +513,24 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
+	 * @param reduce reduce function called on each activities with current result
+	 * @param defaultValue default value and initial value for the reduce function
+	 */
+	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T,  T> reduce, T defaultValue) {
+
+		T result = defaultValue;
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			String act = trajectory.get(i).params.getContainerName();
+			if (activities.contains(act))
+				result = reduce.apply(act, result);
+		}
+
+		return result;
+
 	}
 
 	/**
