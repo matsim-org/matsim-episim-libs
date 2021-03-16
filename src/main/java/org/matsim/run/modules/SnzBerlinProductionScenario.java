@@ -324,25 +324,23 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					LocalDate.of(2020, 6, 15), tracingCapacity
 			));
 		}
+		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 		
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
-			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
 
-			christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
+			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
+			inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
+			inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
 
-			christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
-			christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
-
-			episimConfig.setInputDays(christmasInputDays);
+			inputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
+			inputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
@@ -358,6 +356,12 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 				}
 			}
 		}
+		
+		inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+
+		episimConfig.setInputDays(inputDays);
 		
 		//outdoorFractions
 		if (this.weatherModel != WeatherModel.no) {
