@@ -335,16 +335,10 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// Add missing facilities, with only stationary agents
 		for (EpisimFacility facility : pseudoFacilityMap.values()) {
-			if (!maxGroupSize.containsKey(facility)) {
-				totalUsers.mergeInt(facility, facility.getPersons().size(), Integer::max);
-				maxGroupSize.put(facility, facility.getPersons().size());
-
-				// there may be facilities with only "end" events, thus no group size, but correct activity usage
-				if (!activityUsage.containsKey(facility)) {
-					Object2IntOpenHashMap<String> act = new Object2IntOpenHashMap<>();
-					act.put("home", facility.getPersons().size());
-					activityUsage.put(facility, act);
-				}
+			if (!activityUsage.containsKey(facility)) {
+				Object2IntOpenHashMap<String> act = new Object2IntOpenHashMap<>();
+				act.put("home", facility.getPersons().size());
+				activityUsage.put(facility, act);
 			}
 		}
 
@@ -358,6 +352,19 @@ public final class InfectionEventHandler implements Externalizable {
 
 			if (sameDay.containsKey(eventsForDay)) {
 				continue;
+			}
+
+			// Simulate the behaviour for unclosed trajectories
+			for (EpisimPerson person : personMap.values()) {
+				Id<ActivityFacility> first = person.getFirstFacilityId(day);
+				Id<ActivityFacility> last = person.getLastFacilityId(day.minus(1));
+				if (first != last) {
+					if (first != null && pseudoFacilityMap.get(first).containsPerson(person))
+						pseudoFacilityMap.get(first).removePerson(person);
+
+					if (last != null && !pseudoFacilityMap.get(last).containsPerson(person))
+						pseudoFacilityMap.get(last).addPerson(person, 0);
+				}
 			}
 
 			pseudoFacilityMap.forEach((k, v) -> maxGroupSize.mergeInt(v, v.getPersons().size(), Integer::max));
@@ -384,11 +391,13 @@ public final class InfectionEventHandler implements Externalizable {
 				}
 			}
 
+			// reset state at end of the day
+			// people with unclosed trajectories are excluded
+			pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
+
 			sameDay.put(eventsForDay, day);
 		}
 
-		// reset state again
-		pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
 
 		log.info("Computed max group sizes");
 

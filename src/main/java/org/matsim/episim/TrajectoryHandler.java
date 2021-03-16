@@ -137,7 +137,6 @@ final class TrajectoryHandler {
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 		DayOfWeek prevDay = day.minus(1);
 
-		// remove person from facilities that
 		for (InfectionEventHandler.EpisimFacility facility : pseudoFacilityMap.values()) {
 			if (!responsible.test(facility.getContainerId()))
 				continue;
