@@ -5,6 +5,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 
 import java.io.*;
+import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,6 +65,43 @@ public class EpisimPersonTest {
 
 		p1.addTraceableContactPerson(p2, 0);
 		assertThat(p1.getTraceableContactPersons(0)).containsExactly(p2);
+
+	}
+
+	@Test
+	public void activities() {
+
+		EpisimPerson p = EpisimTestUtils.createPerson("work", null);
+
+		p.setStartOfDay(DayOfWeek.MONDAY);
+
+		p.addToTrajectory(0, new EpisimPerson.Activity("home", null));
+		p.addToTrajectory(1000, new EpisimPerson.Activity("work", null));
+		p.addToTrajectory(2000, new EpisimPerson.Activity("edu", null));
+
+		p.setEndOfDay(DayOfWeek.MONDAY);
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 0).actType)
+				.isEqualTo("home");
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 1000).actType)
+				.isEqualTo("home");
+
+		assertThat(p.getPrevActivity(DayOfWeek.MONDAY, 1000))
+				.isNull();
+
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1000).actType)
+				.isEqualTo("work");
+
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 1001).actType)
+				.isEqualTo("work");
+
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1001).actType)
+				.isEqualTo("edu");
+
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 2001))
+				.isNull();
 
 	}
 
