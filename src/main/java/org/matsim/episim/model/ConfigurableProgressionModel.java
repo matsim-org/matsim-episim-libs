@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -96,6 +97,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private final Set<Id<Person>> tracingQueue = new LinkedHashSet<>();
 
 	/**
+	 * Testing rates for configured activities for current day.
+	 */
+	private Object2DoubleMap<String> testingRateForActivities;
+
+	/**
 	 * Tracing capacity left for the day.
 	 */
 	private int tracingCapacity = Integer.MAX_VALUE;
@@ -157,6 +163,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		testingCapacity = EpisimUtils.findValidEntry(testingConfig.getTestingCapacity(), 0, date);
 		if (testingCapacity != Integer.MAX_VALUE)
 			testingCapacity *= episimConfig.getSampleSize();
+
+
+		testingRateForActivities = testingConfig.getDailyTestingRateForActivities(date);
 	}
 
 	@Override
@@ -466,7 +475,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
 
 			double rate = person.matchActivities(dow, testingConfig.getActivities(),
-					(act, v) -> Math.max(v, testingConfig.getTestingRateForActivity(act)), 0d);
+					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
 
 			testAndQuarantine(person, day, rate);
 		}

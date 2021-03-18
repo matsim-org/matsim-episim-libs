@@ -2,6 +2,8 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
 import java.time.LocalDate;
@@ -50,7 +52,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Separate testing rates for individual activities.
 	 */
-	private final Map<String, Double> ratePerActivity = new HashMap<>();
+	private final Map<String, NavigableMap<LocalDate, Double>> ratePerActivity = new HashMap<>();
 
 	/**
 	 * Tracing and containment strategy.
@@ -122,30 +124,60 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.testingRate = testingRate;
 	}
 
+	/**
+	 * Set testing rate for activities that is valid on all days.
+	 */
 	public void setTestingRatePerActivity(Map<String, Double> rates) {
 		this.ratePerActivity.clear();
-		this.ratePerActivity.putAll(rates);
+		for (Map.Entry<String, Double> e : rates.entrySet()) {
+			ratePerActivity.put(e.getKey(), new TreeMap<>(Map.of(LocalDate.MIN, e.getValue())));
+		}
+	}
+
+	/**
+	 * Set testing rate for activities individually for certain dates.
+	 */
+	public void setTestingRatePerActivityAndDate(Map<String, Map<LocalDate, Double>> rates) {
+		this.ratePerActivity.clear();
+		for (Map.Entry<String, Map<LocalDate, Double>> e : rates.entrySet()) {
+			ratePerActivity.put(e.getKey(), new TreeMap<>(e.getValue()));
+		}
 	}
 
 	@StringSetter(RATE_PER_ACTIVITY)
 	void setRatePerActivity(String rates) {
 
-		Map<String, String> map = SPLITTER.split(rates);
-		setTestingRatePerActivity(map.entrySet().stream().collect(Collectors.toMap(
-				Map.Entry::getKey, e -> Double.parseDouble(e.getValue())
-		)));
+		Map<String, String> rate = Splitter.on("|").withKeyValueSeparator(">").split(rates);
+		this.ratePerActivity.clear();
+
+		for (Map.Entry<String, String> v : rate.entrySet()) {
+			Map<String, String> map = SPLITTER.split(v.getValue());
+			ratePerActivity.put(v.getKey(), new TreeMap<>(map.entrySet().stream().collect(Collectors.toMap(
+					e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+			))));
+		}
 	}
 
 	@StringGetter(RATE_PER_ACTIVITY)
 	String getRatesPerActivity() {
-		return JOINER.join(ratePerActivity);
+
+		Map<String, String> collect =
+				ratePerActivity.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+		return Joiner.on("|").withKeyValueSeparator(">").join(collect);
 	}
 
 	/**
-	 * Return the testing rate for a specific activity. If not configured the global testing rate will be returned.
+	 * Return the testing rate for configured activities for a specific date.
 	 */
-	public double getTestingRateForActivity(String act) {
-		return ratePerActivity.getOrDefault(act, testingRate);
+	public Object2DoubleMap<String> getDailyTestingRateForActivities(LocalDate date) {
+
+		Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<>();
+		for (Map.Entry<String, NavigableMap<LocalDate, Double>> e : ratePerActivity.entrySet()) {
+			map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));
+		}
+
+		return map;
 	}
 
 	@StringGetter(FALSE_POSITIVE_RATE)
