@@ -493,12 +493,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			return;
 
 		DiseaseStatus status = person.getDiseaseStatus();
-		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.recovered) {
+		if (status == DiseaseStatus.infectedButNotContagious || status == DiseaseStatus.susceptible || status == DiseaseStatus.recovered) {
 			TestStatus testStatus = rnd.nextDouble() >= testingConfig.getFalsePositiveRate() ? TestStatus.negative : TestStatus.positive;
 			person.setTestStatus(testStatus, day);
 
-		} else if (status == DiseaseStatus.infectedButNotContagious ||
-				status == DiseaseStatus.contagious ||
+		} else if (status == DiseaseStatus.contagious ||
 				status == DiseaseStatus.showingSymptoms) {
 
 			TestStatus testStatus = rnd.nextDouble() >= testingConfig.getFalseNegativeRate() ? TestStatus.positive : TestStatus.negative;
