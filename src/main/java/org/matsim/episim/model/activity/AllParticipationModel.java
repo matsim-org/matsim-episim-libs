@@ -20,7 +20,7 @@ public final class AllParticipationModel implements ActivityParticipationModel {
 
 	@Override
 	public void updateParticipation(EpisimPerson person, BitSet trajectory, int index,
-									List<DoubleObjectPair<EpisimPerson.Activity>> activities) {
+									List<EpisimPerson.PerformedActivity> activities) {
 
 	}
 }

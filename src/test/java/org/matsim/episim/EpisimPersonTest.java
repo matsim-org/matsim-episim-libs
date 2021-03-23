@@ -75,29 +75,28 @@ public class EpisimPersonTest {
 
 		p.setStartOfDay(DayOfWeek.MONDAY);
 
-		p.addToTrajectory(0, new EpisimPerson.Activity("home", null));
-		p.addToTrajectory(1000, new EpisimPerson.Activity("work", null));
-		p.addToTrajectory(2000, new EpisimPerson.Activity("edu", null));
+		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"));
+		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"));
+		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"));
 
 		p.setEndOfDay(DayOfWeek.MONDAY);
 
-		assertThat(p.getActivity(DayOfWeek.MONDAY, 0).actType)
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 0).actType())
 				.isEqualTo("home");
 
-		assertThat(p.getActivity(DayOfWeek.MONDAY, 1000).actType)
-				.isEqualTo("home");
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 1000).actType())
+				.isEqualTo("work");
 
-		assertThat(p.getPrevActivity(DayOfWeek.MONDAY, 1000))
+		assertThat(p.getPrevActivity(DayOfWeek.MONDAY, 0))
 				.isNull();
 
-		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1000).actType)
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1000).actType())
+				.isEqualTo("edu");
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 1001).actType())
 				.isEqualTo("work");
 
-
-		assertThat(p.getActivity(DayOfWeek.MONDAY, 1001).actType)
-				.isEqualTo("work");
-
-		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1001).actType)
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1001).actType())
 				.isEqualTo("edu");
 
 		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 2001))

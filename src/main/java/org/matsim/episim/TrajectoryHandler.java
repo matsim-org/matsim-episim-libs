@@ -93,7 +93,7 @@ final class TrajectoryHandler {
 			InfectionEventHandler.EpisimFacility lastFacility = this.pseudoFacilityMap.get(lastFacilityId);
 
 			// index of last activity at previous day
-			String actType = person.getActivity(day.minus(1), 24 * 3600.).actType;
+			String actType = person.getActivity(day.minus(1), 24 * 3600.).actType();
 			double timeSpent = now - lastFacility.getContainerEnteringTime(person.getPersonId());
 			person.addSpentTime(actType, timeSpent);
 
@@ -103,13 +103,13 @@ final class TrajectoryHandler {
 			}
 
 			if (responsible.test(lastFacilityId)) {
-				contactModel.infectionDynamicsFacility(person, lastFacility, now, actType);
+				contactModel.infectionDynamicsFacility(person, lastFacility, now);
 				lastFacility.removePerson(person);
 			}
 
 			if (responsible.test(firstFacilityId)) {
 				InfectionEventHandler.EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
-				firstFacility.addPerson(person, now);
+				firstFacility.addPerson(person, now, person.getFirstActivity(day));
 
 				contactModel.notifyEnterFacility(person, firstFacility, now);
 			}
@@ -120,7 +120,7 @@ final class TrajectoryHandler {
 			InfectionEventHandler.EpisimFacility firstFacility = this.pseudoFacilityMap.get(firstFacilityId);
 
 			if (responsible.test(firstFacility.getContainerId())) {
-				firstFacility.addPerson(person, now);
+				firstFacility.addPerson(person, now, person.getFirstActivity(day));
 				contactModel.notifyEnterFacility(person, firstFacility, now);
 			}
 		}
@@ -150,13 +150,12 @@ final class TrajectoryHandler {
 				// person needs to be at a different container and is removed here
 				if (person.getFirstFacilityId(day) != person.getLastFacilityId(prevDay)) {
 
-					// get the last activity of the day
-					EpisimPerson.Activity lastActivity = person.getActivity(prevDay, 86400);
+					EpisimPerson.PerformedActivity lastActivity = facility.getPerformedActivity(person.getPersonId());
 
 					double timeSpent = now - facility.getContainerEnteringTime(person.getPersonId());
-					person.addSpentTime(lastActivity.actType, timeSpent);
+					person.addSpentTime(lastActivity.actType(), timeSpent);
 
-					contactModel.infectionDynamicsFacility(person, facility, now, lastActivity.actType);
+					contactModel.infectionDynamicsFacility(person, facility, now);
 					facility.removePerson(person, it);
 				}
 			}
@@ -188,8 +187,7 @@ final class TrajectoryHandler {
 				continue;
 
 			if (!facility.containsPerson(person)) {
-
-				facility.addPerson(person, now);
+				facility.addPerson(person, now, person.getFirstActivity(day));
 				contactModel.notifyEnterFacility(person, facility, now);
 
 			}
@@ -232,7 +230,7 @@ final class TrajectoryHandler {
 		InfectionEventHandler.EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
 
 		// add person to facility
-		episimFacility.addPerson(episimPerson, now);
+		episimFacility.addPerson(episimPerson, now, episimPerson.getActivity(day, activityStartEvent.getTime()));
 
 		contactModel.notifyEnterFacility(episimPerson, episimFacility, now);
 	}
@@ -254,7 +252,7 @@ final class TrajectoryHandler {
 		// find the facility
 		InfectionEventHandler.EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
 
-		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now, activityEndEvent.getActType());
+		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
 
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
@@ -278,7 +276,7 @@ final class TrajectoryHandler {
 		InfectionEventHandler.EpisimVehicle episimVehicle = this.vehicleMap.get(entersVehicleEvent.getVehicleId());
 
 		// add person to vehicle and memorize entering time:
-		episimVehicle.addPerson(episimPerson, now);
+		episimVehicle.addPerson(episimPerson, now, EpisimPerson.UNSPECIFIC_ACTIVITY);
 
 		contactModel.notifyEnterVehicle(episimPerson, episimVehicle, now);
 	}

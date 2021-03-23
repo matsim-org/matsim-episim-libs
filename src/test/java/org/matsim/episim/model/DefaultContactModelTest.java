@@ -69,7 +69,7 @@ public class DefaultContactModelTest {
 		for (int i = 0; i < 30_000; i++) {
 			InfectionEventHandler.EpisimFacility container = f.get();
 			EpisimPerson person = p.apply(container);
-			model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
+			model.infectionDynamicsFacility(person, container, jointTime.getSeconds());
 			if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious)
 				infections++;
 		}
@@ -94,7 +94,7 @@ public class DefaultContactModelTest {
 
 			while (!container.getPersons().isEmpty()) {
 				EpisimPerson person = container.getPersons().get(r.nextInt(container.getPersons().size()));
-				model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
+				model.infectionDynamicsFacility(person, container, jointTime.getSeconds());
 				EpisimTestUtils.removePerson(container, person);
 			}
 

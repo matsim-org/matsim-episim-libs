@@ -109,7 +109,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Maps activity type to its parameter.
 	 * This can be an identity map because the strings are canonicalized by the {@link ReplayHandler}.
 	 */
-	private final Map<String, EpisimPerson.Activity> paramsMap = new IdentityHashMap<>();
+	private final Map<String, EpisimConfigGroup.InfectionParams> paramsMap = new IdentityHashMap<>();
 
 	/**
 	 * Holds the current restrictions in place for all the activities.
@@ -256,7 +256,7 @@ public final class InfectionEventHandler implements Externalizable {
 						if (!person.hasActivity(it)) {
 							person.setStartOfDay(it);
 							person.setFirstFacilityId(createHomeFacility(person).getContainerId(), it);
-							EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
+							EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
 							person.addToTrajectory(0, home);
 							person.setEndOfDay(it);
 							person.setStartOfDay(it.plus(1));
@@ -273,7 +273,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					String actType = ((ActivityStartEvent) event).getActType();
 
-					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
+					EpisimConfigGroup.InfectionParams act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
 					person.addToTrajectory(event.getTime(), act);
@@ -283,7 +283,7 @@ public final class InfectionEventHandler implements Externalizable {
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
 
-					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
+					EpisimConfigGroup.InfectionParams act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
 					// if this is the first event, container is saved and trajectory element created
@@ -315,7 +315,7 @@ public final class InfectionEventHandler implements Externalizable {
 				// person that didn't move will be put at home the whole day
 				if (!person.hasActivity(day)) {
 					person.setStartOfDay(day);
-					EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
+					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
 					person.addToTrajectory(0, home);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
@@ -363,7 +363,7 @@ public final class InfectionEventHandler implements Externalizable {
 						pseudoFacilityMap.get(first).removePerson(person);
 
 					if (last != null && !pseudoFacilityMap.get(last).containsPerson(person))
-						pseudoFacilityMap.get(last).addPerson(person, 0);
+						pseudoFacilityMap.get(last).addPerson(person, 0, EpisimPerson.UNSPECIFIC_ACTIVITY);
 				}
 			}
 
@@ -381,7 +381,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					if (event instanceof ActivityStartEvent) {
 						if (!facility.containsPerson(person))
-							facility.addPerson(person, 0.0);
+							facility.addPerson(person, 0.0, EpisimPerson.UNSPECIFIC_ACTIVITY);
 
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
@@ -429,11 +429,11 @@ public final class InfectionEventHandler implements Externalizable {
 
 				if (max != undefined) {
 					// set container spaces to spaces of most used activity
-					EpisimPerson.Activity act = paramsMap.get(max.getKey());
+					EpisimConfigGroup.InfectionParams act = paramsMap.get(max.getKey());
 					if (act == null)
 						log.warn("No activity found for {}", max.getKey());
 					else
-						container.setNumSpaces(act.params.getSpacesPerFacility());
+						container.setNumSpaces(act.getSpacesPerFacility());
 				}
 			}
 
@@ -534,8 +534,8 @@ public final class InfectionEventHandler implements Externalizable {
 		return this.pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
 	}
 
-	private EpisimPerson.Activity createActivityType(String actType) {
-		return new EpisimPerson.Activity(actType, episimConfig.selectInfectionParams(actType));
+	private EpisimConfigGroup.InfectionParams createActivityType(String actType) {
+		return episimConfig.selectInfectionParams(actType);
 	}
 
 
@@ -563,8 +563,8 @@ public final class InfectionEventHandler implements Externalizable {
 						episimPerson.setStartOfDay(day);
 					}
 
-					episimPerson.addToTrajectory(0, new EpisimPerson.Activity("home", paramsMap.get("home").params));
-					facility.addPerson(episimPerson, 0);
+					EpisimPerson.PerformedActivity home = episimPerson.addToTrajectory(0, paramsMap.get("home"));
+					facility.addPerson(episimPerson, 0, home);
 
 					// set end index
 					for (DayOfWeek day : DayOfWeek.values()) {

@@ -20,10 +20,7 @@
  */
 package org.matsim.episim;
 
-import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
-import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
-import it.unimi.dsi.fastutil.ints.IntSet;
+import it.unimi.dsi.fastutil.ints.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -60,6 +57,11 @@ public class EpisimContainer<T> {
 	private final List<EpisimPerson> personsAsList = new ArrayList<>();
 
 	private final Int2DoubleMap containerEnterTimes = new Int2DoubleOpenHashMap(4);
+
+	/**
+	 * Activities of persons in the container.
+	 */
+	private final Int2ObjectMap<EpisimPerson.PerformedActivity> personActivities = new Int2ObjectArrayMap<>(4);
 
 	/**
 	 * The maximum number of persons simultaneously in this container. Negative if unknown.
@@ -121,7 +123,7 @@ public class EpisimContainer<T> {
 		return persons.contains(index);
 	}
 
-	void addPerson(EpisimPerson person, double now) {
+	void addPerson(EpisimPerson person, double now, EpisimPerson.PerformedActivity act) {
 		final int index = person.getPersonId().index();
 
 		//assert !persons.contains(index) : "Person already contained in this container.";
@@ -130,6 +132,7 @@ public class EpisimContainer<T> {
 		persons.add(index);
 		personsAsList.add(person);
 		containerEnterTimes.put(index, now);
+		personActivities.put(index, act);
 	}
 
 	/**
@@ -141,6 +144,7 @@ public class EpisimContainer<T> {
 		int index = person.getPersonId().index();
 
 		containerEnterTimes.remove(index);
+		personActivities.remove(index);
 		persons.remove(index);
 		boolean wasRemoved = personsAsList.remove(person);
 		if (!wasRemoved)
@@ -155,6 +159,7 @@ public class EpisimContainer<T> {
 		int index = person.getPersonId().index();
 
 		containerEnterTimes.remove(index);
+		personActivities.remove(index);
 		persons.remove(index);
 		it.remove();
 	}
@@ -222,6 +227,13 @@ public class EpisimContainer<T> {
 	 */
 	public double getContainerEnteringTime(Id<Person> personId) {
 		return containerEnterTimes.getOrDefault(personId.index(), Double.NEGATIVE_INFINITY);
+	}
+
+	/**
+	 * Return the activity that a person is performing in this container.
+	 */
+	public EpisimPerson.PerformedActivity getPerformedActivity(Id<Person> personId) {
+		return personActivities.get(personId.index());
 	}
 
 	public List<EpisimPerson> getPersons() {

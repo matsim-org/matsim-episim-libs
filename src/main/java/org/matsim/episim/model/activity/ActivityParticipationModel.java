@@ -31,6 +31,6 @@ public interface ActivityParticipationModel {
 	 * @param activities activities of the current day
 	 */
 	void updateParticipation(EpisimPerson person, BitSet trajectory, int offset,
-							 List<DoubleObjectPair<EpisimPerson.Activity>> activities);
+							 List<EpisimPerson.PerformedActivity> activities);
 
 }

@@ -21,7 +21,6 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
-import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
@@ -59,7 +58,7 @@ public final class EpisimPerson implements Attributable {
 	 * Whole trajectory over all days of the week.
 	 * Entries contain the starting time of activities and the performed activity.
 	 */
-	private final List<DoubleObjectPair<Activity>> trajectory = new ArrayList<>();
+	private final List<PerformedActivity> trajectory = new ArrayList<>();
 
 	/**
 	 * The position in the trajectory at the start for each day of the week.
@@ -487,8 +486,10 @@ public final class EpisimPerson implements Attributable {
 		this.traceable = traceable;
 	}
 
-	void addToTrajectory(double time, Activity trajectoryElement) {
-		trajectory.add(DoubleObjectPair.of(time, trajectoryElement));
+	PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement) {
+		PerformedActivity act = new PerformedActivity(time, trajectoryElement);
+		trajectory.add(act);
+		return act;
 	}
 
 	void setStartOfDay(DayOfWeek day) {
@@ -516,7 +517,7 @@ public final class EpisimPerson implements Attributable {
 			if (!activityParticipation.get(i))
 				continue;
 
-			if (activities.contains(trajectory.get(i).right().params.getContainerName()))
+			if (activities.contains(trajectory.get(i).params.getContainerName()))
 				return true;
 		}
 
@@ -615,17 +616,14 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Time must be greater than (not equal) for an activity to have started.
-	 * Activities start and end at the same time, so we have to assume the prev activity is still the current one.
+	 * Select a starting activity.
 	 */
 	private static int actIndex(int searchResult) {
 		// reverse computation of insertion point
 		// chose the left activity before that
 		if (searchResult < 0) {
 			return -(searchResult + 1) - 1;
-		} else if (searchResult > 0)
-			return --searchResult;
-
+		}
 		return searchResult;
 	}
 
@@ -633,34 +631,43 @@ public final class EpisimPerson implements Attributable {
 	 * Checks whether a certain activity is performed.
 	 */
 	boolean checkActivity(DayOfWeek day, double time) {
-		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		int idx = actIndex(Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble)));
+		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
 
 		return activityParticipation.get(idx);
 	}
 
-	List<DoubleObjectPair<Activity>> getActivities(DayOfWeek day) {
+	List<PerformedActivity> getActivities(DayOfWeek day) {
 		int offset = getStartOfDay(day);
 		return trajectory.subList(offset, getEndOfDay(day));
+	}
+
+
+	/**
+	 * Return the first activity of a person for specific day.
+	 */
+	PerformedActivity getFirstActivity(DayOfWeek day) {
+		return trajectory.get(getStartOfDay(day));
 	}
 
 	/**
 	 * Get the activity normally performed by a person on a specific day and time.
 	 */
-	public Activity getActivity(DayOfWeek day, double time) {
+	PerformedActivity getActivity(DayOfWeek day, double time) {
 
 		assert getStartOfDay(day) >= 0;
 		assert getEndOfDay(day) <= trajectory.size();
 
-		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
 		assert !sub.isEmpty() : "Trajectory for a day can not be empty";
 
 		// TODO: there might be a better/faster data structure to lookup activities for a certain time
-		int idx = actIndex(Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble)));
+		// TODO: object instantiation overhead
+		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
 
 		assert idx >= 0;
 
-		return sub.get(idx).right();
+		return sub.get(idx);
 	}
 
 	/**
@@ -669,13 +676,16 @@ public final class EpisimPerson implements Attributable {
 	 * @see #getActivity(DayOfWeek, double)
 	 */
 	@Nullable
-	public Activity getPrevActivity(DayOfWeek day, double time) {
-		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		int idx = actIndex(Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble)));
+	public PerformedActivity getPrevActivity(DayOfWeek day, double time) {
+		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+
+		// time must be relative to start of trajectory
+
+		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
 		if (idx - 1 < 0)
 			return null;
 
-		return sub.get(idx - 1).right();
+		return sub.get(idx - 1);
 	}
 
 	/**
@@ -684,13 +694,13 @@ public final class EpisimPerson implements Attributable {
 	 * @see #getActivity(DayOfWeek, double)
 	 */
 	@Nullable
-	public Activity getNextActivity(DayOfWeek day, double time) {
-		List<DoubleObjectPair<Activity>> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		int idx = actIndex(Collections.binarySearch(sub, DoubleObjectPair.of(time % EpisimUtils.DAY, null), Comparator.comparingDouble(DoubleObjectPair::keyDouble)));
+	public PerformedActivity getNextActivity(DayOfWeek day, double time) {
+		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
+		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
 		if (idx + 1 >= sub.size())
 			return null;
 
-		return sub.get(idx + 1).right();
+		return sub.get(idx + 1);
 	}
 
 	/**
@@ -717,26 +727,45 @@ public final class EpisimPerson implements Attributable {
 	public enum VaccinationStatus {yes, no}
 
 	/**
-	 * Activity performed by a person. Holds the type and its infection params.
+	 * Stores when an activity is performed and in which context.
 	 */
-	public static final class Activity {
+	public static final class PerformedActivity {
 
-		public final String actType;
+		public final double time;
 		public final EpisimConfigGroup.InfectionParams params;
 
-		/**
-		 * Constructor.
-		 */
-		public Activity(String actType, EpisimConfigGroup.InfectionParams params) {
-			this.actType = actType;
+		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params) {
+			this.time = time;
 			this.params = params;
+		}
+
+		/**
+		 * Starting time of an activity.
+		 */
+		public double time() {
+			return time;
+		}
+
+		/**
+		 * Activity type as string.
+		 */
+		public String actType() {
+			// container name is quite misleading and not the correct anymore.
+			return params.getContainerName();
 		}
 
 		@Override
 		public String toString() {
-			return "Activity{" +
-					"actType='" + actType + '\'' +
+			return "PerformedActivity{" +
+					"time=" + time +
+					", params=" + params +
 					'}';
 		}
 	}
+
+	/**
+	 * Not further specified activity that is used during initialization.
+	 */
+	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null);
+
 }
