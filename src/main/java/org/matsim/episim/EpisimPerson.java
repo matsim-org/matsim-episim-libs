@@ -453,7 +453,7 @@ public final class EpisimPerson implements Attributable {
 
 		if (oldSize == 0) return;
 
-		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.getDouble(k) < before);
 	}
 
 	/**

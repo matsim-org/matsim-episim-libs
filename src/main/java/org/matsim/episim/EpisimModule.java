@@ -31,6 +31,8 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
@@ -54,6 +56,7 @@ public class EpisimModule extends AbstractModule {
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);
 		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);
+		bind(TestingModel.class).to(DefaultTestingModel.class).in(Singleton.class);
 
 		// Internal classes, should rarely be needed to be reconfigured
 		bind(EpisimRunner.class).in(Singleton.class);
