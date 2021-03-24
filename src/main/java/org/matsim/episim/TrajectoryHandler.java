@@ -306,7 +306,7 @@ final class TrajectoryHandler {
 		episimVehicle.removePerson(episimPerson);
 	}
 
-	public void clock(String what, int taskId) {
+	public void reportCpuTime(String what, int taskId) {
 		reporting.reportCpuTime(iteration, "TrajectoryHandler", what, taskId);
 	}
 }
