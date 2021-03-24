@@ -441,6 +441,8 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
+		// TODO: needs to be sorted or results will be non deterministic
+
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
@@ -658,16 +660,14 @@ public final class EpisimPerson implements Attributable {
 		assert getStartOfDay(day) >= 0;
 		assert getEndOfDay(day) <= trajectory.size();
 
-		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		assert !sub.isEmpty() : "Trajectory for a day can not be empty";
+		// do a linear search for matching activity
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time > time)
+				return trajectory.get(i);
+		}
 
-		// TODO: there might be a better/faster data structure to lookup activities for a certain time
-		// TODO: object instantiation overhead
-		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
-
-		assert idx >= 0;
-
-		return sub.get(idx);
+		return trajectory.get(last);
 	}
 
 	/**
