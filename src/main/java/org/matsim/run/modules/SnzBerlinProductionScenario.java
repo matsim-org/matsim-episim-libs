@@ -33,17 +33,19 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.input.RestrictionInput;
+import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.policy.AdjustedPolicy;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
+import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
-
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,55 +55,48 @@ import java.util.Map;
 public final class SnzBerlinProductionScenario extends AbstractModule {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 
-	public static enum DiseaseImport {yes, onlySpring, no}
-	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
-	public static enum Masks {yes, no}
-	public static enum Tracing {yes, no}
-	public static enum ChristmasModel {no, restrictive, permissive}
-	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
-	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
-
-	private final int sample;
 	private final int importOffset;
-	private final DiseaseImport diseaseImport;
-	private final Restrictions restrictions;
-	private final Masks masks;
-	private final Tracing tracing;
-	private final ChristmasModel christmasModel;
-	private final Snapshot snapshot;
-	private final WeatherModel weatherModel;
-	private final Class<? extends InfectionModel> infectionModel;
-	private final Class<? extends VaccinationModel> vaccinationModel;
 
-	public static class Builder{
+	public static class Builder {
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
+		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.yes;
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
-		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
+		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
-		public Builder setSample( int sample ){
+
+		public Builder setSample(int sample) {
 			this.sample = sample;
 			return this;
 		}
-		public Builder setDiseaseImport( DiseaseImport diseaseImport ){
+
+		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
 			this.diseaseImport = diseaseImport;
 			return this;
 		}
-		public Builder setRestrictions( Restrictions restrictions ){
+
+		public Builder setRestrictions(Restrictions restrictions) {
 			this.restrictions = restrictions;
 			return this;
 		}
-		public Builder setMasks( Masks masks ){
+
+		public Builder setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
+			this.adjustRestrictions = adjustRestrictions;
+			return this;
+		}
+
+		public Builder setMasks(Masks masks) {
 			this.masks = masks;
 			return this;
 		}
-		public Builder setTracing( Tracing tracing ){
+
+		public Builder setTracing(Tracing tracing) {
 			this.tracing = tracing;
 			return this;
 		}
@@ -113,26 +108,53 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.weatherModel = weatherModel;
 			return this;
 		}
-		public Builder setSnapshot( Snapshot snapshot ){
+
+		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
 			return this;
 		}
-		public Builder setInfectionModel( Class<? extends InfectionModel> infectionModel ){
+
+		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
 			this.infectionModel = infectionModel;
 			return this;
 		}
-		public Builder setVaccinationModel( Class<? extends VaccinationModel> vaccinationModel ){
+
+		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
-		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot, infectionModel, importOffset, vaccinationModel );
+
+		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {
+			return new SnzBerlinProductionScenario(this);
 		}
-		public Builder setImportOffset( int importOffset ){
+
+		public Builder setImportOffset(int importOffset) {
 			this.importOffset = importOffset;
 			return this;
 		}
 	}
+
+
+	public static enum DiseaseImport {yes, onlySpring, no}
+	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+	public static enum Masks {yes, no}
+	public static enum Tracing {yes, no}
+	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
+	public static enum ChristmasModel {no, restrictive, permissive}
+	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
+	public static enum AdjustRestrictions {yes, no}
+
+	private final int sample;
+	private final DiseaseImport diseaseImport;
+	private final Restrictions restrictions;
+	private final AdjustRestrictions adjustRestrictions;
+	private final Masks masks;
+	private final Tracing tracing;
+	private final Snapshot snapshot;
+	private final ChristmasModel christmasModel;
+	private final WeatherModel weatherModel;
+	private final Class<? extends InfectionModel> infectionModel;
+	private final Class<? extends VaccinationModel> vaccinationModel;
 
 
 	/**
@@ -145,22 +167,22 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(new Builder());
 	}
 
-	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel, Snapshot snapshot,
-					    Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
-		this.sample = sample;
-		this.diseaseImport = diseaseImport;
-		this.restrictions = restrictions;
-		this.masks = masks;
-		this.tracing = tracing;
-		this.christmasModel = christmasModel;
-		this.weatherModel = weatherModel;
-		this.snapshot = snapshot;
-		this.infectionModel = infectionModel;
-		this.importOffset = importOffset;
-		this.vaccinationModel = vaccinationModel;
+	private SnzBerlinProductionScenario(Builder builder) {
+		this.sample = builder.sample;
+		this.diseaseImport = builder.diseaseImport;
+		this.restrictions = builder.restrictions;
+		this.adjustRestrictions = builder.adjustRestrictions;
+		this.masks = builder.masks;
+		this.tracing = builder.tracing;
+		this.snapshot = builder.snapshot;
+		this.infectionModel = builder.infectionModel;
+		this.importOffset = builder.importOffset;
+		this.vaccinationModel = builder.vaccinationModel;
+		this.christmasModel = builder.christmasModel;
+		this.weatherModel = builder.weatherModel;
 	}
 
 	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -186,13 +208,19 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
+
+		if (adjustRestrictions == AdjustRestrictions.yes)
+			bind(ShutdownPolicy.class).to(AdjustedPolicy.class).in(Singleton.class);
+		else
+			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
+
 	}
 
 	@Provides
 	@Singleton
 	public Config config() {
 
-		//if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -204,23 +232,23 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.SATURDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.SUNDAY);
-
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
+
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+//
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.SATURDAY);
+//
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
@@ -262,8 +290,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
 			if (this.diseaseImport == DiseaseImport.yes) {
 				episimConfig.setCalibrationParameter(1.6E-5);
-			}
-			else {
+			} else {
 				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
 			}
 		}
@@ -273,7 +300,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -289,7 +316,17 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
 
 		//restrictions and masks
+		RestrictionInput activityParticipation;
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		if (adjustRestrictions == AdjustRestrictions.yes) {
+			activityParticipation = new CreateAdjustedRestrictionsFromCSV();
+		} else {
+			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+		}
+
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210124.csv"));
+		basePolicyBuilder.setActivityParticipation(activityParticipation);
+
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
 			basePolicyBuilder.setActivityParticipation(null);
 		}
@@ -302,7 +339,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
-		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
+		ShutdownPolicy.ConfigBuilder<?> builder = basePolicyBuilder.build();
+		episimConfig.setPolicy(builder.build());
 
 		//tracing
 		if (this.tracing == Tracing.yes) {
@@ -344,6 +382,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			episimConfig.setInputDays(christmasInputDays);
 
+			/* TODO: this need to be set earlier in the policy builder
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				double fraction = 0.5925;
@@ -356,7 +395,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					builder.restrict(LocalDate.parse("2020-12-31"), 1.0, act);
 					builder.restrict(LocalDate.parse("2021-01-02"), fraction, act);
 				}
-			}
+			}*/
 		}
 
 		//outdoorFractions
@@ -377,9 +416,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			);
 		}
 
+		// TODO: is this still needed with adjusted policy?
 		//leisure factor
-		double leisureFactor = 1.6;
-		if (this.restrictions != Restrictions.no) builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+		//double leisureFactor = 1.6;
+		//if (this.restrictions != Restrictions.no) builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 

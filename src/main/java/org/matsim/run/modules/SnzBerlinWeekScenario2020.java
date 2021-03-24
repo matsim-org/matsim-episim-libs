@@ -238,7 +238,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			}
 		}
 
-		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
+		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
 
 		// yyyyyy why this? Could you please comment?  kai, sep/20
 		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly)

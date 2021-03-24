@@ -22,6 +22,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String FALSE_NEGATIVE_RATE = "falseNegativeRate";
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
+	private static final String SELECTION = "selection";
 
 	private static final String GROUPNAME = "episimTesting";
 
@@ -49,6 +50,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Tracing and containment strategy.
 	 */
 	private Strategy strategy = Strategy.NONE;
+
+	/**
+	 * Which persons are selected for testing.
+	 */
+	private Selection selection = Selection.ALL_PERSONS;
 
 	/**
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
@@ -159,6 +165,16 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.strategy = strategy;
 	}
 
+	@StringGetter(SELECTION)
+	public Selection getSelection() {
+		return selection;
+	}
+
+	@StringSetter(SELECTION)
+	public void setSelection(Selection selection) {
+		this.selection = selection;
+	}
+
 	public enum Strategy {
 
 		/**
@@ -175,6 +191,20 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 * Test persons that have certain activity at each day.
 		 */
 		ACTIVITIES
+	}
+
+	public enum Selection {
+
+		/**
+		 * All persons will be tested.
+		 */
+		ALL_PERSONS,
+
+		/**
+		 * Only persons with covid like symptoms are tested.
+		 */
+		SYMPTOMS_ONLY
+
 	}
 
 }

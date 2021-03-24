@@ -60,75 +60,30 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-//		episimConfig.setStartFromSnapshot("/Users/sebastianmuller/git/matsim-episim/output/leisureFactor_1.6-vaccinationFactor_1-christmasModel_permissive-schools_closed-ffpAtWork_no-newVariantDate_2020-12-15-extrapolateRestrictions_yesUntil80-curfew_no/episim-snapshot-060-2020-04-24.zip");
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		episimConfig.setStartFromSnapshot("episim-snapshot-330-2021-01-19.zip");
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		//christmas model
-		{
-			Map<LocalDate, DayOfWeek> christmasInputDays = new HashMap<>();
-
-			christmasInputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
-
-			christmasInputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
-			christmasInputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
-			christmasInputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
-
-			episimConfig.setInputDays(christmasInputDays);
-
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				double fraction = 0.5925;
-
-				if (params.christmasModel.equals("restrictive")) {
-					builder.restrict("2020-12-24", 1.0, act);
-				}
-				if (params.christmasModel.equals("permissive")) {
-					builder.restrict("2020-12-24", 1.0, act);
-					builder.restrict("2020-12-31", 1.0, act);
-					builder.restrict("2021-01-02", fraction, act);
-				}
-			}
-		}
-		
-		//extrapolate restrictions after 17.01.
-		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-			if (act.contains("educ")) continue;
-			if (params.extrapolateRestrictions.contains("yes")) {
-				builder.restrict("2021-01-17", 0.72, act);
-				builder.restrict("2021-01-24", 0.76, act);
-				builder.restrict("2021-01-31", 0.8, act);
-				if (params.extrapolateRestrictions.equals("yes")) {
-					builder.restrict("2021-02-07", 0.84, act);
-					builder.restrict("2021-02-14", 0.88, act);
-					builder.restrict("2021-02-21", 0.92, act);
-					builder.restrict("2021-02-28", 0.96, act);
-					builder.restrict("2021-03-07", 1., act);
-				}
-			}
-		}
-		
-		//leisure factor
-		builder.apply("2020-10-15", "2021-12-31", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
-
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(28);
+		vaccinationConfig.setDaysBeforeFullEffect(1);
+		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
+				episimConfig.getStartDate(), 0,
+				LocalDate.parse("2020-12-27"), (int) (2000 * 4./3.),
+				LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.)
+				));
 		
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		
 		LocalDate interventionDate = LocalDate.parse(params.interventionDate);
-		builder.clearAfter(interventionDate.minusDays(1).toString());
+		builder.clearAfter("2021-02-21");
+		if (params.intervention.startsWith("v_")) interventionDate = interventionDate.minusDays(14);
 		switch (params.intervention) {
 		case "none":
+			break;
+		case "l_100":
+			builder.restrict(interventionDate, 1., "leisure");
 			break;
 		case "l_50":
 			builder.restrict(interventionDate, 0.5, "leisure");
@@ -150,6 +105,9 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			break;
 		case "l_c_22-5":
 			builder.restrict(interventionDate, Restriction.ofClosingHours(22, 5), "leisure");
+			break;
+		case "w_100":
+			builder.restrict(interventionDate, 1., "work", "business");
 			break;
 		case "w_50":
 			builder.restrict(interventionDate, 0.5, "work", "business");
@@ -218,6 +176,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
+					LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.),
 					interventionDate, (int) (4831120 * 0.1),
 					interventionDate.plusDays(1), (int) (0)
 					));
@@ -226,6 +185,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
+					LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.),
 					interventionDate, (int) (4831120 * 0.2),
 					interventionDate.plusDays(1), (int) (0)
 					));
@@ -234,6 +194,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
+					LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.),
 					interventionDate, (int) (4831120 * 0.4),
 					interventionDate.plusDays(1), (int) (0)
 					));
@@ -242,6 +203,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
+					LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.),
 					interventionDate, (int) (4831120 * 0.6),
 					interventionDate.plusDays(1), (int) (0)
 					));
@@ -250,6 +212,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
+					LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.),
 					interventionDate, (int) (4831120 * 0.8),
 					interventionDate.plusDays(1), (int) (0)
 					));
@@ -258,6 +221,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
+					LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.),
 					interventionDate, (int) (4831120),
 					interventionDate.plusDays(1), (int) (0)
 					));
@@ -267,12 +231,11 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 			throw new IllegalArgumentException("Unknown intervention: " + params.intervention);
 	}
 
-		if (!params.newVariantDate.equals("never")) {
-			Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
-			infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
-		}
+		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
+		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+		
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -281,35 +244,21 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(8)
+		@GenerateSeeds(16)
 		public long seed;
 
-		@Parameter({1.6})
-		double leisureFactor;
-
-		@IntParameter({1})
-		int vaccinationFactor;
-		
-		@StringParameter({"permissive"})
-//		@StringParameter({"restrictive", "permissive"})
-		public String christmasModel;
-
-		@StringParameter({"2020-12-15", "2020-11-15"})
+		@StringParameter({"2020-12-15"})
 		String newVariantDate;
 		
-		@StringParameter({"yesUntil80"})
-		String extrapolateRestrictions;
-		
 		@StringParameter({"none", 
-			"l_50", "l_0", "l_c_18-5", "l_c_19-5", "l_c_20-5", "l_c_21-5", "l_c_22-5",
-			"w_50", "w_0", "w_ffp",
+			"l_100", "l_50", "l_0", "l_c_18-5", "l_c_19-5", "l_c_20-5", "l_c_21-5", "l_c_22-5",
+			"w_100", "w_50", "w_0", "w_ffp",
 			"s_50", "s_100", "s_100_masks", "s_50_masks",
-			"e_50", "e_0",
 			"t_0.75_5_200", "t_0.5_3_200", "t_0.5_5_inf", "t_0.75_3_inf",
 			"v_10", "v_20", "v_40", "v_60", "v_80", "v_100"})
 		String intervention;
 		
-		@StringParameter({"2021-02-15"})
+		@StringParameter({"2021-03-08"})
 		String interventionDate;
 
 	}

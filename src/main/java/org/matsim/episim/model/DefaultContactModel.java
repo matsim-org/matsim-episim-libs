@@ -71,7 +71,7 @@ public final class DefaultContactModel extends AbstractContactModel {
 	}
 
 	@Override
-	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType) {
+	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now) {
 		infectionDynamicsGeneralized(personLeavingFacility, facility, now);
 	}
 
@@ -88,8 +88,6 @@ public final class DefaultContactModel extends AbstractContactModel {
 
 		// start tracking late as possible because of computational costs
 		boolean trackingEnabled = iteration >= trackingAfterDay;
-
-		EpisimConfigGroup.InfectionParams leavingParams = null;
 
 		otherPersonsInContainer.addAll(container.getPersons());
 		otherPersonsInContainer.remove(personLeavingContainer);
@@ -127,14 +125,17 @@ public final class DefaultContactModel extends AbstractContactModel {
 				}
 			}
 
-			String leavingPersonsActivity = personLeavingContainer.getActivity(day, now).actType;
-			String otherPersonsActivity = contactPerson.getActivity(day, now).actType;
+			EpisimPerson.PerformedActivity leavingAct = container.getPerformedActivity(personLeavingContainer.getPersonId());
+			EpisimPerson.PerformedActivity contactAct = container.getPerformedActivity(contactPerson.getPersonId());
+
+			String leavingPersonsActivity = leavingAct.actType();
+			String otherPersonsActivity = contactAct.actType();
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
 			double containerEnterTimeOfPersonLeaving = container.getContainerEnteringTime(personLeavingContainer.getPersonId());
 			double containerEnterTimeOfOtherPerson = container.getContainerEnteringTime(contactPerson.getPersonId());
-			double jointTimeInContainer = calculateJointTimeInContainer(now, personLeavingContainer, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
+			double jointTimeInContainer = calculateJointTimeInContainer(now, leavingAct.params, containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
 			//forbid certain cross-activity interactions, keep track of contacts
 			if (container instanceof InfectionEventHandler.EpisimFacility) {
@@ -182,13 +183,10 @@ public final class DefaultContactModel extends AbstractContactModel {
 				throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
 			}
 
-
-			// Parameter will only be retrieved one time
-			if (leavingParams == null)
-				leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
+			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, leavingAct);
 
 			// activity params of the contact person and leaving person
-			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
+			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, contactAct);
 
 			double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());
 

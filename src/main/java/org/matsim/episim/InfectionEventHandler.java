@@ -42,6 +42,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -56,6 +57,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -107,7 +109,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Maps activity type to its parameter.
 	 * This can be an identity map because the strings are canonicalized by the {@link ReplayHandler}.
 	 */
-	private final Map<String, EpisimPerson.Activity> paramsMap = new IdentityHashMap<>();
+	private final Map<String, EpisimConfigGroup.InfectionParams> paramsMap = new IdentityHashMap<>();
 
 	/**
 	 * Holds the current restrictions in place for all the activities.
@@ -135,9 +137,19 @@ public final class InfectionEventHandler implements Externalizable {
 	private final VaccinationModel vaccinationModel;
 
 	/**
+	 * Activity participation.
+	 */
+	private final ActivityParticipationModel activityParticipationModel;
+
+	/**
 	 * Scenario with population information.
 	 */
 	private final Scenario scenario;
+
+	/**
+	 * Executors for trajectories.
+	 */
+	private final ExecutorService executor;
 
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
@@ -169,7 +181,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.scenario = injector.getInstance(Scenario.class);
-		this.policy = episimConfig.createPolicyInstance();
+		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
@@ -177,6 +189,8 @@ public final class InfectionEventHandler implements Externalizable {
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = injector.getInstance(VaccinationModel.class);
+		this.activityParticipationModel = injector.getInstance(ActivityParticipationModel.class);
+		this.executor = injector.getInstance(ExecutorService.class);
 	}
 
 	/**
@@ -242,7 +256,7 @@ public final class InfectionEventHandler implements Externalizable {
 						if (!person.hasActivity(it)) {
 							person.setStartOfDay(it);
 							person.setFirstFacilityId(createHomeFacility(person).getContainerId(), it);
-							EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
+							EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
 							person.addToTrajectory(0, home);
 							person.setEndOfDay(it);
 							person.setStartOfDay(it.plus(1));
@@ -259,7 +273,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					String actType = ((ActivityStartEvent) event).getActType();
 
-					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
+					EpisimConfigGroup.InfectionParams act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
 					person.addToTrajectory(event.getTime(), act);
@@ -269,7 +283,7 @@ public final class InfectionEventHandler implements Externalizable {
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
 
-					EpisimPerson.Activity act = paramsMap.computeIfAbsent(actType, this::createActivityType);
+					EpisimConfigGroup.InfectionParams act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					activityUsage.computeIfAbsent(facility, k -> new Object2IntOpenHashMap<>()).mergeInt(actType, 1, Integer::sum);
 
 					// if this is the first event, container is saved and trajectory element created
@@ -301,7 +315,7 @@ public final class InfectionEventHandler implements Externalizable {
 				// person that didn't move will be put at home the whole day
 				if (!person.hasActivity(day)) {
 					person.setStartOfDay(day);
-					EpisimPerson.Activity home = paramsMap.computeIfAbsent("home", this::createActivityType);
+					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
 					person.addToTrajectory(0, home);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
@@ -321,16 +335,10 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// Add missing facilities, with only stationary agents
 		for (EpisimFacility facility : pseudoFacilityMap.values()) {
-			if (!maxGroupSize.containsKey(facility)) {
-				totalUsers.mergeInt(facility, facility.getPersons().size(), Integer::max);
-				maxGroupSize.put(facility, facility.getPersons().size());
-
-				// there may be facilities with only "end" events, thus no group size, but correct activity usage
-				if (!activityUsage.containsKey(facility)) {
-					Object2IntOpenHashMap<String> act = new Object2IntOpenHashMap<>();
-					act.put("home", facility.getPersons().size());
-					activityUsage.put(facility, act);
-				}
+			if (!activityUsage.containsKey(facility)) {
+				Object2IntOpenHashMap<String> act = new Object2IntOpenHashMap<>();
+				act.put("home", facility.getPersons().size());
+				activityUsage.put(facility, act);
 			}
 		}
 
@@ -344,6 +352,19 @@ public final class InfectionEventHandler implements Externalizable {
 
 			if (sameDay.containsKey(eventsForDay)) {
 				continue;
+			}
+
+			// Simulate the behaviour for unclosed trajectories
+			for (EpisimPerson person : personMap.values()) {
+				Id<ActivityFacility> first = person.getFirstFacilityId(day);
+				Id<ActivityFacility> last = person.getLastFacilityId(day.minus(1));
+				if (first != last) {
+					if (first != null && pseudoFacilityMap.get(first).containsPerson(person))
+						pseudoFacilityMap.get(first).removePerson(person);
+
+					if (last != null && !pseudoFacilityMap.get(last).containsPerson(person))
+						pseudoFacilityMap.get(last).addPerson(person, 0, EpisimPerson.UNSPECIFIC_ACTIVITY);
+				}
 			}
 
 			pseudoFacilityMap.forEach((k, v) -> maxGroupSize.mergeInt(v, v.getPersons().size(), Integer::max));
@@ -360,7 +381,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					if (event instanceof ActivityStartEvent) {
 						if (!facility.containsPerson(person))
-							facility.addPerson(person, 0.0);
+							facility.addPerson(person, 0.0, EpisimPerson.UNSPECIFIC_ACTIVITY);
 
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
@@ -370,11 +391,13 @@ public final class InfectionEventHandler implements Externalizable {
 				}
 			}
 
+			// reset state at end of the day
+			// people with unclosed trajectories are excluded
+			pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
+
 			sameDay.put(eventsForDay, day);
 		}
 
-		// reset state again
-		pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
 
 		log.info("Computed max group sizes");
 
@@ -406,11 +429,11 @@ public final class InfectionEventHandler implements Externalizable {
 
 				if (max != undefined) {
 					// set container spaces to spaces of most used activity
-					EpisimPerson.Activity act = paramsMap.get(max.getKey());
+					EpisimConfigGroup.InfectionParams act = paramsMap.get(max.getKey());
 					if (act == null)
 						log.warn("No activity found for {}", max.getKey());
 					else
-						container.setNumSpaces(act.params.getSpacesPerFacility());
+						container.setNumSpaces(act.getSpacesPerFacility());
 				}
 			}
 
@@ -433,6 +456,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// Clear time-use after first iteration
 		personMap.values().forEach(p -> p.getSpentTime().clear());
+		personMap.values().forEach(EpisimPerson::initParticipation);
 
 		createTrajectoryHandlers();
 
@@ -444,6 +468,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Create handlers for executing th
 	 */
 	protected void createTrajectoryHandlers() {
+
+		log.info("Initializing {} trajectory handlers", episimConfig.getThreads());
 
 		for (int i = 0; i < episimConfig.getThreads(); i++) {
 
@@ -508,8 +534,8 @@ public final class InfectionEventHandler implements Externalizable {
 		return this.pseudoFacilityMap.computeIfAbsent(facilityId, EpisimFacility::new);
 	}
 
-	private EpisimPerson.Activity createActivityType(String actType) {
-		return new EpisimPerson.Activity(actType, episimConfig.selectInfectionParams(actType));
+	private EpisimConfigGroup.InfectionParams createActivityType(String actType) {
+		return episimConfig.selectInfectionParams(actType);
 	}
 
 
@@ -537,8 +563,8 @@ public final class InfectionEventHandler implements Externalizable {
 						episimPerson.setStartOfDay(day);
 					}
 
-					episimPerson.addToTrajectory(0, new EpisimPerson.Activity("home", paramsMap.get("home").params));
-					facility.addPerson(episimPerson, 0);
+					EpisimPerson.PerformedActivity home = episimPerson.addToTrajectory(0, paramsMap.get("home"));
+					facility.addPerson(episimPerson, 0, home);
 
 					// set end index
 					for (DayOfWeek day : DayOfWeek.values()) {
@@ -574,6 +600,7 @@ public final class InfectionEventHandler implements Externalizable {
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
+			// TODO: testing should be performed after activity participation
 			progressionModel.updateState(person, iteration);
 		}
 		reporting.reportCpuTime(iteration, "ProgressionModel", "finished", -1);
@@ -601,6 +628,15 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
+
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
+
+		for (EpisimPerson person : personMap.values()) {
+
+			// update person activity participation for the day
+			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),
+					person.getStartOfDay(day), person.getActivities(day));
+		}
 
 		handlers.forEach(h -> {
 			h.setRestrictionsForIteration(iteration, im);
@@ -704,7 +740,7 @@ public final class InfectionEventHandler implements Externalizable {
 			var futures = new CompletableFuture[handlers.size()];
 			for (int i = 0; i < handlers.size(); i++) {
 				ReplayEventsTask task = new ReplayEventsTask(handlers.get(i), events, i, handlers.size());
-				futures[i] = CompletableFuture.runAsync(task);
+				futures[i] = CompletableFuture.runAsync(task, executor);
 			}
 
 			CompletableFuture.allOf(futures).join();

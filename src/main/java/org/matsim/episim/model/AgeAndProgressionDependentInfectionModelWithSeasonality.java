@@ -22,6 +22,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
 
 	private final double[] susceptibility = new double[128];
 	private final double[] infectivity = new double[susceptibility.length];
@@ -42,6 +43,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		this.progression = progression;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
 
@@ -51,7 +53,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
 		}
 
-		distribution = new NormalDistribution(0, 5);
+		distribution = new NormalDistribution(0.5, 2.6);
 		scale = 1 / distribution.density(distribution.getNumericalMean());
 	}
 
@@ -75,15 +77,16 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		double infectivity = this.infectivity[infector.getAge()];
 
 		// apply reduced susceptibility of vaccinated persons
+		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(infector.getVirusStrain(), target, vaccinationConfig, iteration);
+			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
 		}
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* getInfectivity(infector)
-				* infector.getVirusStrain().infectiousness
+				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 				* indoorOutdoorFactor
