@@ -563,14 +563,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	public synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
-		//		try {
-			writer.append(cpuTime, new String[] { String.valueOf(iteration),
-												 where,
+		writer.append(cpuTime, new String[] { String.valueOf(iteration),
+											     where,
 												 what,
 												 String.valueOf(System.currentTimeMillis()),
 												 String.valueOf(taskId)});
-			//			cpuTime.flush();
-			//		} catch (IOException e) {}
 	}
 
 	@Override

@@ -60,7 +60,7 @@ final public class ReplayEventsTask implements Runnable {
 	}
 
 	public void run() {
-		trajectoryHandler.clock("start", taskId);
+		trajectoryHandler.reportCpuTime("start", taskId);
 		trajectoryHandler.onStartDay(this::handles);
 
 		for (final Event e : events) {
@@ -84,6 +84,6 @@ final public class ReplayEventsTask implements Runnable {
 			}
 		}
 
-		trajectoryHandler.clock("finished", taskId);
+		trajectoryHandler.reportCpuTime("finished", taskId);
 	}
 }
