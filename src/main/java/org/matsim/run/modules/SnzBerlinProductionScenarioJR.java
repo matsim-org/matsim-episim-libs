@@ -22,6 +22,7 @@ package org.matsim.run.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -33,7 +34,6 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
-import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.vehicles.VehicleType;
 
@@ -43,7 +43,9 @@ import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
@@ -143,11 +145,11 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenarioJR() {
-		this(10, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(1, DiseaseImport.yes, Restrictions.yes, Masks.no, Tracing.no, ChristmasModel.no, WeatherModel.no, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
 	}
 
 	private SnzBerlinProductionScenarioJR(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel, Snapshot snapshot,
-                                          Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
+										  Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -180,7 +182,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
+		bind(ContactModel.class).to(LocationBasedSymmetricContactModel.class).in(Singleton.class); //jr
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
@@ -190,8 +192,6 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-
-		//jr
 //		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -202,7 +202,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
-		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
 
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
 //				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -288,9 +288,6 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
 
-
-
-
 		//restrictions and masks
 		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
@@ -302,10 +299,24 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) {
 			basePolicyBuilder.setRestrictUniversities(false);
 		}
-
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
+//
+
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
+		//JR
+		//
+//
+//		builder.clearAfter(LocalDate.parse("2019-01-01").toString());
+//
+//		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+////			builder.restrict(LocalDate.parse("2019-01-01"), 0.0, act);
+//			Map<String, Double> berlinSpecific = new HashMap<>();
+//			berlinSpecific.put("Berlin", 1d);
+//			builder.restrictWithDistrict(LocalDate.parse("2019-01-01"), berlinSpecific, 0d, act);
+//
+//		}
+
 
 		//tracing
 		if (this.tracing == Tracing.yes) {
@@ -389,6 +400,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		return config;
+
 	}
 
 	@Provides

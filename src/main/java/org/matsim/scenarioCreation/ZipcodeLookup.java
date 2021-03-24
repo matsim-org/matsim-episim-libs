@@ -54,6 +54,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 
@@ -166,6 +167,7 @@ public class ZipcodeLookup implements Callable<Integer> {
 
 		// Count errors
 		int unknownFac = 0;
+		Map<String, String> facilityIdToNeighborhoodMap = new HashMap<>();
 		for (Facility f : scenario.getActivityFacilities().getFacilities().values()) {
 
 			try {
@@ -187,6 +189,7 @@ public class ZipcodeLookup implements Callable<Integer> {
 		}
 
 		new FacilitiesWriter(scenario.getActivityFacilities()).write("D:/Dropbox/Documents/VSP/episim/be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz");
+
 
 
 		return 0;

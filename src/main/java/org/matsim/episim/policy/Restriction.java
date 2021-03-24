@@ -60,10 +60,15 @@ public final class Restriction {
 	private Map<FaceMask, Double> maskUsage = new EnumMap<>(FaceMask.class);
 
 	/**
+	 * Maps location-based remainingFraction to district name
+	 */
+	private Map<String, Double> districtSpecficValue;
+
+	/**
 	 * Constructor.
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
-						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage) {
+						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> districtSpecificValue) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -104,6 +109,8 @@ public final class Restriction {
 				}
 			}
 		}
+
+		this.districtSpecficValue = districtSpecificValue;
 	}
 
 	/**
@@ -125,33 +132,44 @@ public final class Restriction {
 		}
 	}
 
+
+	public void setDistrictSpecificValues(Map<String, Double> districtSpecficValue) {
+		this.districtSpecficValue = districtSpecficValue;
+	}
+
+	public Map<String, Double> getDistrictSpecficValues() {
+		return this.districtSpecficValue;
+	}
+
+
+
 	/**
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
 		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null,
-				new ClosingHours(0, 0), Map.of());
+				new ClosingHours(0, 0), Map.of(), new HashMap<>());
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null, null,null, null, null);
+		return new Restriction(remainingFraction, null, null, null,null, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null);
+		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
-		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage);
+		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage, new HashMap<>());
 	}
 
 	/**
@@ -159,7 +177,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance));
+		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance), new HashMap<>());
 	}
 
 	/**
@@ -168,7 +186,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate));
+		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate), new HashMap<>());
 	}
 
 	/**
@@ -176,28 +194,28 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
-		return new Restriction(null, null, null,null, null, null, maskUsage);
+		return new Restriction(null, null, null,null, null, null, maskUsage, new HashMap<>());
 	}
 
 	/**
 	 * Creates a restriction with certain facilities closed. Should not be combined with other restrictions.
 	 */
 	public static Restriction ofClosedFacilities(List<String> closed) {
-		return new Restriction(null, null, null,null, closed, null, null);
+		return new Restriction(null, null, null,null, closed, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null,null, null, null, null);
+		return new Restriction(null, ciCorrection, null,null, null, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Creates a restriction with limited maximum group size of activities.
 	 */
 	public static Restriction ofGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, maxGroupSize, null,null, null, null);
+		return new Restriction(null, null, maxGroupSize, null,null, null, null, new HashMap<>());
 	}
 
 	/**
@@ -207,7 +225,7 @@ public final class Restriction {
 	 * @param maxGroupSize maximum allowed group size
 	 */
 	public static Restriction ofReducedGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, null, maxGroupSize, null, null, null);
+		return new Restriction(null, null, null, maxGroupSize, null, null, null, new HashMap<>());
 	}
 
 	/**
@@ -221,7 +239,7 @@ public final class Restriction {
 
 		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
-		return new Restriction(null, null, null, null,null, closed, null);
+		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>());
 	}
 
 	/**
@@ -233,6 +251,11 @@ public final class Restriction {
 
 		Map<FaceMask, Double> enumMap = new EnumMap<>(FaceMask.class);
 
+		Map<String, Double> districtSpecficValue = new HashMap<>();
+		if (!config.getIsNull("districtSpecficValue")) { // jr TODO: what if null?
+			districtSpecficValue = (Map<String, Double>) config.getValue("districtSpecficValue").unwrapped();
+		}
+
 		if (nameMap != null)
 			nameMap.forEach((k, v) -> enumMap.put(FaceMask.valueOf(k), v.doubleValue()));
 
@@ -243,7 +266,7 @@ public final class Restriction {
 				!config.hasPath("reducedGroupSize") || config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
 				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
-				enumMap, null
+				enumMap, districtSpecficValue
 		);
 	}
 
@@ -392,6 +415,11 @@ public final class Restriction {
 			maskUsage.clear();
 			maskUsage.putAll(r.maskUsage);
 		}
+		if (!r.districtSpecficValue.isEmpty()) { //jr
+			districtSpecficValue.clear();
+			districtSpecficValue.putAll(r.districtSpecficValue);
+
+		}
 	}
 
 	/**
@@ -520,6 +548,7 @@ public final class Restriction {
 			map.put("closingHours", List.of(closingHours.from, closingHours.to));
 		}
 
+		map.put("districtSpecficValue", districtSpecficValue); //jr
 
 		return map;
 	}
