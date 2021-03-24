@@ -5,6 +5,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
@@ -20,11 +21,13 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 
 	private final FaceMaskModel maskModel;
 	private final EpisimConfigGroup episimConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
 
 	@Inject
 	public InfectionModelWithViralLoad(FaceMaskModel faceMaskModel, Config config) {
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 	}
 
 
@@ -43,7 +46,7 @@ public final class InfectionModelWithViralLoad implements InfectionModel {
 		double infectability = (double) infector.getAttributes().getAttribute(VIRAL_LOAD);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectability * contactIntensity * jointTimeInContainer * ciCorrection
-				* infector.getVirusStrain().infectiousness
+				* virusStrainConfig.getParams(infector.getVirusStrain()).getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 		);

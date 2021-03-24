@@ -2,6 +2,8 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
 import java.time.LocalDate;
@@ -18,10 +20,12 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String CAPACITY = "testingCapacity";
 	private static final String RATE = "testingRate";
+	private static final String RATE_PER_ACTIVITY = "testingRatePerActivity";
 	private static final String FALSE_POSITIVE_RATE = "falsePositiveRate";
 	private static final String FALSE_NEGATIVE_RATE = "falseNegativeRate";
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
+	private static final String SELECTION = "selection";
 
 	private static final String GROUPNAME = "episimTesting";
 
@@ -46,9 +50,19 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private double testingRate = 1.0;
 
 	/**
+	 * Separate testing rates for individual activities.
+	 */
+	private final Map<String, NavigableMap<LocalDate, Double>> ratePerActivity = new HashMap<>();
+
+	/**
 	 * Tracing and containment strategy.
 	 */
 	private Strategy strategy = Strategy.NONE;
+
+	/**
+	 * Which persons are selected for testing.
+	 */
+	private Selection selection = Selection.ALL_PERSONS;
 
 	/**
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
@@ -110,6 +124,62 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.testingRate = testingRate;
 	}
 
+	/**
+	 * Set testing rate for activities that is valid on all days.
+	 */
+	public void setTestingRatePerActivity(Map<String, Double> rates) {
+		this.ratePerActivity.clear();
+		for (Map.Entry<String, Double> e : rates.entrySet()) {
+			ratePerActivity.put(e.getKey(), new TreeMap<>(Map.of(LocalDate.MIN, e.getValue())));
+		}
+	}
+
+	/**
+	 * Set testing rate for activities individually for certain dates.
+	 */
+	public void setTestingRatePerActivityAndDate(Map<String, Map<LocalDate, Double>> rates) {
+		this.ratePerActivity.clear();
+		for (Map.Entry<String, Map<LocalDate, Double>> e : rates.entrySet()) {
+			ratePerActivity.put(e.getKey(), new TreeMap<>(e.getValue()));
+		}
+	}
+
+	@StringSetter(RATE_PER_ACTIVITY)
+	void setRatePerActivity(String rates) {
+
+		Map<String, String> rate = Splitter.on("|").withKeyValueSeparator(">").split(rates);
+		this.ratePerActivity.clear();
+
+		for (Map.Entry<String, String> v : rate.entrySet()) {
+			Map<String, String> map = SPLITTER.split(v.getValue());
+			ratePerActivity.put(v.getKey(), new TreeMap<>(map.entrySet().stream().collect(Collectors.toMap(
+					e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+			))));
+		}
+	}
+
+	@StringGetter(RATE_PER_ACTIVITY)
+	String getRatesPerActivity() {
+
+		Map<String, String> collect =
+				ratePerActivity.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+		return Joiner.on("|").withKeyValueSeparator(">").join(collect);
+	}
+
+	/**
+	 * Return the testing rate for configured activities for a specific date.
+	 */
+	public Object2DoubleMap<String> getDailyTestingRateForActivities(LocalDate date) {
+
+		Object2DoubleOpenHashMap<String> map = new Object2DoubleOpenHashMap<>();
+		for (Map.Entry<String, NavigableMap<LocalDate, Double>> e : ratePerActivity.entrySet()) {
+			map.put(e.getKey(), (double) EpisimUtils.findValidEntry(e.getValue(), 0.0, date));
+		}
+
+		return map;
+	}
+
 	@StringGetter(FALSE_POSITIVE_RATE)
 	public double getFalsePositiveRate() {
 		return falsePositiveRate;
@@ -159,6 +229,16 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.strategy = strategy;
 	}
 
+	@StringGetter(SELECTION)
+	public Selection getSelection() {
+		return selection;
+	}
+
+	@StringSetter(SELECTION)
+	public void setSelection(Selection selection) {
+		this.selection = selection;
+	}
+
 	public enum Strategy {
 
 		/**
@@ -175,6 +255,20 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 * Test persons that have certain activity at each day.
 		 */
 		ACTIVITIES
+	}
+
+	public enum Selection {
+
+		/**
+		 * All persons will be tested.
+		 */
+		ALL_PERSONS,
+
+		/**
+		 * Only persons with covid like symptoms are tested.
+		 */
+		//SYMPTOMS_ONLY
+
 	}
 
 }
