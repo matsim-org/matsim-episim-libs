@@ -38,6 +38,7 @@ import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InitialInfectionHandler;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.VaccinationModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -124,6 +125,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private final VaccinationModel vaccinationModel;
 
+	private final TestingModel testingModel;
+
 	/**
 	 * Scenario with population information.
 	 */
@@ -152,6 +155,7 @@ public final class InfectionEventHandler implements Externalizable {
 	@Inject
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting, ShutdownPolicy policy,
 								 InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
+								 TestingModel testingModel,
 								 SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -168,6 +172,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.initialInfections = initialInfections;
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = vaccinationModel;
+		this.testingModel = testingModel;
 	}
 
 	/**
@@ -638,11 +643,14 @@ public final class InfectionEventHandler implements Externalizable {
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		progressionModel.setIteration(iteration);
+		testingModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
+		testingModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);
 			progressionModel.updateState(person, iteration);
+			testingModel.performTesting(person, iteration);
 		}
 
 		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);

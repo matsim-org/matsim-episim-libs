@@ -172,8 +172,8 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	static final class MyProgressionModel implements ProgressionModel {
 		AgeDependentProgressionModel delegate ;
-		@Inject MyProgressionModel( SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, TestingConfigGroup testingConfigGroup ) {
-			delegate = new AgeDependentProgressionModel( rnd, episimConfig, tracingConfig, testingConfigGroup );
+		@Inject MyProgressionModel( SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig ) {
+			delegate = new AgeDependentProgressionModel( rnd, episimConfig, tracingConfig );
 		}
 		@Override public void setIteration( int day ){
 			delegate.setIteration( day );

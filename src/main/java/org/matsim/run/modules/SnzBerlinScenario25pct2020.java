@@ -98,13 +98,16 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			.restrict("2021-02-01", 0.2, "educ_primary")
 			.restrict("2021-02-07", 0.3, "educ_primary")
 
-			.restrict("2021-02-22", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other",  "educ_kiga")
+//			.restrict("2021-02-22", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other",  "educ_kiga")
+			.restrict("2021-02-22", .5, "educ_primary")
+			.restrict("2021-02-22", .5, "educ_secondary", "educ_tertiary", "educ_other")
+			
 			//Osterferien
 			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-04-11", 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			//Sommerferien
 			.restrict("2021-06-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-			.restrict("2021-08-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-08-07", 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			;
 		}
 
@@ -237,7 +240,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210220.csv"));
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210313.csv"));
 		}
 
 		public void setIntroductionPeriod(long introductionPeriod) {
