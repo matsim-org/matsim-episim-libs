@@ -255,7 +255,11 @@ public final class InfectionEventHandler implements Externalizable {
 						DayOfWeek it = DayOfWeek.of(i);
 						if (!person.hasActivity(it)) {
 							person.setStartOfDay(it);
-							person.setFirstFacilityId(createHomeFacility(person).getContainerId(), it);
+							Id<ActivityFacility> homeId = createHomeFacility(person).getContainerId();
+
+							person.setFirstFacilityId(homeId, it);
+							person.setLastFacilityId(homeId, it, true);
+
 							EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
 							person.addToTrajectory(0, home);
 							person.setEndOfDay(it);
@@ -278,7 +282,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					person.addToTrajectory(event.getTime(), act);
 
-					person.setLastFacilityId(facility.getContainerId(), day);
+					person.setLastFacilityId(facility.getContainerId(), day, true);
 
 				} else if (event instanceof ActivityEndEvent) {
 					String actType = ((ActivityEndEvent) event).getActType();
@@ -293,7 +297,7 @@ public final class InfectionEventHandler implements Externalizable {
 					}
 
 					// person is not in this container anymore
-					person.setLastFacilityId(null, day);
+					person.setLastFacilityId(facility.getContainerId(), day, false);
 				}
 
 				if (event instanceof PersonEntersVehicleEvent) {
@@ -302,10 +306,15 @@ public final class InfectionEventHandler implements Externalizable {
 					maxGroupSize.mergeInt(vehicle, groupSize.mergeInt(vehicle, 1, Integer::sum), Integer::max);
 					totalUsers.mergeInt(vehicle, 1, Integer::sum);
 
+					person.setStaysInContainer(day, false);
+
 				} else if (event instanceof PersonLeavesVehicleEvent) {
 					EpisimVehicle vehicle = this.vehicleMap.computeIfAbsent(((PersonLeavesVehicleEvent) event).getVehicleId(), EpisimVehicle::new);
 					groupSize.mergeInt(vehicle, -1, Integer::sum);
 					activityUsage.computeIfAbsent(vehicle, k -> new Object2IntOpenHashMap<>()).mergeInt("tr", 1, Integer::sum);
+
+					// vehicle don't count as end of day containers
+					person.setStaysInContainer(day, false);
 				}
 			}
 
@@ -319,7 +328,7 @@ public final class InfectionEventHandler implements Externalizable {
 					person.addToTrajectory(0, home);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
-					person.setLastFacilityId(facility.getContainerId(), day);
+					person.setLastFacilityId(facility.getContainerId(), day, true);
 					cnt++;
 				}
 
@@ -358,12 +367,18 @@ public final class InfectionEventHandler implements Externalizable {
 			for (EpisimPerson person : personMap.values()) {
 				Id<ActivityFacility> first = person.getFirstFacilityId(day);
 				Id<ActivityFacility> last = person.getLastFacilityId(day.minus(1));
-				if (first != last) {
-					if (first != null && pseudoFacilityMap.get(first).containsPerson(person))
-						pseudoFacilityMap.get(first).removePerson(person);
 
-					if (last != null && !pseudoFacilityMap.get(last).containsPerson(person))
-						pseudoFacilityMap.get(last).addPerson(person, 0, EpisimPerson.UNSPECIFIC_ACTIVITY);
+				if (person.getStaysInContainer(day.minus(1))) {
+
+					if (pseudoFacilityMap.get(last).containsPerson(person))
+						pseudoFacilityMap.get(last).removePerson(person);
+
+					if (!pseudoFacilityMap.get(first).containsPerson(person))
+						pseudoFacilityMap.get(first).addPerson(person, 0, person.getFirstActivity(day));
+
+				} else {
+					if (!pseudoFacilityMap.get(first).containsPerson(person))
+						pseudoFacilityMap.get(first).addPerson(person, 0, person.getFirstActivity(day));
 				}
 			}
 
@@ -381,7 +396,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					if (event instanceof ActivityStartEvent) {
 						if (!facility.containsPerson(person))
-							facility.addPerson(person, 0.0, EpisimPerson.UNSPECIFIC_ACTIVITY);
+							facility.addPerson(person, 0.0, person.getActivity(day, event.getTime()));
 
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
@@ -391,13 +406,19 @@ public final class InfectionEventHandler implements Externalizable {
 				}
 			}
 
-			// reset state at end of the day
-			// people with unclosed trajectories are excluded
-			pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
-
 			sameDay.put(eventsForDay, day);
 		}
 
+		pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
+
+		// Put persons into their correct initial container
+		DayOfWeek startDay = EpisimUtils.getDayOfWeek(episimConfig, 0);
+		for (EpisimPerson person : personMap.values()) {
+			if (person.getStaysInContainer(startDay)) {
+				EpisimFacility facility = pseudoFacilityMap.get(person.getLastFacilityId(startDay));
+				facility.addPerson(person, 0, person.getLastActivity(startDay));
+			}
+		}
 
 		log.info("Computed max group sizes");
 
@@ -560,6 +581,7 @@ public final class InfectionEventHandler implements Externalizable {
 					// Person stays here the whole week
 					for (DayOfWeek day : DayOfWeek.values()) {
 						episimPerson.setFirstFacilityId(facilityId, day);
+						episimPerson.setLastFacilityId(facilityId, day, true);
 						episimPerson.setStartOfDay(day);
 					}
 

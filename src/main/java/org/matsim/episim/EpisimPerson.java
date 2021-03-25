@@ -84,6 +84,11 @@ public final class EpisimPerson implements Attributable {
 	// Fields above are initialized from the sim and not persisted
 
 	/**
+	 * Whether person stays in container at the and of a day.
+	 */
+	private final boolean[] staysInContainer = new boolean[7];
+
+	/**
 	 * Traced contacts with other persons.
 	 */
 	private final Object2DoubleMap<EpisimPerson> traceableContactPersons = new Object2DoubleLinkedOpenHashMap<>(4);
@@ -554,6 +559,7 @@ public final class EpisimPerson implements Attributable {
 		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];
+		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];
 	}
 
 	@Override
@@ -580,8 +586,17 @@ public final class EpisimPerson implements Attributable {
 		return lastFacilityId[day.getValue() - 1];
 	}
 
-	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day) {
+	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day, boolean stays) {
 		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;
+		this.staysInContainer[day.getValue() - 1] = stays;
+	}
+
+	void setStaysInContainer(DayOfWeek day, boolean stays) {
+		this.staysInContainer[day.getValue() - 1] = stays;
+	}
+
+	boolean getStaysInContainer(DayOfWeek day) {
+		return staysInContainer[day.getValue() - 1];
 	}
 
 	public Id<ActivityFacility> getInfectionContainer() {
@@ -650,6 +665,10 @@ public final class EpisimPerson implements Attributable {
 	 */
 	PerformedActivity getFirstActivity(DayOfWeek day) {
 		return trajectory.get(getStartOfDay(day));
+	}
+
+	PerformedActivity getLastActivity(DayOfWeek day) {
+		return trajectory.get(getEndOfDay(day) - 1);
 	}
 
 	/**
