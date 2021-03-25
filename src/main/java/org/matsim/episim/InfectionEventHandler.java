@@ -647,6 +647,7 @@ public final class InfectionEventHandler implements Externalizable {
 		progressionModel.setIteration(iteration);
 		testingModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
+		testingModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);
