@@ -34,7 +34,6 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -43,7 +42,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -61,17 +59,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
-	private final int sample;
-	private final int importOffset;
-	private final DiseaseImport diseaseImport;
-	private final Restrictions restrictions;
-	private final Masks masks;
-	private final Tracing tracing;
-	private final ChristmasModel christmasModel;
-	private final Snapshot snapshot;
-	private final WeatherModel weatherModel;
-	private final Class<? extends InfectionModel> infectionModel;
-	private final Class<? extends VaccinationModel> vaccinationModel;
 
 	public static class Builder{
 		private int importOffset = 0;
@@ -85,6 +72,18 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private Snapshot snapshot = Snapshot.no;
 		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
+		private double imprtFctMult = 1.;
+		private double importFactorBeforeJune = 4.;
+		private double importFactorAfterJune = 0.5;
+
+		public Builder setImportFactorBeforeJune( double importFactorBeforeJune ){
+			this.importFactorBeforeJune = importFactorBeforeJune;
+			return this;
+		}
+		public Builder setImportFactorAfterJune( double importFactorAfterJune ){
+			this.importFactorAfterJune = importFactorAfterJune;
+			return this;
+		}
 		public Builder setSample( int sample ){
 			this.sample = sample;
 			return this;
@@ -126,30 +125,55 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot, infectionModel, importOffset, vaccinationModel );
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot,
+					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult );
 		}
 		public Builder setImportOffset( int importOffset ){
 			this.importOffset = importOffset;
 			return this;
 		}
+		public Builder setImportFactor( double imprtFctMult ){
+			this.imprtFctMult = imprtFctMult;
+			return this;
+		}
 	}
-
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
 	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
 
+	private final double imprtFctMult ;
+	private final int sample;
+	private final int importOffset;
+	private final DiseaseImport diseaseImport;
+	private final Restrictions restrictions;
+	private final Masks masks;
+	private final Tracing tracing;
+	private final ChristmasModel christmasModel;
+	private final Snapshot snapshot;
+	private final WeatherModel weatherModel;
+	private final Class<? extends InfectionModel> infectionModel;
+	private final Class<? extends VaccinationModel> vaccinationModel;
+	private final double importFactorBeforeJune;
+	private final double importFactorAfterJune;
+
+
+
 	/**
 	 * Empty constructor is needed for running scenario from command line.
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250, Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class);
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250,
+				Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class,
+				4., 0.5, 1. );
 	}
 
-	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel, Snapshot snapshot,
-					    Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel ) {
+	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel,
+					     Snapshot snapshot,
+					     Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
+					     double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -161,15 +185,17 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.infectionModel = infectionModel;
 		this.importOffset = importOffset;
 		this.vaccinationModel = vaccinationModel;
+		this.importFactorBeforeJune = importFactorBeforeJune;
+		this.importFactorAfterJune = importFactorAfterJune;
+		this.imprtFctMult = imprtFctMult;
 	}
 
-	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
+	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;
 			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
 		}
-		return importMap;
 	}
 
 	/**
@@ -236,21 +262,21 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.diseaseImport != DiseaseImport.no) {
 			episimConfig.setInitialInfectionDistrict(null);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
-			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-02-24").plusDays(importOffset),
-					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-09").plusDays(importOffset),
-					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-23").plusDays(importOffset),
-					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+			interpolateImport( importMap, imprtFctMult*importFactorBeforeJune, LocalDate.parse( "2020-02-24" ).plusDays( importOffset ),
+					LocalDate.parse( "2020-03-09" ).plusDays( importOffset ), 0.9, 23.1 );
+			interpolateImport( importMap, imprtFctMult*importFactorBeforeJune, LocalDate.parse( "2020-03-09" ).plusDays( importOffset ),
+					LocalDate.parse( "2020-03-23" ).plusDays( importOffset ), 23.1, 3.9 );
+			interpolateImport( importMap, imprtFctMult*importFactorBeforeJune, LocalDate.parse( "2020-03-23" ).plusDays( importOffset ),
+					LocalDate.parse( "2020-04-13" ).plusDays( importOffset ), 3.9, 0.1 );
 			if (this.diseaseImport == DiseaseImport.yes) {
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-06-08").plusDays(importOffset),
-						LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-07-13").plusDays(importOffset),
-						LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-08-10").plusDays(importOffset),
-						LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-10-26").plusDays(importOffset),
-						LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
+				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-06-08" ).plusDays( importOffset ),
+						LocalDate.parse( "2020-07-13" ).plusDays( importOffset ), 0.1, 2.7 );
+				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-07-13" ).plusDays( importOffset ),
+						LocalDate.parse( "2020-08-10" ).plusDays( importOffset ), 2.7, 17.9 );
+				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-08-10" ).plusDays( importOffset ),
+						LocalDate.parse( "2020-09-07" ).plusDays( importOffset ), 17.9, 6.1 );
+				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-10-26" ).plusDays( importOffset ),
+						LocalDate.parse( "2020-12-21" ).plusDays( importOffset ), 6.1, 1.1 );
 			}
 			episimConfig.setInfections_pers_per_day(importMap);
 		}
@@ -370,8 +396,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2,
-						(double) 5.);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(),
+						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5. );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -385,7 +411,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//leisure factor
 		double leisureFactor = 1.6;
-		if (this.restrictions != Restrictions.no) builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+		if (this.restrictions != Restrictions.no) {
+			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+		}
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
