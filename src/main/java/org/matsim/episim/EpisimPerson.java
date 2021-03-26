@@ -39,6 +39,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -82,6 +83,11 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private final Id<ActivityFacility>[] lastFacilityId = new Id[7];
 	// Fields above are initialized from the sim and not persisted
+
+	/**
+	 * Whether person stays in container at the and of a day.
+	 */
+	private final boolean[] staysInContainer = new boolean[7];
 
 	/**
 	 * Traced contacts with other persons.
@@ -441,6 +447,8 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
+		// TODO: needs to be sorted or results will be non deterministic
+
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
@@ -472,7 +480,7 @@ public final class EpisimPerson implements Attributable {
 
 		if (oldSize == 0) return;
 
-		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.getDouble(k) < before);
 	}
 
 	/**
@@ -509,19 +517,22 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Check whether a person has one of the given activities on a certain week day.
+	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
 	 * This method takes {@link #activityParticipation} into account.
+	 * @param reduce reduce function called on each activities with current result
+	 * @param defaultValue default value and initial value for the reduce function
 	 */
-	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
-		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
-			if (!activityParticipation.get(i))
-				continue;
+	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T,  T> reduce, T defaultValue) {
 
-			if (activities.contains(trajectory.get(i).params.getContainerName()))
-				return true;
+		T result = defaultValue;
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			String act = trajectory.get(i).params.getContainerName();
+			if (activityParticipation.get(i) && activities.contains(act))
+				result = reduce.apply(act, result);
 		}
 
-		return false;
+		return result;
+
 	}
 
 	/**
@@ -552,6 +563,7 @@ public final class EpisimPerson implements Attributable {
 		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];
+		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];
 	}
 
 	@Override
@@ -578,8 +590,17 @@ public final class EpisimPerson implements Attributable {
 		return lastFacilityId[day.getValue() - 1];
 	}
 
-	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day) {
+	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day, boolean stays) {
 		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;
+		this.staysInContainer[day.getValue() - 1] = stays;
+	}
+
+	void setStaysInContainer(DayOfWeek day, boolean stays) {
+		this.staysInContainer[day.getValue() - 1] = stays;
+	}
+
+	boolean getStaysInContainer(DayOfWeek day) {
+		return staysInContainer[day.getValue() - 1];
 	}
 
 	public Id<ActivityFacility> getInfectionContainer() {
@@ -650,6 +671,10 @@ public final class EpisimPerson implements Attributable {
 		return trajectory.get(getStartOfDay(day));
 	}
 
+	PerformedActivity getLastActivity(DayOfWeek day) {
+		return trajectory.get(getEndOfDay(day) - 1);
+	}
+
 	/**
 	 * Get the activity normally performed by a person on a specific day and time.
 	 */
@@ -658,16 +683,14 @@ public final class EpisimPerson implements Attributable {
 		assert getStartOfDay(day) >= 0;
 		assert getEndOfDay(day) <= trajectory.size();
 
-		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		assert !sub.isEmpty() : "Trajectory for a day can not be empty";
+		// do a linear search for matching activity
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time > time)
+				return trajectory.get(i);
+		}
 
-		// TODO: there might be a better/faster data structure to lookup activities for a certain time
-		// TODO: object instantiation overhead
-		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
-
-		assert idx >= 0;
-
-		return sub.get(idx);
+		return trajectory.get(last);
 	}
 
 	/**

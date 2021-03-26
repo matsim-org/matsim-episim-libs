@@ -147,8 +147,12 @@ final class TrajectoryHandler {
 
 				EpisimPerson person = it.next();
 
+				assert facility.getContainerId().equals(person.getLastFacilityId(prevDay)):
+						String.format("Person %s needs to be in its last facility (%s) at the end of the day, but is in %s",
+								person.getPersonId(), person.getLastFacilityId(prevDay), facility.getContainerId());
+
 				// person needs to be at a different container and is removed here
-				if (person.getFirstFacilityId(day) != person.getLastFacilityId(prevDay)) {
+				if (person.getStaysInContainer(prevDay) && !person.getLastFacilityId(prevDay).equals(person.getFirstFacilityId(day))) {
 
 					EpisimPerson.PerformedActivity lastActivity = facility.getPerformedActivity(person.getPersonId());
 
@@ -177,19 +181,15 @@ final class TrajectoryHandler {
 
 		for (EpisimPerson person : personMap.values()) {
 
-			if (person.getFirstFacilityId(day) == null)
-				continue;
-
 			Id<ActivityFacility> firstFacilityId = person.getFirstFacilityId(day);
-			InfectionEventHandler.EpisimFacility facility = pseudoFacilityMap.get(firstFacilityId);
+			InfectionEventHandler.EpisimFacility firstFacility = pseudoFacilityMap.get(firstFacilityId);
 
 			if (!responsible.test(firstFacilityId))
 				continue;
 
-			if (!facility.containsPerson(person)) {
-				facility.addPerson(person, now, person.getFirstActivity(day));
-				contactModel.notifyEnterFacility(person, facility, now);
-
+			if (!person.getStaysInContainer(prevDay) || !person.getLastFacilityId(prevDay).equals(firstFacilityId)) {
+				firstFacility.addPerson(person, now, person.getFirstActivity(day));
+				contactModel.notifyEnterFacility(person, firstFacility, now);
 			}
 		}
 	}

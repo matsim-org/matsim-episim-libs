@@ -209,6 +209,7 @@ public class RunEpisimIntegrationTest {
 			episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.bln);
 			episimConfig.setSampleSize(0.01);
 			episimConfig.setCalibrationParameter(2);
+			episimConfig.setThreads(2);
 
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
 

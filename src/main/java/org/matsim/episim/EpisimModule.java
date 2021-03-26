@@ -35,6 +35,8 @@ import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.AllParticipationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
@@ -62,6 +64,7 @@ public class EpisimModule extends AbstractModule {
 		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);
 		bind(VaccinationModel.class).to(RandomVaccination.class).in(Singleton.class);
+		bind(TestingModel.class).to(DefaultTestingModel.class).in(Singleton.class);
 		bind(ActivityParticipationModel.class).to(AllParticipationModel.class).in(Singleton.class);
 
 		// Internal classes, should rarely be needed to be reconfigured
