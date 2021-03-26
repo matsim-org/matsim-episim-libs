@@ -153,6 +153,7 @@ public class RunSnzIntegrationTest {
 			episimConfig.setStartDate("2020-02-16");
 			episimConfig.setSampleSize(0.01);
 			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+			episimConfig.setThreads(2);
 
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
 

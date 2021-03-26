@@ -148,7 +148,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
-		
+
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
 
@@ -440,7 +440,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @see EpisimContactEvent
 	 */
 	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-							  StringBuilder actType, double duration) {
+										   StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
@@ -549,7 +549,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Write outdoor fraction for each day.
 	 */
-	public void reportOutdoorFraction(double outdoorFraction, int iteration) {
+	public synchronized void reportOutdoorFraction(double outdoorFraction, int iteration) {
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
 
 		try {
@@ -562,12 +562,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	}
 
-	public synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
-		writer.append(cpuTime, new String[] { String.valueOf(iteration),
-											     where,
-												 what,
-												 String.valueOf(System.currentTimeMillis()),
-												 String.valueOf(taskId)});
+	/**
+	 * Report current cpu time.
+	 */
+	synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
+		writer.append(cpuTime, new String[]{String.valueOf(iteration),
+				where,
+				what,
+				String.valueOf(System.currentTimeMillis()),
+				String.valueOf(taskId)});
 	}
 
 	@Override
