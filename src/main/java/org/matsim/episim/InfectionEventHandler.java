@@ -43,6 +43,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -141,6 +142,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private final ActivityParticipationModel activityParticipationModel;
 
+	private final TestingModel testingModel;
+
 	/**
 	 * Scenario with population information.
 	 */
@@ -190,6 +193,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = injector.getInstance(VaccinationModel.class);
 		this.activityParticipationModel = injector.getInstance(ActivityParticipationModel.class);
+		this.testingModel = injector.getInstance(TestingModel.class);
 		this.executor = injector.getInstance(ExecutorService.class);
 	}
 
@@ -651,14 +655,19 @@ public final class InfectionEventHandler implements Externalizable {
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 		policy.updateRestrictions(report, im);
 
+		reporting.reportCpuTime(iteration, "TestingModel", "start", -1);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
+		testingModel.setIteration(iteration);
+		testingModel.beforeStateUpdates(personMap, iteration, this.report);
 
 		for (EpisimPerson person : personMap.values()) {
-
 			// update person activity participation for the day
 			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),
 					person.getStartOfDay(day), person.getActivities(day));
+
+			testingModel.performTesting(person, iteration);
 		}
+		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
 		handlers.forEach(h -> {
 			h.setRestrictionsForIteration(iteration, im);

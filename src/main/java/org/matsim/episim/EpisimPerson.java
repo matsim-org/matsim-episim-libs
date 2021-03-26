@@ -39,6 +39,7 @@ import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
 import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -479,7 +480,7 @@ public final class EpisimPerson implements Attributable {
 
 		if (oldSize == 0) return;
 
-		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.getDouble(k) < before);
 	}
 
 	/**
@@ -516,19 +517,22 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Check whether a person has one of the given activities on a certain week day.
+	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
 	 * This method takes {@link #activityParticipation} into account.
+	 * @param reduce reduce function called on each activities with current result
+	 * @param defaultValue default value and initial value for the reduce function
 	 */
-	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
-		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
-			if (!activityParticipation.get(i))
-				continue;
+	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T,  T> reduce, T defaultValue) {
 
-			if (activities.contains(trajectory.get(i).params.getContainerName()))
-				return true;
+		T result = defaultValue;
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			String act = trajectory.get(i).params.getContainerName();
+			if (activityParticipation.get(i) && activities.contains(act))
+				result = reduce.apply(act, result);
 		}
 
-		return false;
+		return result;
+
 	}
 
 	/**
