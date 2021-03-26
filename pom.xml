@@ -78,7 +78,7 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/matsim-org/matsim-episim</url>
+            <url>https://maven.pkg.github.com/matsim-org/matsim-episim-libs</url>
         </repository>
     </distributionManagement>
 

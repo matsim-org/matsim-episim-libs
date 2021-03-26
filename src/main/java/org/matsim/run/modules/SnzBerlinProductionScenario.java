@@ -71,6 +71,20 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
+		private double imprtFctMult = 1.;
+		private double importFactorBeforeJune = 4.;
+		private double importFactorAfterJune = 0.5;
+
+		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
+			this.importFactorBeforeJune = importFactorBeforeJune;
+			return this;
+		}
+
+		public Builder setImportFactorAfterJune(double importFactorAfterJune) {
+			this.importFactorAfterJune = importFactorAfterJune;
+			return this;
+		}
+
 		public Builder setSample(int sample) {
 			this.sample = sample;
 			return this;
@@ -100,11 +114,13 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.tracing = tracing;
 			return this;
 		}
-		public Builder setChristmasModel( ChristmasModel christmasModel ){
+
+		public Builder setChristmasModel(ChristmasModel christmasModel) {
 			this.christmasModel = christmasModel;
 			return this;
 		}
-		public Builder setWeatherModel( WeatherModel weatherModel ){
+
+		public Builder setWeatherModel(WeatherModel weatherModel) {
 			this.weatherModel = weatherModel;
 			return this;
 		}
@@ -132,16 +148,27 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.importOffset = importOffset;
 			return this;
 		}
+
+		public Builder setImportFactor(double imprtFctMult) {
+			this.imprtFctMult = imprtFctMult;
+			return this;
+		}
 	}
 
-
 	public static enum DiseaseImport {yes, onlySpring, no}
+
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+
 	public static enum Masks {yes, no}
+
 	public static enum Tracing {yes, no}
+
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
+
 	public static enum ChristmasModel {no, restrictive, permissive}
+
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
+
 	public static enum AdjustRestrictions {yes, no}
 
 	private final int sample;
@@ -156,6 +183,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final Class<? extends InfectionModel> infectionModel;
 	private final Class<? extends VaccinationModel> vaccinationModel;
 
+	private final double imprtFctMult;
+	private final double importFactorBeforeJune;
+	private final double importFactorAfterJune;
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -183,15 +213,17 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.vaccinationModel = builder.vaccinationModel;
 		this.christmasModel = builder.christmasModel;
 		this.weatherModel = builder.weatherModel;
+		this.imprtFctMult = builder.imprtFctMult;
+		this.importFactorBeforeJune = builder.importFactorBeforeJune;
+		this.importFactorAfterJune = builder.importFactorAfterJune;
 	}
 
-	public static Map<LocalDate, Integer> interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
+	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;
 			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
 		}
-		return importMap;
 	}
 
 	/**
@@ -220,7 +252,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -264,25 +297,24 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.diseaseImport != DiseaseImport.no) {
 			episimConfig.setInitialInfectionDistrict(null);
 			Map<LocalDate, Integer> importMap = new HashMap<>();
-			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-02-24").plusDays(importOffset),
+			interpolateImport(importMap, imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
 					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-09").plusDays(importOffset),
+			interpolateImport(importMap, imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
 					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-			importMap = interpolateImport(importMap, 4, LocalDate.parse("2020-03-23").plusDays(importOffset),
+			interpolateImport(importMap, imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
 					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
 			if (this.diseaseImport == DiseaseImport.yes) {
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-06-08").plusDays(importOffset),
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-06-08").plusDays(importOffset),
 						LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-07-13").plusDays(importOffset),
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-07-13").plusDays(importOffset),
 						LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-08-10").plusDays(importOffset),
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-08-10").plusDays(importOffset),
 						LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
-				importMap = interpolateImport(importMap, 0.5, LocalDate.parse("2020-10-26").plusDays(importOffset),
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-10-26").plusDays(importOffset),
 						LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 			}
 			episimConfig.setInfections_pers_per_day(importMap);
-		}
-		else {
+		} else {
 			episimConfig.setInitialInfectionDistrict("Berlin");
 			episimConfig.setCalibrationParameter(2.54e-5);
 		}
@@ -314,6 +346,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("visit").setContactIntensity(9.24).setSpacesPerFacility(spaces); // 33/3.57
 		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
+
+		// todo: use the plain 1/v values (1./3.57, 1./33, ...) and multiply theta with 33.  kai, feb'21
 
 		//restrictions and masks
 		ActivityParticipation activityParticipation;
@@ -362,7 +396,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					LocalDate.of(2020, 6, 15), tracingCapacity
 			));
 		}
-Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
+		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
@@ -407,14 +441,13 @@ Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2,
-						(double) 5.);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(),
+						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		}
-		else {
+		} else {
 			episimConfig.setLeisureOutdoorFraction(Map.of(
 					LocalDate.of(2020, 1, 1), 0.)
 			);

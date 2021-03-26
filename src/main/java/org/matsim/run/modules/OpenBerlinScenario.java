@@ -27,6 +27,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 
 /**
  * Scenario based on the publicly available OpenBerlin scenario (https://github.com/matsim-scenarios/matsim-berlin).
@@ -88,11 +89,11 @@ public class OpenBerlinScenario extends AbstractModule {
 		addDefaultParams(episimConfig);
 
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
-				.shutdown(closingIteration, "leisure", "edu")
-				.restrict(closingIteration, 0.2, "work", "business", "other")
-				.restrict(closingIteration, 0.3, "shop", "errands")
-				.restrict(closingIteration, 0.5, "pt")
-				.open(closingIteration + 60, DEFAULT_ACTIVITIES)
+				.restrict(closingIteration, Restriction.of(0.0), "leisure", "edu")
+				.restrict(closingIteration, Restriction.of(0.2), "work", "business", "other")
+				.restrict(closingIteration, Restriction.of(0.3), "shop", "errands")
+				.restrict(closingIteration, Restriction.of(0.5), "pt")
+				.restrict(closingIteration + 60, Restriction.of(1.0), DEFAULT_ACTIVITIES)
 				.build()
 		);
 

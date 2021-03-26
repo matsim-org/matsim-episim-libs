@@ -8,6 +8,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TestingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
@@ -68,17 +69,16 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		//extrapolate restrictions
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
-			if (params.extrapolateRestrictions.equals("67pct")) builder.restrict("2021-03-22", 0.67, act);
-			if (params.extrapolateRestrictions.contains("yes")) {
+			if (params.activityLevel.equals("67pct")) builder.restrict("2021-03-22", 0.67, act);
+			if (params.activityLevel.equals("100pct")) {
 				builder.restrict("2021-03-21", 0.8, act);
-				if (params.extrapolateRestrictions.equals("yes")) {
-					builder.restrict("2021-03-28", 0.84, act);
-					builder.restrict("2021-04-04", 0.88, act);
-					builder.restrict("2021-04-11", 0.92, act);
-					builder.restrict("2021-04-18", 0.96, act);
-					builder.restrict("2021-04-25", 1., act);
-				}
+				builder.restrict("2021-03-28", 0.84, act);
+				builder.restrict("2021-04-04", 0.88, act);
+				builder.restrict("2021-04-11", 0.92, act);
+				builder.restrict("2021-04-18", 0.96, act);
+				builder.restrict("2021-04-25", 1., act);
 			}
+		
 		}
 					
 		//schools
@@ -150,15 +150,12 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				double fraction;
-				switch (params.extrapolateRestrictions) {
-				case "no":
+				switch (params.activityLevel) {
+				case "76pct":
 					fraction = 0.76;
 					break;
-				case "yes":
+				case "100pct":
 					fraction = 0.88;
-					break;
-				case "yesUntil80":
-					fraction = 0.8;
 					break;
 				case "67pct":
 					fraction = 0.67;
@@ -171,6 +168,27 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
+			}
+		}
+		
+//		if (params.curfew.equals("18-5")) builder.restrict("2021-03-29", Restriction.ofClosingHours(18, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("19-5")) builder.restrict("2021-03-29", Restriction.ofClosingHours(19, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("20-5")) builder.restrict("2021-03-29", Restriction.ofClosingHours(20, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("21-5")) builder.restrict("2021-03-29", Restriction.ofClosingHours(21, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("22-5")) builder.restrict("2021-03-29", Restriction.ofClosingHours(22, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		
+		
+		if (1 == 2) {
+			builder.restrict("2021-05-01", Restriction.ofClosingHours(0, 0), "leisure", "shop_daily", "shop_other", "visit", "errands");
+			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+				if (act.contains("educ_higher")) continue;
+				if (act.contains("educ")) {
+					builder.restrict("2021-05-01", 1.0, act);
+					builder.restrict("2021-06-24", 0.2, act);
+					builder.restrict("2021-08-07", 1.0, act);
+					continue;
+				}
+				builder.restrict("2021-05-01", 1., act);
 			}
 		}
 		
@@ -202,16 +220,18 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		testingConfigGroup.setFalseNegativeRate(0.3);
 		
 		testingConfigGroup.setFalsePositiveRate(0.03);
+		
+		testingConfigGroup.setHouseholdCompliance(params.householdCompliance);
 				
 		testingConfigGroup.setTestingRatePerActivity((Map.of(
-				"leisure", params.testingRateLeisure,
-				"work", params.testingRateWork,
-				"business", params.testingRateWork,
-				"educ_kiga", params.testingRateEdu,
-				"educ_primary", params.testingRateEdu,
-				"educ_secondary", params.testingRateEdu,
-				"educ_tertiary", params.testingRateEdu,
-				"educ_other", params.testingRateEdu
+				"leisure", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[2]) / 100.,
+				"work", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[1]) / 100.,
+				"business", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[1]) / 100.,
+				"educ_kiga", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.,
+				"educ_primary", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.,
+				"educ_secondary", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.,
+				"educ_tertiary", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.,
+				"educ_other", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.
 				)));
 		
 //		double leisureRate1 = Integer.parseInt(params.testingRateLeisure.split("-")[0]) / 100.;
@@ -272,6 +292,16 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(2.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		
+//		if (!params.B1351.equals("no")) {
+//			episimConfig.setInfections_pers_per_day(VirusStrain.B1351, Map.of(
+//					LocalDate.parse("2020-01-01"), 0,
+//					LocalDate.parse("2021-02-01"), 1
+//					));
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(Double.parseDouble(params.B1351.split("-")[0]));
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(Double.parseDouble(params.B1351.split("-")[1]));
+//		}
+
+		
 //		if (params.outdoorModel.contains("no")) {
 //			episimConfig.setLeisureOutdoorFraction(0.);
 //		}
@@ -287,15 +317,15 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		@StringParameter({"current", "plus50pct"})
 		String vaccinationRate;
 		
-		@StringParameter({"50%open", "closed", "open"})
+//		@StringParameter({"50%open", "closed", "open"})
+		@StringParameter({"50%open", "open"})
 		public String schools;
 		
 //		@StringParameter({"2020-12-15"})
 //		String newVariantDate;
 		
-//		@StringParameter({"no", "yes", "yesUntil80"})
-		@StringParameter({"no", "yes", "67pct"})
-		String extrapolateRestrictions;
+		@StringParameter({"76pct", "100pct", "67pct"})
+		String activityLevel;
 		
 //		@StringParameter({"FIXED_DAYS", "leisure", "work", "edu", "leisure&edu", "leisure&work", "work&edu", "leisure&work&edu"})
 		@StringParameter({"leisure&work&edu"})
@@ -311,18 +341,33 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 //		@StringParameter({"0-0", "0-10", "0-20", "10-10", "10-20"})
 //		String testingRateEdu;
 		
-		@Parameter({0.0, 0.02, 0.1, 0.2, 0.3})
-		double testingRateLeisure;
+//		@Parameter({0.0, 0.02, 0.1, 0.2, 0.3})
+//		double testingRateLeisure;
+//		
+//		@Parameter({0.0, 0.2, 0.4, 0.6})
+//		double testingRateWork;
+//		
+//		@Parameter({0.0, 0.2, 0.4, 0.6})
+//		double testingRateEdu;
 		
-//		@StringParameter({"0-0", "0-10", "0-20", "0-40", "10-10", "10-20", "10-40", "20-20", "20-40"})
-		@Parameter({0.0, 0.2, 0.4, 0.6})
-		double testingRateWork;
+		@StringParameter({
+			"0-0-0", 
+			"20-0-0", "20-20-0", "20-20-2", "20-20-10", "20-20-20", 
+			"40-0-0", "40-20-0","40-20-2", "40-20-10", "40-20-20", "40-40-0", "40-40-2", "40-40-10", "40-40-20"
+			})
+		String testingRateEduWorkLeisure;
 		
-		@Parameter({0.0, 0.2, 0.4, 0.6})
-		double testingRateEdu;
-		
-		@StringParameter({"no", "yes"})
+		@StringParameter({"yes"})
 		public String easterModel;
+		
+//		@StringParameter({"no", "18-5", "20-5", "22-5"})
+//		public String curfew;
+		
+//		@StringParameter({"no", "1.0-1.0", "1.0-0.5", "1.0-0.0", "2.0-1.0", "2.0-0.5", "2.0-0.0"})
+//		public String B1351;
+		
+		@Parameter({1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3})
+		double householdCompliance;
 		
 //		@StringParameter({"no"})
 //		String outdoorModel;
