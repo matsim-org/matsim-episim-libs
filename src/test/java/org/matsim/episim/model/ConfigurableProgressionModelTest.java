@@ -45,13 +45,15 @@ public class ConfigurableProgressionModelTest {
 
 	private EpisimReporting reporting;
 	private ProgressionModel model;
-	private TracingConfigGroup tracingConfig;
 	private EpisimConfigGroup episimConfig;
+	private TracingConfigGroup tracingConfig;
+	private TestingConfigGroup testingConfig;
 
 	@Before
 	public void setup() {
 		reporting = mock(EpisimReporting.class);
 		tracingConfig = new TracingConfigGroup();
+		testingConfig = new TestingConfigGroup();
 		episimConfig = new EpisimConfigGroup();
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 

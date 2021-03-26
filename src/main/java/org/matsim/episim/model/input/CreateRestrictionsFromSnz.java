@@ -265,8 +265,11 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 				countingDays++;
 			}
 			writer.close();
-
-			Path finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
+			Path finalPath = null;
+			if (!getPercentageResults)
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString+"_duration"));
+			else
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
 			Files.move(outputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 
 			log.info("Write analyze of " + countingDays + " is writen to " + finalPath);

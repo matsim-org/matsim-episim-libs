@@ -73,7 +73,7 @@ import java.util.concurrent.Callable;
 		usageHelpAutoWidth = true, showDefaultValues = true, mixinStandardHelpOptions = true, abbreviateSynopsis = true,
 		subcommands = {CommandLine.HelpCommand.class, RunParallel.class, CreateBatteryForCluster.class, ScenarioCreation.class, AnalysisCommand.class}
 )
-public class RunEpisim implements Callable<Integer> {
+public final class RunEpisim implements Callable<Integer> {
 
 	public static final String COLOR = "@|bold,fg(81) ";
 	public static final String HEADER = COLOR +
@@ -103,12 +103,35 @@ public class RunEpisim implements Callable<Integer> {
 	@CommandLine.Parameters(hidden = true)
 	private String[] remainder;
 
+	/**
+	 * Constructor with given module.
+	 */
+	private RunEpisim(Module module) {
+		moduleNames.add(module.getClass().getName());
+	}
+
+	private RunEpisim() {
+	}
+
 	public static void main(String[] args) {
 		new CommandLine(new RunEpisim())
 				.setStopAtUnmatched(false)
 				.setUnmatchedOptionsArePositionalParams(true)
 				.execute(args);
 		// (the "execute" will run "RunEpisim#call()")
+	}
+
+	/**
+	 * Run a specific module with given arguments.
+	 * @param module module instance
+	 * @param args additional arguments, as defined in RunEpisim (see help command)
+	 * @return return code greater 0 indicates an error
+	 */
+	public static int run(Module module, String... args) {
+		return new CommandLine(new RunEpisim(module))
+				.setStopAtUnmatched(false)
+				.setUnmatchedOptionsArePositionalParams(true)
+				.execute(args);
 	}
 
 	/**

@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.util.Arrays;
+import java.util.List;
 
 import static org.matsim.run.RunEpisimIntegrationTest.assertSimulationOutput;
 
@@ -40,6 +41,7 @@ public class RunSnzIntegrationTest {
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
 	private VaccinationConfigGroup vaccinationConfig;
+	private TestingConfigGroup testingConfig;
 	private boolean skipped = true;
 
 	@Parameterized.Parameters(name = "restriction-{0}")
@@ -61,6 +63,7 @@ public class RunSnzIntegrationTest {
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
 		vaccinationConfig = injector.getInstance(VaccinationConfigGroup.class);
+		testingConfig = injector.getInstance(TestingConfigGroup.class);
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
@@ -78,6 +81,16 @@ public class RunSnzIntegrationTest {
 	@Test
 	public void tracing() {
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(ITERATIONS / 2);
+		runner.run(ITERATIONS);
+	}
+
+	@Test
+	public void testing() {
+
+		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
+		testingConfig.setActivities(List.of("work", "leisure"));
+		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+
 		runner.run(ITERATIONS);
 	}
 

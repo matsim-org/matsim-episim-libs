@@ -40,6 +40,7 @@ import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InitialInfectionHandler;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.VaccinationModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -126,6 +127,8 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private final VaccinationModel vaccinationModel;
 
+	private final TestingModel testingModel;
+
 	/**
 	 * Scenario with population information.
 	 */
@@ -154,6 +157,7 @@ public final class InfectionEventHandler implements Externalizable {
 	@Inject
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
 								 InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
+								 TestingModel testingModel,
 								 SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -170,6 +174,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.initialInfections = initialInfections;
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = vaccinationModel;
+		this.testingModel = testingModel;
 	}
 
 	/**
@@ -451,6 +456,8 @@ public final class InfectionEventHandler implements Externalizable {
 //		double now = activityStartEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityStartEvent.getTime(), iteration);
 
+		reporting.handleEvent(activityStartEvent);
+
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
 
@@ -471,6 +478,8 @@ public final class InfectionEventHandler implements Externalizable {
 	public void handleEvent(ActivityEndEvent activityEndEvent) {
 //		double now = activityEndEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), activityEndEvent.getTime(), iteration);
+
+		reporting.handleEvent(activityEndEvent);
 
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
 
@@ -494,6 +503,8 @@ public final class InfectionEventHandler implements Externalizable {
 //		double now = entersVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), entersVehicleEvent.getTime(), iteration);
 
+		reporting.handleEvent(entersVehicleEvent);
+
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());
 
@@ -509,6 +520,8 @@ public final class InfectionEventHandler implements Externalizable {
 	public void handleEvent(PersonLeavesVehicleEvent leavesVehicleEvent) {
 //		double now = leavesVehicleEvent.getTime();
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), leavesVehicleEvent.getTime(), iteration);
+
+		reporting.handleEvent(leavesVehicleEvent);
 
 		// find vehicle:
 		EpisimVehicle episimVehicle = this.vehicleMap.get(leavesVehicleEvent.getVehicleId());
@@ -632,11 +645,14 @@ public final class InfectionEventHandler implements Externalizable {
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		progressionModel.setIteration(iteration);
+		testingModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
+		testingModel.beforeStateUpdates(personMap, iteration, this.report);
 		for (EpisimPerson person : personMap.values()) {
 			checkAndHandleEndOfNonCircularTrajectory(person, day);
 			person.resetCurrentPositionInTrajectory(day);
 			progressionModel.updateState(person, iteration);
+			testingModel.performTesting(person, iteration);
 		}
 
 		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);
@@ -790,7 +806,11 @@ public final class InfectionEventHandler implements Externalizable {
 			pseudoFacilityMap.get(id).read(in, personMap);
 		}
 
+
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
+
+		policy.restore(episimConfig.getStartDate().plusDays(iteration), im);
+
 		contactModel.setRestrictionsForIteration(iteration, im);
 	}
 

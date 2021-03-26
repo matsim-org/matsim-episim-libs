@@ -122,7 +122,15 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		// zip codes for district "Berchtesgadener Land"
 		IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
-
+		
+		// zip codes for the district "Mannheim"
+		IntSet zipCodesMannheim = new IntOpenHashSet(
+				List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219, 68229, 68239, 68259, 68305, 68307, 68309));
+		
+		// zip codes for the district "Wolfsburg"
+		IntSet zipCodesWolfsburg = new IntOpenHashSet(
+				List.of(38440, 38442, 38444, 38446, 38448));
+		
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
 		boolean getPercentageResults = true;
 		// setBaseIn2018: set true if you use selected days of 2018 as base days
@@ -138,6 +146,9 @@ class AnalyzeSnzData implements Callable<Integer> {
 //		snz.writeDataForCertainArea(outputFolder.resolve("BonnSnzData_daily_until.csv"), zipCodesBonn, getPercentageResults, setBaseIn2018);
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerchtesgadenSnzData_daily_until.csv"), zipCodesBerchtesgaden, getPercentageResults, setBaseIn2018);
 //		snz.writeDataForCertainArea(outputFolder.resolve("HeinsbergSnzData_daily_until.csv"), zipCodesHeinsberg, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("MannheimSnzData_daily_until.csv"), zipCodesMannheim, getPercentageResults, setBaseIn2018);
+//		snz.writeDataForCertainArea(outputFolder.resolve("WolfsburgSnzData_daily_until.csv"), zipCodesWolfsburg, getPercentageResults, setBaseIn2018);
+		
 		
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinInnenstadtSnzData_daily_until.csv"), zipCodesBerlinInnenstadt, getPercentageResults, setBaseIn2018);
 //		snz.writeDataForCertainArea(outputFolder.resolve("BerlinSuedOstenSnzData_daily_until.csv"), zipCodesBerlinSuedOsten, getPercentageResults, setBaseIn2018);

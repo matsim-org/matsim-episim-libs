@@ -21,6 +21,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	private final EpisimConfigGroup episimConfig;
 	private final EpisimReporting reporting;
 	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
 
 	private double outdoorFactor;
 	private int iteration;
@@ -31,6 +32,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.reporting = reporting;
 	}
 
@@ -52,12 +54,13 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		// note that for 1pct runs, calibParam is of the order of one, which means that for typical times of 100sec or more,
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
+		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
-				: DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
+				: DefaultInfectionModel.getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* susceptibility
-				* infector.getVirusStrain().infectiousness
+				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 				* getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2)
