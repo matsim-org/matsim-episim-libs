@@ -58,6 +58,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -774,7 +775,13 @@ public final class InfectionEventHandler implements Externalizable {
 				futures[i] = CompletableFuture.runAsync(task, executor);
 			}
 
-			CompletableFuture.allOf(futures).join();
+			try {
+				CompletableFuture.allOf(futures).join();
+			} catch (CompletionException e) {
+				log.error("A TrajectoryHandler caused the exception: ", e.getCause());
+				executor.shutdown();
+				throw e;
+			}
 		} else {
 
 			// single threaded task is run directly
