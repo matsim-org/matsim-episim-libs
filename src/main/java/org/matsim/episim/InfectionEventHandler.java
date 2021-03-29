@@ -779,7 +779,9 @@ public final class InfectionEventHandler implements Externalizable {
 				CompletableFuture.allOf(futures).join();
 			} catch (CompletionException e) {
 				log.error("A TrajectoryHandler caused the exception: ", e.getCause());
-				System.exit(-1);
+				executor.shutdown();
+				throw e;
+				//				System.exit(-1);
 			}
 		} else {
 
