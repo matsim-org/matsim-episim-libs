@@ -6,16 +6,16 @@ rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/ep
 # cc %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> cc2
 cc2 <- rkiCasesReferenceDate %>%
   mutate( date=make_date(year,month,day)) %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by(week) %>%
+  mutate( year = year(date), week = isoweek(date) ) %>%
+  group_by(year,week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
 rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
 # dd %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> dd2
 dd2 <- rkiCasesReportingDate %>%
   mutate( date=make_date(year,month,day)) %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by(week) %>%
+  mutate( year = year(date), week = isoweek(date) ) %>%
+  group_by(year,week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
 reducedActParticip <- read_tsv("~/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20201227.csv")
@@ -24,8 +24,8 @@ reducedActParticip2 <- reducedActParticip %>%
   filter( !wday(date) %in% c(1,6,7) ) %>%
   filter( !date %in% c( as.Date("2020-04-09"), as.Date("2020-04-13"), as.Date("2020-04-30"), as.Date("2020-05-07"), as.Date("2020-05-21"),
                         as.Date("2020-06-01"),as.Date("2020-06-02") ) ) %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by(week) %>%
+  mutate( year = year(date), week = isoweek(date) ) %>%
+  group_by(year,week) %>%
   summarise(mean=1+0.01*mean(notAtHomeExceptLeisureAndEdu),date=mean(date))
 reducedActParticip2
 
@@ -35,8 +35,8 @@ rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(`Beginn Meldewoche`) )
 hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv')
 hospital2 <- hospital %>%
   mutate(date = dmy(Datum)) %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by(week) %>%
+  mutate( year = year(date), week = isoweek(date) ) %>%
+  group_by(year,week) %>%
   summarise( mean=mean(`Stationäre Behandlung`),date=mean(date))
 
 
@@ -253,8 +253,37 @@ base <- "output/tempXTheta_25.0_0.45-youthSusc_0.5-grownUpAge_16-ciLsrFct_2.0-im
 #base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.4-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
 #base <- "output/theta_0.75-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.6-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
 
-base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.5-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
-base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_2.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_1.5-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+#base <- "output/theta_0.8-tMidSpring_17.5-ythSusc_0.0-grwnUpAge_16-leisFct_2.0-leisFctDate_2020-10-15-imprtFctAftJun_0.0-trcCapNInf_0/"
+
+#base <- "output/theta_0.8-imprtFctBefJun_4.0-imprtFctAftJun_0.5-trcCapNInf_0-newVariantDate_2020-12-01"
+#base <- "output/theta_0.9-imprtFctBefJun_4.0-imprtFctAftJun_0.5-trcCapNInf_0-newVariantDate_2020-12-01"
+base <- "output/1theta_1.0-imprtFctBefJun_4.0-imprtFctAftJun_0.5-trcCapNInf_0-newVariantDate_2020-12-01"
+#base <- "output/theta_0.8-imprtFctBefJun_28.0-imprtFctAftJun_3.5-trcCapNInf_0-newVariantDate_2020-12-01/"
+
+#base <- "output/theta_0.8-imprtFctBefJun_4.0-imprtFctAftJun_0.5-trcCapNInf_0-newVariantDate_2020-12-01/"
+#base <- "output/theta_0.9-imprtFctBefJun_4.0-imprtFctAftJun_0.5-trcCapNInf_0-newVariantDate_2020-12-01/"
+
+#base <- "output/theta_0.8-imprtFctMult_1.0-newVariantDate_2020-12-01"
+#base <- "output/theta_0.9-imprtFctMult_1.0-newVariantDate_2020-12-01"
+
+#base <- "output/dailyInitialVaccinations_3000-schools_closed-work_no-curfew_no-newVariantDate_2020-12-01-extrapolateRestrictions_no/"
+
+#base <- "output/seed_4711-newVariantDate_2020-12-01/"
+#base <- "output/seed_7564655870752979346-newVariantDate_2020-12-01/"
+
+base <- "output/theta_1.0-imprtFctMult_1.0-newVariantDate_2020-12-01-seed_7564655870752979346/"
+base <- "output/theta_1.0-imprtFctMult_1.0-newVariantDate_2020-12-01-seed_4711/"
+#base <- "output/theta_1.0-imprtFctMult_1.0-newVariantDate_2020-12-01-seed_4713/"
+#base <- "output/theta_1.0-imprtFctMult_1.0-newVariantDate_2020-12-01-seed_4715/"
+
+#base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_7564655870752979346/"
+base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_4711/"
+#base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_4713/"
+#base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_4715/"
+
+#base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_7564655870752979346/"
+#base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_4711/"
 
 # ---
 
@@ -265,8 +294,8 @@ infections <- read_tsv(infectionsFilename)
 infections2 <- infections %>%
   filter(district=="Berlin") %>%
   mutate( newShowingSymptoms=nShowingSymptomsCumulative-lag(nShowingSymptomsCumulative)) %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by( week ) %>%
+  mutate( week = isoweek(date),year=year(date) ) %>%
+  group_by( year,week ) %>%
   summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date), nSeriouslySick=mean(nSeriouslySick) )
 
 # ---
@@ -274,8 +303,8 @@ infections2 <- infections %>%
 outdoorsFilename <- Sys.glob(file.path(base, "*outdoorFraction.tsv" ) )
 outdoors <- read_tsv(outdoorsFilename)
 outdoors2 <- outdoors %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by( week ) %>%
+  mutate( week = isoweek(date), year = year(date) ) %>%
+  group_by( year,week ) %>%
   summarize( mean=1.1-mean(outdoorFraction), date=mean(date))
 
 # ---
@@ -283,8 +312,8 @@ outdoors2 <- outdoors %>%
 diseaseImportFilename <- Sys.glob(file.path(base, "*diseaseImport.tsv" ) )
 diseaseImport <- read_tsv(diseaseImportFilename)
 diseaseImport2 <- diseaseImport %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by( week ) %>%
+  mutate( week = isoweek(date), year = year(date) ) %>%
+  group_by( year,week ) %>%
   summarize( mean=mean(nInfected), date=mean(date))
 
 # ---
@@ -293,8 +322,8 @@ restrictionsFilename <- Sys.glob(file.path(base, "*restrictions.txt"))
 restrictions <- read_tsv( restrictionsFilename )
 restrictions2 <- separate(restrictions,"leisure", into = c("leisure", NA, NA), sep = "_") %>%
   transform( leisure = as.numeric(leisure)) %>%
-  mutate( week = isoweek(date) ) %>%
-  group_by( week ) %>%
+  mutate( year = year(date), week = isoweek(date) ) %>%
+  group_by( year, week ) %>%
   summarize( mean=mean(leisure), date=mean(date))
 
 # ---
@@ -308,7 +337,7 @@ p1 <- ggplot() + scale_y_log10() +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-03-01')), expand = expansion() ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-05-01')), expand = expansion() ) +
   geom_line(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_point(data=reducedActParticip2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
@@ -321,7 +350,7 @@ p1 <- ggplot() + scale_y_log10() +
 
 p2 <- ggplot() + scale_y_log10() +
   geom_point( data=hospital2, mapping=aes(x=date,y=mean),size=3) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-03-01')), expand = expansion() ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-05-01')), expand = expansion() ) +
   geom_point( data=infections2, mapping = aes(x=date, y=nSeriouslySick), color="orange", size=2) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,nSeriouslySick-6*sqrt(nSeriouslySick)), ymax=nSeriouslySick+6*sqrt(nSeriouslySick)), size=1., color="orange")
 

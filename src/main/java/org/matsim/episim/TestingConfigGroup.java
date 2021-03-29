@@ -23,6 +23,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String RATE_PER_ACTIVITY = "testingRatePerActivity";
 	private static final String FALSE_POSITIVE_RATE = "falsePositiveRate";
 	private static final String FALSE_NEGATIVE_RATE = "falseNegativeRate";
+	private static final String HOUSEHOLD_COMPLIANCE = "householdCompliance";
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
 	private static final String SELECTION = "selection";
@@ -48,6 +49,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Share of people that are tested (if applicable for a test)
 	 */
 	private double testingRate = 1.0;
+
+	/**
+	 * Percentage of (fixed) households that are tested.
+	 */
+	private double householdCompliance = 1.0;
 
 	/**
 	 * Separate testing rates for individual activities.
@@ -122,6 +128,16 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(RATE)
 	public void setTestingRate(double testingRate) {
 		this.testingRate = testingRate;
+	}
+
+	@StringSetter(HOUSEHOLD_COMPLIANCE)
+	public void setHouseholdCompliance(double householdCompliance) {
+		this.householdCompliance = householdCompliance;
+	}
+
+	@StringGetter(HOUSEHOLD_COMPLIANCE)
+	public double getHouseholdCompliance() {
+		return householdCompliance;
 	}
 
 	/**
