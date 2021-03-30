@@ -33,6 +33,8 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.activity.ActivityParticipationModel;
+import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
@@ -55,7 +57,6 @@ import java.util.Map;
 public final class SnzBerlinProductionScenario extends AbstractModule {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 
-	private final int importOffset;
 
 	public static class Builder {
 		private int importOffset = 0;
@@ -68,6 +69,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
+		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
 		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
@@ -172,6 +174,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum AdjustRestrictions {yes, no}
 
 	private final int sample;
+	private final int importOffset;
 	private final DiseaseImport diseaseImport;
 	private final Restrictions restrictions;
 	private final AdjustRestrictions adjustRestrictions;
@@ -182,6 +185,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final WeatherModel weatherModel;
 	private final Class<? extends InfectionModel> infectionModel;
 	private final Class<? extends VaccinationModel> vaccinationModel;
+	private final EpisimConfigGroup.ActivityHandling activityHandling;
 
 	private final double imprtFctMult;
 	private final double importFactorBeforeJune;
@@ -208,6 +212,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.masks = builder.masks;
 		this.tracing = builder.tracing;
 		this.snapshot = builder.snapshot;
+		this.activityHandling = builder.activityHandling;
 		this.infectionModel = builder.infectionModel;
 		this.importOffset = builder.importOffset;
 		this.vaccinationModel = builder.vaccinationModel;
@@ -246,6 +251,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		else
 			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay)
+			bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
 	}
 
 	@Provides
@@ -273,6 +280,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
+
+		episimConfig.setActivityHandling(activityHandling);
 
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 //				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);

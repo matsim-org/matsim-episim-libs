@@ -637,18 +637,6 @@ public final class EpisimPerson implements Attributable {
 				'}';
 	}
 
-	/**
-	 * Select a starting activity.
-	 */
-	private static int actIndex(int searchResult) {
-		// reverse computation of insertion point
-		// chose the left activity before that
-		if (searchResult < 0) {
-			return -(searchResult + 1) - 1;
-		}
-		return searchResult;
-	}
-
 	private int findActivity(DayOfWeek day, double time) {
 		// do a linear search for matching activity
 		int last = getEndOfDay(day) - 1;
@@ -659,11 +647,23 @@ public final class EpisimPerson implements Attributable {
 		return last;
 	}
 
+	private int findFirstActivity(DayOfWeek day, double time) {
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time >= time)
+				return i;
+		}
+		return last;
+	}
+
 	/**
 	 * Checks whether a certain activity is performed.
 	 */
 	boolean checkActivity(DayOfWeek day, double time) {
 		return activityParticipation.get(findActivity(day, time));
+	}
+	boolean checkFirstActivity(DayOfWeek day, double time) {
+		return activityParticipation.get(findFirstActivity(day, time));
 	}
 
 	/**
