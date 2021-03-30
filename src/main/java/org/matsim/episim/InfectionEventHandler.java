@@ -626,10 +626,11 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportCpuTime(iteration, "ProgressionModel", "start", -1);
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
+
 		for (EpisimPerson person : personMap.values()) {
-			// TODO: testing should be performed after activity participation
 			progressionModel.updateState(person, iteration);
 		}
+
 		reporting.reportCpuTime(iteration, "ProgressionModel", "finished", -1);
 
 		reporting.reportCpuTime(iteration, "VaccinationModel", "start", -1);
@@ -660,6 +661,8 @@ public final class InfectionEventHandler implements Externalizable {
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 		testingModel.setIteration(iteration);
 		testingModel.beforeStateUpdates(personMap, iteration, this.report);
+
+		activityParticipationModel.setRestrictionsForIteration(iteration, im);
 
 		for (EpisimPerson person : personMap.values()) {
 			// update person activity participation for the day

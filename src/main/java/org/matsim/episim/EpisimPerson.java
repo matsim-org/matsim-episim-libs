@@ -519,10 +519,11 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
 	 * This method takes {@link #activityParticipation} into account.
-	 * @param reduce reduce function called on each activities with current result
+	 *
+	 * @param reduce       reduce function called on each activities with current result
 	 * @param defaultValue default value and initial value for the reduce function
 	 */
-	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T,  T> reduce, T defaultValue) {
+	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T, T> reduce, T defaultValue) {
 
 		T result = defaultValue;
 		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
@@ -548,7 +549,7 @@ public final class EpisimPerson implements Attributable {
 	 */
 	void initParticipation() {
 		activityParticipation = new BitSet(trajectory.size());
-		activityParticipation.set(0, trajectory.size());
+		activityParticipation.set(0, trajectory.size(), true);
 	}
 
 	public BitSet getActivityParticipation() {
@@ -636,26 +637,45 @@ public final class EpisimPerson implements Attributable {
 				'}';
 	}
 
-	/**
-	 * Select a starting activity.
-	 */
-	private static int actIndex(int searchResult) {
-		// reverse computation of insertion point
-		// chose the left activity before that
-		if (searchResult < 0) {
-			return -(searchResult + 1) - 1;
+	private int findActivity(DayOfWeek day, double time) {
+		// do a linear search for matching activity
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time > time)
+				return i;
 		}
-		return searchResult;
+		return last;
+	}
+
+	private int findFirstActivity(DayOfWeek day, double time) {
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time >= time)
+				return i;
+		}
+		return last;
 	}
 
 	/**
 	 * Checks whether a certain activity is performed.
 	 */
 	boolean checkActivity(DayOfWeek day, double time) {
-		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
+		return activityParticipation.get(findActivity(day, time));
+	}
+	boolean checkFirstActivity(DayOfWeek day, double time) {
+		return activityParticipation.get(findFirstActivity(day, time));
+	}
 
-		return activityParticipation.get(idx);
+	/**
+	 * Checks whether the next activity is performed.
+	 */
+	boolean checkNextActivity(DayOfWeek day, double time) {
+		int idx = findActivity(day, time);
+
+		if (idx < getEndOfDay(day) - 1)
+			return activityParticipation.get(idx + 1);
+
+		return true;
 	}
 
 	List<PerformedActivity> getActivities(DayOfWeek day) {
@@ -678,37 +698,12 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Get the activity normally performed by a person on a specific day and time.
 	 */
-	PerformedActivity getActivity(DayOfWeek day, double time) {
+	public PerformedActivity getActivity(DayOfWeek day, double time) {
 
 		assert getStartOfDay(day) >= 0;
 		assert getEndOfDay(day) <= trajectory.size();
 
-		// do a linear search for matching activity
-		int last = getEndOfDay(day) - 1;
-		for (int i = getStartOfDay(day); i < last; i++) {
-			if (trajectory.get(i + 1).time > time)
-				return trajectory.get(i);
-		}
-
-		return trajectory.get(last);
-	}
-
-	/**
-	 * Get the previous activity of a person.
-	 *
-	 * @see #getActivity(DayOfWeek, double)
-	 */
-	@Nullable
-	public PerformedActivity getPrevActivity(DayOfWeek day, double time) {
-		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-
-		// time must be relative to start of trajectory
-
-		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
-		if (idx - 1 < 0)
-			return null;
-
-		return sub.get(idx - 1);
+		return trajectory.get(findActivity(day, time));
 	}
 
 	/**
@@ -718,12 +713,12 @@ public final class EpisimPerson implements Attributable {
 	 */
 	@Nullable
 	public PerformedActivity getNextActivity(DayOfWeek day, double time) {
-		List<PerformedActivity> sub = trajectory.subList(getStartOfDay(day), getEndOfDay(day));
-		int idx = actIndex(Collections.binarySearch(sub, new PerformedActivity(time, null), Comparator.comparingDouble(PerformedActivity::time)));
-		if (idx + 1 >= sub.size())
-			return null;
+		int idx = findActivity(day, time);
 
-		return sub.get(idx + 1);
+		if (idx < getEndOfDay(day) - 1)
+			return trajectory.get(idx + 1);
+
+		return null;
 	}
 
 	/**

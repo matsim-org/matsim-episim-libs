@@ -125,6 +125,14 @@ public class EpisimTestUtils {
 		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 	}
 
+
+	/**
+	 * Create uninitialized person without trajectory.
+	 */
+	public static EpisimPerson createPerson() {
+		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+	}
+
 	/**
 	 * Add persons to a facility.
 	 */

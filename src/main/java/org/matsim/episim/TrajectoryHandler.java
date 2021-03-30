@@ -135,7 +135,9 @@ final class TrajectoryHandler {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
-		DayOfWeek prevDay = day.minus(1);
+
+		// need to use previous as in config
+		DayOfWeek prevDay = EpisimUtils.getDayOfWeek(episimConfig, iteration - 1);
 
 		for (InfectionEventHandler.EpisimFacility facility : pseudoFacilityMap.values()) {
 			if (!responsible.test(facility.getContainerId()))
@@ -147,7 +149,7 @@ final class TrajectoryHandler {
 
 				EpisimPerson person = it.next();
 
-				assert facility.getContainerId().equals(person.getLastFacilityId(prevDay)):
+				assert facility.getContainerId().equals(person.getLastFacilityId(prevDay)) :
 						String.format("Person %s needs to be in its last facility (%s) at the end of the day, but is in %s",
 								person.getPersonId(), person.getLastFacilityId(prevDay), facility.getContainerId());
 
@@ -187,6 +189,9 @@ final class TrajectoryHandler {
 			if (!responsible.test(firstFacilityId))
 				continue;
 
+			if (!person.checkFirstActivity(day, 0))
+				continue;
+
 			if (!person.getStaysInContainer(prevDay) || !person.getLastFacilityId(prevDay).equals(firstFacilityId)) {
 				firstFacility.addPerson(person, now, person.getFirstActivity(day));
 				contactModel.notifyEnterFacility(person, firstFacility, now);
@@ -208,7 +213,7 @@ final class TrajectoryHandler {
 		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)
 			return true;
 
-		throw new UnsupportedOperationException("TODO");
+		return person.checkActivity(day, time) && person.checkNextActivity(day, time);
 	}
 
 	public void handleEvent(ActivityStartEvent activityStartEvent) {
@@ -218,7 +223,7 @@ final class TrajectoryHandler {
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(activityStartEvent.getPersonId());
 
-		if (!checkParticipation(episimPerson, now))
+		if (!checkParticipation(episimPerson, activityStartEvent.getTime()))
 			return;
 
 		reporting.handleEvent(activityStartEvent);
@@ -241,16 +246,17 @@ final class TrajectoryHandler {
 
 		EpisimPerson episimPerson = this.personMap.get(activityEndEvent.getPersonId());
 
-		if (!checkParticipation(episimPerson, now))
-			return;
-
-		reporting.handleEvent(activityEndEvent);
-
 		// create pseudo facility id that includes the activity type:
 		Id<ActivityFacility> episimFacilityId = activityEndEvent.getFacilityId();
 
 		// find the facility
 		InfectionEventHandler.EpisimFacility episimFacility = this.pseudoFacilityMap.get(episimFacilityId);
+
+		// person did not perform this activity
+		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.startOfDay && !episimFacility.containsPerson(episimPerson))
+			return;
+
+		reporting.handleEvent(activityEndEvent);
 
 		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
 
@@ -267,7 +273,7 @@ final class TrajectoryHandler {
 		// find the person:
 		EpisimPerson episimPerson = this.personMap.get(entersVehicleEvent.getPersonId());
 
-		if (!checkVehicleUsage(episimPerson, now))
+		if (!checkVehicleUsage(episimPerson, entersVehicleEvent.getTime()))
 			return;
 
 		reporting.handleEvent(entersVehicleEvent);
@@ -290,7 +296,8 @@ final class TrajectoryHandler {
 
 		EpisimPerson episimPerson = this.personMap.get(leavesVehicleEvent.getPersonId());
 
-		if (!checkVehicleUsage(episimPerson, now))
+		// person did not enter the vehicle
+		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.startOfDay && !episimVehicle.containsPerson(episimPerson))
 			return;
 
 		reporting.handleEvent(leavesVehicleEvent);
