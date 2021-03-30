@@ -215,18 +215,17 @@ public abstract class AbstractContactModel implements ContactModel {
 
 	private boolean tripRelevantForInfectionDynamics(double time, EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
-
-		EpisimPerson.PerformedActivity lastAct = person.getPrevActivity(day, time);
-
 		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
 			return false;
 
+		EpisimPerson.PerformedActivity lastAct = person.getActivity(day, time);
+
 		EpisimPerson.PerformedActivity nextAct = person.getNextActivity(day, time);
 
-		// last activity is only considered if present
+		// next activity is only considered if present
 		return actIsRelevant(trParams, restrictions, rnd) &&
 				(nextAct == null || actIsRelevant(nextAct.params, restrictions, rnd)) &&
-				(lastAct == null || actIsRelevant(lastAct.params, restrictions, rnd));
+				(actIsRelevant(lastAct.params, restrictions, rnd));
 
 	}
 

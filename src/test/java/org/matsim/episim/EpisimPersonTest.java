@@ -71,7 +71,7 @@ public class EpisimPersonTest {
 	@Test
 	public void activities() {
 
-		EpisimPerson p = EpisimTestUtils.createPerson("work", null);
+		EpisimPerson p = EpisimTestUtils.createPerson();
 
 		p.setStartOfDay(DayOfWeek.MONDAY);
 
@@ -87,9 +87,6 @@ public class EpisimPersonTest {
 		assertThat(p.getActivity(DayOfWeek.MONDAY, 1000).actType())
 				.isEqualTo("work");
 
-		assertThat(p.getPrevActivity(DayOfWeek.MONDAY, 0))
-				.isNull();
-
 		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1000).actType())
 				.isEqualTo("edu");
 
@@ -101,6 +98,36 @@ public class EpisimPersonTest {
 
 		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 2001))
 				.isNull();
+	}
+
+	@Test
+	public void participation() {
+
+		EpisimPerson p = EpisimTestUtils.createPerson();
+
+		DayOfWeek d = DayOfWeek.MONDAY;
+		p.setStartOfDay(d);
+
+		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"));
+		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"));
+		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"));
+		p.addToTrajectory(3000, new EpisimConfigGroup.InfectionParams("leisure"));
+
+		p.setEndOfDay(d);
+		p.initParticipation();
+
+		p.getActivityParticipation().set(1, false);
+		p.getActivityParticipation().set(2, false);
+
+
+		assertThat(p.checkActivity(d, 0)).isEqualTo(true);
+		assertThat(p.checkActivity(d, 1000)).isEqualTo(false);
+		assertThat(p.checkActivity(d, 2500)).isEqualTo(false);
+		assertThat(p.checkActivity(d, 3100)).isEqualTo(true);
+
+
+		assertThat(p.checkNextActivity(d, 500)).isEqualTo(false);
+		assertThat(p.checkNextActivity(d, 2000)).isEqualTo(true);
 
 	}
 
