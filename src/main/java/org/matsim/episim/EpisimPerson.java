@@ -463,7 +463,7 @@ public final class EpisimPerson implements Attributable {
 		return traceableContactPersons.object2DoubleEntrySet()
 				.stream().filter(p -> p.getDoubleValue() >= after)
 				.map(Map.Entry::getKey)
-				.sorted()
+				.sorted(Comparator.comparing(EpisimPerson::getPersonId))
 				.collect(Collectors.toList());
 
 		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
