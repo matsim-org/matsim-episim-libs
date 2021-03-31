@@ -112,11 +112,15 @@ public class DefaultTestingModel implements TestingModel {
 		// update is run at end of day, the test needs to be for the next day
 		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
 
-		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS) {
-			if (dow == DayOfWeek.MONDAY || dow == DayOfWeek.THURSDAY) {
+		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && testingConfig.getTestDays().contains(dow)) {
 				testAndQuarantine(person, day, testingConfig.getTestingRate());
-			}
 		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
+
+			double rate = person.matchActivities(dow, testingConfig.getActivities(),
+					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
+
+			testAndQuarantine(person, day, rate);
+		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && testingConfig.getTestDays().contains(dow)) {
 
 			double rate = person.matchActivities(dow, testingConfig.getActivities(),
 					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
