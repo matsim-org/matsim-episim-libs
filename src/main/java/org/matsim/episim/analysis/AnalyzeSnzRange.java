@@ -50,10 +50,10 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 /**
- * @author: rewert 
- * 			This class reads the SENOZON data for every day and analyzes the moved ranges. The data is
- *          filtered by the zip codes of every area. The results for every day are the percentile of the
- *          changes compared to the base.
+ * @author: rewert This class reads the SENOZON data for every day and analyzes
+ *          the moved ranges. The data is filtered by the zip codes of every
+ *          area. The results for every day are the percentile of the changes
+ *          compared to the base.
  */
 @CommandLine.Command(name = "analyzeSnzData", description = "Aggregate snz mobility data.")
 class AnalyzeSnzRange implements Callable<Integer> {
@@ -132,7 +132,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 
 		// getPercentageResults: set to true if you want percentages compared to the
-		boolean getPercentageResults = true;
+		boolean getPercentageResults = false;
 
 //		analyzeDataForCertainArea(zipCodesGER, "Germany", filesWithData, getPercentageResults);
 		analyzeDataForCertainArea(zipCodesBerlin, "Berlin", filesWithData, getPercentageResults);
@@ -176,24 +176,31 @@ class AnalyzeSnzRange implements Callable<Integer> {
 						.parse(IOUtils.getBufferedReader(file.toString()));
 
 				for (CSVRecord record : parse) {
+					if (!record.get("zipCode").contains("NULL")) {
+						int zipCode = Integer.parseInt(record.get("zipCode"));
+						if (zipCodes.contains(zipCode)) {
 
-					int zipCode = Integer.parseInt(record.get("zipCode"));
-					if (zipCodes.contains(zipCode)) {
+							int nPersons = Integer.parseInt(record.get("nPersons"));
+							double dailyRangeSum = Double.parseDouble(record.get("dailyRangeSum"));
+							int nStayHome = Integer.parseInt(record.get("nStayHomes"));
+							int nMobilePersons = Integer.parseInt(record.get("nMobilePersons"));
 
-						int nPersons = Integer.parseInt(record.get("nPersons"));
-						double dailyRangeSum = Double.parseDouble(record.get("dailyRangeSum"));
-
-						sums.mergeDouble("nPersons", nPersons, Double::sum);
-						sums.mergeDouble("dailyRangeSum", dailyRangeSum, Double::sum);
+							sums.mergeDouble("nStayHomes", nStayHome, Double::sum);
+							sums.mergeDouble("nMobilePersons", nMobilePersons, Double::sum);
+							sums.mergeDouble("nPersons", nPersons, Double::sum);
+							sums.mergeDouble("dailyRangeSum", dailyRangeSum, Double::sum);
+						}
 					}
 				}
 
 				List<String> row = new ArrayList<>();
 				row.add(dateString);
 				row.add(String.valueOf((int) sums.getDouble("nPersons")));
+				row.add(String.valueOf((int) sums.getDouble("nStayHomes")));
+				row.add(String.valueOf((int) sums.getDouble("nMobilePersons")));
 				row.add(String.valueOf(sums.getDouble("dailyRangeSum")));
 				row.add(String.valueOf(sums.getDouble("dailyRangeSum") / sums.getDouble("nPersons")));
-				
+
 				JOIN.appendTo(writer, row);
 				writer.write("\n");
 
@@ -214,6 +221,6 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	}
 
 	private enum Types {
-		date, nPersons, dailyRangeSum, dailyRangePerPerson
+		date, nPersons, nStayHomes, nMobilePersons, dailyRangeSum, dailyRangePerPerson
 	}
 }
