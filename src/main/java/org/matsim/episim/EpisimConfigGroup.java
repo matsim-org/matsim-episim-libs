@@ -73,6 +73,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -162,6 +163,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			19, 0.85,
 			20, 1d
 	));
+
+	/**
+	 * Compliance if a curfew is set.
+	 */
+	private double curfewCompliance = 1.0;
 
 	/**
 	 * Default constructor.
@@ -591,6 +597,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(leisureOutdoorFraction);
 	}
 
+
+	@StringGetter(CURFEW_COMPLIANCE)
+	public double getCurfewCompliance() {
+		return curfewCompliance;
+	}
+
+	@StringSetter(CURFEW_COMPLIANCE)
+	public void setCurfewCompliance(double curfewCompliance) {
+		this.curfewCompliance = curfewCompliance;
+	}
 
 	/**
 	 * Get remapping of input days.

@@ -269,8 +269,10 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
-		// no closing hour set
-		if (!r.hasClosingHours()) {
+		// no closing hour set, or no compliance
+		if (!r.hasClosingHours() || episimConfig.getCurfewCompliance() == 0) {
+			return now - max;
+		} else if (episimConfig.getCalibrationParameter() != 1 && rnd.nextDouble() >= episimConfig.getCurfewCompliance()) {
 			return now - max;
 		}
 
