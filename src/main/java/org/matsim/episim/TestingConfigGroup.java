@@ -29,6 +29,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
 	private static final String SELECTION = "selection";
+	private static final String ACTIVITY_CAPACITIES = "activityCapacities";
 
 	private static final String GROUPNAME = "episimTesting";
 
@@ -81,6 +82,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Days on which a person is tested.
 	 */
 	private final Set<DayOfWeek> testDays = new HashSet<>(Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY));
+
+	/**
+	 * Path to csv file for individual activity capacities.
+	 */
+	private String activityCapacities;
 
 	/**
 	 * Default constructor.
@@ -145,6 +151,16 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(HOUSEHOLD_COMPLIANCE)
 	public double getHouseholdCompliance() {
 		return householdCompliance;
+	}
+
+	@StringGetter(ACTIVITY_CAPACITIES)
+	public String getActivityCapacities() {
+		return activityCapacities;
+	}
+
+	@StringSetter(ACTIVITY_CAPACITIES)
+	public void setActivityCapacities(String activityCapacities) {
+		this.activityCapacities = activityCapacities;
 	}
 
 	public Set<DayOfWeek> getTestDays() {
