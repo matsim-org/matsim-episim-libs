@@ -167,7 +167,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Compliance if a curfew is set.
 	 */
-	private double curfewCompliance = 1.0;
+	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
 
 	/**
 	 * Default constructor.
@@ -598,14 +598,26 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 
-	@StringGetter(CURFEW_COMPLIANCE)
-	public double getCurfewCompliance() {
+	public NavigableMap<LocalDate, Double> getCurfewCompliance() {
 		return curfewCompliance;
 	}
 
+	public void setCurfewCompliance(Map<LocalDate, Double> curfewCompliance) {
+		this.curfewCompliance.clear();
+		this.curfewCompliance.putAll(curfewCompliance);
+	}
+
+	@StringGetter(CURFEW_COMPLIANCE)
+	String getCurfewComplianceString() {
+		return JOINER.join(curfewCompliance);
+	}
+
 	@StringSetter(CURFEW_COMPLIANCE)
-	public void setCurfewCompliance(double curfewCompliance) {
-		this.curfewCompliance = curfewCompliance;
+	void setCurfewCompliance(String config) {
+		Map<String, String> map = SPLITTER.split(config);
+		setCurfewCompliance(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
 	}
 
 	/**
