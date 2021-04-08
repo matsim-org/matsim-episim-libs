@@ -66,11 +66,12 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		
+		LocalDate restrictionDate = LocalDate.parse(params.restrictionDate);
 		
 		//extrapolate restrictions
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ")) continue;
-			if (params.activityLevel.equals("67pct")) builder.restrict("2021-04-12", 0.67, act);
+			if (params.activityLevel.equals("67pct")) builder.restrict(restrictionDate, 0.67, act);
 			if (params.activityLevel.equals("trend")) {
 				for (int i = 1; i<100; i++) {
 					double fraction = 0.78 + i * 0.01;
@@ -85,16 +86,16 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		if (params.schools.equals("50%open")) {}
 		
 		if (params.schools.equals("open")) {
-			builder.clearAfter( "2021-04-01", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-			builder.restrict("2021-04-11", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+			builder.clearAfter( restrictionDate.minusDays(2).toString(), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+			builder.restrict(restrictionDate, 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 			//Sommerferien
 			builder.restrict("2021-06-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict("2021-08-07", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		}
 		
 		if (params.schools.equals("closed")) {
-			builder.clearAfter( "2021-04-01", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-			builder.restrict("2021-04-01", .2, "educ_kiga");
+			builder.clearAfter( restrictionDate.minusDays(2).toString(), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+			builder.restrict(restrictionDate, .2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		}
 		
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -125,7 +126,7 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		vaccinations.put(LocalDate.parse("2021-03-27"), (int) ((0.120 - 0.105) * population / 7));
 		
 		if (!params.vaccinationRate.equals("current")) {
-			vaccinations.put(LocalDate.parse("2021-04-12"), (int) (Double.parseDouble(params.vaccinationRate) * 4./3.));
+			vaccinations.put(restrictionDate, (int) (Double.parseDouble(params.vaccinationRate) * 4./3.));
 		}
 
 		// https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
@@ -178,13 +179,29 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 			}
 		}
 		
-		if (params.curfew.contains("19-5")) builder.restrict("2021-04-06", Restriction.ofClosingHours(19, 5), "leisure", "visit");
-		if (params.curfew.contains("21-5")) builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
-
-		if (params.curfew.contains("50pct")) episimConfig.setCurfewCompliance(0.5);
-		if (params.curfew.contains("100pct")) episimConfig.setCurfewCompliance(1.);
-
+		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
+		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
+		curfewCompliance.put(LocalDate.parse("2021-04-06"), 0.5);
 		
+		if (params.leisure.contains("19-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(19, 5), "leisure", "visit");
+		if (params.leisure.contains("21-5")) builder.restrict(restrictionDate, Restriction.ofClosingHours(21, 5), "leisure", "visit");
+
+		if (params.leisure.startsWith("c_") && params.leisure.contains("50pct")) curfewCompliance.put(restrictionDate, 0.5);
+		if (params.leisure.startsWith("c_") && params.leisure.contains("100pct")) curfewCompliance.put(restrictionDate, 1.0);
+		
+		episimConfig.setCurfewCompliance(curfewCompliance);
+				
+		if (params.leisure.equals("0pct")) {
+			builder.clearAfter(restrictionDate.toString(), "leisure", "visit");
+			builder.restrict(restrictionDate, 0., "leisure", "visit");
+		}
+		if (params.leisure.equals("50pct")) {
+			builder.clearAfter(restrictionDate.toString(), "leisure", "visit");
+			builder.restrict(restrictionDate, 0.5, "leisure", "visit");
+		}
+		
+		if (params.work.contains("ffp")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "work", "business");
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
@@ -242,35 +259,35 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 						LocalDate.parse("2021-03-11"), leisureW10,
 						LocalDate.parse("2021-03-18"), leisureW11,
 						LocalDate.parse("2021-03-25"), leisureW12,
-						LocalDate.parse("2021-04-12"), leisureRate
+						restrictionDate, leisureRate
 						),
 				"work", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), workRate
+						restrictionDate, workRate
 						),
 				"business", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), workRate
+						restrictionDate, workRate
 						),
 				"educ_kiga", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), eduRate
+						restrictionDate, eduRate
 						),
 				"educ_primary", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), eduRate
+						restrictionDate, eduRate
 						),
 				"educ_secondary", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), eduRate
+						restrictionDate, eduRate
 						),
 				"educ_tertiary", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), eduRate
+						restrictionDate, eduRate
 						),
 				"educ_other", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
-						LocalDate.parse("2021-04-12"), eduRate
+						restrictionDate, eduRate
 						)
 				)));
 
@@ -341,16 +358,22 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		
 		@StringParameter({
 			"0-0-0", 
-			"20-0-0", "20-20-0", "20-20-2", "20-20-10", "20-20-20", 
-			"40-0-0", "40-20-0","40-20-2", "40-20-10", "40-20-20", "40-40-0", "40-40-2", "40-40-10", "40-40-20"
+			"20-0-0", 
+			"20-20-0", 
+			"20-20-2", "20-20-10", 
+//			"20-20-20", 
+//			"40-0-0", "40-20-0","40-20-2", "40-20-10", "40-20-20", "40-40-0", "40-40-2", "40-40-10", "40-40-20"
 			})
 		String testingRateEduWorkLeisure;
 		
 		@StringParameter({"yes", "no"})
 		public String easterModel;
 		
-		@StringParameter({"no", "19-5-50pct", "19-5-100pct", "21-5-50pct", "21-5-100pct"})
-		public String curfew;
+		@StringParameter({"current", "c_19-5_50pct", "c_19-5_100pct", "c_21-5_100pct", "0pct", "50pct"})
+		public String leisure;
+		
+		@StringParameter({"no", "ffp"})
+		public String work;
 		
 //		@StringParameter({"no", "1.0-1.0", "1.0-0.5", "1.0-0.0", "2.0-1.0", "2.0-0.5", "2.0-0.0"})
 //		public String B1351;
@@ -358,8 +381,11 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 //		@Parameter({1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3})
 //		double householdCompliance;
 		
-		@StringParameter({"yes", "no"})
+		@StringParameter({"yes"})
 		String outdoorModel;
+		
+		@StringParameter({"2021-04-12", "2021-04-19"})
+		String restrictionDate;
 	}
 
 	public static void main(String[] args) {
