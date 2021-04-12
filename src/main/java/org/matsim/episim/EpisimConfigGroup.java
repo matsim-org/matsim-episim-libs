@@ -73,6 +73,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -162,6 +163,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			19, 0.85,
 			20, 1d
 	));
+
+	/**
+	 * Compliance if a curfew is set.
+	 */
+	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
 
 	/**
 	 * Default constructor.
@@ -591,6 +597,28 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(leisureOutdoorFraction);
 	}
 
+
+	public NavigableMap<LocalDate, Double> getCurfewCompliance() {
+		return curfewCompliance;
+	}
+
+	public void setCurfewCompliance(Map<LocalDate, Double> curfewCompliance) {
+		this.curfewCompliance.clear();
+		this.curfewCompliance.putAll(curfewCompliance);
+	}
+
+	@StringGetter(CURFEW_COMPLIANCE)
+	String getCurfewComplianceString() {
+		return JOINER.join(curfewCompliance);
+	}
+
+	@StringSetter(CURFEW_COMPLIANCE)
+	void setCurfewCompliance(String config) {
+		Map<String, String> map = SPLITTER.split(config);
+		setCurfewCompliance(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
+	}
 
 	/**
 	 * Get remapping of input days.

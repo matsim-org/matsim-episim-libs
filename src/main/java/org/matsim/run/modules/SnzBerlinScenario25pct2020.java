@@ -58,7 +58,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
 	private static FixedPolicy.ConfigBuilder basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
-														long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+			 											long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
 														boolean restrictUniversities) throws IOException {
 		// note that there is already a builder around this
 		ConfigBuilder restrictions;
@@ -68,43 +68,46 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		if (restrictSchoolsAndDayCare) {
 			restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
-					.restrict("2020-03-14", 0., "educ_secondary", "educ_tertiary", "educ_other")
-					.restrict("2020-05-11", 0.3, "educ_primary")
-					.restrict("2020-05-11", 0.2, "educ_secondary", "educ_tertiary", "educ_other")
-					.restrict("2020-05-25", 0.3, "educ_kiga")
-					.restrict("2020-06-08", 0.5, "educ_kiga")
-					.restrict("2020-06-22", 1., "educ_kiga")
-					//Sommerferien
-					.restrict("2020-06-25", 0.2, "educ_primary")
-					//Ende der Sommerferien
-					.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					//Lueften nach den Sommerferien
-					.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
-					//Herbstferien
-					.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					//Weihnachtsferien (vorgezogen)
-					.restrict("2020-12-16", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					//			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					.restrict("2021-01-03", 0.5, "educ_kiga")
-					.restrict("2021-01-03", 0.3, "educ_primary")
-					//			//Winterferien
-					.restrict("2021-02-01", 0.2, "educ_primary")
-					.restrict("2021-02-07", 0.3, "educ_primary")
+			.restrict("2020-03-14", 0., "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2020-05-11", 0.3, "educ_primary")
+			.restrict("2020-05-11", 0.2, "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2020-05-25", 0.3, "educ_kiga")
+			.restrict("2020-06-08", 0.5, "educ_kiga")
+			.restrict("2020-06-22", 1., "educ_kiga")
+			//Sommerferien
+			.restrict("2020-06-25", 0.2, "educ_primary")
+			//Ende der Sommerferien
+			.restrict("2020-08-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Lueften nach den Sommerferien
+			.restrict("2020-08-08", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+			//Herbstferien
+			.restrict("2020-10-12", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2020-10-25", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Weihnachtsferien (vorgezogen)
+			.restrict("2020-12-16", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			.restrict("2021-01-03", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-01-03", 0.5, "educ_kiga")
+			.restrict("2021-01-03", 0.3, "educ_primary")
+//			//Winterferien
+			.restrict("2021-02-01", 0.2, "educ_primary")
+			.restrict("2021-02-07", 0.3, "educ_primary")
 
-					.restrict("2021-02-22", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other",  "educ_kiga")
-					//Osterferien
-					.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					//Sommerferien
-					.restrict("2021-06-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
-					.restrict("2021-08-07", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+//			.restrict("2021-02-22", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other",  "educ_kiga")
+			.restrict("2021-02-22", .5, "educ_primary")
+			.restrict("2021-02-22", .5, "educ_secondary", "educ_tertiary", "educ_other")
+
+			//Osterferien
+			.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-04-11", 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Sommerferien
+			.restrict("2021-06-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2021-08-07", 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			;
 		}
 
 		if (restrictUniversities ) {
 			restrictions.restrict("2020-03-14", 0., "educ_higher")
-					.restrict("2020-05-11", 0.2, "educ_higher")
+			.restrict("2020-05-11", 0.2, "educ_higher")
 			;
 		}
 
@@ -186,7 +189,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		config.controler().setOutputDirectory("./output-berlin-25pct-input-" + basePolicyBuilder.getActivityParticipation() + "-ciCorrections-" + basePolicyBuilder.getCiCorrections() + "-startDate-" + episimConfig.getStartDate() + "-hospitalFactor-" + episimConfig.getHospitalFactor() + "-calibrParam-" + episimConfig.getCalibrationParameter() + "-tracingProba-" + tracingProbability);
 
-		//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
 		return config;
 	}
@@ -209,7 +212,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210220.csv"));
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210404.csv"));
 		}
 
 		public void setIntroductionPeriod(long introductionPeriod) {
