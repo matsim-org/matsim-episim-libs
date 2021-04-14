@@ -59,7 +59,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	private static final Joiner JOIN = Joiner.on("\t");
 
 	private enum AnalyseOptions {
-		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends
+		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends, dailyResults
 	};
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -80,20 +80,21 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		log.info("Amount of found files: " + filesWithData.size());
 
 		boolean getPercentageResults = false;
-		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
+		boolean outputShareOutdoor = true;
+		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.dailyResults;
 //		analyzeDataForCertainArea("Test", filesWithData, getPercentageResults, selectedOptionForAnalyse);
 //		analyzeDataForCertainArea("Germany", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Berlin", filesWithData, getPercentageResults, selectedOptionForAnalyse);
+//		analyzeDataForCertainArea("Berlin", filesWithData, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse);
 //		analyzeDataForCertainArea("Munich", filesWithData, getPercentageResults, selectedOptionForAnalyse);
 //		analyzeDataForCertainArea("Heinsberg", filesWithData, getPercentageResults, selectedOptionForAnalyse);
 //		analyzeDataForCertainArea("Bonn", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Mannheim", filesWithData, getPercentageResults, selectedOptionForAnalyse);
+		analyzeDataForCertainArea("Mannheim", filesWithData, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse);
 //		analyzeDataForCertainArea("Wolfsburg", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-		List<String> districtsBerlin = Arrays.asList("Mitte", "Friedrichshain_Kreuzberg", "Pankow",
-				"Charlottenburg_Wilmersdorf", "Spandau", "Steglitz_Zehlendorf", "Tempelhof_Schoeneberg", "Neukoelln",
-				"Treptow_Koepenick", "Marzahn_Hellersdorf", "Lichtenberg", "Reinickendorf");
-		for (String district : districtsBerlin)
-			analyzeDataForCertainArea(district, filesWithData, getPercentageResults, selectedOptionForAnalyse);
+//		List<String> districtsBerlin = Arrays.asList("Mitte", "Friedrichshain_Kreuzberg", "Pankow",
+//				"Charlottenburg_Wilmersdorf", "Spandau", "Steglitz_Zehlendorf", "Tempelhof_Schoeneberg", "Neukoelln",
+//				"Treptow_Koepenick", "Marzahn_Hellersdorf", "Lichtenberg", "Reinickendorf");
+//		for (String district : districtsBerlin)
+//			analyzeDataForCertainArea(district, filesWithData, getPercentageResults, selectedOptionForAnalyse);
 
 		log.info("Done!");
 
@@ -231,20 +232,31 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	}
 
 	private void analyzeDataForCertainArea(String area, List<File> filesWithData, boolean getPercentageResults,
-			AnalyseOptions selectedOptionForAnalyse) throws IOException {
+			boolean outputShareOutdoor, AnalyseOptions selectedOptionForAnalyse) throws IOException {
 
 		log.info("Analyze data for " + area);
 
 		IntSet zipCodes = createAreasWithZIPCodes(area);
 		Path outputFile = outputFolder.resolve(area + "SnzDataTimeline_until.csv");
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
+		Path outputFileShare = null;
+		BufferedWriter writerShare = null;
+		if (outputShareOutdoor) {
+			outputFileShare = outputFolder.resolve(area + "SnzDataTimelineShare_until.csv");
+			writerShare = IOUtils.getBufferedWriter(outputFileShare.toString());
+		}
 		try {
-			String[] header = new String[] { "date", "type", "total", "3-4h", "4-5h", "5-6h", "6-7h", "7-8h", "8-9h",
-					"9-10h", "10-11h", "11-12h", "12-13h", "13-14h", "14-15h", "15-16h", "16-17h", "17-18h", "18-19h",
-					"19-20h", "20-21h", "21-22h", "22-23h", "23-24h", "24-25h", "25-26h", "26-27h" };
+			String[] header = new String[] { "date", "type", "total", "<0h", "0-1h", "1-2h", "2-3h", "3-4h", "4-5h",
+					"5-6h", "6-7h", "7-8h", "8-9h", "9-10h", "10-11h", "11-12h", "12-13h", "13-14h", "14-15h", "15-16h",
+					"16-17h", "17-18h", "18-19h", "19-20h", "20-21h", "21-22h", "22-23h", "23-24h", "24-25h", "25-26h",
+					"26-27h", "27-28h", "28-29h", "29-30h", ">30h" };
 
 			JOIN.appendTo(writer, header);
 			writer.write("\n");
+			if (outputShareOutdoor) {
+				JOIN.appendTo(writerShare, header);
+				writerShare.write("\n");
+			}
 			// base activity level for different days
 			Object2DoubleMap<String> baseStartHomeActs = new Object2DoubleOpenHashMap<>();
 			Object2DoubleMap<String> baseEndHomeActs = new Object2DoubleOpenHashMap<>();
@@ -285,8 +297,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 							file);
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(getPercentageResults, writer, header, base, dateString, sumsHomeStart, sumsHomeEnd,
-								sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 7, header, base,
+								dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 					}
 					break;
@@ -295,8 +307,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file);
 					if (day.equals(DayOfWeek.FRIDAY)) {
-						writeOutput(getPercentageResults, writer, header, base, dateString, sumsHomeStart, sumsHomeEnd,
-								sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 5, header, base,
+								dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 					}
 					break;
@@ -304,8 +316,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					if (day.equals(DayOfWeek.SATURDAY)) {
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file);
-						writeOutput(getPercentageResults, writer, header, base, dateString, sumsHomeStart, sumsHomeEnd,
-								sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 1, header, base,
+								dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 					}
 					break;
@@ -313,8 +325,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					if (day.equals(DayOfWeek.SUNDAY)) {
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file);
-						writeOutput(getPercentageResults, writer, header, base, dateString, sumsHomeStart, sumsHomeEnd,
-								sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 1, header, base,
+								dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 					}
 					break;
@@ -323,10 +335,17 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file);
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(getPercentageResults, writer, header, base, dateString, sumsHomeStart, sumsHomeEnd,
-								sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 2, header, base,
+								dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 					}
+					break;
+				case dailyResults:
+					readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+							file);
+					writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 1, header, base,
+							dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+					clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
 					break;
 				default:
 					break;
@@ -341,14 +360,17 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			}
 
 			writer.close();
+			if (outputShareOutdoor)
+				writerShare.close();
 
 			Path finalPath = null;
 			switch (selectedOptionForAnalyse) {
 			case weeklyResultsOfAllDays:
 				if (!getPercentageResults)
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_numbers"));
+					finalPath = Path
+							.of(outputFile.toString().replace("until", "until" + dateString + "_WeeklyNumbers"));
 				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString+ "_Weekly"));
 				break;
 			case onlyWeekdays:
 				if (!getPercentageResults)
@@ -378,11 +400,20 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				else
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekends"));
 				break;
+			case dailyResults:
+				if (!getPercentageResults)
+					finalPath = Path
+							.of(outputFile.toString().replace("until", "until" + dateString + "_DailyNumbers"));
+				else
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Daily"));
+				break;
 			default:
 				break;
 
 			}
-
+			if (outputShareOutdoor)
+				Files.move(outputFileShare, Path.of(finalPath.toString().replace("Timeline", "Outdoorshare")),
+						StandardCopyOption.REPLACE_EXISTING);
 			Files.move(outputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 
 			log.info("Write analyze of " + countingDays + " is writen to " + finalPath);
@@ -399,11 +430,11 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		sumsNonHomeEnd.clear();
 	}
 
-	private void writeOutput(boolean getPercentageResults, BufferedWriter writer, String[] header,
-			Map<String, Object2DoubleMap<String>> base, String dateString,
-			Object2DoubleOpenHashMap<String> sumsHomeStart, Object2DoubleOpenHashMap<String> sumsHomeEnd,
-			Object2DoubleOpenHashMap<String> sumsNonHomeStart, Object2DoubleOpenHashMap<String> sumsNonHomeEnd)
-			throws IOException {
+	private void writeOutput(boolean getPercentageResults, boolean outputShareOutdoor, BufferedWriter writer,
+			BufferedWriter writerShare, int analyzedDays, String[] header, Map<String, Object2DoubleMap<String>> base,
+			String dateString, Object2DoubleOpenHashMap<String> sumsHomeStart,
+			Object2DoubleOpenHashMap<String> sumsHomeEnd, Object2DoubleOpenHashMap<String> sumsNonHomeStart,
+			Object2DoubleOpenHashMap<String> sumsNonHomeEnd) throws IOException {
 		if (base.get("startHomeActs").isEmpty()) {
 			base.get("startHomeActs").putAll(sumsHomeStart);
 			base.get("endHomeActs").putAll(sumsHomeEnd);
@@ -415,6 +446,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			List<String> rowStartHome = new ArrayList<>();
 			List<String> rowEndNonHome = new ArrayList<>();
 			List<String> rowStartNonHome = new ArrayList<>();
+			List<String> rowShareOutdoor = new ArrayList<>();
 			rowEndHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
 			rowEndHome.add("endHomeActs");
 			rowStartHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
@@ -423,32 +455,47 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			rowEndNonHome.add("endNonHomeActs");
 			rowStartNonHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
 			rowStartNonHome.add("startNonHomeActs");
+			rowShareOutdoor.add(LocalDate.parse(dateString, FMT).format(FMT2));
+			rowShareOutdoor.add("shareOutdoor");
 
+			double shareBefore = 0.;
+			double baseNumberHomeStart = 0;
+			boolean started = false;
+		
 			for (String string : header) {
 				if (!string.contains("date") && !string.contains("type")) {
 					if (getPercentageResults) {
-						rowEndHome.add(String.valueOf(Math.round(
-								(sumsHomeEnd.getDouble(string) / base.get("endHomeActs").getDouble(string) - 1) * 10000)
-								* 0.01));
-						rowStartHome.add(String.valueOf(Math.round(
-								(sumsHomeStart.getDouble(string) / base.get("startHomeActs").getDouble(string) - 1)
-										* 10000)
-								* 0.01));
-						rowEndNonHome.add(String.valueOf(Math.round(
-								(sumsNonHomeEnd.getDouble(string) / base.get("endNonHomeActs").getDouble(string) - 1)
-										* 10000)
-								* 0.01));
-						rowStartNonHome
-								.add(String
-										.valueOf(Math
-												.round((sumsNonHomeStart.getDouble(string)
-														/ base.get("startNonHomeActs").getDouble(string) - 1) * 10000)
-												* 0.01));
+						rowEndHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
+								(sumsHomeEnd.getDouble(string) / base.get("endHomeActs").getDouble(string) - 1))));
+						rowStartHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
+								(sumsHomeStart.getDouble(string) / base.get("startHomeActs").getDouble(string) - 1))));
+						rowEndNonHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
+								(sumsNonHomeEnd.getDouble(string) / base.get("endNonHomeActs").getDouble(string) - 1))));
+						rowStartNonHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
+								(sumsNonHomeStart.getDouble(string)/ base.get("startNonHomeActs").getDouble(string) - 1))));
 					} else {
-						rowEndHome.add(String.valueOf(sumsHomeEnd.getDouble(string)));
-						rowStartHome.add(String.valueOf(sumsHomeStart.getDouble(string)));
-						rowEndNonHome.add(String.valueOf(sumsNonHomeEnd.getDouble(string)));
-						rowStartNonHome.add(String.valueOf(sumsNonHomeStart.getDouble(string)));
+						rowEndHome.add(String.valueOf((int) sumsHomeEnd.getDouble(string)));
+						rowStartHome.add(String.valueOf((int) sumsHomeStart.getDouble(string)));
+						rowEndNonHome.add(String.valueOf((int) sumsNonHomeEnd.getDouble(string)));
+						rowStartNonHome.add(String.valueOf((int) sumsNonHomeStart.getDouble(string)));
+					}
+					if (outputShareOutdoor) {
+						if (string.contains("total")) {
+							rowShareOutdoor.add("0");
+						} else {
+							if (sumsHomeStart.getDouble(string) != 0. && !started) {
+								baseNumberHomeStart = sumsHomeStart.getDouble(string);
+								shareBefore = sumsHomeEnd.getDouble(string) / baseNumberHomeStart;
+								rowShareOutdoor.add(String.valueOf(round2DecimalsAndConvertToProcent(shareBefore)));
+								started = true;
+							} else if (sumsHomeEnd.getDouble(string) != 0. && started) {
+								shareBefore = (shareBefore * baseNumberHomeStart
+										- sumsHomeStart.getDouble(string) 
+										+ sumsHomeEnd.getDouble(string)) / baseNumberHomeStart;
+								rowShareOutdoor.add(String.valueOf(round2DecimalsAndConvertToProcent(shareBefore)));
+							} else
+								rowShareOutdoor.add("0");
+						}
 					}
 				}
 			}
@@ -460,7 +507,10 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			writer.write("\n");
 			JOIN.appendTo(writer, rowEndNonHome);
 			writer.write("\n");
-
+			if (outputShareOutdoor) {
+				JOIN.appendTo(writerShare, rowShareOutdoor);
+				writerShare.write("\n");
+			}
 		}
 	}
 
@@ -511,5 +561,12 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				}
 			}
 		}
+	}
+	/**
+	 * Rounds the number 2 places after the comma
+	 * 
+	 */
+	static double round2DecimalsAndConvertToProcent(double number) {
+		return Math.round(number * 10000) * 0.01;
 	}
 }
