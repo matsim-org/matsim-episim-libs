@@ -91,6 +91,46 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		}
 		return fileData;
 	}
+	
+	/**
+	 * This method searches a files with personStat.
+	 */
+	static File findPersonStatInputFile(File inputFolder) {
+		File perosnStatFile = null;
+		for (File folder : Objects.requireNonNull(inputFolder.listFiles())) {
+			if (folder.isDirectory()) {
+				for (File file : Objects.requireNonNull(folder.listFiles())) {
+					if (file.getName().contains("_personStats.csv.gz")) {
+						perosnStatFile = file;
+						break;
+					}
+				}
+			}
+		break;
+		}
+		return perosnStatFile;
+	}
+	
+	static int getPersonsInThisZIPCode(IntSet zipCodes, File inputPulder) {
+		File fileWithPersonData = findPersonStatInputFile(inputPulder);
+		int nPersons = 0;
+			CSVParser parse;
+			try {
+				parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+						.parse(IOUtils.getBufferedReader(fileWithPersonData.toString()));
+				for (CSVRecord record : parse) {
+					if (!record.get("zipCode").contains("NULL")) {
+						int readZipCode = Integer.parseInt(record.get("zipCode"));
+						if (zipCodes.contains(readZipCode)) {
+							nPersons = nPersons + Integer.parseInt(record.get("nPersons"));
+						}
+					}
+				}
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		return nPersons;
+	}
 
 	/**
 	 * Read durations from a single input file for a day.
@@ -156,6 +196,9 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	public void writeDataForCertainArea(Path outputFile, IntSet zipCodes, boolean getPercentageResults, boolean setBaseIn2018) throws IOException {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+		int nPersons = 0;
+		if (!getPercentageResults)
+			nPersons = getPersonsInThisZIPCode(zipCodes, inputFolder.toFile());
 		Collections.sort(filesWithData);
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
@@ -253,7 +296,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 						row.add(String.valueOf(
 								Math.round((sums.getDouble(actType) / base.get(day).getDouble(actType) - 1) * 100)));
 					else
-						row.add(String.valueOf(sums.getDouble(actType)));
+						row.add(String.valueOf(round2Decimals(sums.getDouble(actType)/nPersons/3600)));
 				}
 
 				JOIN.appendTo(writer, row);
@@ -276,6 +319,13 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+	/**
+	 * Rounds the number 2 places after the comma
+	 * 
+	 */
+	static double round2Decimals(double number) {
+		return Math.round(number * 100) * 0.01;
 	}
 
 	private enum Types {
