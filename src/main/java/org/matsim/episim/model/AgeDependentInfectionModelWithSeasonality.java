@@ -19,6 +19,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
 
 	private final double[] susceptibility = new double[128];
 	private final double[] infectivity = new double[susceptibility.length];
@@ -31,6 +32,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
 
@@ -61,14 +63,15 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double infectivity = this.infectivity[infector.getAge()];
 
 		// apply reduced susceptibility of vaccinated persons
+		VirusStrainConfigGroup.StrainParams params = virusStrainConfig.getParams(infector.getVirusStrain());
 		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
+			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(params, target, vaccinationConfig, iteration);
 		}
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
-				* infector.getVirusStrain().infectiousness
+				* params.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 				* indoorOutdoorFactor

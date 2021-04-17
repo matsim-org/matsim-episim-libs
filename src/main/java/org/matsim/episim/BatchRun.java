@@ -350,6 +350,15 @@ public interface BatchRun<T> {
 	 */
 	@Target(ElementType.FIELD)
 	@Retention(RetentionPolicy.RUNTIME)
+	@interface LongParameter {
+		long[] value();
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
 	@interface StringParameter {
 		String[] value();
 	}

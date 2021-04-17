@@ -59,6 +59,13 @@ public abstract class ShutdownPolicy {
 	public abstract void init(LocalDate start, ImmutableMap<String, Restriction> restrictions);
 
 	/**
+	 * Called when the policy is restored from snapshot.
+	 * @param start restored date
+	 * @param restrictions restrictions from snapshot
+	 */
+	public void restore(LocalDate start, ImmutableMap<String, Restriction> restrictions) {}
+
+	/**
 	 * Update the restrictions at the start of the day based on the report.
 	 * The map is immutable, use setters of {@link Restriction}.
 	 *

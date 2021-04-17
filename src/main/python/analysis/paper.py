@@ -9,13 +9,26 @@ from matplotlib.ticker import ScalarFormatter
 from matplotlib.dates import AutoDateLocator, AutoDateFormatter, ConciseDateFormatter
 
 
-from utils import read_batch_run, read_case_data, read_run, infection_rate
+from utils import read_batch_run, aggregate_batch_run, read_case_data, read_run, infection_rate
 from plot import comparison_plots
+
+#%%
+# Code-snipped needed at seaborn/relational.py, ca. line 410
+"""
+elif ci == "q95":
+    q05 = grouped.quantile(0.05)
+    q95 = grouped.quantile(0.95)
+    cis = pd.DataFrame(np.c_[q05, q95],
+                       index=est.index,
+                       columns=["low", "high"]).stack()
+"""
 
 #%%
 
 sns.set_style("whitegrid")
 sns.set_context("paper")
+sns.set_palette("deep")
+
 
 dateFormater = ConciseDateFormatter(AutoDateLocator())
 
@@ -24,7 +37,96 @@ palette = sns.color_palette()
 
 #%%
 
-rki, hospital = read_case_data("berlin-cases.csv", "berlin-hospital.csv")
+rki, meldedatum, hospital = read_case_data("berlin-cases.csv", "berlin-cases-meldedatum.csv", "berlin-hospital.csv")
+
+
+#%%
+
+import zipfile
+
+z = zipfile.ZipFile("../../../../../public-svn/matsim/scenarios/countries/de/episim/battery/2021-02-09/paperAggr/summaries/79.zip")
+
+with z.open("79.outdoorFraction.tsv") as f:
+    df = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+
+with z.open("79.rValues.txt.csv") as f:
+    rf = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+    rf = rf.set_index("date", drop=False).resample("W").mean().reset_index()
+    rf = pd.melt(rf, id_vars=["date"],  value_name="reinfections",
+                 var_name="activity", value_vars=["home", "leisure", "schools", "day care", "university", "work&business", "pt", "other"])
+    
+with z.open("79.diseaseImport.tsv") as f:
+    ff = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+    
+with z.open("79.infectionsPerActivity.txt.tsv") as f:
+    af = pd.read_csv(f, delimiter="\t", index_col=0, parse_dates=[1], dayfirst=True)
+    
+act_order = sorted(set(af.activity))
+    
+z.close()
+
+#%%  Outdoor fraction
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
+
+sns.scatterplot(x="date", y="outdoorFraction", s=40, data=df, ax=ax)
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
+
+#%% Infections per activity
+
+
+fig, axes = plt.subplots(2,1, sharex=True, dpi=250, figsize=(7.5, 5.0))
+
+sns.lineplot(data=af, x="date", y="infections", hue="activity", hue_order=act_order, ax=axes[0])
+sns.lineplot(data=af, x="date", y="infectionsShare", hue="activity", hue_order=act_order, ax=axes[1])
+
+
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
+
+axes[0].set_yscale("symlog")
+
+axes[0].xaxis.set_major_formatter(dateFormater)
+axes[0].yaxis.set_major_formatter(ScalarFormatter())
+
+axes[0].get_legend().remove()
+axes[1].legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=5)
+axes[1].set_ylabel("infection share")
+
+
+
+#%% Reinfections
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
+
+sns.lineplot(data=rf, x="date", y="reinfections", hue="activity", hue_order=act_order, ax=ax)
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+# Put a legend below current axis
+ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.25), ncol=5)
+
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
+
+
+#%% Disease import
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 2.4))
+
+sns.lineplot(data=ff, x="date", y="nInfected", ax=ax)
+
+ax.xaxis.set_major_formatter(dateFormater)
+
+plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-11-01"))
+    
+plt.ylabel("Imported cases")
+
+
+#%% Mask compliance
+
+
 
 #%% Activity participation
 
@@ -50,28 +152,36 @@ ax.xaxis.set_major_formatter(dateFormater)
 plt.ylabel("activity participation in %")
 plt.legend(loc="best")
 
-plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-07-01"))
+plt.xlim(datetime.fromisoformat("2020-03-01"), datetime.fromisoformat("2020-11-01"))
 
-#%% Section 3-1
+#%% Base calibration
 
-df31 = read_batch_run("data/section-3-1.zip")
+df_base = read_batch_run("data/paper.zip")
+
+#%%
+
+aggregate_batch_run("data/paper.zip")
 
 #%%
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
-rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax, logy=True)
+df = df_base[(df_base.unrestricted=="yes") & (df_base.diseaseImport=="yes") & (df_base.theta==1.36e-5)]
 
-sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax,
-             label=r"Calibrated $\theta$", data=df31)
+rki.plot.scatter(x="date", y=["cases"], label=["RKI Cases"], color=palette[4], ax=ax)
+
+sns.lineplot(x="date", y="cases", estimator="mean", ci="q95", ax=ax, 
+             label=r"Calibrated $\theta$", data=df)
 
 ax.xaxis.set_major_formatter(dateFormater)
 ax.yaxis.set_major_formatter(ScalarFormatter())
 
 plt.ylim(bottom=1)
-plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-06-01"))
+plt.xlim(datetime.fromisoformat("2020-02-01"), datetime.fromisoformat("2020-11-01"))
 plt.legend(loc="upper left")
+plt.yscale("log")
 
+#######################################################################################################
 #%%
 
 
@@ -81,9 +191,6 @@ df = read_batch_run("data/section3-3-data.zip")
 baseCase = df[df.alpha==1.0]
 
 #%%
-
-# NOTE: For ci="q95", the seaborn library was modified locally
-
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 

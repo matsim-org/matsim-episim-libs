@@ -11,12 +11,12 @@ import java.nio.file.Path;
 public interface ActivityParticipation {
 
 	/**
-	 * Provide policy with activity reduction.
-	 */
-	FixedPolicy.ConfigBuilder createPolicy() throws IOException;
-
-	/**
 	 * Sets the input for this file.
 	 */
 	ActivityParticipation setInput(Path input);
+
+	/**
+	 * Provide policy with activity reduction.
+	 */
+	FixedPolicy.ConfigBuilder createPolicy() throws IOException;
 }

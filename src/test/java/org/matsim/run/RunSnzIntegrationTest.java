@@ -3,6 +3,8 @@ package org.matsim.run;
 import com.google.inject.*;
 import com.google.inject.util.Modules;
 import org.junit.*;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -18,36 +20,50 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
+import java.util.Arrays;
+import java.util.List;
 
 import static org.matsim.run.RunEpisimIntegrationTest.assertSimulationOutput;
 
+@RunWith(Parameterized.class)
 public class RunSnzIntegrationTest {
 
-	private static final int ITERATIONS = 30;
+	private static final int ITERATIONS = 40;
 	static final Path INPUT = EpisimUtils.resolveInputPath("../public-svn/matsim/scenarios/countries/de/episim/openDataModel/input");
-
 
 	@Rule
 	public MatsimTestUtils utils = new MatsimTestUtils();
+
+	@Parameterized.Parameter
+	public SnzBerlinProductionScenario.Restrictions r;
+
 	private EpisimRunner runner;
 	private EpisimConfigGroup episimConfig;
 	private TracingConfigGroup tracingConfig;
 	private VaccinationConfigGroup vaccinationConfig;
+	private TestingConfigGroup testingConfig;
 	private boolean skipped = true;
+
+	@Parameterized.Parameters(name = "restriction-{0}")
+	public static Iterable<SnzBerlinProductionScenario.Restrictions> parameters() {
+		return Arrays.asList(
+				SnzBerlinProductionScenario.Restrictions.yes, SnzBerlinProductionScenario.Restrictions.onlyEdu);
+	}
 
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
 
-		// Run only if inut is present
+		// Run only if input is present
 		Assume.assumeTrue(Files.exists(INPUT) && Files.isDirectory(INPUT));
 		skipped = false;
 
-		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzTestScenario(utils)));
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new SnzTestScenario(utils, r)));
 
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
 		vaccinationConfig = injector.getInstance(VaccinationConfigGroup.class);
+		testingConfig = injector.getInstance(TestingConfigGroup.class);
 		runner = injector.getInstance(EpisimRunner.class);
 	}
 
@@ -69,6 +85,16 @@ public class RunSnzIntegrationTest {
 	}
 
 	@Test
+	public void testing() {
+
+		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
+		testingConfig.setActivities(List.of("work", "leisure"));
+		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+
+		runner.run(ITERATIONS);
+	}
+
+	@Test
 	public void curfew() {
 
 		episimConfig.setPolicy(FixedPolicy.class, FixedPolicy.config()
@@ -83,12 +109,12 @@ public class RunSnzIntegrationTest {
 		private final MatsimTestUtils utils;
 		private final SnzBerlinProductionScenario scenario;
 
-		SnzTestScenario(MatsimTestUtils utils) {
+		SnzTestScenario(MatsimTestUtils utils, SnzBerlinProductionScenario.Restrictions r) {
 			this.utils = utils;
 			this.scenario = new SnzBerlinProductionScenario.Builder()
 					.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 					.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.yes)
-					.setRestrictions(SnzBerlinProductionScenario.Restrictions.no)
+					.setRestrictions(r)
 					.createSnzBerlinProductionScenario();
 		}
 

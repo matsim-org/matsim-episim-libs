@@ -24,7 +24,7 @@ clean:
 
 # Includes all the scenarios with local variables
 # https://stackoverflow.com/questions/32904790/can-i-have-local-variables-in-included-makefiles
-SUBDIRS := scenarios/*.mk
+SUBDIRS := scenarios/Heinsberg.mk
 define INCLUDE_FILE
 path = $S
 include $S

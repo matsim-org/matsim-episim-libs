@@ -105,7 +105,6 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 
 		GraphMLExporter<String, CSVRecord> exporter = new GraphMLExporter<>();
 
-
 		exporter.setVertexIdProvider(Function.identity());
 
 		exporter.registerAttribute("runId", GraphMLExporter.AttributeCategory.GRAPH, AttributeType.STRING);
@@ -121,6 +120,8 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 		exporter.registerAttribute("date", GraphMLExporter.AttributeCategory.EDGE, AttributeType.STRING);
 		exporter.registerAttribute("virusStrain", GraphMLExporter.AttributeCategory.EDGE, AttributeType.STRING);
 		exporter.registerAttribute("probability", GraphMLExporter.AttributeCategory.EDGE, AttributeType.DOUBLE);
+
+		exporter.setEdgeWeightAttributeName("probability");
 
 		exporter.setGraphAttributeProvider(() -> Map.of(
 				"runId", new DefaultAttribute<>(id, AttributeType.STRING),
