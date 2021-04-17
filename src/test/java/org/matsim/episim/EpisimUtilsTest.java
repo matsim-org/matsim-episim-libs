@@ -11,6 +11,7 @@ import org.junit.Assume;
 import org.junit.Test;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
@@ -131,12 +132,11 @@ public class EpisimUtilsTest {
 
 		Assume.assumeTrue("Input must exist", f.exists());
 
-		FixedPolicy.ConfigBuilder config = EpisimUtils.createRestrictionsFromCSV(
-				episimConfig,
-				f,
-				1.0
-		);
+		CreateRestrictionsFromCSV act = new CreateRestrictionsFromCSV(episimConfig);
+		act.setInput(f.toPath());
+		act.setAlpha(1.0);
 
+		FixedPolicy.ConfigBuilder config = act.createPolicy();
 
 		FixedPolicy.ConfigBuilder config2 = EpisimUtils.createRestrictionsFromCSV2(episimConfig, f, 1.4, EpisimUtils.Extrapolation.linear);
 		FixedPolicy.ConfigBuilder config3 = EpisimUtils.createRestrictionsFromCSV2(episimConfig, f, 1.4, EpisimUtils.Extrapolation.exponential);

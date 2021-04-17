@@ -8,6 +8,7 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.time.LocalDate;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -30,7 +31,14 @@ public class EpisimTestUtils {
 	private static final AtomicLong ID = new AtomicLong(0);
 	private static final EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
 
-	public static final EpisimConfigGroup TEST_CONFIG = ConfigUtils.addOrGetModule( createTestConfig(), EpisimConfigGroup.class );
+	public static final EpisimConfigGroup TEST_CONFIG = ConfigUtils.addOrGetModule(createTestConfig(), EpisimConfigGroup.class);
+
+	/**
+	 * Get the reporting stub.
+	 */
+	public static EpisimReporting getReporting() {
+		return reporting;
+	}
 
 	/**
 	 * Reset the person id counter.
@@ -41,6 +49,7 @@ public class EpisimTestUtils {
 
 	/**
 	 * Creates test config with some default interactions.
+	 *
 	 * @return
 	 */
 	public static Config createTestConfig() {
@@ -137,6 +146,18 @@ public class EpisimTestUtils {
 	 */
 	public static EpisimReporting.InfectionReport createReport(String date, long day) {
 		return new EpisimReporting.InfectionReport("test", 0, date, day);
+	}
+
+	/**
+	 * Report with incidence per 100k inhabitants.
+	 */
+	public static EpisimReporting.InfectionReport createReport(LocalDate date, long day, int showingSymptoms) {
+		EpisimReporting.InfectionReport report = new EpisimReporting.InfectionReport("test", 0, date.toString(), day);
+
+		report.nSusceptible = 100_000;
+		report.nShowingSymptomsCumulative = showingSymptoms;
+
+		return report;
 	}
 
 

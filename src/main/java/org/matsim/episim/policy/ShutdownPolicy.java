@@ -59,6 +59,13 @@ public abstract class ShutdownPolicy {
 	public abstract void init(LocalDate start, ImmutableMap<String, Restriction> restrictions);
 
 	/**
+	 * Called when the policy is restored from snapshot.
+	 * @param start restored date
+	 * @param restrictions restrictions from snapshot
+	 */
+	public void restore(LocalDate start, ImmutableMap<String, Restriction> restrictions) {}
+
+	/**
 	 * Update the restrictions at the start of the day based on the report.
 	 * The map is immutable, use setters of {@link Restriction}.
 	 *
@@ -71,9 +78,12 @@ public abstract class ShutdownPolicy {
 	/**
 	 * Helper base class for config builders.
 	 */
-	static class ConfigBuilder {
+	static class ConfigBuilder<T> {
 
-		protected Map<String, Object> params = new HashMap<>();
+		/**
+		 * Maps activities to config objects.
+		 */
+		protected Map<String, T> params = new HashMap<>();
 
 		public Config build() {
 			return ConfigFactory.parseMap(params);

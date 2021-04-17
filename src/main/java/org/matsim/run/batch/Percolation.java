@@ -23,7 +23,7 @@ public class Percolation implements BatchRun<Percolation.Params> {
 	 * Base configuration
 	 */
 	private static final SyntheticBatch.Params base = new SyntheticBatch.Params(
-			1000, 1, 1, 1, 10, OldSymmetricContactModel.class, 1
+			1000, 1, 1, 1, 1, OldSymmetricContactModel.class, 1
 	);
 
 	@Override
@@ -54,13 +54,13 @@ public class Percolation implements BatchRun<Percolation.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(100)
+		@GenerateSeeds(1500)
 		public long seed;
 
 		/**
 		 * Calibration parameter.
 		 */
-		@Parameter({1e-5, 1.5e-5, 2e-5, 2.5e-5, 3e-5, 3.5e-5})
+		@Parameter({1e-5, 1.5e-5, 2e-5, 2.5e-5})
 		public double theta;
 
 

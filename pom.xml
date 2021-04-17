@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.matsim-org</groupId>
     <artifactId>matsim-episim</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>21.2-SNAPSHOT</version>
 
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
@@ -78,7 +78,7 @@
         <repository>
             <id>github</id>
             <name>GitHub Packages</name>
-            <url>https://maven.pkg.github.com/matsim-org/matsim-episim</url>
+            <url>https://maven.pkg.github.com/matsim-org/matsim-episim-libs</url>
         </repository>
     </distributionManagement>
 
@@ -227,6 +227,16 @@
         <!--            <artifactId>tablesaw-html</artifactId>-->
         <!--            <version>LATEST</version>-->
         <!--        </dependency>-->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>4.1.2</version>
+        </dependency>
 
     </dependencies>
 

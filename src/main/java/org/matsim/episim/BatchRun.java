@@ -197,7 +197,7 @@ public interface BatchRun<T> {
 
 		List<List<Object>> combinations = Lists.cartesianProduct(Lists.newArrayList(allParams));
 
-		int id = 0;
+		int id = setup.getOffset();
 		for (List<Object> params : combinations) {
 
 			try {
@@ -233,10 +233,18 @@ public interface BatchRun<T> {
 	 */
 	static String resolveForCluster(Path input, String name) {
 		if (System.getProperty("EPISIM_ON_CLUSTER", "false").equals("true"))
-			input = Path.of("/scratch/usr/bebchrak/episim/episim-input");
+			input = Path.of("/scratch/projects/bzz0020/episim-input");
 
 		// convert windows path separators
 		return input.resolve(name).toString().replace("\\", "/");
+	}
+
+	/**
+	 * Get the offset for this run, that is used to generate ids.
+	 * This can be used to concatenate multiple runs together if they have disjunkt ids.
+	 */
+	default int getOffset() {
+		return 0;
 	}
 
 	/**
@@ -335,6 +343,15 @@ public interface BatchRun<T> {
 	@Retention(RetentionPolicy.RUNTIME)
 	@interface IntParameter {
 		int[] value();
+	}
+
+	/**
+	 * See {@link Parameter}.
+	 */
+	@Target(ElementType.FIELD)
+	@Retention(RetentionPolicy.RUNTIME)
+	@interface LongParameter {
+		long[] value();
 	}
 
 	/**

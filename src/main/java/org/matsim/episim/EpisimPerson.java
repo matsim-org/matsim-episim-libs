@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
@@ -36,10 +37,8 @@ import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
 import java.time.DayOfWeek;
-import java.util.ArrayList;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -117,9 +116,19 @@ public final class EpisimPerson implements Attributable {
 	private QuarantineStatus quarantineStatus = QuarantineStatus.no;
 
 	/**
+	 * Strain of the virus the person was infected with.
+	 */
+	private VirusStrain virusStrain = VirusStrain.SARS_CoV_2;
+
+	/**
 	 * Current {@link VaccinationStatus}.
 	 */
 	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
+
+	/**
+	 * Current {@link TestStatus}.
+	 */
+	private TestStatus testStatus = TestStatus.untested;
 
 	/**
 	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
@@ -130,12 +139,39 @@ public final class EpisimPerson implements Attributable {
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
 	 */
 	private int quarantineDate = -1;
+
+	/**
+	 * Iteration when this person was tested. Negative if person was never tested.
+	 */
+	private int testDate = -1;
+
 	private int currentPositionInTrajectory;
+
+	/**
+	 * Age of the person in years.
+	 */
+	private final int age;
 
 	/**
 	 * Whether this person can be traced.
 	 */
 	private boolean traceable;
+
+	/**
+	 * Lookup age from attributes.
+	 */
+	private static int getAge( Attributes attrs ){
+		int age = -1;
+
+		for( String attr : attrs.getAsMap().keySet() ){
+			if( attr.contains( "age" ) ){
+				age = Integer.parseInt(attrs.getAttribute( attr ).toString());
+				break;
+			}
+		}
+
+		return age;
+	}
 
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
@@ -145,6 +181,7 @@ public final class EpisimPerson implements Attributable {
 		this.personId = personId;
 		this.attributes = attrs;
 		this.traceable = traceable;
+		this.age = getAge(attrs);
 		this.reporting = reporting;
 	}
 
@@ -201,10 +238,13 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		status = DiseaseStatus.values()[in.readInt()];
+		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
 		vaccinationDate = in.readInt();
+		testStatus = TestStatus.values()[in.readInt()];
+		testDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
 	}
@@ -250,10 +290,13 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(status.ordinal());
+		out.writeInt(virusStrain.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(vaccinationStatus.ordinal());
 		out.writeInt(vaccinationDate);
+		out.writeInt(testStatus.ordinal());
+		out.writeInt(testDate);
 		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
 	}
@@ -287,6 +330,14 @@ public final class EpisimPerson implements Attributable {
 		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
 	}
 
+	public void setVirusStrain(VirusStrain virusStrain) {
+		this.virusStrain = virusStrain;
+	}
+
+	public VirusStrain getVirusStrain() {
+		return virusStrain;
+	}
+
 	public VaccinationStatus getVaccinationStatus() {
 		return vaccinationStatus;
 	}
@@ -296,6 +347,15 @@ public final class EpisimPerson implements Attributable {
 
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
+	}
+
+	public TestStatus getTestStatus() {
+		return testStatus;
+	}
+
+	public void setTestStatus(TestStatus testStatus, int iteration) {
+		this.testStatus = testStatus;
+		this.testDate = iteration;
 	}
 
 	/**
@@ -344,13 +404,21 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public int daysSince(VaccinationStatus status, int currentDay) {
 		if (status != VaccinationStatus.yes) throw new IllegalArgumentException("Only supports querying when person was vaccinated");
-		if (currentDay < 0) throw new IllegalStateException("Person was never vaccinated");
+		if (vaccinationDate < 0) throw new IllegalStateException("Person was never vaccinated");
 
 		return currentDay - vaccinationDate;
 	}
 
-	int getQuarantineDate() {
-		return this.quarantineDate;
+	/**
+	 * Days elapsed since person got its first vaccination.
+	 *
+	 * @param currentDay current day (iteration)
+	 */
+	public int daysSinceTest(int currentDay) {
+		if (testDate < 0)
+			return Integer.MAX_VALUE;
+
+		return currentDay - testDate;
 	}
 
 	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
@@ -385,7 +453,7 @@ public final class EpisimPerson implements Attributable {
 
 		if (oldSize == 0) return;
 
-		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.get(k) < before);
+		traceableContactPersons.keySet().removeIf(k -> traceableContactPersons.getDouble(k) < before);
 	}
 
 	/**
@@ -436,6 +504,36 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Check whether a person has one of the given activities on a certain week day.
+	 */
+	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			if (activities.contains(trajectory.get(i).params.getContainerName()))
+				return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
+	 * @param reduce reduce function called on each activities with current result
+	 * @param defaultValue default value and initial value for the reduce function
+	 */
+	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T,  T> reduce, T defaultValue) {
+
+		T result = defaultValue;
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			String act = trajectory.get(i).params.getContainerName();
+			if (activities.contains(act))
+				result = reduce.apply(act, result);
+		}
+
+		return result;
+
+	}
+
+	/**
 	 * Defines that day {@code target} has the same trajectory as {@code source}.
 	 */
 	void duplicateDay(DayOfWeek target, DayOfWeek source) {
@@ -464,6 +562,13 @@ public final class EpisimPerson implements Attributable {
 	@Override
 	public Attributes getAttributes() {
 		return attributes;
+	}
+
+	public int getAge() {
+		assert age != -1 : "Person=" + getPersonId().toString() + " has no age. Age dependent progression is not possible.";
+		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
+
+		return age;
 	}
 
 	/**
@@ -537,6 +642,11 @@ public final class EpisimPerson implements Attributable {
 	 * Quarantine status of a person.
 	 */
 	public enum QuarantineStatus {full, atHome, no}
+
+	/**
+	 * Latest test result of this persons.
+	 */
+	public enum TestStatus {untested, positive, negative}
 
 	/**
 	 * Status of vaccination.

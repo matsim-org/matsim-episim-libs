@@ -27,10 +27,7 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -53,7 +50,7 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		SnzBerlinProductionScenario.Builder scenario = new SnzBerlinProductionScenario.Builder();
 
 		if (params != null && params.unrestricted.equals("no"))
-			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_12);
+			scenario.setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21);
 
 		return scenario.createSnzBerlinProductionScenario();
 	}

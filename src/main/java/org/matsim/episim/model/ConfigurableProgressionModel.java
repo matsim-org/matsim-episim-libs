@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -11,11 +12,13 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.EpisimPerson.TestStatus;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -66,7 +69,6 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	// yyyy Der obige Code existiert nochmals in AbstractSnzScenario2020.  Können wir in konsolidieren?  kai, oct'20
 
 
-
 	private static final Logger log = LogManager.getLogger(ConfigurableProgressionModel.class);
 
 	private static final double DAY = 24. * 3600;
@@ -77,6 +79,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
+
 	/**
 	 * Counts how many infections occurred at each location.
 	 */
@@ -149,9 +152,16 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	public final void updateState(EpisimPerson person, int day) {
 		super.updateState(person, day);
 
-
 		// A healthy quarantined person is dismissed from quarantine after some time
 		if (releasePerson(person) && person.daysSinceQuarantine(day) > tracingConfig.getQuarantineDuration()) {
+			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
+			person.setTestStatus(TestStatus.negative, day - 1);
+		}
+
+		// person is reset to untested after two days of quarantine at home, if it was false positive
+		if (releasePerson(person) && person.getTestStatus() == TestStatus.positive && person.daysSinceTest(day) > 2) {
+			// test status will be reset and back-dated so it won't interfere with reporting
+			person.setTestStatus(TestStatus.untested, day - 1);
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 		}
 
@@ -302,7 +312,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 				return DiseaseStatus.contagious;
 
 			case contagious:
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person ))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person))
 					return DiseaseStatus.showingSymptoms;
 				else
 					return DiseaseStatus.recovered;
@@ -358,7 +368,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		return 1.;
 	}
 
-	protected double getProbaOfTransitioningToShowingSymptoms( EpisimPerson person ) {
+	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
 		return 0.8;
 	}
 

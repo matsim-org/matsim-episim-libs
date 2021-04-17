@@ -116,8 +116,7 @@ public class EpisimContainer<T> {
 	void addPerson(EpisimPerson person, double now) {
 		final int index = person.getPersonId().index();
 
-		if (persons.contains(index))
-			throw new IllegalStateException("Person already contained in this container.");
+		assert !persons.contains(index) : "Person already contained in this container.";
 
 		persons.add(index);
 		personsAsList.add(person);

@@ -19,6 +19,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final EpisimReporting reporting;
 	private final SplittableRandom rnd;
 	private final VaccinationConfigGroup vaccinationConfig;
+	private final VirusStrainConfigGroup virusStrainConfig;
 
 	private final double[] susceptibility = new double[128];
 	private final double[] infectivity = new double[susceptibility.length];
@@ -31,6 +32,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.maskModel = faceMaskModel;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		this.virusStrainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		this.reporting = reporting;
 		this.rnd = rnd;
 
@@ -51,27 +53,25 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
-										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double jointTimeInContainer) {
+										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+										   double contactIntensity, double jointTimeInContainer) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
-		double contactIntensity = Math.min(act1.getContactIntensity(), act2.getContactIntensity());
 
-		int ageTarget = EpisimUtils.getAge(target);
-
-		int ageInfector = EpisimUtils.getAge(infector);
-
-		double susceptibility = this.susceptibility[ageTarget];
-		double infectivity = this.infectivity[ageInfector];
+		double susceptibility = this.susceptibility[target.getAge()];
+		double infectivity = this.infectivity[infector.getAge()];
 
 		// apply reduced susceptibility of vaccinated persons
+		VirusStrainConfigGroup.StrainParams params = virusStrainConfig.getParams(infector.getVirusStrain());
 		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(target, vaccinationConfig, iteration);
+			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(params, target, vaccinationConfig, iteration);
 		}
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+				* params.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
 				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
 				* indoorOutdoorFactor

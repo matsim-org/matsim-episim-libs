@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.Event;
 
 import java.io.BufferedWriter;
+import java.io.Closeable;
 import java.io.IOException;
 import java.io.Writer;
 
@@ -20,7 +21,7 @@ import java.io.Writer;
  * Overwrites the default episim writer to do all IO in an extra thread using the {@link Disruptor} library.
  */
 public final class AsyncEpisimWriter extends EpisimWriter implements EventHandler<AsyncEpisimWriter.LogEvent>,
-		EventTranslatorThreeArg<AsyncEpisimWriter.LogEvent, Writer, Event, Double> {
+		EventTranslatorThreeArg<AsyncEpisimWriter.LogEvent, Writer, Event, Double>, Closeable {
 
 	private static final Logger log = LogManager.getLogger(AsyncEpisimWriter.class);
 	private final Disruptor<LogEvent> disruptor;
@@ -80,8 +81,10 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 			event.writer.close();
 		} else {
 			event.writer.append(event.content);
-			if (event.flush)
-				event.writer.flush();
+			// Flushing is not enabled
+			// Events are async anyway, flushing does not make much sense
+			//if (event.flush)
+			//	event.writer.flush();
 		}
 
 		event.reset();
@@ -98,6 +101,11 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 		}
 	}
 
+	@Override
+	public void close() throws IOException {
+		log.info("Shutting down...");
+		disruptor.shutdown();
+	}
 
 	protected static class LogEvent {
 

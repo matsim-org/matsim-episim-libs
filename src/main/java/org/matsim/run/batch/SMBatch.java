@@ -1,23 +1,32 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-
+import org.apache.commons.csv.CSVFormat;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.TracingConfigGroup.CapacityType;
+import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
+import org.matsim.episim.policy.Restriction;
+import org.matsim.run.RunParallel;
+import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
+import java.nio.file.Path;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
-
+import java.util.stream.Collectors;
 
 
 /**
@@ -27,104 +36,154 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().setSnapshot( SnzBerlinProductionScenario.Snapshot.no ).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
 	}
 
 	@Override
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
+	
+//	@Override
+//	public int getOffset() {
+//		return 400;
+//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no ).createSnzBerlinProductionScenario();
+				SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
 		Config config = module.config();
-		config.global().setRandomSeed(params.seed);
-		
+		config.global().setRandomSeed( Long.parseLong( params.seed ) );
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		
-		double thetaFactor = Double.parseDouble(params.weatherMidPoint_Theta.split("_")[1]);
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * thetaFactor);
-//		episimConfig.setStartDate("2020-02-25");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+		episimConfig.setSnapshotInterval(120);
 
-		Map<LocalDate, Integer> importMap = new HashMap<>();
-		int importOffset = 0;
-		importMap.put(episimConfig.getStartDate(), Math.max(1, (int) Math.round(0.9 * 1)));
-		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 1., LocalDate.parse("2020-02-24").plusDays(importOffset),
-				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 1., LocalDate.parse("2020-03-09").plusDays(importOffset),
-				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-		importMap = SnzBerlinProductionScenario.interpolateImport(importMap, 1., LocalDate.parse("2020-03-23").plusDays(importOffset),
-				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 		
-		double importFactor = params.importFactorAfterJune;
-		if (importFactor == 0.) {
-			importMap.put(LocalDate.parse("2020-06-08"), 1);
-		}
-		else {
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactor, LocalDate.parse("2020-06-08").plusDays(importOffset),
-					LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactor, LocalDate.parse("2020-07-13").plusDays(importOffset),
-					LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-			importMap = SnzBerlinProductionScenario.interpolateImport(importMap, importFactor, LocalDate.parse("2020-08-10").plusDays(importOffset),
-					LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 5.4);
-		}
-		episimConfig.setInfections_pers_per_day(importMap);	
-
-		double tempMidPoint = Double.parseDouble(params.weatherMidPoint_Theta.split("_")[0]);
-
-		try {
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractionsFromWeatherData("berlinWeather.csv", params.rainThreshold, tempMidPoint-10., tempMidPoint+10. );
-			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		
-//		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+//		//extrapolate restrictions after 17.01.
+//		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+//			if (act.contains("educ")) continue;
+//			if (params.extrapolateRestrictions.equals("no100%")) {
+//				builder.restrict("2021-02-15", 1., act);
+//			}
+//			if (params.extrapolateRestrictions.contains("yes")) {
+//				builder.restrict("2021-02-07", 0.72, act);
+//				builder.restrict("2021-02-14", 0.76, act);
+//				builder.restrict("2021-02-21", 0.8, act);
+//				if (params.extrapolateRestrictions.equals("yes")) {
+//					builder.restrict("2021-02-28", 0.84, act);
+//					builder.restrict("2021-03-07", 0.88, act);
+//					builder.restrict("2021-03-14", 0.92, act);
+//					builder.restrict("2021-03-21", 0.96, act);
+//					builder.restrict("2021-03-28", 1., act);
+//				}
+//			}
+//		}
 //
-//		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-//				LocalDate.of(2020, 4, 1), 300,
-//				LocalDate.of(2020, 6, 15), params.tracingCapacityJune
-//		));
+//		String restrictionDate = "2021-02-15";
+//		//curfew
+//		if (params.curfew.equals("18-5")) builder.restrict("2021-03-15", Restriction.ofClosingHours(18, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("19-5")) builder.restrict("2021-03-15", Restriction.ofClosingHours(19, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("20-5")) builder.restrict("2021-03-15", Restriction.ofClosingHours(20, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("21-5")) builder.restrict("2021-03-15", Restriction.ofClosingHours(21, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//		if (params.curfew.equals("22-5")) builder.restrict("2021-03-15", Restriction.ofClosingHours(22, 5), "leisure", "shop_daily", "shop_other", "visit", "errands");
+//
+//		//schools
+//		if (params.schools.equals("50%&masks")) {
+//			builder.restrict(LocalDate.parse(restrictionDate), Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "educ_primary", "educ_secondary");
+//			builder.restrict(restrictionDate, .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+//			builder.restrict("2021-04-11", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		}
+//		if (params.schools.equals("open&masks")) {
+//			builder.restrict(LocalDate.parse(restrictionDate), Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "educ_primary", "educ_secondary");
+//		}
+//		if (params.schools.equals("50%open")) {
+//			builder.restrict(restrictionDate, .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+//			builder.restrict("2021-04-11", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		}
+//		if (params.schools.equals("closed")) builder.clearAfter( "2021-02-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+//
+//		//masks at work
+//		if (params.work.equals("ffp")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "work");
+//
+////		Map<LocalDate, Integer> vacMap = EpisimUtils.readCSV(Path.of("germanyVaccinations.csv"),
+////				CSVFormat.DEFAULT, "date", "nVaccinated").entrySet().stream()
+////				.collect(Collectors.toMap(Map.Entry::getKey,
+////						e -> (int) ((e.getValue() * episimConfig.getSampleSize()) / (81_100_000 / 4_800_000)))
+////				);
+////
+////		System.out.println(vacMap);
+//		// TODO: check vac map and put into model
+//
+//		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+//		vaccinationConfig.setEffectiveness(0.9);
+//		vaccinationConfig.setDaysBeforeFullEffect(28);
+//		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
+//		// 4/3 because model is bigger than just Berlin
+//		int base = (int) (3000 * 4./3.);
+//		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
+//				episimConfig.getStartDate(), 0,
+//				LocalDate.parse("2020-12-27"), (int) (2000 * 4./3.)
+//				,LocalDate.parse("2021-01-25"), base
+//				,LocalDate.parse("2021-02-01"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 1./7.)
+//				,LocalDate.parse("2021-02-03"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 2./7.)
+//				,LocalDate.parse("2021-02-05"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 3./7.)
+//				,LocalDate.parse("2021-02-07"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 4./7.)
+//				,LocalDate.parse("2021-02-09"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 5./7.)
+//				,LocalDate.parse("2021-02-10"), base + (int) ((4./3. * params.dailyInitialVaccinations - base) * 6./7.)
+//				,LocalDate.parse("2021-02-12"), base + (int) ((4./3. * params.dailyInitialVaccinations - base))
+//				));
 
+		if (!params.newVariantDate.equals("never")) {
+			Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
+			infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+		}
 
+			episimConfig.setPolicy(FixedPolicy.class, builder.build());
+		
+//		VirusStrain.B117.infectiousness = params.newVariantInfectiousness;
+		
 		return config;
 	}
 
 	public static final class Params {
+		@StringParameter( {"4711","7564655870752979346"} ) String seed;
 
-		@GenerateSeeds(3)
-		public long seed;
+//		@IntParameter({3000})
+//		int dailyInitialVaccinations;
 		
-//		@Parameter({0.75, 0.8, 0.85, 0.9, 0.95, 1., 1.05, 1.1})
-//		double theta;
+//		@StringParameter({"closed"})
+//		public String schools;
 		
-		@Parameter({0.5, 1., 2.})
-		double rainThreshold;
+//		@StringParameter({"no",})
+//		public String work;
 		
-//		@Parameter({5., 10., 15., 20.})
-//		double temperature0;
-//		
-//		@Parameter({20., 25., 30.})
-//		double temperature1;
-		
-		@Parameter({1., 0.25, 0.5, 0.75, 0.})
-		double importFactorAfterJune;
-		
-		@StringParameter({
-			"15.0_0.85", "15.0_0.9", "15.0_0.95",
-			"17.5_0.75", "17.5_0.8", "17.5_0.85",
-			"20.0_0.7", "20.0_0.75", "20.0_0.8",
-			"22.5_0.65", "22.5_0.7", "22.5_0.75",
-			"25.0_0.6", "25.0_0.65", "25.0_0.7"})
-		public String weatherMidPoint_Theta;
-		
-//		@IntParameter({1000, 2000, 3000})
-//		int tracingCapacityJune;
+//		@StringParameter({"no"})
+//		public String curfew;
 
+		@StringParameter({"2020-12-01"})
+		String newVariantDate;
+
+//		@StringParameter({"no"})
+//		String extrapolateRestrictions;
+	}
+
+	public static void main(String[] args) {
+		String[] args2 = {
+				RunParallel.OPTION_SETUP, SMBatch.class.getName(),
+				RunParallel.OPTION_PARAMS, Params.class.getName(),
+				RunParallel.OPTION_THREADS, Integer.toString(4),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
+				RunParallel.OPTION_METADATA
+		};
+
+		RunParallel.main(args2);
 	}
 
 

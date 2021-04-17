@@ -29,6 +29,7 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.episim.EpisimContainer;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -66,7 +67,23 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			Id<?> container = Id.create(attributes.get(EpisimInfectionEvent.CONTAINER), EpisimContainer.class);
 			String type = attributes.get(EpisimInfectionEvent.INFECTION_TYPE);
 
-			return new EpisimInfectionEvent(time, person, infector, container, type);
+			// check for the presence of these attributes
+			double probability = -1;
+			String attr = attributes.get(EpisimInfectionEvent.PROBABILITY);
+			if (attr != null)
+				probability = Double.parseDouble(attr);
+
+			int groupSize = -1;
+			attr = attributes.get(EpisimInfectionEvent.GROUP_SIZE);
+			if (attr != null)
+				groupSize = Integer.parseInt(attr);
+
+			VirusStrain virusStrain = null;
+			attr = attributes.get(EpisimInfectionEvent.VIRUS_STRAIN);
+			if (attr != null)
+				virusStrain = VirusStrain.valueOf(attr);
+
+			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability);
 		};
 	}
 

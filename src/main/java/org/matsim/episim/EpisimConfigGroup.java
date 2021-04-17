@@ -34,6 +34,7 @@ import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -71,15 +72,20 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String INPUT_DAYS = "inputDays";
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
+	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
 
 	private final Trie<String, InfectionParams> paramsTrie = Tries.forStrings();
+
 	/**
 	 * Number of initial infections per day.
+	 * Default is 1 infection per day for {@link VirusStrain#SARS_CoV_2}.
 	 */
-	private final Map<LocalDate, Integer> infectionsPerDay = new TreeMap<>();
+	private final Map<VirusStrain, NavigableMap<LocalDate, Integer>> infectionsPerDay = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2, new TreeMap<>()));
+
 	/**
 	 * Leisure outdoor fractions per day.
 	 */
@@ -139,6 +145,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private String overwritePolicyLocation = null;
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
+	private int daysInfectious = 4;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -156,6 +163,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			19, 0.85,
 			20, 1d
 	));
+
+	/**
+	 * Compliance if a curfew is set.
+	 */
+	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
 
 	/**
 	 * Default constructor.
@@ -251,7 +263,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.upperAgeBoundaryForInitInfections = upperAgeBoundaryForInitInfections;
 	}
 
-	public Map<LocalDate, Integer> getInfections_pers_per_day() {
+	public Map<VirusStrain, NavigableMap<LocalDate, Integer>> getInfections_pers_per_day() {
 		return infectionsPerDay;
 	}
 
@@ -259,26 +271,46 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * @param infectionsPerDay -- From each given date, this will be the number of infections.  Until {@link #setInitialInfections(int)} are used up.
 	 */
 	public void setInfections_pers_per_day(Map<LocalDate, Integer> infectionsPerDay) {
+		this.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infectionsPerDay);
+	}
+
+	public void setInfections_pers_per_day(VirusStrain strain, Map<LocalDate, Integer> infectionsPerDay) {
+
+		Map<LocalDate, Integer> perDay = this.infectionsPerDay.computeIfAbsent(strain, (k) -> new TreeMap<>());
+
 		// yyyy Is it really so plausible to have this here _and_ the plain integer initial infections?  kai, oct'20
 		// yyyyyy Is it correct that the default of this is empty, so even if someone sets the initial infections to some number, this will not have any effect?  kai, nov'20
 		// No, If no entry is present, 1 will be assumed (because this was default at some point).
 		// This logic of handling no entries is not part of the config, but the initial infection handler  - cr, nov'20
-		this.infectionsPerDay.clear();
-		this.infectionsPerDay.putAll(infectionsPerDay);
+		perDay.clear();
+		perDay.putAll(infectionsPerDay);
 	}
 
 	@StringGetter(INFECTIONS_PER_DAY)
 	String getInfectionsPerDay() {
-		return JOINER.join(infectionsPerDay);
+		Map<VirusStrain, String> collect =
+				infectionsPerDay.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+		return Joiner.on("|").withKeyValueSeparator(">").join(collect);
 	}
 
 	@StringSetter(INFECTIONS_PER_DAY)
 	void setInfectionsPerDay(String capacity) {
 
-		Map<String, String> map = SPLITTER.split(capacity);
-		setInfections_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
-				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
-		)));
+		Map<String, String> cap = Splitter.on("|").withKeyValueSeparator(">").split(capacity);
+
+		for (Map.Entry<String, String> v : cap.entrySet()) {
+
+			if (v.getValue().isBlank()) {
+				setInfections_pers_per_day(VirusStrain.valueOf(v.getKey()), new TreeMap<>());
+				continue;
+			}
+
+			Map<String, String> map = SPLITTER.split(v.getValue());
+			setInfections_pers_per_day(VirusStrain.valueOf(v.getKey()), map.entrySet().stream().collect(Collectors.toMap(
+					e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+			)));
+		}
 	}
 
 	@StringGetter(INITIAL_INFECTION_DISTRICT)
@@ -466,6 +498,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.maxContacts = maxContacts;
 	}
 
+	@StringGetter(DAYS_INFECTIOUS)
+	public int getDaysInfectious() {
+		return daysInfectious;
+	}
+
+	@StringSetter(DAYS_INFECTIOUS)
+	public void setDaysInfectious(int daysInfectious) {
+		this.daysInfectious = daysInfectious;
+	}
+
 	@StringGetter(AGE_SUSCEPTIBILITY)
 	String getAgeSusceptibilityString() {
 		return JOINER.join(ageSusceptibility);
@@ -555,6 +597,28 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(leisureOutdoorFraction);
 	}
 
+
+	public NavigableMap<LocalDate, Double> getCurfewCompliance() {
+		return curfewCompliance;
+	}
+
+	public void setCurfewCompliance(Map<LocalDate, Double> curfewCompliance) {
+		this.curfewCompliance.clear();
+		this.curfewCompliance.putAll(curfewCompliance);
+	}
+
+	@StringGetter(CURFEW_COMPLIANCE)
+	String getCurfewComplianceString() {
+		return JOINER.join(curfewCompliance);
+	}
+
+	@StringSetter(CURFEW_COMPLIANCE)
+	void setCurfewCompliance(String config) {
+		Map<String, String> map = SPLITTER.split(config);
+		setCurfewCompliance(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
+	}
 
 	/**
 	 * Get remapping of input days.
@@ -801,6 +865,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Write basic events like infections or disease status change.
 		 */
 		episim,
+
+		/**
+		 * Write the input event each day.
+		 */
+		input,
+
 		/**
 		 * Write additional contact tracing events.
 		 */
@@ -833,6 +903,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
 		public static final String SPACES_PER_FACILITY = "nSpacesPerFacility";
+		public static final String SEASONAL = "seasonal";
 		public static final String MAPPED_NAMES = "mappedNames";
 
 		static final String SET_TYPE = "infectionParams";
@@ -852,6 +923,10 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 */
 		private double spacesPerFacility = 20.;
 
+		/**
+		 * This activity type is seasonal.
+		 */
+		private boolean seasonal = false;
 
 		/**
 		 * See {@link #InfectionParams(String, String...)}. Name itself will also be used as prefix.
@@ -873,17 +948,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			this.containerName = containerName;
 			this.mappedNames = mappedNames.length == 0 ?
 					Sets.newHashSet(containerName) : Sets.newHashSet(mappedNames);
-		}
-
-		/**
-		 * Copy constructor.
-		 */
-		private InfectionParams(InfectionParams other) {
-			this();
-			this.containerName = other.containerName;
-			this.mappedNames = other.mappedNames;
-			this.contactIntensity = other.contactIntensity;
-			this.spacesPerFacility = other.spacesPerFacility;
 		}
 
 		private InfectionParams() {
@@ -945,13 +1009,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			return this;
 		}
 
+		@StringSetter(SEASONAL)
+		public InfectionParams setSeasonal(boolean seasonal) {
+			this.seasonal = seasonal;
+			return this;
+		}
+
 		/**
-		 * Create a copy of the this infection params.
-		 *
-		 * @return new contact intensity to set
+		 * Whether this activity has some seasonal effects.
 		 */
-		public InfectionParams copy(double contactIntensity) {
-			return new InfectionParams(this).setContactIntensity(contactIntensity);
+		@StringGetter(SEASONAL)
+		public boolean isSeasonal() {
+			return seasonal;
 		}
 
 		/**

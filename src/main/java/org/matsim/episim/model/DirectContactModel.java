@@ -203,9 +203,9 @@ public final class DirectContactModel extends AbstractContactModel {
 
 		// person can only infect others 4 days after being contagious
 		if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &&
-				personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) > 4)
+				personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) > episimConfig.getDaysInfectious())
 				|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &&
-				contactPerson.daysSince(DiseaseStatus.contagious, iteration) > 4))
+				contactPerson.daysSince(DiseaseStatus.contagious, iteration) > episimConfig.getDaysInfectious()))
 			return;
 
 		if (jointTimeInContainer < 0 || jointTimeInContainer > 86400 * 7) {
@@ -218,20 +218,22 @@ public final class DirectContactModel extends AbstractContactModel {
 		// activity params of the contact person and leaving person
 		EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
 
+		double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());
+
 		// need to differentiate which person might be the infector
 		if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
 
 			double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-					leavingParams, contactParams, jointTimeInContainer);
+					leavingParams, contactParams, contactIntensity, jointTimeInContainer);
 			if (rnd.nextDouble() < prob)
-				infectPerson(personLeavingContainer, contactPerson, now, infectionType, container);
+				infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 		} else {
 			double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-					contactParams, leavingParams, jointTimeInContainer);
+					contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
 			if (rnd.nextDouble() < prob)
-				infectPerson(contactPerson, personLeavingContainer, now, infectionType, container);
+				infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 		}
 //		}
 	}

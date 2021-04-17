@@ -3,10 +3,13 @@ package org.matsim.episim;
 import org.junit.Test;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.VirusStrain;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,4 +81,22 @@ public class EpisimConfigGroupTest {
 
 	}
 
+	@Test
+	public void initialInfections() {
+
+		Config config = EpisimTestUtils.createTestConfig();
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		Map<LocalDate, Integer> ref = Map.of(LocalDate.of(2020, 12, 12), 10);
+
+		episimConfig.setInfections_pers_per_day(VirusStrain.B117, ref);
+
+		String s = episimConfig.getInfectionsPerDay();
+
+		episimConfig.setInfectionsPerDay(s);
+
+		assertThat(episimConfig.getInfections_pers_per_day().get(VirusStrain.B117))
+				.isEqualTo(ref);
+
+	}
 }

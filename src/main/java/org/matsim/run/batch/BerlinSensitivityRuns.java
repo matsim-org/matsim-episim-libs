@@ -9,11 +9,13 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
 import org.matsim.run.modules.SnzBerlinProductionScenario.DiseaseImport;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Masks;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Restrictions;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
+import org.matsim.run.modules.SnzBerlinProductionScenario.WeatherModel;
 
 import javax.annotation.Nullable;
 
@@ -25,77 +27,77 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		if (params == null)
-			return new SnzBerlinWeekScenario2020();
-
-		Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
-		DiseaseImport diseaseImport = DiseaseImport.yes;
-		Restrictions restrictions = Restrictions.yes;
-		Masks masks = Masks.yes;
-		Tracing tracing = Tracing.yes;
-
-		if (params.run.contains("noDiseaseImport")) diseaseImport = DiseaseImport.no;
-		if (params.run.contains("noRestrictions")) restrictions = Restrictions.no;
-		if (params.run.contains("noNonEduRestrictions")) restrictions = Restrictions.onlyEdu;
-		if (params.run.contains("noEduRestrictions")) restrictions = Restrictions.allExceptEdu;
-		if (params.run.contains("noSchoolAndDayCareRestrictions")) restrictions = Restrictions.allExceptSchoolsAndDayCare;
-		if (params.run.contains("noUniversitiyRestrictions")) restrictions = Restrictions.allExceptUniversities;
-
-		if (params.run.contains("noOutOfHomeRestrictionsExceptEdu")) restrictions = Restrictions.onlyEdu;
-		if (params.run.contains("noMasks")) masks = Masks.no;
-		if (params.run.contains("noTracing")) tracing = Tracing.no;
-		if (params.run.contains("noAgeDepInfModel")) infectionModel = InfectionModelWithSeasonality.class;
-				
-		return new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing( tracing ).setSnapshot(
-				Snapshot.no ).setInfectionModel( infectionModel ).createSnzBerlinProductionScenario();
-//		return new SnzBerlinProductionScenario(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Snapshot.no, InfectionModelWithSeasonality.class);
+		
+		if (params == null) return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();	
+			
+		return getModule(params);
 	}
 
 	@Override
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "basePaper");
 	}
+	
+//	@Override
+//	public int getOffset() {
+//		return 1000;
+//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 		
-		Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
-		DiseaseImport diseaseImport = DiseaseImport.yes;
-		Restrictions restrictions = Restrictions.yes;
-		Masks masks = Masks.yes;
-		Tracing tracing = Tracing.yes;
-
-		if (params.run.contains("noDiseaseImport")) diseaseImport = DiseaseImport.no;
-		if (params.run.contains("noRestrictions")) restrictions = Restrictions.no;
-		if (params.run.contains("noNonEduRestrictions")) restrictions = Restrictions.onlyEdu;
-		if (params.run.contains("noEduRestrictions")) restrictions = Restrictions.allExceptEdu;
-		if (params.run.contains("noSchoolAndDayCareRestrictions")) restrictions = Restrictions.allExceptSchoolsAndDayCare;
-		if (params.run.contains("noUniversitiyRestrictions")) restrictions = Restrictions.allExceptUniversities;
-
-		if (params.run.contains("noOutOfHomeRestrictionsExceptEdu")) restrictions = Restrictions.onlyEdu;
-		if (params.run.contains("noMasks")) masks = Masks.no;
-		if (params.run.contains("noTracing")) tracing = Tracing.no;
-		if (params.run.contains("noAgeDepInfModel")) infectionModel = InfectionModelWithSeasonality.class;
-		
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing(
-				tracing ).setSnapshot( Snapshot.no ).setInfectionModel( infectionModel ).createSnzBerlinProductionScenario();
+		SnzBerlinProductionScenario module = getModule(params);
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 		
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
-		if (params.run.equals("noDiseaseImport") || params.run.equals("noAgeDepInfModel")) episimConfig.setCalibrationParameter(1.7E-5);
-		
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
-
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		
-//		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-//		builder.restrict("2020-03-06", Restriction.ofCiCorrection(params.ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-//		
-//		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+				
+		episimConfig.setCalibrationParameter(1.7E-5 * params.thetaFactor);		
 
 		return config;
+	}
+
+	private SnzBerlinProductionScenario getModule(Params params) {
+		DiseaseImport diseaseImport = DiseaseImport.no;
+		Restrictions restrictions = Restrictions.no;
+		Masks masks = Masks.no;
+		Tracing tracing = Tracing.no;
+		ChristmasModel christmasModel = ChristmasModel.no;
+		WeatherModel weatherModel = WeatherModel.no;
+		
+		if (params.run.contains("2_withSpringImport")) {
+			diseaseImport = DiseaseImport.onlySpring;
+		}
+		if (params.run.contains("3_withRestrictions")) {
+			diseaseImport = DiseaseImport.onlySpring;
+			restrictions = Restrictions.yes;
+		}
+		if (params.run.contains("4_withWeatherModel_175_175")) {
+			diseaseImport = DiseaseImport.onlySpring;
+			restrictions = Restrictions.yes;
+			weatherModel = WeatherModel.midpoints_175_175;
+		}
+		if (params.run.contains("5_withWeatherModel_175_250")) {
+			diseaseImport = DiseaseImport.onlySpring;
+			restrictions = Restrictions.yes;
+			weatherModel = WeatherModel.midpoints_175_250;
+		}
+		if (params.run.contains("6_withSummerImport")) {
+			diseaseImport = DiseaseImport.yes;
+			restrictions = Restrictions.yes;
+			weatherModel = WeatherModel.midpoints_175_250;
+		}
+
+		if (params.withMasks.contains("yes")) {
+			masks = Masks.yes;
+		}
+		if (params.withTracing.contains("yes")) {
+			tracing = Tracing.yes;
+		}
+		
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing(
+				tracing ).setChristmasModel(christmasModel).setWeatherModel(weatherModel).createSnzBerlinProductionScenario();
+		return module;
 	}
 
 	public static final class Params {
@@ -106,25 +108,19 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 //		@Parameter({1.8E-5, 1.7E-5, 1.6E-5, 1.5E-5, 1.4E-5, 1.3E-5, 1.27E-5, 1.1E-5, 1.E-5})
 //		double theta;
 		
-		@StringParameter({"base", "noDiseaseImport", "noDiseaseImportAdaptedTheta", "noRestrictions", "noNonEduRestrictions", "noEduRestrictions", "noSchoolAndDayCareRestrictions", "noUniversitiyRestrictions", "noOutOfHomeRestrictionsExceptEdu", "noMasks", "noTracing", "noAgeDepInfModel", "noAgeDepInfModelAdaptedTheta"})
+		@StringParameter({"1_base", "2_withSpringImport", "3_withRestrictions", "4_withWeatherModel_175_175", "5_withWeatherModel_175_250", "6_withSummerImport"})
 		public String run;
 		
-//		@StringParameter({"yes", "no"})
-//		public String diseaseimport;
-//		
-//		@StringParameter({"yes", "no", "onlyEdu", "allExceptEdu"})
-//		public String restrictions;
-//		
-//		@StringParameter({"yes", "no"})
-//		public String masks;
-//		
-//		@StringParameter({"yes", "no"})
-//		public String tracing;
-//		
-//		@StringParameter({"yes", "no"})
-//		public String AgeDepInfModel;
+		@StringParameter({"no", "yes"})
+		public String withMasks;
 		
-		@Parameter({1.0, 1.05, 1.1})
+		@StringParameter({"no", "yes"})
+		public String withTracing;
+		
+		@StringParameter({"no"})
+		public String withLeisureFactor;
+		
+		@Parameter({0.6, 0.8, 1.0, 1.2})
 		double thetaFactor;
 
 	}

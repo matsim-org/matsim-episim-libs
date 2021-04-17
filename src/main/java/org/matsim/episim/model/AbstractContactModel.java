@@ -68,6 +68,11 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected int iteration;
 	private Map<String, Restriction> restrictions;
 
+	/**
+	 * Curfew compliance valid for the day.
+	 */
+	private double curfewCompliance;
+
 
 	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
 		this.rnd = rnd;
@@ -269,8 +274,10 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		double max = Math.max(containerEnterTimeOfPersonLeaving, containerEnterTimeOfOtherPerson);
 
-		// no closing hour set
-		if (!r.hasClosingHours()) {
+		// no closing hour set, or no compliance
+		if (!r.hasClosingHours() || curfewCompliance == 0) {
+			return now - max;
+		} else if (episimConfig.getCalibrationParameter() != 1 && rnd.nextDouble() >= curfewCompliance) {
 			return now - max;
 		}
 
@@ -293,13 +300,14 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.iteration = iteration;
 		this.restrictions = restrictions;
 		this.infectionModel.setIteration(iteration);
+		this.curfewCompliance = EpisimUtils.findValidEntry(episimConfig.getCurfewCompliance(), 1.0,
+				episimConfig.getStartDate().plusDays(iteration - 1));
 	}
 
 	/**
 	 * Sets the infection status of a person and reports the event.
 	 */
-	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
-								EpisimContainer<?> container) {
+	protected void infectPerson(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType, double prob, EpisimContainer<?> container) {
 
 		if (personWrapper.getDiseaseStatus() != EpisimPerson.DiseaseStatus.susceptible) {
 			throw new IllegalStateException("Person to be infected is not susceptible. Status is=" + personWrapper.getDiseaseStatus());
@@ -326,8 +334,9 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		String infType = infectionType.toString();
 
-		reporting.reportInfection(personWrapper, infector, now, infType, container);
+		reporting.reportInfection(personWrapper, infector, now, infType, infector.getVirusStrain(), prob, container);
 		personWrapper.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		personWrapper.setVirusStrain(infector.getVirusStrain());
 		personWrapper.setInfectionContainer(container);
 		personWrapper.setInfectionType(infType);
 
