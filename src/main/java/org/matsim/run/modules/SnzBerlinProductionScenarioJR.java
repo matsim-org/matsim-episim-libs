@@ -289,7 +289,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
 
 		//restrictions and masks
-		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		SnzBerlinScenario25pct2020JR.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020JR.BasePolicyBuilder(episimConfig);
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
 			basePolicyBuilder.setActivityParticipation(null);
 		}

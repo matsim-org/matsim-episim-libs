@@ -48,7 +48,9 @@ import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import picocli.CommandLine;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -71,14 +73,14 @@ public class ZipcodeLookup implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(ZipcodeLookup.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/samples/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_1pt_split.xml.gz")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
 	//"../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path input;
 
 	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "D:/Dropbox/Documents/VSP/plz/plz-gebiete.shp")
 	private Path shapeFile;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/samples/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_1pt_split.xml.gz")
+	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_25pt_split.xml.gz")
 	private Path output;
 
 	@CommandLine.Option(names = "--attr", description = "Attribute name in the shapefile, which contains the district name", defaultValue = "plz")
@@ -125,6 +127,7 @@ public class ZipcodeLookup implements Callable<Integer> {
 
 		Index index = new Index(shapeFile.toFile(), ct, attr);
 
+		Map<String, String> personIdToNeighborhoodMap = new HashMap<>();
 		// Count errors
 		int unknown = 0;
 		for (Person p : population.getPersons().values()) {
@@ -139,6 +142,9 @@ public class ZipcodeLookup implements Callable<Integer> {
 				for (String neighborhoodName : berlinDistricts.keySet()) {
 					if (berlinDistricts.get(neighborhoodName).contains(Integer.parseInt(plz))) {
 						p.getAttributes().putAttribute("berlin-neighborhood", neighborhoodName);
+						personIdToNeighborhoodMap.put(p.getId().toString(), neighborhoodName);
+
+
 					}
 				}
 
@@ -155,6 +161,16 @@ public class ZipcodeLookup implements Callable<Integer> {
 		}
 
 		log.info("Finished with failed lookup for {} out of {} persons.", unknown, population.getPersons().size());
+
+
+		FileWriter writer = new FileWriter("D:/Dropbox/Documents/VSP/episim/PersonToDistrictMap.txt");
+		BufferedWriter writer1 = new BufferedWriter(writer);
+		for (Map.Entry<String, String> xxx : personIdToNeighborhoodMap.entrySet()) {
+			writer1.write(xxx.getKey() + ";" + xxx.getValue());
+			writer1.newLine();
+		}
+		writer1.close();
+		writer.close();
 
 		PopulationUtils.writePopulation(population, output.toString());
 
@@ -189,6 +205,7 @@ public class ZipcodeLookup implements Callable<Integer> {
 		}
 
 		new FacilitiesWriter(scenario.getActivityFacilities()).write("D:/Dropbox/Documents/VSP/episim/be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz");
+
 
 
 
