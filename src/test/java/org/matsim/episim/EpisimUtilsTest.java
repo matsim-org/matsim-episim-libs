@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.apache.commons.math3.stat.descriptive.rank.Median;
@@ -16,9 +17,12 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 
@@ -43,8 +47,8 @@ public class EpisimUtilsTest {
 
 		// set 6th and 7th july as sunday
 		episimConfig.setInputDays(Map.of(
-				LocalDate.of(2020,7,6), DayOfWeek.SUNDAY,
-				LocalDate.of(2020,7,7), DayOfWeek.SUNDAY
+				LocalDate.of(2020, 7, 6), DayOfWeek.SUNDAY,
+				LocalDate.of(2020, 7, 7), DayOfWeek.SUNDAY
 		));
 
 		assertThat(EpisimUtils.getDayOfWeek(episimConfig, 6)).isEqualTo(DayOfWeek.SUNDAY);
@@ -142,6 +146,27 @@ public class EpisimUtilsTest {
 		FixedPolicy.ConfigBuilder config3 = EpisimUtils.createRestrictionsFromCSV2(episimConfig, f, 1.4, EpisimUtils.Extrapolation.exponential);
 
 		//FileUtils.write(new File("out.json"), config.build().root().render(ConfigRenderOptions.defaults().setJson(true).setComments(false).setOriginComments(false)));
+	}
+
+
+	@Test
+	public void setRestrictions() {
+
+		Path f = Path.of("berlinGoogleMobility.csv");
+
+		Assume.assumeTrue("Input must exists", Files.exists(f));
+
+		NavigableMap<LocalDate, Double> data = EpisimUtils.readCSV(f, CSVFormat.DEFAULT, "date", "workplaces_percent_change_from_baseline");
+
+		// rescale remaining fraction
+		data.replaceAll((k, v) -> Math.min(1, 1 + (v / 100)));
+
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+
+		EpisimUtils.setRestrictions(builder, "work", data, EpisimUtils.Extrapolation.linear);
+
+		builder.build();
+
 	}
 
 	@Test

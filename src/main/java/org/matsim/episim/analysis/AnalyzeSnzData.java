@@ -49,7 +49,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseOptions {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test
+		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender
 	};
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -65,7 +65,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseOptions selectedArea = AnalyseOptions.Berlin;
+		AnalyseOptions selectedArea = AnalyseOptions.Bundeslaender;
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
 		boolean getPercentageResults = false;
@@ -179,6 +179,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
 			snz.writeDataForCertainArea(outputFolder.resolve("WolfsburgSnzData_daily_until.csv"), zipCodesWolfsburg,
 					getPercentageResults, setBaseIn2018);
+			break;
+		case Bundeslaender:	
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
+			snz.writeBundeslandDataForPublic(outputFolder);
 			break;
 		default:
 			break;
