@@ -431,7 +431,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/OpenGeoDB_bundesland_plz_ort_de.csv";
 		HashMap<String, IntSet> zipCodesBL = new HashMap<String, IntSet>();
-		zipCodesBL.put("Deutschalnd", new IntOpenHashSet());
+		zipCodesBL.put("Deutschland", new IntOpenHashSet());
 
 		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
 			CSVParser parse = CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader().parse(reader);
@@ -439,8 +439,12 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			for (CSVRecord record : parse) {
 				if (zipCodesBL.containsKey(record.get("BL"))) {
 					zipCodesBL.get(record.get("BL")).add(Integer.parseInt(record.get("PLZ")));
-				} else
+					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("PLZ")));
+					
+				} else {
 					zipCodesBL.put(record.get("BL"), new IntOpenHashSet(List.of(Integer.parseInt(record.get("PLZ")))));
+					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("PLZ")));
+				}
 			}
 		}
 		return zipCodesBL;
