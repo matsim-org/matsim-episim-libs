@@ -75,6 +75,24 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 
+
+	/*
+	District level restrictions for location based restrictions;
+	 */
+	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
+	private String districtLevelRestrictions = "no";
+
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public String getDestrictLevelRestrictions() {
+		return this.districtLevelRestrictions;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public void setDistrictLevelRestrictions(String districtLevelRestrictions) {
+		this.districtLevelRestrictions = districtLevelRestrictions;
+	}
+
+
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
 
@@ -146,6 +164,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
+
+
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -168,6 +188,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Compliance if a curfew is set.
 	 */
 	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
+
+
+
 
 	/**
 	 * Default constructor.

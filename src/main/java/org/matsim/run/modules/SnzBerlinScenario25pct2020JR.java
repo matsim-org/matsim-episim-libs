@@ -215,10 +215,10 @@ public final class SnzBerlinScenario25pct2020JR extends AbstractSnzScenario2020 
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 
-			String untilDate = "20210407";
+			String untilDate = "20210404";
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateDistrictRestrictionsFromCSVJR(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
+			this.activityParticipation.setInput(INPUT.resolve("perNeighborhood/BerlinSnzData_daily_until" + untilDate + ".csv"));
 
 
 			List<String> neighborhoods = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
@@ -228,7 +228,7 @@ public final class SnzBerlinScenario25pct2020JR extends AbstractSnzScenario2020 
 
 			Map<String, Path> districtInputs = new HashMap<>();
 			for (String kiez : neighborhoods) {
-				districtInputs.put(kiez, INPUT.resolve(kiez + "SnzData_daily_until" + untilDate + ".csv"));
+				districtInputs.put(kiez, INPUT.resolve("perNeighborhood/" + kiez + "SnzData_daily_until" + untilDate + ".csv"));
 			}
 
 			((CreateDistrictRestrictionsFromCSVJR) this.activityParticipation).setDistrictInputs(districtInputs);

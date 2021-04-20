@@ -1,47 +1,27 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-import org.apache.commons.csv.CSVFormat;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
-import org.matsim.episim.TracingConfigGroup.CapacityType;
-import org.matsim.episim.model.FaceMask;
-import org.matsim.episim.model.VirusStrain;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
-import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzBerlinProductionScenarioJR;
 
 import javax.annotation.Nullable;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.time.DayOfWeek;
-import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.stream.Collectors;
 
-
-/**
- * Interventions for symmetric Berlin week model with different contact models
- */
 public class JRBatch implements BatchRun<JRBatch.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().setSnapshot(SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenarioJR.Builder().setSnapshot(SnzBerlinProductionScenarioJR.Snapshot.no).createSnzBerlinProductionScenarioJR();
 	}
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "calibration");
+		return Metadata.of("berlin", "locationBasedRestrictions");
 	}
 
 	//	@Override
@@ -52,19 +32,23 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
+		SnzBerlinProductionScenarioJR module = new SnzBerlinProductionScenarioJR.Builder().setSnapshot(
+				SnzBerlinProductionScenarioJR.Snapshot.no).setSample(1).createSnzBerlinProductionScenarioJR();
 		Config config = module.config();
 		//		config.global().setRandomSeed(params.seed);
 
 		config.global().setRandomSeed(7564655870752979346L);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setStartFromSnapshot("");
-//		episimConfig.setSnapshotInterval();
+//		episimConfig.setStartFromSnapshot("");
+		episimConfig.setDistrictLevelRestrictions(params.districtLevelRestrictions);
+//		episimConfig.setSampleSize(0.01);
+//		double sampleSize = episimConfig.getSampleSize();
 
-		VaccinationConfigGroup vaccinationConfigGroup = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfigGroup.setEffectiveness(params.dailyInitialVaccinations);
+		//		episimConfig.setSnapshotInterval();
+
+//		VaccinationConfigGroup vaccinationConfigGroup = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+//		vaccinationConfigGroup.setEffectiveness(params.dailyInitialVaccinations);
 
 
 		return config;
@@ -75,29 +59,33 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		//		@GenerateSeeds(2)
 		//		public long seed;
 
-		@IntParameter({3000, 10000})
-		int dailyInitialVaccinations;
+//		@IntParameter({3000, 10000})
+//		int dailyInitialVaccinations;
+//
+//		@StringParameter({"restrictive"})
+//		public String christmasModel;
+//
+//		@StringParameter({"closed", "open", "open&masks", "50%&masks", "50%open"})
+//		public String schools;
+//
+//		@StringParameter({"no", "ffp"})
+//		public String work;
+//
+//		@StringParameter({"no", "20-5", "22-5"})
+//		public String curfew;
+//
+//		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15"})
+//		String newVariantDate;
+//
+//		@StringParameter({"no", "yes", "yesUntil80", "no100%"})
+//		String extrapolateRestrictions;
+//
+//		@Parameter({1.35})
+//		double newVariantInfectiousness;
 
-		@StringParameter({"restrictive"})
-		public String christmasModel;
+		@StringParameter({"yes", "no"})
+		String districtLevelRestrictions;
 
-		@StringParameter({"closed", "open", "open&masks", "50%&masks", "50%open"})
-		public String schools;
-
-		@StringParameter({"no", "ffp"})
-		public String work;
-
-		@StringParameter({"no", "20-5", "22-5"})
-		public String curfew;
-
-		@StringParameter({"2020-12-15", "2020-11-15", "2020-10-15"})
-		String newVariantDate;
-
-		@StringParameter({"no", "yes", "yesUntil80", "no100%"})
-		String extrapolateRestrictions;
-
-		@Parameter({1.35})
-		double newVariantInfectiousness;
 	}
 
 	public static void main(String[] args) {

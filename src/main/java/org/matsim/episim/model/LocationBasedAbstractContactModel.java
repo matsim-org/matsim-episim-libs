@@ -30,6 +30,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.facilities.MatsimFacilitiesReader;
 import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
 import java.util.HashMap;
@@ -86,8 +87,8 @@ public abstract class LocationBasedAbstractContactModel implements ContactModel 
 
 		// Get facilities
 		Config cfg = ConfigUtils.createConfig();
-		cfg.facilities().setInputFile("D:/Dropbox/Documents/VSP/episim/be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz");
-		Scenario scenario = ScenarioUtils.loadScenario(cfg);
+		cfg.facilities().setInputFile(config.facilities().getInputFile());
+		Scenario scenario = ScenarioUtils.loadScenario(config);
 		berlinFacilities = new HashMap<>();
 		for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
 			String kiez = (String) facility.getAttributes().getAttribute("berlin-neighborhood");
@@ -252,12 +253,16 @@ public abstract class LocationBasedAbstractContactModel implements ContactModel 
 		//		}
 
 		// ACTIVITY LOCATION
-		if (berlinFacilities.containsKey(container.getContainerId().toString())) {
-			String district = berlinFacilities.get(container.getContainerId().toString());
-			if (r.getDistrictSpecficValues().containsKey(district)) {
-				remainingFraction = r.getDistrictSpecficValues().get(district);
+
+		if (episimConfig.getDestrictLevelRestrictions().equals("yes")) {
+			if (berlinFacilities.containsKey(container.getContainerId().toString())) {
+				String district = berlinFacilities.get(container.getContainerId().toString());
+				if (r.getDistrictSpecficValues().containsKey(district)) {
+					remainingFraction = r.getDistrictSpecficValues().get(district);
+				}
 			}
 		}
+
 
 
 		// avoid use of rnd if outcome is known beforehand

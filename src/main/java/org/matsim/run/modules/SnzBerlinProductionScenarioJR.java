@@ -75,10 +75,10 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 	public static class Builder{
 		private int importOffset = 0;
-		private int sample = 25;
+		private int sample = 1;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
-		private Masks masks = Masks.yes;
+		private Masks masks = Masks.no;
 		private Tracing tracing = Tracing.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
@@ -125,7 +125,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
-		public SnzBerlinProductionScenarioJR createSnzBerlinProductionScenario(){
+		public SnzBerlinProductionScenarioJR createSnzBerlinProductionScenarioJR(){
 			return new SnzBerlinProductionScenarioJR( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot, infectionModel, importOffset, vaccinationModel );
 		}
 		public Builder setImportOffset( int importOffset ){
@@ -198,11 +198,17 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+
+
+//		episimConfig.setSampleSize(1.);
 		config.global().setRandomSeed(7564655870752979346L);
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
-		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
+		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));//_andNeighborhood
+
+		config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
+//		config.plans().setInputFile("C:\\Users\\jakob\\projects\\shared-svn\\projects\\episim\\matsim-files\\snz\\BerlinV2\\episim-input\\be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz");
 
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
 //				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -398,6 +404,10 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
+
+		//jr
+//		episimConfig.setDistrictLevelRestrictions("no");
+//		episimConfig.setSampleSize(0.01); // TODO: JR REVERT
 
 		return config;
 
