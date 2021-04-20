@@ -126,6 +126,11 @@ public final class EpisimPerson implements Attributable {
 	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
 
 	/**
+	 * Current status for re-vaccination.
+	 */
+	private VaccinationStatus reVaccinationStatus = VaccinationStatus.no;
+
+	/**
 	 * Current {@link TestStatus}.
 	 */
 	private TestStatus testStatus = TestStatus.untested;
@@ -242,6 +247,7 @@ public final class EpisimPerson implements Attributable {
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
+		reVaccinationStatus = VaccinationStatus.values()[in.readInt()];
 		vaccinationDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
@@ -294,6 +300,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(vaccinationStatus.ordinal());
+		out.writeInt(reVaccinationStatus.ordinal());
 		out.writeInt(vaccinationDate);
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
@@ -342,10 +349,22 @@ public final class EpisimPerson implements Attributable {
 		return vaccinationStatus;
 	}
 
+	public VaccinationStatus getReVaccinationStatus() {
+		return reVaccinationStatus;
+	}
+
 	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
 		this.vaccinationStatus = vaccinationStatus;
+		this.vaccinationDate = iteration;
+	}
+
+	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
+		if (this.vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("First vaccination must already be present.");
+		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Re-vaccination can only be set to yes.");
+
+		this.reVaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 	}
 

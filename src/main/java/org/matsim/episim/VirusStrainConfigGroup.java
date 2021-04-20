@@ -82,6 +82,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		private static final String STRAIN = "strain";
 		private static final String INFECTIOUSNESS = "infectiousness";
 		private static final String VACCINE_EFFECTIVENESS = "vaccineEffectiveness";
+		private static final String RE_VACCINE_EFFECTIVENESS = "reVaccineEffectiveness";
 
 		/**
 		 * Type of the strain.
@@ -97,6 +98,11 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		 * Vaccine effectiveness
 		 */
 		private double vaccineEffectiveness = 1.0;
+
+		/**
+		 * Vaccine effectiveness for the second vaccine.
+		 */
+		private double reVaccineEffectiveness = 1.0;
 
 		StrainParams() {
 			super(SET_TYPE);
@@ -131,5 +137,16 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		public void setVaccineEffectiveness(double vaccineEffectiveness) {
 			this.vaccineEffectiveness = vaccineEffectiveness;
 		}
+
+		@StringGetter(RE_VACCINE_EFFECTIVENESS)
+		public double getReVaccineEffectiveness() {
+			return reVaccineEffectiveness;
+		}
+
+		@StringSetter(RE_VACCINE_EFFECTIVENESS)
+		public void setReVaccineEffectiveness(double vaccineEffectiveness) {
+			this.reVaccineEffectiveness = vaccineEffectiveness;
+		}
+
 	}
 }
