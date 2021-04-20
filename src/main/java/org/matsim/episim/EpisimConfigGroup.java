@@ -67,6 +67,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
+	private static final String SNAPSHOT_PREFIX = "snapshotPrefix";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
 	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
 	private static final String INPUT_DAYS = "inputDays";
@@ -135,6 +136,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Path to snapshot file.
 	 */
 	private String startFromSnapshot = null;
+
+	/**
+	 * Filename prefix for snapshot.
+	 */
+	private String snapshotPrefix = "episim-snapshot";
+
 	/**
 	 * How the internal rng state should be handled.
 	 */
@@ -356,6 +363,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(START_FROM_SNAPSHOT)
 	public void setStartFromSnapshot(String startFromSnapshot) {
 		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	@StringGetter(SNAPSHOT_PREFIX)
+	public String getSnapshotPrefix() {
+		return snapshotPrefix;
+	}
+
+	@StringSetter(SNAPSHOT_PREFIX)
+	public void setSnapshotPrefix(String snapshotPrefix) {
+		this.snapshotPrefix = snapshotPrefix;
 	}
 
 	@StringGetter(SNAPSHOT_SEED)
