@@ -43,6 +43,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 /**
@@ -62,6 +63,10 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends, dailyResults
 	};
 
+	private enum AnalyseAreas {
+		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg
+	}
+
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
 	private Path inputFolder;
 
@@ -75,168 +80,132 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		log.info("Searching for files in the folder: " + inputFolder);
-		List<File> filesWithData = findInputFiles(inputFolder.toFile());
-		log.info("Amount of found files: " + filesWithData.size());
-
 		boolean getPercentageResults = false;
 		boolean outputShareOutdoor = true;
-		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.dailyResults;
-//		analyzeDataForCertainArea("Test", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Germany", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Berlin", filesWithData, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Munich", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Heinsberg", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Bonn", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-		analyzeDataForCertainArea("Mannheim", filesWithData, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse);
-//		analyzeDataForCertainArea("Wolfsburg", filesWithData, getPercentageResults, selectedOptionForAnalyse);
-//		List<String> districtsBerlin = Arrays.asList("Mitte", "Friedrichshain_Kreuzberg", "Pankow",
-//				"Charlottenburg_Wilmersdorf", "Spandau", "Steglitz_Zehlendorf", "Tempelhof_Schoeneberg", "Neukoelln",
-//				"Treptow_Koepenick", "Marzahn_Hellersdorf", "Lichtenberg", "Reinickendorf");
-//		for (String district : districtsBerlin)
-//			analyzeDataForCertainArea(district, filesWithData, getPercentageResults, selectedOptionForAnalyse);
+		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
+		AnalyseAreas selectedArea = AnalyseAreas.Mannheim;
+
+		analyseData(selectedArea, selectedOptionForAnalyse, getPercentageResults, outputShareOutdoor);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private IntSet createAreasWithZIPCodes(String area) {
-		IntSet zipCodes = null;
-		// zip codes for testing
-		if (area.equals("Test")) {
-			zipCodes = new IntOpenHashSet(List.of(1067));
-			return zipCodes;
-		}
-		// zip codes for Germany
-		if (area.equals("Germany")) {
-			zipCodes = new IntOpenHashSet();
-			for (int i = 0; i <= 99999; i++)
-				zipCodes.add(i);
-			return zipCodes;
-		}
-		// zip codes for Berlin
-		if (area.equals("Berlin")) {
-			zipCodes = new IntOpenHashSet();
+	private void analyseData(AnalyseAreas selectedArea, AnalyseOptions selectedOptionForAnalyse,
+			boolean getPercentageResults, boolean outputShareOutdoor) throws IOException {
+
+		switch (selectedArea) {
+		case Berchtesgaden:
+			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
+					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
+			analyzeDataForCertainArea("Berchtesgaden", zipCodesBerchtesgaden, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Berlin:
+			IntSet zipCodesBerlin = new IntOpenHashSet();
 			for (int i = 10115; i <= 14199; i++)
-				zipCodes.add(i);
-			return zipCodes;
-		}
-		// zip codes for Munich
-		if (area.equals("Munich")) {
-			zipCodes = new IntOpenHashSet();
-			for (int i = 80331; i <= 81929; i++)
-				zipCodes.add(i);
-			return zipCodes;
-		}
-		// zip codes for Hamburg
-		if (area.equals("Hamburg")) {
-			zipCodes = new IntOpenHashSet();
-			for (int i = 22000; i <= 22999; i++)
-				zipCodes.add(i);
-			return zipCodes;
-		}
-		// zip codes for Bonn
-		if (area.equals("Bonn")) {
-			zipCodes = new IntOpenHashSet();
+				zipCodesBerlin.add(i);
+			analyzeDataForCertainArea("Berlin", zipCodesBerlin, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case BerlinDistricts:
+			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();
+			berlinDistricts.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119,
+					10785, 13359, 10787, 10557, 13353, 10555, 13351, 13349, 10551, 13347)));
+			berlinDistricts.put("Friedrichshain_Kreuzberg", new IntOpenHashSet(List.of(10179, 10967, 10243, 10969,
+					10245, 10997, 10247, 10999, 12045, 10961, 10963, 10965, 10178)));
+			berlinDistricts.put("Pankow", new IntOpenHashSet(List.of(10249, 10405, 10407, 10409, 10435, 10437, 10439,
+					13051, 13053, 13086, 13088, 13089, 13125, 13127, 13129, 13156, 13158, 13159, 13187, 13189)));
+			berlinDistricts.put("Charlottenburg_Wilmersdorf",
+					new IntOpenHashSet(List.of(10553, 10585, 10587, 10589, 10625, 10627, 10629, 10707, 10709, 10711,
+							10713, 10715, 10717, 10719, 10789, 13597, 13627, 14050, 14053, 14055, 14057, 14059)));
+			berlinDistricts.put("Spandau", new IntOpenHashSet(
+					List.of(13581, 13583, 13585, 13587, 13589, 13591, 13593, 13595, 13599, 14052, 14089)));
+			berlinDistricts.put("Steglitz_Zehlendorf", new IntOpenHashSet(List.of(12163, 12165, 12167, 12169, 12203,
+					12205, 12207, 12209, 12247, 12279, 14109, 14129, 14163, 14165, 14167, 14169, 14193, 14195, 14199)));
+			berlinDistricts.put("Tempelhof_Schoeneberg",
+					new IntOpenHashSet(List.of(10777, 10779, 10781, 10783, 10823, 10825, 10827, 14197, 10829, 12101,
+							12103, 12105, 12109, 12157, 12159, 12161, 12249, 12277, 12307, 12309)));
+			berlinDistricts.put("Neukoelln", new IntOpenHashSet(List.of(12043, 12047, 12049, 12051, 12053, 12055, 12057,
+					12059, 12099, 12107, 12305, 12347, 12349, 12351, 12353, 12355, 12357, 12359)));
+			berlinDistricts.put("Treptow_Koepenick", new IntOpenHashSet(List.of(12435, 12437, 12439, 12459, 12487,
+					12489, 12524, 12526, 12527, 12555, 12557, 12559, 12587, 12589, 12623)));
+			berlinDistricts.put("Marzahn_Hellersdorf",
+					new IntOpenHashSet(List.of(12619, 12621, 12627, 12629, 12679, 12681, 12683, 12685, 12687, 12689)));
+			berlinDistricts.put("Lichtenberg",
+					new IntOpenHashSet(List.of(10315, 13057, 10317, 10318, 10319, 10365, 10367, 10369, 13055, 13059)));
+			berlinDistricts.put("Reinickendorf", new IntOpenHashSet(List.of(13403, 13405, 13407, 13409, 13435, 13437,
+					13439, 13465, 13467, 13469, 13503, 13505, 13507, 13509, 13629)));
+			for (Entry<String, IntSet> district : berlinDistricts.entrySet())
+				analyzeDataForCertainArea(district.getKey(), district.getValue(), getPercentageResults,
+						outputShareOutdoor, selectedOptionForAnalyse);
+			break;
+		case Bonn:
+			IntSet zipCodesBonn = new IntOpenHashSet();
 			for (int i = 53100; i <= 53299; i++)
-				zipCodes.add(i);
-			return zipCodes;
-		}
-		// zip codes for the district "Kreis Heinsberg"
-		if (area.equals("Heinsberg")) {
-			zipCodes = new IntOpenHashSet(List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
-			return zipCodes;
-		}
-		// zip codes for district "Berchtesgadener Land"
-		if (area.equals("Berchtesgaden")) {
-			zipCodes = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435, 83451, 83454, 83457,
-					83458, 83471, 83483, 83486, 83487));
-			return zipCodes;
-		}
-		// zip codes for the district "Mannheim"
-		if (area.equals("Mannheim")) {
-			zipCodes = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219, 68229, 68239,
-					68259, 68305, 68307, 68309));
-			return zipCodes;
-		}
-		// zip codes for the district "Wolfsburg"
-		if (area.equals("Wolfsburg")) {
-			zipCodes = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
-			return zipCodes;
-		}
+				zipCodesBonn.add(i);
+			analyzeDataForCertainArea("Bonn", zipCodesBonn, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Germany:
+			IntSet zipCodesGER = new IntOpenHashSet();
+			for (int i = 0; i <= 99999; i++)
+				zipCodesGER.add(i);
+			analyzeDataForCertainArea("Germany", zipCodesGER, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Hamburg:
+			IntSet zipCodesHamburg = new IntOpenHashSet();
+			for (int i = 22000; i <= 22999; i++)
+				zipCodesHamburg.add(i);
+			analyzeDataForCertainArea("Hamburg", zipCodesHamburg, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Heinsberg:
+			IntSet zipCodesHeinsberg = new IntOpenHashSet(
+					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
+			analyzeDataForCertainArea("Heinsberg", zipCodesHeinsberg, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Mannheim:
+			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
+					68229, 68239, 68259, 68305, 68307, 68309));
+			analyzeDataForCertainArea("Mannheim", zipCodesMannheim, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Munich:
+			IntSet zipCodesMunich = new IntOpenHashSet();
+			for (int i = 80331; i <= 81929; i++)
+				zipCodesMunich.add(i);
+			analyzeDataForCertainArea("Munich", zipCodesMunich, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Test:
+			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
+			analyzeDataForCertainArea("Test", zipCodesTest, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Wolfsburg:
+			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
+			analyzeDataForCertainArea("Wolfsburg", zipCodesWolfsburg, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		default:
+			break;
 
-		// zip codes for districts in Berlin
-		if (area.equals("Mitte")) {
-			zipCodes = new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119, 10785, 13359, 10787,
-					10557, 13353, 10555, 13351, 13349, 10551, 13347));
-			return zipCodes;
 		}
-		if (area.equals("Friedrichshain_Kreuzberg")) {
-			zipCodes = new IntOpenHashSet(
-					List.of(10179, 10967, 10243, 10969, 10245, 10997, 10247, 10999, 12045, 10961, 10963, 10965, 10178));
-			return zipCodes;
-		}
-		if (area.equals("Pankow")) {
-			zipCodes = new IntOpenHashSet(List.of(10249, 10405, 10407, 10409, 10435, 10437, 10439, 13051, 13053, 13086,
-					13088, 13089, 13125, 13127, 13129, 13156, 13158, 13159, 13187, 13189));
-			return zipCodes;
-		}
-		if (area.equals("Charlottenburg_Wilmersdorf")) {
-			zipCodes = new IntOpenHashSet(List.of(10553, 10585, 10587, 10589, 10625, 10627, 10629, 10707, 10709, 10711,
-					10713, 10715, 10717, 10719, 10789, 13597, 13627, 14050, 14053, 14055, 14057, 14059));
-			return zipCodes;
-		}
-		if (area.equals("Spandau")) {
-			zipCodes = new IntOpenHashSet(
-					List.of(13581, 13583, 13585, 13587, 13589, 13591, 13593, 13595, 13599, 14052, 14089));
-			return zipCodes;
-		}
-		if (area.equals("Steglitz_Zehlendorf")) {
-			zipCodes = new IntOpenHashSet(List.of(12163, 12165, 12167, 12169, 12203, 12205, 12207, 12209, 12247, 12279,
-					14109, 14129, 14163, 14165, 14167, 14169, 14193, 14195, 14199));
-			return zipCodes;
-		}
-		if (area.equals("Tempelhof_Schoeneberg")) {
-			zipCodes = new IntOpenHashSet(List.of(10777, 10779, 10781, 10783, 10823, 10825, 10827, 14197, 10829, 12101,
-					12103, 12105, 12109, 12157, 12159, 12161, 12249, 12277, 12307, 12309));
-			return zipCodes;
-		}
-		if (area.equals("Neukoelln")) {
-			zipCodes = new IntOpenHashSet(List.of(12043, 12047, 12049, 12051, 12053, 12055, 12057, 12059, 12099, 12107,
-					12305, 12347, 12349, 12351, 12353, 12355, 12357, 12359));
-			return zipCodes;
-		}
-		if (area.equals("Treptow_Koepenick")) {
-			zipCodes = new IntOpenHashSet(List.of(12435, 12437, 12439, 12459, 12487, 12489, 12524, 12526, 12527, 12555,
-					12557, 12559, 12587, 12589, 12623));
-			return zipCodes;
-		}
-		if (area.equals("Marzahn_Hellersdorf")) {
-			zipCodes = new IntOpenHashSet(
-					List.of(12619, 12621, 12627, 12629, 12679, 12681, 12683, 12685, 12687, 12689));
-			return zipCodes;
-		}
-		if (area.equals("Lichtenberg")) {
-			zipCodes = new IntOpenHashSet(
-					List.of(10315, 13057, 10317, 10318, 10319, 10365, 10367, 10369, 13055, 13059));
-			return zipCodes;
-		}
-		if (area.equals("Reinickendorf")) {
-			zipCodes = new IntOpenHashSet(List.of(13403, 13405, 13407, 13409, 13435, 13437, 13439, 13465, 13467, 13469,
-					13503, 13505, 13507, 13509, 13629));
-			return zipCodes;
-		}
-		return zipCodes;
-
 	}
 
-	private void analyzeDataForCertainArea(String area, List<File> filesWithData, boolean getPercentageResults,
+	private void analyzeDataForCertainArea(String area, IntSet zipCodes, boolean getPercentageResults,
 			boolean outputShareOutdoor, AnalyseOptions selectedOptionForAnalyse) throws IOException {
 
 		log.info("Analyze data for " + area);
 
-		IntSet zipCodes = createAreasWithZIPCodes(area);
+		log.info("Searching for files in the folder: " + inputFolder);
+		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+		log.info("Amount of found files: " + filesWithData.size());
+
 		Path outputFile = outputFolder.resolve(area + "SnzDataTimeline_until.csv");
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
 		Path outputFileShare = null;
@@ -370,7 +339,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					finalPath = Path
 							.of(outputFile.toString().replace("until", "until" + dateString + "_WeeklyNumbers"));
 				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString+ "_Weekly"));
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekly"));
 				break;
 			case onlyWeekdays:
 				if (!getPercentageResults)
@@ -402,8 +371,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				break;
 			case dailyResults:
 				if (!getPercentageResults)
-					finalPath = Path
-							.of(outputFile.toString().replace("until", "until" + dateString + "_DailyNumbers"));
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_DailyNumbers"));
 				else
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Daily"));
 				break;
@@ -461,7 +429,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			double shareBefore = 0.;
 			double baseNumberHomeStart = 0;
 			boolean started = false;
-		
+
 			for (String string : header) {
 				if (!string.contains("date") && !string.contains("type")) {
 					if (getPercentageResults) {
@@ -470,9 +438,11 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						rowStartHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
 								(sumsHomeStart.getDouble(string) / base.get("startHomeActs").getDouble(string) - 1))));
 						rowEndNonHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
-								(sumsNonHomeEnd.getDouble(string) / base.get("endNonHomeActs").getDouble(string) - 1))));
+								(sumsNonHomeEnd.getDouble(string) / base.get("endNonHomeActs").getDouble(string)
+										- 1))));
 						rowStartNonHome.add(String.valueOf(round2DecimalsAndConvertToProcent(
-								(sumsNonHomeStart.getDouble(string)/ base.get("startNonHomeActs").getDouble(string) - 1))));
+								(sumsNonHomeStart.getDouble(string) / base.get("startNonHomeActs").getDouble(string)
+										- 1))));
 					} else {
 						rowEndHome.add(String.valueOf((int) sumsHomeEnd.getDouble(string)));
 						rowStartHome.add(String.valueOf((int) sumsHomeStart.getDouble(string)));
@@ -489,8 +459,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 								rowShareOutdoor.add(String.valueOf(round2DecimalsAndConvertToProcent(shareBefore)));
 								started = true;
 							} else if (sumsHomeEnd.getDouble(string) != 0. && started) {
-								shareBefore = (shareBefore * baseNumberHomeStart
-										- sumsHomeStart.getDouble(string) 
+								shareBefore = (shareBefore * baseNumberHomeStart - sumsHomeStart.getDouble(string)
 										+ sumsHomeEnd.getDouble(string)) / baseNumberHomeStart;
 								rowShareOutdoor.add(String.valueOf(round2DecimalsAndConvertToProcent(shareBefore)));
 							} else
@@ -562,6 +531,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			}
 		}
 	}
+
 	/**
 	 * Rounds the number 2 places after the comma
 	 * 
