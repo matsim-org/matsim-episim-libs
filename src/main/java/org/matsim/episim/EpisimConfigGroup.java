@@ -67,6 +67,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
+	private static final String SNAPSHOT_PREFIX = "snapshotPrefix";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
 	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
 	private static final String INPUT_DAYS = "inputDays";
@@ -74,24 +75,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
-
-
-	/*
-	District level restrictions for location based restrictions;
-	 */
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
-	private String districtLevelRestrictions = "no";
-
-	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
-	public String getDestrictLevelRestrictions() {
-		return this.districtLevelRestrictions;
-	}
-
-	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
-	public void setDistrictLevelRestrictions(String districtLevelRestrictions) {
-		this.districtLevelRestrictions = districtLevelRestrictions;
-	}
-
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -153,6 +137,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Path to snapshot file.
 	 */
 	private String startFromSnapshot = null;
+
+	/**
+	 * Filename prefix for snapshot.
+	 */
+	private String snapshotPrefix = "episim-snapshot";
+
 	/**
 	 * How the internal rng state should be handled.
 	 */
@@ -164,8 +154,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
-
-
+	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.yes;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -188,9 +177,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Compliance if a curfew is set.
 	 */
 	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
-
-
-
 
 	/**
 	 * Default constructor.
@@ -379,6 +365,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(START_FROM_SNAPSHOT)
 	public void setStartFromSnapshot(String startFromSnapshot) {
 		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	@StringGetter(SNAPSHOT_PREFIX)
+	public String getSnapshotPrefix() {
+		return snapshotPrefix;
+	}
+
+	@StringSetter(SNAPSHOT_PREFIX)
+	public void setSnapshotPrefix(String snapshotPrefix) {
+		this.snapshotPrefix = snapshotPrefix;
 	}
 
 	@StringGetter(SNAPSHOT_SEED)
@@ -700,6 +696,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.facilitiesHandling = facilitiesHandling;
 	}
 
+	/**
+	 * District level restrictions for location based restrictions;
+	 */
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public DistrictLevelRestrictions getDestrictLevelRestrictions() {
+		return this.districtLevelRestrictions;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public void setDistrictLevelRestrictions(DistrictLevelRestrictions districtLevelRestrictions) {
+		this.districtLevelRestrictions = districtLevelRestrictions;
+	}
+
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
 		// this is, I think, necessary for the automatic reading from file, and possibly for the commandline stuff.
@@ -918,6 +927,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 */
 		reseed,
 	}
+
+
+	/**
+	 * Decides whether location based restrictions should be implemented
+	 */
+	public enum DistrictLevelRestrictions {
+		yes,
+		no
+	}
+
 
 	/**
 	 * Parameter set for one activity type.
