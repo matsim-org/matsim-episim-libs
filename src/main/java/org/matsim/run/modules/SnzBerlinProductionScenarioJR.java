@@ -22,7 +22,6 @@ package org.matsim.run.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -43,9 +42,7 @@ import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
@@ -75,7 +72,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 	public static class Builder{
 		private int importOffset = 0;
-		private int sample = 1;
+		private int sample = 1; //TODO
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
 		private Masks masks = Masks.no;
@@ -182,7 +179,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 	@Override
 	protected void configure() {
-		bind(ContactModel.class).to(LocationBasedSymmetricContactModel.class).in(Singleton.class); //jr
+		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
@@ -198,26 +195,20 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-
-
-//		episimConfig.setSampleSize(1.);
 		config.global().setRandomSeed(7564655870752979346L);
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));//_andNeighborhood
+		//config.plans().setInputFile("C:\\Users\\jakob\\projects\\shared-svn\\projects\\episim\\matsim-files\\snz\\BerlinV2\\episim-input\\be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz");
 
 		config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
-//		config.plans().setInputFile("C:\\Users\\jakob\\projects\\shared-svn\\projects\\episim\\matsim-files\\snz\\BerlinV2\\episim-input\\be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz");
 
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.SATURDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
-//				.addDays(DayOfWeek.SUNDAY);
+		// LOCATION BASED RESTRICTIONS
+		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+
+
+
 
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -305,24 +296,10 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.allExceptEdu || this.restrictions == Restrictions.allExceptUniversities) {
 			basePolicyBuilder.setRestrictUniversities(false);
 		}
+
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
-//
-
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
-		//JR
-		//
-//
-//		builder.clearAfter(LocalDate.parse("2019-01-01").toString());
-//
-//		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-////			builder.restrict(LocalDate.parse("2019-01-01"), 0.0, act);
-//			Map<String, Double> berlinSpecific = new HashMap<>();
-//			berlinSpecific.put("Berlin", 1d);
-//			builder.restrictWithDistrict(LocalDate.parse("2019-01-01"), berlinSpecific, 0d, act);
-//
-//		}
-
 
 		//tracing
 		if (this.tracing == Tracing.yes) {
@@ -405,12 +382,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
-		//jr
-//		episimConfig.setDistrictLevelRestrictions("no");
-//		episimConfig.setSampleSize(0.01); // TODO: JR REVERT
-
 		return config;
-
 	}
 
 	@Provides
@@ -425,7 +397,7 @@ public final class SnzBerlinProductionScenarioJR extends AbstractModule {
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
 		// save some time for not needed inputs
-		config.facilities().setInputFile(null);
+//		config.facilities().setInputFile(null); //facilities are needed for location based restrictions
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
 

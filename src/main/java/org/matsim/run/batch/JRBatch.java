@@ -12,6 +12,8 @@ import org.matsim.run.modules.SnzBerlinProductionScenarioJR;
 
 import javax.annotation.Nullable;
 
+import static org.matsim.episim.EpisimConfigGroup.*;
+
 public class JRBatch implements BatchRun<JRBatch.Params> {
 
 	@Override
@@ -24,16 +26,11 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		return Metadata.of("berlin", "locationBasedRestrictions");
 	}
 
-	//	@Override
-	//	public int getOffset() {
-	//		return 400;
-	//	}
-
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
 		SnzBerlinProductionScenarioJR module = new SnzBerlinProductionScenarioJR.Builder().setSnapshot(
-				SnzBerlinProductionScenarioJR.Snapshot.no).setSample(1).createSnzBerlinProductionScenarioJR();
+				SnzBerlinProductionScenarioJR.Snapshot.no).setSample(25).createSnzBerlinProductionScenarioJR();
 		Config config = module.config();
 		//		config.global().setRandomSeed(params.seed);
 
@@ -83,8 +80,8 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 //		@Parameter({1.35})
 //		double newVariantInfectiousness;
 
-		@StringParameter({"yes", "no"})
-		String districtLevelRestrictions;
+		@EnumParameter(DistrictLevelRestrictions.class)
+		DistrictLevelRestrictions districtLevelRestrictions;
 
 	}
 

@@ -21,7 +21,6 @@
 package org.matsim.run.modules;
 
 import com.google.inject.Provides;
-import de.micromata.opengis.kml.v_2_2_0.Create;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
