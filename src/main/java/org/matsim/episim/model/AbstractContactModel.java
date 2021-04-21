@@ -75,7 +75,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	 */
 	private double curfewCompliance;
 
-	private Map<String, String> subdistrictFacilities;
+	private final Map<String, String> subdistrictFacilities;
 
 
 	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting, Scenario scenario) {

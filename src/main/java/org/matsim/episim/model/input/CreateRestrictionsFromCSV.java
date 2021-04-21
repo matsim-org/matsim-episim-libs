@@ -32,6 +32,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 	private File input;
 	private double alpha = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
+	private Map<String, File> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
@@ -42,6 +43,18 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 	public CreateRestrictionsFromCSV setInput(Path input) {
 		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
 		this.input = input.toFile();
+		return this;
+	}
+
+	/**
+	 * Sets the paths for each subdistrict CSV
+	 */
+	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, Path> subdistrictCSVPaths) {
+		Map<String, File> subdistrictInput = new HashMap<>();
+		for (Map.Entry<String, Path> entry : subdistrictCSVPaths.entrySet()) {
+			subdistrictInput.put(entry.getKey(), entry.getValue().toFile());
+		}
+		this.subdistrictInput = subdistrictInput;
 		return this;
 	}
 
@@ -65,26 +78,23 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 
 	@Override
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
-		Reader in = new FileReader(input);
-		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
-		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
 
-		// activity reduction for notAtHome each day
-		Map<LocalDate, Double> days = new LinkedHashMap<>();
+		// If active, the remaining fraction is calculated and saved for each subdistrict
+		boolean districtSpecificValuesActive = episimConfig.getDestrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
-		for (CSVRecord record : parser) {
-			LocalDate date = LocalDate.parse(record.get(0), fmt);
+		// Global Map
+		Map<LocalDate, Double> daysGlobal = parseActivityReductionPerDayFromCSV(input);
 
-			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
-			// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-
-			double remainingFraction = 1. + (value / 100.);
-
-			// modulate reduction with alpha:
-			double reduction = Math.min(1., alpha * (1. - remainingFraction));
-			days.put(date, Math.min(1, 1 - reduction));
+		// Map per District
+		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
+		if (districtSpecificValuesActive) {
+			for (Map.Entry<String, File> entry: subdistrictInput.entrySet()) {
+				daysPerDistrict.put(entry.getKey(), parseActivityReductionPerDayFromCSV(entry.getValue()));
+			}
 		}
 
+		// set of ignored days
 		Set<LocalDate> ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
 				.stream().map(LocalDate::parse).collect(Collectors.toSet());
 
@@ -94,9 +104,8 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
 				.toArray(String[]::new);
 
-		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
-		LocalDate end = Iterables.getLast(days.keySet());
-
+		LocalDate start = Objects.requireNonNull(Iterables.getFirst(daysGlobal.keySet(), null), "CSV is empty");
+		LocalDate end = Iterables.getLast(daysGlobal.keySet());
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
 		// trend used for extrapolation
@@ -104,22 +113,28 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 
 		while (start.isBefore(end)) {
 
-			List<Double> values = new ArrayList<>();
-			for (int i = 0; i < 7; i++) {
-				LocalDate day = start.plusDays(i);
-				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
-						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
-					values.add(days.get(day));
+			double avgGlobal = getWeeklyAvg(daysGlobal, ignored, start);
+
+			Map<String, Double> avgPerKiez = new HashMap<>();
+
+			if (districtSpecificValuesActive) {
+				for (String kiez : subdistrictInput.keySet()) {
+					avgPerKiez.put(kiez, getWeeklyAvg(daysPerDistrict.get(kiez), ignored, start));
 				}
 			}
-			double avg = values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+
+
 			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
 
-			trend.add(avg);
+			trend.add(avgGlobal);
 
 			// calc next sunday:
 			int n = 7 - start.getDayOfWeek().getValue() % 7;
-			builder.restrict(start, avg, act);
+			if (districtSpecificValuesActive) {
+				builder.restrictWithDistrict(start, avgPerKiez, avgGlobal, act);
+			} else {
+				builder.restrict(start, avgGlobal, act);
+			}
 			start = start.plusDays(n);
 		}
 
@@ -167,6 +182,50 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 
 
 		return builder;
+	}
+
+	/**
+	 * Parses inputCSV file to extract the activity reduction per day for the study area
+	 */
+
+	private Map<LocalDate, Double> parseActivityReductionPerDayFromCSV(File inputCSV) throws IOException {
+		Reader in = new FileReader(inputCSV);
+		CSVParser parser = CSVFormat.RFC4180.withFirstRecordAsHeader().withDelimiter('\t').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+
+		// activity reduction for notAtHome each day
+		Map<LocalDate, Double> days = new LinkedHashMap<>();
+
+		for (CSVRecord record : parser) {
+			LocalDate date = LocalDate.parse(record.get(0), fmt);
+
+			int value = Integer.parseInt(record.get("notAtHomeExceptLeisureAndEdu"));
+			// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
+
+			double remainingFraction = 1. + (value / 100.);
+
+			// modulate reduction with alpha:
+			double reduction = Math.min(1., alpha * (1. - remainingFraction));
+			days.put(date, Math.min(1, 1 - reduction));
+		}
+		return days;
+	}
+
+	/**
+	 * Calculates weekly average for activity reduction, wherein certain days are ignored
+	 */
+	private double getWeeklyAvg(Map<LocalDate, Double> days, Set<LocalDate> ignored, LocalDate start) {
+		List<Double> values = new ArrayList<>();
+		for (int i = 0; i < 7; i++) {
+			LocalDate day = start.plusDays(i);
+			if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
+					&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
+				values.add(days.get(day));
+			}
+		}
+
+		return values.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
 	}
 
 	@Override
