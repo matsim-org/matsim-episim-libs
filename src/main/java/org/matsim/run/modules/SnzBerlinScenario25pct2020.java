@@ -39,6 +39,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -210,9 +213,26 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private ActivityParticipation activityParticipation;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
+			String untilDate = "20210404";
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210404.csv"));
+			this.activityParticipation.setInput(INPUT.resolve("perNeighborhood/BerlinSnzData_daily_until" + untilDate + ".csv"));
+
+
+			if (episimConfig.getDestrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)) {
+				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
+						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
+
+
+				Map<String, Path> subdistrictInputs = new HashMap<>();
+				for (String subdistrict : subdistricts) {
+					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
+				}
+
+				((CreateRestrictionsFromCSV) this.activityParticipation).setDistrictInputs(subdistrictInputs);
+			}
+
 		}
 
 		public void setIntroductionPeriod(long introductionPeriod) {

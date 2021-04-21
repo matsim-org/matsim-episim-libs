@@ -74,7 +74,6 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(ZipcodeAndSubdistrictLookup.class);
 
 	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
-	//"../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path input;
 
 	@CommandLine.Option(names = "--shp", description = "Shapefile containing plz information", defaultValue = "") // D:/Dropbox/Documents/VSP/plz/plz-gebiete.shp
@@ -123,7 +122,7 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 
 		CoordinateTransformation ct = TransformationFactory.getCoordinateTransformation(crs, shapeCRS);
 
-		Index index = new Index(shapeFile.toFile(), ct, attr);
+		DistrictLookup.Index index = new DistrictLookup.Index(shapeFile.toFile(), ct, attr);
 
 
 		// Adds zipcode and subdistrict attributes to population (based on home location)
@@ -178,7 +177,7 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 		// Adds zipcode and subdistrict attributes to facilities (based on facility location)
 
 		Config config = ConfigUtils.createConfig();
-		config.facilities().setInputFile(""); //"D:/Dropbox/Documents/VSP/episim/be_2020-facilities_assigned_simplified_grid.xml.gz"
+		config.facilities().setInputFile("../public-svn/matsim/scenarios/countries/de/episim/openDataModel/input/be_2020-facilities_assigned_simplified_grid.xml.gz");
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 
 		// Count errors
@@ -203,73 +202,11 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 				unknownFac++;
 			}
 		}
+		log.info("Finished with failed lookup for {} out of {} facilities.", unknownFac, scenario.getActivityFacilities().getFacilities().values().size());
 
 		new FacilitiesWriter(scenario.getActivityFacilities()).write("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz");
-
-
-
 
 		return 0;
 	}
 
-	/**
-	 * Helper class to provide an index for a shapefile lookup.
-	 */
-	public static final class Index {
-
-		private final STRtree index = new STRtree();
-		private final CoordinateTransformation ct;
-		private final String attr;
-
-		/**
-		 * Constructor.
-		 *
-		 * @param ct   coordinate transform from query to target crs
-		 * @param attr attribute for the result of {@link #query(double, double)}
-		 */
-		public Index(File shapeFile, CoordinateTransformation ct, String attr)
-				throws IOException {
-			ShapefileDataStore ds = (ShapefileDataStore) FileDataStoreFinder.getDataStore(shapeFile);
-			ds.setCharset(StandardCharsets.UTF_8);
-
-			FeatureReader<SimpleFeatureType, SimpleFeature> it = ds.getFeatureReader();
-			while (it.hasNext()) {
-				SimpleFeature ft = it.next();
-				MultiPolygon polygon = (MultiPolygon) ft.getDefaultGeometry();
-
-				Envelope env = polygon.getEnvelopeInternal();
-				index.insert(env, ft);
-			}
-
-			it.close();
-			ds.dispose();
-
-			log.info("Created index with size: {}, depth: {}", index.size(), index.depth());
-
-			this.ct = ct;
-			this.attr = attr;
-		}
-
-		/**
-		 * Query the index for first feature including a certain point.
-		 *
-		 * @throws NoSuchElementException when no entry matched the query.
-		 */
-		@SuppressWarnings("unchecked")
-		public String query(double x, double y) {
-			Coord coord = new Coord(x, y);
-
-			// Because we can not easily transform the feature geometry with MATSim we have to do it the other way around...
-			Coordinate p = MGC.coord2Coordinate(ct.transform(coord));
-
-			List<SimpleFeature> result = index.query(new Envelope(p));
-			for (SimpleFeature ft : result) {
-				MultiPolygon polygon = (MultiPolygon) ft.getDefaultGeometry();
-				if (polygon.contains(MGC.coordinate2Point(p)))
-					return (String) ft.getAttribute(attr);
-			}
-
-			throw new NoSuchElementException(String.format("No matching entry found for x:%f y:%f %s", x, y, p));
-		}
-	}
 }

@@ -50,7 +50,7 @@ import java.util.Map;
  */
 public final class SnzBerlinProductionScenario extends AbstractModule {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
-	
+
 	public static enum DiseaseImport {yes, onlySpring, no}
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
@@ -58,9 +58,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum ChristmasModel {no, restrictive, permissive}
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
+	public static enum LocationBasedRestrictions {yes, no}
 
 
-	public static class Builder{
+	public static class Builder {
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
@@ -76,63 +77,85 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
 
-		public Builder setImportFactorBeforeJune( double importFactorBeforeJune ){
+		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.yes;
+
+
+		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
 			return this;
 		}
-		public Builder setImportFactorAfterJune( double importFactorAfterJune ){
+
+		public Builder setImportFactorAfterJune(double importFactorAfterJune) {
 			this.importFactorAfterJune = importFactorAfterJune;
 			return this;
 		}
-		public Builder setSample( int sample ){
+
+		public Builder setSample(int sample) {
 			this.sample = sample;
 			return this;
 		}
-		public Builder setDiseaseImport( DiseaseImport diseaseImport ){
+
+		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
 			this.diseaseImport = diseaseImport;
 			return this;
 		}
-		public Builder setRestrictions( Restrictions restrictions ){
+
+		public Builder setRestrictions(Restrictions restrictions) {
 			this.restrictions = restrictions;
 			return this;
 		}
-		public Builder setMasks( Masks masks ){
+
+		public Builder setMasks(Masks masks) {
 			this.masks = masks;
 			return this;
 		}
-		public Builder setTracing( Tracing tracing ){
+
+		public Builder setTracing(Tracing tracing) {
 			this.tracing = tracing;
 			return this;
 		}
-		public Builder setChristmasModel( ChristmasModel christmasModel ){
+
+		public Builder setChristmasModel(ChristmasModel christmasModel) {
 			this.christmasModel = christmasModel;
 			return this;
 		}
-		public Builder setWeatherModel( WeatherModel weatherModel ){
+
+		public Builder setWeatherModel(WeatherModel weatherModel) {
 			this.weatherModel = weatherModel;
 			return this;
 		}
-		public Builder setSnapshot( Snapshot snapshot ){
+
+		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
 			return this;
 		}
-		public Builder setInfectionModel( Class<? extends InfectionModel> infectionModel ){
+
+		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
 			this.infectionModel = infectionModel;
 			return this;
 		}
-		public Builder setVaccinationModel( Class<? extends VaccinationModel> vaccinationModel ){
+
+		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
-		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot,
-					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult );
+
+		public Builder setLocationBasedRestrictions(LocationBasedRestrictions locationBasedRestrictions) {
+			this.locationBasedRestrictions = locationBasedRestrictions;
+			return this;
 		}
-		public Builder setImportOffset( int importOffset ){
+
+		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {
+			return new SnzBerlinProductionScenario(sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot,
+					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult, locationBasedRestrictions);
+		}
+
+		public Builder setImportOffset(int importOffset) {
 			this.importOffset = importOffset;
 			return this;
 		}
-		public Builder setImportFactor( double imprtFctMult ){
+
+		public Builder setImportFactor(double imprtFctMult) {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
@@ -157,6 +180,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final Class<? extends VaccinationModel> vaccinationModel;
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
+	private final LocationBasedRestrictions locationBasedRestrictions;
 
 
 
@@ -165,15 +189,15 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250,
+		this(1, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250,
 				Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class,
-				4., 0.5, 1. );
+				4., 0.5, 1. , LocationBasedRestrictions.yes);
 	}
 
 	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel,
 					     Snapshot snapshot,
 					     Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
-					     double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult ) {
+					     double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult, LocationBasedRestrictions locationBasedRestrictions ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -188,6 +212,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.importFactorBeforeJune = importFactorBeforeJune;
 		this.importFactorAfterJune = importFactorAfterJune;
 		this.imprtFctMult = imprtFctMult;
+		this.locationBasedRestrictions = locationBasedRestrictions;
 	}
 
 	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -218,12 +243,12 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		config.global().setRandomSeed(7564655870752979346L);
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
@@ -238,7 +263,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 //
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
 //				.addDays(DayOfWeek.SUNDAY);
-		
+
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
@@ -353,7 +378,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			));
 		}
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
-		
+
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
 
@@ -384,13 +409,13 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 				}
 			}
 		}
-		
+
 		inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
 		inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
 		inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
 
 		episimConfig.setInputDays(inputDays);
-		
+
 		//outdoorFractions
 		if (this.weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
@@ -414,9 +439,15 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.restrictions != Restrictions.no) {
 			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 		}
-		
+
+		//location based restrictions
+		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
+			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
+			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+		}
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		return config;
@@ -433,8 +464,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
-		// save some time for not needed inputs
-		config.facilities().setInputFile(null);
+		// save some time for not needed inputs (facilities are needed for location based restrictions)
+		if (locationBasedRestrictions == LocationBasedRestrictions.no) {
+			config.facilities().setInputFile(null);
+		}
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
 
