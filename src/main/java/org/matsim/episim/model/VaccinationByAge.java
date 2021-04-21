@@ -22,10 +22,11 @@ public class VaccinationByAge implements VaccinationModel {
 	}
 
 	@Override
-	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, int availableVaccinations, int iteration, double now) {
+	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, int iteration, double now) {
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-				.filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+				.filter(p -> p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no))
+				.filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 				.collect(Collectors.toList());
 
 		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
@@ -37,7 +38,7 @@ public class VaccinationByAge implements VaccinationModel {
 		int vaccinated = 0;
 		for (int i = 0; i < candidates.size() && vaccinationsLeft > 0; i++) {
 			EpisimPerson randomPerson = candidates.get(i);
-			randomPerson.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, iteration);
+			vaccinate(randomPerson, iteration, reVaccination);
 			vaccinationsLeft--;
 		}
 
