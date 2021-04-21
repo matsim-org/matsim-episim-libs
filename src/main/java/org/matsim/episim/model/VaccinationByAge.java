@@ -23,6 +23,10 @@ public class VaccinationByAge implements VaccinationModel {
 
 	@Override
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, int iteration, double now) {
+
+		if (availableVaccinations == 0)
+			return 0;
+
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
 				.filter(p -> p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no))
