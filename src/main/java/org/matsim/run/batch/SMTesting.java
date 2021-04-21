@@ -56,7 +56,8 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		Config config = module.config();
 //		config.global().setRandomSeed(params.seed);
 
-		config.global().setRandomSeed(4711);
+		config.global().setRandomSeed(3831662765844904176L);
+//		config.global().setRandomSeed(4711);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		
@@ -151,7 +152,9 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 
 		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayVariant.put(LocalDate.parse("2020-11-25"), 1);
+		infPerDayVariant.put(LocalDate.parse("2020-12-05"), 1);
+//		infPerDayVariant.put(LocalDate.parse("2020-11-25"), 1);
+
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
 		
 		//easter model. input days are set in productionScenario
@@ -205,6 +208,10 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 			builder.restrict(restrictionDate, 0.78 * 0.5, "leisure", "visit");
 		}
 
+		if (params.leisure.equals("noCurfew")) {
+			builder.restrict(restrictionDate, Restriction.ofClosingHours(0, 0), "leisure", "visit");
+			curfewCompliance.put(restrictionDate, 0.0);
+		}
 		
 				
 		
@@ -276,13 +283,24 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 //				"educ_other", Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.
 //				)));
 		
-		double leisureRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[2]) / 100.;
-		double workRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[1]) / 100.;
-		double eduRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.;
-
+		double leisureRate;
+		double workRate;
+		double eduRate;
 		double leisureW10 = 0.002 * 3_570_000 / 1_320_000;
 		double leisureW11 = 0.004 * 3_570_000 / 1_320_000;
 		double leisureW12 = 0.005 * 3_570_000 / 1_320_000;
+		
+		if (!params.testingRateEduWorkLeisure.contains("current")) {
+			leisureRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[2]) / 100.;
+			workRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[1]) / 100.;
+			eduRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.;
+		}
+		
+		else {
+			leisureRate = leisureW12;
+			workRate = 0.;
+			eduRate = 0.;
+		}
 
 		testingConfigGroup.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", Map.of(
@@ -329,7 +347,8 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 				
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(2.0);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		
 //		if (!params.B1351.equals("no")) {
@@ -388,6 +407,7 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 //		double testingRateEdu;
 		
 		@StringParameter({
+			"current",
 			"0-0-0", "20-0-0", "20-20-0", "20-20-10", 
 //			"20-20-20", 
 //			"40-0-0", "40-20-0","40-20-2", "40-20-10", "40-20-20", "40-40-0", "40-40-2", "40-40-10", "40-40-20"
@@ -397,7 +417,7 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		@StringParameter({"yes"})
 		public String easterModel;
 		
-		@StringParameter({"current", "c_19-5_50pct", "c_19-5_100pct", "c_21-5_100pct", "c_0-24_100pct", "c_0-24_50pct"})
+		@StringParameter({"current", "c_19-5_50pct", "c_19-5_100pct", "c_21-5_100pct", "c_0-24_100pct", "c_0-24_50pct", "noCurfew"})
 		public String leisure;
 		
 		@StringParameter({"no", "ffp"})
@@ -409,7 +429,7 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 //		@Parameter({1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3})
 //		double householdCompliance;
 		
-		@StringParameter({"yes"})
+		@StringParameter({"yes", "no"})
 		String outdoorModel;
 		
 		@StringParameter({"no", "after3weeks"})

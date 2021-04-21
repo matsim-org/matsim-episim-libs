@@ -21,6 +21,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 	private static final String EFFECTIVENESS = "effectiveness";
 	private static final String CAPACITY = "vaccinationCapacity";
+	private static final String RECAPACITY = "reVaccinationCapacity";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -38,6 +39,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of vaccinations available per day.
 	 */
 	private final NavigableMap<LocalDate, Integer> vaccinationCapacity = new TreeMap<>();
+
+	/**
+	 * Amount of re-vaccinations available per day.
+	 */
+	private final NavigableMap<LocalDate, Integer> reVaccinationCapacity = new TreeMap<>();
 
 	/**
 	 * Default constructor.
@@ -93,6 +99,32 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(CAPACITY)
 	String getVaccinationCapacityString() {
 		return JOINER.join(vaccinationCapacity);
+	}
+
+	/**
+	 * @see #setVaccinationCapacity_pers_per_day(Map)
+	 */
+	public void setReVaccinationCapacity_pers_per_day(Map<LocalDate, Integer> capacity) {
+		reVaccinationCapacity.clear();
+		reVaccinationCapacity.putAll(capacity);
+	}
+
+	public NavigableMap<LocalDate, Integer> getReVaccinationCapacity() {
+		return reVaccinationCapacity;
+	}
+
+	@StringSetter(RECAPACITY)
+	void setReVaccinationCapacity(String capacity) {
+
+		Map<String, String> map = SPLITTER.split(capacity);
+		setReVaccinationCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+		)));
+	}
+
+	@StringGetter(RECAPACITY)
+	String getReVaccinationCapacityString() {
+		return JOINER.join(reVaccinationCapacity);
 	}
 
 

@@ -52,8 +52,8 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 			susceptibility[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeSusceptibility(), i);
 			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
 		}
-
-		distribution = new NormalDistribution(0, 5);
+		// based on https://arxiv.org/abs/2007.06602
+		distribution = new NormalDistribution(0.5, 2.6);
 		scale = 1 / distribution.density(distribution.getNumericalMean());
 	}
 
@@ -126,13 +126,11 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 	public static void main(String[] args) {
 		// test distribution
-		NormalDistribution dist = new NormalDistribution(0, 2.5);
+		NormalDistribution dist = new NormalDistribution(0.5, 2.6);
 
-		System.out.println(dist.density(-5));
-		System.out.println(dist.density(-2));
-		System.out.println(dist.density(0));
-		System.out.println(dist.density(5));
-		System.out.println(dist.density(10));
+		for(int i = -5; i <= 10; i++) {
+			System.out.println(i + " " + dist.density(i));	
+		}
 
 	}
 }
