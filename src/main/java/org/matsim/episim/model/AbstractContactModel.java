@@ -75,6 +75,9 @@ public abstract class AbstractContactModel implements ContactModel {
 	 */
 	private double curfewCompliance;
 
+	/**
+	 * Map of each ActivityFacility with the corresponding subdistrict
+	 */
 	private final Map<String, String> subdistrictFacilities;
 
 
@@ -225,7 +228,8 @@ public abstract class AbstractContactModel implements ContactModel {
 		Restriction r = restrictions.get(act.params.getContainerName());
 		Double remainingFraction = r.getRemainingFraction();
 
-		// So far, location based restrictions are only applied for EpisimFacilities, not EpisimVehicles
+		// Applies location based restriction, if applicable
+		// So far, they are only applied for EpisimFacilities, not EpisimVehicles
 		if (episimConfig.getDestrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes) && container != null) {
 			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
 				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
