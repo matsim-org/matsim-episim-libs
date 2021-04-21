@@ -68,16 +68,23 @@ public final class DefaultInfectionModel implements InfectionModel {
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
 		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 
+		double vaccineEffectiveness;
+		// use re vaccine effectiveness if person received the new vaccine
+		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)
+			vaccineEffectiveness = virusStrain.getReVaccineEffectiveness();
+		else
+			vaccineEffectiveness = virusStrain.getVaccineEffectiveness();
+
 		// full effect
 		if (daysVaccinated >= config.getDaysBeforeFullEffect())
-			return 1 - config.getEffectiveness() * virusStrain.getVaccineEffectiveness();
+			return 1 - config.getEffectiveness() * vaccineEffectiveness;
 
 		// slightly reduced but nearly full effect after 3 days
 		else if (daysVaccinated >= 3) {
-			return 1 - config.getEffectiveness() * 0.94 * virusStrain.getVaccineEffectiveness();
+			return 1 - config.getEffectiveness() * 0.94 * vaccineEffectiveness;
 		}
 
-		return 1 * virusStrain.getVaccineEffectiveness();
+		return 1 * vaccineEffectiveness;
 
 	}
 }
