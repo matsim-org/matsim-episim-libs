@@ -212,6 +212,10 @@ public final class InfectionEventHandler implements Externalizable {
 		return iteration > 0 && !progressionModel.canProgress(report);
 	}
 
+	public void finish() {
+		executor.shutdown();
+	}
+
 	/**
 	 * Initializes all needed data structures before the simulation can start.
 	 * This *always* needs to be called before starting.
@@ -630,15 +634,19 @@ public final class InfectionEventHandler implements Externalizable {
 		for (EpisimPerson person : personMap.values()) {
 			progressionModel.updateState(person, iteration);
 		}
-
+		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
+		progressionModel.afterStateUpdates(personMap, iteration);
+		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "finished", -2);
 		reporting.reportCpuTime(iteration, "ProgressionModel", "finished", -1);
 
 		reporting.reportCpuTime(iteration, "VaccinationModel", "start", -1);
 		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);
-		vaccinationModel.handleVaccination(personMap, false, (int) (available * episimConfig.getSampleSize()), iteration, now);
+		if (available > 0)
+			vaccinationModel.handleVaccination(personMap, false, (int) (available * episimConfig.getSampleSize()), iteration, now);
 
 		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), 0, date);
-		vaccinationModel.handleVaccination(personMap, true, (int) (available * episimConfig.getSampleSize()), iteration, now);
+		if (available > 0)
+			vaccinationModel.handleVaccination(personMap, true, (int) (available * episimConfig.getSampleSize()), iteration, now);
 		reporting.reportCpuTime(iteration, "VaccinationModel", "finished", -1);
 
 		this.iteration = iteration;
@@ -652,9 +660,9 @@ public final class InfectionEventHandler implements Externalizable {
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration, report.date);
-		reporting.reportCpuTime(iteration, "ReportTimeUse", "start", -1);
+		reporting.reportCpuTime(iteration, "ReportTimeUse", "start", -2);
 		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);
-		reporting.reportCpuTime(iteration, "ReportTimeUse", "finished", -1);
+		reporting.reportCpuTime(iteration, "ReportTimeUse", "finished", -2);
 		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
