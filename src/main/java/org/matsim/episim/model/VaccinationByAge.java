@@ -18,6 +18,8 @@ public class VaccinationByAge implements VaccinationModel {
 
 	private final int MAX_AGE = 130;
 
+	private final int MINIMUM_AGE_FOR_VACCINATIONS = 6;
+
 	@Inject
 	public VaccinationByAge(SplittableRandom rnd) {
 		this.rnd = rnd;
@@ -25,51 +27,42 @@ public class VaccinationByAge implements VaccinationModel {
 
 	@Override
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, int iteration, double now) {
-		List<EpisimPerson> candidates = new ArrayList<EpisimPerson>(persons.values().size());
+		if (availableVaccinations == 0)
+			return 0;
 
-		// to improve the performance of sort below, we first remove the persons
-		// from the candidates, that are you young to have a chance to get
-		// a vaccination. 
-		int ageGroup[] = new int[MAX_AGE];
+		// perAge is an ArrayList where we have for each age (in years) an
+		// ArrayList of Persons that are qualified for a vaccination
+		ArrayList<ArrayList<EpisimPerson>> perAge = new ArrayList<ArrayList<EpisimPerson>>(MAX_AGE);
 		for (EpisimPerson p : persons.values()) {
 			if (p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
 				p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes :
 											                 EpisimPerson.VaccinationStatus.no) &&
 				p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
-				int age = p.getAge();
-				ageGroup[age]++;
-				candidates.add(p);
+				perAge.get(p.getAge()).add(p);
 			}
 		}
 
-		// check the minimal age, that can potentially get an vaccination.
-		int minAge = MAX_AGE;
-		int numPersons = 0;
-		while (numPersons < availableVaccinations) {
-			minAge--;
-			numPersons += ageGroup[minAge];
-		}
-		final int compareToAge = minAge;
-
-		// and remove the persons, that are younger
-		candidates = candidates.stream()
-			    .filter(p -> p.getAge() >= compareToAge)
-				.collect(Collectors.toList());
-
-		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
-
-		candidates = candidates.stream()
-				.sorted(Comparator.comparingInt(EpisimPerson::getAge).reversed())
-			    .collect(Collectors.toList());
-
+		int age = MAX_AGE;
 		int vaccinationsLeft = availableVaccinations;
-		int vaccinated = 0;
-		for (int i = 0; i < candidates.size() && vaccinationsLeft > 0; i++) {
-			EpisimPerson randomPerson = candidates.get(i);
-			vaccinate(randomPerson, iteration, reVaccination);
-			vaccinationsLeft--;
+		while (vaccinationsLeft > 0) {
+			if (perAge.get(age).size() == 0) {
+				age--;
+				if (age < MINIMUM_AGE_FOR_VACCINATIONS)
+					return availableVaccinations - vaccinationsLeft;
+				// there are not enough vaccinationsLeft for the Persons of
+				// this age, so we shuffle this set for we get the first n Persons
+				if (perAge.get(age).size() > vaccinationsLeft)
+					Collections.shuffle(perAge.get(age), new Random(EpisimUtils.getSeed(rnd)));
+				continue;
+			}
+			ArrayList<EpisimPerson> candidates = perAge.get(age);
+			for (int i = 0; i < candidates.size() && vaccinationsLeft > 0; i++) {
+				EpisimPerson person = candidates.get(i);
+				vaccinate(person, iteration, reVaccination);
+				vaccinationsLeft--;
+			}
 		}
 
-		return vaccinated;
+		return availableVaccinations;
 	}
 }
