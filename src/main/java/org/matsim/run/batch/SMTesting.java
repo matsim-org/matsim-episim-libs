@@ -100,55 +100,14 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 			builder.restrict(restrictionDate, .2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		}
 		
-		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(28);
-		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
-		// 4/3 because model is bigger than just Berlin
-		
-		Map<LocalDate, Integer> vaccinations = new HashMap<>();
-		
-		int population = 4_800_000;
-		
-		vaccinations.put(LocalDate.parse("2020-01-01"), 0);
-		
-		vaccinations.put(LocalDate.parse("2020-12-27"), (int) (0.003 * population / 6));
-		vaccinations.put(LocalDate.parse("2021-01-02"), (int) ((0.007 - 0.004) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-01-09"), (int) ((0.013 - 0.007) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-01-16"), (int) ((0.017 - 0.013) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-01-23"), (int) ((0.024 - 0.017) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-01-30"), (int) ((0.030 - 0.024) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-02-06"), (int) ((0.034 - 0.030) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-02-13"), (int) ((0.039 - 0.034) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-02-20"), (int) ((0.045 - 0.039) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-02-27"), (int) ((0.057 - 0.045) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-03-06"), (int) ((0.071 - 0.057) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-03-13"), (int) ((0.088 - 0.071) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-03-20"), (int) ((0.105 - 0.088) * population / 7));
-		vaccinations.put(LocalDate.parse("2021-03-27"), (int) ((0.120 - 0.105) * population / 7));
 		
 		if (!params.vaccinationRate.equals("current")) {
+			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+			Map<LocalDate, Integer> vaccinations = vaccinationConfig.getReVaccinationCapacity();
 			vaccinations.put(restrictionDate, (int) (Double.parseDouble(params.vaccinationRate) * 4./3.));
+			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
 
-		// https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
-		//1.1. 0.3
-		//8.1. 0.7
-		//15.1. 1.3
-		//22.1. 1.7
-		//29.1. 2.4
-		//5.2. 3.
-		//12.2. 3.4
-		//19.2. 3.9
-		//26.2. 4.5
-		// 5.3. 5.7
-		//12.3. 7.1
-		//19.3. 8.8
-		//26.3.	10.5
-		//2.4. 12
-
-		
-		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 
 		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
@@ -156,32 +115,7 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 //		infPerDayVariant.put(LocalDate.parse("2020-11-25"), 1);
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
-		
-		//easter model. input days are set in productionScenario
-		if (params.easterModel.equals("yes")) {
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				double fraction;
-				switch (params.activityLevel) {
-				case "current":
-					fraction = 0.78;
-					break;
-				case "trend":
-					fraction = 0.78;
-					break;
-				case "67pct":
-					fraction = 0.78;
-					break;
-				default:
-					throw new RuntimeException();
-				}
-				builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
-				builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
-				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
-				builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
-				builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
-			}
-		}
+
 		
 		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
