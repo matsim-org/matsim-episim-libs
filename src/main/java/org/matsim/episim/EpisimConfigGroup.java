@@ -29,7 +29,6 @@ import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.apache.poi.ss.formula.functions.T;
 import org.magnos.trie.Trie;
 import org.magnos.trie.TrieMatch;
 import org.magnos.trie.Tries;
@@ -68,6 +67,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
+	private static final String SNAPSHOT_PREFIX = "snapshotPrefix";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
 	private static final String LEISUREOUTDOORFRACTION = "leisureOutdoorFraction";
 	private static final String INPUT_DAYS = "inputDays";
@@ -76,6 +76,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
 	private static final String ACTIVITY_HANDLING = "activityHandling";
 	private static final String THREADS = "threads";
+	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -137,6 +138,12 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Path to snapshot file.
 	 */
 	private String startFromSnapshot = null;
+
+	/**
+	 * Filename prefix for snapshot.
+	 */
+	private String snapshotPrefix = "episim-snapshot";
+
 	/**
 	 * How the internal rng state should be handled.
 	 */
@@ -166,6 +173,11 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			19, 0.85,
 			20, 1d
 	));
+
+	/**
+	 * Compliance if a curfew is set.
+	 */
+	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
 
 	/**
 	 * Default constructor.
@@ -364,6 +376,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(START_FROM_SNAPSHOT)
 	public void setStartFromSnapshot(String startFromSnapshot) {
 		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	@StringGetter(SNAPSHOT_PREFIX)
+	public String getSnapshotPrefix() {
+		return snapshotPrefix;
+	}
+
+	@StringSetter(SNAPSHOT_PREFIX)
+	public void setSnapshotPrefix(String snapshotPrefix) {
+		this.snapshotPrefix = snapshotPrefix;
 	}
 
 	@StringGetter(SNAPSHOT_SEED)
@@ -599,6 +621,28 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(leisureOutdoorFraction);
 	}
 
+
+	public NavigableMap<LocalDate, Double> getCurfewCompliance() {
+		return curfewCompliance;
+	}
+
+	public void setCurfewCompliance(Map<LocalDate, Double> curfewCompliance) {
+		this.curfewCompliance.clear();
+		this.curfewCompliance.putAll(curfewCompliance);
+	}
+
+	@StringGetter(CURFEW_COMPLIANCE)
+	String getCurfewComplianceString() {
+		return JOINER.join(curfewCompliance);
+	}
+
+	@StringSetter(CURFEW_COMPLIANCE)
+	void setCurfewCompliance(String config) {
+		Map<String, String> map = SPLITTER.split(config);
+		setCurfewCompliance(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
+	}
 
 	/**
 	 * Get remapping of input days.

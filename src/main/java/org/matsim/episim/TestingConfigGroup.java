@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String CAPACITY = "testingCapacity";
 	private static final String RATE = "testingRate";
+	private static final String DAYS = "days";
 	private static final String RATE_PER_ACTIVITY = "testingRatePerActivity";
 	private static final String FALSE_POSITIVE_RATE = "falsePositiveRate";
 	private static final String FALSE_NEGATIVE_RATE = "falseNegativeRate";
@@ -27,6 +29,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
 	private static final String SELECTION = "selection";
+	private static final String ACTIVITY_CAPACITIES = "activityCapacities";
 
 	private static final String GROUPNAME = "episimTesting";
 
@@ -74,6 +77,16 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
 	 */
 	private final Set<String> activities = new HashSet<>();
+
+	/**
+	 * Days on which a person is tested.
+	 */
+	private final Set<DayOfWeek> testDays = new HashSet<>(Set.of(DayOfWeek.MONDAY, DayOfWeek.THURSDAY));
+
+	/**
+	 * Path to csv file for individual activity capacities.
+	 */
+	private String activityCapacities;
 
 	/**
 	 * Default constructor.
@@ -138,6 +151,37 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(HOUSEHOLD_COMPLIANCE)
 	public double getHouseholdCompliance() {
 		return householdCompliance;
+	}
+
+	@StringGetter(ACTIVITY_CAPACITIES)
+	public String getActivityCapacities() {
+		return activityCapacities;
+	}
+
+	@StringSetter(ACTIVITY_CAPACITIES)
+	public void setActivityCapacities(String activityCapacities) {
+		this.activityCapacities = activityCapacities;
+	}
+
+	public Set<DayOfWeek> getTestDays() {
+		return testDays;
+	}
+
+	public void setTestDays(Collection<DayOfWeek> days) {
+		this.testDays.clear();
+		this.testDays.addAll(days);
+	}
+
+
+	@StringGetter(DAYS)
+	String getTestDaysString() {
+		return Joiner.on(",").join(testDays);
+	}
+
+	@StringSetter(DAYS)
+	void setTestDays(String days) {
+		setTestDays(Arrays.stream(days.split(",")).map(DayOfWeek::valueOf)
+				.collect(Collectors.toSet()));
 	}
 
 	/**
@@ -270,7 +314,12 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Test persons that have certain activity at each day.
 		 */
-		ACTIVITIES
+		ACTIVITIES,
+
+		/**
+		 * Test persons at fixed days, if they have certain activity.
+		 */
+		FIXED_ACTIVITIES,
 	}
 
 	public enum Selection {
