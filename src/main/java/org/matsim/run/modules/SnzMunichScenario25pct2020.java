@@ -24,11 +24,12 @@ import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
+import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
@@ -41,8 +42,6 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
-
-import static org.matsim.episim.model.Transition.to;
 
 /**
  * Snz scenario for Munich.
@@ -60,15 +59,18 @@ public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 	/**
 	 * The base policy based on actual restrictions in the past and mobility data
 	 */
-	public static FixedPolicy.ConfigBuilder basePolicy(EpisimConfigGroup episimConfig, File csv, double alpha,
-													   double ciCorrection, String dateOfCiChange, EpisimUtils.Extrapolation extrapolation) throws IOException {
+	public static FixedPolicy.ConfigBuilder basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
+													   long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+													   boolean restrictUniversities) throws IOException {
 
-		ConfigBuilder builder = EpisimUtils.createRestrictionsFromCSV2(episimConfig, csv, alpha, extrapolation);
 
-		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-		builder.restrict(dateOfCiChange, Restriction.ofCiCorrection(ciCorrection), "pt");
+		ConfigBuilder restrictions;
 
-		builder.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+		if (activityParticipation == null) restrictions = FixedPolicy.config();
+		else restrictions = activityParticipation.createPolicy();
+
+		if (restrictSchoolsAndDayCare) {
+		restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
 				.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 //				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
 //				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
@@ -76,12 +78,10 @@ public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
 				.restrict("2020-05-25", 0.3, "educ_kiga")
 
-
 				//TODO kläre, was genau in der Zwischenzeit bis zu Ferienbeginn in den Schulen passiert ist
 //				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary",  "educ_tertiary", "educ_other")
 
-
-//		https://www.schulferien.org/Bayern/bayern.html
+//				https://www.schulferien.org/Bayern/bayern.html
 
 //				//Sommerferien
 				.restrict("2020-07-25", 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other")
@@ -101,15 +101,6 @@ public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2020-11-18", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 				.restrict("2020-11-19", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 
-				//Uni startet wieder mit Präsenzveranstaltungen
-				// https://www.uni-muenchen.de/aktuelles/corona_informationen/studium_lehre/index.html#Vorlesungszeit
-				// TUM kombiniert Präsenz- und digitale VEranstaltungen
-				// https://www.tum.de/die-tum/aktuelles/coronavirus/studium/
-
-				//but maybe that is just different wording for the same thing that laso Berlin does
-//				.restrict("2020-11-02", 0.5, "educ_higher")
-
-
 				//Weihnachtsferien
 				.restrict("2020-12-23", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 				.restrict("2021-01-10", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
@@ -123,8 +114,31 @@ public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 				.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 		;
 
-		double maskCompliance = 0.95;
-		long introductionPeriod = 14;
+
+		}
+		if (restrictUniversities ) {
+			//Uni startet wieder mit Präsenzveranstaltungen
+			// https://www.uni-muenchen.de/aktuelles/corona_informationen/studium_lehre/index.html#Vorlesungszeit
+			// TUM kombiniert Präsenz- und digitale VEranstaltungen
+			// https://www.tum.de/die-tum/aktuelles/coronavirus/studium/
+
+			//but maybe that is just different wording for the same thing that laso Berlin does
+//			.restrict("2020-11-02", 0.5, "educ_higher")
+			restrictions.restrict("2020-11-02", 0.5, "educ_higher")
+			;
+		}
+		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
+
+			String date = e.getKey();
+			Double ciCorrection = e.getValue();
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
+			restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "pt");
+		}
+
+
+		if (maskCompliance == 0) return restrictions;
+
 		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 		double clothFraction = maskCompliance * 0.9;
 		double surgicalFraction = maskCompliance * 0.1;
@@ -132,19 +146,20 @@ public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		// in MUC and elsewhere!
 		//MUC started on the same date https://www.muenchen.de/aktuell/2020-04/corona-einkaufen-maerkte-muenchen-mit-maske.html
 
-
 		for (int ii = 0; ii <= introductionPeriod; ii++) {
 			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
-			builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
 					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
 		}
 
 		// mask compliance according to bvg
-		builder.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other");
-		builder.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other");
-		builder.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other");
+		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
 
-		return builder;
+		return restrictions;
+
 	}
 
 	@Provides
@@ -186,19 +201,82 @@ public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 		episimConfig.setHospitalFactor(1.6);
 
 
-		ConfigBuilder configBuilder = null;
-		try {
-			configBuilder = basePolicy(episimConfig, csv, alpha, ciCorrection, dateOfCiChange, EpisimUtils.Extrapolation.none);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
+		BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
 
-		episimConfig.setPolicy(FixedPolicy.class, configBuilder.build());
+		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
 		config.controler().setOutputDirectory("./output-munich-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-500init-schoolsAfterSummer-nn-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter() + "-2"); //TODO
 //		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
 
-
 		return config;
+	}
+
+	public static class BasePolicyBuilder {
+
+		private final EpisimConfigGroup episimConfig;
+
+		private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
+		private long introductionPeriod = 14;
+		private double maskCompliance = 0.95;
+		private boolean restrictSchoolsAndDayCare = true;
+		private boolean restrictUniversities = true;
+		private ActivityParticipation activityParticipation;
+
+		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
+			this.episimConfig = episimConfig;
+			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+			// TODO: 18.04.2021
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210404.csv"));
+		}
+		public void setIntroductionPeriod(long introductionPeriod) {
+			this.introductionPeriod = introductionPeriod;
+		}
+
+		public void setMaskCompliance(double maskCompliance) {
+			this.maskCompliance = maskCompliance;
+		}
+
+		public void setActivityParticipation(ActivityParticipation activityParticipation) {
+			this.activityParticipation = activityParticipation;
+		}
+
+		public ActivityParticipation getActivityParticipation() {
+			return activityParticipation;
+		}
+
+		public void setCiCorrections(Map<String, Double> ciCorrections) {
+			this.ciCorrections = ciCorrections;
+		}
+
+		public Map<String, Double> getCiCorrections() {
+			return ciCorrections;
+		}
+
+		public boolean getRestrictSchoolsAndDayCare() {
+			return restrictSchoolsAndDayCare;
+		}
+
+		public void setRestrictSchoolsAndDayCare(boolean restrictSchoolsAndDayCare) {
+			this.restrictSchoolsAndDayCare = restrictSchoolsAndDayCare;
+		}
+		public boolean getRestrictUniversities() {
+			return restrictUniversities;
+		}
+
+		public void setRestrictUniversities(boolean restrictUniversities) {
+			this.restrictUniversities = restrictUniversities;
+		}
+
+		public ConfigBuilder build() {
+			ConfigBuilder configBuilder = null;
+			try {
+				configBuilder = basePolicy(activityParticipation, ciCorrections,introductionPeriod,
+						maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
+			} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+			return configBuilder;
+		}
+
 	}
 
 }
