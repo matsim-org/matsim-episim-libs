@@ -53,10 +53,10 @@ final public class ReplayEventsTask implements Runnable {
 	}
 
 	/**
-	 * Check whether the handler is responsible for this event.
+	 * Check whether the handler is responsible for the entity with this id.
 	 */
-	boolean handles(Id<?> containerId) {
-		return Math.abs(containerId.hashCode()) % numThreads == taskId;
+	boolean handles(Id<?> id) {
+		return Math.abs(id.hashCode()) % numThreads == taskId;
 	}
 
 	public void run() {

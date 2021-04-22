@@ -447,8 +447,6 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
-		// TODO: needs to be sorted or results will be non deterministic
-
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
@@ -461,9 +459,11 @@ public final class EpisimPerson implements Attributable {
 	 * Get all traced contacts that happened after certain time.
 	 */
 	public synchronized List<EpisimPerson> getTraceableContactPersons(double after) {
+		// needs to be sorted or results will be non deterministic with multithreading
 		return traceableContactPersons.object2DoubleEntrySet()
 				.stream().filter(p -> p.getDoubleValue() >= after)
 				.map(Map.Entry::getKey)
+				.sorted(Comparator.comparing(EpisimPerson::getPersonId))
 				.collect(Collectors.toList());
 
 		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I

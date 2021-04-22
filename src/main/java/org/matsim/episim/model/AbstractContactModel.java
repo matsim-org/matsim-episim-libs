@@ -218,9 +218,9 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
 			return false;
 
-		EpisimPerson.PerformedActivity lastAct = person.getActivity(day, time);
+		EpisimPerson.PerformedActivity lastAct = person.getActivity(day, time % 86400);
 
-		EpisimPerson.PerformedActivity nextAct = person.getNextActivity(day, time);
+		EpisimPerson.PerformedActivity nextAct = person.getNextActivity(day, time % 86400);
 
 		// next activity is only considered if present
 		return actIsRelevant(trParams, restrictions, rnd) &&
