@@ -62,25 +62,25 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 		Offset<Double> offset = Offset.offset(0.01);
 
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.72, offset);
+				.isCloseTo(0.40, offset);
 
 		model.setIteration(3);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.92, offset);
+				.isCloseTo(0.85, offset);
 
 		model.setIteration(5);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(1, offset);
+				.isCloseTo(0.98, offset);
 
 		progression.updateState(p, 4);
 
 		model.setIteration(7);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.92, offset);
+				.isCloseTo(0.62, offset);
 
 		model.setIteration(9);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.72, offset);
+				.isCloseTo(0.22, offset);
 
 	}
 
@@ -94,15 +94,15 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 		Offset<Double> offset = Offset.offset(0.01);
 
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.73, offset);
+				.isCloseTo(0.22, offset);
 
 		model.setIteration(4);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.98, offset);
+				.isCloseTo(0.84, offset);
 
 		model.setIteration(5);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(1, offset);
+				.isCloseTo(0.98, offset);
 
 		model.setIteration(6);
 		assertThat(model.getInfectivity(p))
@@ -110,7 +110,7 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 
 		model.setIteration(9);
 		assertThat(model.getInfectivity(p))
-				.isCloseTo(0.73, offset);
+				.isCloseTo(0.40, offset);
 
 	}
 

@@ -27,7 +27,7 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing capacity left for the day.
 	 */
-	private int testingCapacity = Integer.MAX_VALUE;
+	protected int testingCapacity = Integer.MAX_VALUE;
 
 	/**
 	 * Testing rates for configured activities for current day.
@@ -112,11 +112,15 @@ public class DefaultTestingModel implements TestingModel {
 		// update is run at end of day, the test needs to be for the next day
 		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
 
-		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS) {
-			if (dow == DayOfWeek.MONDAY || dow == DayOfWeek.THURSDAY) {
+		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && testingConfig.getTestDays().contains(dow)) {
 				testAndQuarantine(person, day, testingConfig.getTestingRate());
-			}
 		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
+
+			double rate = person.matchActivities(dow, testingConfig.getActivities(),
+					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
+
+			testAndQuarantine(person, day, rate);
+		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && testingConfig.getTestDays().contains(dow)) {
 
 			double rate = person.matchActivities(dow, testingConfig.getActivities(),
 					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
@@ -127,17 +131,19 @@ public class DefaultTestingModel implements TestingModel {
 
 	/**
 	 * Perform testing and quarantine person.
+	 *
+	 * @return true if the person was tested (test result does not matter)
 	 */
-	private void testAndQuarantine(EpisimPerson person, int day, double testingRate) {
+	protected boolean testAndQuarantine(EpisimPerson person, int day, double testingRate) {
 
 		if (testingRate == 0)
-			return;
+			return false;
 
 		if (nonCompliantHouseholds.contains(getHomeId(person)))
-			return;
+			return false;
 
 		if (testingRate != 1d && rnd.nextDouble() >= testingRate)
-			return;
+			return false;
 
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 		if (status == EpisimPerson.DiseaseStatus.infectedButNotContagious || status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered) {
@@ -157,6 +163,7 @@ public class DefaultTestingModel implements TestingModel {
 		}
 
 		testingCapacity--;
+		return true;
 	}
 
 	private void quarantinePerson(EpisimPerson p, int day) {
