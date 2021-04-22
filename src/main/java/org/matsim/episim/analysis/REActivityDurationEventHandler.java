@@ -23,10 +23,12 @@ package org.matsim.episim.analysis;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
 import org.matsim.api.core.v01.events.ActivityStartEvent;
 import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
 import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
+import org.matsim.api.core.v01.population.Person;
 
 /**
  * EventHanlder calculating the number of persons for one activityType and the
@@ -55,6 +57,8 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 			if (!personSetStart.containsKey(personId)) {
 				personSetStart.put(personId, event.getTime());
 			}
+			else
+				personSetStart.put(personId+"_1", event.getTime());
 		}
 	}
 
@@ -74,10 +78,11 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 				HashMap<String, Double> personSetEnd = new HashMap<>();
 				activityEndMap.put(event.getActType().toString(), personSetEnd);
 			}
-			String personId = event.getPersonId().toString();
+			String personId = event.getPersonId().toString();			
 			HashMap<String, Double> personSetStart = activityStartMap.get(event.getActType().toString());
 			HashMap<String, Double> personSetEnd = activityEndMap.get(event.getActType().toString());
 
+			
 			// if no startAcitivity take place. Assume midnight as startTime
 			if (personSetStart != null && !personSetStart.containsKey(personId)) {
 				personSetEnd.put(personId, event.getTime());
@@ -96,8 +101,14 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 					personSetStart.remove(personId);
 				}
 				double duration = event.getTime() - startTime;
-				if (personSetEnd != null && personSetEnd.containsKey(personId))
-					personSetEnd.replace(personId, durationBefore + duration);
+				
+				//change personId if you want to analyze all activities without analyze for summarized result for each person 
+				if (personSetEnd != null && personSetEnd.containsKey(personId)) {
+//					personSetEnd.replace(personId, durationBefore + duration);
+					while (personSetEnd.containsKey(personId))
+						personId = personId+"_1"; 
+				personSetEnd.put(personId, duration);
+				}
 				else
 					personSetEnd.put(personId, duration);
 
