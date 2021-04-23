@@ -219,7 +219,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			this.activityParticipation.setInput(INPUT.resolve("perNeighborhood/BerlinSnzData_daily_until" + untilDate + ".csv"));
 
 
-			if (episimConfig.getDestrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)) {
+			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)) {
 				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
 						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
 						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");

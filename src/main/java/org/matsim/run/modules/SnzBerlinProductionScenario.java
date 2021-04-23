@@ -444,6 +444,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
 			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
 			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());

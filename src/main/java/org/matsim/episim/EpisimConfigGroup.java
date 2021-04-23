@@ -76,6 +76,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
+	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -155,6 +156,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.yes;
+	private String districtLevelRestrictionsAttribute = "";
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -700,13 +702,23 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * District level restrictions for location based restrictions;
 	 */
 	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
-	public DistrictLevelRestrictions getDestrictLevelRestrictions() {
+	public DistrictLevelRestrictions getDistrictLevelRestrictions() {
 		return this.districtLevelRestrictions;
 	}
 
 	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
 	public void setDistrictLevelRestrictions(DistrictLevelRestrictions districtLevelRestrictions) {
 		this.districtLevelRestrictions = districtLevelRestrictions;
+	}
+
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public String getDistrictLevelRestrictionsAttribute() {
+		return this.districtLevelRestrictionsAttribute;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public void setDistrictLevelRestrictionsAttribute(String districtLevelRestrictionsAttribute) {
+		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
 
 	@Override

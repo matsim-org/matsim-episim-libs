@@ -80,7 +80,7 @@ public final class CreateRestrictionsFromCSV implements ActivityParticipation {
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
 		// If active, the remaining fraction is calculated and saved for each subdistrict
-		boolean districtSpecificValuesActive = episimConfig.getDestrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+		boolean districtSpecificValuesActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
 		// Global Map
