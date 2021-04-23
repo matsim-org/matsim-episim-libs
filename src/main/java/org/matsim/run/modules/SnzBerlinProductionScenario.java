@@ -80,7 +80,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
 
-		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.yes;
+		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
 
 		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
@@ -180,7 +180,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private SnzBerlinProductionScenario() {
 		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, EasterModel.yes, WeatherModel.midpoints_175_250,
 				Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class,
-				4., 0.5, 1.,LocationBasedRestrictions.yes );
+				4., 0.5, 1.,LocationBasedRestrictions.no );
 	}
 
 	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel,EasterModel easterModel, WeatherModel weatherModel,

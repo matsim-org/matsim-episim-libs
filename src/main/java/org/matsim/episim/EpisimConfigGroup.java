@@ -155,7 +155,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
-	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.yes;
+	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.

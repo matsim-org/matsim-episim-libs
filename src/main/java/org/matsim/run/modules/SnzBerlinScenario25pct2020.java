@@ -216,7 +216,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			String untilDate = "20210404";
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("perNeighborhood/BerlinSnzData_daily_until" + untilDate + ".csv"));
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
 
 
 			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)) {
