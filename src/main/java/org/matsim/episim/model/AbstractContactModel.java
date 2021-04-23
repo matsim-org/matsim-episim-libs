@@ -238,8 +238,8 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes) && container != null) {
 			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
 				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
-				if (r.getDistrictSpecficValues().containsKey(subdistrict)) {
-					remainingFraction = r.getDistrictSpecficValues().get(subdistrict);
+				if (r.getDistrictSpecificValues().containsKey(subdistrict)) {
+					remainingFraction = r.getDistrictSpecificValues().get(subdistrict);
 				}
 			}
 		}

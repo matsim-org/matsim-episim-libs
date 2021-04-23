@@ -211,14 +211,14 @@ public final class FixedPolicy extends ShutdownPolicy {
 			if (activities.length == 0)
 				throw new IllegalArgumentException("No activities given");
 
-			Map<String, Double> districtSpecficValues = restriction.getDistrictSpecficValues();
+			Map<String, Double> districtSpecificValues = restriction.getDistrictSpecificValues();
 
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
 
 				// Because of merging, each activity needs a separate restriction
 				Restriction clone = Restriction.clone(restriction);
-				clone.setDistrictSpecificValues(districtSpecficValues);
+				clone.setDistrictSpecificValues(districtSpecificValues);
 
 				// merge if there is an entry already
 				if (p.containsKey(date))
@@ -239,9 +239,9 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
 		}
 
-		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecficValue, double fraction, String... activities) {
+		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecificValue, double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
-			restriction.setDistrictSpecificValues(districtSpecficValue);
+			restriction.setDistrictSpecificValues(districtSpecificValue);
 
 			return restrictWithDistrict(date.toString(), restriction, activities);
 		}
@@ -333,7 +333,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
 				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,
-						null, null, null, null, null, restriction), activities);
+						null, null, null, null, null, new HashMap<String, Double>(), restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}
