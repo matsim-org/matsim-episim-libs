@@ -79,6 +79,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
+	private final VirusStrainConfigGroup strainConfig;
 
 	/**
 	 * Counts how many infections occurred at each location.
@@ -116,9 +117,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private long prevShowingSymptoms;
 
 	@Inject
-	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
+	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, VirusStrainConfigGroup strainConfig) {
 		super(rnd, episimConfig);
 		this.tracingConfig = tracingConfig;
+		this.strainConfig = strainConfig;
 
 		Config config = episimConfig.getProgressionConfig();
 
@@ -318,7 +320,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 					return DiseaseStatus.recovered;
 
 			case showingSymptoms:
-				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person))
+				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person) * strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
 					return DiseaseStatus.seriouslySick;
 				else
 					return DiseaseStatus.recovered;
