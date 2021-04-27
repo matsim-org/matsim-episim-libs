@@ -35,8 +35,9 @@ public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
 	 * Constructor as in {@link ConfigurableProgressionModel}.
 	 */
 	@Inject
-	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
-		super(rnd, episimConfig, tracingConfig);
+	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	                                    VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
+		super(rnd, episimConfig, tracingConfig, strainConfig, vaccinationConfig);
 	}
 
 	@Override

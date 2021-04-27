@@ -56,6 +56,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
+	public static enum Vaccinations {yes, no}
 	public static enum ChristmasModel {no, restrictive, permissive}
 	public static enum EasterModel {yes, no}
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
@@ -63,13 +64,14 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum LocationBasedRestrictions {yes, no}
 
 
-	public static class Builder {
+	public static class Builder{
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
+		private Vaccinations vaccinations = Vaccinations.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
 		private EasterModel easterModel = EasterModel.yes;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
@@ -81,7 +83,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private double importFactorAfterJune = 0.5;
 
 		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
-
 
 		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
@@ -111,6 +112,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.tracing = tracing;
 			return this;
 		}
+		public Builder setVaccinations( Vaccinations vaccinations ){
+			this.vaccinations = vaccinations;
+			return this;
+		}
 		public Builder setChristmasModel( ChristmasModel christmasModel ){
 			this.christmasModel = christmasModel;
 			return this;
@@ -136,8 +141,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel,easterModel, weatherModel, snapshot,
-					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult,locationBasedRestrictions);
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, vaccinations, christmasModel, easterModel, weatherModel, snapshot,
+					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult,locationBasedRestrictions );
 		}
 		public Builder setImportOffset( int importOffset ){
 			this.importOffset = importOffset;
@@ -161,6 +166,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final Restrictions restrictions;
 	private final Masks masks;
 	private final Tracing tracing;
+	private final Vaccinations vaccinations;
 	private final ChristmasModel christmasModel;
 	private final EasterModel easterModel;
 	private final Snapshot snapshot;
@@ -178,20 +184,20 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, EasterModel.yes, WeatherModel.midpoints_175_250,
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Vaccinations.yes, ChristmasModel.restrictive, EasterModel.yes, WeatherModel.midpoints_175_250,
 				Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class,
-				4., 0.5, 1.,LocationBasedRestrictions.no );
+				4., 0.5, 1., LocationBasedRestrictions.no );
 	}
 
-	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel,EasterModel easterModel, WeatherModel weatherModel,
-					     Snapshot snapshot,
-					     Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
-					     double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult, LocationBasedRestrictions locationBasedRestrictions ) {
+	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Vaccinations vaccinations, ChristmasModel christmasModel, EasterModel easterModel,
+			WeatherModel weatherModel, Snapshot snapshot, Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
+					     double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult, LocationBasedRestrictions locationBasedRestrictions) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
 		this.masks = masks;
 		this.tracing = tracing;
+		this.vaccinations = vaccinations;
 		this.christmasModel = christmasModel;
 		this.easterModel = easterModel;
 		this.weatherModel = weatherModel;
@@ -444,7 +450,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 		//vacinations
-		{
+		if (this.vaccinations.equals(Vaccinations.yes)) {
 			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 			vaccinationConfig.setEffectiveness(0.9);
 			vaccinationConfig.setDaysBeforeFullEffect(28);

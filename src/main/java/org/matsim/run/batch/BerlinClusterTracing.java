@@ -129,8 +129,9 @@ public final class BerlinClusterTracing implements BatchRun<BerlinClusterTracing
 		@Inject
 		public CustomProgressionModel(
 				@Named("symptomatic") double symptomatic,
-				SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
-			super(rnd, episimConfig, tracingConfig);
+				SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig, VirusStrainConfigGroup strainConfig,
+				VaccinationConfigGroup vaccinationConfig) {
+			super(rnd, episimConfig, tracingConfig, strainConfig, vaccinationConfig);
 			this.symptomatic = symptomatic;
 		}
 

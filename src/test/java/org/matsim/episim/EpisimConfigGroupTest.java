@@ -52,6 +52,29 @@ public class EpisimConfigGroupTest {
 	}
 
 	@Test
+	public void samePrefix() {
+
+		EpisimConfigGroup config = new EpisimConfigGroup();
+
+		EpisimConfigGroup.InfectionParams schoolescort = config.getOrAddContainerParams("schoolescort");
+
+		EpisimConfigGroup.InfectionParams schhool = config.getOrAddContainerParams("school");
+
+		assertThat(config.selectInfectionParams("school"))
+				.isSameAs(schhool);
+
+		assertThat(config.selectInfectionParams("school123"))
+				.isSameAs(schhool);
+
+		assertThat(config.selectInfectionParams("schoolescort"))
+				.isSameAs(schoolescort);
+
+		assertThat(config.selectInfectionParams("schoolescort123"))
+				.isSameAs(schoolescort);
+
+	}
+
+	@Test
 	public void input() throws IOException {
 
 		Config root = ConfigUtils.createConfig();
