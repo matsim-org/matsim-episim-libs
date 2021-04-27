@@ -165,7 +165,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Whether this person can be vaccinated.
 	 */
-	private boolean vaccinable;
+	private boolean vaccinable = true;
 
 	/**
 	 * Lookup age from attributes.
