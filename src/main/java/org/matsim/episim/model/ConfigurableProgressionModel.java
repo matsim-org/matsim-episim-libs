@@ -177,9 +177,17 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			performTracing(person, now - tracingDelay * DAY, day);
 		}
 
-		// clear tracing if not relevant anymore
-		person.clearTraceableContractPersons(now - (tracingDelay + tracingConfig.getTracingDayDistance() + 1) * DAY);
 	}
+
+	@Override
+	public final void afterStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day) {
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
+		int tracingDistance = tracingConfig.getTracingDayDistance();
+		// clear tracing if not relevant anymore
+		persons.values().parallelStream().forEach(person -> 
+		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));											
+	}
+
 
 	/**
 	 * Checks whether person can be released from quarantine.

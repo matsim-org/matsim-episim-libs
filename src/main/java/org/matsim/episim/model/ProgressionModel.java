@@ -50,10 +50,17 @@ public interface ProgressionModel {
 	default void beforeStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day, EpisimReporting.InfectionReport report) {}
 
 	/**
+	 * Called after all state updates for all persons have been done.
+	 */
+	default void afterStateUpdates(Map<Id<Person>, EpisimPerson> persons, int day) {}
+
+	
+	/**
 	 * Checks whether any state transitions are possible. Otherwise the simulation will end.
 	 */
 	boolean canProgress(EpisimReporting.InfectionReport report);
 
+	
 	/**
 	 * Return the number of days between current state and next one.
 	 * @return next day of transition, or -1 if there is none.

@@ -479,27 +479,24 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
-
 		if (iteration == 0) return;
 
 		Object2DoubleMap<String> avg = new Object2DoubleOpenHashMap<>();
 
-		int i = 1;
-		for (EpisimPerson person : persons) {
-
-			// Average += (NewValue - Average) / NewSampleCount;
-			for (String act : activities) {
-				// Compute incremental avg.
-				avg.mergeDouble(act, (person.getSpentTime().getDouble(act) - avg.getDouble(act)) / i, Double::sum);
-
-				// Compute total instead
-//				avg.mergeDouble(act, person.getSpentTime().getDouble(act), Double::sum);
+        activities.parallelStream().forEach(act -> {
+			int i = 1;
+			double timeSpent = 0;
+			for (EpisimPerson person : persons) {
+				timeSpent += (person.getSpentTime().getDouble(act) - timeSpent) / i;
+				i++;
 			}
-
+			avg.put(act, timeSpent);
+		});
+		
+		for (EpisimPerson person : persons) {
 			person.getSpentTime().clear();
-			i++;
 		}
-
+		
 		List<String> order = Lists.newArrayList(activities);
 		Object[] array = new String[order.size()];
 		Arrays.fill(array, "");

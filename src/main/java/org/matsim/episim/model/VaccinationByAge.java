@@ -25,7 +25,6 @@ public class VaccinationByAge implements VaccinationModel {
 
 	@Override
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, int iteration, double now) {
-
 		if (availableVaccinations == 0)
 			return 0;
 

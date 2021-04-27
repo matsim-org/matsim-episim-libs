@@ -124,6 +124,8 @@ public final class EpisimRunner {
 
 		}
 
+		handler.finish();
+
 		reporting.close();
 	}
 
