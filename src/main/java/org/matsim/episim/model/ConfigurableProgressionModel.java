@@ -2,7 +2,6 @@ package org.matsim.episim.model;
 
 import com.google.inject.Inject;
 import com.typesafe.config.Config;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
@@ -18,7 +17,6 @@ import org.matsim.facilities.ActivityFacility;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -79,6 +77,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
+	private final VirusStrainConfigGroup strainConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
 
 	/**
 	 * Counts how many infections occurred at each location.
@@ -116,9 +116,12 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private long prevShowingSymptoms;
 
 	@Inject
-	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig) {
+	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
+	                                    VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
 		super(rnd, episimConfig);
 		this.tracingConfig = tracingConfig;
+		this.strainConfig = strainConfig;
+		this.vaccinationConfig = vaccinationConfig;
 
 		Config config = episimConfig.getProgressionConfig();
 
@@ -326,7 +329,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 					return DiseaseStatus.recovered;
 
 			case showingSymptoms:
-				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person))
+				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person)
+						* strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick()
+						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ? vaccinationConfig.getFactorSeriouslySick() : 1.0))
 					return DiseaseStatus.seriouslySick;
 				else
 					return DiseaseStatus.recovered;

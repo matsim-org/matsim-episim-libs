@@ -548,7 +548,16 @@ public final class InfectionEventHandler implements Externalizable {
 
 		boolean traceable = localRnd.nextDouble() < tracingConfig.getEquipmentRate();
 
-		return new EpisimPerson(id, attrs, traceable, reporting);
+		EpisimPerson p = new EpisimPerson(id, attrs, traceable, reporting);
+
+		Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
+
+		if (compliance == 0.0)
+			p.setTraceable(false);
+		else if (compliance == 1.0 || localRnd.nextDouble() < compliance)
+			p.setTraceable(true);
+
+		return p;
 	}
 
 	/**

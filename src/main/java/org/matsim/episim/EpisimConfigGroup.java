@@ -753,7 +753,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		Optional<String> match = params.mappedNames.stream().filter(s -> paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();
 		if (match.isPresent()) {
-			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params.");
+			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params. Try to define the params in different order.");
 		}
 
 		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
