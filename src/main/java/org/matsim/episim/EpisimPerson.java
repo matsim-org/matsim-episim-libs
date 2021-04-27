@@ -182,6 +182,11 @@ public final class EpisimPerson implements Attributable {
 	private boolean traceable;
 
 	/**
+	 * Whether this person can be vaccinated.
+	 */
+	private boolean vaccinable = true;
+
+	/**
 	 * Lookup age from attributes.
 	 */
 	private static int getAge(Attributes attrs) {
@@ -255,6 +260,7 @@ public final class EpisimPerson implements Attributable {
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
 		traceable = in.readBoolean();
+		vaccinable = in.readBoolean();
 	}
 
 	/**
@@ -301,6 +307,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
 		out.writeBoolean(traceable);
+		out.writeBoolean(vaccinable);
 	}
 
 	public Id<Person> getPersonId() {
@@ -509,8 +516,16 @@ public final class EpisimPerson implements Attributable {
 		return traceable;
 	}
 
-	public void setTraceable(boolean traceable) {
+	void setTraceable(boolean traceable) {
 		this.traceable = traceable;
+	}
+
+	public boolean isVaccinable() {
+		return vaccinable;
+	}
+
+	void setVaccinable(boolean vaccinable) {
+		this.vaccinable = vaccinable;
 	}
 
 	PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement) {
@@ -596,6 +611,13 @@ public final class EpisimPerson implements Attributable {
 		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
 
 		return age;
+	}
+
+	/**
+	 * Return the age of a person or the default age if no age is specified.
+	 */
+	public int getAgeOrDefault(int defaultAge) {
+		return age != -1 ? age : defaultAge;
 	}
 
 	Id<ActivityFacility> getFirstFacilityId(DayOfWeek day) {

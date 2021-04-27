@@ -119,6 +119,12 @@ public class EpisimModule extends AbstractModule {
 
 	@Provides
 	@Singleton
+	public VirusStrainConfigGroup strainConfigGroup(Config config) {
+		return ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+	}
+
+	@Provides
+	@Singleton
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
 
 		// Async writer is used for huge event number
