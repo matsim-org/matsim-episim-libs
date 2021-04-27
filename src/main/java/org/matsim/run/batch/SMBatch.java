@@ -43,7 +43,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 400;
@@ -58,12 +58,12 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		config.global().setRandomSeed( Long.parseLong( params.seed ) );
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		episimConfig.setSnapshotInterval(120);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		
+
 //		//extrapolate restrictions after 17.01.
 //		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 //			if (act.contains("educ")) continue;
@@ -146,9 +146,9 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		}
 
 			episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 //		VirusStrain.B117.infectiousness = params.newVariantInfectiousness;
-		
+
 		return config;
 	}
 
@@ -157,13 +157,13 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 
 //		@IntParameter({3000})
 //		int dailyInitialVaccinations;
-		
+
 //		@StringParameter({"closed"})
 //		public String schools;
-		
+
 //		@StringParameter({"no",})
 //		public String work;
-		
+
 //		@StringParameter({"no"})
 //		public String curfew;
 
@@ -178,7 +178,7 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, SMBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(4),
+				RunParallel.OPTION_TASKS, Integer.toString(4),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
 				RunParallel.OPTION_METADATA
 		};

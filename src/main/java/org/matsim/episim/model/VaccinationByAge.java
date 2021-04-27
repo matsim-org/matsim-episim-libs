@@ -32,7 +32,7 @@ public class VaccinationByAge implements VaccinationModel {
 		// ArrayList of Persons that are qualified for a vaccination
 		final List<EpisimPerson>[] perAge = new List[MAX_AGE];
 
-		for (int i = 0; i <= MAX_AGE; i++)
+		for (int i = 0; i < MAX_AGE; i++)
 			perAge[i] = new ArrayList<>();
 
 		for (EpisimPerson p : persons.values()) {
