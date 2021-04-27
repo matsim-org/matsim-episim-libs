@@ -174,11 +174,12 @@ public final class EpisimUtils {
 	 * @param date         date to search for
 	 * @return value from the map larger or equal to {@code date}
 	 */
-	public static <T> T findValidEntry(Map<LocalDate, T> map, T defaultValue, LocalDate date) {
+	public static <K extends Comparable, T> T findValidEntry(Map<K, T> map, T defaultValue, K date) {
 		T result = defaultValue;
-		for (Map.Entry<LocalDate, T> kv : map.entrySet()) {
-			LocalDate key = kv.getKey();
-			if (key.isBefore(date) || key.isEqual(date)) {
+		for (Map.Entry<K, T> kv : map.entrySet()) {
+			K key = kv.getKey();
+			// key <= date
+			if (key.compareTo(date) <= 0) {
 				result = kv.getValue();
 			}
 		}
