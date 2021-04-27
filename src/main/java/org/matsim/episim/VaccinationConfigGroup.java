@@ -23,6 +23,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String COMPLIANCE = "compliance";
 	private static final String CAPACITY = "vaccinationCapacity";
 	private static final String RECAPACITY = "reVaccinationCapacity";
+	private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -35,6 +36,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Effectiveness, i.e. how much susceptibility is reduced.
 	 */
 	private double effectiveness = 0.96;
+
+	/**
+	 * Factor for probability if person is vaccinated.
+	 */
+	private double factorSeriouslySick = 1.0;
 
 	/**
 	 * Amount of vaccinations available per day.
@@ -83,6 +89,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Set vaccination compliance by age.
+	 *
 	 * @see #compliance
 	 */
 	public void setCompliancePerAge(Map<Integer, Double> compliance) {
@@ -166,5 +173,13 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(reVaccinationCapacity);
 	}
 
+	@StringGetter(FACTOR_SERIOUSLY_SICK)
+	public double getFactorSeriouslySick() {
+		return factorSeriouslySick;
+	}
 
+	@StringSetter(FACTOR_SERIOUSLY_SICK)
+	public void setFactorSeriouslySick(double factorSeriouslySick) {
+		this.factorSeriouslySick = factorSeriouslySick;
+	}
 }

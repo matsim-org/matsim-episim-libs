@@ -49,6 +49,7 @@ public class ConfigurableProgressionModelTest {
 	private TracingConfigGroup tracingConfig;
 	private TestingConfigGroup testingConfig;
 	private VirusStrainConfigGroup strainConfig;
+	private VaccinationConfigGroup vaccinationConfig;
 
 	@Before
 	public void setup() {
@@ -57,9 +58,10 @@ public class ConfigurableProgressionModelTest {
 		testingConfig = new TestingConfigGroup();
 		episimConfig = new EpisimConfigGroup();
 		strainConfig = new VirusStrainConfigGroup();
+		vaccinationConfig = new VaccinationConfigGroup();
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
-		model = new ConfigurableProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig, strainConfig);
+		model = new ConfigurableProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig, strainConfig, vaccinationConfig);
 		model.setIteration(1);
 	}
 
@@ -298,7 +300,7 @@ public class ConfigurableProgressionModelTest {
 						to(DiseaseStatus.recovered, Transition.fixed(0)))
 				.build());
 
-		model = new ConfigurableProgressionModel(new SplittableRandom(1), config, tracingConfig, strainConfig);
+		model = new ConfigurableProgressionModel(new SplittableRandom(1), config, tracingConfig, strainConfig, vaccinationConfig);
 
 		List<Double> recoveredDays = new ArrayList<>();
 
