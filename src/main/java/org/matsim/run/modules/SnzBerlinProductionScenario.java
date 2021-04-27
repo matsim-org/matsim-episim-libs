@@ -62,7 +62,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
-		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.yes;
+		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
 		private Vaccinations vaccinations = Vaccinations.yes;
