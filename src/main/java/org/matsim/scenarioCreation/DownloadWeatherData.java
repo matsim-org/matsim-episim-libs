@@ -54,6 +54,7 @@ public class DownloadWeatherData implements Callable<Integer> {
 
 	private static Logger log = LogManager.getLogger(DownloadWeatherData.class);
 
+	// für munich
 	@Parameters(paramLabel = "STATION", arity = "1", description = "Meteostat station id.", defaultValue = "10382")
 	private String station;
 

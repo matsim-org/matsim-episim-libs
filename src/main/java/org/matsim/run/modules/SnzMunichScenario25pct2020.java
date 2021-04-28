@@ -48,6 +48,7 @@ import java.util.Map;
  *
  * @see AbstractSnzScenario
  */
+// TODO: 23/04/2021 nach productionScenario 
 public final class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 

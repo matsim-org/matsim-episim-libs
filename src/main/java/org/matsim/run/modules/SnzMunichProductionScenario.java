@@ -200,7 +200,6 @@ public class SnzMunichProductionScenario {
 		// same as in the berlin scenario
 		config.global().setRandomSeed(7564655870752979346L);
 
-		// TODO: 17.04.2021
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		// TODO: 17.04.2021
@@ -227,7 +226,6 @@ public class SnzMunichProductionScenario {
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
 
-		// TODO: 17.04.2021 calibration parameter
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
@@ -331,6 +329,7 @@ public class SnzMunichProductionScenario {
 			tracingConfig.setTracingDelay_days(5);
 			tracingConfig.setTraceSusceptible(true);
 			tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
+			// TODO: 23/04/2021
 			int tracingCapacity = 200;
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 					LocalDate.of(2020, 4, 1), (int) (tracingCapacity * 0.2),
@@ -340,7 +339,6 @@ public class SnzMunichProductionScenario {
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 
 		//christmasModel
-		// TODO: 17.04.2021
 		if (this.christmasModel != ChristmasModel.no) {
 
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
@@ -397,7 +395,6 @@ public class SnzMunichProductionScenario {
 		}
 
 		//leisure factor
-		// TODO: 17.04.2021
 		double leisureFactor = 1.6;
 		if (this.restrictions != Restrictions.no) {
 			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
@@ -412,7 +409,6 @@ public class SnzMunichProductionScenario {
 
 	@Provides
 	@Singleton
-	// TODO: 17.04.2021
 	public Scenario scenario(Config config) {
 
 		// guice will use no args constructor by default, we check if this config was initialized
