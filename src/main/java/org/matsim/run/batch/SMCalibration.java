@@ -43,7 +43,7 @@ public class SMCalibration implements BatchRun<SMCalibration.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 400;
@@ -60,13 +60,13 @@ public class SMCalibration implements BatchRun<SMCalibration.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
-		
+
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 //		episimConfig.setSnapshotInterval(120);
 
-		
+
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather.csv").toFile(), SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, params.midPoint1, params.midPoint2,
 					(double) 5.);
@@ -74,9 +74,9 @@ public class SMCalibration implements BatchRun<SMCalibration.Params> {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 //		VirusStrain.B117.infectiousness = 1.35;
-		
+
 		return config;
 	}
 
@@ -87,20 +87,20 @@ public class SMCalibration implements BatchRun<SMCalibration.Params> {
 
 		@Parameter({0.001, 0.01, 0.1, 0.5, 1, 2, 10, 100})
 		double thetaFactor;
-		
+
 		@Parameter({17.5, 20., 22.5})
 		double midPoint1;
-		
+
 		@Parameter({20., 22.5, 25.})
 		double midPoint2;
-		
+
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, SMCalibration.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
 				RunParallel.OPTION_METADATA
 		};

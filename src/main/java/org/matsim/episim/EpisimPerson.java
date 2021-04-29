@@ -260,7 +260,9 @@ public final class EpisimPerson implements Attributable {
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
 		traceable = in.readBoolean();
-		vaccinable = in.readBoolean();
+
+		// vaccinable, which is not restored from snapshot
+		in.readBoolean();
 	}
 
 	/**

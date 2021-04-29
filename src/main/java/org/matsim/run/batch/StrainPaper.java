@@ -34,7 +34,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "strainPaper");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 1500;
@@ -49,41 +49,41 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		episimConfig.setStartFromSnapshot("../episim-snapshot-270-2020-11-20.zip");
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		
+
 		builder.clearAfter("2020-12-14");
-		
+
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 			if (act.contains("educ_higher")) continue;
 			builder.restrict("2020-12-15", params.activityLevel, act);
 		}
-					
+
 		//schools
 		if (params.schools.equals("50%open")) {
 			builder.clearAfter( "2020-12-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 			builder.restrict("2020-12-15", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		}
-		
+
 		if (params.schools.equals("open")) {
 			builder.clearAfter( "2020-12-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 			builder.restrict("2020-12-15", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-		}		
+		}
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		episimConfig.setLeisureOutdoorFraction(0.);
-		
+
 		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayVariant.put(LocalDate.parse(params.b117date), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
-		
+
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		
+
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.b117inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 
@@ -94,16 +94,16 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 		@GenerateSeeds(10)
 		public long seed;
-		
+
 		@StringParameter({"50%open", "open", "activityLevel"})
 		public String schools;
-		
+
 		@StringParameter({"2020-12-15"})
 		String b117date;
-		
+
 		@Parameter({1.35, 1.7, 2.0, 2.5})
 		double b117inf;
-		
+
 		@Parameter({0.47, 0.57, 0.67, 0.77, 0.87})
 		double activityLevel;
 
@@ -113,7 +113,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, StrainPaper.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
 				RunParallel.OPTION_METADATA
 		};
