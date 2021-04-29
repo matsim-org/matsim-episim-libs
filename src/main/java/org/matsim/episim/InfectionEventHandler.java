@@ -561,8 +561,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		if (compliance == 0.0)
 			p.setVaccinable(false);
-		else if (compliance == 1.0 || localRnd.nextDouble() < compliance)
-			p.setVaccinable(true);
+		else p.setVaccinable(compliance == 1.0 || localRnd.nextDouble() < compliance);
 
 		return p;
 	}
