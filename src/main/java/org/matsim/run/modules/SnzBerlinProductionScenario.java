@@ -346,12 +346,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		int spaces = 20;
 
-
-		if (sample == 100) {
-			spaces = 80;
-			// episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.25);
-		}
-
 		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
