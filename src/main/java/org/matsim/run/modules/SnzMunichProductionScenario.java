@@ -11,14 +11,19 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,14 +34,20 @@ public class SnzMunichProductionScenario {
 	// classes should either be final or package-private if not explicitly designed for inheritance.  kai, dec'20
 
 	public static enum DiseaseImport {yes, onlySpring, no}
+
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+
 	public static enum Masks {yes, no}
+
 	public static enum Tracing {yes, no}
+
 	public static enum ChristmasModel {no, restrictive, permissive}
+
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
+
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
-	public static class Builder{
+	public static class Builder {
 		private int importOffset = 0;
 		private int sample = 25;
 		private SnzMunichProductionScenario.DiseaseImport diseaseImport = SnzMunichProductionScenario.DiseaseImport.yes;
@@ -52,63 +63,77 @@ public class SnzMunichProductionScenario {
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
 
-		public SnzMunichProductionScenario.Builder setImportFactorBeforeJune(double importFactorBeforeJune ){
+		public SnzMunichProductionScenario.Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setImportFactorAfterJune(double importFactorAfterJune ){
+
+		public SnzMunichProductionScenario.Builder setImportFactorAfterJune(double importFactorAfterJune) {
 			this.importFactorAfterJune = importFactorAfterJune;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setSample(int sample ){
+
+		public SnzMunichProductionScenario.Builder setSample(int sample) {
 			this.sample = sample;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setDiseaseImport(SnzMunichProductionScenario.DiseaseImport diseaseImport ){
+
+		public SnzMunichProductionScenario.Builder setDiseaseImport(SnzMunichProductionScenario.DiseaseImport diseaseImport) {
 			this.diseaseImport = diseaseImport;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setRestrictions(SnzMunichProductionScenario.Restrictions restrictions ){
+
+		public SnzMunichProductionScenario.Builder setRestrictions(SnzMunichProductionScenario.Restrictions restrictions) {
 			this.restrictions = restrictions;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setMasks(SnzMunichProductionScenario.Masks masks ){
+
+		public SnzMunichProductionScenario.Builder setMasks(SnzMunichProductionScenario.Masks masks) {
 			this.masks = masks;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setTracing(SnzMunichProductionScenario.Tracing tracing ){
+
+		public SnzMunichProductionScenario.Builder setTracing(SnzMunichProductionScenario.Tracing tracing) {
 			this.tracing = tracing;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setChristmasModel(SnzMunichProductionScenario.ChristmasModel christmasModel ){
+
+		public SnzMunichProductionScenario.Builder setChristmasModel(SnzMunichProductionScenario.ChristmasModel christmasModel) {
 			this.christmasModel = christmasModel;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setWeatherModel(SnzMunichProductionScenario.WeatherModel weatherModel ){
+
+		public SnzMunichProductionScenario.Builder setWeatherModel(SnzMunichProductionScenario.WeatherModel weatherModel) {
 			this.weatherModel = weatherModel;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setSnapshot(SnzMunichProductionScenario.Snapshot snapshot ){
+
+		public SnzMunichProductionScenario.Builder setSnapshot(SnzMunichProductionScenario.Snapshot snapshot) {
 			this.snapshot = snapshot;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setInfectionModel(Class<? extends InfectionModel> infectionModel ){
+
+		public SnzMunichProductionScenario.Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
 			this.infectionModel = infectionModel;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel ){
+
+		public SnzMunichProductionScenario.Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
-		public SnzMunichProductionScenario createSnzMunichProductionScenario(){
-			return new SnzMunichProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot,
-					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult );
+
+		public SnzMunichProductionScenario createSnzMunichProductionScenario() {
+			return new SnzMunichProductionScenario(sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot,
+					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult);
 		}
-		public SnzMunichProductionScenario.Builder setImportOffset(int importOffset ){
+
+		public SnzMunichProductionScenario.Builder setImportOffset(int importOffset) {
 			this.importOffset = importOffset;
 			return this;
 		}
-		public SnzMunichProductionScenario.Builder setImportFactor(double imprtFctMult ){
+
+		public SnzMunichProductionScenario.Builder setImportFactor(double imprtFctMult) {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
@@ -117,10 +142,9 @@ public class SnzMunichProductionScenario {
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
 	 */
-	// TODO: 17.04.2021
-	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+	public static final Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/MunichV2/episim-input");
 
-	private final double imprtFctMult ;
+	private final double imprtFctMult;
 	private final int sample;
 	private final int importOffset;
 	private final DiseaseImport diseaseImport;
@@ -139,13 +163,13 @@ public class SnzMunichProductionScenario {
 	private SnzMunichProductionScenario() {
 		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250,
 				Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class,
-				4., 0.5, 1. );
+				4., 0.5, 1.);
 	}
 
 	private SnzMunichProductionScenario(int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel,
 										Snapshot snapshot,
 										Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
-										double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult ) {
+										double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
@@ -178,20 +202,12 @@ public class SnzMunichProductionScenario {
 		return folder.resolve(String.format(base, sample)).toString();
 	}
 
-	// TODO: 18.04.2021
-//	@Override
-//	protected void configure() {
-//		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
-//		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-//		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
-//		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
-//	}
-
 	@Provides
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25) throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -200,10 +216,10 @@ public class SnzMunichProductionScenario {
 		// same as in the berlin scenario
 		config.global().setRandomSeed(7564655870752979346L);
 
-		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
+		// TODO: 02.05.2021 currently no vehicle data
+		// config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
-		// TODO: 17.04.2021
-		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+		config.plans().setInputFile(inputForSample("mu_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_wRestaurants.xml.gz", sample))
 //				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -214,16 +230,13 @@ public class SnzMunichProductionScenario {
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_wRestaurants.xml.gz", sample))
 //				.addDays(DayOfWeek.SUNDAY);
 
-		// TODO: 17.04.2021
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("mu_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		// TODO: 17.04.2021
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("mu_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SATURDAY);
 
-		// TODO: 17.04.2021
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		episimConfig.addInputEventsFile(inputForSample("mu_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
@@ -233,7 +246,8 @@ public class SnzMunichProductionScenario {
 		episimConfig.setHospitalFactor(0.5);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 
-		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
+		if (this.snapshot != Snapshot.no)
+			episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
@@ -251,18 +265,17 @@ public class SnzMunichProductionScenario {
 			}
 			// TODO: 17.04.2021
 			if (this.diseaseImport == DiseaseImport.yes) {
-				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-06-08" ).plusDays( importOffset ),
-						LocalDate.parse( "2020-07-13" ).plusDays( importOffset ), 0.1, 2.7 );
-				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-07-13" ).plusDays( importOffset ),
-						LocalDate.parse( "2020-08-10" ).plusDays( importOffset ), 2.7, 17.9 );
-				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-08-10" ).plusDays( importOffset ),
-						LocalDate.parse( "2020-09-07" ).plusDays( importOffset ), 17.9, 6.1 );
-				interpolateImport( importMap, imprtFctMult*importFactorAfterJune, LocalDate.parse( "2020-10-26" ).plusDays( importOffset ),
-						LocalDate.parse( "2020-12-21" ).plusDays( importOffset ), 6.1, 1.1 );
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-06-08").plusDays(importOffset),
+						LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-07-13").plusDays(importOffset),
+						LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-08-10").plusDays(importOffset),
+						LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
+				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-10-26").plusDays(importOffset),
+						LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
 			}
 			episimConfig.setInfections_pers_per_day(importMap);
-		}
-		else {
+		} else {
 			episimConfig.setInitialInfectionDistrict("Munich");
 			episimConfig.setCalibrationParameter(2.54e-5);
 		}
@@ -270,8 +283,7 @@ public class SnzMunichProductionScenario {
 		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
 			if (this.diseaseImport == DiseaseImport.yes) {
 				episimConfig.setCalibrationParameter(1.6E-5);
-			}
-			else {
+			} else {
 				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
 			}
 		}
@@ -315,7 +327,6 @@ public class SnzMunichProductionScenario {
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
 
 		//tracing
-		// TODO: 17.04.2021
 		if (this.tracing == Tracing.yes) {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 //			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
@@ -329,8 +340,9 @@ public class SnzMunichProductionScenario {
 			tracingConfig.setTracingDelay_days(5);
 			tracingConfig.setTraceSusceptible(true);
 			tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
-			// TODO: 23/04/2021
-			int tracingCapacity = 200;
+			// munich 1561720
+			// berlin 3769962
+			int tracingCapacity = 83;
 			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
 					LocalDate.of(2020, 4, 1), (int) (tracingCapacity * 0.2),
 					LocalDate.of(2020, 6, 15), tracingCapacity
@@ -376,19 +388,17 @@ public class SnzMunichProductionScenario {
 		episimConfig.setInputDays(inputDays);
 
 		//outdoorFractions
-		// TODO: 17.04.2021
 		if (this.weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(INPUT.resolve("berlinWeather.csv").toFile(),
-						INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5. );
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(INPUT.resolve("munichWeather.csv").toFile(),
+						INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
-		}
-		else {
+		} else {
 			episimConfig.setLeisureOutdoorFraction(Map.of(
 					LocalDate.of(2020, 1, 1), 0.)
 			);
@@ -469,5 +479,237 @@ public class SnzMunichProductionScenario {
 
 		return scenario;
 	}
-}
 
+	final static class SnzMunichScenario25pct2020 extends AbstractSnzScenario2020 {
+		/**
+		 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
+		 */
+		static Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/MunichV2/episim-input");
+
+		/**
+		 * The base policy based on actual restrictions in the past and mobility data
+		 */
+		static FixedPolicy.ConfigBuilder basePolicy(ActivityParticipation activityParticipation, Map<String, Double> ciCorrections,
+														   long introductionPeriod, Double maskCompliance, boolean restrictSchoolsAndDayCare,
+														   boolean restrictUniversities) throws IOException {
+
+
+			FixedPolicy.ConfigBuilder restrictions;
+
+			if (activityParticipation == null) restrictions = FixedPolicy.config();
+			else restrictions = activityParticipation.createPolicy();
+
+			if (restrictSchoolsAndDayCare) {
+				restrictions.restrict("2020-03-14", 0.1, "educ_primary", "educ_kiga")
+						.restrict("2020-03-14", 0., "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, clothMaskCompliance, FaceMask.SURGICAL, surgicalMaskCompliance)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES)
+//				.restrict("2020-04-27", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.6, FaceMask.SURGICAL, 0.3)), "pt", "shop_daily", "shop_other")
+						.restrict("2020-05-11", 0.3, "educ_primary")
+						.restrict("2020-05-11", 0.2, "educ_secondary", "educ_higher", "educ_tertiary", "educ_other")
+						.restrict("2020-05-25", 0.3, "educ_kiga")
+
+						//TODO kläre, was genau in der Zwischenzeit bis zu Ferienbeginn in den Schulen passiert ist
+//				.restrict("2020-06-08", 1., "educ_primary", "educ_kiga", "educ_secondary",  "educ_tertiary", "educ_other")
+
+//				https://www.schulferien.org/Bayern/bayern.html
+
+//				//Sommerferien
+						.restrict("2020-07-25", 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other")
+
+						//Ende der Sommerferien
+						.restrict("2020-09-08", 1., "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other")
+
+						//ab hier gilt ein 3-Stufen-Plan für Kiga und Schulen. Stufe 4 würde restriction = 0.5 bedeuten. Tritt in Kraft nach Ermessen des Gesundheitsamtes
+						// https://www.muenchen.de/rathaus/Stadtverwaltung/Referat-fuer-Bildung-und-Sport/Schule/corona.html#drei-stufen-plan_1
+						// https://www.muenchen.de/rathaus/Serviceangebote/familie/kinderbetreuung/corona.html
+
+
+						//Herbstferien
+						.restrict("2020-10-31", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+						.restrict("2020-11-08", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+						.restrict("2020-11-18", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+						.restrict("2020-11-19", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+						//Weihnachtsferien
+						.restrict("2020-12-23", 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+						.restrict("2021-01-10", 1., "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+						//Winterferien
+						.restrict("2021-02-15", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+						.restrict("2021-02-21", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
+						//Osterferien
+						.restrict("2021-03-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+						.restrict("2021-04-11", 1., "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+				;
+
+
+			}
+			if (restrictUniversities) {
+				//Uni startet wieder mit Präsenzveranstaltungen
+				// https://www.uni-muenchen.de/aktuelles/corona_informationen/studium_lehre/index.html#Vorlesungszeit
+				// TUM kombiniert Präsenz- und digitale VEranstaltungen
+				// https://www.tum.de/die-tum/aktuelles/coronavirus/studium/
+
+				//but maybe that is just different wording for the same thing that laso Berlin does
+//			.restrict("2020-11-02", 0.5, "educ_higher")
+				restrictions.restrict("2020-11-02", 0.5, "educ_higher")
+				;
+			}
+			for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
+
+				String date = e.getKey();
+				Double ciCorrection = e.getValue();
+				restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+				restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "quarantine_home");
+				restrictions.restrict(date, Restriction.ofCiCorrection(ciCorrection), "pt");
+			}
+
+
+			if (maskCompliance == 0) return restrictions;
+
+			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
+			double clothFraction = maskCompliance * 0.9;
+			double surgicalFraction = maskCompliance * 0.1;
+			// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
+			// in MUC and elsewhere!
+			//MUC started on the same date https://www.muenchen.de/aktuell/2020-04/corona-einkaufen-maerkte-muenchen-mit-maske.html
+
+			for (int ii = 0; ii <= introductionPeriod; ii++) {
+				LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
+				restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+						FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other");
+			}
+
+			// mask compliance according to bvg
+			restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+			restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+			restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+			restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
+
+			return restrictions;
+
+		}
+
+		@Provides
+		@Singleton
+		public Config config() {
+
+			Config config = getBaseConfig();
+
+			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+			episimConfig.setInitialInfections(500);
+			episimConfig.setInitialInfectionDistrict("München");//TODO
+			episimConfig.setSampleSize(0.25);
+			episimConfig.setCalibrationParameter(0.000_002_6);
+			episimConfig.setMaxContacts(3);
+			String startDate = "2020-02-08";
+			episimConfig.setStartDate(startDate);
+
+			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+
+			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
+			double tracingProbability = 0.5;
+			tracingConfig.setTracingProbability(tracingProbability);
+			tracingConfig.setTracingPeriod_days(14);
+			tracingConfig.setMinContactDuration_sec(15 * 60.);
+			tracingConfig.setQuarantineHouseholdMembers(true);
+			tracingConfig.setEquipmentRate(1.);
+			tracingConfig.setTracingDelay_days(2);
+			tracingConfig.setTracingCapacity_pers_per_day(Integer.MAX_VALUE); //TODO
+
+			double alpha = 1.;
+			double ciCorrection = 1.;
+
+			File csv = new File(INPUT.resolve("MunichSnzData_daily_until20200919.csv").toString()); //TODO
+			String dateOfCiChange = "2020-03-08";
+
+			episimConfig.setProgressionConfig(SnzBerlinScenario25pct2020.baseProgressionConfig(Transition.config()).build());
+			episimConfig.setHospitalFactor(1.6);
+
+
+			BasePolicyBuilder basePolicyBuilder = new BasePolicyBuilder(episimConfig);
+
+			episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+			config.controler().setOutputDirectory("./output-munich-25pct-SNZrestrictsFromCSV-newprogr-tracing-linearExtra-inf-500init-schoolsAfterSummer-nn-" + tracingProbability + "-" + alpha + "-" + ciCorrection + "-" + dateOfCiChange + "-" + episimConfig.getStartDate() + "-" + episimConfig.getCalibrationParameter() + "-2"); //TODO
+//		config.controler().setOutputDirectory("./output-berlin-25pct-unrestricted-calibr-" + episimConfig.getCalibrationParameter());
+
+			return config;
+		}
+
+		static class BasePolicyBuilder {
+
+			private final EpisimConfigGroup episimConfig;
+
+			private Map<String, Double> ciCorrections = Map.of("2020-03-07", 0.32);
+			private long introductionPeriod = 14;
+			private double maskCompliance = 0.95;
+			private boolean restrictSchoolsAndDayCare = true;
+			private boolean restrictUniversities = true;
+			private ActivityParticipation activityParticipation;
+
+			public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
+				this.episimConfig = episimConfig;
+				this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+				this.activityParticipation.setInput(INPUT.resolve("MunichSnzData_daily_until20201107.csv"));
+			}
+
+			public void setIntroductionPeriod(long introductionPeriod) {
+				this.introductionPeriod = introductionPeriod;
+			}
+
+			public void setMaskCompliance(double maskCompliance) {
+				this.maskCompliance = maskCompliance;
+			}
+
+			public void setActivityParticipation(ActivityParticipation activityParticipation) {
+				this.activityParticipation = activityParticipation;
+			}
+
+			public ActivityParticipation getActivityParticipation() {
+				return activityParticipation;
+			}
+
+			public void setCiCorrections(Map<String, Double> ciCorrections) {
+				this.ciCorrections = ciCorrections;
+			}
+
+			public Map<String, Double> getCiCorrections() {
+				return ciCorrections;
+			}
+
+			public boolean getRestrictSchoolsAndDayCare() {
+				return restrictSchoolsAndDayCare;
+			}
+
+			public void setRestrictSchoolsAndDayCare(boolean restrictSchoolsAndDayCare) {
+				this.restrictSchoolsAndDayCare = restrictSchoolsAndDayCare;
+			}
+
+			public boolean getRestrictUniversities() {
+				return restrictUniversities;
+			}
+
+			public void setRestrictUniversities(boolean restrictUniversities) {
+				this.restrictUniversities = restrictUniversities;
+			}
+
+			public FixedPolicy.ConfigBuilder build() {
+				FixedPolicy.ConfigBuilder configBuilder = null;
+				try {
+					configBuilder = basePolicy(activityParticipation, ciCorrections, introductionPeriod,
+							maskCompliance, restrictSchoolsAndDayCare, restrictUniversities);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+				return configBuilder;
+			}
+
+		}
+
+	}
+
+}
