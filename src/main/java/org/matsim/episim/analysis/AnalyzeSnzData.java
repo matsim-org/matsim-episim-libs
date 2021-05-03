@@ -49,7 +49,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseOptions {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender
+		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen
 	};
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -65,7 +65,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseOptions selectedArea = AnalyseOptions.Bundeslaender;
+		AnalyseOptions selectedArea = AnalyseOptions.Tuebingen;
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
 		boolean getPercentageResults = false;
@@ -173,6 +173,11 @@ class AnalyzeSnzData implements Callable<Integer> {
 		case Test:
 			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
 			snz.writeDataForCertainArea(outputFolder.resolve("TestSnzData_daily_until.csv"), zipCodesTest,
+					getPercentageResults, setBaseIn2018);
+			break;
+		case Tuebingen:
+			IntSet zipCodesTuebingen = new IntOpenHashSet(List.of(72070, 72072, 72074, 72076));
+			snz.writeDataForCertainArea(outputFolder.resolve("TuebingenSnzData_daily_until.csv"), zipCodesTuebingen,
 					getPercentageResults, setBaseIn2018);
 			break;
 		case Wolfsburg:
