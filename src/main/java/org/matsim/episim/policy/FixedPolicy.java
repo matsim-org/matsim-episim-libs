@@ -24,6 +24,8 @@ import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMap;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
 
 import java.time.LocalDate;
@@ -39,7 +41,8 @@ import java.util.function.Consumer;
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
  */
 public final class FixedPolicy extends ShutdownPolicy {
-	// Classes should be final or non-public if not explicitly designed for inheritance.  kai, dec'20
+
+	private static final Logger log = LogManager.getLogger(FixedPolicy.class);
 
 	/**
 	 * Constructor.
@@ -144,6 +147,12 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 			for (String activity : activities) {
 				Map<String, Object> map = (Map<String, Object>) params.get(activity);
+
+				if (map == null) {
+					log.warn("Activity {} not set", activity);
+					continue;
+				}
+
 				Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
 				while (it.hasNext()) {
 					Map.Entry<String, Object> e = it.next();

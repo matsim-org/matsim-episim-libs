@@ -35,6 +35,7 @@ import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.input.ActivityParticipation;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 
@@ -51,6 +52,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Common utility class for episim.
@@ -172,11 +174,12 @@ public final class EpisimUtils {
 	 * @param date         date to search for
 	 * @return value from the map larger or equal to {@code date}
 	 */
-	public static <T> T findValidEntry(Map<LocalDate, T> map, T defaultValue, LocalDate date) {
+	public static <K extends Comparable, T> T findValidEntry(Map<K, T> map, T defaultValue, K date) {
 		T result = defaultValue;
-		for (Map.Entry<LocalDate, T> kv : map.entrySet()) {
-			LocalDate key = kv.getKey();
-			if (key.isBefore(date) || key.isEqual(date)) {
+		for (Map.Entry<K, T> kv : map.entrySet()) {
+			K key = kv.getKey();
+			// key <= date
+			if (key.compareTo(date) <= 0) {
 				result = kv.getValue();
 			}
 		}
@@ -414,6 +417,30 @@ public final class EpisimUtils {
 
 
 		return map;
+	}
+
+	public static void setRestrictions(FixedPolicy.ConfigBuilder builder, String act, NavigableMap<LocalDate, Double> data, Extrapolation extrapolation) {
+
+		builder.clearAfter(LocalDate.MIN.toString(), act);
+
+		List<Double> trend = new ArrayList<>();
+
+		AtomicReference<LocalDate> start = new AtomicReference<>(LocalDate.parse("2020-02-28"));
+
+		ActivityParticipation.resampleAvgWeekday(data, start.get(), (date, avg) -> {
+			trend.add(avg);
+			start.set(date);
+			builder.restrict(date, avg, act);
+		});
+
+		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
+		start.set(start.get().plusDays(7));
+
+		for (Double predict : ActivityParticipation.extrapolate(recentTrend, 25, extrapolation)) {
+			builder.restrict(start.get(), Math.min(predict, 1), act);
+			start.set(start.get().plusDays(7));
+		}
+
 	}
 
 	public static Map<LocalDate, Double> getOutdoorFractionsFromWeatherData(File weatherCSV, double rainThreshold,

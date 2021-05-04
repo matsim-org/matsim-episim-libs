@@ -126,6 +126,11 @@ public final class EpisimPerson implements Attributable {
 	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
 
 	/**
+	 * Current status for re-vaccination.
+	 */
+	private VaccinationStatus reVaccinationStatus = VaccinationStatus.no;
+
+	/**
 	 * Current {@link TestStatus}.
 	 */
 	private TestStatus testStatus = TestStatus.untested;
@@ -158,14 +163,19 @@ public final class EpisimPerson implements Attributable {
 	private boolean traceable;
 
 	/**
+	 * Whether this person can be vaccinated.
+	 */
+	private boolean vaccinable = true;
+
+	/**
 	 * Lookup age from attributes.
 	 */
-	private static int getAge( Attributes attrs ){
+	private static int getAge(Attributes attrs) {
 		int age = -1;
 
-		for( String attr : attrs.getAsMap().keySet() ){
-			if( attr.contains( "age" ) ){
-				age = Integer.parseInt(attrs.getAttribute( attr ).toString());
+		for (String attr : attrs.getAsMap().keySet()) {
+			if (attr.contains("age")) {
+				age = Integer.parseInt(attrs.getAttribute(attr).toString());
 				break;
 			}
 		}
@@ -191,8 +201,8 @@ public final class EpisimPerson implements Attributable {
 	 * @param persons map of all persons in the simulation
 	 */
 	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons,
-			  Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
-			  Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
+	          Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
+	          Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
 
 		int n = in.readInt();
 		traceableContactPersons.clear();
@@ -222,7 +232,7 @@ public final class EpisimPerson implements Attributable {
 		} else
 			currentContainer = null;
 
-		if (in.readBoolean()){
+		if (in.readBoolean()) {
 			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
 		}
 
@@ -242,11 +252,15 @@ public final class EpisimPerson implements Attributable {
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
+		reVaccinationStatus = VaccinationStatus.values()[in.readInt()];
 		vaccinationDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
 		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
+
+		// vaccinable, which is not restored
+		in.readBoolean();
 	}
 
 	/**
@@ -294,11 +308,13 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(vaccinationStatus.ordinal());
+		out.writeInt(reVaccinationStatus.ordinal());
 		out.writeInt(vaccinationDate);
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
 		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
+		out.writeBoolean(vaccinable);
 	}
 
 	public Id<Person> getPersonId() {
@@ -342,10 +358,22 @@ public final class EpisimPerson implements Attributable {
 		return vaccinationStatus;
 	}
 
+	public VaccinationStatus getReVaccinationStatus() {
+		return reVaccinationStatus;
+	}
+
 	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
 		this.vaccinationStatus = vaccinationStatus;
+		this.vaccinationDate = iteration;
+	}
+
+	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
+		if (this.vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("First vaccination must already be present.");
+		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Re-vaccination can only be set to yes.");
+
+		this.reVaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 	}
 
@@ -463,8 +491,16 @@ public final class EpisimPerson implements Attributable {
 		return traceable;
 	}
 
-	public void setTraceable(boolean traceable) {
+	void setTraceable(boolean traceable) {
 		this.traceable = traceable;
+	}
+
+	public boolean isVaccinable() {
+		return vaccinable;
+	}
+
+	void setVaccinable(boolean vaccinable) {
+		this.vaccinable = vaccinable;
 	}
 
 	void addToTrajectory(Activity trajectoryElement) {
@@ -517,10 +553,11 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
-	 * @param reduce reduce function called on each activities with current result
+	 *
+	 * @param reduce       reduce function called on each activities with current result
 	 * @param defaultValue default value and initial value for the reduce function
 	 */
-	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T,  T> reduce, T defaultValue) {
+	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T, T> reduce, T defaultValue) {
 
 		T result = defaultValue;
 		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
@@ -569,6 +606,13 @@ public final class EpisimPerson implements Attributable {
 		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
 
 		return age;
+	}
+
+	/**
+	 * Return the age of a person or the default age if no age is specified.
+	 */
+	public int getAgeOrDefault(int defaultAge) {
+		return age != -1 ? age : defaultAge;
 	}
 
 	/**

@@ -156,9 +156,9 @@ public final class InfectionEventHandler implements Externalizable {
 
 	@Inject
 	public InfectionEventHandler(Config config, Scenario scenario, ProgressionModel progressionModel, EpisimReporting reporting,
-								 InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
-								 TestingModel testingModel,
-								 SplittableRandom rnd) {
+	                             InitialInfectionHandler initialInfections, ContactModel contactModel, VaccinationModel vaccinationModel,
+	                             TestingModel testingModel,
+	                             SplittableRandom rnd) {
 		this.config = config;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -555,7 +555,15 @@ public final class InfectionEventHandler implements Externalizable {
 
 		boolean traceable = localRnd.nextDouble() < tracingConfig.getEquipmentRate();
 
-		return new EpisimPerson(id, attrs, traceable, reporting);
+		EpisimPerson p = new EpisimPerson(id, attrs, traceable, reporting);
+
+		Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
+
+		if (compliance == 0.0)
+			p.setVaccinable(false);
+		else p.setVaccinable(compliance == 1.0 || localRnd.nextDouble() < compliance);
+
+		return p;
 	}
 
 	/**
@@ -656,7 +664,10 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);
-		vaccinationModel.handleVaccination(personMap, (int) (available * episimConfig.getSampleSize()), iteration, now);
+		vaccinationModel.handleVaccination(personMap, false, (int) (available * episimConfig.getSampleSize()), iteration, now);
+
+		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), 0, date);
+		vaccinationModel.handleVaccination(personMap, true, (int) (available * episimConfig.getSampleSize()), iteration, now);
 
 		this.iteration = iteration;
 

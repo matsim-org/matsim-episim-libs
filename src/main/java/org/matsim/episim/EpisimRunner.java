@@ -61,7 +61,7 @@ public final class EpisimRunner {
 
 	@Inject
 	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider, Provider<ReplayHandler> replay,
-						Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider) {
+	                    Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
@@ -165,7 +165,7 @@ public final class EpisimRunner {
 
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
 
-		Path path = output.resolve(String.format("episim-snapshot-%03d-%s.zip", iteration, date));
+		Path path = output.resolve(episimConfig.getSnapshotPrefix() + String.format("-%03d-%s.zip", iteration, date));
 
 		log.info("Writing snapshot to {}", path);
 

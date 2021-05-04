@@ -31,6 +31,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
@@ -55,7 +56,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 	public static enum Masks {yes, no}
 	public static enum Tracing {yes, no}
+	public static enum Vaccinations {yes, no}
 	public static enum ChristmasModel {no, restrictive, permissive}
+	public static enum EasterModel {yes, no}
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
@@ -67,7 +70,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private Restrictions restrictions = Restrictions.yes;
 		private Masks masks = Masks.yes;
 		private Tracing tracing = Tracing.yes;
+		private Vaccinations vaccinations = Vaccinations.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
+		private EasterModel easterModel = EasterModel.yes;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
 		private Class<? extends InfectionModel> infectionModel = AgeDependentInfectionModelWithSeasonality.class;
@@ -104,8 +109,16 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.tracing = tracing;
 			return this;
 		}
+		public Builder setVaccinations( Vaccinations vaccinations ){
+			this.vaccinations = vaccinations;
+			return this;
+		}
 		public Builder setChristmasModel( ChristmasModel christmasModel ){
 			this.christmasModel = christmasModel;
+			return this;
+		}
+		public Builder setEasterModel( EasterModel easterModel ){
+			this.easterModel = easterModel;
 			return this;
 		}
 		public Builder setWeatherModel( WeatherModel weatherModel ){
@@ -125,7 +138,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario(){
-			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, christmasModel, weatherModel, snapshot,
+			return new SnzBerlinProductionScenario( sample, diseaseImport, restrictions, masks, tracing, vaccinations, christmasModel, easterModel, weatherModel, snapshot,
 					infectionModel, importOffset, vaccinationModel, importFactorBeforeJune, importFactorAfterJune, imprtFctMult );
 		}
 		public Builder setImportOffset( int importOffset ){
@@ -150,7 +163,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final Restrictions restrictions;
 	private final Masks masks;
 	private final Tracing tracing;
+	private final Vaccinations vaccinations;
 	private final ChristmasModel christmasModel;
+	private final EasterModel easterModel;
 	private final Snapshot snapshot;
 	private final WeatherModel weatherModel;
 	private final Class<? extends InfectionModel> infectionModel;
@@ -165,21 +180,22 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	 */
 	@SuppressWarnings("unused")
 	private SnzBerlinProductionScenario() {
-		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, ChristmasModel.restrictive, WeatherModel.midpoints_175_250,
+		this(25, DiseaseImport.yes, Restrictions.yes, Masks.yes, Tracing.yes, Vaccinations.yes, ChristmasModel.restrictive, EasterModel.yes, WeatherModel.midpoints_175_250,
 				Snapshot.no, AgeDependentInfectionModelWithSeasonality.class, 0, VaccinationByAge.class,
 				4., 0.5, 1. );
 	}
 
-	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, ChristmasModel christmasModel, WeatherModel weatherModel,
-					     Snapshot snapshot,
-					     Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
+	private SnzBerlinProductionScenario( int sample, DiseaseImport diseaseImport, Restrictions restrictions, Masks masks, Tracing tracing, Vaccinations vaccinations, ChristmasModel christmasModel, EasterModel easterModel, 
+			WeatherModel weatherModel, Snapshot snapshot, Class<? extends InfectionModel> infectionModel, int importOffset, Class<? extends VaccinationModel> vaccinationModel,
 					     double importFactorBeforeJune, double importFactorAfterJune, double imprtFctMult ) {
 		this.sample = sample;
 		this.diseaseImport = diseaseImport;
 		this.restrictions = restrictions;
 		this.masks = masks;
 		this.tracing = tracing;
+		this.vaccinations = vaccinations;
 		this.christmasModel = christmasModel;
+		this.easterModel = easterModel;
 		this.weatherModel = weatherModel;
 		this.snapshot = snapshot;
 		this.infectionModel = infectionModel;
@@ -385,9 +401,22 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			}
 		}
 		
-		inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
-		inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
-		inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+		if (this.easterModel == EasterModel.yes) {
+			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
+			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
+			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+			
+			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+				if (act.contains("educ")) continue;
+				double fraction = 0.72;
+				builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
+				builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
+				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
+				builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
+				builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
+			}
+		}
+
 
 		episimConfig.setInputDays(inputDays);
 		
@@ -413,6 +442,40 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		double leisureFactor = 1.6;
 		if (this.restrictions != Restrictions.no) {
 			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+		}
+		
+		//vacinations
+		if (this.vaccinations.equals(Vaccinations.yes)) {
+			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+			vaccinationConfig.setEffectiveness(0.9);
+			vaccinationConfig.setDaysBeforeFullEffect(28);
+			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
+			
+			Map<LocalDate, Integer> vaccinations = new HashMap<>();
+			
+			int population = 4_800_000;
+			
+			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
+			
+			vaccinations.put(LocalDate.parse("2020-12-27"), (int) (0.003 * population / 6));
+			vaccinations.put(LocalDate.parse("2021-01-02"), (int) ((0.007 - 0.004) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-01-09"), (int) ((0.013 - 0.007) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-01-16"), (int) ((0.017 - 0.013) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-01-23"), (int) ((0.024 - 0.017) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-01-30"), (int) ((0.030 - 0.024) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-02-06"), (int) ((0.034 - 0.030) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-02-13"), (int) ((0.039 - 0.034) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-02-20"), (int) ((0.045 - 0.039) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-02-27"), (int) ((0.057 - 0.045) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-03-06"), (int) ((0.071 - 0.057) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-03-13"), (int) ((0.088 - 0.071) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-03-20"), (int) ((0.105 - 0.088) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-03-27"), (int) ((0.120 - 0.105) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-04-03"), (int) ((0.140 - 0.120) * population / 7));
+			vaccinations.put(LocalDate.parse("2021-04-10"), (int) ((0.183 - 0.140) * population / 7));
+			//extrapolated from 5.4. until 22.4.
+			vaccinations.put(LocalDate.parse("2021-04-17"), (int) ((0.207 - 0.123) * population / 17));
+			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
