@@ -20,7 +20,7 @@
     </licenses>
 
     <properties>
-        <matsim.version>12.0</matsim.version>
+        <matsim.version>13.0</matsim.version>
         <!--<matsim.version>12.0-2020w09-SNAPSHOT</matsim.version>-->
         <mainClass>org.matsim.run.RunEpisim</mainClass>
     </properties>
@@ -30,7 +30,13 @@
         <!-- Repository for MATSim releases (MATSim is not on Maven central) -->
         <repository>
             <id>matsim</id>
-            <url>https://dl.bintray.com/matsim/matsim</url>
+            <url>https://repo.matsim.org/repository/matsim</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
         </repository>
 
         <repository>

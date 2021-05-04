@@ -1,30 +1,19 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-
-import org.joda.time.LocalDate;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.model.*;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
-import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
-import org.matsim.run.modules.SnzBerlinProductionScenario.DiseaseImport;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Masks;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Restrictions;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
-import org.matsim.run.modules.SnzBerlinProductionScenario.WeatherModel;
-
-import java.util.ArrayList;
+import org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 
 
 /**
@@ -34,9 +23,9 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		
-		if (params == null) return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();	
-			
+
+		if (params == null) return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();
+
 		return getModule(params);
 	}
 
@@ -44,7 +33,7 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "basePaperInterventions");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 1000;
@@ -52,20 +41,20 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		
+
 		SnzBerlinProductionScenario module = getModule(params);
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
-		
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-				
+
 		episimConfig.setCalibrationParameter(1.7E-5 * params.thetaFactor);
-		
+
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		
-		String restrictionDate = "2020-04-01"; 
+
+		String restrictionDate = "2020-04-01";
 		ArrayList<String> acts = new ArrayList<>();
-		
+
 		switch (params.restrictedAct) {
 		case "home":
 			acts.add("home");
@@ -100,7 +89,7 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 		default:
 			throw new IllegalArgumentException("Unknown restrictedAct: " + params.restrictedAct);
 		}
-		
+
 		switch (params.restriction) {
 		case "75pct":
 			for (String act : acts) builder.restrict(restrictionDate, 0.75, act);
@@ -117,7 +106,7 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 		default:
 			throw new IllegalArgumentException("Unknown restriction: " + params.restriction);
 		}
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		return config;
@@ -130,7 +119,7 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 		Tracing tracing = Tracing.no;
 		ChristmasModel christmasModel = ChristmasModel.no;
 		WeatherModel weatherModel = WeatherModel.no;
-		
+
 		if (params.run.contains("2_withSpringImport")) {
 			diseaseImport = DiseaseImport.onlySpring;
 		}
@@ -160,7 +149,7 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 		if (params.withTracing.contains("yes")) {
 			tracing = Tracing.yes;
 		}
-		
+
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing(
 				tracing ).setChristmasModel(christmasModel).setWeatherModel(weatherModel).createSnzBerlinProductionScenario();
 		return module;
@@ -170,28 +159,28 @@ public class BerlinPaperInterventions implements BatchRun<BerlinPaperInterventio
 
 		@GenerateSeeds(10)
 		public long seed;
-		
+
 //		@Parameter({1.8E-5, 1.7E-5, 1.6E-5, 1.5E-5, 1.4E-5, 1.3E-5, 1.27E-5, 1.1E-5, 1.E-5})
 //		double theta;
-		
+
 		@StringParameter({"1_base"})
 		public String run;
-		
+
 		@StringParameter({"no"})
 		public String withMasks;
-		
+
 		@StringParameter({"no"})
 		public String withTracing;
-		
+
 		@StringParameter({"no"})
 		public String withLeisureFactor;
-		
+
 		@StringParameter({"home", "work_business", "schools", "shop_errands", "leisure", "publicTransport", "university", "dayCare"})
 		public String restrictedAct;
-		
+
 		@StringParameter({"75pct", "50pct", "90pctN95Masks", "90pctClothMasks"})
 		public String restriction;
-		
+
 		@Parameter({0.6, 0.8, 1.0, 1.2})
 		double thetaFactor;
 
