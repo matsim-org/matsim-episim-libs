@@ -56,7 +56,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		delegate.characters(ch, start, length);
 	}
 
-	private MatsimEventsReader.CustomEventMapper<EpisimInfectionEvent> getEpisimInfectionEventMapper() {
+	private MatsimEventsReader.CustomEventMapper getEpisimInfectionEventMapper() {
 		return event -> {
 
 			Map<String, String> attributes = event.getAttributes();
@@ -87,7 +87,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		};
 	}
 
-	private MatsimEventsReader.CustomEventMapper<EpisimPersonStatusEvent> getEpisimPersonStatusEventMapper() {
+	private MatsimEventsReader.CustomEventMapper getEpisimPersonStatusEventMapper() {
 		return event -> {
 
 			Map<String, String> attributes = event.getAttributes();
@@ -100,7 +100,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		};
 	}
 
-	private MatsimEventsReader.CustomEventMapper<EpisimContactEvent> getEpisimContactEventMapper() {
+	private MatsimEventsReader.CustomEventMapper getEpisimContactEventMapper() {
 		return event -> {
 
 			Map<String, String> attributes = event.getAttributes();
