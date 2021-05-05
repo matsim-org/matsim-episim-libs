@@ -34,6 +34,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
+				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setVaccinations(SnzBerlinProductionScenario.Vaccinations.no)
 				.createSnzBerlinProductionScenario();
 		
@@ -55,6 +56,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
+				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setVaccinations(SnzBerlinProductionScenario.Vaccinations.no)
 				.createSnzBerlinProductionScenario();
 		
@@ -72,14 +74,15 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		
 		episimConfig.setLeisureOutdoorFraction(0.);
 		
-		
-		
 		LocalDate date = LocalDate.parse("2020-11-21");
 		
 		double workTrigger = params.trigger;
 		double leisureTrigger = params.trigger;
 		double eduTrigger = params.trigger;
 		double shopErrandsTrigger = params.trigger;
+		
+		double openFraction = 0.9;
+		double restrictedFraction = 0.6;
 		
 		com.typesafe.config.Config policy = AdaptivePolicy.config()
 				.incidenceTrigger(workTrigger, workTrigger, "work", "business")
@@ -92,13 +95,14 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 						.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other")
 						)
 				.restrictedPolicy(FixedPolicy.config()
-						.restrict(date, Restriction.of(params.restrictedFraction), "work")
-						.restrict(date, Restriction.of(params.restrictedFraction), "shop_daily")
-						.restrict(date, Restriction.of(params.restrictedFraction), "shop_other")
-						.restrict(date, Restriction.of(params.restrictedFraction), "errands")
-						.restrict(date, Restriction.of(params.restrictedFraction), "business")
-						.restrict(date, Restriction.of(params.restrictedFraction), "visit")
-						.restrict(date, Restriction.of(params.restrictedFraction), "leisure")
+						.restrict(date, Restriction.of(restrictedFraction), "work")
+						.restrict(date, Restriction.of(restrictedFraction), "shop_daily")
+						.restrict(date, Restriction.of(restrictedFraction), "shop_other")
+						.restrict(date, Restriction.of(restrictedFraction), "errands")
+						.restrict(date, Restriction.of(restrictedFraction), "business")
+						.restrict(date, Restriction.of(restrictedFraction), "visit")
+						.restrict(date, Restriction.of(restrictedFraction), "leisure")
+						.restrict(date, Restriction.of(restrictedFraction), "educ_higher")
 						.restrict(date, Restriction.of(.2), "educ_kiga")
 						.restrict(date, Restriction.of(.2), "educ_primary")
 						.restrict(date, Restriction.of(.2), "educ_secondary")
@@ -106,13 +110,14 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 						.restrict(date, Restriction.of(.2), "educ_other")
 				)
 				.openPolicy(FixedPolicy.config()
-						.restrict(date, Restriction.of(params.openFraction), "work")
-						.restrict(date, Restriction.of(params.openFraction), "shop_daily")
-						.restrict(date, Restriction.of(params.openFraction), "shop_other")
-						.restrict(date, Restriction.of(params.openFraction), "errands")
-						.restrict(date, Restriction.of(params.openFraction), "business")
-						.restrict(date, Restriction.of(params.openFraction), "visit")
-						.restrict(date, Restriction.of(params.openFraction), "leisure")
+						.restrict(date, Restriction.of(openFraction), "work")
+						.restrict(date, Restriction.of(openFraction), "shop_daily")
+						.restrict(date, Restriction.of(openFraction), "shop_other")
+						.restrict(date, Restriction.of(openFraction), "errands")
+						.restrict(date, Restriction.of(openFraction), "business")
+						.restrict(date, Restriction.of(openFraction), "visit")
+						.restrict(date, Restriction.of(openFraction), "leisure")
+						.restrict(date, Restriction.of(openFraction), "educ_higher")
 						.restrict(date, Restriction.of(1.), "educ_kiga")
 						.restrict(date, Restriction.of(1.), "educ_primary")
 						.restrict(date, Restriction.of(1.), "educ_secondary")
@@ -136,6 +141,8 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.b117inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setReVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
+
 		
 		if (!params.b1351inf.equals("no")) {
 			Map<LocalDate, Integer> infPerDayB1351 = new HashMap<>();
@@ -148,7 +155,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 			else 
 				virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(params.b117inf);
 			
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(0.0);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.b1351VaccinationEffectiveness);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setReVaccineEffectiveness(1.0);	
 		}
 		
@@ -161,9 +168,8 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 			
 			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
 			vaccinations.put(LocalDate.parse("2021-01-01"), (int) (0.05 * 4_831_120 / 59));
-			
-			if(params.vaccinations.contains("1slow")) vaccinations.put(LocalDate.parse("2021-03-01"), (int) (0.95 * 4_831_120 / 184));
-			if(params.vaccinations.contains("1quick")) vaccinations.put(LocalDate.parse("2021-03-01"), (int) (0.95 * 4_831_120 / 92));
+			vaccinations.put(LocalDate.parse("2021-03-01"), (int) ((0.119 - 0.05) * 4_831_120 / 31));
+			vaccinations.put(LocalDate.parse("2021-04-01"), (int) ((0.248 - 0.119) * 4_831_120 / 29));
 			
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 			
@@ -171,10 +177,19 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 			
 			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
 			
-			if(params.vaccinations.contains("2slow")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) (0.95 * 4_831_120 / 184));
-			if(params.vaccinations.contains("2quick")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) (0.95 * 4_831_120 / 92));
+			if(params.vaccinations.equals("revaccination")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) ((0.248 - 0.119) * 4_831_120 / 29));
+			if(params.vaccinations.equals("quickRevaccination")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) ((0.248 - 0.119) * 2 * 4_831_120 / 29));
 			
 			vaccinationConfig.setReVaccinationCapacity_pers_per_day(reVaccinations);
+			
+			vaccinationConfig.setFactorSeriouslySick(0.5);
+			
+			Map<Integer, Double> vaccinationCompliance = new HashMap<>();
+			
+			for(int i = 0; i<18; i++) vaccinationCompliance.put(i, 0.);
+			for(int i = 18; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+
+			vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 		}
 		
 
@@ -189,7 +204,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		@StringParameter({"2020-12-15"})
 		String b117date;
 		
-		@Parameter({1.35, 1.7, 2.0, 2.5})
+		@Parameter({1.2, 1.5, 1.8, 2.1, 2.4})
 		double b117inf;
 		
 		@StringParameter({"2021-04-01"})
@@ -198,16 +213,23 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		@StringParameter({"no", "1.0", "b117"})
 		String b1351inf;
 		
-		@StringParameter({"no", "1slow-2no", "1quick-2no", "1slow-2slow", "1quick-2slow", "1quick-2quick"})
+		@StringParameter({"no", "noRevaccination", "revaccination", "quickRevaccination"})
 		String vaccinations;
 		
-		@Parameter({0.65})
-		double restrictedFraction;
+		@Parameter({1.0, 0.8, 0.6})
+		double vaccinationCompliance;
 		
-		@Parameter({0.9})
-		double openFraction;
+		@Parameter({1.0, 0.5, 0.3, 0.1, 0.0})
+		double b1351VaccinationEffectiveness;
 		
-		@Parameter({Integer.MAX_VALUE, 200., 100., 50., 25.})
+//		@Parameter({0.65})
+//		double restrictedFraction;
+//		
+//		@Parameter({0.9})
+//		double openFraction;
+		
+//		@Parameter({Integer.MAX_VALUE, 100.})
+		@Parameter({100.})
 		double trigger;
 		
 
