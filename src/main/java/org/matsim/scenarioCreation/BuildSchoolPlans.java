@@ -34,6 +34,7 @@ import org.matsim.core.utils.misc.Counter;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -177,8 +178,8 @@ public final class BuildSchoolPlans {
 	}
 
 	private static List<EducFacility> findClosestKFacilities(Set<EducFacility> facilitiesSet, Coord homeCoord, int k) {
-		return PartialSort.kSmallestElements(k, facilitiesSet.stream(),
-				fac -> DistanceUtils.calculateSquaredDistance(homeCoord, fac.getCoord()));
+		return PartialSort.kSmallestElements(k, facilitiesSet.stream(), Comparator.comparingDouble(
+				fac -> DistanceUtils.calculateSquaredDistance(homeCoord, fac.getCoord())));
 	}
 
 	private static String getLegMode(double distance) {

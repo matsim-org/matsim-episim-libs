@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.matsim-org</groupId>
     <artifactId>matsim-episim</artifactId>
-    <version>21.2-SNAPSHOT</version>
+    <version>21.4-SNAPSHOT</version>
 
     <name>MATSim Episim</name>
     <description>Epidemic simulation for MATSim</description>
@@ -20,7 +20,7 @@
     </licenses>
 
     <properties>
-        <matsim.version>12.0</matsim.version>
+        <matsim.version>13.0</matsim.version>
         <!--<matsim.version>12.0-2020w09-SNAPSHOT</matsim.version>-->
         <mainClass>org.matsim.run.RunEpisim</mainClass>
     </properties>
@@ -30,7 +30,13 @@
         <!-- Repository for MATSim releases (MATSim is not on Maven central) -->
         <repository>
             <id>matsim</id>
-            <url>https://dl.bintray.com/matsim/matsim</url>
+            <url>https://repo.matsim.org/repository/matsim</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
         </repository>
 
         <repository>
@@ -120,7 +126,7 @@
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.6</version>
+            <version>2.7</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
