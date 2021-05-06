@@ -73,7 +73,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		Path tempFile = Files.createTempFile("episim", "csv");
 		tempFile.toFile().deleteOnExit();
 
-		writeDataForCertainArea(tempFile, areaCodes, true, false);
+		writeDataForCertainArea(tempFile, areaCodes, true, null);
 		delegate.setInput(tempFile);
 
 		return delegate.createPolicy();
@@ -194,7 +194,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	 * Analyze data and write result to {@code outputFile}.
 	 */
 	public void writeDataForCertainArea(Path outputFile, IntSet zipCodes, boolean getPercentageResults,
-			boolean setBaseIn2018) throws IOException {
+			List<String> baseDays) throws IOException {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 		int nPersons = 0;
@@ -234,14 +234,13 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			// will contain the last parsed date
 			String dateString = "";
 
-			// set base from days in 2018
-			if (setBaseIn2018) {
-				Path baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/Vergleich2017/");
-				String weekdayBase = "20180131";
-				String saturdayBase = "20180127";
-				String sundayBase = "20180114";
-				List<String> baseDays = Arrays.asList(weekdayBase, saturdayBase, sundayBase);
-
+			if (!baseDays.isEmpty()) {
+				Path baseFile = null;
+				if (baseDays.iterator().next().contains("2018"))
+					baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/Vergelich2017/");
+				else if (baseDays.iterator().next().contains("2020"))
+					baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/");
+				
 				log.info("Setting weekday base from: " + baseFile);
 				for (File folder : Objects.requireNonNull(baseFile.toFile().listFiles())) {
 					if (folder.isDirectory()) {
@@ -313,8 +312,14 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			Path finalPath = null;
 			if (!getPercentageResults)
 				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_duration"));
-			else
-				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
+			else {
+				if (baseDays.isEmpty()) 
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
+				else if (baseDays.iterator().next().contains("2018"))
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_base2018"));
+				else if (baseDays.iterator().next().contains("202009"))
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_baseSep20"));
+			}
 			Files.move(outputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 
 			log.info("Write analyze of " + countingDays + " is writen to " + finalPath);
@@ -397,7 +402,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 						baseBL.put(nameBundesland, base);
 						baseBL.get(nameBundesland).get(day).putAll(sums);
 					}
-					//add the number of persons in this area from data
+					// add the number of persons in this area from data
 					if (!personsPerBL.containsKey(nameBundesland))
 						personsPerBL.put(nameBundesland, getPersonsInThisZIPCode(zipCodes, inputFolder.toFile()));
 
@@ -440,7 +445,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 				if (zipCodesBL.containsKey(record.get("BL"))) {
 					zipCodesBL.get(record.get("BL")).add(Integer.parseInt(record.get("PLZ")));
 					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("PLZ")));
-					
+
 				} else {
 					zipCodesBL.put(record.get("BL"), new IntOpenHashSet(List.of(Integer.parseInt(record.get("PLZ")))));
 					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("PLZ")));
