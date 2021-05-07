@@ -37,7 +37,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 10000;
@@ -55,7 +55,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
@@ -67,31 +67,31 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
 
-		
+
 		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-06"), 0.5);
-		
+
 		episimConfig.setCurfewCompliance(curfewCompliance);
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
-				
+
+
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		
+
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		
-		
+
+
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setFactorSeriouslySick(0.5);
 
-				
+
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-		
+
 		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
-				
+
 		List<String> actsList = new ArrayList<String>();
 		actsList.add("leisure");
 		actsList.add("work");
@@ -103,17 +103,17 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		actsList.add("educ_other");
 		actsList.add("educ_higher");
 		testingConfigGroup.setActivities(actsList);
-		
+
 		testingConfigGroup.setFalseNegativeRate(0.3);
 		testingConfigGroup.setFalsePositiveRate(0.03);
 		testingConfigGroup.setHouseholdCompliance(1.0);
-						
+
 		LocalDate testingDate = LocalDate.parse("2021-04-19");
-		
+
 		double leisureRate = 0.2;
 		double workRate = 0.05;
 		double eduRate = 0.05;
-		
+
 		testingConfigGroup.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
@@ -154,20 +154,20 @@ public class Calibration implements BatchRun<Calibration.Params> {
 				)));
 
 		testingConfigGroup.setTestingCapacity_pers_per_day(Map.of(
-				LocalDate.of(1970, 1, 1), 0, 
+				LocalDate.of(1970, 1, 1), 0,
 				testingDate, Integer.MAX_VALUE));
-	
+
 		return config;
 	}
 
 	public static final class Params {
 
-		@GenerateSeeds(20)
+		@GenerateSeeds(50)
 		public long seed;
-		
+
 		@Parameter({0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5})
 		double thetaFactor;
-		
+
 	}
 
 	public static void main(String[] args) {
