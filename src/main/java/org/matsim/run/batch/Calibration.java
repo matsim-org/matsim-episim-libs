@@ -35,7 +35,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "calibration");
+		return Metadata.of("berlin", "calibration-mt");
 	}
 
 //	@Override
@@ -55,6 +55,8 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		episimConfig.setActivityHandling(params.contacts);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
@@ -168,13 +170,16 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@Parameter({0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5})
 		double thetaFactor;
 
+		@EnumParameter(EpisimConfigGroup.ActivityHandling.class)
+		EpisimConfigGroup.ActivityHandling contacts;
+
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, Calibration.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
 				RunParallel.OPTION_METADATA
 		};
