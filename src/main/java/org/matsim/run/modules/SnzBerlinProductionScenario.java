@@ -151,8 +151,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 
-		public void setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
+		public Builder setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
 			this.activityHandling = activityHandling;
+			return this;
 		}
 
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {

@@ -1,13 +1,8 @@
 package org.matsim.run.batch;
 
-import com.google.inject.AbstractModule;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.TestingConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -29,8 +24,12 @@ import java.util.Map;
 public class Calibration implements BatchRun<Calibration.Params> {
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();
+	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
+		return new SnzBerlinProductionScenario.Builder()
+				.setActivityHandling(params == null ? EpisimConfigGroup.ActivityHandling.duringContact : params.contacts)
+				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
+				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
+				.createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -46,17 +45,12 @@ public class Calibration implements BatchRun<Calibration.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
-				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
-				.createSnzBerlinProductionScenario();
+		SnzBerlinProductionScenario module = getBindings(id, params);
+
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 
-
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
-		episimConfig.setActivityHandling(params.contacts);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
@@ -120,40 +114,40 @@ public class Calibration implements BatchRun<Calibration.Params> {
 				"leisure", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, leisureRate
-						),
+				),
 				"work", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, workRate
-						),
+				),
 				"business", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, workRate
-						),
+				),
 				"educ_kiga", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, eduRate
-						),
+				),
 				"educ_primary", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, eduRate
-						),
+				),
 				"educ_secondary", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, eduRate
-						),
+				),
 				"educ_tertiary", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, eduRate
-						),
+				),
 				"educ_higher", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, eduRate
-						),
+				),
 				"educ_other", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
 						testingDate, eduRate
-						)
-				)));
+				)
+		)));
 
 		testingConfigGroup.setTestingCapacity_pers_per_day(Map.of(
 				LocalDate.of(1970, 1, 1), 0,
