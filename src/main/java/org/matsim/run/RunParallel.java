@@ -84,9 +84,9 @@ public class RunParallel<T> implements Callable<Integer> {
 	public static final String OPTION_TASKS = "--tasks";
 	@CommandLine.Option(names = OPTION_TASKS, defaultValue = "4", description = "Number of simulations to start concurrently")
 	private int tasks;
-	
+
 	public static final String OPTION_TASK_THREADS = "--task-threads";
-	@CommandLine.Option(names = OPTION_TASK_THREADS, defaultValue = "3", description = "Number of threads per simulation")
+	@CommandLine.Option(names = OPTION_TASK_THREADS, defaultValue = "-1", description = "Overwrite Number of threads per simulation")
 	private int taskThreads;
 
 	@CommandLine.Option(names = "--total-worker", defaultValue = "1", description = "Total number of worker processes available for this run." +
@@ -191,7 +191,9 @@ public class RunParallel<T> implements Callable<Integer> {
 
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
 
-			episimConfig.setThreads(taskThreads);
+			if (taskThreads > -1) {
+				episimConfig.setThreads(taskThreads);
+			}
 
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
 			episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
