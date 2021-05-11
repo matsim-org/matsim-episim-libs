@@ -28,9 +28,15 @@
     <repositories>
 
         <!-- Repository for MATSim releases (MATSim is not on Maven central) -->
-        <repository>
+         <repository>
             <id>matsim</id>
-            <url>https://dl.bintray.com/matsim/matsim</url>
+            <url>https://repo.matsim.org/repository/matsim</url>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
         </repository>
 
         <repository>
