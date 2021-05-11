@@ -69,19 +69,14 @@ public class RValuesFromEvents implements Callable<Integer> {
 			"home", "leisure", "schools", "day care", "university", "work&business", "pt", "other"
 	);
 
-	//	@CommandLine.Option(names = "--output", defaultValue = "./output/")
-	@CommandLine.Option(names = "--output", defaultValue = "C:/Users/jakob/Desktop/output2")
+	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
 	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
 	private LocalDate startDate;
 
-	@CommandLine.Option(names = "--per-virus-strain", defaultValue = "true")
-	private boolean perStrainActive;
-
 
 	public static void main(String[] args) {
-
 		System.exit(new CommandLine(new RValuesFromEvents()).execute(args));
 	}
 
@@ -96,7 +91,6 @@ public class RValuesFromEvents implements Callable<Integer> {
 			log.error("Output path {} does not exist.", output);
 			return 2;
 		}
-
 
 		BufferedWriter rValues = Files.newBufferedWriter(output.resolve("rValues.txt"));
 		rValues.write("day\tdate\trValue\tnewContagious\tscenario\t");
@@ -196,18 +190,20 @@ public class RValuesFromEvents implements Callable<Integer> {
 			strains.add(strain.toString());
 		}
 
-
 		for (int i = 0; i <= eventFiles.size(); i++) {
 			for (String strain : strains) {
 				int noOfInfectors = 0;
 				// infected persons per activity
 				Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
 				for (InfectedPerson ip : rHandler.infectedPersons.values()) {
-					if (ip.contagiousDay == i) {
-						if (ip.noOfInfected.containsKey(strain)) {
+					if (ip.contagiousDay == i && ip.virusStrain != null) { //TODO: check whether "virusStrain!=null" makes sense
+						if (ip.virusStrain.toString().equals(strain) || strain.equals("all-strains")) {
 							noOfInfectors++;
-							ip.noOfInfected.get(strain).forEach((k, v) -> noOfInfected.mergeInt(k, v, Integer::sum));
+							if (ip.noOfInfected.containsKey(strain)) {
+								ip.noOfInfected.get(strain).forEach((k, v) -> noOfInfected.mergeInt(k, v, Integer::sum));
+							}
 						}
+
 					}
 				}
 
@@ -239,7 +235,6 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		private final String id;
 		private final Map<String, Object2IntMap<String>> noOfInfected = new HashMap<>();
-
 		private int contagiousDay;
 		private VirusStrain virusStrain;
 
@@ -268,6 +263,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
+
 			String infectorId = event.getInfectorId().toString();
 			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, InfectedPerson::new);
 
@@ -283,8 +279,9 @@ public class RValuesFromEvents implements Callable<Integer> {
 			infector.increaseNoOfInfectedByOne(activityType, virusStrain);
 
 			// infected person
-			//			InfectedPerson infected = infectedPersons.computeIfAbsent(event.getPersonId().toString(), InfectedPerson::new);
-			//			infected.virusStrain = virusStrain;
+			InfectedPerson infected = infectedPersons.computeIfAbsent(event.getPersonId().toString(), InfectedPerson::new);
+			infected.virusStrain = virusStrain;
+
 
 		}
 
@@ -304,7 +301,6 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		private final Map<String, Int2IntMap> infectionsPerActivity = new TreeMap<>();
 
-
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectionType = getActivityType(event.getInfectionType());
@@ -316,7 +312,6 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 			infectionsPerActivity.computeIfAbsent(infectionType, k -> new Int2IntOpenHashMap())
 					.merge(day, 1, Integer::sum);
-
 
 		}
 	}
