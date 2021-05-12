@@ -72,7 +72,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 //		builder.clearAfter("2020-12-14");
 //		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
-		episimConfig.setLeisureOutdoorFraction(0.);
+		if (params.outdoorModel.equals("no")) episimConfig.setLeisureOutdoorFraction(0.);
 		
 		LocalDate date = LocalDate.parse("2020-11-21");
 		
@@ -219,7 +219,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		@Parameter({1.0, 0.8, 0.6})
 		double vaccinationCompliance;
 		
-		@Parameter({1.0, 0.5, 0.3, 0.1, 0.0})
+		@Parameter({1.0, 0.9, 0.7, 0.5, 0.3, 0.1, 0.0})
 		double b1351VaccinationEffectiveness;
 		
 //		@Parameter({0.65})
@@ -231,6 +231,9 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 //		@Parameter({Integer.MAX_VALUE, 100.})
 		@Parameter({100.})
 		double trigger;
+		
+		@StringParameter({"no", "yes"})
+		String outdoorModel;
 		
 
 	}
