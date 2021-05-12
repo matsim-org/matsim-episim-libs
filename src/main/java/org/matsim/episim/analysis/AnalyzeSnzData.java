@@ -29,6 +29,7 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
@@ -49,7 +50,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseOptions {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender
+		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen
+	};
+	private enum BaseDaysForComparison {
+		March2020, Sebtember2020, days2018 
 	};
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -65,37 +69,55 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseOptions selectedArea = AnalyseOptions.Bundeslaender;
+		AnalyseOptions selectedArea = AnalyseOptions.Berlin;
+		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
-		boolean getPercentageResults = false;
-		// setBaseIn2018: set true if you use selected days of 2018 as base days
-		boolean setBaseIn2018 = false;
+		boolean getPercentageResults = true;
 
-		writeData(selectedArea, getPercentageResults, setBaseIn2018);
+		writeData(selectedArea, getPercentageResults, selectedBase);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private void writeData(AnalyseOptions selectedArea, boolean getPercentageResults, boolean setBaseIn2018)
+	private void writeData(AnalyseOptions selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase)
 			throws IOException {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
+		List<String> baseDays = Arrays.asList();
+		
+		switch (selectedBase) {
+		case March2020:
+			break;
+		case days2018:
+			String weekdayBase2018 = "20180131";
+			String saturdayBase2018 = "20180127";
+			String sundayBase2018 = "20180114";
+			baseDays = Arrays.asList(weekdayBase2018, saturdayBase2018, sundayBase2018);
+			break;
+		case Sebtember2020:
+			String weekdayBase2020 = "20200911";
+			String saturdayBase2020 = "20200912";
+			String sundayBase2020 = "20200913";
+			baseDays = Arrays.asList(weekdayBase2020, saturdayBase2020, sundayBase2020);
+			break;
+		}
+		
 		switch (selectedArea) {
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 			snz.writeDataForCertainArea(outputFolder.resolve("BerchtesgadenSnzData_daily_until.csv"),
-					zipCodesBerchtesgaden, getPercentageResults, setBaseIn2018);
+					zipCodesBerchtesgaden, getPercentageResults, baseDays);
 			break;
 		case Berlin:
 			IntSet zipCodesBerlin = new IntOpenHashSet();
 			for (int i = 10115; i <= 14199; i++)
 				zipCodesBerlin.add(i);
 			snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case BerlinDistrcits:
 			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();
@@ -127,58 +149,63 @@ class AnalyzeSnzData implements Callable<Integer> {
 					13439, 13465, 13467, 13469, 13503, 13505, 13507, 13509, 13629)));
 			for (Entry<String, IntSet> district : berlinDistricts.entrySet())
 				snz.writeDataForCertainArea(outputFolder.resolve(district.getKey() + "SnzData_daily_until.csv"),
-						district.getValue(), getPercentageResults, setBaseIn2018);
+						district.getValue(), getPercentageResults, baseDays);
 			break;
 		case Bonn:
 			IntSet zipCodesBonn = new IntOpenHashSet();
 			for (int i = 53100; i <= 53299; i++)
 				zipCodesBonn.add(i);
 			snz.writeDataForCertainArea(outputFolder.resolve("BonnSnzData_daily_until.csv"), zipCodesBonn,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case Germany:
 			IntSet zipCodesGER = new IntOpenHashSet();
 			for (int i = 0; i <= 99999; i++)
 				zipCodesGER.add(i);
 			snz.writeDataForCertainArea(outputFolder.resolve("GermanySnzData_daily_until.csv"), zipCodesGER,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case Hamburg:
 			IntSet zipCodesHamburg = new IntOpenHashSet();
 			for (int i = 22000; i <= 22999; i++)
 				zipCodesHamburg.add(i);
 			snz.writeDataForCertainArea(outputFolder.resolve("HamburgSnzData_daily_until.csv"), zipCodesHamburg,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case Heinsberg:
 			IntSet zipCodesHeinsberg = new IntOpenHashSet(
 					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 			snz.writeDataForCertainArea(outputFolder.resolve("HeinsbergSnzData_daily_until.csv"), zipCodesHeinsberg,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 
 			break;
 		case Mannheim:
 			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
 					68229, 68239, 68259, 68305, 68307, 68309));
 			snz.writeDataForCertainArea(outputFolder.resolve("MannheimSnzData_daily_until.csv"), zipCodesMannheim,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case Munich:
 			IntSet zipCodesMunich = new IntOpenHashSet();
 			for (int i = 80331; i <= 81929; i++)
 				zipCodesMunich.add(i);
 			snz.writeDataForCertainArea(outputFolder.resolve("MunichSnzData_daily_until.csv"), zipCodesMunich,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case Test:
 			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
 			snz.writeDataForCertainArea(outputFolder.resolve("TestSnzData_daily_until.csv"), zipCodesTest,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
+			break;
+		case Tuebingen:
+			IntSet zipCodesTuebingen = new IntOpenHashSet(List.of(72070, 72072, 72074, 72076));
+			snz.writeDataForCertainArea(outputFolder.resolve("TuebingenSnzData_daily_until.csv"), zipCodesTuebingen,
+					getPercentageResults, baseDays);
 			break;
 		case Wolfsburg:
 			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
 			snz.writeDataForCertainArea(outputFolder.resolve("WolfsburgSnzData_daily_until.csv"), zipCodesWolfsburg,
-					getPercentageResults, setBaseIn2018);
+					getPercentageResults, baseDays);
 			break;
 		case Bundeslaender:	
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");

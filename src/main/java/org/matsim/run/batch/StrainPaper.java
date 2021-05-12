@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.BatchRun.Parameter;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -26,8 +27,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no).setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -43,8 +43,12 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no).setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no).createSnzBerlinProductionScenario();
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
+				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
+				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
+				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
+				.setVaccinations(SnzBerlinProductionScenario.Vaccinations.no)
+				.createSnzBerlinProductionScenario();
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 
@@ -58,7 +62,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		builder.clearAfter("2020-12-14");
 		
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-			if (act.contains("educ_higher")) continue;
+//			if (act.contains("educ_higher")) continue;
 			builder.restrict("2020-12-15", params.activityLevel, act);
 		}
 					
@@ -85,7 +89,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.b117inf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
 
 		return config;
 	}
@@ -95,13 +99,14 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		@GenerateSeeds(10)
 		public long seed;
 		
-		@StringParameter({"50%open", "open", "activityLevel"})
+//		@StringParameter({"50%open", "open", "activityLevel"})
+		@StringParameter({"activityLevel"})
 		public String schools;
 		
 		@StringParameter({"2020-12-15"})
 		String b117date;
 		
-		@Parameter({1.35, 1.7, 2.0, 2.5})
+		@Parameter({1.2, 1.5, 1.8, 2.1, 2.4})
 		double b117inf;
 		
 		@Parameter({0.47, 0.57, 0.67, 0.77, 0.87})

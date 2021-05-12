@@ -213,7 +213,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private ActivityParticipation activityParticipation;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
-			String untilDate = "20210404";
+			String untilDate = "20210424";
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
