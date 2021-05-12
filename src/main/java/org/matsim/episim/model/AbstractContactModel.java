@@ -97,7 +97,8 @@ public abstract class AbstractContactModel implements ContactModel {
 				&& !scenario.getActivityFacilities().getFacilities().isEmpty()) {
 
 			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
-				String subdistrict = (String) facility.getAttributes().getAttribute("subdistrict"); //TODO make this configurable
+				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
+				String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);
 				if (subdistrict != null) {
 					this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);
 				}
