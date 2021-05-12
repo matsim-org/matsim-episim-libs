@@ -244,6 +244,12 @@ public final class Restriction {
 		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>());
 	}
 
+	public static Restriction ofDistrictSpecificValue(Map<String, Double> districtSpecificValue) {
+
+		return new Restriction(null, null, null, null, null, null, null, districtSpecificValue);
+
+	}
+
 	/**
 	 * Creates a restriction from a config entry.
 	 */
@@ -424,8 +430,8 @@ public final class Restriction {
 			maskUsage.clear();
 			maskUsage.putAll(r.maskUsage);
 		}
-		if (!r.districtSpecificValue.isEmpty()) {
-			districtSpecificValue.clear();
+		if (r.districtSpecificValue!=null && !r.districtSpecificValue.isEmpty()) {
+			districtSpecificValue = new HashMap<>();
 			districtSpecificValue.putAll(r.districtSpecificValue);
 
 		}

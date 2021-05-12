@@ -3,6 +3,9 @@ package org.matsim.episim.policy;
 import org.junit.Test;
 import org.matsim.episim.model.FaceMask;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RestrictionTest {
@@ -12,6 +15,14 @@ public class RestrictionTest {
 	 */
 	public static Restriction update(Restriction r, Restriction other) {
 		r.update(other);
+		return r;
+	}
+
+	/**
+	 * Helper function to allow merging restrictions for tests.
+	 */
+	public static Restriction merge(Restriction r, Restriction other) {
+		r.merge(other.asMap());
 		return r;
 	}
 
@@ -26,6 +37,13 @@ public class RestrictionTest {
 		r.merge(Restriction.ofReducedGroupSize(5).asMap());
 		r.merge(Restriction.ofClosingHours(0, 7).asMap());
 
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+		r.merge(Restriction.ofDistrictSpecificValue(nycBoroughs).asMap());
+
+
+
 		assertThat(r.getRemainingFraction()).isEqualTo(0.8);
 		assertThat(r.getCiCorrection()).isEqualTo(0.5);
 
@@ -39,6 +57,9 @@ public class RestrictionTest {
 		assertThat(r.getClosingHours()).isEqualTo(new Restriction.ClosingHours(hours(0), hours(7)));
 
 		assertThat(Restriction.ofClosingHours(0, 0).hasClosingHours()).isFalse();
+
+		assertThat(r.getDistrictSpecificValues().size()).isEqualTo(2);
+		assertThat(r.getDistrictSpecificValues().get("Queens")).isEqualTo(0.8);
 
 	}
 
@@ -122,6 +143,78 @@ public class RestrictionTest {
 				.isEqualTo(0);
 
 
+	}
+
+	@Test
+	public void locationBasedRestrictions() {
+
+		// Set up restrictions
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+		Restriction rNYC = Restriction.ofDistrictSpecificValue(nycBoroughs);
+
+		Map<String, Double> berlinDistricts = new HashMap<>();
+		berlinDistricts.put("Marzahn", 0.6);
+		berlinDistricts.put("Wilmersdorf", 0.4);
+		Restriction rBerlin = Restriction.ofDistrictSpecificValue(berlinDistricts);
+
+		Map<String, Double> empty = new HashMap<>();
+		Restriction rEmpty = Restriction.ofDistrictSpecificValue(empty);
+
+		Restriction rNull = Restriction.ofDistrictSpecificValue(null);
+
+
+		// Test clone functionality
+		Restriction clone = Restriction.clone(rNYC);
+		assertThat(clone.getDistrictSpecificValues().size()).isEqualTo(2);
+		assertThat(clone.getDistrictSpecificValues().get("Queens")).isEqualTo(0.8);
+
+		// Test update/merge functionality
+		// Update/Merge nyc into berlin should always keep berlins values
+		Restriction updateResult = update(rNYC, rBerlin);
+		assertThat(updateResult.getDistrictSpecificValues().containsKey("Queens")).isEqualTo(false);
+		assertThat(updateResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		Restriction mergeResult = merge(rNYC, rBerlin);
+		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Queens")).isEqualTo(false);
+		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		// Update/Merge berlin from empty & vice versa should always keep berlins values;
+		updateResult = update(rEmpty, rBerlin);
+		assertThat(updateResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		updateResult = update(rBerlin, rEmpty);
+		assertThat(updateResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rEmpty, rBerlin);
+		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rBerlin, rEmpty);
+		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		// Update/Merge berlin from null & vice versa should always keep berlins values;
+		updateResult = update(rNull, rBerlin);
+		assertThat(updateResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		updateResult = update(rBerlin, rNull);
+		assertThat(updateResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rNull, rBerlin);
+		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rBerlin, rNull);
+		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
 	}
 
 	private int days(int d) {
