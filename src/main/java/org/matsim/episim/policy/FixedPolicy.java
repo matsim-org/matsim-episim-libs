@@ -272,6 +272,13 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict("day-" + day, restriction, activities);
 		}
 
+		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double>  districtSpecificValue, double fraction, String... activities) {
+			Restriction restriction = Restriction.of(fraction);
+			restriction.setDistrictSpecificValues(districtSpecificValue);
+
+			return restrictWithDistrict("day-" + day, restriction, activities);
+		}
+
 		/**
 		 * Same as {@link #restrict(long, Restriction, String...)}  with default values.
 		 *

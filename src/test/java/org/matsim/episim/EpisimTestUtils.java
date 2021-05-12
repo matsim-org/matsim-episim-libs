@@ -82,6 +82,13 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create facility with just an ID
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(String facId) {
+		return new InfectionEventHandler.EpisimFacility(Id.create(facId, ActivityFacility.class));
+	}
+
+	/**
 	 * Create facility with n persons in it.
 	 */
 	public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, Consumer<EpisimPerson> init) {
@@ -94,6 +101,15 @@ public class EpisimTestUtils {
 	 */
 	public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, int groupSize, Consumer<EpisimPerson> init) {
 		InfectionEventHandler.EpisimFacility container = createFacility();
+		container.setMaxGroupSize(groupSize);
+		return addPersons(container, n, act, init);
+	}
+
+	/**
+	 * Create a facility with certain group size and ID.
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(String facId, int n, String act, int groupSize, Consumer<EpisimPerson> init) {
+		InfectionEventHandler.EpisimFacility container = createFacility(facId);
 		container.setMaxGroupSize(groupSize);
 		return addPersons(container, n, act, init);
 	}

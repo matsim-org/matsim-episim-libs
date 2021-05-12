@@ -159,11 +159,9 @@ public class RestrictionTest {
 		berlinDistricts.put("Wilmersdorf", 0.4);
 		Restriction rBerlin = Restriction.ofDistrictSpecificValue(berlinDistricts);
 
-		Map<String, Double> empty = new HashMap<>();
-		Restriction rEmpty = Restriction.ofDistrictSpecificValue(empty);
+		Restriction rEmpty = Restriction.ofDistrictSpecificValue(new HashMap<>());
 
 		Restriction rNull = Restriction.ofDistrictSpecificValue(null);
-
 
 		// Test clone functionality
 		Restriction clone = Restriction.clone(rNYC);
