@@ -382,7 +382,7 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		// TODO: Currently not in use, is it still needed?
 		// Necessary for the otfvis visualization (although it is unfortunately not working).  kai, apr'20
-		if (scenario != null) {
+		if (scenario != null && !scenario.getPopulation().getPersons().isEmpty()) {
 			final Person person = PopulationUtils.findPerson(personWrapper.getPersonId(), scenario);
 			if (person != null) {
 				person.getAttributes().putAttribute(AgentSnapshotInfo.marker, true);
