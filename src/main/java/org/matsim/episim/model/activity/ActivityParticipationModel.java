@@ -1,7 +1,6 @@
 package org.matsim.episim.model.activity;
 
 import com.google.common.collect.ImmutableMap;
-import it.unimi.dsi.fastutil.doubles.DoubleObjectPair;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.policy.Restriction;
 

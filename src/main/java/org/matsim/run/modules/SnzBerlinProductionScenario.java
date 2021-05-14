@@ -151,6 +151,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 
+		public Builder setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
+			this.activityHandling = activityHandling;
+			return this;
+		}
+
 		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {
 			return new SnzBerlinProductionScenario(this);
 		}
@@ -455,7 +460,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.78;
+				double fraction = 0.72;
 				builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);

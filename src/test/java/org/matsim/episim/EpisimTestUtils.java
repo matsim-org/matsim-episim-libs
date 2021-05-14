@@ -134,6 +134,16 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create person with vaccinable status.
+	 */
+	public static EpisimPerson createPerson(boolean vaccinable) {
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+		p.setVaccinable(vaccinable);
+		return p;
+	}
+
+
+	/**
 	 * Add persons to a facility.
 	 */
 	public static InfectionEventHandler.EpisimFacility addPersons(InfectionEventHandler.EpisimFacility container, int n,
