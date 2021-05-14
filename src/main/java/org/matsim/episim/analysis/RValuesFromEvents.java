@@ -281,6 +281,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 			// infected person
 			InfectedPerson infected = infectedPersons.computeIfAbsent(event.getPersonId().toString(), InfectedPerson::new);
 			infected.virusStrain = virusStrain;
+			infected.contagiousDay = -1; // contagious day is not yet known;
 
 
 		}
