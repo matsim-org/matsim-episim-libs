@@ -2,15 +2,14 @@ package org.matsim.episim.analysis;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.algorithms.EventWriter;
 import org.matsim.core.events.algorithms.EventWriterXML;
-import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.*;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.model.VirusStrain;
@@ -19,33 +18,33 @@ import org.matsim.testcases.MatsimTestUtils;
 import picocli.CommandLine;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
+import java.util.*;
 
 
 public class RValuesFromEventsTest {
+	final private VirusStrain COV2 = VirusStrain.SARS_CoV_2;
+	final private VirusStrain B117 = VirusStrain.B117;
+
+	final private Id<Person> a = Id.createPersonId("a");
+	final private Id<Person> a1 = Id.createPersonId("a1");
+	final private Id<Person> a2 = Id.createPersonId("a2");
+	final private Id<Person> a3 = Id.createPersonId("a3");
+
+	final private Id<Person> b = Id.createPersonId("b");
+	final private Id<Person> b1 = Id.createPersonId("b1");
 
 	@Rule
 	public MatsimTestUtils utils = new MatsimTestUtils();
 
-	final private VirusStrain COV2 = VirusStrain.SARS_CoV_2;
-	final private VirusStrain B117 = VirusStrain.B117;
-
 	@Test
 	public void testOneVirusStrain() {
 
-		Id<Person> a = Id.createPersonId("a");
-		Id<Person> a1 = Id.createPersonId("a1");
-		Id<Person> a2 = Id.createPersonId("a2");
-		Id<Person> a3 = Id.createPersonId("a3");
+		// Create directory hierarchy
+		boolean directoryMade = new File(utils.getOutputDirectory() + "test01/events").mkdirs();
+		Assume.assumeTrue(directoryMade);
 
-		Id<Person> b = Id.createPersonId("b");
-		Id<Person> b1 = Id.createPersonId("b1");
-
-		String testEventsLocation = "test/output/org/matsim/episim/analysis/RValuesFromEventsTest";
-		final EventWriter eventsWriter = new EventWriterXML(testEventsLocation + "/test01/events/test_events.xml.gz");
+		// Create eventsWriter and attach to eventsManager as handler
+		final EventWriter eventsWriter = new EventWriterXML(utils.getOutputDirectory() + "test01/events/test_events.xml.gz");
 		EventsManager eventsManager = EventsUtils.createEventsManager();
 		eventsManager.addHandler(eventsWriter);
 		eventsManager.initProcessing();
@@ -66,11 +65,13 @@ public class RValuesFromEventsTest {
 		eventsManager.finishProcessing();
 		eventsWriter.closeFile();
 
+		// Generate RValues.txt for generated events
 		RValuesFromEvents rValuesFromEvents = new RValuesFromEvents();
-		new CommandLine(rValuesFromEvents).execute("--output", testEventsLocation);
+		new CommandLine(rValuesFromEvents).execute("--output",  utils.getOutputDirectory());
 
+		// Read & Parse RValues.txt to check if correct R values are produced
 		List<List<String>> records = new ArrayList<>();
-		try (BufferedReader br = new BufferedReader(new FileReader( testEventsLocation + "/rValues.txt"))) {
+		try (BufferedReader br = new BufferedReader(new FileReader(  utils.getOutputDirectory() + "/rValues.txt"))) {
 			String line;
 			while ((line = br.readLine()) != null) {
 				String[] values = line.split("\t");
@@ -96,16 +97,12 @@ public class RValuesFromEventsTest {
 	@Test
 	public void testTwoVirusStrains() {
 
-		Id<Person> a = Id.createPersonId("a");
-		Id<Person> a1 = Id.createPersonId("a1");
-		Id<Person> a2 = Id.createPersonId("a2");
-		Id<Person> a3 = Id.createPersonId("a3");
+		// Create directory hierarchy
+		boolean directoryMade = new File(utils.getOutputDirectory() + "test01/events").mkdirs();
+		Assume.assumeTrue(directoryMade);
 
-		Id<Person> b = Id.createPersonId("b");
-		Id<Person> b1 = Id.createPersonId("b1");
-
-		String testEventsLocation = "test/output/org/matsim/episim/analysis/RValuesFromEventsTest";
-		final EventWriter eventsWriter = new EventWriterXML(testEventsLocation + "/test01/events/test_events.xml.gz");
+		// Create eventsWriter and attach to eventsManager as handler
+		final EventWriter eventsWriter = new EventWriterXML(utils.getOutputDirectory() + "test01/events/test_events.xml.gz");
 		EventsManager eventsManager = EventsUtils.createEventsManager();
 		eventsManager.addHandler(eventsWriter);
 		eventsManager.initProcessing();
@@ -124,11 +121,13 @@ public class RValuesFromEventsTest {
 		eventsManager.finishProcessing();
 		eventsWriter.closeFile();
 
+		// Generate RValues.txt for generated events
 		RValuesFromEvents rValuesFromEvents = new RValuesFromEvents();
-		new CommandLine(rValuesFromEvents).execute("--output", testEventsLocation);
+		new CommandLine(rValuesFromEvents).execute("--output",  utils.getOutputDirectory());
 
+		// Read & Parse RValues.txt to check if correct R values are produced
 		List<List<String>> records = new ArrayList<>();
-		try (BufferedReader br = new BufferedReader(new FileReader( testEventsLocation + "/rValues.txt"))) {
+		try (BufferedReader br = new BufferedReader(new FileReader(  utils.getOutputDirectory() + "/rValues.txt"))) {
 			String line;
 			while ((line = br.readLine()) != null) {
 				String[] values = line.split("\t");
