@@ -33,7 +33,7 @@ public class RValuesFromEventsTest {
 	final private VirusStrain COV2 = VirusStrain.SARS_CoV_2;
 	final private VirusStrain B117 = VirusStrain.B117;
 
-	@org.testng.annotations.Test
+	@Test
 	public void testOneVirusStrain() {
 
 		Id<Person> a = Id.createPersonId("a");
