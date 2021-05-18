@@ -67,7 +67,7 @@ public class RunEpisimSnapshotTest {
 		OutputDirectoryLogging.catchLogEntries();
 
 		AbstractModule testScenario = model.equals("snz") ? new RunSnzIntegrationTest.SnzTestScenario(utils,
-				SnzBerlinProductionScenario.Restrictions.onlyEdu) : new RunEpisimIntegrationTest.TestScenario(utils);
+				SnzBerlinProductionScenario.Restrictions.onlyEdu) : new RunEpisimIntegrationTest.TestScenario(utils, 30);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(testScenario));
 
