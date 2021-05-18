@@ -69,7 +69,7 @@ public interface RestrictionInput {
 		} else if (type == EpisimUtils.Extrapolation.exponential) {
 
 			List<WeightedObservedPoint> points = new ArrayList<>();
-			for (int i = 0; i < n; i++) {
+			for (int i = 0; i < Math.min(size, n); i++) {
 				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
 			}
 
@@ -114,7 +114,7 @@ public interface RestrictionInput {
 			for (int i = 0; i < 7; i++) {
 				LocalDate day = start.plusDays(i);
 				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
-						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
+						&& day.getDayOfWeek() != DayOfWeek.FRIDAY && values.containsKey(day)) {
 					week.add((double) values.get(day));
 				}
 			}
