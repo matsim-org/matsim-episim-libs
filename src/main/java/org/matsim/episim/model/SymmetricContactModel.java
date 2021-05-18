@@ -149,8 +149,8 @@ public final class SymmetricContactModel extends AbstractContactModel {
 			EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer,  container.getPerformedActivity(personLeavingContainer.getPersonId()));
 			EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson,  container.getPerformedActivity(contactPerson.getPersonId()));
 
-			String leavingPersonsActivity = leavingParams.getContainerName();
-			String otherPersonsActivity = contactParams.getContainerName();
+			String leavingPersonsActivity = leavingParams == qhParams ? "home" : leavingParams.getContainerName();
+			String otherPersonsActivity = contactParams == qhParams ? "home" : contactParams.getContainerName();
 
 			StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
 
