@@ -123,8 +123,11 @@ public class EpisimTestUtils {
 	/**
 	 * Create person with vaccinable status.
 	 */
-	public static EpisimPerson createPerson(boolean vaccinable) {
-		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+	public static EpisimPerson createPerson(boolean vaccinable, int age) {
+		Attributes attr = new Attributes();
+		attr.putAttribute("age", age);
+
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), attr, reporting);
 		p.setVaccinable(vaccinable);
 		return p;
 	}
