@@ -101,17 +101,21 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		builder.restrict(date2, 0.5, "educ_higher");
 		builder.restrict(date3, 1.0, "educ_higher");
 		
+		builder.restrict("2021-07-18", 0.2, "educ_higher");
+		builder.restrict("2021-10-18", 1.0, "educ_higher");
+
+		
 		episimConfig.setCurfewCompliance(curfewCompliance);
 		
-		if(params.testingAndMasks.equals("no")) {
+		if(params.masks.equals("no")) {
 			builder.restrict(date3, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
 			builder.restrict(date3, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
 		}
 		
-		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", params.workFactor * (double) e.get("fraction")), "work", "business");
-		
-		builder.restrict("2021-06-25", params.workFactor, "work", "business");
-		builder.restrict("2021-08-06", 1.0, "work", "business");
+//		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", params.workFactor * (double) e.get("fraction")), "work", "business");
+//		
+//		builder.restrict("2021-06-25", params.workFactor, "work", "business");
+//		builder.restrict("2021-08-06", 1.0, "work", "business");
 
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
@@ -139,11 +143,11 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		
-		for(int i = 0; i<15; i++) vaccinationCompliance.put(i, 0.);
+		for(int i = 0; i<12; i++) vaccinationCompliance.put(i, 0.);
 		double vaccinationCompliance1518 = 0.0;
-		if (params.vaccinate1518.equals("yes")) vaccinationCompliance1518 = params.vaccinationCompliance;
-		for(int i = 15; i<18; i++) vaccinationCompliance.put(i, vaccinationCompliance1518);
-		for(int i = 18; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		if (params.vaccinate1216.equals("yes")) vaccinationCompliance1518 = params.vaccinationCompliance;
+		for(int i = 12; i<16; i++) vaccinationCompliance.put(i, vaccinationCompliance1518);
+		for(int i = 16; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 		
@@ -151,7 +155,7 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 
 		if (!params.revaccinationDate.equals("no")) {
 			reVaccinations.put(LocalDate.parse("2020-01-01"), 0);
-			reVaccinations.put(LocalDate.parse(params.revaccinationDate), (int) (0.01 * 4_831_120));
+			reVaccinations.put(LocalDate.parse(params.revaccinationDate), (int) (params.revaccinationSpeed * 4_831_120));
 			vaccinationConfig.setReVaccinationCapacity_pers_per_day(reVaccinations);
 		}
 		
@@ -194,7 +198,7 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 			workTests.put(testingDate.plusDays(i), workRate1 * i / 31.);
 			eduTests.put(testingDate.plusDays(i), eduRate1 * i / 31.);
 		}
-		if (params.testingAndMasks.equals("no")) {
+		if (params.testing.equals("no")) {
 			leisureTests.put(date3, 0.0);
 			workTests.put(date3, 0.0);
 			eduTests.put(date3, 0.0);
@@ -228,10 +232,13 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		String testingRateEduWorkLeisure1;
 		
 		@StringParameter({"no", "yes"})		
-		String testingAndMasks;
+		String testing;
 		
-		@Parameter({1.0, 0.83})
-		double workFactor;
+		@StringParameter({"no", "yes"})		
+		String masks;
+		
+//		@Parameter({1.0, 0.83})
+//		double workFactor;
 		
 		@StringParameter({"2021-04-01", "2021-06-01"})
 		String b1351date;
@@ -246,10 +253,13 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		double vaccinationCompliance;
 		
 		@StringParameter({"yes", "no"})
-		String vaccinate1518;
+		String vaccinate1216;
 		
 		@StringParameter({"no", "2021-08-01", "2021-10-01"})
 		String revaccinationDate;
+		
+		@Parameter({0.01, 0.02})
+		double revaccinationSpeed;
 		
 //		@StringParameter({"0-0-0", "20-5-5", "20-10-5"})
 //		String testingRateEduWorkLeisure2;
