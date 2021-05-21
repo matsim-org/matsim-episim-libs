@@ -8,8 +8,6 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TestingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
-import org.matsim.episim.BatchRun.Parameter;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
@@ -58,7 +56,9 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
 				.createSnzBerlinProductionScenario();
 		Config config = module.config();
+		
 		config.global().setRandomSeed(3831662765844904176L);
+		config.global().setRandomSeed(params.seed);
 
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -99,7 +99,6 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		curfewCompliance.put(date1, 0.0);
 		
 		builder.restrict(date2, 0.5, "educ_higher");
-		builder.restrict(date3, 1.0, "educ_higher");
 		
 		builder.restrict("2021-07-18", 0.2, "educ_higher");
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
@@ -112,34 +111,45 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 			builder.restrict(date3, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
 		}
 		
-//		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", params.workFactor * (double) e.get("fraction")), "work", "business");
-//		
-//		builder.restrict("2021-06-25", params.workFactor, "work", "business");
-//		builder.restrict("2021-08-06", 1.0, "work", "business");
+		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", 0.83 * (double) e.get("fraction")), "work", "business");
+		
+		builder.restrict("2021-06-24", 0.83, "work", "business");
+		builder.restrict("2021-08-06", 1.0, "work", "business");
+		
+		builder.restrict("2021-10-11", 0.83, "work", "business");
+		builder.restrict("2021-10-23", 1.0, "work", "business");
+		
+		builder.restrict("2021-12-24", 0.83, "work", "business");
+		builder.restrict("2021-12-31", 1.0, "work", "business");
 
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 		
-				
+		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		double vaccineEffectiveness = vaccinationConfig.getEffectiveness();
+		
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 		
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
+				
 		if (params.b1351inf > 0.0) {
 			Map<LocalDate, Integer> infPerDayB1351 = new HashMap<>();
 			infPerDayB1351.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayB1351.put(LocalDate.parse(params.b1351date), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.B1351, infPerDayB1351);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(params.b1351inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.b1351VaccinationEffectiveness);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setReVaccineEffectiveness(1.0);	
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.b1351VaccinationEffectiveness / vaccineEffectiveness);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setReVaccineEffectiveness(1.0);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setFactorSeriouslySickVaccinated(0.05 / (1- params.b1351VaccinationEffectiveness));
+
 		}
 		
-		
-		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setFactorSeriouslySick(0.5);
+//		vaccinationConfig.setFactorSeriouslySick(0.5);
 		
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		
@@ -225,8 +235,8 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 
 	public static final class Params {
 
-//		@GenerateSeeds(1)
-//		public long seed;
+		@GenerateSeeds(5)
+		public long seed;
 		
 		@StringParameter({"20-5-5"})		
 		String testingRateEduWorkLeisure1;
@@ -240,13 +250,14 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 //		@Parameter({1.0, 0.83})
 //		double workFactor;
 		
-		@StringParameter({"2021-04-01", "2021-06-01"})
+//		@StringParameter({"2021-04-01", "2021-06-01"})
+		@StringParameter({"2021-04-01"})
 		String b1351date;
 		
-		@Parameter({0.0, 1.0, 1.4, 1.8})
+		@Parameter({1.0, 1.4, 1.8})
 		double b1351inf;
 		
-		@Parameter({1.0, 0.9, 0.7, 0.5, 0.25, 0.0})
+		@Parameter({0.9, 0.8, 0.7, 0.6, 0.5})
 		double b1351VaccinationEffectiveness;
 		
 		@Parameter({0.8, 0.6})
