@@ -531,7 +531,7 @@ public final class EpisimUtils {
 			prcpPerDay.put(monthDay, prcp);
 		}
 
-		for (int i = 1; i < 365; i++) {
+		for (int i = 1; i < 365*3; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
 			int day = date.getDayOfMonth();

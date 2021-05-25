@@ -24,7 +24,7 @@ public class DefaultInfectionModelTest {
 		escape.setVaccineEffectiveness(0.2);
 		escape.setReVaccineEffectiveness(1);
 
-		EpisimPerson p = EpisimTestUtils.createPerson(true);
+		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
 
 		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 

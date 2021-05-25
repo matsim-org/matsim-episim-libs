@@ -38,7 +38,7 @@ public class VaccinationByAge implements VaccinationModel {
 		for (EpisimPerson p : persons.values()) {
 			if (p.isVaccinable() &&
 					p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
-					p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no) &&
+					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no) )&&
 					p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
 
 				perAge[p.getAge()].add(p);
@@ -48,27 +48,21 @@ public class VaccinationByAge implements VaccinationModel {
 		int age = MAX_AGE - 1;
 		int vaccinationsLeft = availableVaccinations;
 
-		while (vaccinationsLeft > 0) {
-
-			if (perAge[age].size() == 0) {
-				age--;
-
-				if (age < MINIMUM_AGE_FOR_VACCINATIONS)
-					return availableVaccinations - vaccinationsLeft;
-
-				// there are not enough vaccinationsLeft for the Persons of
-				// this age, so we shuffle this set for we get the first n Persons
-				if (perAge[age].size() > vaccinationsLeft)
-					Collections.shuffle(perAge[age], new Random(EpisimUtils.getSeed(rnd)));
-				continue;
-			}
+		while (vaccinationsLeft > 0 && age > MINIMUM_AGE_FOR_VACCINATIONS) {
 
 			List<EpisimPerson> candidates = perAge[age];
-			for (int i = 0; i < candidates.size() && vaccinationsLeft > 0; i++) {
+
+			// list is shuffled to avoid eventual bias
+			if (candidates.size() > vaccinationsLeft)
+				Collections.shuffle(perAge[age], new Random(EpisimUtils.getSeed(rnd)));
+
+			for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
 				EpisimPerson person = candidates.get(i);
 				vaccinate(person, iteration, reVaccination);
 				vaccinationsLeft--;
 			}
+
+			age--;
 		}
 
 		return availableVaccinations - vaccinationsLeft;
