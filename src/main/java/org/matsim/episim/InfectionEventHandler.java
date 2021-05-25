@@ -40,6 +40,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.utils.collections.Tuple;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
@@ -230,6 +231,9 @@ public final class InfectionEventHandler implements Externalizable {
 		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
 
+		// This is used to distribute the containers to the different ReplayEventTasks
+		List<Tuple<EpisimContainer<?>, Double>> estimatedLoad = new LinkedList<>();
+		
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
 		Map<List<Event>, DayOfWeek> sameDay = new IdentityHashMap<>(7);
@@ -449,8 +453,10 @@ public final class InfectionEventHandler implements Externalizable {
 			EpisimContainer<?> container = kv.getKey();
 			double scale = 1 / episimConfig.getSampleSize();
 
-			container.setTotalUsers((int) (totalUsers.getInt(container) * scale));
+			final int numUsers = totalUsers.getInt(container);
+			container.setTotalUsers((int) (numUsers * scale));
 			container.setMaxGroupSize((int) (kv.getIntValue() * scale));
+			estimatedLoad.add(Tuple.of(container, (double) numUsers * kv.getIntValue()));
 
 			Object2IntMap<String> usage = activityUsage.get(kv.getKey());
 			if (usage != null) {
@@ -488,12 +494,67 @@ public final class InfectionEventHandler implements Externalizable {
 		personMap.values().forEach(p -> p.getSpentTime().clear());
 		personMap.values().forEach(EpisimPerson::initParticipation);
 
+		balanceContainersByLoad(estimatedLoad);
+		
 		createTrajectoryHandlers();
-
+		
 		init = true;
 	}
 
-
+	/**
+	 * Distribute the containers to the different ReplayEventTasks, by setting
+	 * the taskId attribute of the containers to values between 0 and episimConfig.getThreds() - 1,
+     * so that the sum of numUsers * maxGroupSize has an even distribution	
+	 */
+	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
+		// We need the containers sorted by the load, with the highest load first
+		Collections.sort(estimatedLoad, new Comparator<Tuple<EpisimContainer<?>, Double>>() {
+			@Override
+			public int compare(Tuple<EpisimContainer<?>, Double> t1, Tuple<EpisimContainer<?>, Double> t2) {
+				if (Math.abs(t1.getSecond() - t2.getSecond()) < 1.0e-9)
+					return 0;
+				else if (t1.getSecond() < t2.getSecond())
+					return 1;
+				return -1;
+			}
+		});
+	
+		final int numThreads = episimConfig.getThreads();
+		// the overall load of the containers assigned to the thread/taskId
+		final Double[] loadPerThread = new Double[numThreads];
+		for (int i = 0; i < numThreads; i++)
+			loadPerThread[i] = 0.0;
+		
+		for(Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
+			// search for the thread/taskId with the minimal load
+			int useThread = 0;
+			Double minLoad = loadPerThread[0];
+			for (int i = 1; i < numThreads; i++) {
+				if (loadPerThread[i] < minLoad) {
+					useThread = i;
+					minLoad = loadPerThread[i];
+				}
+			}
+			// add the load to this thread and set the taskId for the container
+			loadPerThread[useThread] += tuple.getSecond();
+			tuple.getFirst().setTaskId(useThread);
+			if (useThread == 0)
+				log.info("In task 0: {}", tuple.getFirst().getContainerId());
+		}
+	}
+	
+	
+	/**
+	 * Distribute the containers to the different ReplayEventTasks, using
+	 * the hashCode of the containerId (the original distribution schema)	
+	 */
+	private void balanceContainersByHash(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
+		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
+		    final EpisimContainer<?> container = tuple.getFirst();
+			final int useThread = Math.abs(container.getContainerId().hashCode()) % episimConfig.getThreads();		     container.setTaskId(useThread);
+		}
+	} 
+	
 	/**
 	 * Create handlers for executing th
 	 */
