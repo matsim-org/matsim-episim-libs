@@ -93,6 +93,13 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 * @return true when there should be an immediate update again
 	 */
 	private boolean updateNext(EpisimPerson person, Id<Person> id, EpisimPerson.DiseaseStatus from) {
+
+		// clear transition
+		if (from == EpisimPerson.DiseaseStatus.susceptible) {
+			nextStateAndDay.removeLong(id);
+			return false;
+		}
+
 		EpisimPerson.DiseaseStatus next = decideNextState(person);
 		int nextTransitionDay = decideTransitionDay(person, from, next);
 
