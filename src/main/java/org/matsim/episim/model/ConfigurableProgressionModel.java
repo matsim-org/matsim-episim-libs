@@ -61,6 +61,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			.from(DiseaseStatus.seriouslySickAfterCritical,
 					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 
+			// TODO: just placeholder
+			.from(DiseaseStatus.recovered,
+					to(DiseaseStatus.susceptible, Transition.logNormalWithMean(360, 15)))
+
 			.build();
 
 	// yyyy Quellen für alle Aussagen oben??  "Es ..." oder "Eine Studie aus ..." ist mir eigentlich nicht genug.  kai, aug'20
@@ -184,8 +188,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 		int tracingDistance = tracingConfig.getTracingDayDistance();
 		// clear tracing if not relevant anymore
-		persons.values().parallelStream().forEach(person -> 
-		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));											
+		persons.values().parallelStream().forEach(person ->
+		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));
 	}
 
 
@@ -351,6 +355,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			case seriouslySickAfterCritical:
 				return DiseaseStatus.recovered;
 
+			case recovered:
+				return DiseaseStatus.susceptible;
 
 			default:
 				throw new IllegalStateException("No state transition defined for " + person.getDiseaseStatus());

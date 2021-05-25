@@ -172,6 +172,11 @@ public final class EpisimPerson implements Attributable {
 	private int testDate = -1;
 
 	/**
+	 * How many times a person did go through the infected -> recovered cycle.
+	 */
+	private int numInfections = 0;
+
+	/**
 	 * Age of the person in years.
 	 */
 	private final int age;
@@ -260,6 +265,7 @@ public final class EpisimPerson implements Attributable {
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
 		traceable = in.readBoolean();
+		numInfections = in.readInt();
 
 		// vaccinable, which is not restored from snapshot
 		in.readBoolean();
@@ -309,6 +315,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
 		out.writeBoolean(traceable);
+		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
 	}
 
@@ -322,6 +329,12 @@ public final class EpisimPerson implements Attributable {
 
 	public void setDiseaseStatus(double now, DiseaseStatus status) {
 		this.status = status;
+
+		// when person goes back to susceptible, old states are removed
+		if (status == DiseaseStatus.susceptible) {
+			statusChanges.keySet().removeIf(p -> p != DiseaseStatus.recovered);
+		}
+
 		if (!statusChanges.containsKey(status))
 			statusChanges.put(status, now);
 
@@ -350,6 +363,7 @@ public final class EpisimPerson implements Attributable {
 			setVirusStrain(event.getVirusStrain());
 			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
 			setInfectionType(event.getInfectionType());
+			numInfections++;
 
 			this.earliestInfection = null;
 			return event;
@@ -472,6 +486,13 @@ public final class EpisimPerson implements Attributable {
 			return Integer.MAX_VALUE;
 
 		return currentDay - testDate;
+	}
+
+	/**
+	 * Number of times person was infected.
+	 */
+	public int getNumInfections() {
+		return numInfections;
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
@@ -705,6 +726,7 @@ public final class EpisimPerson implements Attributable {
 	boolean checkActivity(DayOfWeek day, double time) {
 		return activityParticipation.get(findActivity(day, time));
 	}
+
 	boolean checkFirstActivity(DayOfWeek day, double time) {
 		return activityParticipation.get(findFirstActivity(day, time));
 	}

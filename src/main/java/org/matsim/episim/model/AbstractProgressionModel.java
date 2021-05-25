@@ -60,7 +60,6 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
 				person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 
-			return;
 		}
 
 		// 0 is empty transition
@@ -78,10 +77,9 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 				person.setDiseaseStatus(now, next);
 				onTransition(person, now, day, status, next);
 
-				if (next != EpisimPerson.DiseaseStatus.recovered) {
-					if (updateNext(person, id, next))
-						updateState(person, day);
-				}
+				if (updateNext(person, id, next))
+					updateState(person, day);
+
 			}
 		} else {
 			if (updateNext(person, id, status))
