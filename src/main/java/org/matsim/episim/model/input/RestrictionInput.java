@@ -6,11 +6,11 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ShutdownPolicy;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
@@ -25,18 +25,24 @@ import java.util.stream.Collectors;
 /**
  * Interface for providing activity participation data.
  */
-public interface ActivityParticipation {
+public interface RestrictionInput {
 
 	/**
 	 * Sets the input for this file.
 	 */
-	ActivityParticipation setInput(Path input);
+	RestrictionInput setInput(Path input);
+
+	/**
+	 * Parameter to modulates the activity participation.
+	 */
+	default RestrictionInput setAlpha(double alpha) {
+		return this;
+	}
 
 	/**
 	 * Provide policy with activity reduction.
 	 */
-	FixedPolicy.ConfigBuilder createPolicy() throws IOException;
-
+	ShutdownPolicy.ConfigBuilder<?> createPolicy() throws IOException;
 
 
 	/**
@@ -63,7 +69,7 @@ public interface ActivityParticipation {
 		} else if (type == EpisimUtils.Extrapolation.exponential) {
 
 			List<WeightedObservedPoint> points = new ArrayList<>();
-			for (int i = 0; i < n; i++) {
+			for (int i = 0; i < Math.min(size, n); i++) {
 				points.add(new WeightedObservedPoint(1.0, i, trend.get(i)));
 			}
 
@@ -113,8 +119,7 @@ public interface ActivityParticipation {
 				}
 			}
 
-			// TODO: use .doubleStream#()
-			double avg = week.stream().mapToDouble(Double::doubleValue).average().orElseThrow();
+			double avg = week.doubleStream().average().orElseThrow();
 			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
 
 			f.accept(start, avg);

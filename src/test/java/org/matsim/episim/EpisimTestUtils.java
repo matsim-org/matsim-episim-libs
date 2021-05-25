@@ -8,7 +8,9 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -59,6 +61,7 @@ public class EpisimTestUtils {
 		episimConfig.setSampleSize(1);
 		episimConfig.setMaxContacts(10);
 		episimConfig.setCalibrationParameter(0.001);
+		episimConfig.setThreads(1);
 
 		// No container name should be the prefix of another one
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c00").setContactIntensity(0));
@@ -120,10 +123,12 @@ public class EpisimTestUtils {
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 
-		p.getTrajectory().add(new EpisimPerson.Activity(currentAct, TEST_CONFIG.selectInfectionParams(currentAct)));
+		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
+		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct));
+		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
 
 		if (container != null) {
-			container.addPerson(p, 0);
+			container.addPerson(p, 0, act);
 		}
 
 		return p;
@@ -136,11 +141,22 @@ public class EpisimTestUtils {
 		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 	}
 
+
+	/**
+	 * Create uninitialized person without trajectory.
+	 */
+	public static EpisimPerson createPerson() {
+		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+	}
+
 	/**
 	 * Create person with vaccinable status.
 	 */
-	public static EpisimPerson createPerson(boolean vaccinable) {
-		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+	public static EpisimPerson createPerson(boolean vaccinable, int age) {
+		Attributes attr = new Attributes();
+		attr.putAttribute("age", age);
+
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), attr, reporting);
 		p.setVaccinable(vaccinable);
 		return p;
 	}

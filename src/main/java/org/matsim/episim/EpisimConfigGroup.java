@@ -74,6 +74,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String ACTIVITY_HANDLING = "activityHandling";
+	private static final String THREADS = "threads";
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
@@ -149,14 +151,15 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
+	private ActivityHandling activityHandling = ActivityHandling.duringContact;
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
-	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
+	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -205,6 +208,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		clearParameterSetsForType(EventFileParams.SET_TYPE);
 		addInputEventsFile(inputEventsFile)
 				.addDays(DayOfWeek.values());
+	}
+
+	@StringSetter(THREADS)
+	public void setThreads(int threads) {
+		this.threads = threads;
+	}
+
+	@StringGetter(THREADS)
+	public int getThreads() {
+		return threads;
 	}
 
 	@StringGetter(WRITE_EVENTS)
@@ -406,21 +419,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.sampleSize = sampleSize;
 	}
 
-	@StringGetter("policyClass")
-	public String getPolicyClass() {
-		return policyClass.getName();
-	}
-
-	@StringSetter("policyClass")
-	public void setPolicyClass(String policyClass) {
-		try {
-			this.policyClass = (Class<? extends ShutdownPolicy>) ClassLoader.getSystemClassLoader().loadClass(policyClass);
-		} catch (ClassNotFoundException e) {
-			log.error("Policy class not found", e);
-			throw new IllegalArgumentException(e);
-		}
-	}
-
 	@StringGetter("policyConfig")
 	public String getPolicyConfig() {
 		if (overwritePolicyLocation != null)
@@ -469,9 +467,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Sets policy class and desired config.
+	 * @deprecated set policy class via guice.
+	 * @see #setPolicy(Config)
 	 */
+	@Deprecated
 	public void setPolicy(Class<? extends ShutdownPolicy> policy, Config config) {
-		this.policyClass = policy;
+		this.policyConfig = config;
+	}
+
+	/**
+	 * Sets policy config.
+	 */
+	public void setPolicy(Config config) {
 		this.policyConfig = config;
 	}
 
@@ -668,18 +675,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 
 	/**
-	 * Create a configured instance of the desired policy.
-	 */
-	public ShutdownPolicy createPolicyInstance() {
-		try {
-			return policyClass.getConstructor(Config.class).newInstance(policyConfig);
-		} catch (ReflectiveOperationException e) {
-			log.error("Could not create policy", e);
-			throw new IllegalStateException(e);
-		}
-	}
-
-	/**
 	 * Create restriction for each {@link InfectionParams}.
 	 */
 	public Map<String, Restriction> createInitialRestrictions() {
@@ -696,6 +691,17 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter("facilitiesHandling")
 	public void setFacilitiesHandling(FacilitiesHandling facilitiesHandling) {
 		this.facilitiesHandling = facilitiesHandling;
+	}
+
+
+	@StringGetter(ACTIVITY_HANDLING)
+	public ActivityHandling getActivityHandling() {
+		return activityHandling;
+	}
+
+	@StringSetter(ACTIVITY_HANDLING)
+	public void setActivityHandling(ActivityHandling activityHandling) {
+		this.activityHandling = activityHandling;
 	}
 
 	/**
@@ -938,6 +944,23 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Overwrite the rng state with a new seed taken from config.
 		 */
 		reseed,
+	}
+
+	/**
+	 * Defines how activity participation is handled.
+	 */
+	public enum ActivityHandling {
+
+		/**
+		 * Activity participation is randdom during each contact.
+		 */
+		duringContact,
+
+		/**
+		 * Activity participation is fixed at start of the day.
+		 */
+		startOfDay
+
 	}
 
 

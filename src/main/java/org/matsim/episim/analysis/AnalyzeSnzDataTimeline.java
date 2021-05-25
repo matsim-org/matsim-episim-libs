@@ -64,7 +64,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	};
 
 	private enum AnalyseAreas {
-		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg
+		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg, Collogne
 	}
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -166,6 +166,15 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			IntSet zipCodesHeinsberg = new IntOpenHashSet(
 					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 			analyzeDataForCertainArea("Heinsberg", zipCodesHeinsberg, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
+			break;
+		case Collogne:
+			IntSet zipCodesCollogne = new IntOpenHashSet(
+					List.of(50667, 50668, 50670, 50672, 50674, 50676, 50677, 50678, 50679, 50733, 50735, 50737, 50739, 50765,
+							50767, 50769, 50823, 50825, 50827, 50829, 50858, 50859, 50931, 50933, 50935, 50937, 50939, 50968,
+							50969, 50996, 50997, 50999, 51061, 51063, 51065, 51067, 51069, 51103, 51105, 51107, 51109, 51143,
+							51145, 51147, 51149));
+			analyzeDataForCertainArea("Collogne", zipCodesCollogne, getPercentageResults, outputShareOutdoor,
 					selectedOptionForAnalyse);
 			break;
 		case Mannheim:

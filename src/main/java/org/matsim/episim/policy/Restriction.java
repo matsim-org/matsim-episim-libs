@@ -318,7 +318,7 @@ public final class Restriction {
 
 			if (e.getValue() == 1d) return e.getKey();
 			else if (Double.isNaN(p))
-				p = rnd.nextDouble();
+				p =rnd.nextDouble();
 
 			if (p < e.getValue())
 				return e.getKey();

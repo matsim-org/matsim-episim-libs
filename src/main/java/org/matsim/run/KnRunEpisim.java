@@ -302,7 +302,7 @@ public class KnRunEpisim {
 					r.setAlpha(1.);
 					basePolicyBuilder.setActivityParticipation(r);
 
-					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
+					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.buildFixed();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
 					strb.append( "_ciCorr" ).append(Joiner.on("_").withKeyValueSeparator("@").join(basePolicyBuilder.getCiCorrections()));

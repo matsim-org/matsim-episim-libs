@@ -35,7 +35,7 @@ import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.model.input.ActivityParticipation;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 
@@ -58,6 +58,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * Common utility class for episim.
  */
 public final class EpisimUtils {
+
+	/**
+	 * Seconds in one day.
+	 */
+	static final double DAY = 24. * 3600;
 
 	private EpisimUtils() {
 	}
@@ -427,7 +432,7 @@ public final class EpisimUtils {
 
 		AtomicReference<LocalDate> start = new AtomicReference<>(LocalDate.parse("2020-02-28"));
 
-		ActivityParticipation.resampleAvgWeekday(data, start.get(), (date, avg) -> {
+		RestrictionInput.resampleAvgWeekday(data, start.get(), (date, avg) -> {
 			trend.add(avg);
 			start.set(date);
 			builder.restrict(date, avg, act);
@@ -436,7 +441,7 @@ public final class EpisimUtils {
 		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
 		start.set(start.get().plusDays(7));
 
-		for (Double predict : ActivityParticipation.extrapolate(recentTrend, 25, extrapolation)) {
+		for (Double predict : RestrictionInput.extrapolate(recentTrend, 25, extrapolation)) {
 			builder.restrict(start.get(), Math.min(predict, 1), act);
 			start.set(start.get().plusDays(7));
 		}

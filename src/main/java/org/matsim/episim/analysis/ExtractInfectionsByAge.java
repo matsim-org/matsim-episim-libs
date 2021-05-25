@@ -55,9 +55,6 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	@CommandLine.Option(names = "--age-groups", description = "Age groups as list of bin edges")
 	private List<Integer> ageGroups = List.of(0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90);
 
-	@CommandLine.Option(names = "--sample-size", description = "Sample size used to calculate incidents", defaultValue = "0.25")
-	private double sampleSize;
-
 	@CommandLine.Option(names = "--attr", defaultValue = "microm:modeled:age", description = "Name of the age attribute")
 	private String ageAttr;
 
@@ -261,7 +258,7 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	 */
 	private String calcIncidence(int group, double aggr) {
 
-		double scale = 100_000d / ((groupSizes.get(group) * (1 / sampleSize)));
+		double scale = 100_000d / groupSizes.get(group);
 		return String.valueOf(aggr * scale);
 	}
 

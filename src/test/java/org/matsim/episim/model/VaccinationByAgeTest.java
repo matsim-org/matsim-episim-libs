@@ -8,8 +8,10 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,7 +31,7 @@ public class VaccinationByAgeTest {
 		Map<Id<Person>, EpisimPerson> persons = new HashMap<>();
 
 		for (int i = 0; i < 100; i++) {
-			EpisimPerson p = EpisimTestUtils.createPerson(false);
+			EpisimPerson p = EpisimTestUtils.createPerson(false, 30);
 			persons.put(p.getPersonId(), p);
 		}
 
@@ -40,6 +42,30 @@ public class VaccinationByAgeTest {
 
 		assertThat(persons.values())
 				.allMatch(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no);
+
+	}
+
+	@Test
+	public void handleVaccinationsWithAge() {
+
+		SplittableRandom rnd = new SplittableRandom(0);
+		Map<Id<Person>, EpisimPerson> persons = new HashMap<>();
+
+		for (int i = 0; i < 1000; i++) {
+			EpisimPerson p = EpisimTestUtils.createPerson(true, rnd.nextInt(12, 100));
+			persons.put(p.getPersonId(), p);
+		}
+
+		int sum = 0;
+
+		for (int i = 0; i < 10; i++) {
+			sum += model.handleVaccination(persons, false, 300, i, 86400 * i);
+
+			List<EpisimPerson> vaccinated = persons.values().stream().filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).collect(Collectors.toList());
+			assertThat(vaccinated)
+					.hasSize(sum);
+
+		}
 
 	}
 }

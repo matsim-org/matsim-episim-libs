@@ -22,12 +22,15 @@ package org.matsim.episim.policy;
 
 import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Inject;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.episim.EpisimReporting;
 
+import javax.annotation.Nullable;
+import javax.inject.Named;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -46,7 +49,8 @@ public final class FixedPolicy extends ShutdownPolicy {
 	/**
 	 * Constructor.
 	 */
-	public FixedPolicy(Config config) {
+	@Inject
+	public FixedPolicy(@Named("policy") Config config) {
 		super(config);
 	}
 
@@ -66,14 +70,19 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
+		initRestrictions(start, restrictions, config);
+	}
 
-		// Init restrictions that are before simulation start
+	/**
+	 * Init restrictions that are before simulation start
+	 */
+	static void initRestrictions(LocalDate start, ImmutableMap<String, Restriction> restrictions, Config config) {
 		for (Map.Entry<String, Restriction> entry : restrictions.entrySet()) {
 
 			// activity name
 			if (!config.hasPath(entry.getKey())) continue;
 
-			Config actConfig = this.config.getConfig(entry.getKey());
+			Config actConfig = config.getConfig(entry.getKey());
 
 			for (Map.Entry<String, ConfigValue> days : actConfig.root().entrySet()) {
 
@@ -94,23 +103,36 @@ public final class FixedPolicy extends ShutdownPolicy {
 			// activity name
 			if (!config.hasPath(entry.getKey())) continue;
 
-			Config actConfig = this.config.getConfig(entry.getKey());
-			String dayKey = "day-" + report.day;
-			String dateKey = report.date;
-
-			// check for day or date config
-			Config dayConfig = null;
-			if (actConfig.hasPath(dayKey))
-				dayConfig = actConfig.getConfig(dayKey);
-			else if (actConfig.hasPath(dateKey))
-				dayConfig = actConfig.getConfig(dateKey);
-
-			if (dayConfig != null) {
-
-				Restriction r = Restriction.fromConfig(dayConfig);
+			Restriction r = readForDay(report, config, entry.getKey());
+			if (r != null)
 				entry.getValue().update(r);
-			}
 		}
+	}
+
+	/**
+	 * Read restriction from map.
+	 */
+	@Nullable
+	static Restriction readForDay(EpisimReporting.InfectionReport report, Config config, String act) {
+
+		if (!config.hasPath(act))
+			return null;
+
+		Config actConfig = config.getConfig(act);
+		String dayKey = "day-" + report.day;
+		String dateKey = report.date;
+
+		// check for day or date config
+		Config dayConfig = null;
+		if (actConfig.hasPath(dayKey))
+			dayConfig = actConfig.getConfig(dayKey);
+		else if (actConfig.hasPath(dateKey))
+			dayConfig = actConfig.getConfig(dateKey);
+
+		if (dayConfig != null) {
+			return Restriction.fromConfig(dayConfig);
+		}
+		return null;
 	}
 
 	/**

@@ -67,7 +67,7 @@ public class RunEpisimSnapshotTest {
 		OutputDirectoryLogging.catchLogEntries();
 
 		AbstractModule testScenario = model.equals("snz") ? new RunSnzIntegrationTest.SnzTestScenario(utils,
-				SnzBerlinProductionScenario.Restrictions.onlyEdu) : new RunEpisimIntegrationTest.TestScenario(utils);
+				SnzBerlinProductionScenario.Restrictions.onlyEdu) : new RunEpisimIntegrationTest.TestScenario(utils, 30);
 
 		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(testScenario));
 
@@ -107,6 +107,12 @@ public class RunEpisimSnapshotTest {
 
 		for (File file : Objects.requireNonNull(new File(utils.getOutputDirectory()).listFiles())) {
 
+			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")
+					|| file.getName().endsWith("cputime.tsv")) continue;
+
+			assertThat(file)
+					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
+
 			// check event files
 			if (file.getName().equals("events")) {
 				for (File event : Objects.requireNonNull(file.listFiles())) {
@@ -115,10 +121,6 @@ public class RunEpisimSnapshotTest {
 				}
 			}
 
-			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")) continue;
-
-			assertThat(file)
-					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
 		}
 
 	}

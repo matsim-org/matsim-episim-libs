@@ -42,12 +42,14 @@ import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
+import org.matsim.episim.ReplayEventsTask;
+
 import org.matsim.facilities.ActivityFacility;
 
 import javax.annotation.Nullable;
 import java.time.DayOfWeek;
 import java.util.*;
-
+import java.util.concurrent.*;
 
 /**
  * Handler that replays events from {@link EpisimConfigGroup#getInputEventsFile()} with corrected time and attributes.
@@ -57,28 +59,9 @@ public final class ReplayHandler {
 	private static final Logger log = LogManager.getLogger(ReplayHandler.class);
 
 	/**
-	 * Experimental flag to adjust persons starting with leisure time during reading of events.
-	 * @implNote don't set to true
-	 */
-	@Beta
-	private static final boolean ADJUST_LEISURE = false;
-	/**
-	 * Used when adjust leisure is true. Mark persons that already started their day.
-	 */
-	private final Set<Id<Person>> started = Collections.newSetFromMap(new IdentityHashMap<>());
-	/**
-	 * Rng for leisure adjustment.
-	 */
-	private SplittableRandom rnd;
-	/**
-	 * Number of adjusted leisure activities.
-	 */
-	private int adjusted = 0;
-	/**
 	 * Needed in createEpisimFacilityId.
 	 */
 	private final EpisimConfigGroup episimConfig;
-
 
 	private final Scenario scenario;
 	private final Map<DayOfWeek, List<Event>> events = new EnumMap<>(DayOfWeek.class);
@@ -92,8 +75,6 @@ public final class ReplayHandler {
 		this.episimConfig = config;
 
 		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
-
-			rnd = new SplittableRandom(0);
 
 			List<Event> eventsForDay = new ArrayList<>();
 			EventsManager manager = EventsUtils.createEventsManager();
@@ -110,12 +91,6 @@ public final class ReplayHandler {
 
 				events.put(day, eventsForDay);
 			}
-
-			started.clear();
-		}
-
-		if (ADJUST_LEISURE) {
-			log.warn("Adjusted {} leisure activities", adjusted);
 		}
 
 		if (events.size() != 7) {
@@ -140,17 +115,7 @@ public final class ReplayHandler {
 	 * Replays event add modifies attributes based on current iteration.
 	 */
 	public void replayEvents(final InfectionEventHandler infectionHandler, DayOfWeek day) {
-		for (final Event e : events.get(day)) {
-			if (e instanceof ActivityStartEvent) {
-				infectionHandler.handleEvent((ActivityStartEvent) e);
-			} else if (e instanceof ActivityEndEvent) {
-				infectionHandler.handleEvent((ActivityEndEvent) e);
-			} else if (e instanceof PersonEntersVehicleEvent) {
-				infectionHandler.handleEvent((PersonEntersVehicleEvent) e);
-			} else {
-				infectionHandler.handleEvent((PersonLeavesVehicleEvent) e);
-			}
-		}
+		infectionHandler.handleEvents(day, events.get(day));
 	}
 
 	/**
@@ -188,10 +153,6 @@ public final class ReplayHandler {
 					coord = link.getToNode().getCoord();
 				}
 
-				if (ADJUST_LEISURE) {
-					started.add(e.getPersonId());
-				}
-
 				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(),
 						                       createEpisimFacilityId(e),
 						                       e.getActType().intern(), coord);
@@ -204,19 +165,6 @@ public final class ReplayHandler {
 
 				String actType = e.getActType().intern();
 				double time = e.getTime();
-
-				// only persons starting their day with end leisure will be adjusted.
-				if (ADJUST_LEISURE && time < 13000 && !started.contains(e.getPersonId())) {
-					started.add(e.getPersonId());
-
-					// adjust person during the first 3.6h
-					// valid comparison because of .intern()
-					if (time < 13000 && actType.equals("leisure")) {
-						time -= Math.min(time - 1, 13000 * rnd.nextDouble());
-						adjusted++;
-					}
-				}
-
 				event = new ActivityEndEvent(time, e.getPersonId(), e.getLinkId(),
 						createEpisimFacilityId(e),
 						actType);

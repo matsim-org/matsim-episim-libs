@@ -51,6 +51,7 @@ import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -105,6 +106,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter diseaseImport;
 	private BufferedWriter outdoorFraction;
 	private BufferedWriter virusStrains;
+	private BufferedWriter cpuTime;
 
 	private String memorizedDate = null;
 
@@ -146,6 +148,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
+		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -204,6 +207,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
+		// cpu time is overwritten
+		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
 
 		// Write config files again to overwrite these from snapshot
@@ -412,36 +417,32 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report the occurrence of an infection.
 	 *
-	 * @param personWrapper infected person
-	 * @param infector      infector
-	 * @param infectionType activities of both persons
+	 * @param event occurred infection event
 	 */
-	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType,
-								VirusStrain strain, double prob, EpisimContainer<?> container) {
+	public void reportInfection(EpisimInfectionEvent event) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
 		// race-conditions will occur, but the state will be eventually where we want it (threads stop logging)
 		if (cnt > 0) {
-			log.warn("Infection of personId={} by person={} at/in {}", personWrapper.getPersonId(), infector.getPersonId(), infectionType);
+			log.warn("Infection of personId={} by person={} at/in {}", event.getPersonId(), event.getInfectorId(), event.getInfectionType());
 			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
-		strains.mergeInt(strain, 1, Integer::sum);
-		manager.processEvent(new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-				personWrapper.getCurrentContainer().getContainerId(), infectionType, container.getPersons().size(), strain, prob));
+		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);
+		manager.processEvent(event);
 
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];
-		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(now);
-		array[InfectionEventsWriterFields.infector.ordinal()] = infector.getPersonId().toString();
-		array[InfectionEventsWriterFields.infected.ordinal()] = personWrapper.getPersonId().toString();
-		array[InfectionEventsWriterFields.infectionType.ordinal()] = infectionType;
+		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(event.getTime());
+		array[InfectionEventsWriterFields.infector.ordinal()] = event.getInfectorId().toString();
+		array[InfectionEventsWriterFields.infected.ordinal()] = event.getPersonId().toString();
+		array[InfectionEventsWriterFields.infectionType.ordinal()] = event.getInfectionType();
 		array[InfectionEventsWriterFields.date.ordinal()] = memorizedDate;
-		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(container.getPersons().size());
-		array[InfectionEventsWriterFields.facility.ordinal()] = container.getContainerId().toString();
-		array[InfectionEventsWriterFields.virusStrain.ordinal()] = strain.toString();
-		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(prob);
+		array[InfectionEventsWriterFields.groupSize.ordinal()] = Long.toString(event.getGroupSize());
+		array[InfectionEventsWriterFields.facility.ordinal()] = event.getContainerId().toString();
+		array[InfectionEventsWriterFields.virusStrain.ordinal()] = event.getVirusStrain().toString();
+		array[InfectionEventsWriterFields.probability.ordinal()] = Double.toString(event.getProbability());
 
 		writer.append(infectionEvents, array);
 	}
@@ -452,8 +453,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 *
 	 * @see EpisimContactEvent
 	 */
-	public void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-							  StringBuilder actType, double duration) {
+	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
+										   StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
@@ -481,25 +482,22 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
-
 		if (iteration == 0) return;
 
-		Object2DoubleMap<String> avg = new Object2DoubleOpenHashMap<>();
+		Map<String, Double> avg = new ConcurrentHashMap<>();
 
-		int i = 1;
-		for (EpisimPerson person : persons) {
-
-			// Average += (NewValue - Average) / NewSampleCount;
-			for (String act : activities) {
-				// Compute incremental avg.
-				avg.mergeDouble(act, (person.getSpentTime().getDouble(act) - avg.getDouble(act)) / i, Double::sum);
-
-				// Compute total instead
-//				avg.mergeDouble(act, person.getSpentTime().getDouble(act), Double::sum);
+        activities.parallelStream().forEach(act -> {
+			int i = 1;
+			double timeSpent = 0;
+			for (EpisimPerson person : persons) {
+				timeSpent += (person.getSpentTime().getDouble(act) - timeSpent) / i;
+				i++;
 			}
+			avg.put(act, timeSpent);
+		});
 
+		for (EpisimPerson person : persons) {
 			person.getSpentTime().clear();
-			i++;
 		}
 
 		List<String> order = Lists.newArrayList(activities);
@@ -562,7 +560,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Write outdoor fraction for each day.
 	 */
-	public void reportOutdoorFraction(double outdoorFraction, int iteration) {
+	public synchronized void reportOutdoorFraction(double outdoorFraction, int iteration) {
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
 
 		try {
@@ -575,6 +573,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	}
 
+	/**
+	 * Report current cpu time.
+	 */
+	synchronized void reportCpuTime(int iteration, String where, String what, int taskId) {
+		writer.append(cpuTime, new String[]{String.valueOf(iteration),
+				where,
+				what,
+				String.valueOf(System.currentTimeMillis()),
+				String.valueOf(taskId)});
+	}
+
 	@Override
 	public void close() {
 
@@ -585,6 +594,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(diseaseImport);
 		writer.close(outdoorFraction);
 		writer.close(virusStrains);
+		writer.close(cpuTime);
 
 	}
 

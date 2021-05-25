@@ -129,7 +129,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		NormalDistribution dist = new NormalDistribution(0.5, 2.6);
 
 		for(int i = -5; i <= 10; i++) {
-			System.out.println(i + " " + dist.density(i));	
+			System.out.println(i + " " + dist.density(i));
 		}
 
 	}
