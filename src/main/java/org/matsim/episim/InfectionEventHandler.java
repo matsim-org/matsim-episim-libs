@@ -538,8 +538,6 @@ public final class InfectionEventHandler implements Externalizable {
 			// add the load to this thread and set the taskId for the container
 			loadPerThread[useThread] += tuple.getSecond();
 			tuple.getFirst().setTaskId(useThread);
-			if (useThread == 0)
-				log.info("In task 0: {}", tuple.getFirst().getContainerId());
 		}
 	}
 	
