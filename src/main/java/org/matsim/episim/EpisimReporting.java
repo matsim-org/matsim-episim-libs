@@ -51,6 +51,7 @@ import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -206,6 +207,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
+		// cpu time is overwritten
+		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
 
 		// Write config files again to overwrite these from snapshot
@@ -481,7 +484,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
 		if (iteration == 0) return;
 
-		Object2DoubleMap<String> avg = new Object2DoubleOpenHashMap<>();
+		Map<String, Double> avg = new ConcurrentHashMap<>();
 
         activities.parallelStream().forEach(act -> {
 			int i = 1;
@@ -492,11 +495,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			}
 			avg.put(act, timeSpent);
 		});
-		
+
 		for (EpisimPerson person : persons) {
 			person.getSpentTime().clear();
 		}
-		
+
 		List<String> order = Lists.newArrayList(activities);
 		Object[] array = new String[order.size()];
 		Arrays.fill(array, "");

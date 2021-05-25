@@ -66,7 +66,7 @@ public class RunEpisimIntegrationTest {
 	@Before
 	public void setup() {
 		OutputDirectoryLogging.catchLogEntries();
-		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils)));
+		Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(new TestScenario(utils, it)));
 
 		episimConfig = injector.getInstance(EpisimConfigGroup.class);
 		tracingConfig = injector.getInstance(TracingConfigGroup.class);
@@ -93,6 +93,7 @@ public class RunEpisimIntegrationTest {
 
 		tracingConfig.setTracingDelay_days(1 );
 		tracingConfig.setTracingProbability(0.75);
+		tracingConfig.setTracingCapacity_pers_per_day(50_000);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(tDay);
 
 		runner.run(it);
@@ -186,9 +187,16 @@ public class RunEpisimIntegrationTest {
 	static class TestScenario extends AbstractModule {
 
 		private final MatsimTestUtils utils;
+		private final int it;
 
 		TestScenario(MatsimTestUtils utils) {
+			this(utils, 1);
+		}
+
+
+		TestScenario(MatsimTestUtils utils, int it) {
 			this.utils = utils;
+			this.it = it;
 		}
 
 		@Override
@@ -208,7 +216,7 @@ public class RunEpisimIntegrationTest {
 
 			episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.bln);
 			episimConfig.setSampleSize(0.01);
-			episimConfig.setCalibrationParameter(2);
+			episimConfig.setCalibrationParameter(0.01 / it);
 			episimConfig.setThreads(2);
 
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
