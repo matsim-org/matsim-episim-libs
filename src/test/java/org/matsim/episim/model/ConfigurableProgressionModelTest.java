@@ -41,6 +41,9 @@ public class ConfigurableProgressionModelTest {
 			.from(DiseaseStatus.seriouslySickAfterCritical,
 					to(DiseaseStatus.recovered, Transition.fixed(1)))
 
+			.from(DiseaseStatus.recovered,
+					to(DiseaseStatus.susceptible, Transition.fixed(10)))
+
 			.build();
 
 	private EpisimReporting reporting;
@@ -240,15 +243,25 @@ public class ConfigurableProgressionModelTest {
 		// Depends on random seed
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
-		for (int day = 0; day <= 16; day++) {
+
+		for (int day = 0; day <= 26; day++) {
 			model.updateState(p, day);
 
 			if (day == 3) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.infectedButNotContagious);
 			if (day == 4) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.contagious);
 			if (day == 6) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.showingSymptoms);
 			if (day == 16) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.recovered);
-
+			if (day == 26) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.susceptible);
 		}
+
+		// reinfection after susceptible
+		p.setDiseaseStatus(30 * 86400, DiseaseStatus.infectedButNotContagious);
+
+		for (int day = 30; day <= 33; day++) {
+			model.updateState(p, day);
+			if (day == 33) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.infectedButNotContagious);
+		}
+
 	}
 
 
@@ -298,6 +311,8 @@ public class ConfigurableProgressionModelTest {
 						to(DiseaseStatus.seriouslySickAfterCritical, Transition.fixed(0)))
 				.from(DiseaseStatus.seriouslySickAfterCritical,
 						to(DiseaseStatus.recovered, Transition.fixed(0)))
+				.from(DiseaseStatus.recovered,
+						to(DiseaseStatus.susceptible, Transition.fixed(40)))
 				.build());
 
 		model = new ConfigurableProgressionModel(new SplittableRandom(1), config, tracingConfig, strainConfig, vaccinationConfig);
