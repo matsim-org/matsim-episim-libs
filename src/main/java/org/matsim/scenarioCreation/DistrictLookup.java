@@ -30,7 +30,6 @@ import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.index.strtree.STRtree;
 import org.matsim.api.core.v01.Coord;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
@@ -47,6 +46,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Preprocessing step that takes the home ids of each person in a population and looks up their district from a shape file.
@@ -61,13 +61,13 @@ public class DistrictLookup implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(DistrictLookup.class);
 
-	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
+	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans.xml.gz")
 	private Path input;
 
 	@CommandLine.Option(names = "--shp", description = "Shapefile containing district information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp")
 	private Path shapeFile;
 
-	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue  = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
+	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Heinsberg/Heinsberg_smallerArea/episim-input/he_small_2020_snz_entirePopulation_noPlans_withDistricts_100pt.xml.gz")
 	private Path output;
 
 	@CommandLine.Option(names = "--attr", description = "Attribute name in the shapefile, which contains the district name", defaultValue = "name_2")
@@ -96,9 +96,9 @@ public class DistrictLookup implements Callable<Integer> {
 		Index index = new Index(shapeFile.toFile(), ct, attr);
 
 		// Count errors
-		int unknown = 0;
-		for (Person p : population.getPersons().values()) {
+		AtomicInteger unknown = new AtomicInteger(0);
 
+		population.getPersons().values().parallelStream().forEach(p -> {
 			try {
 				double x = (double) p.getAttributes().getAttribute("homeX");
 				double y = (double) p.getAttributes().getAttribute("homeY");
@@ -107,12 +107,12 @@ public class DistrictLookup implements Callable<Integer> {
 
 				p.getAttributes().putAttribute("district", district);
 			} catch (RuntimeException e) {
-				unknown++;
+				unknown.incrementAndGet();
 			}
-		}
+		});
 
 		// Simple check if the lookup might be wrong
-		if (unknown >= population.getPersons().size() * 0.5) {
+		if (unknown.get() >= population.getPersons().size() * 0.5) {
 			log.error("District lookup failed for {} out of {} persons.", unknown, population.getPersons().size());
 			return 1;
 		}
