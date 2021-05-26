@@ -49,7 +49,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -386,7 +388,32 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210124.csv"));
+		String untilDate = "20210518";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+".csv"));
+
+		//location based restrictions
+		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
+			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
+			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+
+			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
+				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
+						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
+
+
+				Map<String, Path> subdistrictInputs = new HashMap<>();
+				for (String subdistrict : subdistricts) {
+					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
+				}
+
+				((CreateRestrictionsFromCSV) activityParticipation).setDistrictInputs(subdistrictInputs);
+			}
+		}
+
+
+
 		basePolicyBuilder.setActivityParticipation(activityParticipation);
 
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
@@ -533,16 +560,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			//extrapolated from 5.4. until 22.4.
 			vaccinations.put(LocalDate.parse("2021-04-17"), (int) ((0.207 - 0.123) * population / 17));
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
-		}
-
-
-
-		//location based restrictions
-		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
-			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
-			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
-			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
-
 		}
 
 		episimConfig.setPolicy(builder.build());

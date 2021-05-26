@@ -162,7 +162,9 @@ public interface RestrictionInput {
 						String districtName = entry.getKey();
 						Map<LocalDate, Double> daysForDistrict = entry.getValue();
 						if (daysForDistrict.containsKey(day)) {
-							weekPerDistrict.getOrDefault(districtName, new DoubleArrayList()).add((double) daysForDistrict.get(day));
+							DoubleArrayList weekForDistrict = weekPerDistrict.getOrDefault(districtName, new DoubleArrayList());
+							weekForDistrict.add((double) daysForDistrict.get(day));
+							weekPerDistrict.put(districtName, weekForDistrict);
 						}
 					}
 				}

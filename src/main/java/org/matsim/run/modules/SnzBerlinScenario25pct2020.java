@@ -242,25 +242,25 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		private RestrictionInput activityParticipation;
 
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
-			String untilDate = "20210509";
+			String untilDate = "20210518";
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
 
 
-			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)) {
-				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
-						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
-						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
-
-
-				Map<String, Path> subdistrictInputs = new HashMap<>();
-				for (String subdistrict : subdistricts) {
-					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
-				}
-
-				((CreateRestrictionsFromCSV) this.activityParticipation).setDistrictInputs(subdistrictInputs);
-			}
+//			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)) {
+//				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+//						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
+//						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
+//
+//
+//				Map<String, Path> subdistrictInputs = new HashMap<>();
+//				for (String subdistrict : subdistricts) {
+//					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
+//				}
+//
+//				((CreateRestrictionsFromCSV) this.activityParticipation).setDistrictInputs(subdistrictInputs);
+//			}
 
 		}
 
