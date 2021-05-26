@@ -50,10 +50,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseOptions {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen
+		Germany, Berlin, BerlinDistricts, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen
 	};
 	private enum BaseDaysForComparison {
-		March2020, Sebtember2020, days2018 
+		March2020, September2020, days2018
 	};
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -97,14 +97,14 @@ class AnalyzeSnzData implements Callable<Integer> {
 			String sundayBase2018 = "20180114";
 			baseDays = Arrays.asList(weekdayBase2018, saturdayBase2018, sundayBase2018);
 			break;
-		case Sebtember2020:
+		case September2020:
 			String weekdayBase2020 = "20200911";
 			String saturdayBase2020 = "20200912";
 			String sundayBase2020 = "20200913";
 			baseDays = Arrays.asList(weekdayBase2020, saturdayBase2020, sundayBase2020);
 			break;
 		}
-		
+
 		switch (selectedArea) {
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
@@ -119,7 +119,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin,
 					getPercentageResults, baseDays);
 			break;
-		case BerlinDistrcits:
+		case BerlinDistricts:
 			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();
 			berlinDistricts.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119,
 					10785, 13359, 10787, 10557, 13353, 10555, 13351, 13349, 10551, 13347)));
@@ -207,7 +207,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			snz.writeDataForCertainArea(outputFolder.resolve("WolfsburgSnzData_daily_until.csv"), zipCodesWolfsburg,
 					getPercentageResults, baseDays);
 			break;
-		case Bundeslaender:	
+		case Bundeslaender:
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
 			snz.writeBundeslandDataForPublic(outputFolder);
 			break;
