@@ -6,6 +6,7 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.commons.math3.fitting.WeightedObservedPoint;
 import org.apache.commons.math3.stat.regression.SimpleRegression;
+import org.apache.logging.log4j.util.TriConsumer;
 import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -15,10 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
@@ -123,6 +121,63 @@ public interface RestrictionInput {
 			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
 
 			f.accept(start, avg);
+
+			// calc next sunday:
+			int n = 7 - start.getDayOfWeek().getValue() % 7;
+			start = start.plusDays(n);
+		}
+
+		return start;
+	}
+
+	static LocalDate resampleAvgWeekdayBySubdistrict(Map<LocalDate, Double> daysGlobal,
+													 Map<String, Map<LocalDate, Double>> daysPerDistrict,
+													 LocalDate start,
+													 TriConsumer<LocalDate, Double, Map<String, Double>> f) {
+
+		Set<LocalDate> ignored;
+		try {
+			ignored = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
+					.stream().map(LocalDate::parse).collect(Collectors.toSet());
+		} catch (IOException e) {
+			throw new UncheckedIOException("Could not read bank holidays.", e);
+		}
+
+		LocalDate end = Iterables.getLast(daysGlobal.keySet());
+
+		while (start.isBefore(end)) {
+
+			DoubleList weekGlobal = new DoubleArrayList();
+			Map<String, DoubleArrayList> weekPerDistrict = new HashMap<>();
+
+			for (int i = 0; i < 7; i++) {
+				LocalDate day = start.plusDays(i);
+				if (!ignored.contains(day) && day.getDayOfWeek() != DayOfWeek.SATURDAY && day.getDayOfWeek() != DayOfWeek.SUNDAY
+						&& day.getDayOfWeek() != DayOfWeek.FRIDAY) {
+					if (daysGlobal.containsKey(day)) {
+						weekGlobal.add((double) daysGlobal.get(day));
+					}
+					// now per district
+					for (Map.Entry<String, Map<LocalDate, Double>> entry : daysPerDistrict.entrySet()) {
+						String districtName = entry.getKey();
+						Map<LocalDate, Double> daysForDistrict = entry.getValue();
+						if (daysForDistrict.containsKey(day)) {
+							weekPerDistrict.getOrDefault(districtName, new DoubleArrayList()).add((double) daysForDistrict.get(day));
+						}
+					}
+				}
+			}
+
+			double avg = weekGlobal.doubleStream().average().orElseThrow();
+
+			Map<String, Double> avgPerDistrict = new HashMap<>();
+			for (String districtName : weekPerDistrict.keySet()) {
+				double avgForDistrict = weekPerDistrict.get(districtName).doubleStream().average().orElseThrow();
+				avgPerDistrict.put(districtName, avgForDistrict);
+			}
+			// (the above results in a weekly average. Not necessarily all days for the same week, but this is corrected below)
+
+			f.accept(start, avg, avgPerDistrict);
 
 			// calc next sunday:
 			int n = 7 - start.getDayOfWeek().getValue() % 7;

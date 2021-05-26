@@ -238,7 +238,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.easterModel = builder.easterModel;
-		this.locationBasedRestrictions = locationBasedRestrictions;
+		this.locationBasedRestrictions = builder.locationBasedRestrictions;
 	}
 
 	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {

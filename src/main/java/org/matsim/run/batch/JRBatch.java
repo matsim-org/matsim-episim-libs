@@ -51,7 +51,6 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, JRBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
 				RunParallel.OPTION_METADATA
 		};

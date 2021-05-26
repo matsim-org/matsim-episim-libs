@@ -25,7 +25,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private Path input;
 	private double alpha = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
-	private Map<String, Path> subdistrictInput; //TODO:change to Path
+	private Map<String, Path> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
@@ -42,11 +42,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	/**
 	 * Sets the paths for each subdistrict CSV
 	 */
-	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, Path> subdistrictCSVPaths) {
-		Map<String, Path> subdistrictInput = new HashMap<>();
-		for (Map.Entry<String, Path> entry : subdistrictCSVPaths.entrySet()) {
-			subdistrictInput.put(entry.getKey(), entry.getValue().toFile());
-		}
+	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, Path> subdistrictInput) {
 		this.subdistrictInput = subdistrictInput;
 		return this;
 	}
@@ -80,16 +76,16 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 			// activity reduction for notAtHome each day
 			Map<LocalDate, Double> days = new LinkedHashMap<>();
 
-		for (CSVRecord record : parser) {
-			LocalDate date = LocalDate.parse(record.get(0), fmt);
+			for (CSVRecord record : parser) {
+				LocalDate date = LocalDate.parse(record.get(0), fmt);
 
 				int value = Integer.parseInt(record.get(column));
 
-			double remainingFraction = 1. + (value / 100.);
+				double remainingFraction = 1. + (value / 100.);
 
-			// modulate reduction with alpha:
-			double reduction = Math.min(1., alpha * (1. - remainingFraction));
-			days.put(date, Math.min(1, 1 - reduction));
+				// modulate reduction with alpha:
+				double reduction = Math.min(1., alpha * (1. - remainingFraction));
+				days.put(date, Math.min(1, 1 - reduction));
 			}
 
 			return days;
@@ -100,9 +96,20 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	@Override
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
+		// If active, the remaining fraction is calculated and saved for each subdistrict
+		boolean districtSpecificValuesActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+				&& subdistrictInput != null && !subdistrictInput.isEmpty();
+
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
 		Map<LocalDate, Double> days = readInput(input, "notAtHomeExceptLeisureAndEdu", alpha);
 
+		// days per subdistrict
+		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
+		if (districtSpecificValuesActive) {
+			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
+				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), "notAtHomeExceptLeisureAndEdu", alpha));
+			}
+		}
 
 		// activities to set:
 		String[] act = episimConfig.getInfectionParams().stream()
@@ -116,11 +123,23 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 		// trend used for extrapolation
 		List<Double> trend = new ArrayList<>();
+		Map<String, List<Double>> trendPerDistrict = new HashMap<>();
 
-		RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -> {
-			trend.add(avg);
-			builder.restrict(date, avg, act);
-		});
+
+		if (districtSpecificValuesActive) {
+			RestrictionInput.resampleAvgWeekdayBySubdistrict(days, daysPerDistrict, start, (date, avg, avgPerDistrict) -> {
+				for (String districtName : avgPerDistrict.keySet()) {
+					trendPerDistrict.getOrDefault(districtName, new ArrayList<>()).add(avgPerDistrict.get(districtName));
+				}
+				trend.add(avg);
+				builder.restrictWithDistrict(date, avgPerDistrict, avg, act);
+			});
+		} else {
+			RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -> {
+				trend.add(avg);
+				builder.restrict(date, avg, act);
+			});
+		}
 
 		// Use last weeks for the trend
 		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
