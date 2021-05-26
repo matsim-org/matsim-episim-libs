@@ -507,19 +507,14 @@ public final class InfectionEventHandler implements Externalizable {
      * so that the sum of numUsers * maxGroupSize has an even distribution	
 	 */
 	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
-		// We need the containers sorted by the load, with the highest load first
-		Collections.sort(estimatedLoad, new Comparator<Tuple<EpisimContainer<?>, Double>>() {
-			@Override
-			public int compare(Tuple<EpisimContainer<?>, Double> t1, Tuple<EpisimContainer<?>, Double> t2) {
-				if (Math.abs(t1.getSecond() - t2.getSecond()) < 1.0e-9) {
-					return t1.getFirst().getContainerId().toString().compareTo(
-						   t2.getFirst().getContainerId().toString());
-				}
-				else if (t1.getSecond() < t2.getSecond())
-					return 1;
-				return -1;
-			}
-		});
+		// We need the containers sorted by the load, with the highest load first.
+		// To get a deterministic distribution, we use the containerId for
+		// sorting the containers with the same estimatedLoad.
+		Comparator<Tuple<EpisimContainer<?>, Double>> loadComperator =
+			Comparator.<Tuple<EpisimContainer<?>, Double>,Double>comparing(
+						  t -> t.getSecond(), Comparator.reverseOrder()).
+			thenComparing(t -> t.getFirst().getContainerId().toString());
+		Collections.sort(estimatedLoad, loadComperator);
 	
 		final int numThreads = episimConfig.getThreads();
 		// the overall load of the containers assigned to the thread/taskId
