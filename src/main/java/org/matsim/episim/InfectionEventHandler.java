@@ -511,8 +511,10 @@ public final class InfectionEventHandler implements Externalizable {
 		Collections.sort(estimatedLoad, new Comparator<Tuple<EpisimContainer<?>, Double>>() {
 			@Override
 			public int compare(Tuple<EpisimContainer<?>, Double> t1, Tuple<EpisimContainer<?>, Double> t2) {
-				if (Math.abs(t1.getSecond() - t2.getSecond()) < 1.0e-9)
-					return 0;
+				if (Math.abs(t1.getSecond() - t2.getSecond()) < 1.0e-9) {
+					return t1.getFirst().getContainerId().toString().compareTo(
+						   t2.getFirst().getContainerId().toString());
+				}
 				else if (t1.getSecond() < t2.getSecond())
 					return 1;
 				return -1;
