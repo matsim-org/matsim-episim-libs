@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -64,7 +65,8 @@ public class ConfigurableProgressionModelTest {
 		vaccinationConfig = new VaccinationConfigGroup();
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
-		model = new ConfigurableProgressionModel(new SplittableRandom(1), episimConfig, tracingConfig, strainConfig, vaccinationConfig);
+		SplittableRandom rnd = new SplittableRandom(1);
+		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
 		model.setIteration(1);
 	}
 
@@ -73,7 +75,7 @@ public class ConfigurableProgressionModelTest {
 
 		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay_days(0 );
+		tracingConfig.setTracingDelay_days(0);
 
 		model.setIteration(1);
 
@@ -94,8 +96,8 @@ public class ConfigurableProgressionModelTest {
 
 		tracingConfig.setTracingProbability(1);
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay_days(0 );
-		tracingConfig.setTracingCapacity_pers_per_day(500 );
+		tracingConfig.setTracingDelay_days(0);
+		tracingConfig.setTracingCapacity_pers_per_day(500);
 
 		episimConfig.setStartDate("2020-06-01");
 		episimConfig.setSampleSize(1);
@@ -172,8 +174,8 @@ public class ConfigurableProgressionModelTest {
 	public void tracingDistance() {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay_days(2 );
-		tracingConfig.setTracingPeriod_days(1 );
+		tracingConfig.setTracingDelay_days(2);
+		tracingConfig.setTracingPeriod_days(1);
 
 		EpisimPerson p = EpisimTestUtils.createPerson(reporting);
 		p.setDiseaseStatus(0, DiseaseStatus.infectedButNotContagious);
@@ -201,7 +203,7 @@ public class ConfigurableProgressionModelTest {
 	public void traceHome() {
 
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(0);
-		tracingConfig.setTracingDelay_days(0 );
+		tracingConfig.setTracingDelay_days(0);
 		tracingConfig.setTracingProbability(0);
 		tracingConfig.setQuarantineHouseholdMembers(false);
 
@@ -228,7 +230,7 @@ public class ConfigurableProgressionModelTest {
 		// person is not traced one day later when activated, as person is only traced one time
 
 		tracingConfig.setQuarantineHouseholdMembers(true);
-		tracingConfig.setTracingDelay_days(1 );
+		tracingConfig.setTracingDelay_days(1);
 
 		model.setIteration(7);
 		model.updateState(p, 7);
@@ -315,7 +317,8 @@ public class ConfigurableProgressionModelTest {
 						to(DiseaseStatus.susceptible, Transition.fixed(40)))
 				.build());
 
-		model = new ConfigurableProgressionModel(new SplittableRandom(1), config, tracingConfig, strainConfig, vaccinationConfig);
+		SplittableRandom rnd = new SplittableRandom(1);
+		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
 
 		List<Double> recoveredDays = new ArrayList<>();
 

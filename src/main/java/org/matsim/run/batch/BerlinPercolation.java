@@ -14,6 +14,8 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
@@ -130,7 +132,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		protected void configure() {
 			bind(InfectionModel.class).to(DefaultInfectionModel.class);
 			bind(ContactModel.class).to(SymmetricContactModel.class);
-			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class);
+			bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class);
 		}
 
 		@Provides

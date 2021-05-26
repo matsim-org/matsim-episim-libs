@@ -1,8 +1,6 @@
 package org.matsim.run.batch;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.Singleton;
-import com.google.inject.util.Modules;
 
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -10,12 +8,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
 
-import org.matsim.episim.model.AgeDependentInfectionModelWithSeasonality;
-import org.matsim.episim.model.AgeDependentProgressionModel;
-import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.FaceMask;
-import org.matsim.episim.model.InfectionModel;
-import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;

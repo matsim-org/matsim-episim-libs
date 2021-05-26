@@ -11,6 +11,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
@@ -121,7 +123,7 @@ public class RunSnzIntegrationTest {
 		@Override
 		protected void configure() {
 			bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
-			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+			bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 			bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 		}
 
