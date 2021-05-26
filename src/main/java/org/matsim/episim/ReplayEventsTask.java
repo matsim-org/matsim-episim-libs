@@ -22,6 +22,8 @@ package org.matsim.episim;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.*;
+import org.matsim.facilities.ActivityFacility;
+import org.matsim.vehicles.Vehicle;
 
 import java.util.Collection;
 import java.util.List;
@@ -53,33 +55,40 @@ final public class ReplayEventsTask implements Runnable {
 	}
 
 	/**
-	 * Check whether the handler is responsible for the entity with this id.
+	 * Check whether the handler is responsible for the facility with this id.
 	 */
-	boolean handles(Id<?> id) {
-		return Math.abs(id.hashCode()) % numThreads == taskId;
+	boolean handlesFacility(Id<ActivityFacility> id) {
+		return trajectoryHandler.getEpisimFacility(id).getTaskId() == taskId;
 	}
 
+	/**
+	 * Check whether the handler is responsible for the vehicle with this id.
+	 */
+	boolean handlesVehicle(Id<Vehicle> id) {
+		return trajectoryHandler.getEpisimVehicle(id).getTaskId() == taskId;
+	}
+	
 	public void run() {
 		trajectoryHandler.reportCpuTime("start", taskId);
-		trajectoryHandler.onStartDay(this::handles);
+		trajectoryHandler.onStartDay(this::handlesFacility, this::handlesVehicle);
 
 		for (final Event e : events) {
 			if (e instanceof ActivityStartEvent) {
 				ActivityStartEvent ase = (ActivityStartEvent) e;
-				if (handles(ase.getFacilityId()))
+				if (handlesFacility(ase.getFacilityId()))
 					trajectoryHandler.handleEvent(ase);
 			} else if (e instanceof ActivityEndEvent) {
 				ActivityEndEvent aee = (ActivityEndEvent) e;
-				if (handles(aee.getFacilityId())) {
+				if (handlesFacility(aee.getFacilityId())) {
 					trajectoryHandler.handleEvent(aee);
 				}
 			} else if (e instanceof PersonEntersVehicleEvent) {
 				PersonEntersVehicleEvent peve = (PersonEntersVehicleEvent) e;
-				if (handles(peve.getVehicleId()))
+				if (handlesVehicle(peve.getVehicleId()))
 					trajectoryHandler.handleEvent(peve);
 			} else {
 				PersonLeavesVehicleEvent plve = (PersonLeavesVehicleEvent) e;
-				if (handles(plve.getVehicleId()))
+				if (handlesVehicle(plve.getVehicleId()))
 					trajectoryHandler.handleEvent(plve);
 			}
 		}
