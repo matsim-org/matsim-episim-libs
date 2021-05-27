@@ -33,6 +33,8 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.vehicles.VehicleType;
 
@@ -63,7 +65,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 		bind(VaccinationModel.class).to(VaccinationByAge.class).in(Singleton.class);
 	}
