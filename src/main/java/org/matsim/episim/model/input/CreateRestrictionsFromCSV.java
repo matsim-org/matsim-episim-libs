@@ -88,7 +88,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-		Map<LocalDate, Double> days = readInput(input, "notAtHomeExceptLeisureAndEdu", alpha);
+		Map<LocalDate, Double> days = readInput(input, "notAtHome", alpha);
 
 
 		// activities to set:
