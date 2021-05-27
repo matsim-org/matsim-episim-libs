@@ -16,7 +16,7 @@ public class VaccinationByAge implements VaccinationModel {
 	private final SplittableRandom rnd;
 
 	private final static int MAX_AGE = 130;
-	private final static int MINIMUM_AGE_FOR_VACCINATIONS = 6;
+	private final static int MINIMUM_AGE_FOR_VACCINATIONS = 0;
 
 	@Inject
 	public VaccinationByAge(SplittableRandom rnd) {
