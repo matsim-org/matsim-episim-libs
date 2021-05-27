@@ -313,6 +313,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(0.5);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
+		episimConfig.setThreads(8);
 
 		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
 
@@ -357,7 +358,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -383,7 +384,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210124.csv"));
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210504_v2.csv"));
 		basePolicyBuilder.setActivityParticipation(activityParticipation);
 
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
@@ -425,10 +426,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
-
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);				
 			inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
@@ -439,11 +439,15 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			inputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
 
-			/* TODO: this need to be set earlier in the policy builder
+			// TODO: this need to be set earlier in the policy builder
+			if (this.adjustRestrictions != AdjustRestrictions.no) {
+				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
+			}
+						
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.5925;
-
+				double fraction = 0.665;
+				
 				if (this.christmasModel == ChristmasModel.restrictive) {
 					builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
 				}
@@ -452,17 +456,22 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					builder.restrict(LocalDate.parse("2020-12-31"), 1.0, act);
 					builder.restrict(LocalDate.parse("2021-01-02"), fraction, act);
 				}
-			}*/
+			}
 		}
 
 		if (this.easterModel == EasterModel.yes) {
 			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+			
+			// TODO: this need to be set earlier in the policy builder
+			if (this.adjustRestrictions != AdjustRestrictions.no) {
+				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
+			}
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.72;
+				double fraction = 0.68;
 				builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
