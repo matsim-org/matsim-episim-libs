@@ -80,12 +80,12 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 				person.setDiseaseStatus(now, next);
 				onTransition(person, now, day, status, next);
 
-				if (updateNext(person, id, next))
+				if (updateNext(person, id, next, day))
 					updateState(person, day);
 
 			}
 		} else {
-			if (updateNext(person, id, status))
+			if (updateNext(person, id, status, day))
 				updateState(person, day);
 		}
 	}
@@ -95,7 +95,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 *
 	 * @return true when there should be an immediate update again
 	 */
-	private boolean updateNext(EpisimPerson person, Id<Person> id, EpisimPerson.DiseaseStatus from) {
+	private boolean updateNext(EpisimPerson person, Id<Person> id, EpisimPerson.DiseaseStatus from, int day) {
 
 		// clear transition
 		if (from == EpisimPerson.DiseaseStatus.susceptible) {
@@ -103,7 +103,7 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			return false;
 		}
 
-		EpisimPerson.DiseaseStatus next = statusTransitionModel.decideNextState(person, person.getDiseaseStatus());
+		EpisimPerson.DiseaseStatus next = statusTransitionModel.decideNextState(person, person.getDiseaseStatus(), day);
 		int nextTransitionDay = decideTransitionDay(person, from, next);
 
 		nextStateAndDay.put(id, compoundLong(next.ordinal(), nextTransitionDay));

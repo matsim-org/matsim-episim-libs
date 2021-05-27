@@ -12,8 +12,9 @@ public interface DiseaseStatusTransitionModel {
 	 * Calculate the next disease status of a person.
 	 * @param person the person
 	 * @param status current disease status
+	 * @param day current day (iteration number)
 	 * @return the next disease status.
 	 */
-	EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status);
+	EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status, int day);
 
 }

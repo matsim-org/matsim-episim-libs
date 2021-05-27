@@ -22,7 +22,7 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	}
 
 	@Override
-	public final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status) {
+	public final EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person, EpisimPerson.DiseaseStatus status, int day) {
 
 		switch (status) {
 			case infectedButNotContagious:
