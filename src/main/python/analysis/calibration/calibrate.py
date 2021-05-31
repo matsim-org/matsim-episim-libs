@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import os
 import argparse
 import subprocess
 from datetime import datetime, date, timedelta
@@ -57,6 +58,12 @@ def percentage_error(actual, predicted):
 def mean_absolute_percentage_error(y_true, y_pred):
     return np.mean(np.abs(percentage_error(np.asarray(y_true), np.asarray(y_pred)))) * 100
 
+
+def msle(y_true, y_pred):
+
+    # pad time series to same length if necessary
+    pad = max(0, len(y_true) - len(y_pred))
+    return mean_squared_log_error(y_true, np.pad(y_pred, (0, pad), 'edge'))
 
 def reinfection_number(f, target=2.5, days=20):
     """ Calculates reinfection number of a run """
@@ -128,15 +135,15 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
 
     peak = str(df.loc[df.cases.idxmax()].date)
 
-    error_sick = mean_squared_log_error(hospital["Stationäre Behandlung"], df.nSeriouslySick + df.nCritical)
-    error_critical = mean_squared_log_error(hospital["Intensivmedizin"], df.nCritical)
+    error_sick = msle(hospital["Stationäre Behandlung"], df.nSeriouslySick + df.nCritical)
+    error_critical = msle(hospital["Intensivmedizin"], df.nCritical)
 
     # Assume fixed Dunkelziffer
-    error_cases = mean_squared_log_error(rki.casesSmoothed * assumed_dz, df.casesSmoothed)
+    error_cases = msle(rki.casesSmoothed * assumed_dz, df.casesSmoothed)
     # error_cases = mean_squared_log_error(rki.casesNorm, df.casesNorm)
 
     # Dunkelziffer
-    dz = float(df.nContagiousCumulative.tail(1) / rki.casesCumulative.tail(1))
+    dz = float(df.nContagiousCumulative.tail(1)) / float(rki.casesCumulative.tail(1))
 
     return error_cases, error_sick, error_critical, peak, dz
 
@@ -225,7 +232,11 @@ def objective_hospital(trial):
           % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
-    subprocess.run(cmd, shell=True)
+
+    if os.name != 'nt':
+        cmd = cmd.split(" ")
+
+    subprocess.run(cmd, shell=os.name == 'nt')
 
     results = []
     for i in range(1, trial.study.user_attrs["runs"] + 1):
@@ -341,7 +352,7 @@ if __name__ == "__main__":
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="hospital")
-    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -Xmx10G")
+    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -Xmx20G")
 
     args = parser.parse_args()
 
