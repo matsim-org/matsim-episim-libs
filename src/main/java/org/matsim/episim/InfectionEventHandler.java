@@ -233,7 +233,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// This is used to distribute the containers to the different ReplayEventTasks
 		List<Tuple<EpisimContainer<?>, Double>> estimatedLoad = new LinkedList<>();
-		
+
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
 		Map<List<Event>, DayOfWeek> sameDay = new IdentityHashMap<>(7);
@@ -274,7 +274,7 @@ public final class InfectionEventHandler implements Externalizable {
 							person.setLastFacilityId(homeId, it, true);
 
 							EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
-							person.addToTrajectory(0, home);
+							person.addToTrajectory(0, home, homeId);
 							person.setEndOfDay(it);
 							person.setStartOfDay(it.plus(1));
 						}
@@ -293,7 +293,8 @@ public final class InfectionEventHandler implements Externalizable {
 					EpisimConfigGroup.InfectionParams act = paramsMap.computeIfAbsent(actType, this::createActivityType);
 					totalUsers.mergeInt(facility, 1, Integer::sum);
 
-					person.addToTrajectory(event.getTime(), act);
+					Id<ActivityFacility> facilityId = ((ActivityStartEvent) event).getFacilityId();
+					person.addToTrajectory(event.getTime(), act, facilityId);
 
 					person.setLastFacilityId(facility.getContainerId(), day, true);
 
@@ -305,7 +306,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 					// if this is the first event, container is saved and trajectory element created
 					if (!person.hasActivity(day)) {
-						person.addToTrajectory(0, act);
+						Id<ActivityFacility> facilityId = ((ActivityEndEvent) event).getFacilityId();
+						person.addToTrajectory(0, act, facilityId);
 						person.setFirstFacilityId(facility.getContainerId(), day);
 					}
 
@@ -338,10 +340,10 @@ public final class InfectionEventHandler implements Externalizable {
 				if (!person.hasActivity(day)) {
 					person.setStartOfDay(day);
 					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
-					person.addToTrajectory(0, home);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
 					person.setLastFacilityId(facility.getContainerId(), day, true);
+					person.addToTrajectory(0, home, facility.getContainerId());
 					cnt++;
 				}
 
@@ -495,16 +497,16 @@ public final class InfectionEventHandler implements Externalizable {
 		personMap.values().forEach(EpisimPerson::initParticipation);
 
 		balanceContainersByLoad(estimatedLoad);
-		
+
 		createTrajectoryHandlers();
-		
+
 		init = true;
 	}
 
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, by setting
 	 * the taskId attribute of the containers to values between 0 and episimConfig.getThreds() - 1,
-     * so that the sum of numUsers * maxGroupSize has an even distribution	
+     * so that the sum of numUsers * maxGroupSize has an even distribution
 	 */
 	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		// We need the containers sorted by the load, with the highest load first.
@@ -515,13 +517,13 @@ public final class InfectionEventHandler implements Externalizable {
 						  t -> t.getSecond(), Comparator.reverseOrder()).
 			thenComparing(t -> t.getFirst().getContainerId().toString());
 		Collections.sort(estimatedLoad, loadComperator);
-	
+
 		final int numThreads = episimConfig.getThreads();
 		// the overall load of the containers assigned to the thread/taskId
 		final Double[] loadPerThread = new Double[numThreads];
 		for (int i = 0; i < numThreads; i++)
 			loadPerThread[i] = 0.0;
-		
+
 		for(Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
 			// search for the thread/taskId with the minimal load
 			int useThread = 0;
@@ -537,19 +539,19 @@ public final class InfectionEventHandler implements Externalizable {
 			tuple.getFirst().setTaskId(useThread);
 		}
 	}
-	
-	
+
+
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, using
-	 * the hashCode of the containerId (the original distribution schema)	
+	 * the hashCode of the containerId (the original distribution schema)
 	 */
 	private void balanceContainersByHash(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
 		    final EpisimContainer<?> container = tuple.getFirst();
 			final int useThread = Math.abs(container.getContainerId().hashCode()) % episimConfig.getThreads();		     container.setTaskId(useThread);
 		}
-	} 
-	
+	}
+
 	/**
 	 * Create handlers for executing th
 	 */
@@ -658,7 +660,7 @@ public final class InfectionEventHandler implements Externalizable {
 						episimPerson.setStartOfDay(day);
 					}
 
-					EpisimPerson.PerformedActivity home = episimPerson.addToTrajectory(0, paramsMap.get("home"));
+					EpisimPerson.PerformedActivity home = episimPerson.addToTrajectory(0, paramsMap.get("home"), facilityId);
 					facility.addPerson(episimPerson, 0, home);
 
 					// set end index

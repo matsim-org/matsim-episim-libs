@@ -551,8 +551,17 @@ public final class EpisimPerson implements Attributable {
 		this.vaccinable = vaccinable;
 	}
 
+	PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement, Id<ActivityFacility> facilityId) {
+		PerformedActivity act = new PerformedActivity(time, trajectoryElement, facilityId);
+		trajectory.add(act);
+		return act;
+	}
+
+	/**
+	 * @deprecated -- discouraged, as it doesn't include facilityID, which is needed for location based restrictions
+	 */
 	PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement) {
-		PerformedActivity act = new PerformedActivity(time, trajectoryElement);
+		PerformedActivity act = new PerformedActivity(time, trajectoryElement, null);
 		trajectory.add(act);
 		return act;
 	}
@@ -816,10 +825,13 @@ public final class EpisimPerson implements Attributable {
 
 		public final double time;
 		public final EpisimConfigGroup.InfectionParams params;
+		public final Id<ActivityFacility> facilityId;
 
-		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params) {
+
+		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params, Id<ActivityFacility> facilityId) {
 			this.time = time;
 			this.params = params;
+			this.facilityId = facilityId;
 		}
 
 		/**
@@ -837,6 +849,14 @@ public final class EpisimPerson implements Attributable {
 			return params.getContainerName();
 		}
 
+		/**
+		 * Facility Id for performed activity
+		 */
+		public Id<ActivityFacility> getFacilityId() {
+			return this.facilityId;
+		}
+
+
 		@Override
 		public String toString() {
 			return "PerformedActivity{" +
@@ -849,6 +869,6 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Not further specified activity that is used during initialization.
 	 */
-	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null);
+	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
 }
