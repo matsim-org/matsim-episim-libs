@@ -128,7 +128,7 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
 
     peak = str(df.loc[df.cases.idxmax()].date)
 
-    error_sick = mean_squared_log_error(hospital["Stationäre Behandlung"], df.nSeriouslySick)
+    error_sick = mean_squared_log_error(hospital["Stationäre Behandlung"], df.nSeriouslySick + df.nCritical)
     error_critical = mean_squared_log_error(hospital["Intensivmedizin"], df.nCritical)
 
     # Assume fixed Dunkelziffer
@@ -208,6 +208,37 @@ def objective_unconstrained(trial):
 
     trial.set_user_attr("df", df.to_json())
     return df.error.mean()
+
+def objective_hospital(trial):
+    """ Objective for hospital numbers and calibration parameter """
+
+    n = trial.number
+    c = trial.suggest_uniform("calibrationParameter", 0.8e-5, 1.7e-5)
+
+    scenario = trial.study.user_attrs["scenario"]
+    district = trial.study.user_attrs.get("district", "unknown")
+    jvm = trial.study.user_attrs["jvm_opts"]
+
+    results = []
+    for i in range(trial.study.user_attrs["runs"]):
+        cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --number %d --run %d --calibParameter %.12f --days 195" \
+              % (jvm, scenario, n, i, c)
+
+        print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
+        subprocess.run(cmd, shell=True)
+
+        res = calc_multi_error("output-calibration/%d/run%d/infections.txt" % (n, i), district, start="2020-03-01", end="2020-09-01")
+        results.append(res)
+
+    df = pd.DataFrame(results, columns=["error_cases", "error_sick", "error_critical", "peak", "dz"])
+    print(df)
+
+    for k, v in df.mean().iteritems():
+        trial.set_user_attr(k, v)
+
+    trial.set_user_attr("df", df.to_json())
+
+    return df.error_sick.mean()
 
 
 def objective_ci_correction(trial):
@@ -302,13 +333,13 @@ if __name__ == "__main__":
     parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinWeekScenario2020")
-    parser.add_argument("--runs", type=int, default=1, help="Number of runs per objective")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionSzenario")
+    parser.add_argument("--runs", type=int, default=10, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
-    parser.add_argument("--objective", type=str, choices=["unconstrained", "ci_correction", "multi"], default="unconstrained")
-    parser.add_argument("--jvm-opts", type=str, default="-Xmx8G")
+    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="unconstrained")
+    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -Xmx10G")
 
     args = parser.parse_args()
 
@@ -334,7 +365,8 @@ if __name__ == "__main__":
     objectives = {
         "multi": objective_multi,
         "unconstrained": objective_unconstrained,
-        "ci_correction": objective_ci_correction
+        "ci_correction": objective_ci_correction,
+        "hospital": objective_hospital
     }
 
     objective = objectives[args.objective]
