@@ -33,6 +33,8 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.AllParticipationModel;
+import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.model.testing.DefaultTestingModel;
@@ -60,6 +62,7 @@ public class EpisimModule extends AbstractModule {
 		bind(ContactModel.class).to(DefaultContactModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 		bind(InitialInfectionHandler.class).to(RandomInitialInfections.class).in(Singleton.class);

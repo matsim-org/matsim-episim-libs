@@ -121,10 +121,6 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			;
 		}
 
-		restrictions.restrict("2020-03-22", 0., "restaurant");
-		restrictions.restrict("2020-11-02", 0., "restaurant");
-
-
 		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
 
 			String date = e.getKey();
@@ -138,23 +134,55 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		if (maskCompliance == 0) return restrictions;
 
 		LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
-		double clothFraction = maskCompliance * 0.9;
-		double surgicalFraction = maskCompliance * 0.1;
+		double clothFraction = maskCompliance * 1./3.;
+		double surgicalFraction = maskCompliance * 1./3.;
+		double ffpFraction = maskCompliance * 1./3.;
 		// this is the date when it was officially introduced in Berlin, so for the time being we do not make this configurable.  Might be different
 		// in MUC and elsewhere!
 
 		for (int ii = 0; ii <= introductionPeriod; ii++) {
 			LocalDate date = masksCenterDate.plusDays(-introductionPeriod / 2 + ii);
-			restrictions.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
-					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), "pt", "shop_daily", "shop_other", "errands");
+			restrictions.restrict(date, Restriction.ofMask(Map.of(
+					FaceMask.CLOTH, clothFraction * ii / introductionPeriod,
+					FaceMask.N95, ffpFraction * ii / introductionPeriod,
+					FaceMask.SURGICAL, surgicalFraction * ii / introductionPeriod)), 
+					"pt", "shop_daily", "shop_other", "errands");
 		}
 
 		// mask compliance according to bvg
-		restrictions.restrict("2020-06-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
-		restrictions.restrict("2020-07-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.85 * 0.9, FaceMask.SURGICAL, 0.85 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
-		restrictions.restrict("2020-08-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict(LocalDate.parse("2020-06-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.8 * 1./3.,
+				FaceMask.N95, 0.8 * 1./3.,
+				FaceMask.SURGICAL, 0.8 * 1./3.)), 
+				"pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict(LocalDate.parse("2020-07-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.85 * 1./3.,
+				FaceMask.N95, 0.85 * 1./3.,
+				FaceMask.SURGICAL, 0.85 * 1./3.)),  
+				"pt", "shop_daily", "shop_other", "errands");
+		restrictions.restrict(LocalDate.parse("2020-08-01"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.9 * 1./3.,
+				FaceMask.N95, 0.9 * 1./3.,
+				FaceMask.SURGICAL, 0.9 * 1./3.)),  
+				"pt", "shop_daily", "shop_other", "errands");
+		
+		//Pflicht für medizinische Masken: https://www.rbb24.de/politik/thema/corona/beitraege/2021/01/verschaerfte-maskenpflicht-berlin-ffp2-oepnv-.html
+		restrictions.restrict(LocalDate.parse("2021-01-24"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9 * 1./2.,
+				FaceMask.SURGICAL, 0.9 * 1./2.)),  
+				"pt", "shop_daily", "shop_other", "errands");
+		
+		//FFP2-Maskenpflicht https://www.berlin.de/aktuelles/berlin/6489489-958092-ab-mittwoch-an-vielen-orten-ffp2masken-p.html
+		restrictions.restrict(LocalDate.parse("2021-03-31"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9)),  
+				"pt", "shop_daily", "shop_other", "errands");
 
-		restrictions.restrict("2020-10-25", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
+		
+		restrictions.restrict(LocalDate.parse("2020-10-25"), Restriction.ofMask(Map.of(
+				FaceMask.CLOTH, 0.9 * 1./3.,
+				FaceMask.N95, 0.9 * 1./3.,
+				FaceMask.SURGICAL, 0.9 * 1./3.)),  
+				"educ_higher", "educ_tertiary", "educ_other");
 
 		if (activityParticipation instanceof CreateAdjustedRestrictionsFromCSV) {
 			CreateAdjustedRestrictionsFromCSV adjusted = (CreateAdjustedRestrictionsFromCSV) activityParticipation;

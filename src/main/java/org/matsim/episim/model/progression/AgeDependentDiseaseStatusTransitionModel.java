@@ -18,26 +18,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.matsim.episim.model;
+package org.matsim.episim.model.progression;
 
 import org.matsim.episim.*;
 
 import com.google.inject.Inject;
+import org.matsim.episim.model.ConfigurableProgressionModel;
 
 import java.util.SplittableRandom;
 
 /**
  * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
  */
-public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
+public class AgeDependentDiseaseStatusTransitionModel extends DefaultDiseaseStatusTransitionModel {
 
-	/**
-	 * Constructor as in {@link ConfigurableProgressionModel}.
-	 */
+	private final EpisimConfigGroup episimConfig;
+
 	@Inject
-	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-	                                    VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
-		super(rnd, episimConfig, tracingConfig, strainConfig, vaccinationConfig);
+	public AgeDependentDiseaseStatusTransitionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
+	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
+		super(rnd, vaccinationConfig, strainConfigGroup);
+		this.episimConfig = episimConfig;
 	}
 
 	@Override

@@ -131,7 +131,8 @@ final class TrajectoryHandler {
 	 *
 	 * @param responsible predicate for checking if the handler is responsible for a certain facility
 	 */
-	public void onStartDay(Predicate<Id<?>> responsible) {
+	public void onStartDay(Predicate<Id<ActivityFacility>> responsibleFacility,
+						   Predicate<Id<Vehicle>> responsibleVehicle) {
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
@@ -140,7 +141,7 @@ final class TrajectoryHandler {
 		DayOfWeek prevDay = EpisimUtils.getDayOfWeek(episimConfig, iteration - 1);
 
 		for (InfectionEventHandler.EpisimFacility facility : pseudoFacilityMap.values()) {
-			if (!responsible.test(facility.getContainerId()))
+			if (!responsibleFacility.test(facility.getContainerId()))
 				continue;
 
 			Iterator<EpisimPerson> it = facility.getPersons().iterator();
@@ -169,7 +170,7 @@ final class TrajectoryHandler {
 
 		// all persons still in vehicles are removed at the end of the day
 		for (InfectionEventHandler.EpisimVehicle vehicle : vehicleMap.values()) {
-			if (!responsible.test(vehicle.getContainerId()))
+			if (!responsibleVehicle.test(vehicle.getContainerId()))
 				continue;
 
 			Iterator<EpisimPerson> it = vehicle.getPersons().iterator();
@@ -186,7 +187,7 @@ final class TrajectoryHandler {
 			Id<ActivityFacility> firstFacilityId = person.getFirstFacilityId(day);
 			InfectionEventHandler.EpisimFacility firstFacility = pseudoFacilityMap.get(firstFacilityId);
 
-			if (!responsible.test(firstFacilityId))
+			if (!responsibleFacility.test(firstFacilityId))
 				continue;
 
 			if (!person.checkFirstActivity(day, 0))
@@ -315,6 +316,14 @@ final class TrajectoryHandler {
 
 	public void reportCpuTime(String what, int taskId) {
 		reporting.reportCpuTime(iteration, "TrajectoryHandler", what, taskId);
+	}
+
+	public InfectionEventHandler.EpisimFacility getEpisimFacility(Id<ActivityFacility> id) {
+		return this.pseudoFacilityMap.get(id);
+	}
+
+	public InfectionEventHandler.EpisimVehicle getEpisimVehicle(Id<Vehicle> id) {
+		return this.vehicleMap.get(id);
 	}
 }
 

@@ -7,6 +7,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 
 import java.util.SplittableRandom;
 
@@ -41,8 +42,10 @@ public class AgeAndProgressionDependentInfectionModelWithSeasonalityTest {
 		progression = new ConfigurableProgressionModel(rnd,
 				ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class),
 				ConfigUtils.addOrGetModule(config, TracingConfigGroup.class),
-				ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class),
-				ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class)
+				new DefaultDiseaseStatusTransitionModel(rnd,
+						ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class),
+						ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class)
+				)
 		);
 		reporting = EpisimTestUtils.getReporting();
 		model = new AgeAndProgressionDependentInfectionModelWithSeasonality(

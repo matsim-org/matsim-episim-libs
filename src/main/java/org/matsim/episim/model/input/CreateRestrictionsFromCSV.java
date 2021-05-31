@@ -101,7 +101,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-		Map<LocalDate, Double> days = readInput(input, "notAtHomeExceptLeisureAndEdu", alpha);
+		Map<LocalDate, Double> days = readInput(input, "notAtHome", alpha);
 
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();

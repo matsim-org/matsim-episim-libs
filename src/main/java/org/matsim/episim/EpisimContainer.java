@@ -84,6 +84,11 @@ public class EpisimContainer<T> {
 	 */
 	private double numSpaces = 1;
 
+	/**
+	 * The id of the ReplayEventTask that handles the events for this container
+	 */
+	private int taskId = 0;
+	
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
 	}
@@ -216,6 +221,15 @@ public class EpisimContainer<T> {
 		this.numSpaces = numSpaces;
 	}
 
+	public void setTaskId(int taskId) {
+		this.taskId = taskId;
+	}
+
+	public int getTaskId() {
+		return taskId;
+	}
+
+	
 	void clearPersons() {
 		this.persons.clear();
 		this.personsAsList.clear();

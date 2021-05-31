@@ -39,6 +39,8 @@ import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.AdjustedPolicy;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -262,7 +264,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 
@@ -318,6 +320,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(0.5);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
+		episimConfig.setThreads(8);
 
 		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
 
@@ -362,7 +365,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -388,8 +391,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210518";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+".csv"));
+		String untilDate = "20210504";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+"_v2.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
@@ -411,8 +414,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 				((CreateRestrictionsFromCSV) activityParticipation).setDistrictInputs(subdistrictInputs);
 			}
 		}
-
-
 
 		basePolicyBuilder.setActivityParticipation(activityParticipation);
 
@@ -455,10 +456,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
-
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);				
 			inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
@@ -469,11 +469,15 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			inputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
 
-			/* TODO: this need to be set earlier in the policy builder
+			// TODO: this need to be set earlier in the policy builder
+			if (this.adjustRestrictions != AdjustRestrictions.no) {
+				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
+			}
+						
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.5925;
-
+				double fraction = 0.665;
+				
 				if (this.christmasModel == ChristmasModel.restrictive) {
 					builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
 				}
@@ -482,17 +486,22 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					builder.restrict(LocalDate.parse("2020-12-31"), 1.0, act);
 					builder.restrict(LocalDate.parse("2021-01-02"), fraction, act);
 				}
-			}*/
+			}
 		}
 
 		if (this.easterModel == EasterModel.yes) {
 			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+			
+			// TODO: this need to be set earlier in the policy builder
+			if (this.adjustRestrictions != AdjustRestrictions.no) {
+				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
+			}
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.72;
+				double fraction = 0.68;
 				builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);

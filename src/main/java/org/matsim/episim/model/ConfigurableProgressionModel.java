@@ -12,6 +12,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.EpisimPerson.TestStatus;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.facilities.ActivityFacility;
 
 import java.io.IOException;
@@ -61,6 +62,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 			.from(DiseaseStatus.seriouslySickAfterCritical,
 					to(DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
 
+			// TODO: just placeholder
+			.from(DiseaseStatus.recovered,
+					to(DiseaseStatus.susceptible, Transition.logNormalWithMean(360, 15)))
+
 			.build();
 
 	// yyyy Quellen für alle Aussagen oben??  "Es ..." oder "Eine Studie aus ..." ist mir eigentlich nicht genug.  kai, aug'20
@@ -77,8 +82,6 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
-	private final VirusStrainConfigGroup strainConfig;
-	private final VaccinationConfigGroup vaccinationConfig;
 
 	/**
 	 * Counts how many infections occurred at each location.
@@ -117,11 +120,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	@Inject
 	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-	                                    VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
-		super(rnd, episimConfig);
+	                                    DiseaseStatusTransitionModel statusTransitionModel) {
+		super(rnd, episimConfig, statusTransitionModel);
 		this.tracingConfig = tracingConfig;
-		this.strainConfig = strainConfig;
-		this.vaccinationConfig = vaccinationConfig;
 
 		Config config = episimConfig.getProgressionConfig();
 
@@ -184,8 +185,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, day);
 		int tracingDistance = tracingConfig.getTracingDayDistance();
 		// clear tracing if not relevant anymore
-		persons.values().parallelStream().forEach(person -> 
-		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));											
+		persons.values().parallelStream().forEach(person ->
+		    person.clearTraceableContractPersons(now - (tracingDelay + tracingDistance + 1) * DAY));
 	}
 
 
@@ -316,48 +317,6 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	}
 
 	@Override
-	protected final DiseaseStatus decideNextState(EpisimPerson person) {
-
-		switch (person.getDiseaseStatus()) {
-			case infectedButNotContagious:
-				return DiseaseStatus.contagious;
-
-			case contagious:
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person))
-					return DiseaseStatus.showingSymptoms;
-				else
-					return DiseaseStatus.recovered;
-
-			case showingSymptoms:
-				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person)
-						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
-						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
-						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ? vaccinationConfig.getFactorSeriouslySick() : 1.0))
-					return DiseaseStatus.seriouslySick;
-				else
-					return DiseaseStatus.recovered;
-
-			case seriouslySick:
-				if (!person.hadDiseaseStatus(DiseaseStatus.critical)
-						&& rnd.nextDouble() < getProbaOfTransitioningToCritical(person))
-					return DiseaseStatus.critical;
-				else
-					return DiseaseStatus.recovered;
-
-			case critical:
-				return DiseaseStatus.seriouslySickAfterCritical;
-
-			case seriouslySickAfterCritical:
-				return DiseaseStatus.recovered;
-
-
-			default:
-				throw new IllegalStateException("No state transition defined for " + person.getDiseaseStatus());
-		}
-	}
-
-	@Override
 	protected final int decideTransitionDay(EpisimPerson person, DiseaseStatus from, DiseaseStatus to) {
 		Transition t = tMatrix[from.ordinal() * DiseaseStatus.values().length + to.ordinal()];
 		if (t == null) throw new IllegalStateException(String.format("No transition from %s to %s defined", from, to));
@@ -365,27 +324,6 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		return t.getTransitionDay(rnd);
 	}
 
-	/**
-	 * Probability that a persons transitions from {@code showingSymptoms} to {@code seriouslySick}.
-	 */
-	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
-		return 0.05625;
-	}
-
-	/**
-	 * Probability that a persons transitions from {@code seriouslySick} to {@code critical}.
-	 */
-	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
-		return 0.25;
-	}
-
-	protected double getProbaOfTransitioningToContagious(EpisimPerson person) {
-		return 1.;
-	}
-
-	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
-		return 0.8;
-	}
 
 	/**
 	 * Perform the tracing procedure for a person. Also ensures if enabled for current day.
