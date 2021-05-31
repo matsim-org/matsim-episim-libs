@@ -115,6 +115,21 @@ public class RunParallel<T> implements Callable<Integer> {
 	@CommandLine.Option(names = OPTION_METADATA, description = "Write metadata to output directory.", defaultValue = "false")
 	private boolean writeMetadata;
 
+	/**
+	 * Prepared batch run
+	 */
+	private PreparedRun prepare;
+
+	/**
+	 * Constructor for a predefined run.
+	 */
+	public RunParallel(PreparedRun prepare) {
+		this.prepare = prepare;
+	}
+
+	public RunParallel() {
+	}
+
 	@SuppressWarnings("rawtypes")
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new RunParallel()).execute(args));
@@ -139,7 +154,10 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		ExecutorService executor = Executors.newFixedThreadPool(threads);
 
-		PreparedRun prepare = BatchRun.prepare(setup, params);
+		// prepare run only if not given via constructor
+		if (prepare == null)
+			prepare = BatchRun.prepare(setup, params);
+
 		List<CompletableFuture<Void>> futures = new ArrayList<>();
 
 		// All config need to have the same base config (population, events, etc..)

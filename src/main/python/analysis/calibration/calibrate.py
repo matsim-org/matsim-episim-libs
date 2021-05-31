@@ -182,6 +182,7 @@ def objective_reinfection(trial):
 def objective_unconstrained(trial):
     """ Objective for constrained infection dynamic. """
 
+    # TODO: not updated yet to new trial runner
     n = trial.number
     c = trial.suggest_uniform("calibrationParameter", 0.7e-5, 1.7e-5)
 
@@ -219,15 +220,16 @@ def objective_hospital(trial):
     district = trial.study.user_attrs.get("district", "unknown")
     jvm = trial.study.user_attrs["jvm_opts"]
 
+    # Run trials for all seeds in parallel
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --number %d --runs %d --calibParameter %.12f --days 195" \
+          % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
+
+    print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
+    subprocess.run(cmd, shell=True)
+
     results = []
-    for i in range(trial.study.user_attrs["runs"]):
-        cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --number %d --run %d --calibParameter %.12f --days 195" \
-              % (jvm, scenario, n, i, c)
-
-        print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
-        subprocess.run(cmd, shell=True)
-
-        res = calc_multi_error("output-calibration/%d/run%d/infections.txt" % (n, i), district, start="2020-03-01", end="2020-09-01")
+    for i in range(1, trial.study.user_attrs["runs"] + 1):
+        res = calc_multi_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2020-09-01")
         results.append(res)
 
     df = pd.DataFrame(results, columns=["error_cases", "error_sick", "error_critical", "peak", "dz"])
@@ -333,12 +335,12 @@ if __name__ == "__main__":
     parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionSzenario")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionScenario")
     parser.add_argument("--runs", type=int, default=10, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
-    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="unconstrained")
+    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="hospital")
     parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -Xmx10G")
 
     args = parser.parse_args()
