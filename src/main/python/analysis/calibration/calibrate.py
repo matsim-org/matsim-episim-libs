@@ -347,12 +347,12 @@ if __name__ == "__main__":
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionScenario")
-    parser.add_argument("--runs", type=int, default=10, help="Number of runs per objective")
+    parser.add_argument("--runs", type=int, default=8, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="hospital")
-    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -Xmx20G")
+    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -XX:+UseParallelGC -Xms20G -Xmx20G")
 
     args = parser.parse_args()
 
