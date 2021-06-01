@@ -145,9 +145,30 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
 		start = start.plusDays(7);
 
-		for (Double predict : RestrictionInput.extrapolate(recentTrend, 25, extrapolation)) {
-			builder.restrict(start, Math.min(predict, 1), act);
-			start = start.plusDays(7);
+		List<Double> extrapolateGlobal = RestrictionInput.extrapolate(recentTrend, 25, extrapolation);
+
+		if (districtSpecificValuesActive) {
+			Map<String, List<Double>> extrapolateByDistrict = new HashMap<>();
+			for (String district : trendPerDistrict.keySet()) {
+				List<Double> recentTrendForDistrict = trendPerDistrict.get(district).subList(Math.max(0, trendPerDistrict.size() - 8), trendPerDistrict.size());
+				List<Double> extrapolateForDistrict = RestrictionInput.extrapolate(recentTrendForDistrict, 25, extrapolation);
+				extrapolateByDistrict.put(district, extrapolateForDistrict);
+			}
+
+			for (int i = 0; i < extrapolateGlobal.size(); i++) {
+				double predict = Math.min(extrapolateGlobal.get(i), 1);
+				Map<String, Double> predictByDistrict = new HashMap<>();
+				for (String district : extrapolateByDistrict.keySet()) {
+					predictByDistrict.put(district, Math.min(extrapolateByDistrict.get(district).get(i), 1));
+				}
+				builder.restrictWithDistrict(start, predictByDistrict, predict, act);
+				start = start.plusDays(7);
+			}
+		} else {
+			for (Double predict : extrapolateGlobal) {
+				builder.restrict(start, Math.min(predict, 1), act);
+				start = start.plusDays(7);
+			}
 		}
 
 		return builder;
