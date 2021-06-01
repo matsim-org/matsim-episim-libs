@@ -36,6 +36,7 @@ import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
+import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
@@ -273,8 +274,13 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		else
 			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 
-		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay)
-			bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
+			if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
+				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
+			} else {
+				bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
+			}
+		}
 	}
 
 	@Provides
