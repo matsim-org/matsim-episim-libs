@@ -62,13 +62,13 @@ public final class Restriction {
 	/**
 	 * Maps location-based remainingFraction to district name
 	 */
-	private Map<String, Double> districtSpecificValue;
+	private Map<String, Double> locationBasedRf;
 
 	/**
 	 * Constructor.
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
-						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> districtSpecificValue) {
+						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf) {
 
 		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -110,24 +110,23 @@ public final class Restriction {
 			}
 		}
 
-		this.districtSpecificValue = districtSpecificValue;
+		this.locationBasedRf = locationBasedRf;
 	}
 
 	/**
 	 * Create from other restriction.
 	 *
 	 * @param maskUsage will only be used of other is null
-	 * @param districtSpecificValue
 	 */
 	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
-				@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> districtSpecificValue, Restriction other) {
+				@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf, Restriction other) {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
 		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
 		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
-		this.districtSpecificValue = districtSpecificValue;
+		this.locationBasedRf = locationBasedRf;
 
 		if (closed != null) {
 			this.closed = closed.stream().map(s -> Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());
@@ -135,12 +134,12 @@ public final class Restriction {
 	}
 
 
-	public void setDistrictSpecificValues(Map<String, Double> districtSpecificValue) {
-		this.districtSpecificValue = districtSpecificValue;
+	public void setLocationBasedRf(Map<String, Double> locationBasedRf) {
+		this.locationBasedRf = locationBasedRf;
 	}
 
-	public Map<String, Double> getDistrictSpecificValues() {
-		return this.districtSpecificValue;
+	public Map<String, Double> getLocationBasedRf() {
+		return this.locationBasedRf;
 	}
 
 
@@ -244,9 +243,9 @@ public final class Restriction {
 		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>());
 	}
 
-	public static Restriction ofDistrictSpecificValue(Map<String, Double> districtSpecificValue) {
+	public static Restriction ofLocationBasedRf(Map<String, Double> locationBasedRf) {
 
-		return new Restriction(null, null, null, null, null, null, null, districtSpecificValue);
+		return new Restriction(null, null, null, null, null, null, null, locationBasedRf);
 
 	}
 
@@ -259,12 +258,12 @@ public final class Restriction {
 
 		Map<FaceMask, Double> enumMap = new EnumMap<>(FaceMask.class);
 
-		Map<String, Double> districtSpecificValue = new HashMap<>();
+		Map<String, Double> locationBasedRf = new HashMap<>();
 
-		if (!config.getIsNull("districtSpecificValue")) {
-			Map<String, Double> valueFromConfig = (Map<String, Double>) config.getValue("districtSpecificValue").unwrapped();
+		if (!config.getIsNull("locationBasedRf")) {
+			Map<String, Double> valueFromConfig = (Map<String, Double>) config.getValue("locationBasedRf").unwrapped();
 			if (valueFromConfig != null) {
-				districtSpecificValue = valueFromConfig;
+				locationBasedRf = valueFromConfig;
 			}
 		}
 
@@ -279,7 +278,7 @@ public final class Restriction {
 				!config.hasPath("reducedGroupSize") || config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
 				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
-				enumMap, districtSpecificValue, null
+				enumMap, locationBasedRf, null
 		);
 	}
 
@@ -302,7 +301,7 @@ public final class Restriction {
 				restriction.closed == null ? null : restriction.closed.stream().map(Objects::toString).collect(Collectors.toList()),
 				restriction.closingHours,
 				null,
-				restriction.districtSpecificValue == null ? new HashMap<>() : restriction.districtSpecificValue,
+				restriction.locationBasedRf == null ? new HashMap<>() : restriction.locationBasedRf,
 				restriction);
 	}
 
@@ -430,9 +429,9 @@ public final class Restriction {
 			maskUsage.clear();
 			maskUsage.putAll(r.maskUsage);
 		}
-		if (r.districtSpecificValue!=null && !r.districtSpecificValue.isEmpty()) {
-			districtSpecificValue = new HashMap<>();
-			districtSpecificValue.putAll(r.districtSpecificValue);
+		if (r.locationBasedRf !=null && !r.locationBasedRf.isEmpty()) {
+			locationBasedRf = new HashMap<>();
+			locationBasedRf.putAll(r.locationBasedRf);
 
 		}
 	}
@@ -457,8 +456,8 @@ public final class Restriction {
 		((Map<String, Double>) restriction.get("masks"))
 				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
 
-		Map<String, Double> otherDistrictSpecificValue = new HashMap<>();
-		((Map<String, Double>) restriction.get("districtSpecificValue")).forEach(((key, value) -> otherDistrictSpecificValue.put(key, value)));
+		Map<String, Double> otherLocationBasedRf = new HashMap<>();
+		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
 
 		// if new and old Restriction have equal Rfs: warn
 		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)){
@@ -470,14 +469,14 @@ public final class Restriction {
 		else if (remainingFraction == null){
 			remainingFraction = otherRf;
 
-			if (!districtSpecificValue.isEmpty() && !otherDistrictSpecificValue.isEmpty() && !districtSpecificValue.equals(otherDistrictSpecificValue)) {
-				log.warn("Duplicated districtSpecificValue usage; existing value=" + districtSpecificValue + "; new value=" + otherDistrictSpecificValue + "; keeping existing value.");
-			} else if (districtSpecificValue.isEmpty()) {
-				districtSpecificValue.putAll(otherDistrictSpecificValue);
+			if (!locationBasedRf.isEmpty() && !otherLocationBasedRf.isEmpty() && !locationBasedRf.equals(otherLocationBasedRf)) {
+				log.warn("Duplicated locationBasedRf usage; existing value=" + locationBasedRf + "; new value=" + otherLocationBasedRf + "; keeping existing value.");
+			} else if (locationBasedRf.isEmpty()) {
+				locationBasedRf.putAll(otherLocationBasedRf);
 			}
 		} else {
-			if ((districtSpecificValue == null || districtSpecificValue.isEmpty())
-					&& (!otherDistrictSpecificValue.isEmpty() || otherDistrictSpecificValue != null)) {
+			if ((locationBasedRf == null || locationBasedRf.isEmpty())
+					&& (!otherLocationBasedRf.isEmpty() || otherLocationBasedRf != null)) {
 
 				log.warn("localRf removed during merge, as new remainingFraction was provided");
 			}
@@ -590,7 +589,7 @@ public final class Restriction {
 			map.put("closingHours", List.of(closingHours.from, closingHours.to));
 		}
 
-		map.put("districtSpecificValue", districtSpecificValue);
+		map.put("locationBasedRf", locationBasedRf);
 
 		return map;
 	}

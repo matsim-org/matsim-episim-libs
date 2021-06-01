@@ -83,7 +83,7 @@ public class LocationBasedParticipationModelTest {
 		nycBoroughs.put("Bronx", bronxRf);
 		nycBoroughs.put("Queens", queensRf);
 		Restriction workRestriction = Restriction.of(globalRf);
-		workRestriction.setDistrictSpecificValues(nycBoroughs);
+		workRestriction.setLocationBasedRf(nycBoroughs);
 		restrictions.put("work", workRestriction);
 
 

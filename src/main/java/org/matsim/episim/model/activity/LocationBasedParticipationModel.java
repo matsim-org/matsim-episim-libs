@@ -9,7 +9,6 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
 
-import java.security.AccessControlContext;
 import java.util.*;
 
 /**
@@ -69,8 +68,8 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 			if (facilityId != null) {
 				if (subdistrictFacilities.containsKey(facilityId.toString())) {
 					String subdistrict = subdistrictFacilities.get(facilityId.toString());
-					if (restriction.getDistrictSpecificValues().containsKey(subdistrict)) {
-						remainingFraction = restriction.getDistrictSpecificValues().get(subdistrict);
+					if (restriction.getLocationBasedRf().containsKey(subdistrict)) {
+						remainingFraction = restriction.getLocationBasedRf().get(subdistrict);
 					}
 				}
 			}

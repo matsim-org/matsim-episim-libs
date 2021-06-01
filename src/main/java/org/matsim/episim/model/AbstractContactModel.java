@@ -27,7 +27,6 @@ import org.matsim.episim.*;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
-import org.matsim.vis.snapshotwriters.AgentSnapshotInfo;
 
 import java.util.HashMap;
 import java.time.DayOfWeek;
@@ -243,8 +242,8 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes) && container != null) {
 			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
 				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
-				if (r.getDistrictSpecificValues().containsKey(subdistrict)) {
-					remainingFraction = r.getDistrictSpecificValues().get(subdistrict);
+				if (r.getLocationBasedRf().containsKey(subdistrict)) {
+					remainingFraction = r.getLocationBasedRf().get(subdistrict);
 				}
 			}
 		}

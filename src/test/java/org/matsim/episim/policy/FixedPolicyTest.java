@@ -183,7 +183,7 @@ public class FixedPolicyTest {
 
 		FixedPolicy.ConfigBuilder config1 = FixedPolicy.config()
 				.restrict(2, Restriction.of(0.9), "work")
-				.restrict(2, Restriction.ofDistrictSpecificValue(nycBoroughs), "work");
+				.restrict(2, Restriction.ofLocationBasedRf(nycBoroughs), "work");
 
 		config1.build();
 
@@ -196,13 +196,13 @@ public class FixedPolicyTest {
 		config1.restrict(1, 0.4, "work");
 		FixedPolicy policy = new FixedPolicy(config1.build());
 		policy.updateRestrictions(EpisimTestUtils.createReport("--", 1), r);
-		assertThat(r.get("work").getDistrictSpecificValues().size()).isEqualTo(0);
+		assertThat(r.get("work").getLocationBasedRf().size()).isEqualTo(0);
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.4);
 		policy.updateRestrictions(EpisimTestUtils.createReport("--", 2), r);
-		assertThat(r.get("work").getDistrictSpecificValues().size()).isEqualTo(2);
-		assertThat(r.get("work").getDistrictSpecificValues().get("Bronx")).isEqualTo(0.7);
+		assertThat(r.get("work").getLocationBasedRf().size()).isEqualTo(2);
+		assertThat(r.get("work").getLocationBasedRf().get("Bronx")).isEqualTo(0.7);
 		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
-		assertThat(r.get("home").getDistrictSpecificValues().size()).isEqualTo(0);
+		assertThat(r.get("home").getLocationBasedRf().size()).isEqualTo(0);
 
 	}
 }

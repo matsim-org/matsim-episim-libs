@@ -233,14 +233,14 @@ public final class FixedPolicy extends ShutdownPolicy {
 			if (activities.length == 0)
 				throw new IllegalArgumentException("No activities given");
 
-			Map<String, Double> districtSpecificValues = restriction.getDistrictSpecificValues();
+			Map<String, Double> locationBasedRf = restriction.getLocationBasedRf();
 
 			for (String act : activities) {
 				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
 
 				// Because of merging, each activity needs a separate restriction
 				Restriction clone = Restriction.clone(restriction);
-				clone.setDistrictSpecificValues(districtSpecificValues);
+				clone.setLocationBasedRf(locationBasedRf);
 
 				// merge if there is an entry already
 				if (p.containsKey(date))
@@ -263,7 +263,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecificValue, double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
-			restriction.setDistrictSpecificValues(districtSpecificValue);
+			restriction.setLocationBasedRf(districtSpecificValue);
 
 			return restrictWithDistrict(date.toString(), restriction, activities);
 		}
@@ -294,9 +294,9 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict("day-" + day, restriction, activities);
 		}
 
-		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double>  districtSpecificValue, double fraction, String... activities) {
+		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double>  locationBasedRf, double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
-			restriction.setDistrictSpecificValues(districtSpecificValue);
+			restriction.setLocationBasedRf(locationBasedRf);
 
 			return restrictWithDistrict("day-" + day, restriction, activities);
 		}

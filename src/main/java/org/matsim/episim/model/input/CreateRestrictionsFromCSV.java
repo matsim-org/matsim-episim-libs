@@ -97,7 +97,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
 		// If active, the remaining fraction is calculated and saved for each subdistrict
-		boolean districtSpecificValuesActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+		boolean locationBasedRfActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
@@ -105,7 +105,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
-		if (districtSpecificValuesActive) {
+		if (locationBasedRfActive) {
 			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
 				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), "notAtHomeExceptLeisureAndEdu", alpha));
 			}
@@ -126,7 +126,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		Map<String, List<Double>> trendPerDistrict = new HashMap<>();
 
 
-		if (districtSpecificValuesActive) {
+		if (locationBasedRfActive) {
 			RestrictionInput.resampleAvgWeekdayBySubdistrict(days, daysPerDistrict, start, (date, avg, avgPerDistrict) -> {
 				for (String districtName : avgPerDistrict.keySet()) {
 					trendPerDistrict.getOrDefault(districtName, new ArrayList<>()).add(avgPerDistrict.get(districtName));
@@ -147,7 +147,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 		List<Double> extrapolateGlobal = RestrictionInput.extrapolate(recentTrend, 25, extrapolation);
 
-		if (districtSpecificValuesActive) {
+		if (locationBasedRfActive) {
 			Map<String, List<Double>> extrapolateByDistrict = new HashMap<>();
 			for (String district : trendPerDistrict.keySet()) {
 				List<Double> recentTrendForDistrict = trendPerDistrict.get(district).subList(Math.max(0, trendPerDistrict.size() - 8), trendPerDistrict.size());
