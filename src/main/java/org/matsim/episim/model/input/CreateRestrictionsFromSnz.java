@@ -115,6 +115,47 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		return perosnStatFile;
 	}
 
+	/**
+	 * Searches the number of persons in all the different areas
+	 * 
+	 * @param zipCodesForAreas
+	 * @param inputPulder
+	 * @return
+	 */
+	static Map<String, Integer> getPersonsInThisZIPCodes(HashMap<String, IntSet> zipCodesForAreas, File inputPulder) {
+		File fileWithPersonData = findPersonStatInputFile(inputPulder);
+		Map<String, Integer> personsPerArea = new HashMap<>();
+		for (String area : zipCodesForAreas.keySet()) {
+			personsPerArea.put(area, 0);
+		}
+		CSVParser parse;
+		try {
+			parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+					.parse(IOUtils.getBufferedReader(fileWithPersonData.toString()));
+			for (CSVRecord record : parse) {
+				for (Entry<String, IntSet> certainArea : zipCodesForAreas.entrySet()) {
+					if (!record.get("zipCode").contains("NULL")) {
+						String nameArea = certainArea.getKey();
+						int readZipCode = Integer.parseInt(record.get("zipCode"));
+						if (certainArea.getValue().contains(readZipCode))
+							personsPerArea.put(nameArea,
+									personsPerArea.get(nameArea) + Integer.parseInt(record.get("nPersons")));
+					}
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return personsPerArea;
+	}
+
+	/**
+	 * Searches the number of persons in all this area
+	 * 
+	 * @param zipCodes
+	 * @param inputPulder
+	 * @return
+	 */
 	static int getPersonsInThisZIPCode(IntSet zipCodes, File inputPulder) {
 		File fileWithPersonData = findPersonStatInputFile(inputPulder);
 		int nPersons = 0;
@@ -137,7 +178,56 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	}
 
 	/**
-	 * Read durations from a single input file for a day.
+	 * Read durations from a single input file for different areas for a day.
+	 * 
+	 * @param allSums
+	 */
+	static HashMap<String, Object2DoubleMap<String>> readDurations(File file, HashMap<String, IntSet> zipCodesForAreas,
+			HashMap<String, Object2DoubleMap<String>> allSums) throws IOException {
+
+		if (allSums.isEmpty())
+			for (String nameArea : zipCodesForAreas.keySet()) {
+				Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+				allSums.put(nameArea, sums);
+			}
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(file.toString())) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				for (Entry<String, IntSet> certainArea : zipCodesForAreas.entrySet()) {
+					if (!record.get("zipCode").contains("NULL")) {
+						String nameArea = certainArea.getKey();
+						int zipCode = Integer.parseInt(record.get("zipCode"));
+						if (certainArea.getValue().contains(zipCode)) {
+							Object2DoubleMap<String> sums = allSums.get(nameArea);
+							double duration = Double.parseDouble(record.get("durationSum"));
+							String actType = record.get("actType");
+
+							sums.mergeDouble(actType, duration, Double::sum);
+
+							if (!actType.equals("home")) {
+
+								sums.mergeDouble("notAtHome", duration, Double::sum);
+
+								if (!actType.equals("education") && !actType.equals("leisure")) {
+									sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
+								}
+								if (!actType.equals("education")) {
+									sums.mergeDouble("notAtHomeExceptEdu", duration, Double::sum);
+								}
+							}
+							allSums.put(nameArea, sums);
+						}
+					}
+				}
+			}
+		}
+		return allSums;
+	}
+
+	/**
+	 * Read durations from a single input file for one area for a day.
 	 */
 	static Object2DoubleMap<String> readDurations(File file, IntSet zipCodes) throws IOException {
 		Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
@@ -240,7 +330,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 					baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/Vergelich2017/");
 				else if (baseDays.iterator().next().contains("2020"))
 					baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/");
-				
+
 				log.info("Setting weekday base from: " + baseFile);
 				for (File folder : Objects.requireNonNull(baseFile.toFile().listFiles())) {
 					if (folder.isDirectory()) {
@@ -313,7 +403,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			if (!getPercentageResults)
 				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_duration"));
 			else {
-				if (baseDays.isEmpty()) 
+				if (baseDays.isEmpty())
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
 				else if (baseDays.iterator().next().contains("2018"))
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_base2018"));
@@ -329,7 +419,8 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	}
 
 	/**
-	 * Analyze data and write result to {@code outputFile}. The result contains data for all Bundeslaender.
+	 * Analyze data and write result to {@code outputFile}. The result contains data
+	 * for all Bundeslaender.
 	 */
 	public void writeBundeslandDataForPublic(Path outputFile) throws IOException {
 
@@ -359,15 +450,14 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 			// will contain the last parsed date
 			String dateString = "";
-
+			HashMap<String, Object2DoubleMap<String>> allSums = new HashMap<String, Object2DoubleMap<String>>();
 			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
+
+				allSums = readDurations(file, zipCodesBL, allSums);
+
 				for (Entry<String, IntSet> bundesland : zipCodesBL.entrySet()) {
-					IntSet zipCodes = bundesland.getValue();
 					String nameBundesland = bundesland.getKey();
-
-					Object2DoubleMap<String> sums = readDurations(file, zipCodes);
-
 					dateString = file.getName().split("_")[0];
 					LocalDate date = LocalDate.parse(dateString, FMT);
 
@@ -388,7 +478,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 					Object2DoubleMap<String> so = new Object2DoubleOpenHashMap<>();
 					if (baseBL.containsKey(nameBundesland)) {
 						if (baseBL.get(nameBundesland).get(day).isEmpty())
-							baseBL.get(nameBundesland).get(day).putAll(sums);
+							baseBL.get(nameBundesland).get(day).putAll(allSums.get(nameBundesland));
 					} else {
 						Map<DayOfWeek, Object2DoubleMap<String>> base = new EnumMap<>(DayOfWeek.class);
 						base.put(DayOfWeek.MONDAY, wd);
@@ -400,25 +490,24 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 						base.put(DayOfWeek.SUNDAY, so);
 
 						baseBL.put(nameBundesland, base);
-						baseBL.get(nameBundesland).get(day).putAll(sums);
+						baseBL.get(nameBundesland).get(day).putAll(allSums.get(nameBundesland));
 					}
 					// add the number of persons in this area from data
-					if (!personsPerBL.containsKey(nameBundesland))
-						personsPerBL.put(nameBundesland, getPersonsInThisZIPCode(zipCodes, inputFolder.toFile()));
+					if (personsPerBL.isEmpty())
+						personsPerBL = getPersonsInThisZIPCodes(zipCodesBL, inputFolder.toFile());
 
 					List<String> row = new ArrayList<>();
 					row.add(dateString);
 					row.add(nameBundesland);
-					row.add(String.valueOf(
-							round2Decimals(sums.getDouble("notAtHome") / personsPerBL.get(nameBundesland) / 3600)));
-					row.add(String.valueOf(Math.round(
-							(sums.getDouble("notAtHome") / baseBL.get(nameBundesland).get(day).getDouble("notAtHome")
-									- 1) * 100)));
+					row.add(String.valueOf(round2Decimals(allSums.get(nameBundesland).getDouble("notAtHome")
+							/ personsPerBL.get(nameBundesland) / 3600)));
+					row.add(String.valueOf(Math.round((allSums.get(nameBundesland).getDouble("notAtHome")
+							/ baseBL.get(nameBundesland).get(day).getDouble("notAtHome") - 1) * 100)));
 
 					JOIN.appendTo(writer, row);
 					writer.write("\n");
 				}
-
+				allSums.clear();
 				if (countingDays == 1 || countingDays % 5 == 0)
 					log.info("Finished day " + countingDays);
 
@@ -432,6 +521,85 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 	}
 
+	/**
+	 * Analyze data and write result to {@code outputFile}. The result contains data
+	 * for all Bundeslaender.
+	 */
+	public void writeLandkreisDataForPublic(Path outputFile) throws IOException {
+
+		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+
+		Path thisOutputFile = outputFile.resolve("mobilityData_OverviewLK.csv");
+
+		Collections.sort(filesWithData);
+		log.info("Searching for files in the folder: " + inputFolder);
+		log.info("Amount of found files: " + filesWithData.size());
+
+		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toString());
+		try {
+			String[] header = new String[] { "date", "Landkreis", "outOfHomeDuration",
+					"percentageChangeComparedToBeforeCorona" };
+			JOIN.appendTo(writer, header);
+			writer.write("\n");
+
+			Map<String, Object2DoubleMap<String>> baseLK = new HashMap<String, Object2DoubleMap<String>>();
+			Map<String, Integer> personsPerLK = new HashMap<>();
+			HashMap<String, IntSet> zipCodesLK = findZIPCodesForLandkreise();
+
+			int countingDays = 1;
+
+			// will contain the last parsed date
+			String dateString = "";
+			HashMap<String, Object2DoubleMap<String>> allSums = new HashMap<String, Object2DoubleMap<String>>();
+			// Analyzes all files with the mobility data
+			for (File file : filesWithData) {
+
+				allSums = readDurations(file, zipCodesLK, allSums);
+
+				if (countingDays % 7 == 0) {
+					for (String nameOfArea : allSums.keySet()) {
+						dateString = file.getName().split("_")[0];
+						Object2DoubleMap<String> sums = allSums.get(nameOfArea);
+
+						// set base
+						if (!baseLK.containsKey(nameOfArea))
+							baseLK.put(nameOfArea, sums);
+
+						// add the number of persons in this area from data
+						if (personsPerLK.isEmpty())
+							personsPerLK = getPersonsInThisZIPCodes(zipCodesLK, inputFolder.toFile());
+
+						if (countingDays % 7 == 0) {
+							List<String> row = new ArrayList<>();
+							row.add(dateString);
+							row.add(nameOfArea);
+							row.add(String.valueOf(round2Decimals(
+									sums.getDouble("notAtHome") / 7 / personsPerLK.get(nameOfArea) / 3600)));
+							row.add(String.valueOf(Math.round(
+									(sums.getDouble("notAtHome") / baseLK.get(nameOfArea).getDouble("notAtHome") - 1)
+											* 100)));
+							JOIN.appendTo(writer, row);
+							writer.write("\n");
+						}
+					}
+					log.info("Finished week " + countingDays / 7);
+					allSums.clear();
+				}
+				countingDays++;
+			}
+			writer.close();
+			log.info("Write analyze of " + countingDays + " is writen to " + thisOutputFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * Assigns the zip codes to a Bundesland
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
 	private HashMap<String, IntSet> findZIPCodesForBundeslaender() throws IOException {
 
 		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/OpenGeoDB_bundesland_plz_ort_de.csv";
@@ -453,6 +621,75 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			}
 		}
 		return zipCodesBL;
+	}
+
+	/**
+	 * Assigns the zip codes to Landkreise
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private HashMap<String, IntSet> findZIPCodesForLandkreise() throws IOException {
+
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
+		HashMap<String, IntSet> zipCodesLK = new HashMap<String, IntSet>();
+		zipCodesLK.put("Deutschland", new IntOpenHashSet());
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				String nameLK = record.get("landkreis");
+				if (nameLK.isEmpty())
+					nameLK = record.get("ort");
+				if (zipCodesLK.containsKey(nameLK)) {
+					zipCodesLK.get(nameLK).add(Integer.parseInt(record.get("plz")));
+					zipCodesLK.get("Deutschland").add(Integer.parseInt(record.get("plz")));
+
+				} else {
+					zipCodesLK.put(nameLK, new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
+					zipCodesLK.get("Deutschland").add(Integer.parseInt(record.get("plz")));
+				}
+			}
+		}
+		return zipCodesLK;
+	}
+
+	@SuppressWarnings("unlikely-arg-type")
+	public HashMap<String, IntSet> findZipCodesForAnyArea(String anyArea) throws IOException {
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
+		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
+		List<String> possibleAreas = new ArrayList<String>();
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				String nameLK = record.get("landkreis");
+				if (nameLK.isEmpty())
+					nameLK = record.get("ort");
+
+				if (nameLK.contains(anyArea)) {
+
+					if (!possibleAreas.contains(nameLK))
+						possibleAreas.add(nameLK);
+					if (zipCodes.containsKey(nameLK)) {
+						zipCodes.get(nameLK).add(Integer.parseInt(record.get("plz")));
+					} else
+						zipCodes.put(nameLK, new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
+				}
+			}
+		}
+		if (possibleAreas.size() > 1)
+			if (possibleAreas.contains(anyArea)) {
+				IntSet finalZipCodes = zipCodes.get(anyArea);
+				zipCodes.clear();
+				zipCodes.put(anyArea, finalZipCodes);
+			} else
+				throw new RuntimeException(
+						"For the choosen area " + anyArea + " more the following districts are possible: "
+								+ possibleAreas.toString() + " Choose one and start again.");
+		return zipCodes;
 	}
 
 	/**

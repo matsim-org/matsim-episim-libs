@@ -50,7 +50,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseOptions {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen
+		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen, Landkreise, AnyArea
 	};
 	private enum BaseDaysForComparison {
 		March2020, Sebtember2020, days2018 
@@ -71,18 +71,18 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		AnalyseOptions selectedArea = AnalyseOptions.Berlin;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
-
+		String anyArea = "Berlin";
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
-		boolean getPercentageResults = true;
+		boolean getPercentageResults = false;
 
-		writeData(selectedArea, getPercentageResults, selectedBase);
+		writeData(selectedArea, getPercentageResults, selectedBase, anyArea);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private void writeData(AnalyseOptions selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase)
+	private void writeData(AnalyseOptions selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase, String anyArea)
 			throws IOException {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
@@ -106,6 +106,11 @@ class AnalyzeSnzData implements Callable<Integer> {
 		}
 		
 		switch (selectedArea) {
+		case AnyArea:
+			HashMap<String, IntSet> zipCodesAnyArea = snz.findZipCodesForAnyArea(anyArea);
+			snz.writeDataForCertainArea(outputFolder.resolve(zipCodesAnyArea.keySet().iterator().next()+"SnzData_daily_until.csv"),
+					zipCodesAnyArea.values().iterator().next(), getPercentageResults, baseDays);
+			break;
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
@@ -210,6 +215,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 		case Bundeslaender:	
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
 			snz.writeBundeslandDataForPublic(outputFolder);
+			break;
+		case Landkreise:	
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
+			snz.writeLandkreisDataForPublic(outputFolder);
 			break;
 		default:
 			break;
