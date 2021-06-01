@@ -440,6 +440,9 @@ public final class Restriction {
 	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
 	 *
+	 * localRf: if new restriction has a Rf, the localRf will NOT be included in merged result; reason: to aid users who
+	 * manually enter restrictions, but forget to clear the localRf.
+	 *
 	 * @see #asMap()
 	 */
 	void merge(Map<String, Object> restriction) {
@@ -457,10 +460,31 @@ public final class Restriction {
 		Map<String, Double> otherDistrictSpecificValue = new HashMap<>();
 		((Map<String, Double>) restriction.get("districtSpecificValue")).forEach(((key, value) -> otherDistrictSpecificValue.put(key, value)));
 
-		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf))
+		// if new and old Restriction have equal Rfs: warn
+		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)){
 			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
-		else if (remainingFraction == null)
+		}
+		// if new Restriction doesn't have value for Rf:
+		// 1) keep old value for Rf
+		// 2) check whether new Restriction has localRf, and if not, then use localRf from old Restriction
+		else if (remainingFraction == null){
 			remainingFraction = otherRf;
+
+			if (!districtSpecificValue.isEmpty() && !otherDistrictSpecificValue.isEmpty() && !districtSpecificValue.equals(otherDistrictSpecificValue)) {
+				log.warn("Duplicated districtSpecificValue usage; existing value=" + districtSpecificValue + "; new value=" + otherDistrictSpecificValue + "; keeping existing value.");
+			} else if (districtSpecificValue.isEmpty()) {
+				districtSpecificValue.putAll(otherDistrictSpecificValue);
+			}
+		} else {
+			if ((districtSpecificValue == null || districtSpecificValue.isEmpty())
+					&& (!otherDistrictSpecificValue.isEmpty() || otherDistrictSpecificValue != null)) {
+
+				log.warn("localRf removed during merge, as new remainingFraction was provided");
+			}
+		}
+
+
+
 
 		if (ciCorrection != null && otherE != null && !ciCorrection.equals(otherE))
 			log.warn("Duplicated ci correction " + ciCorrection + " and " + otherE);
@@ -487,13 +511,6 @@ public final class Restriction {
 			log.warn("(full new restriction=" + restriction + ")");
 		} else if (maskUsage.isEmpty())
 			maskUsage.putAll(otherMasks);
-
-		if (!districtSpecificValue.isEmpty() && !otherDistrictSpecificValue.isEmpty() && !districtSpecificValue.equals(otherDistrictSpecificValue)) {
-			log.warn("Duplicated districtSpecificValue usage; existing value=" + districtSpecificValue + "; new value=" + otherDistrictSpecificValue + "; keeping existing value.");
-			log.warn("(full new restriction=" + restriction + ")");
-		} else if (districtSpecificValue.isEmpty()) {
-			districtSpecificValue.putAll(otherDistrictSpecificValue);
-		}
 
 	}
 

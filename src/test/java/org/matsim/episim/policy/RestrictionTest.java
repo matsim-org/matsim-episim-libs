@@ -213,6 +213,42 @@ public class RestrictionTest {
 		mergeResult = merge(rBerlin, rNull);
 		assertThat(mergeResult.getDistrictSpecificValues().containsKey("Wilmersdorf")).isEqualTo(true);
 		assertThat(mergeResult.getDistrictSpecificValues().get("Wilmersdorf")).isEqualTo(0.4);
+
+		// Tests merge behaviour between Restrictions with rf and Restrictions with localRfs
+		// As a rule, if new Restriction has rf, the old restriction's localRf should not be used, as it could be out of date
+
+		Restriction rf05 = Restriction.of(0.5);
+		Restriction rf08 = Restriction.of(0.8);
+
+		// old Restriction: rBerlin
+		// new Restriction: rf05
+		// merged Restriction should only contain rf05; rBerlin should be deleted
+		mergeResult = merge(rf05, rBerlin);
+		assertThat(mergeResult.getRemainingFraction()).isEqualTo(0.5);
+		assertThat(mergeResult.getDistrictSpecificValues().size()).isEqualTo(0);
+
+		// old Restriction: rf05
+		// new Restriction: rBerlin
+		// merged should contain both rf05 and localRf
+		Restriction rBerlin_rf05 = merge(rBerlin, rf05);
+		assertThat(rBerlin_rf05.getRemainingFraction()).isEqualTo(0.5);
+		assertThat(rBerlin_rf05.getDistrictSpecificValues().size()).isEqualTo(2);
+
+		// old Restriction: rBerlin_rf05
+		// new Restriction: rf08
+		// merged should only contain rf of 0.8
+		mergeResult = merge(rf08, rBerlin_rf05);
+		assertThat(mergeResult.getRemainingFraction()).isEqualTo(0.8);
+		assertThat(mergeResult.getDistrictSpecificValues().size()).isEqualTo(0);
+
+		// old Restriction: rf08
+		// new Restriction: rBerlin_rf05
+		// merged should equal rBerlin_rf05
+		mergeResult = merge(rBerlin_rf05, rf08);
+		assertThat(mergeResult.getRemainingFraction()).isEqualTo(0.5);
+		assertThat(mergeResult.getDistrictSpecificValues().size()).isEqualTo(2);
+
+
 	}
 
 	private int days(int d) {
