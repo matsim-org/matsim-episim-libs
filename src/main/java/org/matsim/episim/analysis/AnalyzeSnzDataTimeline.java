@@ -64,7 +64,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	};
 
 	private enum AnalyseAreas {
-		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg, Collogne
+		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg, Collogne, Frankfurt
 	}
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -81,9 +81,9 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		boolean getPercentageResults = false;
-		boolean outputShareOutdoor = true;
+		boolean outputShareOutdoor = false;
 		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
-		AnalyseAreas selectedArea = AnalyseAreas.Mannheim;
+		AnalyseAreas selectedArea = AnalyseAreas.Frankfurt;
 
 		analyseData(selectedArea, selectedOptionForAnalyse, getPercentageResults, outputShareOutdoor);
 
@@ -177,6 +177,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			analyzeDataForCertainArea("Collogne", zipCodesCollogne, getPercentageResults, outputShareOutdoor,
 					selectedOptionForAnalyse);
 			break;
+		case Frankfurt:
+			IntSet zipCodesFrankfurt = new IntOpenHashSet();
+			for (int i = 60306; i <= 60599; i++)
+				zipCodesFrankfurt.add(i);
+			zipCodesFrankfurt.addAll(List.of(65929, 65931, 65933, 65934, 65936));
+			analyzeDataForCertainArea("FrankfurtMain", zipCodesFrankfurt, getPercentageResults, outputShareOutdoor,
+					selectedOptionForAnalyse);
 		case Mannheim:
 			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
 					68229, 68239, 68259, 68305, 68307, 68309));
