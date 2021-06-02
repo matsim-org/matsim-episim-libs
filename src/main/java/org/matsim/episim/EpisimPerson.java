@@ -561,14 +561,6 @@ public final class EpisimPerson implements Attributable {
 		return act;
 	}
 
-	/**
-	 * @deprecated -- discouraged, as it doesn't include facilityID, which is needed for location based restrictions
-	 */
-	PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement) {
-		PerformedActivity act = new PerformedActivity(time, trajectoryElement, null);
-		trajectory.add(act);
-		return act;
-	}
 
 	void setStartOfDay(DayOfWeek day) {
 		startOfDay[day.getValue() - 1] = trajectory.size();

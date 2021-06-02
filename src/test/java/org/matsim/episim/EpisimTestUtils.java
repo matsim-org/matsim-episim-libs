@@ -124,7 +124,7 @@ public class EpisimTestUtils {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 
 		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
-		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct));
+		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct),null);
 		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
 
 		if (container != null) {

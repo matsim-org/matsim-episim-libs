@@ -75,9 +75,9 @@ public class EpisimPersonTest {
 
 		p.setStartOfDay(DayOfWeek.MONDAY);
 
-		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"));
-		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"));
-		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"));
+		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"),null);
+		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"),null);
+		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"),null);
 
 		p.setEndOfDay(DayOfWeek.MONDAY);
 
@@ -108,10 +108,10 @@ public class EpisimPersonTest {
 		DayOfWeek d = DayOfWeek.MONDAY;
 		p.setStartOfDay(d);
 
-		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"));
-		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"));
-		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"));
-		p.addToTrajectory(3000, new EpisimConfigGroup.InfectionParams("leisure"));
+		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"),null);
+		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"),null);
+		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"),null);
+		p.addToTrajectory(3000, new EpisimConfigGroup.InfectionParams("leisure"),null);
 
 		p.setEndOfDay(d);
 		p.initParticipation();
