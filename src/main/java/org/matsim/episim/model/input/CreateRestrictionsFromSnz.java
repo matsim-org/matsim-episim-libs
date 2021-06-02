@@ -454,7 +454,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
 
-				allSums = readDurations(file, zipCodesBL, allSums);
+				readDurations(file, zipCodesBL, allSums);
 
 				for (Entry<String, IntSet> bundesland : zipCodesBL.entrySet()) {
 					String nameBundesland = bundesland.getKey();
@@ -554,7 +554,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
 
-				allSums = readDurations(file, zipCodesLK, allSums);
+				readDurations(file, zipCodesLK, allSums);
 
 				if (countingDays % 7 == 0) {
 					for (String nameOfArea : allSums.keySet()) {
@@ -655,7 +655,11 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		return zipCodesLK;
 	}
 
-	@SuppressWarnings("unlikely-arg-type")
+	/** Finds the zipCodes for any Area. If more than one area contains the input String an exception is thrown.
+	 * @param anyArea
+	 * @return
+	 * @throws IOException
+	 */
 	public HashMap<String, IntSet> findZipCodesForAnyArea(String anyArea) throws IOException {
 		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
 		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
