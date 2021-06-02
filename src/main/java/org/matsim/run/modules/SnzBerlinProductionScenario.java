@@ -36,6 +36,7 @@ import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
+import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
@@ -51,7 +52,9 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -79,6 +82,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private double imprtFctMult = 1.;
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
+
+		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
 		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
@@ -183,6 +188,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
 	public static enum AdjustRestrictions {yes, no}
 	public static enum EasterModel {yes, no}
+	public static enum LocationBasedRestrictions {yes, no}
 
 	private final int sample;
 	private final int importOffset;
@@ -203,6 +209,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final double imprtFctMult;
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
+	private final LocationBasedRestrictions locationBasedRestrictions;
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -236,6 +243,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.easterModel = builder.easterModel;
+		this.locationBasedRestrictions = builder.locationBasedRestrictions;
 	}
 
 	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -266,8 +274,13 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		else
 			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 
-		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay)
-			bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
+			if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
+				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
+			} else {
+				bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
+			}
+		}
 	}
 
 	@Provides
@@ -384,7 +397,30 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210504_v2.csv"));
+		String untilDate = "20210504";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+"_v2.csv"));
+
+		//location based restrictions
+		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
+			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
+			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+
+			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
+				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
+						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
+
+
+				Map<String, Path> subdistrictInputs = new HashMap<>();
+				for (String subdistrict : subdistricts) {
+					subdistrictInputs.put(subdistrict, INPUT.resolve("perNeighborhood/" + subdistrict + "SnzData_daily_until" + untilDate + ".csv"));
+				}
+
+				((CreateRestrictionsFromCSV) activityParticipation).setDistrictInputs(subdistrictInputs);
+			}
+		}
+
 		basePolicyBuilder.setActivityParticipation(activityParticipation);
 
 		if (this.restrictions == Restrictions.no || this.restrictions == Restrictions.onlyEdu) {
@@ -559,8 +595,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
-		// save some time for not needed inputs
-		config.facilities().setInputFile(null);
+		// save some time for not needed inputs (facilities are needed for location based restrictions)
+		if (locationBasedRestrictions == LocationBasedRestrictions.no) {
+			config.facilities().setInputFile(null);
+		}
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
 

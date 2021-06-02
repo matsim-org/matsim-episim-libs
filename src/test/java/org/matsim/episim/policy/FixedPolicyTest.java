@@ -18,6 +18,7 @@ import org.matsim.run.modules.SnzBerlinScenario25pct2020;
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -172,5 +173,36 @@ public class FixedPolicyTest {
 			EpisimReporting.InfectionReport report = EpisimTestUtils.createReport(start.plusDays(i).toString(), i);
 			p.updateRestrictions(report, r);
 		}
+	}
+
+	@Test
+	public void locationBasedRestrictions() {
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+
+		FixedPolicy.ConfigBuilder config1 = FixedPolicy.config()
+				.restrict(2, Restriction.of(0.9), "work")
+				.restrict(2, Restriction.ofLocationBasedRf(nycBoroughs), "work");
+
+		config1.build();
+
+		FixedPolicy.ConfigBuilder config2 = FixedPolicy.config()
+				.restrictWithDistrict(2, nycBoroughs, 0.9, "work");
+
+
+		assertThat(config1.build()).isEqualTo(config2.build());
+
+		config1.restrict(1, 0.4, "work");
+		FixedPolicy policy = new FixedPolicy(config1.build());
+		policy.updateRestrictions(EpisimTestUtils.createReport("--", 1), r);
+		assertThat(r.get("work").getLocationBasedRf().size()).isEqualTo(0);
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.4);
+		policy.updateRestrictions(EpisimTestUtils.createReport("--", 2), r);
+		assertThat(r.get("work").getLocationBasedRf().size()).isEqualTo(2);
+		assertThat(r.get("work").getLocationBasedRf().get("Bronx")).isEqualTo(0.7);
+		assertThat(r.get("work").getRemainingFraction()).isEqualTo(0.9);
+		assertThat(r.get("home").getLocationBasedRf().size()).isEqualTo(0);
+
 	}
 }

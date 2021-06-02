@@ -91,7 +91,7 @@ public class EpisimModule extends AbstractModule {
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
 		// save some time for not needed inputs
-		config.facilities().setInputFile(null);
+//		config.facilities().setInputFile(null); // facilities are needed for location-based-restrictions
 
 		return ScenarioUtils.loadScenario(config);
 	}

@@ -25,6 +25,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private Path input;
 	private double alpha = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
+	private Map<String, Path> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
 		this.episimConfig = episimConfig;
@@ -35,6 +36,14 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	public CreateRestrictionsFromCSV setInput(Path input) {
 		// Not in constructor: could be taken from episim config; (2) no damage in changing it and rerunning.  kai, dec'20
 		this.input = input;
+		return this;
+	}
+
+	/**
+	 * Sets the paths for each subdistrict CSV
+	 */
+	public CreateRestrictionsFromCSV setDistrictInputs(Map<String, Path> subdistrictInput) {
+		this.subdistrictInput = subdistrictInput;
 		return this;
 	}
 
@@ -87,9 +96,20 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	@Override
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
+		// If active, the remaining fraction is calculated and saved for each subdistrict
+		boolean locationBasedRfActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+				&& subdistrictInput != null && !subdistrictInput.isEmpty();
+
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
 		Map<LocalDate, Double> days = readInput(input, "notAtHome", alpha);
 
+		// days per subdistrict
+		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
+		if (locationBasedRfActive) {
+			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
+				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), "notAtHomeExceptLeisureAndEdu", alpha));
+			}
+		}
 
 		// activities to set:
 		String[] act = episimConfig.getInfectionParams().stream()
@@ -103,19 +123,52 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 		// trend used for extrapolation
 		List<Double> trend = new ArrayList<>();
+		Map<String, List<Double>> trendPerDistrict = new HashMap<>();
 
-		RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -> {
-			trend.add(avg);
-			builder.restrict(date, avg, act);
-		});
+
+		if (locationBasedRfActive) {
+			RestrictionInput.resampleAvgWeekdayBySubdistrict(days, daysPerDistrict, start, (date, avg, avgPerDistrict) -> {
+				for (String districtName : avgPerDistrict.keySet()) {
+					trendPerDistrict.getOrDefault(districtName, new ArrayList<>()).add(avgPerDistrict.get(districtName));
+				}
+				trend.add(avg);
+				builder.restrictWithDistrict(date, avgPerDistrict, avg, act);
+			});
+		} else {
+			RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -> {
+				trend.add(avg);
+				builder.restrict(date, avg, act);
+			});
+		}
 
 		// Use last weeks for the trend
 		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
 		start = start.plusDays(7);
 
-		for (Double predict : RestrictionInput.extrapolate(recentTrend, 25, extrapolation)) {
-			builder.restrict(start, Math.min(predict, 1), act);
-			start = start.plusDays(7);
+		List<Double> extrapolateGlobal = RestrictionInput.extrapolate(recentTrend, 25, extrapolation);
+
+		if (locationBasedRfActive) {
+			Map<String, List<Double>> extrapolateByDistrict = new HashMap<>();
+			for (String district : trendPerDistrict.keySet()) {
+				List<Double> recentTrendForDistrict = trendPerDistrict.get(district).subList(Math.max(0, trendPerDistrict.size() - 8), trendPerDistrict.size());
+				List<Double> extrapolateForDistrict = RestrictionInput.extrapolate(recentTrendForDistrict, 25, extrapolation);
+				extrapolateByDistrict.put(district, extrapolateForDistrict);
+			}
+
+			for (int i = 0; i < extrapolateGlobal.size(); i++) {
+				double predict = Math.min(extrapolateGlobal.get(i), 1);
+				Map<String, Double> predictByDistrict = new HashMap<>();
+				for (String district : extrapolateByDistrict.keySet()) {
+					predictByDistrict.put(district, Math.min(extrapolateByDistrict.get(district).get(i), 1));
+				}
+				builder.restrictWithDistrict(start, predictByDistrict, predict, act);
+				start = start.plusDays(7);
+			}
+		} else {
+			for (Double predict : extrapolateGlobal) {
+				builder.restrict(start, Math.min(predict, 1), act);
+				start = start.plusDays(7);
+			}
 		}
 
 		return builder;

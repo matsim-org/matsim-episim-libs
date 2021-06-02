@@ -3,6 +3,9 @@ package org.matsim.episim.policy;
 import org.junit.Test;
 import org.matsim.episim.model.FaceMask;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class RestrictionTest {
@@ -12,6 +15,14 @@ public class RestrictionTest {
 	 */
 	public static Restriction update(Restriction r, Restriction other) {
 		r.update(other);
+		return r;
+	}
+
+	/**
+	 * Helper function to allow merging restrictions for tests.
+	 */
+	public static Restriction merge(Restriction r, Restriction other) {
+		r.merge(other.asMap());
 		return r;
 	}
 
@@ -26,6 +37,8 @@ public class RestrictionTest {
 		r.merge(Restriction.ofReducedGroupSize(5).asMap());
 		r.merge(Restriction.ofClosingHours(0, 7).asMap());
 
+
+
 		assertThat(r.getRemainingFraction()).isEqualTo(0.8);
 		assertThat(r.getCiCorrection()).isEqualTo(0.5);
 
@@ -39,6 +52,20 @@ public class RestrictionTest {
 		assertThat(r.getClosingHours()).isEqualTo(new Restriction.ClosingHours(hours(0), hours(7)));
 
 		assertThat(Restriction.ofClosingHours(0, 0).hasClosingHours()).isFalse();
+
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+		Restriction localRestriction = Restriction.ofLocationBasedRf(nycBoroughs);
+		r.merge(localRestriction.asMap());
+
+		// if merged in this direction, locationBasedRf is NOT kept
+		assertThat(r.getLocationBasedRf().size()).isEqualTo(0);
+
+		// if merged in this direction, locationBasedRf IS kept
+		localRestriction.merge(r.asMap());
+		assertThat(localRestriction.getLocationBasedRf().size()).isEqualTo(2);
+		assertThat(localRestriction.getLocationBasedRf().get("Queens")).isEqualTo(0.8);
 
 	}
 
@@ -120,6 +147,112 @@ public class RestrictionTest {
 				.isEqualTo(0);
 		assertThat(r.overlapWithClosingHour(d + hours(8), d + hours(10)))
 				.isEqualTo(0);
+
+
+	}
+
+	@Test
+	public void locationBasedRestrictions() {
+
+		// Set up restrictions
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+		Restriction rNYC = Restriction.ofLocationBasedRf(nycBoroughs);
+
+		Map<String, Double> berlinDistricts = new HashMap<>();
+		berlinDistricts.put("Marzahn", 0.6);
+		berlinDistricts.put("Wilmersdorf", 0.4);
+		Restriction rBerlin = Restriction.ofLocationBasedRf(berlinDistricts);
+
+		Restriction rEmpty = Restriction.ofLocationBasedRf(new HashMap<>());
+
+		Restriction rNull = Restriction.ofLocationBasedRf(null);
+
+		// Test clone functionality
+		Restriction clone = Restriction.clone(rNYC);
+		assertThat(clone.getLocationBasedRf().size()).isEqualTo(2);
+		assertThat(clone.getLocationBasedRf().get("Queens")).isEqualTo(0.8);
+
+		// Test update/merge functionality
+		// Update/Merge nyc into berlin should always keep berlins values
+		Restriction updateResult = update(rNYC, rBerlin);
+		assertThat(updateResult.getLocationBasedRf().containsKey("Queens")).isEqualTo(false);
+		assertThat(updateResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		Restriction mergeResult = merge(rNYC, rBerlin);
+		assertThat(mergeResult.getLocationBasedRf().containsKey("Queens")).isEqualTo(false);
+		assertThat(mergeResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		// Update/Merge berlin from empty & vice versa should always keep berlins values;
+		updateResult = update(rEmpty, rBerlin);
+		assertThat(updateResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		updateResult = update(rBerlin, rEmpty);
+		assertThat(updateResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rEmpty, rBerlin);
+		assertThat(mergeResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rBerlin, rEmpty);
+		assertThat(mergeResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		// Update/Merge berlin from null & vice versa should always keep berlins values;
+		updateResult = update(rNull, rBerlin);
+		assertThat(updateResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		updateResult = update(rBerlin, rNull);
+		assertThat(updateResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(updateResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rNull, rBerlin);
+		assertThat(mergeResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		mergeResult = merge(rBerlin, rNull);
+		assertThat(mergeResult.getLocationBasedRf().containsKey("Wilmersdorf")).isEqualTo(true);
+		assertThat(mergeResult.getLocationBasedRf().get("Wilmersdorf")).isEqualTo(0.4);
+
+		// Tests merge behaviour between Restrictions with rf and Restrictions with localRfs
+		// As a rule, if new Restriction has rf, the old restriction's localRf should not be used, as it could be out of date
+
+		Restriction rf05 = Restriction.of(0.5);
+		Restriction rf08 = Restriction.of(0.8);
+
+		// old Restriction: rBerlin
+		// new Restriction: rf05
+		// merged Restriction should only contain rf05; rBerlin should be deleted
+		mergeResult = merge(rf05, rBerlin);
+		assertThat(mergeResult.getRemainingFraction()).isEqualTo(0.5);
+		assertThat(mergeResult.getLocationBasedRf().size()).isEqualTo(0);
+
+		// old Restriction: rf05
+		// new Restriction: rBerlin
+		// merged should contain both rf05 and localRf
+		Restriction rBerlin_rf05 = merge(rBerlin, rf05);
+		assertThat(rBerlin_rf05.getRemainingFraction()).isEqualTo(0.5);
+		assertThat(rBerlin_rf05.getLocationBasedRf().size()).isEqualTo(2);
+
+		// old Restriction: rBerlin_rf05
+		// new Restriction: rf08
+		// merged should only contain rf of 0.8
+		mergeResult = merge(rf08, rBerlin_rf05);
+		assertThat(mergeResult.getRemainingFraction()).isEqualTo(0.8);
+		assertThat(mergeResult.getLocationBasedRf().size()).isEqualTo(0);
+
+		// old Restriction: rf08
+		// new Restriction: rBerlin_rf05
+		// merged should equal rBerlin_rf05
+		mergeResult = merge(rBerlin_rf05, rf08);
+		assertThat(mergeResult.getRemainingFraction()).isEqualTo(0.5);
+		assertThat(mergeResult.getLocationBasedRf().size()).isEqualTo(2);
 
 
 	}

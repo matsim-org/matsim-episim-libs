@@ -207,6 +207,10 @@ public final class EpisimPerson implements Attributable {
 		return age;
 	}
 
+	public List<PerformedActivity> getTrajectory() {
+		return trajectory;
+	}
+
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
 	}
@@ -551,11 +555,12 @@ public final class EpisimPerson implements Attributable {
 		this.vaccinable = vaccinable;
 	}
 
-	PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement) {
-		PerformedActivity act = new PerformedActivity(time, trajectoryElement);
+	public PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement, Id<ActivityFacility> facilityId) {
+		PerformedActivity act = new PerformedActivity(time, trajectoryElement, facilityId);
 		trajectory.add(act);
 		return act;
 	}
+
 
 	void setStartOfDay(DayOfWeek day) {
 		startOfDay[day.getValue() - 1] = trajectory.size();
@@ -743,7 +748,7 @@ public final class EpisimPerson implements Attributable {
 		return true;
 	}
 
-	List<PerformedActivity> getActivities(DayOfWeek day) {
+	public List<PerformedActivity> getActivities(DayOfWeek day) {
 		int offset = getStartOfDay(day);
 		return trajectory.subList(offset, getEndOfDay(day));
 	}
@@ -816,10 +821,13 @@ public final class EpisimPerson implements Attributable {
 
 		public final double time;
 		public final EpisimConfigGroup.InfectionParams params;
+		public final Id<ActivityFacility> facilityId;
 
-		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params) {
+
+		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params, Id<ActivityFacility> facilityId) {
 			this.time = time;
 			this.params = params;
+			this.facilityId = facilityId;
 		}
 
 		/**
@@ -837,6 +845,14 @@ public final class EpisimPerson implements Attributable {
 			return params.getContainerName();
 		}
 
+		/**
+		 * Facility Id for performed activity
+		 */
+		public Id<ActivityFacility> getFacilityId() {
+			return this.facilityId;
+		}
+
+
 		@Override
 		public String toString() {
 			return "PerformedActivity{" +
@@ -849,6 +865,6 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Not further specified activity that is used during initialization.
 	 */
-	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null);
+	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
 }

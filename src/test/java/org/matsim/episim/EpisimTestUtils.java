@@ -85,6 +85,13 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create facility with just an ID
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(String facId) {
+		return new InfectionEventHandler.EpisimFacility(Id.create(facId, ActivityFacility.class));
+	}
+
+	/**
 	 * Create facility with n persons in it.
 	 */
 	public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, Consumer<EpisimPerson> init) {
@@ -102,13 +109,22 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create a facility with certain group size and ID.
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(String facId, int n, String act, int groupSize, Consumer<EpisimPerson> init) {
+		InfectionEventHandler.EpisimFacility container = createFacility(facId);
+		container.setMaxGroupSize(groupSize);
+		return addPersons(container, n, act, init);
+	}
+
+	/**
 	 * Create a person and add to container.
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 
 		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
-		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct));
+		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct),null);
 		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
 
 		if (container != null) {

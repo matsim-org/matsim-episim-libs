@@ -23,6 +23,7 @@ package org.matsim.episim.model;
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
 
@@ -55,9 +56,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 	@Inject
 		/* package */
 	SymmetricContactModel(SplittableRandom rnd, Config config, TracingConfigGroup tracingConfig,
-						  EpisimReporting reporting, InfectionModel infectionModel) {
+						  EpisimReporting reporting, InfectionModel infectionModel, Scenario scenario) {
 		// (make injected constructor non-public so that arguments can be changed without repercussions.  kai, jun'20)
-		super(rnd, config, infectionModel, reporting);
+		super(rnd, config, infectionModel, reporting, scenario);
 		this.trackingAfterDay = tracingConfig.getPutTraceablePersonsInQuarantineAfterDay();
 		this.traceSusceptible = tracingConfig.getTraceSusceptible();
 	}

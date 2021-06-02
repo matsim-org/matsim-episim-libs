@@ -26,7 +26,9 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.policy.Restriction;
+import org.matsim.facilities.ActivityFacility;
 
+import java.util.HashMap;
 import java.time.DayOfWeek;
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -41,7 +43,7 @@ import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 public abstract class AbstractContactModel implements ContactModel {
 	public static final String QUARANTINE_HOME = "quarantine_home";
 
-	protected final Scenario scenario = null;
+	protected final Scenario scenario;
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 	protected final EpisimReporting reporting;
@@ -73,8 +75,13 @@ public abstract class AbstractContactModel implements ContactModel {
 	 */
 	private double curfewCompliance;
 
+	/**
+	 * Map of each ActivityFacility with the corresponding subdistrict
+	 */
+	private final Map<String, String> subdistrictFacilities;
 
-	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
+
+	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting, Scenario scenario) {
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.infectionModel = infectionModel;
@@ -82,6 +89,26 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.trParams = episimConfig.selectInfectionParams("tr");
 		this.qhParams = episimConfig.selectInfectionParams(QUARANTINE_HOME);
 		this.trackingMinDuration = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class).getMinDuration();
+		this.scenario = scenario;
+
+		subdistrictFacilities = new HashMap<>();
+		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+				&& scenario != null
+				&& !scenario.getActivityFacilities().getFacilities().isEmpty()) {
+
+			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
+				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
+				String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);
+				if (subdistrict != null) {
+					this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);
+				}
+			}
+		}
+	}
+
+	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting) {
+		this(rnd, config, infectionModel, reporting, null);
+
 	}
 
 	private static boolean hasDiseaseStatusRelevantForInfectionDynamics(EpisimPerson personWrapper) {
@@ -202,19 +229,32 @@ public abstract class AbstractContactModel implements ContactModel {
 		if (r.isClosed(container.getContainerId()))
 			return false;
 
-		return actIsRelevant(act.params, restrictions, rnd);
+		return actIsRelevant(act.params, restrictions, rnd, container);
 	}
 
-	private boolean actIsRelevant(EpisimConfigGroup.InfectionParams params, Map<String, Restriction> restrictions, SplittableRandom rnd) {
+	private boolean actIsRelevant(EpisimConfigGroup.InfectionParams params, Map<String, Restriction> restrictions, SplittableRandom rnd,EpisimContainer container) {
 
 		Restriction r = restrictions.get(params.getContainerName());
+		Double remainingFraction = r.getRemainingFraction();
+
+		// Applies location based restriction, if applicable
+		// So far, they are only applied for EpisimFacilities, not EpisimVehicles
+		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes) && container != null) {
+			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
+				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
+				if (r.getLocationBasedRf().containsKey(subdistrict)) {
+					remainingFraction = r.getLocationBasedRf().get(subdistrict);
+				}
+			}
+		}
+
 		// avoid use of rnd if outcome is known beforehand
-		if (r.getRemainingFraction() == 1)
+		if (remainingFraction == 1)
 			return true;
-		if (r.getRemainingFraction() == 0)
+		if (remainingFraction == 0)
 			return false;
 
-		return rnd.nextDouble() < r.getRemainingFraction();
+		return rnd.nextDouble() < remainingFraction;
 
 	}
 
@@ -228,9 +268,9 @@ public abstract class AbstractContactModel implements ContactModel {
 		EpisimPerson.PerformedActivity nextAct = person.getNextActivity(day, time % 86400);
 
 		// next activity is only considered if present
-		return actIsRelevant(trParams, restrictions, rnd) &&
-				(nextAct == null || actIsRelevant(nextAct.params, restrictions, rnd)) &&
-				(actIsRelevant(lastAct.params, restrictions, rnd));
+		return actIsRelevant(trParams, restrictions, rnd, null) &&
+				(nextAct == null || actIsRelevant(nextAct.params, restrictions, rnd, null)) &&
+				(actIsRelevant(lastAct.params, restrictions, rnd, null));
 
 	}
 

@@ -77,6 +77,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String ACTIVITY_HANDLING = "activityHandling";
 	private static final String THREADS = "threads";
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
+	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
+	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -155,6 +157,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private String overwritePolicyLocation = null;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
+	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
+	private String districtLevelRestrictionsAttribute = "";
 	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -700,6 +704,29 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.activityHandling = activityHandling;
 	}
 
+	/**
+	 * District level restrictions for location based restrictions;
+	 */
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public DistrictLevelRestrictions getDistrictLevelRestrictions() {
+		return this.districtLevelRestrictions;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public void setDistrictLevelRestrictions(DistrictLevelRestrictions districtLevelRestrictions) {
+		this.districtLevelRestrictions = districtLevelRestrictions;
+	}
+
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public String getDistrictLevelRestrictionsAttribute() {
+		return this.districtLevelRestrictionsAttribute;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public void setDistrictLevelRestrictionsAttribute(String districtLevelRestrictionsAttribute) {
+		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
+	}
+
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
 		// this is, I think, necessary for the automatic reading from file, and possibly for the commandline stuff.
@@ -935,6 +962,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		startOfDay
 
 	}
+
+
+	/**
+	 * Decides whether location based restrictions should be implemented
+	 */
+	public enum DistrictLevelRestrictions {
+		yes,
+		no
+	}
+
 
 	/**
 	 * Parameter set for one activity type.

@@ -38,7 +38,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
@@ -220,10 +219,53 @@ public final class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
+		 * Restrict activities at specific date in absolute time.
+		 *
+		 * @param date        the date (yyyy-mm-dd) when it will be in effect
+		 * @param restriction restriction to apply
+		 * @param activities  activities to restrict
+		 *
+		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, Restriction, String...)}
+		 */
+		@SuppressWarnings("unchecked")
+		public ConfigBuilder restrictWithDistrict(String date, Restriction restriction, String... activities) {
+
+			if (activities.length == 0)
+				throw new IllegalArgumentException("No activities given");
+
+			Map<String, Double> locationBasedRf = restriction.getLocationBasedRf();
+
+			for (String act : activities) {
+				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.computeIfAbsent(act, m -> new HashMap<>());
+
+				// Because of merging, each activity needs a separate restriction
+				Restriction clone = Restriction.clone(restriction);
+				clone.setLocationBasedRf(locationBasedRf);
+
+				// merge if there is an entry already
+				if (p.containsKey(date))
+					clone.merge(p.get(date));
+
+				Map<String, Object> value = clone.asMap();
+				p.put(date, value);
+			}
+
+			return this;
+		}
+
+
+		/**
 		 * Same as {@link #restrict(String, Restriction, String...)} with default values.
 		 */
 		public ConfigBuilder restrict(LocalDate date, double fraction, String... activities) {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
+		}
+
+		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecificValue, double fraction, String... activities) {
+			Restriction restriction = Restriction.of(fraction);
+			restriction.setLocationBasedRf(districtSpecificValue);
+
+			return restrictWithDistrict(date.toString(), restriction, activities);
 		}
 
 		/**
@@ -250,6 +292,13 @@ public final class FixedPolicy extends ShutdownPolicy {
 			if (day <= 0) throw new IllegalArgumentException("Day must be larger than 0");
 
 			return restrict("day-" + day, restriction, activities);
+		}
+
+		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double>  locationBasedRf, double fraction, String... activities) {
+			Restriction restriction = Restriction.of(fraction);
+			restriction.setLocationBasedRf(locationBasedRf);
+
+			return restrictWithDistrict("day-" + day, restriction, activities);
 		}
 
 		/**
@@ -313,7 +362,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
 				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,
-						null, null, null, null, null, restriction), activities);
+						null, null, null, null, null, new HashMap<String, Double>(), restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}
