@@ -15,3 +15,13 @@ $(out)/germany_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz: $(out
 	$(sc) districtLookup $<\
  	 --output $@\
 	 --shp ../public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp
+
+$(out)/germany_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz: $(out)/germany_snz_entirePopulation_emptyPlans_withDistricts_100pt.xml.gz
+	$(sc) downSample 0.25\
+   --population $<\
+   --events $(in)/de2020gsmwt_events_reduced.xml.gz\
+   --events $(in)/de2020gsmsa_events_reduced.xml.gz\
+   --events $(in)/de2020gsmso_events_reduced.xml.gz\
+   --output $(tmp)
+
+	mv $(tmp)/population0.25.xml.gz $(out)/germany_snz_entirePopulation_emptyPlans_withDistricts_25pt.xml.gz
