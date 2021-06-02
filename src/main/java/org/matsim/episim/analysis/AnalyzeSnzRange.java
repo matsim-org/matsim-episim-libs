@@ -61,9 +61,10 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	private static final Joiner JOIN = Joiner.on("\t");
 
 	private enum AnalyseAreas {
-		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg, Bundeslaender
+		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg,
+		Bundeslaender, Landkreise, AnyArea
 	}
-	
+
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
 	private Path inputFolder;
 
@@ -78,16 +79,22 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		AnalyseAreas selectedArea = AnalyseAreas.Bundeslaender;
-		analyseData(selectedArea);
+		String anyArea = "Berlin";
+		analyseData(selectedArea, anyArea);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private void analyseData(AnalyseAreas selectedArea) throws IOException {
+	private void analyseData(AnalyseAreas selectedArea, String anyArea) throws IOException {
 
 		switch (selectedArea) {
+		case AnyArea:
+			HashMap<String, IntSet> zipCodesAnyArea = findZipCodesForAnyArea(anyArea);
+			analyzeDataForCertainArea(zipCodesAnyArea.keySet().iterator().next(),
+					zipCodesAnyArea.values().iterator().next());
+			break;
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
@@ -172,9 +179,13 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
 			analyzeDataForCertainArea("Wolfsburg", zipCodesWolfsburg);
 			break;
-		case Bundeslaender:	
+		case Bundeslaender:
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
 			writeBundeslandDataForPublic(outputFolder);
+			break;
+		case Landkreise:
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
+			writeLandkreiseDataForPublic(outputFolder);
 			break;
 		default:
 			break;
@@ -182,6 +193,13 @@ class AnalyzeSnzRange implements Callable<Integer> {
 		}
 	}
 
+	/**
+	 * Analyze the data for one certain area.
+	 * 
+	 * @param area
+	 * @param zipCodes
+	 * @throws IOException
+	 */
 	private void analyzeDataForCertainArea(String area, IntSet zipCodes) throws IOException {
 		log.info("Analyze data for " + area);
 
@@ -189,7 +207,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 		Collections.sort(filesWithData);
 		log.info("Amount of found files: " + filesWithData.size());
-		
+
 		Path outputFile = outputFolder.resolve(area + "SnzDataRange_daily_until.csv");
 
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
@@ -210,26 +228,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 
 				dateString = file.getName().split("_")[0];
 
-				CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
-						.parse(IOUtils.getBufferedReader(file.toString()));
-
-				for (CSVRecord record : parse) {
-					if (!record.get("zipCode").contains("NULL")) {
-						int zipCode = Integer.parseInt(record.get("zipCode"));
-						if (zipCodes.contains(zipCode)) {
-
-							int nPersons = Integer.parseInt(record.get("nPersons"));
-							double dailyRangeSum = Double.parseDouble(record.get("dailyRangeSum"));
-							int nStayHome = Integer.parseInt(record.get("nStayHomes"));
-							int nMobilePersons = Integer.parseInt(record.get("nMobilePersons"));
-
-							sums.mergeDouble("nStayHomes", nStayHome, Double::sum);
-							sums.mergeDouble("nMobilePersons", nMobilePersons, Double::sum);
-							sums.mergeDouble("nPersons", nPersons, Double::sum);
-							sums.mergeDouble("dailyRangeSum", dailyRangeSum, Double::sum);
-						}
-					}
-				}
+				readPersonsFile(zipCodes, file, sums);
 
 				List<String> row = new ArrayList<>();
 				row.add(dateString);
@@ -257,9 +256,88 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			e.printStackTrace();
 		}
 	}
-	
+
 	/**
-	 * Analyze range data and write result to {@code outputFile}. The result contains data for all Bundeslaender.
+	 * Reads the file with the person statistics for one list of zip Codes and saves
+	 * the result in sums
+	 * 
+	 * @param zipCodes
+	 * @param file
+	 * @param sums
+	 * @throws IOException
+	 */
+	private void readPersonsFile(IntSet zipCodes, File file, Object2DoubleMap<String> sums) throws IOException {
+		CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+				.parse(IOUtils.getBufferedReader(file.toString()));
+
+		for (CSVRecord record : parse) {
+			if (!record.get("zipCode").contains("NULL")) {
+				int zipCode = Integer.parseInt(record.get("zipCode"));
+				if (zipCodes.contains(zipCode)) {
+
+					int nPersons = Integer.parseInt(record.get("nPersons"));
+					double dailyRangeSum = Double.parseDouble(record.get("dailyRangeSum"));
+					int nStayHome = Integer.parseInt(record.get("nStayHomes"));
+					int nMobilePersons = Integer.parseInt(record.get("nMobilePersons"));
+
+					sums.mergeDouble("nStayHomes", nStayHome, Double::sum);
+					sums.mergeDouble("nMobilePersons", nMobilePersons, Double::sum);
+					sums.mergeDouble("nPersons", nPersons, Double::sum);
+					sums.mergeDouble("dailyRangeSum", dailyRangeSum, Double::sum);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Reads the file with the person statistics for all lists of zip Codes and
+	 * saves the result in separate sums
+	 * 
+	 * @param zipCodesForAreas
+	 * @param file
+	 * @param allSums
+	 * @throws IOException
+	 */
+	private void readPersonsFile(HashMap<String, IntSet> zipCodesForAreas, File file,
+			HashMap<String, Object2DoubleMap<String>> allSums) throws IOException {
+
+		if (allSums.isEmpty())
+			for (String nameArea : zipCodesForAreas.keySet()) {
+				Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+				allSums.put(nameArea, sums);
+			}
+
+		CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+				.parse(IOUtils.getBufferedReader(file.toString()));
+
+		for (CSVRecord record : parse) {
+			for (Entry<String, IntSet> certainArea : zipCodesForAreas.entrySet()) {
+				if (!record.get("zipCode").contains("NULL")) {
+					String nameArea = certainArea.getKey();
+					int zipCode = Integer.parseInt(record.get("zipCode"));
+					if (certainArea.getValue().contains(zipCode)) {
+						Object2DoubleMap<String> sums = allSums.get(nameArea);
+
+						int nPersons = Integer.parseInt(record.get("nPersons"));
+						double dailyRangeSum = Double.parseDouble(record.get("dailyRangeSum"));
+						int nStayHome = Integer.parseInt(record.get("nStayHomes"));
+						int nMobilePersons = Integer.parseInt(record.get("nMobilePersons"));
+
+						sums.mergeDouble("nStayHomes", nStayHome, Double::sum);
+						sums.mergeDouble("nMobilePersons", nMobilePersons, Double::sum);
+						sums.mergeDouble("nPersons", nPersons, Double::sum);
+						sums.mergeDouble("dailyRangeSum", dailyRangeSum, Double::sum);
+
+						allSums.put(nameArea, sums);
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Analyze range data and write result to {@code outputFile}. The result
+	 * contains data for all Bundeslaender.
 	 */
 	public void writeBundeslandDataForPublic(Path outputFile) throws IOException {
 
@@ -273,59 +351,39 @@ class AnalyzeSnzRange implements Callable<Integer> {
 
 		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toString());
 		try {
-			
+
 			JOIN.appendTo(writer, TypesBL.values());
 			writer.write("\n");
-
-			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
-
 			int countingDays = 1;
 
 			// will contain the last parsed date
 			String dateString = "";
 
+			HashMap<String, Object2DoubleMap<String>> allSums = new HashMap<String, Object2DoubleMap<String>>();
+			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
+
 			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
-				for (Entry<String, IntSet> bundesland : zipCodesBL.entrySet()) {
-					IntSet zipCodes = bundesland.getValue();
-					String nameBundesland = bundesland.getKey();
 
-					Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+				readPersonsFile(zipCodesBL, file, allSums);
+
+				for (String nameBundesland : zipCodesBL.keySet()) {
 
 					dateString = file.getName().split("_")[0];
-
-					CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
-							.parse(IOUtils.getBufferedReader(file.toString()));
-
-					for (CSVRecord record : parse) {
-						if (!record.get("zipCode").contains("NULL")) {
-							int zipCode = Integer.parseInt(record.get("zipCode"));
-							if (zipCodes.contains(zipCode)) {
-
-								int nPersons = Integer.parseInt(record.get("nPersons"));
-								double dailyRangeSum = Double.parseDouble(record.get("dailyRangeSum"));
-								int nStayHome = Integer.parseInt(record.get("nStayHomes"));
-								int nMobilePersons = Integer.parseInt(record.get("nMobilePersons"));
-
-								sums.mergeDouble("nStayHomes", nStayHome, Double::sum);
-								sums.mergeDouble("nMobilePersons", nMobilePersons, Double::sum);
-								sums.mergeDouble("nPersons", nPersons, Double::sum);
-								sums.mergeDouble("dailyRangeSum", dailyRangeSum, Double::sum);
-							}
-						}
-					}
 
 					List<String> row = new ArrayList<>();
 					row.add(dateString);
 					row.add(nameBundesland);
-					row.add(String.valueOf(round2Decimals(sums.getDouble("nMobilePersons")/sums.getDouble("nPersons"))*100));
-					row.add(String.valueOf(round2Decimals(sums.getDouble("dailyRangeSum") / sums.getDouble("nPersons"))));
+					row.add(String.valueOf(round2Decimals(allSums.get(nameBundesland).getDouble("nMobilePersons")
+							/ allSums.get(nameBundesland).getDouble("nPersons")) * 100));
+					row.add(String.valueOf(round2Decimals(allSums.get(nameBundesland).getDouble("dailyRangeSum")
+							/ allSums.get(nameBundesland).getDouble("nPersons"))));
 					JOIN.appendTo(writer, row);
 					writer.write("\n");
 				}
-
-				if (countingDays == 1 || countingDays % 5 == 0)
-					log.info("Finished day " + countingDays);
+				allSums.clear();
+				if (countingDays % 7 == 0)
+					log.info("Finished week " + countingDays);
 
 				countingDays++;
 			}
@@ -336,6 +394,70 @@ class AnalyzeSnzRange implements Callable<Integer> {
 		}
 
 	}
+
+	/**
+	 * Analyze range data and write result to {@code outputFile}. The result
+	 * contains data for all Bundeslaender.
+	 */
+	public void writeLandkreiseDataForPublic(Path outputFile) throws IOException {
+
+		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+
+		Path thisOutputFile = outputFile.resolve("range_OverviewLK.csv");
+
+		Collections.sort(filesWithData);
+		log.info("Searching for files in the folder: " + inputFolder);
+		log.info("Amount of found files: " + filesWithData.size());
+
+		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toString());
+		try {
+
+			JOIN.appendTo(writer, TypesBL.values());
+			writer.write("\n");
+
+			int countingDays = 1;
+
+			// will contain the last parsed date
+			String dateString = "";
+
+			HashMap<String, Object2DoubleMap<String>> allSums = new HashMap<String, Object2DoubleMap<String>>();
+			HashMap<String, IntSet> zipCodesLK = findZIPCodesForLandkreise();
+
+			// Analyzes all files with the mobility data
+			for (File file : filesWithData) {
+
+				readPersonsFile(zipCodesLK, file, allSums);
+				if (countingDays % 7 == 0) {
+					for (String nameLandkreis : zipCodesLK.keySet()) {
+
+						dateString = file.getName().split("_")[0];
+
+						List<String> row = new ArrayList<>();
+						row.add(dateString);
+						row.add(nameLandkreis);
+						row.add(String.valueOf(round2Decimals(allSums.get(nameLandkreis).getDouble("nMobilePersons")
+								/ allSums.get(nameLandkreis).getDouble("nPersons")) * 100));
+						row.add(String.valueOf(round2Decimals(allSums.get(nameLandkreis).getDouble("dailyRangeSum")
+								/ allSums.get(nameLandkreis).getDouble("nPersons"))));
+						JOIN.appendTo(writer, row);
+						writer.write("\n");
+					}
+					allSums.clear();
+				}
+
+				if (countingDays == 1 || countingDays % 7 == 0)
+					log.info("Finished week " + countingDays);
+
+				countingDays++;
+			}
+			writer.close();
+			log.info("Write analyze of " + countingDays + " is writen to " + thisOutputFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 	/**
 	 * This method searches all files with an certain name in a given folder.
 	 */
@@ -352,28 +474,111 @@ class AnalyzeSnzRange implements Callable<Integer> {
 		}
 		return fileData;
 	}
-	
+
+	/**
+	 * Finds all zipCodes for all Bundesländer in Germany
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
 	private HashMap<String, IntSet> findZIPCodesForBundeslaender() throws IOException {
 
-		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/OpenGeoDB_bundesland_plz_ort_de.csv";
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
 		HashMap<String, IntSet> zipCodesBL = new HashMap<String, IntSet>();
 		zipCodesBL.put("Deutschland", new IntOpenHashSet());
 
 		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
-			CSVParser parse = CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader().parse(reader);
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
 
 			for (CSVRecord record : parse) {
-				if (zipCodesBL.containsKey(record.get("BL"))) {
-					zipCodesBL.get(record.get("BL")).add(Integer.parseInt(record.get("PLZ")));
-					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("PLZ")));
-					
+				if (zipCodesBL.containsKey(record.get("bundesland"))) {
+					zipCodesBL.get(record.get("bundesland")).add(Integer.parseInt(record.get("plz")));
+					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("plz")));
+
 				} else {
-					zipCodesBL.put(record.get("BL"), new IntOpenHashSet(List.of(Integer.parseInt(record.get("PLZ")))));
-					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("PLZ")));
+					zipCodesBL.put(record.get("bundesland"),
+							new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
+					zipCodesBL.get("Deutschland").add(Integer.parseInt(record.get("plz")));
 				}
 			}
 		}
 		return zipCodesBL;
+	}
+
+	/**
+	 * Finds all zipCodes for all Landkreise in Germany
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private HashMap<String, IntSet> findZIPCodesForLandkreise() throws IOException {
+
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
+		HashMap<String, IntSet> zipCodesLK = new HashMap<String, IntSet>();
+		zipCodesLK.put("Deutschland", new IntOpenHashSet());
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				String nameLK = record.get("landkreis");
+				if (nameLK.isEmpty())
+					nameLK = record.get("ort");
+				if (zipCodesLK.containsKey(nameLK)) {
+					zipCodesLK.get(nameLK).add(Integer.parseInt(record.get("plz")));
+					zipCodesLK.get("Deutschland").add(Integer.parseInt(record.get("plz")));
+
+				} else {
+					zipCodesLK.put(nameLK, new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
+					zipCodesLK.get("Deutschland").add(Integer.parseInt(record.get("plz")));
+				}
+			}
+		}
+		return zipCodesLK;
+	}
+
+	/**
+	 * Finds the zipCodes for any Area. If more than one area contains the input
+	 * String an exception is thrown.
+	 * 
+	 * @param anyArea
+	 * @return
+	 * @throws IOException
+	 */
+	public HashMap<String, IntSet> findZipCodesForAnyArea(String anyArea) throws IOException {
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
+		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
+		List<String> possibleAreas = new ArrayList<String>();
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				String nameLK = record.get("landkreis");
+				if (nameLK.isEmpty())
+					nameLK = record.get("ort");
+
+				if (nameLK.contains(anyArea)) {
+
+					if (!possibleAreas.contains(nameLK))
+						possibleAreas.add(nameLK);
+					if (zipCodes.containsKey(nameLK)) {
+						zipCodes.get(nameLK).add(Integer.parseInt(record.get("plz")));
+					} else
+						zipCodes.put(nameLK, new IntOpenHashSet(List.of(Integer.parseInt(record.get("plz")))));
+				}
+			}
+		}
+		if (possibleAreas.size() > 1)
+			if (possibleAreas.contains(anyArea)) {
+				IntSet finalZipCodes = zipCodes.get(anyArea);
+				zipCodes.clear();
+				zipCodes.put(anyArea, finalZipCodes);
+			} else
+				throw new RuntimeException(
+						"For the choosen area " + anyArea + " more the following districts are possible: "
+								+ possibleAreas.toString() + " Choose one and start again.");
+		return zipCodes;
 	}
 
 	/**
@@ -383,9 +588,12 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	static double round2Decimals(double number) {
 		return Math.round(number * 100) * 0.01;
 	}
+
 	private enum TypesBL {
-		date, BundeslandID, sharePersonLeavingHome, dailyRangePerPerson
-	}private enum Types {
+		date, Landkreis, sharePersonLeavingHome, dailyRangePerPerson
+	}
+
+	private enum Types {
 		date, nPersons, nStayHomes, nMobilePersons, dailyRangeSum, dailyRangePerPerson
 	}
 }
