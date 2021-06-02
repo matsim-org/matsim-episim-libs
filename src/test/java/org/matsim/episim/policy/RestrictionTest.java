@@ -37,11 +37,6 @@ public class RestrictionTest {
 		r.merge(Restriction.ofReducedGroupSize(5).asMap());
 		r.merge(Restriction.ofClosingHours(0, 7).asMap());
 
-		Map<String, Double> nycBoroughs = new HashMap<>();
-		nycBoroughs.put("Bronx", 0.7);
-		nycBoroughs.put("Queens", 0.8);
-		r.merge(Restriction.ofLocationBasedRf(nycBoroughs).asMap());
-
 
 
 		assertThat(r.getRemainingFraction()).isEqualTo(0.8);
@@ -58,8 +53,19 @@ public class RestrictionTest {
 
 		assertThat(Restriction.ofClosingHours(0, 0).hasClosingHours()).isFalse();
 
-		assertThat(r.getLocationBasedRf().size()).isEqualTo(2);
-		assertThat(r.getLocationBasedRf().get("Queens")).isEqualTo(0.8);
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.7);
+		nycBoroughs.put("Queens", 0.8);
+		Restriction localRestriction = Restriction.ofLocationBasedRf(nycBoroughs);
+		r.merge(localRestriction.asMap());
+
+		// if merged in this direction, locationBasedRf is NOT kept
+		assertThat(r.getLocationBasedRf().size()).isEqualTo(0);
+
+		// if merged in this direction, locationBasedRf IS kept
+		localRestriction.merge(r.asMap());
+		assertThat(localRestriction.getLocationBasedRf().size()).isEqualTo(2);
+		assertThat(localRestriction.getLocationBasedRf().get("Queens")).isEqualTo(0.8);
 
 	}
 
