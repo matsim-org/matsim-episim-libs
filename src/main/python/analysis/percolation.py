@@ -2,7 +2,7 @@
 
 import math
 import itertools
-from os import path, listdir
+from os import stat, path, listdir, makedirs
 from collections import defaultdict
 from glob import glob
 
@@ -29,7 +29,54 @@ sns.set_palette("deep")
 
 #%%
 
-output = "C:/Users/chris/Development/matsim-org/matsim-episim/graphs"
+output = "C:/Users/chris/Development/matsim-org/matsim-episim/filtered"
+biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest"
+
+fracs = {
+    "0.07" : [],
+    "0.08" : [],
+    "0.09" : [],
+    "0.1" : [],
+    "0.11" : [],
+}
+
+for d in listdir(output):
+
+    seed, _, frac = d.rpartition("-")
+    
+    seed = int(seed.split("_")[1])
+    frac = frac.split("_")[1]
+    
+    g_path = glob(path.join(output, d, "*.infectionEvents.txt"))[0]
+    size = stat(g_path).st_size
+    
+    fracs[frac].append((seed, size, g_path))
+#%%
+
+import shutil
+
+for frac, v in fracs.items():
+    
+    top = sorted(v, key=lambda d: d[1], reverse=True)
+    
+    print(frac)
+    
+    for seed, size, g_path in top[:3]:
+              
+        print("\t", size, g_path)
+        
+        dir = path.join(biggest, path.basename(path.dirname(g_path)))
+        
+        if not path.exists(dir):
+            makedirs(dir)
+        
+        shutil.copy(g_path, dir)
+    
+
+
+#%%
+
+output = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest"
 
 G = {
      "0.07": nx.DiGraph(),
@@ -78,7 +125,7 @@ df = pd.DataFrame(data)
 #%%
 
 for k, g in G.items(): 
-    nx.readwrite.graphml.write_graphml(g, "data/%s.graphml" % k)      
+    nx.readwrite.graphml.write_graphml(g, "data/%s-biggest.graphml" % k)      
 
 #%%
 
