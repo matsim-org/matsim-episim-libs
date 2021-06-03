@@ -3,6 +3,12 @@ library(tidyverse)
 library(tmap)
 library(sf)
 
+
+outersect <- function(x, y) {
+  sort(c(setdiff(x, y),
+         setdiff(y, x)))
+}
+
 #Part 1) LK_Timeline
 data <- read_csv("D:/Dropbox/Documents/VSP/LK_Timeline_WeeklyNumbers_perPerson.csv")
 
@@ -15,7 +21,8 @@ data2 <- data %>%
   select(!contains(unwanted_hours)) %>% 
   mutate("night_total" = `<0h` +`0-1h`+`1-2h`+`2-3h`+`3-4h`+`4-5h`+`22-23h`+`23-24h`+`24-25h`+`>30h`)
 
-data2$area <- data2$area %>% str_replace("Landkreis ","") %>% 
+data2$area <- data2$area %>% 
+  str_replace("Landkreis ","") %>% 
   str_replace("Kreis ","") %>% 
   str_replace("Nienburg/Weser","Nienburg (Weser)") %>% 
   str_replace("Cottbus - Chóśebuz","Cottbus") %>% 
@@ -25,16 +32,16 @@ data2$area <- data2$area %>% str_replace("Landkreis ","") %>%
   
 
 data_to_merge <- data2 %>% 
-  filter(date == "2020-03-08" | date == "2021-05-30") %>% 
+  filter(date == "2021-05-02" | date == "2021-04-04") %>% 
   select(c(date,area,night_total)) %>% 
-  pivot_wider(names_from = date,values_from = night_total,values_fn = mean) %>% 
-  mutate(change = `2021-05-30`/`2020-03-08`) %>% select(c(area,change))
+  pivot_wider(names_from = date,values_from = night_total,values_fn = mean) %>%
+  mutate(change = `2021-05-02`/`2021-04-04`) %>% select(c(area,change))
 
 # Landkreise Shapefile 
 lk <- st_read("D:/Dropbox/Documents/VSP/landkreise-DE/landkreise-in-germany.shp") %>% 
   mutate(area = name_2)
 
-lk2 <- lk %>% left_join(data_to_merge, by="area")
+lk2 <- lk %>% left_join(data_to_merge, by="area") %>% mutate(percent_reduction = 100 - change * 100 )
 
 lk_names <- lk$name_2
 data_names <- unique(data2$area)
@@ -44,10 +51,10 @@ Reduce(outersect,list(lk_names,data_names))
 
 tmap_mode("view")
 tm_shape(lk2) +
-  tm_polygons(col = "change", id = "area")
+  tm_polygons(col = "percent_reduction",
+              id = "area", 
+              title.col = "% Reduction of Nightly Activites")
 
 
-outersect <- function(x, y) {
-  sort(c(setdiff(x, y),
-         setdiff(y, x)))
-}
+dddd = lk$name_2
+View(dddd)
