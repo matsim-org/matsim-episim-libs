@@ -117,7 +117,7 @@ data_hours2 <- data_hours %>%
   mutate(date = as.Date(strptime(date, "%Y%m%d")))
 
 # Specify whether location is Landkreis or Kreis, needed for merge later, since some kreise and landkreise share a name
-for(i in 1:nrow(data2)){
+for(i in 1:nrow(data_hours2)){
   if (grepl("Kreis", data_hours2$Landkreis[i],fixed = TRUE)
       | grepl("kreis", data_hours2$Landkreis[i],fixed = TRUE) ){
     if (grepl("Landkreis", data_hours2$Landkreis[i],fixed = TRUE)
@@ -135,18 +135,26 @@ for(i in 1:nrow(data2)){
 }  
 
 data_hours2$Landkreis <- data_hours2$Landkreis %>%
-  str_replace("Landkreis ","") %>% 
+  str_replace("Landkreis ","") %>%
+  str_replace("München()","München") %>% 
   str_replace("Kreis ","") %>% 
   str_replace("Nienburg/Weser","Nienburg (Weser)") %>% 
   str_replace("Cottbus - Chóśebuz","Cottbus") %>% 
   str_replace("Lindau","Lindau (Bodensee)") %>% 
   str_replace("Rhein-Neuss", "Rhein-Kreis Neuss") %>% 
-  str_replace("Altenkirchen","Altenkirchen (Westerwald)")
+  str_replace("Altenkirchen","Altenkirchen (Westerwald)") %>% 
+  str_replace("St, Wendel", "St. Wendel")
 
 data_hours_date <- data_hours2 %>%
-  filter(date == "2021-05-02") %>%
-  filter(Landkreis != "Landau in der Pfalz")
+  filter(date == "2021-03-28") %>%
+  select(c(Landkreis,isKreis,isLandkreis, outOfHomeDuration))
 
+data_hours_change <- data_hours2%>%
+  filter(date == "2021-05-02" | date == "2021-03-28") %>%
+  select(c(date,Landkreis,isKreis,isLandkreis,outOfHomeDuration)) %>% 
+  pivot_wider(names_from = date,values_from = outOfHomeDuration) %>%
+  mutate(change = `2021-05-02`/`2021-03-28`) %>% 
+  select(c(Landkreis,isKreis,isLandkreis,change))
 
 lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp")) 
 lk2 <- lk %>% mutate(Landkreis = name_2)
@@ -158,21 +166,31 @@ for(i in 1:nrow(lk2)){
 }  
 
 # First merge where all three variables are checked --> change.x
-lk3 <- lk2 %>% left_join(data_hours_date, by=c("Landkreis","isLandkreis", "isKreis")) 
+lk3_change <- lk2 %>% left_join(data_hours_change, by=c("Landkreis","isLandkreis", "isKreis")) 
+lk3_date <- lk2 %>% left_join(data_hours_date, by=c("Landkreis","isLandkreis", "isKreis")) 
 #Then, just using location names --> change.y
-lk3 <- lk3 %>% left_join(data_hours_date, by= "Landkreis") 
+lk3_change <- lk3_change %>% left_join(data_hours_change, by= "Landkreis") 
+lk3_date <- lk3_date %>% left_join(data_hours_date, by= "Landkreis")
 
 # if there is no value in change.x, then use value from change.y
-for(i in 1:nrow(lk3)){
-  if(!is.na(lk3$change.x[i])){
-    lk3$change_final[i] = lk3$change.x[i]
+for(i in 1:nrow(lk3_change)){
+  if(!is.na(lk3_change$change.x[i])){
+    lk3_change$change_final[i] = lk3_change$change.x[i]
   } else {
-    lk3$change_final[i] = lk3$change.y[i] 
+    lk3_change$change_final[i] = lk3_change$change.y[i] 
+  }
+}
+for(i in 1:nrow(lk3_date)){
+  if(!is.na(lk3_date$outOfHomeDuration.x[i])){
+    lk3_date$outOfHomeDuration_final[i] = lk3_date$outOfHomeDuration.x[i]
+  } else {
+    lk3_date$outOfHomeDuration_final[i] = lk3_date$outOfHomeDuration.y[i] 
   }
 }  
 
 
-lk3 <- lk3 %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration)
+lk3_date <- lk3_date %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration_final)
+lk3_changes <- lk3_change %>% left_join(data_hours_change, by="Landkreis") %>% mutate(changeOutOfHome = (change_final -1)*100)
 
 lk_names <- lk$name_2
 data_names <- unique(data_hours$Landkreis)
@@ -181,10 +199,19 @@ Reduce(intersect,list(lk_names,data_names))
 Reduce(outersect,list(lk_names,data_names))
 
 tmap_mode("view")
-tm_shape(lk3) +
+tm_shape(lk3_date) +
   tm_polygons(col = "hoursOutHome",
               id = "Landkreis", 
               title.col = "% Average hours out of home", title='02. May 2021') +
   tm_layout(legend.position = c("right", "top"), title= 'Durschnittliche Dauer außhäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top')) +
   tm_shape(bl) +
   tm_borders(lwd = 2, col = "blue") 
+
+tm_shape(lk3_changes) +
+  tm_polygons(col = "changeOutOfHome",
+              id = "Landkreis", 
+              title.col = "% Average hours out of home", title='28.March/02.May') +
+  tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer außhäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) +
+  tm_shape(bl) +
+  tm_borders(lwd = 2, col = "blue") 
+
