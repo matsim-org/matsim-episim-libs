@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -76,15 +77,22 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 
 		Graph<String, CSVRecord> graph = new DefaultDirectedGraph<>(CSVRecord.class);
 
-		Set<String> infected = new HashSet<>();
+		Map<String, String> infectionType = new HashMap<>();
 
 		boolean hasProb;
+		boolean hasStrain;
 		try (BufferedReader reader = Files.newBufferedReader(scenario.resolve(id + "infectionEvents.txt"))) {
 			CSVParser parser = new CSVParser(reader, CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader());
 
 			hasProb = parser.getHeaderMap().containsKey("probability");
+			hasStrain = parser.getHeaderMap().containsKey("virusStrain");
 
 			for (CSVRecord record : parser) {
+
+				if (record.size() < parser.getHeaderMap().size()) {
+					log.warn("Truncated row in {}: {}", scenario, record);
+					continue;
+				}
 
 				LocalDate date = LocalDate.parse(record.get("date"));
 
@@ -94,7 +102,7 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 				String a = record.get("infector");
 				String b = record.get("infected");
 
-				infected.add(b);
+				infectionType.put(b, record.get("infectionType"));
 
 				graph.addVertex(a);
 				graph.addVertex(b);
@@ -112,14 +120,14 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 		exporter.registerAttribute("from", GraphMLExporter.AttributeCategory.GRAPH, AttributeType.STRING);
 		exporter.registerAttribute("to", GraphMLExporter.AttributeCategory.GRAPH, AttributeType.STRING);
 
-		exporter.registerAttribute("source", GraphMLExporter.AttributeCategory.NODE, AttributeType.BOOLEAN);
+		exporter.registerAttribute("source", GraphMLExporter.AttributeCategory.NODE, AttributeType.STRING);
 
 		exporter.registerAttribute("facility", GraphMLExporter.AttributeCategory.EDGE, AttributeType.STRING);
 		exporter.registerAttribute("infectionType", GraphMLExporter.AttributeCategory.EDGE, AttributeType.STRING);
 		exporter.registerAttribute("groupSize", GraphMLExporter.AttributeCategory.EDGE, AttributeType.INT);
 		exporter.registerAttribute("date", GraphMLExporter.AttributeCategory.EDGE, AttributeType.STRING);
 		exporter.registerAttribute("virusStrain", GraphMLExporter.AttributeCategory.EDGE, AttributeType.STRING);
-		exporter.registerAttribute("probability", GraphMLExporter.AttributeCategory.EDGE, AttributeType.DOUBLE);
+		//exporter.registerAttribute("probability", GraphMLExporter.AttributeCategory.EDGE, AttributeType.DOUBLE);
 
 		exporter.setEdgeWeightAttributeName("probability");
 
@@ -131,7 +139,7 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 		));
 
 		exporter.setVertexAttributeProvider(v -> Map.of(
-				"source", new DefaultAttribute<>(!infected.contains(v), AttributeType.BOOLEAN)
+				"source", new DefaultAttribute<>(infectionType.getOrDefault(v, "initial"), AttributeType.STRING)
 		));
 
 		exporter.setEdgeAttributeProvider(r -> Map.of(
@@ -139,7 +147,7 @@ public class ExtractInfectionGraph implements Callable<Integer> {
 				"infectionType", new DefaultAttribute<>(r.get("infectionType"), AttributeType.STRING),
 				"groupSize", new DefaultAttribute<>(Integer.parseInt(r.get("groupSize")), AttributeType.INT),
 				"date", new DefaultAttribute<>(r.get("date"), AttributeType.STRING),
-				"virusStrain", new DefaultAttribute<>(r.get("virusStrain"), AttributeType.STRING),
+				"virusStrain", new DefaultAttribute<>(hasStrain ? r.get("virusStrain") : "NA", AttributeType.STRING),
 				"probability", new DefaultAttribute<>(hasProb ? Double.parseDouble(r.get("probability")) : -1, AttributeType.DOUBLE)
 				)
 		);

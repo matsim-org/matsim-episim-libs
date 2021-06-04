@@ -29,10 +29,13 @@ sns.set_palette("deep")
 
 #%%
 
-output = "C:/Users/chris/Development/matsim-org/matsim-episim/filtered"
-biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest"
+output = "C:/Users/chris/Development/matsim-org/matsim-episim/filtered-new"
+biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest-new"
 
 fracs = {
+    "0.04": [],
+    "0.05": [],
+    "0.06" : [],
     "0.07" : [],
     "0.08" : [],
     "0.09" : [],
