@@ -46,7 +46,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 	public Module getBindings(int id, @Nullable Params params) {
 		/// TODO hardcoded now and needs to be adjusted before runs
 		/// XXX
-		return new Binding(Params.OLD);
+		return new Binding(Params.CURRENT);
 	}
 
 	@Override
@@ -59,6 +59,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 
+		episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.none);
 
 		episimConfig.setStartDate(getDefaultStartDate());
 		episimConfig.setInfections_pers_per_day(Map.of(
@@ -92,14 +93,14 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 	public static final class Params {
 
 		private final static String OLD = "oldSymmetric";
+		private final static String CURRENT = "symmetric";
 
-		@GenerateSeeds(value = 1500)
+		@GenerateSeeds(value = 9000)
 		public long seed;
 
-		@StringParameter(OLD)
-		public String contactModel;
+		public String contactModel = CURRENT;
 
-		@Parameter({0.07, 0.08, 0.09, 0.10, 0.11})
+		@Parameter({0.06, 0.07, 0.08, 0.09, 0.10, 0.11})
 		public double fraction;
 
 	}
@@ -129,7 +130,12 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		@Override
 		protected void configure() {
 			bind(InfectionModel.class).to(DefaultInfectionModel.class);
-			bind(ContactModel.class).to(SymmetricContactModel.class);
+
+			if (delegate instanceof SnzBerlinWeekScenario2020)
+				bind(ContactModel.class).to(OldSymmetricContactModel.class);
+			else
+				bind(ContactModel.class).to(SymmetricContactModel.class);
+
 			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class);
 		}
 
