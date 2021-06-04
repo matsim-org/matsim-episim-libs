@@ -4,7 +4,8 @@ library(tmap)
 library(sf)
 
 #setwd("C:/Users/jakob/projects")
-setwd("/Users/Ricardo/git")
+#setwd("/Users/Ricardo/git")
+setwd("/Users/kainagel/")
 
 svnLocationShape <-"public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
 svnLocationData <- "public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/"
@@ -28,23 +29,23 @@ for(i in 1:nrow(data2)){
       | grepl("kreis", data2$area[i],fixed = TRUE) ){
     if (grepl("Landkreis", data2$area[i],fixed = TRUE)
         |grepl("landkreis", data2$area[i],fixed = TRUE) ){
-      data2$isLandkreis[i] = TRUE
-      data2$isKreis[i] = FALSE
+      data2$isLandkreis[i] <- TRUE
+      data2$isKreis[i] <- FALSE
     } else {
-      data2$isLandkreis[i] = FALSE
-      data2$isKreis[i] = TRUE
+      data2$isLandkreis[i] <- FALSE
+      data2$isKreis[i] <- TRUE
     }
   } else {
-    data2$isLandkreis[i] = FALSE
-    data2$isKreis[i] = FALSE
+    data2$isLandkreis[i] <- FALSE
+    data2$isKreis[i] <- FALSE
   }
 }  
 
 # Manual change of names to work with merge later
 data2$area <- data2$area %>% 
   str_replace("Landkreis ","") %>%
-  str_replace("München()","München") %>% 
-  str_replace("Kreis ","") %>% 
+  str_replace("München()","München") %>%
+  str_replace("Kreis ","") %>%
   str_replace("Nienburg/Weser","Nienburg (Weser)") %>% 
   str_replace("Cottbus - Chóśebuz","Cottbus") %>% 
   str_replace("Lindau","Lindau (Bodensee)") %>% 
@@ -53,18 +54,25 @@ data2$area <- data2$area %>%
   str_replace("St, Wendel", "St. Wendel")
 
 #select dates that should be compared and find the change between two daes. 
-data_to_merge <- data2 %>% 
-  filter(date == "2021-05-02" | date == "2021-03-28") %>% 
+data_to_merge <- data2 %>%
+  filter(date == "2021-05-02" | date == "2021-03-28") %>%
   select(c(date,area,isKreis,isLandkreis,night_total)) %>% 
   pivot_wider(names_from = date,values_from = night_total) %>%
-  mutate(change = `2021-05-02`/`2021-03-28`) %>% select(c(area,isKreis,isLandkreis,change))
+  mutate(change = `2021-05-02`/`2021-03-28`) %>%
+  select(c(area,isKreis,isLandkreis,change)) %>%
+  {.}
+
+# yyyyyy Bei mir existieren einige Einträge (z.B. München, Würzburg) für jedes Datum doppelt.  Damit scheitert dann die Division in "mutate".
+# Es gibt einen "Landkreis München", und es gibt "München" (= die Stadt).  Vielleicht ist es doch nicht so gut, das oben rauszulöschen?
+# kai, jun'21
+
 
 # Landkreise Shapefile 
 lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp"))
 bl <- st_read(paste0(svnLocationShape, "Bundesländer_2016_ew.shp"))
 
-lk$name_2 <- lk$name_2 %>% 
-  str_replace("München(Landkreis)","München")
+#lk$name_2 <- lk$name_2 %>%
+#  str_replace("München(Landkreis)","München")
 
 
 lk2 <- lk %>% mutate(area = name_2)
