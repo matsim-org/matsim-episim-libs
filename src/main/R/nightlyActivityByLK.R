@@ -3,10 +3,10 @@ library(tidyverse)
 library(tmap)
 library(sf)
 
-setwd("C:/Users/jakob/projects")
-#setwd("/Users/Ricardo/git")
+#setwd("C:/Users/jakob/projects")
+setwd("/Users/Ricardo/git")
 
-svnLocationShape <-"public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/landkreise-in-germany.shp"
+svnLocationShape <-"public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
 svnLocationData <- "public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/"
 
 outersect <- function(x, y) {
@@ -33,7 +33,7 @@ for(i in 1:nrow(data2)){
     } else {
       data2$isLandkreis[i] = FALSE
       data2$isKreis[i] = TRUE
-      }
+    }
   } else {
     data2$isLandkreis[i] = FALSE
     data2$isKreis[i] = FALSE
@@ -60,11 +60,12 @@ data_to_merge <- data2 %>%
   mutate(change = `2021-05-02`/`2021-03-28`) %>% select(c(area,isKreis,isLandkreis,change))
 
 # Landkreise Shapefile 
-lk <- st_read(svnLocationShape)
+lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp"))
+bl <- st_read(paste0(svnLocationShape, "Bundesländer_2016_ew.shp"))
 
 lk$name_2 <- lk$name_2 %>% 
   str_replace("München(Landkreis)","München")
-  
+
 
 lk2 <- lk %>% mutate(area = name_2)
 
@@ -88,7 +89,7 @@ for(i in 1:nrow(lk3)){
 }  
 
 
-lk3 <-lk3 %>% mutate(percent_reduction = change_final -1)
+lk3 <-lk3 %>% mutate(percent_reduction = (change_final -1)*100)
 
 lk_names <- lk3$name_2
 data_names <- unique(data2$area)
@@ -96,18 +97,17 @@ data_names <- unique(data2$area)
 Reduce(intersect,list(lk_names,data_names))
 Reduce(outersect,list(lk_names,data_names))
 
+
 tmap_mode("view")
 tm_shape(lk3) +
   tm_polygons(col = "percent_reduction",
               id = "area", 
-             title.col = "% Reduction of Nightly Activites", title='28.March/02.May')
+              title.col = "% Reduction of Nightly Activites", title='28.March/02.May') +
+  tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22- 5 Uhr in %',  title.position = c('right', 'top')) +
+tm_shape(bl) +
+  tm_borders(lwd = 2, col = "blue")
 
-  
-  
-  
-  
-  
-  
+
 #Part 2 duration for one day
 
 data_hours <- read.csv2(paste0(svnLocationData,"mobilityData_OverviewLK.csv"))
@@ -115,6 +115,24 @@ data_hours %>% glimpse()
 
 data_hours2 <- data_hours %>%
   mutate(date = as.Date(strptime(date, "%Y%m%d")))
+
+# Specify whether location is Landkreis or Kreis, needed for merge later, since some kreise and landkreise share a name
+for(i in 1:nrow(data2)){
+  if (grepl("Kreis", data_hours2$Landkreis[i],fixed = TRUE)
+      | grepl("kreis", data_hours2$Landkreis[i],fixed = TRUE) ){
+    if (grepl("Landkreis", data_hours2$Landkreis[i],fixed = TRUE)
+        |grepl("landkreis", data_hours2$Landkreis[i],fixed = TRUE) ){
+      data_hours2$isLandkreis[i] = TRUE
+      data_hours2$isKreis[i] = FALSE
+    } else {
+      data_hours2$isLandkreis[i] = FALSE
+      data_hours2$isKreis[i] = TRUE
+    }
+  } else {
+    data_hours2$isLandkreis[i] = FALSE
+    data_hours2$isKreis[i] = FALSE
+  }
+}  
 
 data_hours2$Landkreis <- data_hours2$Landkreis %>%
   str_replace("Landkreis ","") %>% 
@@ -130,8 +148,9 @@ data_hours_date <- data_hours2 %>%
   filter(Landkreis != "Landau in der Pfalz")
 
 
-lk <- st_read(svnLocationShape) %>% 
+lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp")) %>% 
   mutate(Landkreis = name_2)
+bl <- st_read(paste0(svnLocationShape, "Bundesländer_2016_ew.shp"))
 
 lk2 <- lk %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration)
 lk_names <- lk$name_2
@@ -145,6 +164,8 @@ Reduce(outersect,list(lk_names,data_names))
 tm_shape(lk2) +
   tm_polygons(col = "hoursOutHome",
               id = "Landkreis", 
-              title.col = "% Average hours out of home", title='02. May 2021')
-
+              title.col = "% Average hours out of home", title='02. May 2021') +
+  tm_layout(legend.position = c("right", "top"), title= 'Durschnittliche Dauer außhäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top')) +
+  tm_shape(bl) +
+  tm_borders(lwd = 2, col = "blue") 
 
