@@ -148,24 +148,43 @@ data_hours_date <- data_hours2 %>%
   filter(Landkreis != "Landau in der Pfalz")
 
 
-lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp")) %>% 
-  mutate(Landkreis = name_2)
-bl <- st_read(paste0(svnLocationShape, "Bundesländer_2016_ew.shp"))
+lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp")) 
+lk2 <- lk %>% mutate(Landkreis = name_2)
 
-lk2 <- lk %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration)
+bl <- st_read(paste0(svnLocationShape, "Bundesländer_2016_ew.shp"))
+for(i in 1:nrow(lk2)){
+  lk2$isLandkreis[i] = if (lk2$type_2[i] == "Landkreis") TRUE else FALSE
+  lk2$isKreis[i] = if (lk2$type_2[i] == "Kreis") TRUE else FALSE
+}  
+
+# First merge where all three variables are checked --> change.x
+lk3 <- lk2 %>% left_join(data_hours_date, by=c("Landkreis","isLandkreis", "isKreis")) 
+#Then, just using location names --> change.y
+lk3 <- lk3 %>% left_join(data_hours_date, by= "Landkreis") 
+
+# if there is no value in change.x, then use value from change.y
+for(i in 1:nrow(lk3)){
+  if(!is.na(lk3$change.x[i])){
+    lk3$change_final[i] = lk3$change.x[i]
+  } else {
+    lk3$change_final[i] = lk3$change.y[i] 
+  }
+}  
+
+
+lk3 <- lk3 %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration)
+
 lk_names <- lk$name_2
 data_names <- unique(data_hours$Landkreis)
 
 Reduce(intersect,list(lk_names,data_names))
 Reduce(outersect,list(lk_names,data_names))
 
-
-
-tm_shape(lk2) +
+tmap_mode("view")
+tm_shape(lk3) +
   tm_polygons(col = "hoursOutHome",
               id = "Landkreis", 
               title.col = "% Average hours out of home", title='02. May 2021') +
   tm_layout(legend.position = c("right", "top"), title= 'Durschnittliche Dauer außhäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top')) +
   tm_shape(bl) +
   tm_borders(lwd = 2, col = "blue") 
-
