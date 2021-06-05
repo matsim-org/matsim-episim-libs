@@ -3,9 +3,9 @@ library(tidyverse)
 library(tmap)
 library(sf)
 
-setwd("C:/Users/jakob/projects")
+#setwd("C:/Users/jakob/projects")
 #setwd("/Users/Ricardo/git")
-#setwd("/Users/kainagel/")
+setwd("/Users/kainagel/")
 
 svnLocationShape <- "public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
 svnLocationData <- "public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/"
@@ -31,6 +31,7 @@ for(i in 1:nrow(lk2)){
 }  
 
 #Part 1) LK_Timeline 22-5 compare two dates
+#data <- read.csv2(paste0(svnLocationData,"LK_Timeline_WeeklyNumbers_perPerson.csv"),encoding = "DOS")
 data <- read.csv2(paste0(svnLocationData,"LK_Timeline_WeeklyNumbers_perPerson.csv"))
 
 data2 <- data %>%
@@ -70,13 +71,25 @@ data2$area <- data2$area %>%
 data2[data2$area == "München" & data2$isLandkreis,"area"] <- "München(Landkreis)"
 data2[grepl("Cottbus",data2$area),"area"] <- "Cottbus"
 
+#data3 <- data2 %>% filter( grepl("rzburg", area ) )
+
+# 2021-03-28
+# 2021-04-04
+# 2021-04-11
+# 2021-04-18
+# 2021-04-25
+# 2021-05-02
+
+dateBefore <- "2021-03-28"
+dateAfter <- "2021-05-02"
+
 
 #select dates that should be compared and find the change between two daes. 
 data_to_merge <- data2 %>%
-  filter(date == "2021-05-02" | date == "2021-03-28") %>%
+  filter(date == dateAfter | date == dateBefore ) %>%
   select(c(date,area,isKreis,isLandkreis,night_total)) %>% 
-  pivot_wider(names_from = date,values_from = night_total) %>%
-  mutate(change = `2021-05-02`/`2021-03-28`) %>%
+  pivot_wider(names_from = date,values_from = night_total, values_fn = mean ) %>%
+  mutate(change = !!sym(dateAfter)/ !!sym(dateBefore) ) %>%
   select(c(area,isKreis,isLandkreis,change)) %>%
   {.}
 
@@ -117,7 +130,7 @@ tmap_mode("view")
 tm_shape(lk3) +
   tm_polygons(col = "percent_reduction",
               id = "area", 
-              title.col = "% Reduction of Nightly Activites", title='28.March/02.May') +
+              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," / ",dateBefore) )
   tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22- 5 Uhr in %',  title.position = c('right', 'top')) #+
 #tm_shape(bl) +
 #  tm_borders(lwd = 2, col = "blue")
