@@ -130,7 +130,7 @@ tmap_mode("view")
 tm_shape(lk3) +
   tm_polygons(col = "percent_reduction",
               id = "area", 
-              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," / ",dateBefore) )
+              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," / ",dateBefore) ) +
   tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22- 5 Uhr in %',  title.position = c('right', 'top')) #+
 #tm_shape(bl) +
 #  tm_borders(lwd = 2, col = "blue")
