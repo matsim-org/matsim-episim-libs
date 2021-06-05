@@ -3,11 +3,11 @@ library(tidyverse)
 library(tmap)
 library(sf)
 
-#setwd("C:/Users/jakob/projects")
+setwd("C:/Users/jakob/projects")
 #setwd("/Users/Ricardo/git")
-setwd("/Users/kainagel/")
+#setwd("/Users/kainagel/")
 
-svnLocationShape <-"public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
+svnLocationShape <- "public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
 svnLocationData <- "public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/"
 
 outersect <- function(x, y) {
@@ -18,6 +18,7 @@ outersect <- function(x, y) {
 #Part 1) LK_Timeline 22-5 compare two dates
 data <- read.csv2(paste0(svnLocationData,"LK_Timeline_WeeklyNumbers_perPerson.csv"))
 
+prepare_activity_data <- function(data)
 data2 <- data %>%
   mutate(date = as.Date(date, format = "%d,%m,%y")) %>% 
   filter(type == "endNonHomeActs") %>%
@@ -47,11 +48,15 @@ data2$area <- data2$area %>%
   str_replace("München()","München") %>%
   str_replace("Kreis ","") %>%
   str_replace("Nienburg/Weser","Nienburg (Weser)") %>% 
-  str_replace("Cottbus - Chóśebuz","Cottbus") %>% 
+  str_replace("Cottbus - Ch�?ebuz","Cottbus") %>% 
   str_replace("Lindau","Lindau (Bodensee)") %>% 
   str_replace("Rhein-Neuss", "Rhein-Kreis Neuss") %>% 
   str_replace("Altenkirchen","Altenkirchen (Westerwald)") %>% 
   str_replace("St, Wendel", "St. Wendel")
+
+
+data2[data2$area == "M�nchen" & data2$isLandkreis,"area"] <- "M�nchen(Landkreis)"
+data2[grepl("Cottbus",data2$area),"area"] <- "Cottbus"
 
 #select dates that should be compared and find the change between two daes. 
 data_to_merge <- data2 %>%
@@ -69,13 +74,13 @@ data_to_merge <- data2 %>%
 
 # Landkreise Shapefile 
 lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp"))
-bl <- st_read(paste0(svnLocationShape, "Bundesländer_2016_ew.shp"))
+bl <- st_read(paste0(svnLocationShape, "Bundesl�nder_2016_ew.shp"))
 
-#lk$name_2 <- lk$name_2 %>%
-#  str_replace("München(Landkreis)","München")
+
 
 
 lk2 <- lk %>% mutate(area = name_2)
+
 
 for(i in 1:nrow(lk2)){
   lk2$isLandkreis[i] = if (lk2$type_2[i] == "Landkreis") TRUE else FALSE
@@ -111,9 +116,9 @@ tm_shape(lk3) +
   tm_polygons(col = "percent_reduction",
               id = "area", 
               title.col = "% Reduction of Nightly Activites", title='28.March/02.May') +
-  tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22- 5 Uhr in %',  title.position = c('right', 'top')) +
-tm_shape(bl) +
-  tm_borders(lwd = 2, col = "blue")
+  tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22- 5 Uhr in %',  title.position = c('right', 'top')) #+
+#tm_shape(bl) +
+#  tm_borders(lwd = 2, col = "blue")
 
 
 #Part 2 duration for one day
@@ -152,6 +157,9 @@ data_hours2$Landkreis <- data_hours2$Landkreis %>%
   str_replace("Rhein-Neuss", "Rhein-Kreis Neuss") %>% 
   str_replace("Altenkirchen","Altenkirchen (Westerwald)") %>% 
   str_replace("St, Wendel", "St. Wendel")
+
+data_hours2[data_hours2$Landkreis == "M�nchen" & data_hours2$isLandkreis,"Landkreis"] <- "M�nchen(Landkreis)"
+data_hours2[grepl("Cottbus",data_hours2$Landkreis),"Landkreis"] <- "Cottbus"
 
 data_hours_date <- data_hours2 %>%
   filter(date == "2021-03-28") %>%
@@ -200,10 +208,10 @@ for(i in 1:nrow(lk3_date)){
 lk3_date <- lk3_date %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration_final)
 lk3_changes <- lk3_change %>% left_join(data_hours_change, by="Landkreis") %>% mutate(changeOutOfHome = (change_final -1)*100)
 
-lk_names <- lk$name_2
-data_names <- unique(data_hours$Landkreis)
+lk_names <- lk2$name_2
+data_names <- unique(data_hours2$Landkreis)
 
-Reduce(intersect,list(lk_names,data_names))
+#Reduce(intersect,list(lk_names,data_names))
 Reduce(outersect,list(lk_names,data_names))
 
 tmap_mode("view")
@@ -211,15 +219,15 @@ tm_shape(lk3_date) +
   tm_polygons(col = "hoursOutHome",
               id = "Landkreis", 
               title.col = "% Average hours out of home", title='02. May 2021') +
-  tm_layout(legend.position = c("right", "top"), title= 'Durschnittliche Dauer außhäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top')) +
-  tm_shape(bl) +
-  tm_borders(lwd = 2, col = "blue") 
+  tm_layout(legend.position = c("right", "top"), title= 'Durschnittliche Dauer außhäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top'))# +
+  #tm_shape(bl) +
+  #tm_borders(lwd = 2, col = "blue") 
 
 tm_shape(lk3_changes) +
   tm_polygons(col = "changeOutOfHome",
               id = "Landkreis", 
               title.col = "% Average hours out of home", title='28.March/02.May') +
-  tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer außhäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) +
-  tm_shape(bl) +
+  #tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer außhäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) #+
+  #tm_shape(bl) +
   tm_borders(lwd = 2, col = "blue") 
 
