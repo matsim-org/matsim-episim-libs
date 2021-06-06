@@ -15,6 +15,7 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
@@ -32,7 +33,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 
 	@Override
 	public LocalDate getDefaultStartDate() {
-		return LocalDate.of(2020, 1, 1);
+		return LocalDate.of(2021, 1, 3);
 	}
 
 	@Override
@@ -74,17 +75,21 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 			episimConfig.setCalibrationParameter(1.07e-5 * params.fraction);
 
 		} else {
-			// reduced calib param
-			episimConfig.setCalibrationParameter(2.54e-5 * params.fraction);
+			// adjust calib param
+			episimConfig.setCalibrationParameter(1.7E-5 * 0.8 * params.fraction);
 		}
 
 		// no tracing and vaccinations
 		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(getDefaultStartDate(), 0));
 
-		// unrestricted
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
-		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+
+		FixedPolicy.ConfigBuilder policy = FixedPolicy.parse(episimConfig.getPolicy());
+
+		// restriction fixed at beginning of january.
+
+		policy.clearAfter(getDefaultStartDate().plusDays(1).toString());
+		episimConfig.setPolicy(FixedPolicy.class, policy.build());
 
 
 		return config;
@@ -95,12 +100,12 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		private final static String OLD = "oldSymmetric";
 		private final static String CURRENT = "symmetric";
 
-		@GenerateSeeds(value = 9000)
+		@GenerateSeeds(value = 3000)
 		public long seed;
 
 		public String contactModel = CURRENT;
 
-		@Parameter({0.06, 0.07, 0.08, 0.09, 0.10, 0.11})
+		@Parameter({0.85, 0.9, 0.95, 1, 1.05})
 		public double fraction;
 
 	}
@@ -119,8 +124,10 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 			else
 				delegate = new SnzBerlinProductionScenario.Builder()
 						.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.no)
+						.setRestrictions(SnzBerlinProductionScenario.Restrictions.yes)
 						.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 						.setTracing(SnzBerlinProductionScenario.Tracing.no)
+						.setWeatherModel(SnzBerlinProductionScenario.WeatherModel.no)
 						.setInfectionModel(DefaultInfectionModel.class)
 						.createSnzBerlinProductionScenario();
 
@@ -169,4 +176,15 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 
 	}
 
+	public static void main(String[] args) {
+		String[] args2 = {
+				RunParallel.OPTION_SETUP, BerlinPercolation.class.getName(),
+				RunParallel.OPTION_PARAMS, BerlinPercolation.Params.class.getName(),
+				RunParallel.OPTION_THREADS, Integer.toString(2),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(10000),
+		};
+
+		RunParallel.main(args2);
+
+	}
 }
