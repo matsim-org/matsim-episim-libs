@@ -2,10 +2,13 @@ library(readr)
 library(tidyverse)
 library(tmap)
 library(sf)
+library(stats)
 
 #setwd("C:/Users/jakob/projects")
 #setwd("/Users/Ricardo/git")
 setwd("/Users/kainagel/")
+
+rm(list = ls())
 
 svnLocationShape <- "public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
 svnLocationData <- "public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/"
@@ -15,7 +18,6 @@ outersect <- function(x, y) {
          setdiff(y, x)))
 }
 
- 
 
 # Data prep: import and modify shape file for districts (Landkreise, Stadtkreise...)
 # Landkreise Shapefile 
@@ -71,7 +73,7 @@ data2$area <- data2$area %>%
 data2[data2$area == "München" & data2$isLandkreis,"area"] <- "München(Landkreis)"
 data2[grepl("Cottbus",data2$area),"area"] <- "Cottbus"
 
-#data3 <- data2 %>% filter( grepl("rzburg", area ) )
+# 2020-03-08
 
 # 2021-03-28
 # 2021-04-04
@@ -80,7 +82,7 @@ data2[grepl("Cottbus",data2$area),"area"] <- "Cottbus"
 # 2021-04-25
 # 2021-05-02
 
-dateBefore <- "2021-03-28"
+dateBefore <- "2021-04-18"
 dateAfter <- "2021-05-02"
 
 
@@ -130,13 +132,19 @@ tmap_mode("view")
 tm_shape(lk3) +
   tm_polygons(col = "percent_reduction",
               id = "area", 
-              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," / ",dateBefore) ) +
-  tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22- 5 Uhr in %',  title.position = c('right', 'top')) #+
+              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," vs ",dateBefore) ) +
+  tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22-5 Uhr in %',  title.position = c('right', 'top')) #+
 #tm_shape(bl) +
 #  tm_borders(lwd = 2, col = "blue")
 
+#########################################
+#########################################
+rm(list = ls())
 
 #Part 2 duration for one day
+
+svnLocationShape <- "public-svn/matsim/scenarios/countries/de/episim/original-data/landkreise-in-germany/"
+svnLocationData <- "public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/"
 
 data_hours <- read.csv2(paste0(svnLocationData,"mobilityData_OverviewLK.csv"))
 data_hours %>% glimpse()
@@ -174,16 +182,29 @@ data_hours2$Landkreis <- data_hours2$Landkreis %>%
 data_hours2[data_hours2$Landkreis == "München" & data_hours2$isLandkreis,"Landkreis"] <- "München(Landkreis)"
 data_hours2[grepl("Cottbus",data_hours2$Landkreis),"Landkreis"] <- "Cottbus"
 
+# 2020-03-08
+
+# 2021-03-28
+# 2021-04-04
+# 2021-04-11
+# 2021-04-18
+# 2021-04-25
+# 2021-05-02
+
+dateBefore <- "2020-03-08"
+dateAfter <- "2021-05-02"
+
 data_hours_date <- data_hours2 %>%
-  filter(date == "2021-03-28") %>%
+  filter(date == dateAfter ) %>%
   select(c(Landkreis,isKreis,isLandkreis, outOfHomeDuration))
 
 data_hours_change <- data_hours2%>%
-  filter(date == "2021-05-02" | date == "2021-03-28") %>%
+  filter(date == dateBefore | date == dateAfter) %>%
   select(c(date,Landkreis,isKreis,isLandkreis,outOfHomeDuration)) %>% 
   pivot_wider(names_from = date,values_from = outOfHomeDuration) %>%
-  mutate(change = `2021-05-02`/`2021-03-28`) %>% 
-  select(c(Landkreis,isKreis,isLandkreis,change))
+  mutate(change = !!sym(dateAfter)/!!sym(dateBefore) ) %>%
+  select(c(Landkreis,isKreis,isLandkreis,change)) %>%
+  {.}
 
 lk <- st_read(paste0(svnLocationShape, "landkreise-in-germany.shp")) 
 lk2 <- lk %>% mutate(Landkreis = name_2)
@@ -219,7 +240,10 @@ for(i in 1:nrow(lk3_date)){
 
 
 lk3_date <- lk3_date %>% left_join(data_hours_date, by="Landkreis") %>% mutate(hoursOutHome = outOfHomeDuration_final)
-lk3_changes <- lk3_change %>% left_join(data_hours_change, by="Landkreis") %>% mutate(changeOutOfHome = (change_final -1)*100)
+lk3_changes <- lk3_change %>% left_join(data_hours_change, by="Landkreis") %>% mutate( changeOutOfHome = pmin( 0., (change_final -1.)*100. )  )
+
+head( lk3_changes)
+
 
 lk_names <- lk2$name_2
 data_names <- unique(data_hours2$Landkreis)
@@ -227,20 +251,20 @@ data_names <- unique(data_hours2$Landkreis)
 #Reduce(intersect,list(lk_names,data_names))
 Reduce(outersect,list(lk_names,data_names))
 
-tmap_mode("view")
+tmap_mode("plot" )
 tm_shape(lk3_date) +
   tm_polygons(col = "hoursOutHome",
               id = "Landkreis", 
-              title.col = "% Average hours out of home", title='02. May 2021') +
-  tm_layout(legend.position = c("right", "top"), title= 'Durschnittliche Dauer außhäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top'))# +
+              title.col = "% Average hours out of home", title=dateAfter) +
+  tm_layout(legend.position = c("right", "top"), title= 'Durchschnittliche Dauer aushäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top'))# +
   #tm_shape(bl) +
   #tm_borders(lwd = 2, col = "blue") 
 
 tm_shape(lk3_changes) +
   tm_polygons(col = "changeOutOfHome",
               id = "Landkreis", 
-              title.col = "% Average hours out of home", title='28.March/02.May') +
-  tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer außhäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) #+
+              title.col = "% Average hours out of home", title=paste0( dateAfter, " vs ", dateBefore )) +
+  tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer aushäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) #+
   #tm_shape(bl) +
   #tm_borders(lwd = 2, col = "blue") 
 
