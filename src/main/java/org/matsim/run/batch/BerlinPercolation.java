@@ -100,12 +100,12 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		private final static String OLD = "oldSymmetric";
 		private final static String CURRENT = "symmetric";
 
-		@GenerateSeeds(value = 3000)
+		@GenerateSeeds(value = 9000)
 		public long seed;
 
 		public String contactModel = CURRENT;
 
-		@Parameter({0.85, 0.9, 0.95, 1, 1.05})
+		@Parameter({0.4, 0.45, 0.5, 0.55, 0.6})
 		public double fraction;
 
 	}
