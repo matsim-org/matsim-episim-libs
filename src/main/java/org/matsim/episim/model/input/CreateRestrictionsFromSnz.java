@@ -36,6 +36,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 	private static final Logger log = LogManager.getLogger(CreateRestrictionsFromSnz.class);
 	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+	private static final DateTimeFormatter FMT_holiday = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 	private static final Joiner JOIN = Joiner.on("\t");
 
 	/**
@@ -100,19 +101,21 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	 * This method searches a files with personStat.
 	 */
 	static File findPersonStatInputFile(File inputFolder) {
-		File perosnStatFile = null;
+		File personStatFile = null;
 		for (File folder : Objects.requireNonNull(inputFolder.listFiles())) {
 			if (folder.isDirectory()) {
 				for (File file : Objects.requireNonNull(folder.listFiles())) {
-					if (file.getName().contains("_personStats.csv.gz")) {
-						perosnStatFile = file;
+					String string = file.getName().split("_")[0];
+					if (file.getName().contains("_personStats.csv.gz") && string.contains("20210531")) {
+						personStatFile = file;
 						break;
 					}
 				}
 			}
-			break;
+			if (personStatFile != null)
+				break;
 		}
-		return perosnStatFile;
+		return personStatFile;
 	}
 
 	/**
@@ -287,6 +290,8 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			List<String> baseDays) throws IOException {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
+		HashMap<String, Set<String>> lkAssignemt = createLKAssignmentToBL();
+
 		int nPersons = 0;
 		if (!getPercentageResults)
 			nPersons = getPersonsInThisZIPCode(zipCodes, inputFolder.toFile());
@@ -294,9 +299,11 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
 
-		Set<LocalDate> holidays = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
-				.stream().map(LocalDate::parse).collect(Collectors.toSet());
-
+		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
+		Set<LocalDate> holidays = allHolidays
+				.get(getRelatedBundesland(outputFile.getFileName().toString().split("Snz")[0], lkAssignemt));
+		if (holidays == null)
+			holidays = allHolidays.get("Germany");
 		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
 		try {
 
@@ -432,8 +439,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
 
-		Set<LocalDate> holidays = Resources.readLines(Resources.getResource("bankHolidays.txt"), StandardCharsets.UTF_8)
-				.stream().map(LocalDate::parse).collect(Collectors.toSet());
+		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
 
 		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toString());
 		try {
@@ -460,6 +466,10 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 					String nameBundesland = bundesland.getKey();
 					dateString = file.getName().split("_")[0];
 					LocalDate date = LocalDate.parse(dateString, FMT);
+
+					Set<LocalDate> holidays = allHolidays.get(nameBundesland);
+					if (holidays == null)
+						holidays = allHolidays.get("Germany");
 
 					DayOfWeek day = date.getDayOfWeek();
 
@@ -595,6 +605,49 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	}
 
 	/**
+	 * Creates an assignment of the landkreise to the Bundeslaender
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private HashMap<String, Set<String>> createLKAssignmentToBL() throws IOException {
+
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
+		HashMap<String, Set<String>> lKAssignment = new HashMap<String, Set<String>>();
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				String nameLK = record.get("landkreis");
+				if (nameLK.isEmpty())
+					nameLK = record.get("ort");
+				if (lKAssignment.containsKey(record.get("bundesland"))) {
+					if (!lKAssignment.get(record.get("bundesland")).contains(nameLK))
+						lKAssignment.get(record.get("bundesland")).add(String.valueOf(nameLK));
+				} else
+					lKAssignment.put(record.get("bundesland"), new HashSet<>(Arrays.asList(nameLK)));
+			}
+		}
+		return lKAssignment;
+	}
+
+	/**
+	 * Returns the Bundesland where is Landkreis is located
+	 * 
+	 * @param landkreis
+	 * @param lKAssignment
+	 * @return
+	 */
+	private String getRelatedBundesland(String landkreis, HashMap<String, Set<String>> lKAssignment) {
+
+		for (String bundesland : lKAssignment.keySet())
+			if (lKAssignment.get(bundesland).contains(landkreis))
+				return bundesland;
+		return null;
+	}
+
+	/**
 	 * Assigns the zip codes to a Bundesland
 	 * 
 	 * @return
@@ -655,7 +708,10 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		return zipCodesLK;
 	}
 
-	/** Finds the zipCodes for any Area. If more than one area contains the input String an exception is thrown.
+	/**
+	 * Finds the zipCodes for any Area. If more than one area contains the input
+	 * String an exception is thrown.
+	 * 
 	 * @param anyArea
 	 * @return
 	 * @throws IOException
@@ -694,6 +750,41 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 						"For the choosen area " + anyArea + " more the following districts are possible: "
 								+ possibleAreas.toString() + " Choose one and start again.");
 		return zipCodes;
+	}
+
+	/**
+	 * Reads all bank holidays for Germany and each Bundesland
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private HashMap<String, Set<LocalDate>> readBankHolidays() throws IOException {
+	
+		String bankHolidayFile = "src/main/resources/bankHolidays.csv";
+		HashMap<String, Set<LocalDate>> bankHolidaysForBL = new HashMap<String, Set<LocalDate>>();
+	
+		try (BufferedReader reader = IOUtils.getBufferedReader(bankHolidayFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+	
+			for (CSVRecord record : parse) {
+				String[] BlWithBankHolidy = record.get("Bundesland").split(";");
+				LocalDate date = LocalDate.parse(record.get("bankHoliday"), FMT_holiday);
+				for (String bundesland : BlWithBankHolidy) {
+	
+					if (bankHolidaysForBL.containsKey(bundesland)) {
+						if (!bankHolidaysForBL.get(bundesland).contains(date))
+							bankHolidaysForBL.get(bundesland).add(date);
+					} else
+						bankHolidaysForBL.put(bundesland, new HashSet<LocalDate>(Arrays.asList(date)));
+				}
+			}
+			Set<LocalDate> germanyBankHolidays = bankHolidaysForBL.get("Germany");
+	
+			for (String bundesland : bankHolidaysForBL.keySet())
+				if (!bundesland.contains("Germany"))
+					bankHolidaysForBL.get(bundesland).addAll(germanyBankHolidays);
+		}
+		return bankHolidaysForBL;
 	}
 
 	/**
