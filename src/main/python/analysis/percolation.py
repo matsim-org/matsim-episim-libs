@@ -27,7 +27,7 @@ sns.set_style("whitegrid")
 sns.set_context("paper")
 sns.set_palette("deep")
 
-#%%
+#%% Read in all infections
 
 output = "C:/Users/chris/Development/matsim-org/matsim-episim/perc-jan"
 biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest-jan"
@@ -47,7 +47,7 @@ for d in listdir(output):
     df["clusterSize"] = df.shape[0]
     
     fracs[frac].append((seed, df, g_path))    
-#%%
+#%% Copy biggest clusters
 
 import shutil
 
@@ -67,6 +67,27 @@ for frac, v in fracs.items():
             makedirs(dir)
         
         shutil.copy(g_path, dir)
+    
+#%% Create distribution of infections
+
+for frac, v in fracs.items():
+
+    n = []
+    
+    for seed, df, g_path in v:
+        
+        if len(df) == 0:
+            n.append(0)
+            
+        # persons not infecting anyone
+        no_inf = set(df.infected).difference(set(df.infector))
+        res = np.concatenate((df['infector'].value_counts().array, np.zeros(len(no_inf))))
+        
+        n.extend(res)
+    
+    n = np.sort(n)
+    
+    np.save(path.join(biggest, frac + ".npy"), n, allow_pickle=False)
     
     
 #%%
