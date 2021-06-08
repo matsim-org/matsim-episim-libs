@@ -7,6 +7,7 @@ import com.google.inject.Singleton;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Scenario;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
@@ -23,6 +24,11 @@ import javax.annotation.Nullable;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.Map;
+import java.util.SplittableRandom;
+
+import static org.matsim.episim.EpisimUtils.nextLogNormalFromMeanAndSigma;
+import static org.matsim.episim.model.InfectionModelWithViralLoad.SUSCEPTIBILITY;
+import static org.matsim.episim.model.InfectionModelWithViralLoad.VIRAL_LOAD;
 
 /**
  * Percolation runs for berlin
@@ -47,13 +53,13 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 	public Module getBindings(int id, @Nullable Params params) {
 		/// TODO hardcoded now and needs to be adjusted before runs
 		/// XXX
-		return new Binding(Params.CURRENT);
+		return new Binding(Params.CURRENT, true);
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		Config config = new Binding(params.contactModel).config();
+		Config config = new Binding(params.contactModel, params.superSpreading).config();
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -104,6 +110,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		public long seed;
 
 		public String contactModel = CURRENT;
+		public boolean superSpreading = true;
 
 		@Parameter({0.4, 0.45, 0.5, 0.55, 0.6})
 		public double fraction;
@@ -116,8 +123,9 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 	private static final class Binding extends AbstractModule {
 
 		private final AbstractModule delegate;
+		private final boolean superSpreading;
 
-		public Binding(String contactModel) {
+		public Binding(String contactModel, boolean superSpreading) {
 
 			if (contactModel.equals(Params.OLD))
 				delegate = new SnzBerlinWeekScenario2020(25, false, false, OldSymmetricContactModel.class);
@@ -131,19 +139,22 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 						.setInfectionModel(DefaultInfectionModel.class)
 						.createSnzBerlinProductionScenario();
 
-
+			this.superSpreading = superSpreading;
 		}
 
 		@Override
 		protected void configure() {
-			bind(InfectionModel.class).to(DefaultInfectionModel.class);
+			if (superSpreading)
+				bind(InfectionModel.class).to(InfectionModelWithViralLoad.class).in(Singleton.class);
+			else
+				bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 
 			if (delegate instanceof SnzBerlinWeekScenario2020)
-				bind(ContactModel.class).to(OldSymmetricContactModel.class);
+				bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
 			else
-				bind(ContactModel.class).to(SymmetricContactModel.class);
+				bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 
-			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class);
+			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
 		}
 
 		@Provides
@@ -168,10 +179,21 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		@Provides
 		@Singleton
 		public Scenario scenario(Config config) {
+			Scenario scenario;
 			if (delegate instanceof SnzBerlinWeekScenario2020)
-				return ((SnzBerlinWeekScenario2020) delegate).scenario(config);
+				scenario = ((SnzBerlinWeekScenario2020) delegate).scenario(config);
 			else
-				return ((SnzBerlinProductionScenario) delegate).scenario(config);
+				scenario = ((SnzBerlinProductionScenario) delegate).scenario(config);
+
+			if (superSpreading) {
+				SplittableRandom rnd = new SplittableRandom(4715);
+				for (Person person : scenario.getPopulation().getPersons().values()) {
+					person.getAttributes().putAttribute(VIRAL_LOAD, nextLogNormalFromMeanAndSigma(rnd, 1, 1));
+					person.getAttributes().putAttribute(SUSCEPTIBILITY, nextLogNormalFromMeanAndSigma(rnd, 1, 1));
+				}
+			}
+
+			return scenario;
 		}
 
 	}

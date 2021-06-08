@@ -94,7 +94,10 @@ for i in range(1, 1000):
     grouped = grouped / grouped.sum()
     res = res.append(grouped, ignore_index=True)
 
+res.index += 1
+
 #%%    
+
 
 fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
@@ -102,11 +105,16 @@ fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
 res.plot.area(ax=ax, colormap="tab20")
 
-plt.legend(bbox_to_anchor=(1.0, 1.0))
-plt.xlabel("Group size")
-
-
+plt.legend(bbox_to_anchor=(1.01, 0.98))
+plt.xlabel("Cluster size")
+plt.ylabel("Share of infection context")
 plt.xscale("log")
+
+plt.xlim(left=1, right=1000)
+
+ax.xaxis.set_major_formatter(ScalarFormatter())
+
+sns.despine()
 
 #%%
 
