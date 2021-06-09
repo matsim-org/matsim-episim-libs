@@ -76,7 +76,8 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
 	private Path input;
 
-	@CommandLine.Option(names = "--shp", description = "Shapefile containing plz information", defaultValue = "") // D:/Dropbox/Documents/VSP/plz/plz-gebiete.shp
+	@CommandLine.Option(names = "--shp", description = "Shapefile containing plz information", defaultValue = "")
+	// D:/Dropbox/Documents/VSP/plz/plz-gebiete.shp
 	private Path shapeFile;
 
 	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_25pt_split.xml.gz")
@@ -142,8 +143,6 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 					if (subdistricts.get(neighborhoodName).contains(Integer.parseInt(plz))) {
 						p.getAttributes().putAttribute("subdistrict", neighborhoodName);
 						personIdToNeighborhoodMap.put(p.getId().toString(), neighborhoodName);
-
-
 					}
 				}
 
@@ -173,7 +172,6 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 		//		writer.close();
 
 
-
 		// Adds zipcode and subdistrict attributes to facilities (based on facility location)
 
 		Config config = ConfigUtils.createConfig();
@@ -183,21 +181,24 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 		// Count errors
 		int unknownFac = 0;
 		Map<String, String> facilityIdToNeighborhoodMap = new HashMap<>();
-		for (Facility f : scenario.getActivityFacilities().getFacilities().values()) {
+		for (ActivityFacility f : scenario.getActivityFacilities().getFacilities().values()) {
 
 			try {
 				double x = f.getCoord().getX();
 				double y = f.getCoord().getY();
 
 				String plz = index.query(x, y);
-				((Attributable) f).getAttributes().putAttribute("zipcode", plz);
+				f.getAttributes().putAttribute("zipcode", plz);
 
-
+				String districtToWrite = "NA";
 				for (String neighborhoodName : subdistricts.keySet()) {
 					if (subdistricts.get(neighborhoodName).contains(Integer.parseInt(plz))) {
-						((Attributable) f).getAttributes().putAttribute("subdistrict", neighborhoodName);
+						f.getAttributes().putAttribute("subdistrict", neighborhoodName);
+						districtToWrite = neighborhoodName;
+						break;
 					}
 				}
+				facilityIdToNeighborhoodMap.put(f.getId().toString(), districtToWrite);
 			} catch (RuntimeException e) {
 				unknownFac++;
 			}
@@ -205,6 +206,16 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 		log.info("Finished with failed lookup for {} out of {} facilities.", unknownFac, scenario.getActivityFacilities().getFacilities().values().size());
 
 		new FacilitiesWriter(scenario.getActivityFacilities()).write("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz");
+
+
+		FileWriter writer = new FileWriter("FacilityToDistrictMapCOMPLETE.txt");
+		BufferedWriter writer1 = new BufferedWriter(writer);
+		for (Map.Entry<String, String> facilityIdToNeighborhood : facilityIdToNeighborhoodMap.entrySet()) {
+			writer1.write(facilityIdToNeighborhood.getKey() + ";" + facilityIdToNeighborhood.getValue());
+			writer1.newLine();
+		}
+		writer1.close();
+		writer.close();
 
 		return 0;
 	}
