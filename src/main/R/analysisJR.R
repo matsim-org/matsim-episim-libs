@@ -6,6 +6,8 @@
 library(readxl)
 library(tidyverse)
 library(janitor)
+library(lubridate)
+
 
 rm(list = ls())
 
@@ -23,21 +25,30 @@ rki_berlin <- rki %>%
 for(i in 1:nrow(rki_berlin)){
   dateX <- as.character(rki_berlin$date[i])
   if(grepl("44",dateX)){
-    date_improved <- as.character(excel_numeric_to_date(as.numeric(dateX)))#,format = "%Y-%m-%d")
-    print(date_improved)
+    date_improved <- as.character(excel_numeric_to_date(as.numeric(dateX)))
     rki_berlin$date[i] <- date_improved
   } else {
-
-    #date_improved <- as.Date(dateX,format = "%d.%m.%Y")
     date_improved <- dateX
     rki_berlin$date[i] <- date_improved
   }
 }
 
+ymd <- ymd(rki_berlin$date)
+dmy <- dmy(rki_berlin$date)
+ymd[is.na(ymd)] <- dmy[is.na(ymd)] # some dates are ambiguous, here we give
+rki_berlin$date2 <- ymd
+
+
 rki_berlin$LK <- rki_berlin$LK %>%
   str_replace("SK Berlin ", "")
 
-rki_ch <- rki_berlin
+rki_ch <- rki_berlin %>%
+  filter(LK=="Charlottenburg-Wilmersdorf")
+
+ggplot(rki_berlin, mapping = aes(x = date2, y = cases)) +
+  geom_line(aes(color = LK)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%y")+
+  labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
 
 # 2) Display simulation data also per Bezirk
 
