@@ -84,7 +84,7 @@ public class SyntheticScenario extends AbstractModule {
 	protected void configure() {
 		bind(ContactModel.class).to(params.contactModel).in(Singleton.class);
 		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 	}
 
 	@Provides

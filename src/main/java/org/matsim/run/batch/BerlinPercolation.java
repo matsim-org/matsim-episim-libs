@@ -106,13 +106,14 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		private final static String OLD = "oldSymmetric";
 		private final static String CURRENT = "symmetric";
 
-		@GenerateSeeds(value = 9000)
+		@GenerateSeeds(value = 5000)
 		public long seed;
 
 		public String contactModel = CURRENT;
 		public boolean superSpreading = true;
 
-		@Parameter({0.4, 0.45, 0.5, 0.55, 0.6})
+		@Parameter({0.65, 0.6, 0.75, 0.8, 0.85})
+		//@Parameter({0.4, 0.45, 0.5, 0.55, 0.6})
 		public double fraction;
 
 	}
@@ -207,6 +208,5 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		};
 
 		RunParallel.main(args2);
-
 	}
 }
