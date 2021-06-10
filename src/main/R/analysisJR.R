@@ -41,23 +41,44 @@ for(i in 1:nrow(rki_berlin)){
 ymd <- ymd(rki_berlin$date)
 dmy <- dmy(rki_berlin$date)
 ymd[is.na(ymd)] <- dmy[is.na(ymd)] # some dates are ambiguous, here we give
-rki_berlin$date2 <- ymd
+rki_berlin$date <- ymd
 
 
 rki_berlin$LK <- rki_berlin$LK %>%
-  str_replace("SK Berlin ", "")
+  str_replace("SK Berlin ", "") %>%
+  str_replace("-","_") %>%
+  str_replace("ö","oe")
 
-rki_ch <- rki_berlin %>%
-  filter(LK=="Charlottenburg-Wilmersdorf")
 
-ggplot(rki_berlin, mapping = aes(x = date2, y = cases)) +
-  geom_line(aes(color = LK)) +
+rki_berlin <- rki_berlin %>% rename(district = LK) %>% mutate(cases = cases/7)
+
+ggplot(rki_berlin, mapping = aes(x = date, y = cases)) +
+  geom_line(aes(color = district)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b-%y")+
   labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
 
+
+
+### 1b) RKI Previous Data
+rki_old <- read_csv("D:/Dropbox/Documents/VSP/RKI_COVID19_02112020.csv")
+
+rki_berlin_old <- rki_old %>%
+  filter(grepl("berlin", Landkreis, ignore.case = TRUE)) %>%
+  mutate(date = as.Date(Refdatum, format = "%m/%d/%Y"), district = Landkreis) %>% ## TODO: RefDatum or Meldedaturm
+  select(district,AnzahlFall,date) %>%
+  group_by(district,date) %>%
+  summarise(rki_cases_old = sum(AnzahlFall)) %>%
+  mutate(district = str_replace(district,"SK Berlin ","")) %>%
+  mutate(district = str_replace(district,"-","_")) %>%
+  mutate(district = str_replace(district,"ö","oe"))
+
+ggplot(rki_berlin_old %>% filter(district=="Mitte"), aes(x= date, y= rki_cases_old))+
+  geom_line(aes(color = district))
+
+
 # 2) Display simulation data also per Bezirk
 
-rm(list = ls())
+# rm(list = ls())
 
 # facilities
 fac_to_district_map <- read_delim("C:/Users/jakob/projects/matsim-episim/FacilityToDistrictMapCOMPLETE.txt",
@@ -66,41 +87,70 @@ fac_to_district_map <- read_delim("C:/Users/jakob/projects/matsim-episim/Facilit
 
 fac_to_district_map[is.na(fac_to_district_map)] <- "outta berlin"
 
+fac_to_district_map$facility <- fac_to_district_map$facility %>%
+  str_replace("[A-Z]$","")
+
 
 # episim
 episim_df <- read_delim("C:/Users/jakob/Desktop/locationBasedRestrictions3.infectionEvents.txt",
                         "\t", escape_double = FALSE, trim_ws = TRUE) %>% select(date,facility)
 
-episim_df2 <- episim_df
+episim_df2 <- episim_df %>% filter(!grepl("^tr_",facility))
 
 episim_df2$facility <- episim_df2$facility %>%
   str_replace("home_","") %>%
-  str_replace("_split\\d","")
+  str_replace("_split\\d","") %>%
+  str_replace("[A-Z]$","")
 
 merged <- episim_df2 %>%
-  left_join(fac_to_district_map, by = c("facility"),keep = TRUE) %>%
-  filter(!grepl("tr_",facility.x)) %>%
-  filter(is.na(district))
+  left_join(fac_to_district_map, by = c("facility"),keep = TRUE)
 
-antiiii <-anti_join(episim_df2,fac_to_district_map, by = "facility")
+na_facs <- merged %>% filter(is.na(district)) %>% pull(facility.x)
+length(unique(na_facs))
 
-fac_to_district_map %>% filter(grepl("110000000563100031",facility)) %>% view()
-# fac_file_unique <- unique(fac_to_district_map$facility)
-# events_file_unique <- unique(episim_df$facility)
-#
-# inter <- Reduce(intersect,list(fac_file_unique,events_file_unique))
-# outer <- Reduce(outersect,list(fac_file_unique,events_file_unique))
-# intersect(fac_to_district_map$facility)
+# All unique facilities in episim output: 39.734
 
-  rename("kiez" = X2 ) %>%
-  group_by(kiez,date) %>% summarise(count = n())
+# Unusable Portion of Data
+# 1st merge with no cleaning : 28.372 unique unmergable facs
+# remove home_ : 16.062
+# remove _split\\d : 9.282
+# remove tr_ : 7500
+# remove A/B at end : 6571
 
-episim_df2
 
-episim_mitte <- episim_df2 %>%
-  filter(kiez == "Mitte")
+episim_final  <- merged %>%
+  filter(!is.na(district)) %>%
+  filter(district!="outta berlin") %>%
+  select(!starts_with("facility")) %>%
+  group_by(date, district) %>%
+  count() %>% rename(infections = n)
 
-ggplot(data = episim_mitte, mapping = aes(date,count)) + geom_line()
+ggplot(episim_final, mapping = aes(x=date,y = infections))+
+  geom_line(mapping = aes(color = district))
+
 
 
 # 3) Compare data, see if my ... made improvement
+rki_and_episim <- episim_final %>%
+  full_join(rki_berlin, by = c("date","district")) %>%
+  rename(rki = cases, episim = infections) %>%
+  full_join(rki_berlin_old, by = c("date","district")) %>%
+  mutate(month = months(date)) %>%
+  mutate(week = week(date)) %>%
+  mutate(year = year(date)) %>%
+  group_by(district,year,week) %>%
+  summarise(episim_week = mean(episim,na.rm = TRUE),
+            rki_week = mean(rki,na.rm = TRUE),
+            rki_old_week = mean(rki_cases_old,na.rm = TRUE)) %>%
+  mutate(week_year = as.Date(paste(year, week, 1, sep="-"), "%Y-%U-%u"))
+
+# ggplot(rki_and_episim %>% filter(district=="Mitte"), aes(x = date)) +
+#   geom_line(aes(y= rki), color = 'red') +
+#   geom_line(aes(y= episim), color = 'blue')+
+#   geom_line(aes(y = rki_cases_old), color = 'orange')
+
+ggplot(rki_and_episim %>% filter(district=="Mitte"), aes(x = week_year)) +
+  geom_line(aes(y= rki_week), color = 'red') +
+  geom_line(aes(y = rki_old_week), color = 'dark red') +
+  geom_line(aes(y= episim_week), color = 'blue')
+
