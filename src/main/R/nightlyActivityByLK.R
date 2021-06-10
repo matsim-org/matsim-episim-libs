@@ -4,8 +4,8 @@ library(tmap)
 library(sf)
 library(stats)
 
-setwd("C:/Users/jakob/projects")
-#setwd("/Users/Ricardo/git")
+#setwd("C:/Users/jakob/projects")
+setwd("/Users/Ricardo/git")
 #setwd("/Users/kainagel/")
 
 rm(list = ls())
@@ -73,29 +73,36 @@ gbl_prep_mobility_data <- function(df){
 
 rm(list = gbl_outersect(ls(),ls(pattern = "^gbl")))
 
-#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_WeeklyNumbers_perPerson.csv"),encoding = "DOS")
-data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_WeeklyNumbers_perPerson.csv"), fileEncoding = "UTF-8")
+#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekly.csv"), fileEncoding = "UTF-8")
+data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekdays.csv"), fileEncoding = "UTF-8")
+#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekends.csv"), fileEncoding = "UTF-8")
 
 data2 <- data %>%
-  mutate(date = as.Date(date, format = "%d,%m,%y")) %>% 
+  mutate_all(type.convert) %>%
+  mutate(date = as.Date(date, format = "%d.%m.%y")) %>% 
+  mutate_if(is.factor, as.character) %>%
   filter(type == "endNonHomeActs") %>%
   mutate("night_total" = X.0h + X0.1h + X1.2h + X2.3h + X3.4h + X4.5h + X22.23h + X23.24h + X24.25h + X25.26h + X26.27h)
 
 
 data3 <- gbl_prep_mobility_data(data2)
 
-
-# 2020-03-08
-
-# 2021-03-28
+# weekly or weekend dates
+# 2020-03-08                  
+# 2021-03-28                  
 # 2021-04-04
 # 2021-04-11
 # 2021-04-18
 # 2021-04-25
 # 2021-05-02
 
-dateBefore <- "2021-04-18"
-dateAfter <- "2021-05-02"
+#weekdays dates
+#2021-03-26
+#2021-04-30
+#2021-05-07
+
+dateBefore <- "2021-03-26"
+dateAfter <- "2021-05-07"
 
 
 #select dates that should be compared and find the change between two daes. 
@@ -139,7 +146,7 @@ tm_shape(lk3) +
               title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," vs ",dateBefore) ) +
   tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22-5 Uhr in %',  title.position = c('right', 'top')) +
   tm_shape(gbl_bl) +
-    tm_borders(lwd = 2, col = "blue")
+  tm_borders(lwd = 2, col = "blue")
 
 ####################################
 ## Part 2) duration of activities ##
@@ -147,32 +154,42 @@ tm_shape(lk3) +
 
 rm(list = gbl_outersect(ls(),ls(pattern = "^gbl")))
 
-data_hours <- read.csv2(paste0(gbl_location_data,"mobilityData_OverviewLK.csv"),fileEncoding = "UTF-8")
+#data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekly.csv"),fileEncoding = "UTF-8")
+#data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekends.csv"),fileEncoding = "UTF-8")
+data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekdays.csv"),fileEncoding = "UTF-8")
 
 
 data_hours2 <- data_hours %>%
   mutate(date = as.Date(strptime(date, "%Y%m%d"))) %>% rename(area = Landkreis)
 
 data_hours3 <- gbl_prep_mobility_data(data_hours2)
-# 2020-03-08
 
-# 2021-03-28
+# weekly or weekend dates
+# 2020-03-08                  
+# 2021-03-28                  
 # 2021-04-04
 # 2021-04-11
 # 2021-04-18
 # 2021-04-25
 # 2021-05-02
 
-dateBefore <- "2020-03-08"
-dateAfter <- "2021-05-02"
+#weekdays dates
+#2021-03-26
+#2021-04-30
+#2021-05-07
+
+dateBefore <- "2021-03-26"
+dateAfter <- "2021-05-07" # also used for single day analysis
 
 data_hours_date <- data_hours3 %>%
   filter(date == dateAfter ) %>%
+  mutate (outOfHomeDuration = as.numeric(outOfHomeDuration)) %>%
   select(c(area,isKreis,isLandkreis, outOfHomeDuration))
 
 data_hours_change <- data_hours3 %>%
   filter(date == dateBefore | date == dateAfter) %>%
   select(c(date,area,isKreis,isLandkreis,outOfHomeDuration)) %>% 
+  mutate (outOfHomeDuration = as.numeric(outOfHomeDuration)) %>%
   pivot_wider(names_from = date,values_from = outOfHomeDuration) %>%
   mutate(change = !!sym(dateAfter)/!!sym(dateBefore) ) %>%
   select(c(area,isKreis,isLandkreis,change)) %>%
@@ -204,7 +221,7 @@ for(i in 1:nrow(lk3_date)){
 
 
 lk3_date <- lk3_date %>% left_join(data_hours_date, by="area") %>% mutate(hoursOutHome = outOfHomeDuration_final)
-lk3_changes <- lk3_change %>% left_join(data_hours_change, by="area") %>% mutate( changeOutOfHome = pmin( 0., (change_final -1.)*100. )  )
+lk3_changes <- lk3_change %>% left_join(data_hours_change, by="area") %>% mutate( changeOutOfHome = (change_final -1.)*100.  )
 # yyyyyy seems like a duplicated code? -jakob, june '21
 
 
@@ -226,5 +243,3 @@ tm_shape(lk3_changes) +
   tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer aushäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) +
   tm_shape(gbl_bl) +
   tm_borders(lwd = 2, col = "blue") 
-
-
