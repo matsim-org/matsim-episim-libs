@@ -162,7 +162,7 @@ data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekdays.csv")
 data_hours2 <- data_hours %>%
   mutate(date = as.Date(strptime(date, "%Y%m%d"))) %>% rename(area = Landkreis)
 
-data_hours3 <- gbl_prep_mobility_data(data_hours2)
+data_hours3 <- gbl_prep_mobility_data(data_hours2) %>% filter(area != "Landau in der Pfalz")
 
 # weekly or weekend dates
 # 2020-03-08                  
