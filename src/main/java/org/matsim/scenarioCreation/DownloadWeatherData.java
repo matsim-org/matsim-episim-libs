@@ -54,7 +54,7 @@ public class DownloadWeatherData implements Callable<Integer> {
 
 	private static Logger log = LogManager.getLogger(DownloadWeatherData.class);
 
-	@Parameters(paramLabel = "STATION", arity = "1", description = "Meteostat station id.", defaultValue = "10382")
+	@Parameters(paramLabel = "STATION", arity = "1", description = "Meteostat station id.", defaultValue = "10384")
 	private String station;
 
 	@Option(names = "--from", description = "From date (inclusive).", defaultValue = "2020-02-01", required = true)
