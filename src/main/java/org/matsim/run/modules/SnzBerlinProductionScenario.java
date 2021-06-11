@@ -425,7 +425,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210504.csv").toFile(),
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210608_tegel_until20210430.csv").toFile(),
 						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5. );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
@@ -444,10 +444,10 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 			
 			double workVacFactor = 0.92;
-			builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+//			builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+//			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+//			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+//			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 //			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 //			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 //			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
