@@ -237,7 +237,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			default:
 				break;
 			}
-			snz.writeBundeslandDataForPublic(outputFolder);//TODO add Feiertage
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption);
 			break;
 		case Landkreise:
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
