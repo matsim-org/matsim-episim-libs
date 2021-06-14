@@ -37,7 +37,7 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		episimConfig.setDistrictLevelRestrictions(params.districtLevelRestrictions);
 
-		episimConfig.setActivityHandling(params.activityHandling);
+		episimConfig.setActivityHandling(ActivityHandling.startOfDay);
 
 		return config;
 	}
@@ -50,8 +50,8 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@EnumParameter(ActivityHandling.class)
-		ActivityHandling activityHandling;
+//		@EnumParameter(ActivityHandling.class) //TODO Why does this cause errors?
+//		ActivityHandling activityHandling;
 
 	}
 
