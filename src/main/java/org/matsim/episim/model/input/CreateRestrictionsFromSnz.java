@@ -448,13 +448,11 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 
-		Path thisOutputFile = outputFile.resolve("mobilityData_Overview2BL.csv");
+		Path thisOutputFile = outputFile.resolve("mobilityData_OverviewBL_new.csv");
 
 		Collections.sort(filesWithData);
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
-
-		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
 
 		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
 		try {
@@ -465,9 +463,21 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
 
-			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, allHolidays, writer,
+			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer,
 					zipCodesBL);
 			writer.close();
+			
+			Path finalPath = null;
+			if (selectedOutputOption.contains("daily"))
+				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_daily"));
+			else if (selectedOutputOption.contains("weekly"))
+				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekly"));
+			else if (selectedOutputOption.contains("weekdays"))
+				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekdays"));
+			else if (selectedOutputOption.contains("weekends"))
+				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekends"));
+
+			Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 			log.info("Write analyze of " + filesWithData.size() + " is writen to " + thisOutputFile);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -487,8 +497,6 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 		Path thisOutputFile = outputFile.resolve("mobilityData_OverviewLK_new.csv");
 
-		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
-
 		Collections.sort(filesWithData);
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
@@ -502,24 +510,19 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 			HashMap<String, IntSet> zipCodesLK = findZIPCodesForLandkreise();
 
-			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, allHolidays, writer,
+			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer,
 					zipCodesLK);
 
 			writer.close();
 			Path finalPath = null;
-			String analysedAreas = null;
-			if (selectedOutputOption.contains("LK"))
-				analysedAreas = "LK";
-			else if (selectedOutputOption.contains("BL"))
-				analysedAreas = "BL";
 			if (selectedOutputOption.contains("daily"))
-				finalPath = Path.of(thisOutputFile.toString().replace(analysedAreas, analysedAreas+"_daily"));
+				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_daily"));
 			else if (selectedOutputOption.contains("weekly"))
-				finalPath = Path.of(thisOutputFile.toString().replace(analysedAreas, analysedAreas+"_weekly"));
+				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_weekly"));
 			else if (selectedOutputOption.contains("weekdays"))
-				finalPath = Path.of(thisOutputFile.toString().replace(analysedAreas, analysedAreas+"_weekdays"));
+				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_weekdays"));
 			else if (selectedOutputOption.contains("weekends"))
-				finalPath = Path.of(thisOutputFile.toString().replace(analysedAreas, analysedAreas+"_weekends"));
+				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_weekends"));
 
 			Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 
@@ -538,12 +541,13 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	 * @throws IOException
 	 */
 	private void readAndWriteResultsOfAllDays(String selectedOutputOptions, List<File> filesWithData,
-			HashMap<String, Set<LocalDate>> allHolidays, BufferedWriter writer, HashMap<String, IntSet> zipCodesAreas)
+			BufferedWriter writer, HashMap<String, IntSet> zipCodesAreas)
 			throws IOException {
 
 		Map<DayOfWeek, Map<String, Object2DoubleMap<String>>> base = new EnumMap<>(DayOfWeek.class);
 		Map<String, Integer> personsPerArea = new HashMap<>();
 		HashMap<String, Set<String>> lkAssignemt = createLKAssignmentToBL();
+		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
 
 		int countingDays = 1;
 		HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod = new HashMap<String, Integer>();
