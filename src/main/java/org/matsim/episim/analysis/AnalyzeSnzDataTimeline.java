@@ -37,6 +37,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -44,6 +45,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 /**
@@ -56,11 +58,12 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzDataTimeline.class);
 
 	private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
-	private static final DateTimeFormatter FMT2 = DateTimeFormatter.ofPattern("dd.MM.yy");
-	private static final Joiner JOIN = Joiner.on("\t");
+	private static final DateTimeFormatter FMT_output = DateTimeFormatter.ofPattern("dd.MM.yy");
+	private static final DateTimeFormatter FMT_holiday = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+	private static final Joiner JOIN = Joiner.on(";");
 
 	private enum AnalyseOptions {
-		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends, dailyResults
+		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends, dailyResults, Mo_Do
 	};
 
 	private enum AnalyseAreas {
@@ -81,10 +84,11 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
+		// TODO Sommerzeit, Endsumme
 		boolean getPercentageResults = false;
 		boolean outputShareOutdoor = false;
 		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
-		AnalyseAreas selectedArea = AnalyseAreas.Berlin;
+		AnalyseAreas selectedArea = AnalyseAreas.Landkreise;
 		String anyArea = "Berlin";
 
 		analyseData(selectedArea, selectedOptionForAnalyse, getPercentageResults, outputShareOutdoor, anyArea);
@@ -241,7 +245,9 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		}
 	}
 
-	/** Analyzes the data and writes the results for certain areas.
+	/**
+	 * Analyzes the data and writes the results for certain areas.
+	 * 
 	 * @param zipCodes
 	 * @param getPercentageResults
 	 * @param outputShareOutdoor
@@ -270,12 +276,15 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		else
 			outputFile = selectedOutputFolder.resolve("Timeline_until.csv");
 
-		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toString());
+		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
+		HashMap<String, Set<String>> lkAssignemt = createLKAssignmentToBL();
+
+		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
 		Path outputFileShare = null;
 		BufferedWriter writerShare = null;
 		if (outputShareOutdoor) {
 			outputFileShare = Path.of(outputFile.toString().replace("Timeline", "Outdoorshare"));
-			writerShare = IOUtils.getBufferedWriter(outputFileShare.toString());
+			writerShare = IOUtils.getBufferedWriter(outputFileShare.toUri().toURL(), StandardCharsets.UTF_8, true);
 		}
 		try {
 			String[] header = new String[] { "date", "area", "type", "total", "<0h", "0-1h", "1-2h", "2-3h", "3-4h",
@@ -300,7 +309,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			base.put("endHomeActs", baseEndHomeActs);
 			base.put("startNonHomeActs", baseStartNonHomeActs);
 			base.put("endNonHomeActs", baseEndNonHomeActs);
-			
+
 			Map<String, Object2DoubleMap<String>> sumsHomeStart = new HashMap<>();
 			Map<String, Object2DoubleMap<String>> sumsHomeEnd = new HashMap<>();
 			Map<String, Object2DoubleMap<String>> sumsNonHomeStart = new HashMap<>();
@@ -314,17 +323,14 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				baseForAreas.put(certainArea, base);
 			}
 			int countingDays = 1;
-			int countingWeek = 1;
+			HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod = new HashMap<String, Integer>();
+			Map<String, Integer> personsInThisArea = getPersonsInThisZIPCodes(zipCodes, inputFolder.toFile());
 
 			// will contain the last parsed date
 			String dateString = "";
 
 			for (File file : filesWithData) {
 
-				if (countingWeek == 8) {
-
-					countingWeek = 1;
-				}
 				dateString = file.getName().split("_")[0];
 				LocalDate date = LocalDate.parse(dateString, FMT);
 				DayOfWeek day = date.getDayOfWeek();
@@ -332,68 +338,91 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				switch (selectedOptionForAnalyse) {
 				case weeklyResultsOfAllDays:
 					readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-							file);
+							file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 7, header,
-								baseForAreas, dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlyWeekdays:
-					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY))
+					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)) {
+						List<String> areasWithBankHoliday = new ArrayList<>();
+						getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-								file);
+								file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+					}
 					if (day.equals(DayOfWeek.FRIDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 5, header,
-								baseForAreas, dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlySaturdays:
 					if (day.equals(DayOfWeek.SATURDAY)) {
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-								file);
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 1, header,
-								baseForAreas, dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlySundays:
 					if (day.equals(DayOfWeek.SUNDAY)) {
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-								file);
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 1, header,
-								baseForAreas, dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlyWeekends:
 					if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
 						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-								file);
+								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 2, header,
-								baseForAreas, dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case dailyResults:
 					readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-							file);
-					writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare, 1, header, baseForAreas,
-							dateString, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
-					clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd);
+							file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+					writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+							anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart, sumsHomeEnd,
+							sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+					clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+					break;
+				case Mo_Do:
+					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
+							&& !day.equals(DayOfWeek.FRIDAY)) {
+						List<String> areasWithBankHoliday = new ArrayList<>();
+						getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
+						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+					}
+					if (day.equals(DayOfWeek.THURSDAY)) {
+						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+					}
 					break;
 				default:
 					break;
 
 				}
 
-				if (countingDays == 1 || countingDays % 5 == 0)
-					log.info("Finished day " + countingDays);
+				if (countingDays % 7 == 0)
+					log.info("Finished week " + countingDays / 7);
 
 				countingDays++;
-				countingWeek++;
 			}
 
 			writer.close();
@@ -443,6 +472,12 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				else
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Daily"));
 				break;
+			case Mo_Do:
+				if (!getPercentageResults)
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-DoNumbers"));
+				else
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
+				break;
 			default:
 				break;
 
@@ -459,59 +494,129 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	}
 
 	/**
-	 * Clears all sums to start a next period for the analysis
+	 * Reads the data and saves the data in the different sums types
 	 * 
+	 * @param file
+	 * @throws IOException
+	 * 
+	 */
+	private void readDataOfTheDay(HashMap<String, IntSet> zipCodesOfAreas, String[] header,
+			Map<String, Object2DoubleMap<String>> sumsHomeStart, Map<String, Object2DoubleMap<String>> sumsHomeEnd,
+			Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
+			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, File file, List<String> areasWithBankHoliday,
+			HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod, HashMap<String, Set<String>> lkAssignemt)
+			throws IOException {
+
+		if (anaylzedDaysPerAreaAndPeriod.isEmpty())
+			for (String nameArea : zipCodesOfAreas.keySet()) {
+				anaylzedDaysPerAreaAndPeriod.put(nameArea, 0);
+			}
+
+		for (String area : anaylzedDaysPerAreaAndPeriod.keySet())
+			if (areasWithBankHoliday == null || !areasWithBankHoliday.contains(getRelatedBundesland(area, lkAssignemt)))
+				anaylzedDaysPerAreaAndPeriod.put(area, anaylzedDaysPerAreaAndPeriod.get(area) + 1);
+
+		CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+				.parse(IOUtils.getBufferedReader(file.toString()));
+		for (CSVRecord record : parse) {
+			for (String certainArea : zipCodesOfAreas.keySet()) {
+				if (areasWithBankHoliday == null
+						|| !areasWithBankHoliday.contains(getRelatedBundesland(certainArea, lkAssignemt))) {
+					if (!record.get("zipCode").contains("NULL")) {
+						int zipCode = Integer.parseInt(record.get("zipCode"));
+						if (zipCodesOfAreas.get(certainArea).contains(zipCode)) {
+							for (String string : header) {
+								if (!string.contains("date") && !string.contains("type") && !string.contains("area")) {
+									if (record.get("type").contains("startHomeActs"))
+										sumsHomeStart.get(certainArea).mergeDouble(string,
+												Integer.parseInt(record.get(string)), Double::sum);
+									if (record.get("type").contains("endHomeActs"))
+										sumsHomeEnd.get(certainArea).mergeDouble(string,
+												Integer.parseInt(record.get(string)), Double::sum);
+									if (record.get("type").contains("startNonHomeActs"))
+										sumsNonHomeStart.get(certainArea).mergeDouble(string,
+												Integer.parseInt(record.get(string)), Double::sum);
+									if (record.get("type").contains("endNonHomeActs"))
+										sumsNonHomeEnd.get(certainArea).mergeDouble(string,
+												Integer.parseInt(record.get(string)), Double::sum);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	/**
+	 * Writes the output of the analyzed time period.
+	 * 
+	 * @param getPercentageResults
+	 * @param outputShareOutdoor
+	 * @param writer
+	 * @param writerShare
+	 * @param anaylzedDaysPerAreaAndPeriod
+	 * @param header
+	 * @param baseForAreas
+	 * @param dateString
 	 * @param sumsHomeStart
 	 * @param sumsHomeEnd
 	 * @param sumsNonHomeStart
 	 * @param sumsNonHomeEnd
+	 * @param personsInThisArea
+	 * @throws IOException
 	 */
-	private void clearSums(Map<String, Object2DoubleMap<String>> sumsHomeStart,
-			Map<String, Object2DoubleMap<String>> sumsHomeEnd, Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
-			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd) {
-
-		for (String area : sumsHomeStart.keySet()) {
-			sumsHomeStart.get(area).clear();
-			sumsHomeEnd.get(area).clear();
-			sumsNonHomeStart.get(area).clear();
-			sumsNonHomeEnd.get(area).clear();
-		}
-	}
-
 	private void writeOutput(boolean getPercentageResults, boolean outputShareOutdoor, BufferedWriter writer,
-			BufferedWriter writerShare, int analyzedDays, String[] header,
+			BufferedWriter writerShare, HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod, String[] header,
 			Map<String, Map<String, Object2DoubleMap<String>>> baseForAreas, String dateString,
 			Map<String, Object2DoubleMap<String>> sumsHomeStart, Map<String, Object2DoubleMap<String>> sumsHomeEnd,
 			Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
-			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd) throws IOException {
+			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, Map<String, Integer> personsInThisArea)
+			throws IOException {
 
-		for (String certainArea : sumsNonHomeStart.keySet())
+		for (String certainArea : sumsNonHomeStart.keySet()) {
+			Object2DoubleMap<String> sumsNonHomeEndArea = sumsNonHomeEnd.get(certainArea);
+			Object2DoubleMap<String> sumsNonHomeStartArea = sumsNonHomeStart.get(certainArea);
+			Object2DoubleMap<String> sumsHomeStartArea = sumsHomeStart.get(certainArea);
+			Object2DoubleMap<String> sumsHomeEndArea = sumsHomeEnd.get(certainArea);
+			
+			for (String hour : sumsNonHomeEndArea.keySet()) {
+				sumsNonHomeEndArea.put(hour, Math.round(
+						(sumsNonHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+				sumsNonHomeStartArea.put(hour, Math.round(
+						(sumsNonHomeStartArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+				sumsHomeStartArea.put(hour, Math.round(
+						(sumsHomeStartArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+				sumsHomeEndArea.put(hour, Math.round(
+						(sumsHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+			}
 			if (baseForAreas.get(certainArea).get("startHomeActs").isEmpty()) {
 				baseForAreas.get(certainArea).get("startHomeActs").putAll(sumsHomeStart.get(certainArea));
 				baseForAreas.get(certainArea).get("endHomeActs").putAll(sumsHomeEnd.get(certainArea));
 				baseForAreas.get(certainArea).get("startNonHomeActs").putAll(sumsNonHomeStart.get(certainArea));
 				baseForAreas.get(certainArea).get("endNonHomeActs").putAll(sumsNonHomeEnd.get(certainArea));
 			}
+		}
 		for (String certainArea : sumsNonHomeStart.keySet()) {
-			if (!sumsHomeStart.get(certainArea).isEmpty()) {
+			if (!sumsNonHomeEnd.get(certainArea).isEmpty()) {
 				List<String> rowEndHome = new ArrayList<>();
 				List<String> rowStartHome = new ArrayList<>();
 				List<String> rowEndNonHome = new ArrayList<>();
 				List<String> rowStartNonHome = new ArrayList<>();
 				List<String> rowShareOutdoor = new ArrayList<>();
-				rowEndHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
+				rowEndHome.add(LocalDate.parse(dateString, FMT).format(FMT_output));
 				rowEndHome.add(certainArea);
 				rowEndHome.add("endHomeActs");
-				rowStartHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
+				rowStartHome.add(LocalDate.parse(dateString, FMT).format(FMT_output));
 				rowStartHome.add(certainArea);
 				rowStartHome.add("startHomeActs");
-				rowEndNonHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
+				rowEndNonHome.add(LocalDate.parse(dateString, FMT).format(FMT_output));
 				rowEndNonHome.add(certainArea);
 				rowEndNonHome.add("endNonHomeActs");
-				rowStartNonHome.add(LocalDate.parse(dateString, FMT).format(FMT2));
+				rowStartNonHome.add(LocalDate.parse(dateString, FMT).format(FMT_output));
 				rowStartNonHome.add(certainArea);
 				rowStartNonHome.add("startNonHomeActs");
-				rowShareOutdoor.add(LocalDate.parse(dateString, FMT).format(FMT2));
+				rowShareOutdoor.add(LocalDate.parse(dateString, FMT).format(FMT_output));
 				rowShareOutdoor.add(certainArea);
 				rowShareOutdoor.add("shareOutdoor");
 
@@ -539,11 +644,18 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 											/ baseForAreas.get(certainArea).get("startNonHomeActs").getDouble(string)
 											- 1))));
 						} else {
-							rowEndHome.add(String.valueOf((int) sumsHomeEnd.get(certainArea).getDouble(string)));
-							rowStartHome.add(String.valueOf((int) sumsHomeStart.get(certainArea).getDouble(string)));
-							rowEndNonHome.add(String.valueOf((int) sumsNonHomeEnd.get(certainArea).getDouble(string)));
-							rowStartNonHome
-									.add(String.valueOf((int) sumsNonHomeStart.get(certainArea).getDouble(string)));
+							rowEndHome.add(String
+									.valueOf(round2Decimals((double) sumsHomeEnd.get(certainArea).getDouble(string)
+											/ personsInThisArea.get(certainArea))));
+							rowStartHome.add(String
+									.valueOf(round2Decimals((double) sumsHomeStart.get(certainArea).getDouble(string)
+											/ personsInThisArea.get(certainArea))));
+							rowEndNonHome.add(String
+									.valueOf(round2Decimals((double) sumsNonHomeEnd.get(certainArea).getDouble(string)
+											/ personsInThisArea.get(certainArea))));
+							rowStartNonHome.add(String
+									.valueOf(round2Decimals((double) sumsNonHomeStart.get(certainArea).getDouble(string)
+											/ personsInThisArea.get(certainArea))));
 						}
 						if (outputShareOutdoor) {
 							if (string.contains("total")) {
@@ -580,6 +692,28 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			}
 		}
 
+	}
+
+	/**
+	 * Clears all sums to start a next period for the analysis
+	 * 
+	 * @param sumsHomeStart
+	 * @param sumsHomeEnd
+	 * @param sumsNonHomeStart
+	 * @param sumsNonHomeEnd
+	 * @param anaylzedDaysPerAreaAndPeriod 
+	 */
+	private void clearSums(Map<String, Object2DoubleMap<String>> sumsHomeStart,
+			Map<String, Object2DoubleMap<String>> sumsHomeEnd, Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
+			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod) {
+
+		for (String area : sumsHomeStart.keySet()) {
+			sumsHomeStart.get(area).clear();
+			sumsHomeEnd.get(area).clear();
+			sumsNonHomeStart.get(area).clear();
+			sumsNonHomeEnd.get(area).clear();
+		}
+		anaylzedDaysPerAreaAndPeriod.clear();
 	}
 
 	/**
@@ -706,44 +840,155 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	}
 
 	/**
-	 * Reads the data and saves the data in the different sums types
+	 * Searches the number of persons in all the different areas
 	 * 
-	 * @param file
-	 * @throws IOException
-	 * 
+	 * @param zipCodesForAreas
+	 * @param inputPulder
+	 * @return
 	 */
-	private void readDataOfTheDay(HashMap<String, IntSet> zipCodesOfAreas, String[] header,
-			Map<String, Object2DoubleMap<String>> sumsHomeStart, Map<String, Object2DoubleMap<String>> sumsHomeEnd,
-			Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
-			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, File file) throws IOException {
-
-		CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
-				.parse(IOUtils.getBufferedReader(file.toString()));
-		for (CSVRecord record : parse) {
-			for (String certainArea : zipCodesOfAreas.keySet()) {
-				if (!record.get("zipCode").contains("NULL")) {
-					int zipCode = Integer.parseInt(record.get("zipCode"));
-					if (zipCodesOfAreas.get(certainArea).contains(zipCode)) {
-						for (String string : header) {
-							if (!string.contains("date") && !string.contains("type") && !string.contains("area")) {
-								if (record.get("type").contains("startHomeActs"))
-									sumsHomeStart.get(certainArea).mergeDouble(string,
-											Integer.parseInt(record.get(string)), Double::sum);
-								if (record.get("type").contains("endHomeActs"))
-									sumsHomeEnd.get(certainArea).mergeDouble(string,
-											Integer.parseInt(record.get(string)), Double::sum);
-								if (record.get("type").contains("startNonHomeActs"))
-									sumsNonHomeStart.get(certainArea).mergeDouble(string,
-											Integer.parseInt(record.get(string)), Double::sum);
-								if (record.get("type").contains("endNonHomeActs"))
-									sumsNonHomeEnd.get(certainArea).mergeDouble(string,
-											Integer.parseInt(record.get(string)), Double::sum);
-							}
-						}
+	static Map<String, Integer> getPersonsInThisZIPCodes(HashMap<String, IntSet> zipCodesForAreas, File inputPulder) {
+		File fileWithPersonData = findPersonStatInputFile(inputPulder);
+		Map<String, Integer> personsPerArea = new HashMap<>();
+		for (String area : zipCodesForAreas.keySet()) {
+			personsPerArea.put(area, 0);
+		}
+		CSVParser parse;
+		try {
+			parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
+					.parse(IOUtils.getBufferedReader(fileWithPersonData.toString()));
+			for (CSVRecord record : parse) {
+				for (Entry<String, IntSet> certainArea : zipCodesForAreas.entrySet()) {
+					if (!record.get("zipCode").contains("NULL")) {
+						String nameArea = certainArea.getKey();
+						int readZipCode = Integer.parseInt(record.get("zipCode"));
+						if (certainArea.getValue().contains(readZipCode))
+							personsPerArea.put(nameArea,
+									personsPerArea.get(nameArea) + Integer.parseInt(record.get("nPersons")));
 					}
 				}
 			}
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+		return personsPerArea;
+	}
+
+	/**
+	 * Creates an assignment of the landkreise to the Bundeslaender
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private HashMap<String, Set<String>> createLKAssignmentToBL() throws IOException {
+
+		String zipCodeFile = "../shared-svn/projects/episim/data/PLZ/zuordnung_plz_ort_landkreis.csv";
+		HashMap<String, Set<String>> lKAssignment = new HashMap<String, Set<String>>();
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(zipCodeFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			for (CSVRecord record : parse) {
+				String nameLK = record.get("landkreis");
+				if (nameLK.isEmpty())
+					nameLK = record.get("ort");
+				if (lKAssignment.containsKey(record.get("bundesland"))) {
+					if (!lKAssignment.get(record.get("bundesland")).contains(nameLK))
+						lKAssignment.get(record.get("bundesland")).add(String.valueOf(nameLK));
+				} else
+					lKAssignment.put(record.get("bundesland"), new HashSet<>(Arrays.asList(nameLK)));
+			}
+		}
+		return lKAssignment;
+	}
+
+	/**
+	 * Returns the Bundesland where is Landkreis is located
+	 * 
+	 * @param area
+	 * @param lKAssignment
+	 * @return
+	 */
+	private static String getRelatedBundesland(String area, HashMap<String, Set<String>> lKAssignment) {
+
+		if (lKAssignment.containsKey(area))
+			return area;
+
+		for (String bundesland : lKAssignment.keySet())
+			if (lKAssignment.get(bundesland).contains(area))
+				return bundesland;
+		return null;
+	}
+
+	/**
+	 * Reads all bank holidays for Germany and each Bundesland
+	 * 
+	 * @return
+	 * @throws IOException
+	 */
+	private HashMap<String, Set<LocalDate>> readBankHolidays() throws IOException {
+	
+		String bankHolidayFile = "src/main/resources/bankHolidays.csv";
+		HashMap<String, Set<LocalDate>> bankHolidaysForBL = new HashMap<String, Set<LocalDate>>();
+	
+		try (BufferedReader reader = IOUtils.getBufferedReader(bankHolidayFile)) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+	
+			for (CSVRecord record : parse) {
+				String[] BlWithBankHolidy = record.get("Bundesland").split(";");
+				LocalDate date = LocalDate.parse(record.get("bankHoliday"), FMT_holiday);
+				for (String bundesland : BlWithBankHolidy) {
+	
+					if (bankHolidaysForBL.containsKey(bundesland)) {
+						if (!bankHolidaysForBL.get(bundesland).contains(date))
+							bankHolidaysForBL.get(bundesland).add(date);
+					} else
+						bankHolidaysForBL.put(bundesland, new HashSet<LocalDate>(Arrays.asList(date)));
+				}
+			}
+			Set<LocalDate> germanyBankHolidays = bankHolidaysForBL.get("Germany");
+	
+			for (String bundesland : bankHolidaysForBL.keySet())
+				if (!bundesland.contains("Germany"))
+					bankHolidaysForBL.get(bundesland).addAll(germanyBankHolidays);
+		}
+		return bankHolidaysForBL;
+	}
+
+	/**
+	 * Finds all bundeslaender with bank holiday on this day
+	 * 
+	 * @param areasWithBankHoliday
+	 * @param allHolidays
+	 * @param date
+	 */
+	private void getAreasWithBankHoliday(List<String> areasWithBankHoliday, HashMap<String, Set<LocalDate>> allHolidays,
+			LocalDate date) {
+	
+		for (String certainArea : allHolidays.keySet()) {
+			if (allHolidays.get(certainArea).contains(date))
+				areasWithBankHoliday.add(certainArea);
+		}
+	}
+
+	/**
+	 * This method searches a files with personStat.
+	 */
+	static File findPersonStatInputFile(File inputFolder) {
+		File personStatFile = null;
+		for (File folder : Objects.requireNonNull(inputFolder.listFiles())) {
+			if (folder.isDirectory()) {
+				for (File file : Objects.requireNonNull(folder.listFiles())) {
+					String string = file.getName().split("_")[0];
+					if (file.getName().contains("_personStats.csv.gz") && string.contains("20210531")) {
+						personStatFile = file;
+						break;
+					}
+				}
+			}
+			if (personStatFile != null)
+				break;
+		}
+		return personStatFile;
 	}
 
 	/**
@@ -753,4 +998,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	static double round2DecimalsAndConvertToProcent(double number) {
 		return Math.round(number * 10000) * 0.01;
 	}
+
+	/**
+	 * Rounds the number 2 places after the comma
+	 * 
+	 */
+	static double round2Decimals(double number) {
+		return Math.round(number * 100) * 0.01;
+	}
+
 }
