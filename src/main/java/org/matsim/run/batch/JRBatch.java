@@ -32,10 +32,12 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 				SnzBerlinProductionScenario.Snapshot.no).setSample(25).createSnzBerlinProductionScenario();
 		Config config = module.config();
 
-		config.global().setRandomSeed(7564655870752979346L);
+		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		episimConfig.setDistrictLevelRestrictions(params.districtLevelRestrictions);
+
+		episimConfig.setActivityHandling(params.activityHandling);
 
 		return config;
 	}
@@ -45,13 +47,19 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		@EnumParameter(DistrictLevelRestrictions.class)
 		DistrictLevelRestrictions districtLevelRestrictions;
 
+		@GenerateSeeds(5)
+		public long seed;
+
+		@EnumParameter(ActivityHandling.class)
+		ActivityHandling activityHandling;
+
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, JRBatch.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(450),
 				RunParallel.OPTION_METADATA
 		};
 
