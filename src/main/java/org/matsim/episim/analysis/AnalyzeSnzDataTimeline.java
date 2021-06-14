@@ -71,6 +71,11 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		Collogne, Frankfurt, AnyArea, Bundeslaender, Landkreise
 	}
 
+	private enum OutputData {
+		allDataTypes, StartHome, EndHome, StartNonHome, EndNonHome, EndNonHome22_5
+
+	}
+
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
 	private Path inputFolder;
 
@@ -84,14 +89,15 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		// TODO Sommerzeit, Endsumme
 		boolean getPercentageResults = false;
 		boolean outputShareOutdoor = false;
 		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
 		AnalyseAreas selectedArea = AnalyseAreas.Landkreise;
+		OutputData selectedOutputData = OutputData.EndNonHome22_5;
 		String anyArea = "Berlin";
 
-		analyseData(selectedArea, selectedOptionForAnalyse, getPercentageResults, outputShareOutdoor, anyArea);
+		analyseData(selectedArea, selectedOptionForAnalyse, selectedOutputData, getPercentageResults,
+				outputShareOutdoor, anyArea);
 
 		log.info("Done!");
 
@@ -99,33 +105,34 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	}
 
 	private void analyseData(AnalyseAreas selectedArea, AnalyseOptions selectedOptionForAnalyse,
-			boolean getPercentageResults, boolean outputShareOutdoor, String anyArea) throws IOException {
+			OutputData selectedOutputData, boolean getPercentageResults, boolean outputShareOutdoor, String anyArea)
+			throws IOException {
 		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
 
 		switch (selectedArea) {
 		case AnyArea:
 			zipCodes = findZipCodesForAnyArea(anyArea);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Bundeslaender:
 			zipCodes = findZIPCodesForBundeslaender();
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					outputFolder);
+					selectedOutputData, outputFolder);
 			break;
 		case Landkreise:
 			zipCodes = findZIPCodesForLandkreise();
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					outputFolder);
+					selectedOutputData, outputFolder);
 			break;
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 			zipCodes.put("Berchtesgaden", zipCodesBerchtesgaden);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Berlin:
 			IntSet zipCodesBerlin = new IntOpenHashSet();
@@ -133,7 +140,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesBerlin.add(i);
 			zipCodes.put("Berlin", zipCodesBerlin);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case BerlinDistricts:
 			zipCodes.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119, 10785,
@@ -162,7 +169,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			zipCodes.put("Reinickendorf", new IntOpenHashSet(List.of(13403, 13405, 13407, 13409, 13435, 13437, 13439,
 					13465, 13467, 13469, 13503, 13505, 13507, 13509, 13629)));
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Bonn:
 			IntSet zipCodesBonn = new IntOpenHashSet();
@@ -170,7 +177,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesBonn.add(i);
 			zipCodes.put("Bonn", zipCodesBonn);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Germany:
 			IntSet zipCodesGER = new IntOpenHashSet();
@@ -178,7 +185,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesGER.add(i);
 			zipCodes.put("Germany", zipCodesGER);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Hamburg:
 			IntSet zipCodesHamburg = new IntOpenHashSet();
@@ -186,14 +193,14 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesHamburg.add(i);
 			zipCodes.put("Hamburg", zipCodesHamburg);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Heinsberg:
 			IntSet zipCodesHeinsberg = new IntOpenHashSet(
 					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 			zipCodes.put("Heinsberg", zipCodesHeinsberg);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Collogne:
 			IntSet zipCodesCollogne = new IntOpenHashSet(List.of(50667, 50668, 50670, 50672, 50674, 50676, 50677, 50678,
@@ -202,7 +209,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					51069, 51103, 51105, 51107, 51109, 51143, 51145, 51147, 51149));
 			zipCodes.put("Collogne", zipCodesCollogne);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Frankfurt:
 			IntSet zipCodesFrankfurt = new IntOpenHashSet();
@@ -211,13 +218,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			zipCodesFrankfurt.addAll(List.of(65929, 65931, 65933, 65934, 65936));
 			zipCodes.put("FrankfurtMain", zipCodesFrankfurt);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 		case Mannheim:
 			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
 					68229, 68239, 68259, 68305, 68307, 68309));
 			zipCodes.put("Mannheim", zipCodesMannheim);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Munich:
 			IntSet zipCodesMunich = new IntOpenHashSet();
@@ -225,19 +232,19 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesMunich.add(i);
 			zipCodes.put("Munich", zipCodesMunich);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Test:
 			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
 			zipCodes.put("Test", zipCodesTest);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		case Wolfsburg:
 			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
 			zipCodes.put("Wolfsburg", zipCodesWolfsburg);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					null);
+					selectedOutputData, null);
 			break;
 		default:
 			break;
@@ -252,12 +259,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * @param getPercentageResults
 	 * @param outputShareOutdoor
 	 * @param selectedOptionForAnalyse
+	 * @param selectedOutputData
 	 * @param selectedOutputFolder
 	 * @throws IOException
 	 */
 	private void analyzeDataForCertainAreas(HashMap<String, IntSet> zipCodes, boolean getPercentageResults,
-			boolean outputShareOutdoor, AnalyseOptions selectedOptionForAnalyse, Path selectedOutputFolder)
-			throws IOException {
+			boolean outputShareOutdoor, AnalyseOptions selectedOptionForAnalyse, OutputData selectedOutputData,
+			Path selectedOutputFolder) throws IOException {
 
 		log.info("Searching for files in the folder: " + inputFolder);
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
@@ -287,10 +295,18 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			writerShare = IOUtils.getBufferedWriter(outputFileShare.toUri().toURL(), StandardCharsets.UTF_8, true);
 		}
 		try {
-			String[] header = new String[] { "date", "area", "type", "total", "<0h", "0-1h", "1-2h", "2-3h", "3-4h",
-					"4-5h", "5-6h", "6-7h", "7-8h", "8-9h", "9-10h", "10-11h", "11-12h", "12-13h", "13-14h", "14-15h",
-					"15-16h", "16-17h", "17-18h", "18-19h", "19-20h", "20-21h", "21-22h", "22-23h", "23-24h", "24-25h",
-					"25-26h", "26-27h", "27-28h", "28-29h", "29-30h", ">30h" };
+			String[] header;
+			switch (selectedOutputData) {
+			case EndNonHome22_5:
+				header = new String[] { "date", "area", "type", "total", "22-5" };
+				break;
+			default:
+				header = new String[] { "date", "area", "type", "total", "<0h", "0-1h", "1-2h", "2-3h", "3-4h", "4-5h",
+						"5-6h", "6-7h", "7-8h", "8-9h", "9-10h", "10-11h", "11-12h", "12-13h", "13-14h", "14-15h",
+						"15-16h", "16-17h", "17-18h", "18-19h", "19-20h", "20-21h", "21-22h", "22-23h", "23-24h",
+						"24-25h", "25-26h", "26-27h", "27-28h", "28-29h", "29-30h", ">30h", "22-5" };
+				break;
+			}
 
 			JOIN.appendTo(writer, header);
 			writer.write("\n");
@@ -337,81 +353,88 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 				switch (selectedOptionForAnalyse) {
 				case weeklyResultsOfAllDays:
-					readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+					readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 							file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
 								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlyWeekdays:
 					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)) {
 						List<String> areasWithBankHoliday = new ArrayList<>();
 						getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
-						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					}
 					if (day.equals(DayOfWeek.FRIDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
 								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlySaturdays:
 					if (day.equals(DayOfWeek.SATURDAY)) {
-						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
 								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlySundays:
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
 								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case onlyWeekends:
 					if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
-						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
 								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				case dailyResults:
-					readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+					readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 							file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-					writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+					writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 							anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart, sumsHomeEnd,
 							sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-					clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+					clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+							anaylzedDaysPerAreaAndPeriod);
 					break;
 				case Mo_Do:
 					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
 							&& !day.equals(DayOfWeek.FRIDAY)) {
 						List<String> areasWithBankHoliday = new ArrayList<>();
 						getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
-						readDataOfTheDay(zipCodes, header, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 								file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					}
 					if (day.equals(DayOfWeek.THURSDAY)) {
-						writeOutput(getPercentageResults, outputShareOutdoor, writer, writerShare,
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
 								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
 								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, anaylzedDaysPerAreaAndPeriod);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
 				default:
@@ -500,7 +523,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * @throws IOException
 	 * 
 	 */
-	private void readDataOfTheDay(HashMap<String, IntSet> zipCodesOfAreas, String[] header,
+	private void readDataOfTheDay(HashMap<String, IntSet> zipCodesOfAreas,
 			Map<String, Object2DoubleMap<String>> sumsHomeStart, Map<String, Object2DoubleMap<String>> sumsHomeEnd,
 			Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
 			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, File file, List<String> areasWithBankHoliday,
@@ -515,7 +538,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 		for (String area : anaylzedDaysPerAreaAndPeriod.keySet())
 			if (areasWithBankHoliday == null || !areasWithBankHoliday.contains(getRelatedBundesland(area, lkAssignemt)))
 				anaylzedDaysPerAreaAndPeriod.put(area, anaylzedDaysPerAreaAndPeriod.get(area) + 1);
-
+		List<String> hours22_5 = Arrays.asList("<0h", "0-1h", "1-2h", "2-3h", "3-4h", "4-5h", "22-23h", "23-24h",
+				"24-25h", "25-26h", "26-27h");
 		CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader()
 				.parse(IOUtils.getBufferedReader(file.toString()));
 		for (CSVRecord record : parse) {
@@ -525,8 +549,9 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					if (!record.get("zipCode").contains("NULL")) {
 						int zipCode = Integer.parseInt(record.get("zipCode"));
 						if (zipCodesOfAreas.get(certainArea).contains(zipCode)) {
-							for (String string : header) {
-								if (!string.contains("date") && !string.contains("type") && !string.contains("area")) {
+							for (String string : record.getParser().getHeaderNames()) {
+								if (!string.contains("date") && !string.contains("type") && !string.contains("area")
+										&& !string.contains("zipCode")) {
 									if (record.get("type").contains("startHomeActs"))
 										sumsHomeStart.get(certainArea).mergeDouble(string,
 												Integer.parseInt(record.get(string)), Double::sum);
@@ -538,6 +563,9 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 												Integer.parseInt(record.get(string)), Double::sum);
 									if (record.get("type").contains("endNonHomeActs"))
 										sumsNonHomeEnd.get(certainArea).mergeDouble(string,
+												Integer.parseInt(record.get(string)), Double::sum);
+									if (record.get("type").contains("endNonHomeActs") && hours22_5.contains(string))
+										sumsNonHomeEnd.get(certainArea).mergeDouble("22-5",
 												Integer.parseInt(record.get(string)), Double::sum);
 								}
 							}
@@ -553,6 +581,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * 
 	 * @param getPercentageResults
 	 * @param outputShareOutdoor
+	 * @param selectedOutputData
 	 * @param writer
 	 * @param writerShare
 	 * @param anaylzedDaysPerAreaAndPeriod
@@ -566,9 +595,9 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * @param personsInThisArea
 	 * @throws IOException
 	 */
-	private void writeOutput(boolean getPercentageResults, boolean outputShareOutdoor, BufferedWriter writer,
-			BufferedWriter writerShare, HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod, String[] header,
-			Map<String, Map<String, Object2DoubleMap<String>>> baseForAreas, String dateString,
+	private void writeOutput(boolean getPercentageResults, boolean outputShareOutdoor, OutputData selectedOutputData,
+			BufferedWriter writer, BufferedWriter writerShare, HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod,
+			String[] header, Map<String, Map<String, Object2DoubleMap<String>>> baseForAreas, String dateString,
 			Map<String, Object2DoubleMap<String>> sumsHomeStart, Map<String, Object2DoubleMap<String>> sumsHomeEnd,
 			Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
 			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, Map<String, Integer> personsInThisArea)
@@ -579,7 +608,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			Object2DoubleMap<String> sumsNonHomeStartArea = sumsNonHomeStart.get(certainArea);
 			Object2DoubleMap<String> sumsHomeStartArea = sumsHomeStart.get(certainArea);
 			Object2DoubleMap<String> sumsHomeEndArea = sumsHomeEnd.get(certainArea);
-			
+
 			for (String hour : sumsNonHomeEndArea.keySet()) {
 				sumsNonHomeEndArea.put(hour, Math.round(
 						(sumsNonHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
@@ -677,14 +706,42 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 					}
 				}
-				JOIN.appendTo(writer, rowStartHome);
-				writer.write("\n");
-				JOIN.appendTo(writer, rowEndHome);
-				writer.write("\n");
-				JOIN.appendTo(writer, rowStartNonHome);
-				writer.write("\n");
-				JOIN.appendTo(writer, rowEndNonHome);
-				writer.write("\n");
+				switch (selectedOutputData) {
+				case EndHome:
+					JOIN.appendTo(writer, rowEndHome);
+					writer.write("\n");
+					break;
+				case EndNonHome:
+					JOIN.appendTo(writer, rowEndNonHome);
+					writer.write("\n");
+					break;
+				case EndNonHome22_5:
+					JOIN.appendTo(writer, rowEndNonHome);
+					writer.write("\n");
+					break;
+				case StartHome:
+					JOIN.appendTo(writer, rowStartHome);
+					writer.write("\n");
+					break;
+				case StartNonHome:
+					JOIN.appendTo(writer, rowStartNonHome);
+					writer.write("\n");
+					break;
+				case allDataTypes:
+					JOIN.appendTo(writer, rowStartHome);
+					writer.write("\n");
+					JOIN.appendTo(writer, rowEndHome);
+					writer.write("\n");
+					JOIN.appendTo(writer, rowStartNonHome);
+					writer.write("\n");
+					JOIN.appendTo(writer, rowEndNonHome);
+					writer.write("\n");
+					break;
+				default:
+					break;
+
+				}
+
 				if (outputShareOutdoor) {
 					JOIN.appendTo(writerShare, rowShareOutdoor);
 					writerShare.write("\n");
@@ -701,11 +758,12 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * @param sumsHomeEnd
 	 * @param sumsNonHomeStart
 	 * @param sumsNonHomeEnd
-	 * @param anaylzedDaysPerAreaAndPeriod 
+	 * @param anaylzedDaysPerAreaAndPeriod
 	 */
 	private void clearSums(Map<String, Object2DoubleMap<String>> sumsHomeStart,
 			Map<String, Object2DoubleMap<String>> sumsHomeEnd, Map<String, Object2DoubleMap<String>> sumsNonHomeStart,
-			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd, HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod) {
+			Map<String, Object2DoubleMap<String>> sumsNonHomeEnd,
+			HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod) {
 
 		for (String area : sumsHomeStart.keySet()) {
 			sumsHomeStart.get(area).clear();
@@ -926,18 +984,18 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * @throws IOException
 	 */
 	private HashMap<String, Set<LocalDate>> readBankHolidays() throws IOException {
-	
+
 		String bankHolidayFile = "src/main/resources/bankHolidays.csv";
 		HashMap<String, Set<LocalDate>> bankHolidaysForBL = new HashMap<String, Set<LocalDate>>();
-	
+
 		try (BufferedReader reader = IOUtils.getBufferedReader(bankHolidayFile)) {
 			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
-	
+
 			for (CSVRecord record : parse) {
 				String[] BlWithBankHolidy = record.get("Bundesland").split(";");
 				LocalDate date = LocalDate.parse(record.get("bankHoliday"), FMT_holiday);
 				for (String bundesland : BlWithBankHolidy) {
-	
+
 					if (bankHolidaysForBL.containsKey(bundesland)) {
 						if (!bankHolidaysForBL.get(bundesland).contains(date))
 							bankHolidaysForBL.get(bundesland).add(date);
@@ -946,7 +1004,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				}
 			}
 			Set<LocalDate> germanyBankHolidays = bankHolidaysForBL.get("Germany");
-	
+
 			for (String bundesland : bankHolidaysForBL.keySet())
 				if (!bundesland.contains("Germany"))
 					bankHolidaysForBL.get(bundesland).addAll(germanyBankHolidays);
@@ -963,7 +1021,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 */
 	private void getAreasWithBankHoliday(List<String> areasWithBankHoliday, HashMap<String, Set<LocalDate>> allHolidays,
 			LocalDate date) {
-	
+
 		for (String certainArea : allHolidays.keySet()) {
 			if (allHolidays.get(certainArea).contains(date))
 				areasWithBankHoliday.add(certainArea);
