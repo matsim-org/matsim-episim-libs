@@ -464,7 +464,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.christmasModel != ChristmasModel.no) {
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);				
+			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
@@ -479,11 +479,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			if (this.adjustRestrictions != AdjustRestrictions.no) {
 				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
 			}
-						
+
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				double fraction = 0.665;
-				
+
 				if (this.christmasModel == ChristmasModel.restrictive) {
 					builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
 				}
@@ -499,7 +499,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
-			
+
 			// TODO: this need to be set earlier in the policy builder
 			if (this.adjustRestrictions != AdjustRestrictions.no) {
 				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
@@ -546,8 +546,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		//vacinations
 		if (this.vaccinations.equals(Vaccinations.yes)) {
 			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-			vaccinationConfig.setEffectiveness(0.9);
-			vaccinationConfig.setDaysBeforeFullEffect(28);
+			vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+			vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();

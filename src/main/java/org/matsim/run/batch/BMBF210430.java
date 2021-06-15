@@ -9,6 +9,7 @@ import org.matsim.episim.TestingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -130,7 +131,7 @@ public class BMBF210430 implements BatchRun<BMBF210430.Params> {
 
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setFactorSeriouslySick(0.5);
+		vaccinationConfig.getParams(VaccinationType.generic).setFactorSeriouslySick(0.5);
 //		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 //
 //		for(int i = 0; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);

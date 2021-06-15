@@ -13,7 +13,7 @@ public class DefaultInfectionModelTest {
 	public void getVaccinationEffectiveness() {
 
 		VaccinationConfigGroup vacConfig = new VaccinationConfigGroup();
-		vacConfig.setEffectiveness(0.9);
+		vacConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
 
 		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
 		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);

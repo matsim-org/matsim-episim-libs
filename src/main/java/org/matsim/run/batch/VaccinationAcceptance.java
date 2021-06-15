@@ -8,6 +8,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TestingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -91,7 +92,7 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setFactorSeriouslySick(0.5);
+		vaccinationConfig.getParams(VaccinationType.generic).setFactorSeriouslySick(0.5);
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
 		for(int i = 0; i<18; i++) vaccinationCompliance.put(i, 0.);

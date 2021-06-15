@@ -347,8 +347,8 @@ public class DefaultContactModelTest {
 	public void vaccinated() {
 
 		VaccinationConfigGroup vac = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vac.setEffectiveness(1.0);
-		vac.setDaysBeforeFullEffect(0);
+		vac.getParams(VaccinationType.generic).setEffectiveness(1.0);
+		vac.getParams(VaccinationType.generic).setDaysBeforeFullEffect(0);
 
 		Function<InfectionEventHandler.EpisimFacility, EpisimPerson> fp = f -> {
 			EpisimPerson p = EpisimTestUtils.createPerson("c10", f);
@@ -362,7 +362,7 @@ public class DefaultContactModelTest {
 		assertThat(rate)
 				.isEqualTo(0);
 
-		vac.setDaysBeforeFullEffect(15);
+		vac.getParams(VaccinationType.generic).setDaysBeforeFullEffect(15);
 		rate = sampleInfectionRate(Duration.ofMinutes(10), "c10",
 				() -> EpisimTestUtils.createFacility(9, "c10", 10, EpisimTestUtils.CONTAGIOUS), fp);
 

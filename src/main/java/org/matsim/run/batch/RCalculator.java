@@ -11,6 +11,7 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -66,8 +67,8 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(1);
+		vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(1);
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 				episimConfig.getStartDate(), 0,
 				LocalDate.parse("2020-12-27"), (int) (2000 * 4./3.),

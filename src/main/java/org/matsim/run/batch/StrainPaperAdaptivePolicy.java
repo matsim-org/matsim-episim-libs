@@ -9,6 +9,7 @@ import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.BatchRun.Parameter;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
@@ -161,8 +162,8 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 
 		if (!params.vaccinations.equals("no")) {
 			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-			vaccinationConfig.setEffectiveness(0.9);
-			vaccinationConfig.setDaysBeforeFullEffect(28);
+			vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+			vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
@@ -182,7 +183,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 
 			vaccinationConfig.setReVaccinationCapacity_pers_per_day(reVaccinations);
 
-			vaccinationConfig.setFactorSeriouslySick(0.5);
+			vaccinationConfig.getParams(VaccinationType.generic).setFactorSeriouslySick(0.5);
 
 			Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
