@@ -29,8 +29,8 @@ sns.set_palette("deep")
 
 #%% Read in all infections
 
-output = "C:/Users/chris/Development/matsim-org/matsim-episim/perc-jan"
-biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest-jan"
+output = "C:/Users/chris/Development/matsim-org/matsim-episim/perc-susp-jan"
+biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest-jan-susp"
 
 fracs = defaultdict(lambda : [])
 
@@ -76,30 +76,83 @@ for frac, v in fracs.items():
     
     for seed, df, g_path in v:
         
+        # seed person did not infect anyone
         if len(df) == 0:
             n.append(0)
             
-        # persons not infecting anyone
-        no_inf = set(df.infected).difference(set(df.infector))
-        res = np.concatenate((df['infector'].value_counts().array, np.zeros(len(no_inf))))
-        
-        n.extend(res)
+        else:            
+            # persons not infecting anyone
+            no_inf = set(df.infected).difference(set(df.infector))
+            res = np.concatenate((df['infector'].value_counts().array, np.zeros(len(no_inf))))        
+            n.extend(res)
     
     n = np.sort(n)
     
     np.save(path.join(biggest, frac + ".npy"), n, allow_pickle=False)
     
     
-#%%
+#%% Color palette for infection type
     
-sizes = df.groupby("infectionType").size().sort_values(ascending=False)
-act = list(sizes[:11].index)
-palette = sns.color_palette("husl", 11)
+def act_type(infection_type):
+    
+    if infection_type == "pt":
+        return infection_type
+    
+    # some can be nan
+    if type(infection_type) == float:
+        return "other"
+    
+    s = infection_type.split("_")
+    
+    # extract first part
+    context = "_".join(s[0:len(s)//2])
+    
+    
+    if context in ("home", "work", "leisure", "educ_kiga", "educ_primary",
+                   "educ_secondary", "educ_other", "educ_higher"):
+
+        return context
+    
+    return "other"
+    
+
+
+v_act_type = np.vectorize(act_type, otypes=["object"])
+
+
+act = ["work", "leisure", "educ_kiga", "educ_primary",
+       "educ_secondary", "educ_higher","educ_other", "home", "other", "pt"]
+
+
+palette = [
+    '#1f77b4',  # muted blue
+    '#ff7f0e',  # safety orange
+    '#2ca02c',  # cooked asparagus green
+    '#d62728',  # brick red
+    '#9467bd',  # muted purple
+    '#8c564b',  # chestnut brown
+    '#e377c2',  # raspberry yogurt pink
+    '#17becf',   # blue-teal
+    '#7f7f7f',  # middle gray
+    '#bcbd22',  # curry yellow-green
+]
+
+
+from colorsys import rgb_to_hls
+
+for i, color in enumerate(palette):
+    
+    pass
+    #lightness = min(1, rgb_to_hls(color)[1] * scale)
+    
+    #palette[i] = sns.set_hls_values(color = color, h = None, l = 0.6, s = None)
+
     
 #%%
 
-df = pd.concat(df for seed, df, g_path in fracs["0.52"])
-df.loc[~df.infectionType.isin(act), "infectionType"] = "other"
+df = pd.concat(df for seed, df, g_path in fracs["0.9"])
+
+df.infectionType = v_act_type(df.infectionType)
 
 
 #%%
@@ -124,7 +177,7 @@ fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
 
 #plt.stackplot(res.index + 1, res.to_numpy().T, labels=res.columns, colors=palette)
 
-res.plot.area(ax=ax, colormap="tab20")
+res.plot.area(ax=ax, color=palette)
 
 plt.legend(bbox_to_anchor=(1.01, 0.98))
 plt.xlabel("Cluster size")
@@ -219,37 +272,31 @@ G = nx.read_graphml("../../../../biggest-jan/seed_4903684801928898534-fraction_0
 
 pos = graphviz_layout(G, prog="dot")
 
+
 #%%
 
 import matplotlib.patches as mpatches
 
-palette = sns.color_palette("deep", 8)
-
-df = pd.DataFrame.from_dict({k: v["source"] for k,v in G.nodes.data()}, orient="index", columns=["source"])
-sizes = df.groupby("source").size().sort_values(ascending=False)
-
 node_color = []
 for k, v in G.nodes.data():
     
-    idx = sizes.index.get_loc(v["source"])
+    ift = act_type(v["source"])
     
-    if len(palette) > idx:
-        color = palette[idx]
-    else:
-        color = "#696969"
+    idx = act.index(ift)
     
+    color = palette[idx]
     node_color.append(color)
 
 handles = []
 
 for i, c in enumerate(palette):
-    patch = mpatches.Patch(color=c, label=sizes.index[i])    
+    patch = mpatches.Patch(color=c, label=act[i])    
     handles.append(patch)
     
 
 #%%
 
-fig = plt.figure(figsize=(50, 80), dpi=50)
+fig = plt.figure(figsize=(120, 80), dpi=50)
 
 visual_style = {
     "node_color": node_color,
