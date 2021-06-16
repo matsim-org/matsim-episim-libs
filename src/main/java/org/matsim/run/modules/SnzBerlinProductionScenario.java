@@ -59,7 +59,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum Vaccinations {yes, no}
 	public static enum ChristmasModel {no, restrictive, permissive}
 	public static enum EasterModel {yes, no}
-	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175}
+	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175, midpoints_200_250}
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
 
