@@ -29,8 +29,8 @@ sns.set_palette("deep")
 
 #%% Read in all infections
 
-output = "C:/Users/chris/Development/matsim-org/matsim-episim/perc-susp-jan"
-biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest-jan-susp"
+output = "C:/Users/chris/Development/matsim-org/matsim-episim/filtered-new"
+biggest = "C:/Users/chris/Development/matsim-org/matsim-episim/biggest-new"
 
 fracs = defaultdict(lambda : [])
 
@@ -70,6 +70,8 @@ for frac, v in fracs.items():
     
 #%% Create distribution of infections
 
+dist = {}
+
 for frac, v in fracs.items():
 
     n = []
@@ -88,8 +90,44 @@ for frac, v in fracs.items():
     
     n = np.sort(n)
     
+    dist[frac] = n
+    
     np.save(path.join(biggest, frac + ".npy"), n, allow_pickle=False)
     
+#%%
+
+df_1 = pd.DataFrame(dist["0.52"], columns=["n"])
+df_1["run"] = "januar"
+    
+#%%
+
+df_2 = pd.DataFrame(dist["0.9"], columns=["n"])
+df_2["run"] = "januar-susp"
+
+#%%
+
+df_3 = pd.DataFrame(dist["0.09"], columns=["n"])
+df_3["run"] = "unrestricted"
+
+
+#%%
+
+df = pd.concat([df_1, df_2, df_3])
+
+#%% Plot distribuition
+
+fig, ax = plt.subplots(dpi=250, figsize=(7.5, 3.8))
+
+g = sns.histplot(df, ax=ax, x="n", hue="run", discrete=True, multiple="dodge", stat="density", common_norm=False)
+
+#plt.xlim(right=16)
+plt.yscale("log")
+
+g.legend_.set_title("Scenario")
+
+#ax.yaxis.set_major_formatter(ScalarFormatter())
+
+
     
 #%% Color palette for infection type
     
@@ -107,11 +145,16 @@ def act_type(infection_type):
     # extract first part
     context = "_".join(s[0:len(s)//2])
     
-    
-    if context in ("home", "work", "leisure", "educ_kiga", "educ_primary",
-                   "educ_secondary", "educ_other", "educ_higher"):
-
+    if context in ("home", "leisure", "pt"):    
         return context
+    elif context == "educ_higher":
+        return "university"
+    elif context == "educ_kiga":
+        return "day care"
+    elif context in ("work", "business"):
+        return "work&business"
+    elif context in ("educ_primary", "educ_secondary", "educ_tertiary", "educ_other"):
+        return "schools"
     
     return "other"
     
@@ -120,8 +163,8 @@ def act_type(infection_type):
 v_act_type = np.vectorize(act_type, otypes=["object"])
 
 
-act = ["work", "leisure", "educ_kiga", "educ_primary",
-       "educ_secondary", "educ_higher","educ_other", "home", "other", "pt"]
+act = ["home", "leisure", "schools", "day care", "university",
+       "work&business", "pt", "other"]
 
 
 palette = [
@@ -132,9 +175,9 @@ palette = [
     '#9467bd',  # muted purple
     '#8c564b',  # chestnut brown
     '#e377c2',  # raspberry yogurt pink
-    '#17becf',   # blue-teal
     '#7f7f7f',  # middle gray
-    '#bcbd22',  # curry yellow-green
+#    '#17becf',   # blue-teal
+#    '#bcbd22',  # curry yellow-green
 ]
 
 
@@ -150,7 +193,7 @@ for i, color in enumerate(palette):
     
 #%%
 
-df = pd.concat(df for seed, df, g_path in fracs["0.9"])
+df = pd.concat(df for seed, df, g_path in fracs["0.52"])
 
 df.infectionType = v_act_type(df.infectionType)
 
@@ -268,7 +311,7 @@ ax.yaxis.set_major_formatter(FuncFormatter(lambda x,pos: "%.5f" % x))
 
 from networkx.drawing.nx_pydot import graphviz_layout
 
-G = nx.read_graphml("../../../../biggest-jan/seed_4903684801928898534-fraction_0.52/percolation12773.post.infections.graphml")
+G = nx.read_graphml("../../../../biggest-new/seed_5443790475904766986-fraction_0.09/percolation51820.post.infections.graphml")
 
 pos = graphviz_layout(G, prog="dot")
 
