@@ -322,7 +322,9 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 			case showingSymptoms:
 				if (rnd.nextDouble() < getProbaOfTransitioningToSeriouslySick(person)
-						* strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick()
+						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
+						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
+						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ? vaccinationConfig.getFactorSeriouslySick() : 1.0))
 					return DiseaseStatus.seriouslySick;
 				else

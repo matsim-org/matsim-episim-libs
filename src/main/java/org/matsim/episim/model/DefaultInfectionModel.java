@@ -41,8 +41,8 @@ public final class DefaultInfectionModel implements InfectionModel {
 
 	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
-										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
-										   double contactIntensity, double jointTimeInContainer) {
+	                                       EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+	                                       double contactIntensity, double jointTimeInContainer) {
 
 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
@@ -69,22 +69,28 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 
 		double vaccineEffectiveness;
+
+		// minimum effectiveness, independent of time
+		double min;
 		// use re vaccine effectiveness if person received the new vaccine
-		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)
+		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
 			vaccineEffectiveness = virusStrain.getReVaccineEffectiveness();
-		else
+			// effectiveness of second vaccine is never below first
+			min = virusStrain.getVaccineEffectiveness();
+		} else {
 			vaccineEffectiveness = virusStrain.getVaccineEffectiveness();
+			min = 0;
+		}
 
 		// full effect
 		if (daysVaccinated >= config.getDaysBeforeFullEffect())
-			return 1 - config.getEffectiveness() * vaccineEffectiveness;
+			return 1 - config.getEffectiveness() * Math.max(min, vaccineEffectiveness);
 
 		// slightly reduced but nearly full effect after 3 days
 		else if (daysVaccinated >= 3) {
-			return 1 - config.getEffectiveness() * 0.94 * vaccineEffectiveness;
+			return 1 - config.getEffectiveness() * Math.max(min, 0.94 * vaccineEffectiveness);
 		}
 
-		return 1 * vaccineEffectiveness;
-
+		return 1 - min * config.getEffectiveness();
 	}
 }
