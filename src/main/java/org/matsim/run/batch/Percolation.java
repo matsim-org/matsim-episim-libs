@@ -24,7 +24,7 @@ public class Percolation implements BatchRun<Percolation.Params> {
 	 * Base configuration
 	 */
 	private static final SyntheticBatch.Params base = new SyntheticBatch.Params(
-			1000, 1, 1, 1, 1, OldSymmetricContactModel.class, 1
+			10000, 1, 1, 1, 1, OldSymmetricContactModel.class, 1
 	);
 
 	@Override
@@ -74,7 +74,8 @@ public class Percolation implements BatchRun<Percolation.Params> {
 				RunParallel.OPTION_PARAMS, Percolation.Params.class.getName(),
 				RunParallel.OPTION_THREADS, Integer.toString(2),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(10000),
-				"--no-reuse"
+				"--no-reuse",
+				"--output=perc-syn"
 		};
 
 		RunParallel.main(args2);

@@ -193,6 +193,8 @@ public class SyntheticScenario extends AbstractModule {
 		);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
+
 		// tracing config ...
 
 		return config;
