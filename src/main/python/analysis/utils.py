@@ -11,7 +11,7 @@ from os import path
 
 def _generator(z):
     """ Generator for zip files inside zip file. """
-    if "summaries/" in z.namelist():
+    if "summaries/" in z.namelist() or any(x.startswith("summaries/") and x.endswith(".zip") for x in z.namelist()):
         for f in z.namelist():
             if not f.endswith("zip"): continue
             with zipfile.ZipFile(z.open(f)) as inner:
@@ -42,7 +42,7 @@ def read_batch_run(run, r_values=False, age_groups=None, infections=False):
 
         if info is None:
             with z.open("_info.txt") as f:
-                info = pd.read_csv(f, sep=";")
+                info = pd.read_csv(f, sep=";", dtype={"RunId": "str"})
 
         # Iterator for zip files
         zips = _generator(z)
