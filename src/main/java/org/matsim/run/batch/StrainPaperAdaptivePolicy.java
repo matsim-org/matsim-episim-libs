@@ -134,7 +134,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		infPerDayB117.put(LocalDate.parse(params.b117date), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		double vaccineEffectiveness = vaccinationConfig.getEffectiveness();
+		double vaccineEffectiveness = vaccinationConfig.getParams(VaccinationType.generic).getEffectiveness();
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 

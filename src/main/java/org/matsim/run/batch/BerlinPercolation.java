@@ -205,7 +205,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, BerlinPercolation.class.getName(),
 				RunParallel.OPTION_PARAMS, BerlinPercolation.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(2),
+				RunParallel.OPTION_TASKS, Integer.toString(2),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(10000),
 		};
 

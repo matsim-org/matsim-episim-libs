@@ -155,7 +155,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 		// Using the same base policy as berlin
 		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 		builder.setActivityParticipation(restrictions);
-		FixedPolicy.ConfigBuilder policy = builder.build();
+		FixedPolicy.ConfigBuilder policy = builder.buildFixed();
 
 		episimConfig.setPolicy(FixedPolicy.class, policy.build());
 		config.controler().setOutputDirectory("output-snz-dresden");
