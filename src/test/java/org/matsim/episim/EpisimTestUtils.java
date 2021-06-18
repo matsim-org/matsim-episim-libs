@@ -3,6 +3,7 @@ package org.matsim.episim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
@@ -18,7 +19,7 @@ public class EpisimTestUtils {
 
 	public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
 	public static final Consumer<EpisimPerson> SYMPTOMS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.showingSymptoms);
-	public static final Consumer<EpisimPerson> VACCINATED = person -> person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
+	public static final Consumer<EpisimPerson> VACCINATED = person -> person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
 
 	public static final Consumer<EpisimPerson> FULL_QUARANTINE = person -> {
 		person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);

@@ -26,7 +26,7 @@ public class DefaultInfectionModelTest {
 
 		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
 
-		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 1)

@@ -418,9 +418,10 @@ public final class EpisimPerson implements Attributable {
 		return reVaccinationStatus;
 	}
 
-	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
+	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
+		this.vaccinationType = type;
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 	}

@@ -30,7 +30,14 @@ public interface VaccinationModel {
 		if (reVaccination)
 			p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, iteration);
 		else
-			p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, iteration);
+			p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, chooseVaccinationType(p, iteration), iteration);
+	}
+
+	/**
+	 * For the first vaccination, chose the {@link VaccinationType} a person is getting.
+	 */
+	default VaccinationType chooseVaccinationType(EpisimPerson person, int iteration) {
+		return VaccinationType.generic;
 	}
 
 }
