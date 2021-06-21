@@ -73,9 +73,20 @@ gbl_prep_mobility_data <- function(df){
 
 rm(list = gbl_outersect(ls(),ls(pattern = "^gbl")))
 
-#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekly.csv"), fileEncoding = "UTF-8")
-data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekdays.csv"), fileEncoding = "UTF-8")
+data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekly.csv"), fileEncoding = "UTF-8")
+period <- "Woche"
+
+#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekdays.csv"), fileEncoding = "UTF-8")
+#period <- "Wochentage"
+
 #data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_weekends.csv"), fileEncoding = "UTF-8")
+#period <- "Wochenenden"
+
+#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_Fr-Sa.csv"), fileEncoding = "UTF-8")
+#period <- "Fr-Sa"
+
+#data <- read.csv2(paste0(gbl_location_data,"LK_Timeline_Mo-Do.csv"), fileEncoding = "UTF-8")
+#period <- "Mo-Do"
 
 data2 <- data %>%
   mutate_all(type.convert) %>%
@@ -88,7 +99,8 @@ data2 <- data %>%
 data3 <- gbl_prep_mobility_data(data2)
 
 # weekly or weekend dates
-# 2020-03-08                  
+# 2020-03-08 
+# 2020-09-13
 # 2021-03-28                  
 # 2021-04-04
 # 2021-04-11
@@ -97,15 +109,20 @@ data3 <- gbl_prep_mobility_data(data2)
 # 2021-05-02
 
 #weekdays dates
-#2021-03-26
-#2021-04-30
-#2021-05-07
+# 2020-09-11
+# 2021-03-26
+# 2021-04-16
+# 2021-04-30
+# 2021-05-07
 
-dateBefore <- "2021-03-26"
-dateAfter <- "2021-05-07"
+dateBefore <- "2021-04-18"
+dateAfter <- "2021-05-02" # also used for single day analysis
 
+data_date <- data3 %>%
+  filter(date == dateAfter ) %>%
+  select(c(area,isKreis,isLandkreis, night_total))
 
-#select dates that should be compared and find the change between two daes. 
+#select dates that should be compared and find the change between two dates. 
 data_to_merge <- data3 %>%
   filter(date == dateAfter | date == dateBefore ) %>%
   select(c(date,area,isKreis,isLandkreis,night_total)) %>% 
@@ -121,30 +138,66 @@ data_to_merge <- data3 %>%
 # Für München wurde das jetzt manuell gerichtet. -jakob
 
 # First merge where all three variables are checked --> change.x
-lk3 <- gbl_lk %>% left_join(data_to_merge, by=c("area","isLandkreis", "isKreis")) 
+lk3_changeNight <- gbl_lk %>% left_join(data_to_merge, by=c("area","isLandkreis", "isKreis")) 
+lk3_dateNight <- gbl_lk %>% left_join(data_date, by=c("area","isLandkreis", "isKreis")) 
 #Then, just using location names --> change.y
-lk3 <- lk3 %>% left_join(data_to_merge, by= "area") 
+lk3_changeNight <- lk3_changeNight %>% left_join(data_to_merge, by= "area") 
+lk3_dateNight <- lk3_dateNight %>% left_join(data_date, by= "area")
 
 # if there is no value in change.x, then use value from change.y
-for(i in 1:nrow(lk3)){
-  if(!is.na(lk3$change.x[i])){
-    lk3$change_final[i] = lk3$change.x[i]
+for(i in 1:nrow(lk3_changeNight)){
+  if(!is.na(lk3_changeNight$change.x[i])){
+    lk3_changeNight$change_final[i] = lk3_changeNight$change.x[i]
   } else {
-    lk3$change_final[i] = lk3$change.y[i] 
+    lk3_changeNight$change_final[i] = lk3_changeNight$change.y[i] 
+  }
+}  
+for(i in 1:nrow(lk3_dateNight)){
+  if(!is.na(lk3_dateNight$night_total.x[i])){
+    lk3_dateNight$night_total_final[i] = lk3_dateNight$night_total.x[i]
+  } else {
+    lk3_dateNight$night_total_final[i] = lk3_dateNight$night_total.y[i] 
   }
 }  
 
+lk3_dateNight <- lk3_dateNight %>% left_join(data_date, by="area") %>% mutate(Act22_5 = night_total_final)
+lk3_changeNight <-lk3_changeNight %>% mutate(percent_reduction = (change_final -1)*100)
 
-lk3 <-lk3 %>% mutate(percent_reduction = (change_final -1)*100)
-
-Reduce(gbl_outersect,list(lk3$name_2,unique(data3$area)))
+Reduce(gbl_outersect,list(lk3_dateNight$name_2,unique(data3$area)))
 
 tmap_mode("view")
-tm_shape(lk3) +
+
+tm_shape(lk3_dateNight) +
+  tm_polygons(col = "Act22_5",
+              id = "area", 
+              title.col = "% Average hours out of home", title=dateAfter,
+              breaks = c(50, 75,100, 125, 150, 175, 200, 225, 250)) +
+  tm_layout(title = paste0(period,': Durchschnittliche Anz. EndNonHome 22-5 per 1000 EW'),
+            title.position = c('right', 'top'),
+            legend.position = c(0.87, 0.1), 
+            legend.text.size=1,
+            legend.title.size=1.2,
+            legend.outside.position = "bottom",
+            legend.bg.color = "white",
+            legend.bg.alpha=.9,
+            frame = FALSE) +
+  tm_shape(gbl_bl) +
+  tm_borders(lwd = 2, col = "blue") 
+
+tm_shape(lk3_changeNight) +
   tm_polygons(col = "percent_reduction",
               id = "area", 
-              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," vs ",dateBefore) ) +
-  tm_layout(legend.position = c("right", "top"), title= 'Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22-5 Uhr in %',  title.position = c('right', 'top')) +
+              title.col = "% Reduction of Nightly Activites", title= paste0(dateAfter," vs ",dateBefore),
+              breaks = c(-40, -30, -20, -10, 0, 10, 20, 30, 40)) +
+  tm_layout(title= paste0(period,': Veränderung der Anzahl beendeter Aktivitäten außer Haus zwischen 22-5 Uhr in %'),
+            title.position = c('right', 'top'),
+            legend.position = c(0.87, 0.1), 
+            legend.text.size=1,
+            legend.title.size=1.2,
+            legend.outside.position = "bottom",
+            legend.bg.color = "white",
+            legend.bg.alpha=.9,
+            frame = FALSE) +
   tm_shape(gbl_bl) +
   tm_borders(lwd = 2, col = "blue")
 
@@ -155,8 +208,13 @@ tm_shape(lk3) +
 rm(list = gbl_outersect(ls(),ls(pattern = "^gbl")))
 
 #data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekly.csv"),fileEncoding = "UTF-8")
+#period <- "Woche"
+
 #data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekends.csv"),fileEncoding = "UTF-8")
+#period <- "Wochenenden"
+
 data_hours <- read.csv2(paste0(gbl_location_data,"LK_mobilityData_weekdays.csv"),fileEncoding = "UTF-8")
+period <- "Wochentage"
 
 
 data_hours2 <- data_hours %>%
@@ -174,12 +232,13 @@ data_hours3 <- gbl_prep_mobility_data(data_hours2) %>% filter(area != "Landau in
 # 2021-05-02
 
 #weekdays dates
-#2021-03-26
-#2021-04-30
-#2021-05-07
+# 2021-03-26
+# 2021-04-16
+# 2021-04-30
+# 2021-05-07
 
-dateBefore <- "2021-03-26"
-dateAfter <- "2021-05-07" # also used for single day analysis
+dateBefore <- "2021-04-16"
+dateAfter <- "2021-04-30" # also used for single day analysis
 
 data_hours_date <- data_hours3 %>%
   filter(date == dateAfter ) %>%
@@ -231,15 +290,33 @@ tmap_mode("view" )
 tm_shape(lk3_date) +
   tm_polygons(col = "hoursOutHome",
               id = "area", 
-              title.col = "% Average hours out of home", title=dateAfter) +
-  tm_layout(legend.position = c("right", "top"), title = 'Durchschnittliche Dauer aushäusiger Aktivitäten pro Person in Stunden',  title.position = c('right', 'top')) +
+              title.col = "% Average hours out of home", title=dateAfter,
+              breaks = c(3,4,5, 6, 7, 8, 9, 10)) +
+  tm_layout(title = paste0(period,': Durchschnittliche Dauer aushäusiger Aktivitäten pro Person in Stunden'),
+            title.position = c('right', 'top'),
+            legend.position = c(0.87, 0.1), 
+            legend.text.size=1,
+            legend.title.size=1.2,
+            legend.outside.position = "bottom",
+            legend.bg.color = "white",
+            legend.bg.alpha=.9,
+            frame = FALSE) +
   tm_shape(gbl_bl) +
   tm_borders(lwd = 2, col = "blue") 
 
 tm_shape(lk3_changes) +
   tm_polygons(col = "changeOutOfHome",
               id = "area", 
-              title.col = "% Average hours out of home", title=paste0( dateAfter, " vs ", dateBefore )) +
-  tm_layout(legend.position = c("right", "top"), title= 'Veränderung Dauer aushäusiger Aktivitäten pro Person in %',  title.position = c('right', 'top')) +
+              title.col = "% Average hours out of home", title=paste0( dateAfter, " vs ", dateBefore ),
+              breaks = c(-20,-10,-5,0,5,10,20)) +
+  tm_layout(title=paste0(period,': Veränderung Dauer aushäusiger Aktivitäten pro Person in %'),
+            title.position = c('right', 'top'),
+            legend.position = c(0.87, 0.1), 
+            legend.text.size=1,
+            legend.title.size=1.2,
+            legend.outside.position = "bottom",
+            legend.bg.color = "white",
+            legend.bg.alpha=.9,
+            frame = FALSE) +
   tm_shape(gbl_bl) +
   tm_borders(lwd = 2, col = "blue") 
