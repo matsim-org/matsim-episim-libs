@@ -17,7 +17,6 @@ import org.matsim.run.RunParallel;
 import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
-
 import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -38,7 +37,7 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "opening");
+		return Metadata.of("berlin", "mutations");
 	}
 	
 //	@Override
@@ -89,6 +88,9 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 		builder.restrict(date1, 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		//Sommerferien
 		builder.restrict("2021-08-07", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//kein zusätzliches Lüften mehr nach den Sommerferien
+		builder.restrict("2021-08-07", Restriction.ofCiCorrection(params.ciCorrectionEdu), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+
 		
 		builder.restrict(date1, 1.0, "shop_daily", "shop_other", "errands");
 		
@@ -102,6 +104,13 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
 		}
 		
+		if(params.masks.equals("fromOctober")) {
+			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
+			builder.restrict("2021-10-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.9 * 0.9, FaceMask.SURGICAL, 0.9 * 0.1)), "pt", "shop_daily", "shop_other", "errands");
+			builder.restrict("2021-10-01", Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.8 * 0.9, FaceMask.SURGICAL, 0.8 * 0.1)), "educ_higher", "educ_tertiary", "educ_other");
+		}
+		
 		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 		
 		builder.restrict("2021-06-24", 0.83, "work", "business");
@@ -110,8 +119,11 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 		builder.restrict("2021-10-11", 0.83, "work", "business");
 		builder.restrict("2021-10-23", 1.0, "work", "business");
 		
-		builder.restrict("2021-12-24", 0.83, "work", "business");
-		builder.restrict("2021-12-31", 1.0, "work", "business");
+		builder.restrict("2021-12-20", 0.83, "work", "business");
+		builder.restrict("2022-01-02", 1.0, "work", "business");
+		
+		builder.restrict("2021-12-20", 0.2, "educ_higher");
+		builder.restrict("2022-01-02", 1.0, "educ_higher");
 
 		
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
@@ -132,11 +144,11 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 			Map<LocalDate, Integer> infPerDayB1351 = new HashMap<>();
 			infPerDayB1351.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayB1351.put(LocalDate.parse(params.mutBDate), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.B1351, infPerDayB1351);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(params.mutBinf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setReVaccineEffectiveness(1.0);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
+			episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayB1351);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.mutBinf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setReVaccineEffectiveness(1.0);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
 
 		}
 				
@@ -209,6 +221,14 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 			workTests.put(date1, 0.0);
 			eduTests.put(date1, 0.0);
 		}
+		if (params.testing.equals("fromOctober")) {
+			leisureTests.put(date1, 0.0);
+			workTests.put(date1, 0.0);
+			eduTests.put(date1, 0.0);
+			leisureTests.put(LocalDate.parse("2021-10-01"), leisureRate1);
+			workTests.put(LocalDate.parse("2021-10-01"), workRate1);
+			eduTests.put(LocalDate.parse("2021-10-01"), eduRate1);
+		}
 		
 		testingConfigGroup.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -240,23 +260,23 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 		@StringParameter({"no", "yes"})		
 		String testing;
 		
-		@StringParameter({"no", "yes"})		
+		@StringParameter({"no", "yes", "fromOctober"})		
 		String masks;
 		
 //		@Parameter({1.0, 0.83})
 //		double workFactor;
 		
 //		@StringParameter({"2021-04-01", "2021-06-01"})
-		@StringParameter({"2021-04-01"})
+		@StringParameter({"2021-04-07"})
 		String mutBDate;
 		
-		@Parameter({1.0, 1.4, 1.8, 2.5})
+		@Parameter({1.8, 2.2, 2.5})
 		double mutBinf;
 		
-		@Parameter({0.9, 0.8, 0.7, 0.6, 0.5})
+		@Parameter({0.9, 0.8, 0.7})
 		double mutBVaccinationEffectiveness;
 		
-		@Parameter({0.8})
+		@Parameter({0.8, 0.95})
 		double vaccinationCompliance;
 		
 		@StringParameter({"6m", "12y", "16y"})
@@ -265,8 +285,11 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 		@StringParameter({"no", "2021-08-01", "2021-10-01"})
 		String revaccinationDate;
 		
-		@Parameter({0.01, 0.02})
+		@Parameter({0.02})
 		double revaccinationSpeed;
+		
+		@Parameter({0.5, 1.0})
+		double ciCorrectionEdu;
 
 	}
 
