@@ -44,8 +44,8 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 
 /**
- * Preprocessing step that takes the home ids of each person in a population and looks up their district from a shape file.
- * Writes a new population file with the additional "district" attribute as result.
+ * Preprocessing step that finds zipcode and subdistrict of every facility and writes this info as
+ * an attribute in the facilities file
  */
 @CommandLine.Command(
 		name = "zipcodeLookup",
