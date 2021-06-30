@@ -29,7 +29,8 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 	public Config prepareConfig(int id, Params params) {
 
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no).setSample(25).createSnzBerlinProductionScenario();
+				SnzBerlinProductionScenario.Snapshot.no).setSample(25).setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
+				.createSnzBerlinProductionScenario();
 		Config config = module.config();
 
 		config.global().setRandomSeed(params.seed);
@@ -39,6 +40,7 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 
 		episimConfig.setActivityHandling(ActivityHandling.startOfDay);
 
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 		return config;
 	}
 
@@ -50,8 +52,15 @@ public class JRBatch implements BatchRun<JRBatch.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@EnumParameter(ActivityHandling.class) //TODO Why does this cause errors?
-//		ActivityHandling activityHandling;
+		@Parameter({3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0})
+		double thetaFactor;
+
+//		@EnumParameter(SnzBerlinProductionScenario.LocationBasedContactIntensity.class)
+//		SnzBerlinProductionScenario.LocationBasedContactIntensity locationBasedContactIntensity;
+
+
+		//		@EnumParameter(ActivityHandling.class) //TODO Why does this cause errors?
+		//		ActivityHandling activityHandling;
 
 	}
 

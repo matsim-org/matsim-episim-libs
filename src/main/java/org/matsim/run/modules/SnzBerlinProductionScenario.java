@@ -83,7 +83,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
 
-		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
+		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.yes;
+		private LocationBasedContactIntensity locationBasedContactIntensity = LocationBasedContactIntensity.no;
 
 		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
@@ -176,6 +177,12 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
+
+		public Builder setLocationBasedContactIntensity(LocationBasedContactIntensity localCI
+		) {
+			this.locationBasedContactIntensity = localCI;
+			return this;
+		}
 	}
 
 	public static enum DiseaseImport {yes, onlySpring, no}
@@ -189,6 +196,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	public static enum AdjustRestrictions {yes, no}
 	public static enum EasterModel {yes, no}
 	public static enum LocationBasedRestrictions {yes, no}
+	public static enum LocationBasedContactIntensity {yes, no}
 
 	private final int sample;
 	private final int importOffset;
@@ -210,6 +218,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
 	private final LocationBasedRestrictions locationBasedRestrictions;
+	private final LocationBasedContactIntensity locationBasedContactIntensity;
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -244,6 +253,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.easterModel = builder.easterModel;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
+		this.locationBasedContactIntensity = builder.locationBasedContactIntensity;
 	}
 
 	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -300,14 +310,26 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
-				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+		if (locationBasedContactIntensity == LocationBasedContactIntensity.no) {
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+					.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
-				.addDays(DayOfWeek.SATURDAY);
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+					.addDays(DayOfWeek.SATURDAY);
 
-		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
-				.addDays(DayOfWeek.SUNDAY);
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+					.addDays(DayOfWeek.SUNDAY);
+		} else {
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_withLivingSpace.xml.gz", sample))
+					.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_withLivingSpace.xml.gz", sample))
+					.addDays(DayOfWeek.SATURDAY);
+
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_withLivingSpace.xml.gz", sample))
+					.addDays(DayOfWeek.SUNDAY);
+		}
+
 
 		episimConfig.setActivityHandling(activityHandling);
 
@@ -383,8 +405,23 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("errands").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("business").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("visit").setContactIntensity(9.24).setSpacesPerFacility(spaces); // 33/3.57
-		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
+
+		if(locationBasedContactIntensity == LocationBasedContactIntensity.yes){
+			episimConfig.getOrAddContainerParams("home_15").setContactIntensity(1.47).setSpacesPerFacility(1);
+			episimConfig.getOrAddContainerParams("home_25").setContactIntensity(0.88).setSpacesPerFacility(1);
+			episimConfig.getOrAddContainerParams("home_35").setContactIntensity(0.63).setSpacesPerFacility(1);
+			episimConfig.getOrAddContainerParams("home_45").setContactIntensity(0.49).setSpacesPerFacility(1);
+			episimConfig.getOrAddContainerParams("home_55").setContactIntensity(0.40).setSpacesPerFacility(1);
+			episimConfig.getOrAddContainerParams("home_65").setContactIntensity(0.34).setSpacesPerFacility(1);
+			episimConfig.getOrAddContainerParams("home_75").setContactIntensity(0.29).setSpacesPerFacility(1);
+
+			// weighted average of contact intensities (39 m2 per person)
+			episimConfig.getOrAddContainerParams("home").setContactIntensity(0.56).setSpacesPerFacility(1);
+
+		} else {
+			episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
+		}
 
 		// todo: use the plain 1/v values (1./3.57, 1./33, ...) and multiply theta with 33.  kai, feb'21
 
@@ -397,12 +434,12 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210504";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+"_v2.csv"));
+		String untilDate = "20210518";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+".csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
-			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
+			config.facilities().setInputFile(INPUT.resolve("be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz").toString());
 			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
 			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
@@ -464,7 +501,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.christmasModel != ChristmasModel.no) {
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);				
+			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
@@ -479,11 +516,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			if (this.adjustRestrictions != AdjustRestrictions.no) {
 				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
 			}
-						
+
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
 				double fraction = 0.665;
-				
+
 				if (this.christmasModel == ChristmasModel.restrictive) {
 					builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
 				}
@@ -499,7 +536,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
-			
+
 			// TODO: this need to be set earlier in the policy builder
 			if (this.adjustRestrictions != AdjustRestrictions.no) {
 				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
