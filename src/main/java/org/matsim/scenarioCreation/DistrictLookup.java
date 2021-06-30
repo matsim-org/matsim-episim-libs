@@ -178,7 +178,7 @@ public class DistrictLookup implements Callable<Integer> {
 			for (SimpleFeature ft : result) {
 				MultiPolygon polygon = (MultiPolygon) ft.getDefaultGeometry();
 				if (polygon.contains(MGC.coordinate2Point(p)))
-					return (String) ft.getAttribute(attr);
+					return String.valueOf(ft.getAttribute(attr));
 			}
 
 			throw new NoSuchElementException(String.format("No matching entry found for x:%f y:%f %s", x, y, p));
