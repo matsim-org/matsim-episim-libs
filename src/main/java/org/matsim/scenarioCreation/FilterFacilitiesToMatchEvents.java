@@ -25,6 +25,11 @@ import java.util.stream.Collectors;
 		mixinStandardHelpOptions = true
 )
 
+/*
+  class to filter global facilities file to match events file;
+  takes into account that "_split#" may have been added to some facilities in events file,
+   and changes the facility id accordingly
+ */
 public class FilterFacilitiesToMatchEvents implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(FilterFacilitiesToMatchEvents.class);
@@ -67,13 +72,12 @@ public class FilterFacilitiesToMatchEvents implements Callable<Integer> {
 		}
 
 
-
 		// if facilityId from facilities file is substring of facilityId from events file, then create a new facility to match events file
 		// i.e. from events: home_12345_split1 ; from facilities: 12345; --> create facility in facilities file of id home_12345_split1
 		Map<Id<ActivityFacility>, Id<ActivityFacility>> modNameToOldNameEvents = new HashMap<>();
 		for (Id<ActivityFacility> eventFacility : facilitiesToKeep) {
 			if (eventFacility.toString().contains("home_") || eventFacility.toString().contains("split")) {
-				String shortenedIdString = eventFacility.toString().replaceFirst("home_", "").replaceFirst("_split[0-9]+","");
+				String shortenedIdString = eventFacility.toString().replaceFirst("home_", "").replaceFirst("_split[0-9]+", "");
 				Id<ActivityFacility> shortenedId = Id.create(shortenedIdString, ActivityFacility.class);
 				modNameToOldNameEvents.put(eventFacility, shortenedId);
 			}
@@ -85,13 +89,11 @@ public class FilterFacilitiesToMatchEvents implements Callable<Integer> {
 		}
 
 
-
 		log.info("Reading {}...", this.facilities);
 
 		ActivityFacilitiesImpl facilities = new ActivityFacilitiesImpl();
 		MatsimFacilitiesReader fReader = new MatsimFacilitiesReader(null, null, facilities);
 		fReader.parse(IOUtils.getInputStream(IOUtils.getFileUrl(this.facilities.toString())));
-
 
 
 		// add new facilities
