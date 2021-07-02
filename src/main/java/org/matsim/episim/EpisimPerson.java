@@ -882,14 +882,23 @@ public final class EpisimPerson implements Attributable {
 	 */
 	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
+	/**
+	 * This function check if the person can infect other persons and marks in this
+     * case all facilities that are visited this day 
+	 */
 	public void markFacilities(DayOfWeek day, Map<Id<ActivityFacility>, EpisimFacility> pseudoFacilityMap) {
-		List<PerformedActivity> activities = getActivities(day);
-		for (int i = 0; i < activities.size(); i++) {
-			// TODO: maybe check trajectory
-			//			if (trajectory.get(offset + i))
-			if (status == DiseaseStatus.contagious || status == DiseaseStatus.showingSymptoms) {
-				EpisimFacility facility = pseudoFacilityMap.get(activities.get(i).getFacilityId());
-				facility.setContainsContagiousThisDay(true);
+		// TODO: maybe refactor this check to a more visible function, to reduce the risk
+		// of overlooking a necessary adjustment in the event of a change in the disease model
+		if (status == DiseaseStatus.contagious || status == DiseaseStatus.showingSymptoms) {
+			int offset = this.getStartOfDay(day);
+			BitSet activityParticipation = getActivityParticipation();
+
+			List<PerformedActivity> activities = getActivities(day);
+			for (int i = 0; i < activities.size(); i++) {
+				if (activityParticipation.get(offset + i)) {
+					EpisimFacility facility = pseudoFacilityMap.get(activities.get(i).getFacilityId());
+					facility.setContainsContagiousThisDay(true);
+				}
 			}
 		}
 	}
