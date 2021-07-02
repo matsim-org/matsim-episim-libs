@@ -88,6 +88,15 @@ public class EpisimContainer<T> {
 	 * The id of the ReplayEventTask that handles the events for this container
 	 */
 	private int taskId = 0;
+
+	/**
+	 * This flag is set to true at the beginning of the day,
+	 * if one person that is visiting the container at this day has the
+	 * DiseaseStatus contagious or showingSymptoms. 	
+     * 
+     * See also: EpisimPerson::markFacilities	
+	 */
+ 	private boolean containsContagiousThisDay = false;
 	
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
@@ -253,5 +262,13 @@ public class EpisimContainer<T> {
 	public List<EpisimPerson> getPersons() {
 		// Using Collections.unmodifiableList(...) puts huge pressure on the GC if its called hundred thousand times per second
 		return personsAsList;
+	}
+
+	public boolean getContainsContagiousThisDay() {
+		return containsContagiousThisDay;
+	}
+
+	public void setContainsContagiousThisDay(boolean newState) {
+		containsContagiousThisDay = newState;
 	}
 }

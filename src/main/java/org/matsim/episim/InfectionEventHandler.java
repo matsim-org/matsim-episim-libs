@@ -748,6 +748,11 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
+		reporting.reportCpuTime(iteration, "MarkFacilities", "start", -1);
+		pseudoFacilityMap.values().forEach(c -> c.setContainsContagiousThisDay(false));
+		personMap.values().parallelStream().forEach(p -> p.markFacilities(day, pseudoFacilityMap));
+		reporting.reportCpuTime(iteration, "MarkFacilities", "finished", -1);
+			
 		handlers.forEach(h -> {
 			h.setRestrictionsForIteration(iteration, im);
 			EpisimUtils.setSeed(h.getRnd(), rnd.nextLong());

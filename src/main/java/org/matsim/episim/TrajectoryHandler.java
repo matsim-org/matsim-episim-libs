@@ -259,7 +259,9 @@ final class TrajectoryHandler {
 
 		reporting.handleEvent(activityEndEvent);
 
-		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
+		if (episimFacility.getContainsContagiousThisDay()) {
+			contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
+		}
 
 		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);

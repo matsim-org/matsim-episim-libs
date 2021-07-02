@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
@@ -881,4 +882,15 @@ public final class EpisimPerson implements Attributable {
 	 */
 	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
+	public void markFacilities(DayOfWeek day, Map<Id<ActivityFacility>, EpisimFacility> pseudoFacilityMap) {
+		List<PerformedActivity> activities = getActivities(day);
+		for (int i = 0; i < activities.size(); i++) {
+			// TODO: maybe check trajectory
+			//			if (trajectory.get(offset + i))
+			if (status == DiseaseStatus.contagious || status == DiseaseStatus.showingSymptoms) {
+				EpisimFacility facility = pseudoFacilityMap.get(activities.get(i).getFacilityId());
+				facility.setContainsContagiousThisDay(true);
+			}
+		}
+	}
 }
