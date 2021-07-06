@@ -28,7 +28,6 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.InfectionEventHandler.EpisimFacility;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;

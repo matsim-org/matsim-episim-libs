@@ -748,7 +748,6 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
-			
 		handlers.forEach(h -> {
 			h.setRestrictionsForIteration(iteration, im);
 			EpisimUtils.setSeed(h.getRnd(), rnd.nextLong());
