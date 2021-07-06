@@ -197,6 +197,16 @@ theme(axis.text.x = element_text(angle = 90))+                                  
 scale_color_manual(values = c("blue", "magenta", "dark grey","dark grey")) +
 facet_wrap(~district,  ncol=4)
 
+
+
+
+
+
+
+
+
+
+
 #
 # read_and_process_episim_events <- function(events_filename, facilities_to_district_map){
 #   fac_to_district_map <- read_delim(facilities_to_district_map,

@@ -40,10 +40,10 @@ joined <- lor %>% left_join(k15,by= "PLR_ID")
 
 joined$m2pp[joined$m2pp == 0] <- NA
 
-st_write(joined, "D:/Dropbox/Documents/VSP/episim/local_contact_intensity/LORs_with_living_space/lors.shp")
+# st_write(joined, "D:/Dropbox/Documents/VSP/episim/local_contact_intensity/LORs_with_living_space/lors.shp")
 
 
-antiiiiii <- lor %>% anti_join(k15, by = "PLR_ID")
+# antiiiiii <- lor %>% anti_join(k15, by = "PLR_ID")
 
 tmap_mode("view")
 tm_basemap(leaflet::providers$OpenStreetMap) +
