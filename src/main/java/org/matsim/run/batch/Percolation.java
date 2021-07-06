@@ -8,6 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.OldSymmetricContactModel;
+import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SyntheticScenario;
 
 import javax.annotation.Nullable;
@@ -23,7 +24,7 @@ public class Percolation implements BatchRun<Percolation.Params> {
 	 * Base configuration
 	 */
 	private static final SyntheticBatch.Params base = new SyntheticBatch.Params(
-			1000, 1, 1, 1, 1, OldSymmetricContactModel.class, 1
+			10000, 1, 1, 1, 1, OldSymmetricContactModel.class, 1
 	);
 
 	@Override
@@ -46,6 +47,8 @@ public class Percolation implements BatchRun<Percolation.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+		episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.none);
+
 		episimConfig.setCalibrationParameter(params.theta);
 
 		return config;
@@ -54,7 +57,7 @@ public class Percolation implements BatchRun<Percolation.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(1500)
+		@GenerateSeeds(25000)
 		public long seed;
 
 		/**
@@ -63,6 +66,19 @@ public class Percolation implements BatchRun<Percolation.Params> {
 		@Parameter({1e-5, 1.5e-5, 2e-5, 2.5e-5})
 		public double theta;
 
-
 	}
+
+	public static void main(String[] args) {
+		String[] args2 = {
+				RunParallel.OPTION_SETUP, Percolation.class.getName(),
+				RunParallel.OPTION_PARAMS, Percolation.Params.class.getName(),
+				RunParallel.OPTION_TASKS, Integer.toString(2),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(10000),
+				"--no-reuse",
+				"--output=perc-syn"
+		};
+
+		RunParallel.main(args2);
+	}
+
 }

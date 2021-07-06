@@ -22,12 +22,8 @@ package org.matsim.run.modules;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
-import org.matsim.core.controler.ControlerUtils;
-import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
@@ -35,14 +31,13 @@ import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -154,8 +149,13 @@ public final class SnzDresdenScenario extends AbstractModule {
 
 
 		// Policy and restrictions
+		CreateRestrictionsFromCSV restrictions = new CreateRestrictionsFromCSV(episimConfig);
+		restrictions.setInput(INPUT.resolve("DresdenSnzData_daily_until20210531.csv"));
 
-		FixedPolicy.ConfigBuilder policy = FixedPolicy.config();
+		// Using the same base policy as berlin
+		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		builder.setActivityParticipation(restrictions);
+		FixedPolicy.ConfigBuilder policy = builder.buildFixed();
 
 		episimConfig.setPolicy(FixedPolicy.class, policy.build());
 		config.controler().setOutputDirectory("output-snz-dresden");

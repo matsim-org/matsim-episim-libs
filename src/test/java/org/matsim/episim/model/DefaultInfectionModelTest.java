@@ -13,7 +13,7 @@ public class DefaultInfectionModelTest {
 	public void getVaccinationEffectiveness() {
 
 		VaccinationConfigGroup vacConfig = new VaccinationConfigGroup();
-		vacConfig.setEffectiveness(0.9);
+		vacConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
 
 		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
 		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);
@@ -26,7 +26,7 @@ public class DefaultInfectionModelTest {
 
 		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
 
-		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 1)

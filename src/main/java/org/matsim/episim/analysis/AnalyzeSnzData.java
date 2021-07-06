@@ -36,24 +36,27 @@ import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 
 /**
- * @author: rewert
- * This class reads the SENOZON data for every day. The data is filtered by the
- * zip codes of every area. The base line is always the first day. The results
- * for every day are the percentile of the changes compared to the base.
+ * @author: rewert This class reads the SENOZON data for every day. The data is
+ *          filtered by the zip codes of every area. The base line is always the
+ *          first day. The results for every day are the percentile of the
+ *          changes compared to the base.
  */
-@CommandLine.Command(
-		name = "analyzeSnzData",
-		description = "Aggregate snz mobility data."
-)
+@CommandLine.Command(name = "analyzeSnzData", description = "Aggregate snz mobility data.")
 class AnalyzeSnzData implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
-	private enum AnalyseOptions {
-		Germany, Berlin, BerlinDistricts, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test, Bundeslaender, Tuebingen
+	private enum AnalyseAreas {
+		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test,
+		Bundeslaender, Tuebingen, Landkreise, AnyArea
 	};
+
+	private enum AnalyseOptions {
+		onlyWeekdays, weeklyResultsOfAllDays, onlyWeekends, dailyResults
+	};
+
 	private enum BaseDaysForComparison {
-		March2020, September2020, days2018
+		March2020, Sebtember2020, days2018
 	};
 
 	@CommandLine.Parameters(defaultValue = "../shared-svn/projects/episim/data/Bewegungsdaten/")
@@ -69,24 +72,27 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseOptions selectedArea = AnalyseOptions.Berlin;
+		AnalyseAreas selectedArea = AnalyseAreas.Berlin;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
+		AnalyseOptions selectedOutputOptions = AnalyseOptions.onlyWeekends;
+		String anyArea = "Berlin";
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
-		boolean getPercentageResults = true;
+		boolean getPercentageResults = false;
 
-		writeData(selectedArea, getPercentageResults, selectedBase);
+		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private void writeData(AnalyseOptions selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase)
-			throws IOException {
+	private void writeData(AnalyseAreas selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase,
+			String anyArea, AnalyseOptions selectedOutputOptions) throws IOException {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
 		List<String> baseDays = Arrays.asList();
+		String outputOption = null;
 
 		switch (selectedBase) {
 		case March2020:
@@ -97,7 +103,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			String sundayBase2018 = "20180114";
 			baseDays = Arrays.asList(weekdayBase2018, saturdayBase2018, sundayBase2018);
 			break;
-		case September2020:
+		case Sebtember2020:
 			String weekdayBase2020 = "20200911";
 			String saturdayBase2020 = "20200912";
 			String sundayBase2020 = "20200913";
@@ -106,6 +112,12 @@ class AnalyzeSnzData implements Callable<Integer> {
 		}
 
 		switch (selectedArea) {
+		case AnyArea:
+			HashMap<String, IntSet> zipCodesAnyArea = snz.findZipCodesForAnyArea(anyArea);
+			snz.writeDataForCertainArea(
+					outputFolder.resolve(zipCodesAnyArea.keySet().iterator().next() + "SnzData_daily_until.csv"),
+					zipCodesAnyArea.values().iterator().next(), getPercentageResults, baseDays);
+			break;
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
@@ -122,7 +134,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin,
 					getPercentageResults, baseDays);
 			break;
-		case BerlinDistricts:
+		case BerlinDistrcits:
 			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();
 			berlinDistricts.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119,
 					10785, 13359, 10787, 10557, 13353, 10555, 13351, 13349, 10551, 13347)));
@@ -212,7 +224,44 @@ class AnalyzeSnzData implements Callable<Integer> {
 			break;
 		case Bundeslaender:
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
-			snz.writeBundeslandDataForPublic(outputFolder);
+			switch (selectedOutputOptions) {
+			case weeklyResultsOfAllDays:
+				outputOption = "weekly";
+				break;
+			case dailyResults:
+				outputOption = "daily";
+				break;
+			case onlyWeekdays:
+				outputOption = "weekdays";
+				break;
+			case onlyWeekends:
+				outputOption = "weekends";
+				break;
+			default:
+				break;
+			}
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption);
+			break;
+		case Landkreise:
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
+
+			switch (selectedOutputOptions) {
+			case weeklyResultsOfAllDays:
+				outputOption = "weekly";
+				break;
+			case dailyResults:
+				outputOption = "daily";
+				break;
+			case onlyWeekdays:
+				outputOption = "weekdays";
+				break;
+			case onlyWeekends:
+				outputOption = "weekends";
+				break;
+			default:
+				break;
+			}
+			snz.writeLandkreisDataForPublic(outputFolder, outputOption);
 			break;
 		default:
 			break;

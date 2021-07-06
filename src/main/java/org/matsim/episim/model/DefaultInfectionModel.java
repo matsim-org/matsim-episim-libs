@@ -83,14 +83,14 @@ public final class DefaultInfectionModel implements InfectionModel {
 		}
 
 		// full effect
-		if (daysVaccinated >= config.getDaysBeforeFullEffect())
-			return 1 - config.getEffectiveness() * Math.max(min, vaccineEffectiveness);
+		if (daysVaccinated >= config.getParams(target.getVaccinationType()).getDaysBeforeFullEffect())
+			return 1 - config.getParams(target.getVaccinationType()).getEffectiveness() * Math.max(min, vaccineEffectiveness);
 
 		// slightly reduced but nearly full effect after 3 days
 		else if (daysVaccinated >= 3) {
-			return 1 - config.getEffectiveness() * Math.max(min, 0.94 * vaccineEffectiveness);
+			return 1 - config.getParams(target.getVaccinationType()).getEffectiveness() * Math.max(min, 0.94 * vaccineEffectiveness);
 		}
 
-		return 1 - min * config.getEffectiveness();
+		return 1 - min * config.getParams(target.getVaccinationType()).getEffectiveness();
 	}
 }

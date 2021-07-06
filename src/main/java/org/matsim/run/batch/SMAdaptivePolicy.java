@@ -7,6 +7,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
@@ -57,8 +58,8 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 //		episimConfig.setSnapshotInterval(30);
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(28);
+		vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 		// 4/3 because model is bigger than just Berlin
 		int base = (int) (3000 * 4./3.);

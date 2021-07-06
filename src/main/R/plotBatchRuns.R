@@ -29,39 +29,75 @@ captions <- c("opening5816")
 output <- "~/Desktop/strain_paper_plots/2021-04-30-opening/"
 plotBatch(runs, batch, output, captions, "2020-03-01", "2021-05-31", 10, 3.5)
 
+#fig 2
 batch <- "https://covid-sim.info/2021-05-01/strains"
-runs <- c("2", "12", "22")
-#runs <- c("2", "22")
-captions <- c("_1.2", "_1.8", "_2.4")
-#captions <- c("_1.2", "_2.4")
+# runs <- c("2", "12", "22")
+runs <- c("2", "22")
+# captions <- c("_1.2", "_1.8", "_2.4")
+captions <- c("_1.2", "_2.4")
 output <- "~/Desktop/strain_paper_plots/2021-05-01-strains-b117theta/"
-plotBatch(runs, batch, output, captions, "2020-12-01", "2021-08-31", 5, 3.5)
+plotBatch(runs, batch, output, captions, "2020-12-01", "2021-08-31", 10, 5)
 
+#fig 3
 batch <- "https://covid-sim.info/2021-05-01/strains"
-runs <- c("10", "12", "14")
-captions <- c("47%", "67%", "87%")
+#runs <- c("10", "12", "14")
+runs <- c("10", "14")
+#captions <- c("47%", "67%", "87%")
+captions <- c("47%", "87%")
 output <- "~/Desktop/strain_paper_plots/2021-05-01-strains-activityLevel/"
-plotBatch(runs, batch, output, captions, "2020-12-01", "2021-08-31", 10, 3.5)
+plotBatch(runs, batch, output, captions, "2020-12-01", "2021-07-31", 10, 5)
 
 #fig 4
-batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
-runs <- c("strainPaper365", "strainPaper380", "strainPaper385", "strainPaper390")
-captions <- c("365", "380", "385", "390")
-output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-b117/"
+# batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
+# runs <- c("strainPaper365", "strainPaper380", "strainPaper385", "strainPaper390")
+# captions <- c("365", "380", "385", "390")
+# output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-b117/"
+# plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
+
+batch <- "https://covid-sim.info/2021-05-27/adaptivePolicy"
+runs <- c("strainPaper1203", "strainPaper1275", "strainPaper1251", "strainPaper1227")
+captions <- c("1203", "1275", "1251", "1227")
+output <- "~/Desktop/strain_paper_plots/2021-05-27-adaptivePolicy-b117/"
 plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
 
 #fig 5
-batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
-runs <- c("strainPaper504", "strainPaper503", "strainPaper502", "strainPaper501")
-captions <- c("504", "503", "502", "501")
-output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-b1351/"
+# batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
+# runs <- c("strainPaper504", "strainPaper503", "strainPaper502", "strainPaper501")
+# captions <- c("504", "503", "502", "501")
+# output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-b1351/"
+# plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
+
+batch <- "https://covid-sim.info/2021-05-27/adaptivePolicy"
+runs <- c("strainPaper2123", "strainPaper2119", "strainPaper2115")
+captions <- c("2123", "2119", "2115")
+output <- "~/Desktop/strain_paper_plots/2021-05-27-adaptivePolicy-b1351-1.8/"
 plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
 
 #fig 6
-batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
-runs <- c("strainPaper503", "strainPaper518", "strainPaper533")
-captions <- c("503", "518", "533")
-output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-revaccination/"
+batch <- "https://covid-sim.info/2021-05-27/adaptivePolicy"
+runs <- c("strainPaper1835", "strainPaper1831", "strainPaper1827")
+captions <- c("1835", "1831", "1827")
+output <- "~/Desktop/strain_paper_plots/2021-05-27-adaptivePolicy-b1351-1.5/"
+plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
+
+#fig 7
+# batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
+# runs <- c("strainPaper503", "strainPaper2200", "strainPaper533")
+# captions <- c("503", "518", "533")
+# output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-revaccination/"
+# plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
+
+batch <- "https://covid-sim.info/2021-05-27/adaptivePolicy"
+runs <- c("strainPaper2127", "strainPaper2199", "strainPaper2271")
+captions <- c("2127", "2199", "2271")
+output <- "~/Desktop/strain_paper_plots/2021-05-27-adaptivePolicy-revaccination/"
+plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
+
+#fig 8
+batch <- "https://covid-sim.info/2021-05-27/adaptivePolicy"
+runs <- c("strainPaper2128", "strainPaper2200", "strainPaper2272")
+captions <- c("2128", "2200", "2272")
+output <- "~/Desktop/strain_paper_plots/2021-05-27-adaptivePolicy-revaccination-seasonality/"
 plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
 
 
@@ -70,6 +106,18 @@ plotBatch(runs, batch, output, captions, "2020-12-01", "2022-05-31", 6, 3.5)
 
 
 plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
+  
+  # batch <- "https://covid-sim.info/2021-05-01/adaptivePolicy"
+  # runs <- c("strainPaper365", "strainPaper380", "strainPaper385", "strainPaper390")
+  # captions <- c("365", "380", "385", "390")
+  # output <- "~/Desktop/strain_paper_plots/2021-05-01-adaptivePolicy-b117/"
+  # dateMin <- "2020-12-01"
+  # dateMax <- "2022-05-31"
+  # w <- 6
+  # h <- 3.5
+  
+  d <- 300
+  
   path2Zip <- list()
   infections <- list()
   vaccinations <- list()
@@ -106,15 +154,23 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       summarize( newShowingSymptoms=mean(newShowingSymptoms), date=mean(date))
     
     strains[[i]] <- strains[[i]] %>%
-      mutate(SARS_CoV_2share = SARS_CoV_2 / (B117 + B1351 + SARS_CoV_2)) %>%
-      mutate(B117share = B117 / (B117 + B1351 + SARS_CoV_2)) %>%
-      mutate(B1351share = B1351 / (B117 + B1351 + SARS_CoV_2)) %>%
+      mutate(A = B117) %>%
+      mutate(B = B1351) %>%
+      select(-c(B117)) %>%
+      select(-c(B1351)) %>%
       mutate(date = as.Date(strptime(date, "%Y-%m-%d"))) %>%
-      select(-c(day)) %>%
-      pivot_longer(!date, names_to = "strain", values_to = "value") %>%
       mutate( week = paste0(isoweek(date), "-", isoyear(date))) %>%
-      group_by( week, strain ) %>%
-      summarize( value=mean(value), date=mean(date))
+      group_by( week ) %>%
+      summarize( date=mean(date), SARS_CoV_2=mean(SARS_CoV_2), A=mean(A), B=mean(B)) %>%
+      mutate(SARS_CoV_2share = SARS_CoV_2 / (A + B + SARS_CoV_2)) %>%
+      # mutate(B117share = B117 / (B117 + B1351 + SARS_CoV_2)) %>%
+      # mutate(B1351share = B1351 / (B117 + B1351 + SARS_CoV_2)) %>%
+      mutate(A_share = A / (A + B + SARS_CoV_2)) %>%
+      mutate(B_share = B / (A + B + SARS_CoV_2)) %>%
+      select(-c(week)) %>%
+      pivot_longer(!date, names_to = "strain", values_to = "value")
+      # group_by( date, strain ) %>%
+      # summarize( value=mean(value))
     
     rValues[[i]] <- rValues[[i]] %>%
       mutate(date = as.Date(strptime(date, "%Y-%m-%d"))) %>%
@@ -155,12 +211,12 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       scale_color_manual(limits=c("model", "positive tests"), values = c("blue","red")) +
       guides(colour = guide_legend(override.aes = list(color = c("blue", "red"))))
     
-    ggsave(paste0(output, "infections_", runs[[i]], ".png"), width = w, height = h, dpi = 300, units = "in")
+    ggsave(paste0(output, "infections_", runs[[i]], ".png"), width = w, height = h, dpi = d, units = "in")
     
     
     #strains
     strainPlot <- strains[[i]] %>%
-      filter(strain == "SARS_CoV_2" | strain == "B117" | strain == "B1351") %>%
+      filter(strain == "SARS_CoV_2" | strain == "A" | strain == "B") %>%
       ggplot(mapping=aes(x = date)) +
       labs(
         caption=paste0("Taken from: ", batch, ". Run Id: ", runs[[i]]),
@@ -172,10 +228,10 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       theme(legend.position = "bottom", legend.title = element_blank()) +
       scale_y_log10()
     
-    ggsave(paste0(output, "strain_", runs[[i]], ".png"), width = w, height = h, dpi = 300, units = "in")
+    ggsave(paste0(output, "strain_", runs[[i]], ".png"), width = w, height = h, dpi = d, units = "in")
     
     strainsShare <- strainPlotShare <- strains[[i]] %>%
-      filter(strain == "SARS_CoV_2share" | strain == "B117share" | strain == "B1351share")
+      filter(strain == "SARS_CoV_2share" | strain == "A_share" | strain == "B_share")
     
     strainPlotShare <- ggplot() +
       labs(
@@ -190,7 +246,7 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       theme(legend.position = "bottom", legend.title = element_blank()) +
       scale_y_continuous(labels = scales::percent_format())
     
-    ggsave(paste0(output, "strainShare_", runs[[i]], ".png"), width = w, height = h, dpi = 300, units = "in")
+    ggsave(paste0(output, "strainShare_", runs[[i]], ".png"), width = w, height = h, dpi = d, units = "in")
     
     strainPlots <- grid.arrange(strainPlot, strainPlotShare, nrow = 2)
     
@@ -204,7 +260,7 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       ylim(0, 1) +
       theme(legend.position = "bottom")
     
-    ggsave(paste0(output, "rValues_", runs[[i]], ".png"), width = w, height = h, dpi = 300, units = "in")
+    ggsave(paste0(output, "rValues_", runs[[i]], ".png"), width = w, height = h, dpi = d, units = "in")
     
   }
   
@@ -218,9 +274,9 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       select(-c(date))
     infectionsAllRuns <- merge(infectionsAllRuns, toBeMerged, by ="week", suffixes = c("", captions[[i]]))
   
-    toBeMerged <- strains[[i]] %>%
-      select(-c(date))
-    strainsAllRuns <- merge(strainsAllRuns, toBeMerged, by =c("week","strain"), suffixes = c("", captions[[i]]))
+    toBeMerged <- strains[[i]]
+      #select(-c(date))
+    strainsAllRuns <- merge(strainsAllRuns, toBeMerged, by =c("date","strain"), suffixes = c("", captions[[i]]))
   } 
   
   infectionsAllRuns <- infectionsAllRuns %>%
@@ -240,14 +296,14 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
     theme(legend.position = "bottom") +
     scale_y_log10()
   
-  ggsave(paste0(output, "infections_all", ".png"), width = w, height = h, dpi = 300, units = "in")
+  ggsave(paste0(output, "infections_all", ".png"), width = w, height = h, dpi = d, units = "in")
   
   strainsAllRuns <- strainsAllRuns %>%
-    select(-c(week, value)) %>%
+    select(-c(value)) %>%
     pivot_longer(cols=starts_with("va"),names_to = "run", values_to = "value")
   
   strainsAllRunsShare <- strainsAllRuns %>%
-    filter(strain == "SARS_CoV_2share" | strain == "B117share" | strain == "B1351share")
+    filter(strain == "SARS_CoV_2share" | strain == "A_share" | strain == "B_share")
     
   ggplot() +
     labs(
@@ -255,16 +311,16 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
       x="date", y="infections share") +
     geom_point(data = strainsAllRunsShare, mapping=aes(x = date, y = value, colour=run, shape=strain), size = 2) +
     geom_line(data = strainsAllRunsShare, mapping=aes(x = date, y = value, colour=run, shape=strain)) +
-    geom_line(mapping=aes(x = b117Date, y = b117Share)) +
+    #geom_line(mapping=aes(x = b117Date, y = b117Share)) +
     xlim(c(as.Date(dateMin), as.Date(dateMax))) +
     ylim(0, 1) +
     theme(legend.position = "bottom") +
     scale_y_continuous(labels = scales::percent_format())
   
-  ggsave(paste0(output, "strainsShare_all", ".png"), width = w, height = h, dpi = 300, units = "in")
+  ggsave(paste0(output, "strainsShare_all", ".png"), width = w, height = h, dpi = d, units = "in")
   
   strainsAllRuns %>%
-    filter(strain == "SARS_CoV_2" | strain == "B117" | strain == "B1351") %>%
+    filter(strain == "SARS_CoV_2" | strain == "A_share" | strain == "B_share") %>%
     ggplot(mapping=aes(x = date, y = value)) +
     labs(
       caption=paste0("Taken from: ", batch),
@@ -275,7 +331,7 @@ plotBatch <- function(runs, batch, output, captions, dateMin, dateMax, w, h) {
     theme(legend.position = "bottom") +
     scale_y_log10()
   
-  ggsave(paste0(output, "strains_all", ".png"), width = w, height = h, dpi = 300, units = "in")
+  ggsave(paste0(output, "strains_all", ".png"), width = w, height = h, dpi = d, units = "in")
 }
 
 

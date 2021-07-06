@@ -9,6 +9,7 @@ import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.BatchRun.Parameter;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
@@ -132,16 +133,23 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayB117.put(LocalDate.parse(params.b117date), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		double vaccineEffectiveness = vaccinationConfig.getParams(VaccinationType.generic).getEffectiveness();
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setReVaccineEffectiveness(1.0);
+virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
+
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.b117inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setReVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
+
+
 
 
 		if (!params.b1351inf.equals("no")) {
@@ -150,20 +158,17 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 			infPerDayB1351.put(LocalDate.parse(params.b1351date), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.B1351, infPerDayB1351);
 
-			if (params.b1351inf.equals("1.0"))
-				virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(1.0);
-			else
-				virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(params.b117inf);
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.b1351VaccinationEffectiveness);
+				virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(Double.parseDouble(params.b1351inf));
+				virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.b1351VaccinationEffectiveness / vaccineEffectiveness);
+
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setReVaccineEffectiveness(1.0);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setFactorSeriouslySickVaccinated(0.05 / (1- params.b1351VaccinationEffectiveness));
 		}
 
 		if (!params.vaccinations.equals("no")) {
-			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-			vaccinationConfig.setEffectiveness(0.9);
-			vaccinationConfig.setDaysBeforeFullEffect(28);
-
+			vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+			vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
 			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
@@ -177,12 +182,11 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 
 			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
 
-			if(params.vaccinations.equals("revaccination")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) ((0.248 - 0.119) * 4_831_120 / 29));
-			if(params.vaccinations.equals("quickRevaccination")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) ((0.248 - 0.119) * 2 * 4_831_120 / 29));
-
+			if(params.vaccinations.equals("revaccination")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) ((0.248 - 0.119) * 2 * 4_831_120 / 29));
+			if(params.vaccinations.equals("quickRevaccination")) reVaccinations.put(LocalDate.parse("2021-08-01"), (int) ((0.248 - 0.119) * 4 * 4_831_120 / 29));
 			vaccinationConfig.setReVaccinationCapacity_pers_per_day(reVaccinations);
 
-			vaccinationConfig.setFactorSeriouslySick(0.5);
+			vaccinationConfig.getParams(VaccinationType.generic).setFactorSeriouslySick(0.5);
 
 			Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
@@ -204,13 +208,14 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		@StringParameter({"2020-12-15"})
 		String b117date;
 
-		@Parameter({1.2, 1.5, 1.8, 2.1, 2.4})
+//		@Parameter({1.2, 1.5, 1.8, 2.1, 2.4})
+		@Parameter({1.5, 1.8, 2.1})
 		double b117inf;
 
 		@StringParameter({"2021-04-01"})
 		String b1351date;
 
-		@StringParameter({"no", "1.0", "b117"})
+		@StringParameter({"no", "1.0", "1.5", "1.8"})
 		String b1351inf;
 
 		@StringParameter({"no", "noRevaccination", "revaccination", "quickRevaccination"})
@@ -219,7 +224,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		@Parameter({1.0, 0.8, 0.6})
 		double vaccinationCompliance;
 
-		@Parameter({1.0, 0.9, 0.7, 0.5, 0.3, 0.1, 0.0})
+		@Parameter({0.9, 0.7, 0.5, 0.3, 0.1, 0.0})
 		double b1351VaccinationEffectiveness;
 
 //		@Parameter({0.65})
@@ -228,8 +233,8 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 //		@Parameter({0.9})
 //		double openFraction;
 
-//		@Parameter({Integer.MAX_VALUE, 100.})
-		@Parameter({100.})
+		@Parameter({Integer.MAX_VALUE, 100.})
+//		@Parameter({100.})
 		double trigger;
 
 		@StringParameter({"no", "yes"})

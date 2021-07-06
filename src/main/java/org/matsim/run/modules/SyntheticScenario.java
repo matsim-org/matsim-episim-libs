@@ -86,7 +86,7 @@ public class SyntheticScenario extends AbstractModule {
 	protected void configure() {
 		bind(ContactModel.class).to(params.contactModel).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
-		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 	}
 
 	@Provides
@@ -195,6 +195,8 @@ public class SyntheticScenario extends AbstractModule {
 		);
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(Integer.MAX_VALUE);
+
 		// tracing config ...
 
 		return config;

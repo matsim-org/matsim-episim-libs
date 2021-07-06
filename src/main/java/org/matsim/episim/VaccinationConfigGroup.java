@@ -2,9 +2,13 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
 
 import java.time.LocalDate;
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -18,29 +22,13 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final Splitter.MapSplitter SPLITTER = Splitter.on(";").withKeyValueSeparator("=");
 	private static final Joiner.MapJoiner JOINER = Joiner.on(";").withKeyValueSeparator("=");
 
-	private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
-	private static final String EFFECTIVENESS = "effectiveness";
 	private static final String COMPLIANCE = "compliance";
 	private static final String CAPACITY = "vaccinationCapacity";
 	private static final String RECAPACITY = "reVaccinationCapacity";
-	private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 
 	private static final String GROUPNAME = "episimVaccination";
 
-	/**
-	 * Number of days until vaccination goes into full effect.
-	 */
-	private int daysBeforeFullEffect = 21;
 
-	/**
-	 * Effectiveness, i.e. how much susceptibility is reduced.
-	 */
-	private double effectiveness = 0.96;
-
-	/**
-	 * Factor for probability if person is vaccinated.
-	 */
-	private double factorSeriouslySick = 1.0;
 
 	/**
 	 * Amount of vaccinations available per day.
@@ -58,34 +46,63 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private final NavigableMap<Integer, Double> compliance = new TreeMap<>(Map.of(-1, 1.0));
 
+	/**
+	 * Holds all specific vaccination params.
+	 */
+	private final Map<VaccinationType, VaccinationParams> params = new EnumMap<>(VaccinationType.class);
 
 	/**
 	 * Default constructor.
 	 */
 	public VaccinationConfigGroup() {
 		super(GROUPNAME);
+
+		// add default params
+		getOrAddParams(VaccinationType.generic);
 	}
 
-	@StringGetter(DAYS_BEFORE_FULL_EFFECT)
-	public int getDaysBeforeFullEffect() {
-		return daysBeforeFullEffect;
+	/**
+	 * Get config parameter for a specific vaccination type.
+	 */
+	public VaccinationParams getParams(VaccinationType type) {
+		if (!params.containsKey(type))
+			throw new IllegalStateException("Vaccination type " + type + " is not configured.");
+
+		return params.get(type);
 	}
 
-	@StringSetter(DAYS_BEFORE_FULL_EFFECT)
-	public void setDaysBeforeFullEffect(int daysBeforeFullEffect) {
-		this.daysBeforeFullEffect = daysBeforeFullEffect;
+	/**
+	 * Get an existing or add new parameter set.
+	 */
+	public VaccinationParams getOrAddParams(VaccinationType type) {
+		if (!params.containsKey(type)) {
+			VaccinationParams p = new VaccinationParams();
+			p.type = type;
+			addParameterSet(p);
+			return p;
+		}
+
+		return params.get(type);
 	}
 
-	@StringGetter(EFFECTIVENESS)
-	public double getEffectiveness() {
-		return effectiveness;
+	@Override
+	public ConfigGroup createParameterSet(String type) {
+		if (VirusStrainConfigGroup.StrainParams.SET_TYPE.equals(type)) {
+			return new VaccinationParams();
+		}
+		throw new IllegalArgumentException("Unknown type" + type);
 	}
 
-	@StringSetter(EFFECTIVENESS)
-	public void setEffectiveness(double effectiveness) {
-		this.effectiveness = effectiveness;
-	}
+	@Override
+	public void addParameterSet(final ConfigGroup set) {
+		if (VaccinationParams.SET_TYPE.equals(set.getName())) {
+			VaccinationParams p = (VaccinationParams) set;
+			params.put(p.type, p);
+			super.addParameterSet(set);
 
+		} else
+			throw new IllegalStateException("Unknown set type " + set.getName());
+	}
 
 	/**
 	 * Set vaccination compliance by age.
@@ -173,13 +190,69 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(reVaccinationCapacity);
 	}
 
-	@StringGetter(FACTOR_SERIOUSLY_SICK)
-	public double getFactorSeriouslySick() {
-		return factorSeriouslySick;
+
+	/**
+	 * Holds strain specific options.
+	 */
+	public static final class VaccinationParams extends ReflectiveConfigGroup {
+
+		static final String SET_TYPE = "vaccinationParams";
+
+		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
+		private static final String EFFECTIVENESS = "effectiveness";
+		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
+
+		private VaccinationType type;
+
+		/**
+		 * Number of days until vaccination goes into full effect.
+		 */
+		private int daysBeforeFullEffect = 21;
+
+		/**
+		 * Effectiveness, i.e. how much susceptibility is reduced.
+		 */
+		private double effectiveness = 0.96;
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+		private double factorSeriouslySick = 1.0;
+
+		VaccinationParams() {
+			super(SET_TYPE);
+		}
+
+		@StringGetter(FACTOR_SERIOUSLY_SICK)
+		public double getFactorSeriouslySick() {
+			return factorSeriouslySick;
+		}
+
+		@StringSetter(FACTOR_SERIOUSLY_SICK)
+		public void setFactorSeriouslySick(double factorSeriouslySick) {
+			this.factorSeriouslySick = factorSeriouslySick;
+		}
+
+		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
+		public int getDaysBeforeFullEffect() {
+			return daysBeforeFullEffect;
+		}
+
+		@StringSetter(DAYS_BEFORE_FULL_EFFECT)
+		public void setDaysBeforeFullEffect(int daysBeforeFullEffect) {
+			this.daysBeforeFullEffect = daysBeforeFullEffect;
+		}
+
+		@StringGetter(EFFECTIVENESS)
+		public double getEffectiveness() {
+			return effectiveness;
+		}
+
+		@StringSetter(EFFECTIVENESS)
+		public void setEffectiveness(double effectiveness) {
+			this.effectiveness = effectiveness;
+		}
+
 	}
 
-	@StringSetter(FACTOR_SERIOUSLY_SICK)
-	public void setFactorSeriouslySick(double factorSeriouslySick) {
-		this.factorSeriouslySick = factorSeriouslySick;
-	}
 }

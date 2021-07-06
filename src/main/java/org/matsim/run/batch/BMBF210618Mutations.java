@@ -28,9 +28,9 @@ import java.util.Map;
 
 
 /**
- * Opening strategies
+ * Mutations
  */
-public class BMBF210521 implements BatchRun<BMBF210521.Params> {
+public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
@@ -44,7 +44,7 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 
 //	@Override
 //	public int getOffset() {
-//		return 10000;
+//		return 20000;
 //	}
 
 	@Override
@@ -58,8 +58,8 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 				.createSnzBerlinProductionScenario();
 		Config config = module.config();
 
+//		config.global().setRandomSeed(params.seed);
 		config.global().setRandomSeed(3831662765844904176L);
-		config.global().setRandomSeed(params.seed);
 
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -81,38 +81,29 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-06"), 0.5);
+		curfewCompliance.put(LocalDate.parse("2021-05-16"), 0.0);
+		episimConfig.setCurfewCompliance(curfewCompliance);
 
-		LocalDate date1 = LocalDate.parse("2021-05-22");
-		LocalDate date2 = date1.plusWeeks(3);
-		LocalDate date3 = date2.plusWeeks(3);
 
-		builder.restrict(date1, 0.5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-		builder.restrict(date2, 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
+		LocalDate date1 = LocalDate.parse("2021-06-21");
+
+		builder.restrict(date1, 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		//Sommerferien
 		builder.restrict("2021-08-07", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
-		builder.restrict(date1, 0.75, "shop_daily", "shop_other", "errands");
-		builder.restrict(date2, 1.0, "shop_daily", "shop_other", "errands");
+		builder.restrict(date1, 1.0, "shop_daily", "shop_other", "errands");
 
-		builder.restrict(date1, 0.9, "work", "business", "leisure", "visit");
-		builder.restrict(date2, 1.0, "work", "business", "leisure", "visit");
+		builder.restrict(date1, 1.0, "work", "business", "leisure", "visit");
 
-		curfewCompliance.put(date1, 0.0);
-
-		builder.restrict(date2, 0.5, "educ_higher");
-
-		builder.restrict("2021-07-18", 0.2, "educ_higher");
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
 
 
-		episimConfig.setCurfewCompliance(curfewCompliance);
-
 		if(params.masks.equals("no")) {
-			builder.restrict(date3, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
-			builder.restrict(date3, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
+			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
 		}
 
-		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", 0.83 * (double) e.get("fraction")), "work", "business");
+		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 
 		builder.restrict("2021-06-24", 0.83, "work", "business");
 		builder.restrict("2021-08-06", 1.0, "work", "business");
@@ -138,27 +129,32 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
-		if (params.b1351inf > 0.0) {
+		if (params.mutBinf > 0.0) {
 			Map<LocalDate, Integer> infPerDayB1351 = new HashMap<>();
 			infPerDayB1351.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayB1351.put(LocalDate.parse(params.b1351date), 1);
+			infPerDayB1351.put(LocalDate.parse(params.mutBDate), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.B1351, infPerDayB1351);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(params.b1351inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.b1351VaccinationEffectiveness / vaccineEffectiveness);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setInfectiousness(params.mutBinf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setReVaccineEffectiveness(1.0);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setFactorSeriouslySickVaccinated(0.05 / (1- params.b1351VaccinationEffectiveness));
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.B1351).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
 
 		}
 
-//		vaccinationConfig.setFactorSeriouslySick(0.5);
-
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
-		for(int i = 0; i<12; i++) vaccinationCompliance.put(i, 0.);
-		double vaccinationCompliance1518 = 0.0;
-		if (params.vaccinate1216.equals("yes")) vaccinationCompliance1518 = params.vaccinationCompliance;
-		for(int i = 12; i<16; i++) vaccinationCompliance.put(i, vaccinationCompliance1518);
-		for(int i = 16; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		if (params.vaccinationAgeGroup.equals("6m")) {
+			vaccinationCompliance.put(0, params.vaccinationCompliance * 0.5);
+			for(int i = 1; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		}
+		if (params.vaccinationAgeGroup.equals("12y")) {
+			for(int i = 0; i<11; i++) vaccinationCompliance.put(i, 0.0);
+			for(int i = 12; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		}
+		if (params.vaccinationAgeGroup.equals("16y")) {
+			for(int i = 0; i<15; i++) vaccinationCompliance.put(i, 0.0);
+			for(int i = 16; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		}
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
@@ -210,9 +206,9 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 			eduTests.put(testingDate.plusDays(i), eduRate1 * i / 31.);
 		}
 		if (params.testing.equals("no")) {
-			leisureTests.put(date3, 0.0);
-			workTests.put(date3, 0.0);
-			eduTests.put(date3, 0.0);
+			leisureTests.put(date1, 0.0);
+			workTests.put(date1, 0.0);
+			eduTests.put(date1, 0.0);
 		}
 
 		testingConfigGroup.setTestingRatePerActivityAndDate((Map.of(
@@ -236,8 +232,8 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(5)
-		public long seed;
+//		@GenerateSeeds(1)
+//		public long seed;
 
 		@StringParameter({"20-5-5"})
 		String testingRateEduWorkLeisure1;
@@ -253,19 +249,19 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 
 //		@StringParameter({"2021-04-01", "2021-06-01"})
 		@StringParameter({"2021-04-01"})
-		String b1351date;
+		String mutBDate;
 
-		@Parameter({1.0, 1.4, 1.8})
-		double b1351inf;
+		@Parameter({1.0, 1.4, 1.8, 2.5})
+		double mutBinf;
 
 		@Parameter({0.9, 0.8, 0.7, 0.6, 0.5})
-		double b1351VaccinationEffectiveness;
+		double mutBVaccinationEffectiveness;
 
-		@Parameter({0.8, 0.6})
+		@Parameter({0.8})
 		double vaccinationCompliance;
 
-		@StringParameter({"yes", "no"})
-		String vaccinate1216;
+		@StringParameter({"6m", "12y", "16y"})
+		String vaccinationAgeGroup;
 
 		@StringParameter({"no", "2021-08-01", "2021-10-01"})
 		String revaccinationDate;
@@ -273,20 +269,14 @@ public class BMBF210521 implements BatchRun<BMBF210521.Params> {
 		@Parameter({0.01, 0.02})
 		double revaccinationSpeed;
 
-//		@StringParameter({"0-0-0", "20-5-5", "20-10-5"})
-//		String testingRateEduWorkLeisure2;
-//
-//		@StringParameter({"0-0-0", "20-5-5", "20-10-5"})
-//		String testingRateEduWorkLeisure3;
-
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, BMBF210521.class.getName(),
+				RunParallel.OPTION_SETUP, BMBF210618Mutations.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(280),
 				RunParallel.OPTION_METADATA
 		};
 

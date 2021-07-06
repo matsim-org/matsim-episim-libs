@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
@@ -192,6 +193,11 @@ public final class EpisimPerson implements Attributable {
 	private boolean vaccinable = true;
 
 	/**
+	 * Received vaccination type.
+	 */
+	private VaccinationType vaccinationType = VaccinationType.generic;
+
+	/**
 	 * Lookup age from attributes.
 	 */
 	private static int getAge(Attributes attrs) {
@@ -273,6 +279,8 @@ public final class EpisimPerson implements Attributable {
 
 		// vaccinable, which is not restored from snapshot
 		in.readBoolean();
+
+		vaccinationType = VaccinationType.values()[in.readInt()];
 	}
 
 	/**
@@ -321,6 +329,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeBoolean(traceable);
 		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
+		out.writeInt(vaccinationType.ordinal());
 	}
 
 	public Id<Person> getPersonId() {
@@ -401,13 +410,18 @@ public final class EpisimPerson implements Attributable {
 		return vaccinationStatus;
 	}
 
+	public VaccinationType getVaccinationType() {
+		return vaccinationType;
+	}
+
 	public VaccinationStatus getReVaccinationStatus() {
 		return reVaccinationStatus;
 	}
 
-	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
+	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
+		this.vaccinationType = type;
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 	}
