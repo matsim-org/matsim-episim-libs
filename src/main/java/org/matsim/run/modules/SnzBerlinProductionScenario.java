@@ -64,7 +64,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 	public static class Builder {
 		private int importOffset = 0;
-		private int sample = 25;
+		private int sample = 1;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
 		private Restrictions restrictions = Restrictions.yes;
 		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
@@ -297,8 +297,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25 && this.sample != 100)
-			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		if (this.sample != 25 && this.sample != 100)
+//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 

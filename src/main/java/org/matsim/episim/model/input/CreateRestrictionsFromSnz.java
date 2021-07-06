@@ -240,7 +240,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 					baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/Vergelich2017/");
 				else if (baseDays.iterator().next().contains("2020"))
 					baseFile = Paths.get("../shared-svn/projects/episim/data/Bewegungsdaten/");
-				
+
 				log.info("Setting weekday base from: " + baseFile);
 				for (File folder : Objects.requireNonNull(baseFile.toFile().listFiles())) {
 					if (folder.isDirectory()) {
@@ -313,7 +313,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 			if (!getPercentageResults)
 				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_duration"));
 			else {
-				if (baseDays.isEmpty()) 
+				if (baseDays.isEmpty())
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString));
 				else if (baseDays.iterator().next().contains("2018"))
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_base2018"));
@@ -457,7 +457,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Rounds the number 2 places after the comma
-	 * 
+	 *
 	 */
 	static double round2Decimals(double number) {
 		return Math.round(number * 100) * 0.01;

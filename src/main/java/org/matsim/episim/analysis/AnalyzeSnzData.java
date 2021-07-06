@@ -87,7 +87,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
 		List<String> baseDays = Arrays.asList();
-		
+
 		switch (selectedBase) {
 		case March2020:
 			break;
@@ -116,6 +116,9 @@ class AnalyzeSnzData implements Callable<Integer> {
 			IntSet zipCodesBerlin = new IntOpenHashSet();
 			for (int i = 10115; i <= 14199; i++)
 				zipCodesBerlin.add(i);
+
+//			TODO: remove 12529 Schönefeld
+			zipCodesBerlin.remove(12529);
 			snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin,
 					getPercentageResults, baseDays);
 			break;
