@@ -90,14 +90,11 @@ public class EpisimContainer<T> {
 	private int taskId = 0;
 
 	/**
-	 * This flag is set to true at the beginning of the day,
-	 * if one person that is visiting the container at this day has the
-	 * DiseaseStatus contagious or showingSymptoms. 	
-     * 
-     * See also: EpisimPerson::markFacilities	
+	 * This counts the number of persons in this container
+	 * which have the DiseaseStatus contagious or showingSymptoms. 	
 	 */
- 	private boolean containsContagiousThisDay = false;
-	
+ 	private int contagiousCounter = 0;
+
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
 	}
@@ -163,6 +160,10 @@ public class EpisimContainer<T> {
 		boolean wasRemoved = personsAsList.remove(person);
 		if (!wasRemoved)
 			log.warn( "Person {} was not in container {}", person.getPersonId(), containerId);
+
+		if (person.canInfectOthers()) {
+			contagiousCounter -= 1;
+		}
 	}
 
 	/**
@@ -264,11 +265,17 @@ public class EpisimContainer<T> {
 		return personsAsList;
 	}
 
-	public boolean getContainsContagiousThisDay() {
-		return containsContagiousThisDay;
+
+	public void countContagious(int add) {
+		contagiousCounter += add;
+		assert contagiousCounter >= 0 : "We can not have a negative number of contagious persons"; 
 	}
 
-	public void setContainsContagiousThisDay(boolean newState) {
-		containsContagiousThisDay = newState;
+	public void resetContagiousCounter() {
+		contagiousCounter = 0;
+	}
+	
+	public boolean containsContagious() {
+		return contagiousCounter > 0;
 	}
 }
