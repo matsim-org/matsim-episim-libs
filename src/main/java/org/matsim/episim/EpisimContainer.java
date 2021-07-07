@@ -161,9 +161,8 @@ public class EpisimContainer<T> {
 		if (!wasRemoved)
 			log.warn( "Person {} was not in container {}", person.getPersonId(), containerId);
 
-		if (person.canInfectOthers()) {
+		if (person.infectedButNotSerious())
 			contagiousCounter -= 1;
-		}
 	}
 
 	/**
