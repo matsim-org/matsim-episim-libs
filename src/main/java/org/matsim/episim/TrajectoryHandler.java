@@ -166,7 +166,7 @@ final class TrajectoryHandler {
 
 					contactModel.infectionDynamicsFacility(person, facility, now);
 					facility.removePerson(person, it);
-				} else if (person.canInfectOthers())
+				} else if (person.infectedButNotSerious())
 					facility.countContagious(1);
 			}
 		}
@@ -262,12 +262,12 @@ final class TrajectoryHandler {
 
 		reporting.handleEvent(activityEndEvent);
 
-		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.disable ||
+		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.no ||
 		    episimFacility.containsContagious()) {
 			contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
 		}
 
-		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.enable) {
+		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.yes) {
 			double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
 			episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
 		}
@@ -311,13 +311,13 @@ final class TrajectoryHandler {
 
 		reporting.handleEvent(leavesVehicleEvent);
 
-		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.disable || 
+		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.no || 
 			episimVehicle.containsContagious()) {
 			contactModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
 		}
 
 
-		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.enable) {
+		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.yes) {
 			double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
 
 			episimPerson.addSpentTime("pt", timeSpent);

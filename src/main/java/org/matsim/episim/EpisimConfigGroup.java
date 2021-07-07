@@ -161,8 +161,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
-	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.disable;
-	private ReportTimeUse reportTimeUse = ReportTimeUse.enable;
+	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
+	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
 	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -1003,8 +1003,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
      * methods are only called, if a contagious person is in the container
      */	
 	public enum ContagiousOptimization {
-		enable,
-		disable
+		yes,
+		no
 	}
 	
 	/**
@@ -1012,8 +1012,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
      * can be disabled with
      */
 	public enum ReportTimeUse {
-		enable,
-		disable
+		yes,
+		no
 	}
 
 
