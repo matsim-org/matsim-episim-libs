@@ -9,10 +9,7 @@ import org.matsim.episim.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.SplittableRandom;
+import java.util.*;
 
 /**
  * Testing model that provides some default testing capabilities and helper functions.
@@ -27,12 +24,12 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing capacity left for the day.
 	 */
-	protected int testingCapacity = Integer.MAX_VALUE;
+	protected Map<TestType, Integer> testingCapacity = new EnumMap<>(TestType.class);
 
 	/**
 	 * Testing rates for configured activities for current day.
 	 */
-	private Object2DoubleMap<String> testingRateForActivities;
+	private Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
 
 	/**
 	 * Ids of households that are not compliant.
@@ -52,11 +49,16 @@ public class DefaultTestingModel implements TestingModel {
 
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
-		testingCapacity = EpisimUtils.findValidEntry(testingConfig.getTestingCapacity(), 0, date);
-		if (testingCapacity != Integer.MAX_VALUE)
-			testingCapacity *= episimConfig.getSampleSize();
+		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
 
-		testingRateForActivities = testingConfig.getDailyTestingRateForActivities(date);
+			int testingCapacity = EpisimUtils.findValidEntry(params.getTestingCapacity(), 0, date);
+			if (testingCapacity != Integer.MAX_VALUE)
+				testingCapacity *= episimConfig.getSampleSize();
+
+			this.testingCapacity.put(params.getType(), testingCapacity);
+			this.testingRateForActivities.put(params.getType(), params.getDailyTestingRateForActivities(date));
+
+		}
 	}
 
 	@Override
@@ -101,32 +103,39 @@ public class DefaultTestingModel implements TestingModel {
 		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
 			return;
 
-		if (testingCapacity <= 0)
-			return;
-
 		// person with positive test is not tested twice
 		// test status will be set when released from quarantine
 		if (person.getTestStatus() == EpisimPerson.TestStatus.positive)
 			return;
 
-		// update is run at end of day, the test needs to be for the next day
-		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
+		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
 
-		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && testingConfig.getTestDays().contains(dow)) {
-				testAndQuarantine(person, day, testingConfig.getTestingRate());
-		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
+			TestType type = params.getType();
 
-			double rate = person.matchActivities(dow, testingConfig.getActivities(),
-					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
+			if (testingCapacity.get(type) <= 0)
+				continue;
 
-			testAndQuarantine(person, day, rate);
-		} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && testingConfig.getTestDays().contains(dow)) {
+			// update is run at end of day, the test needs to be for the next day
+			DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
 
-			double rate = person.matchActivities(dow, testingConfig.getActivities(),
-					(act, v) -> Math.max(v, testingRateForActivities.getOrDefault(act, testingConfig.getTestingRate())), 0d);
+			if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && params.getTestDays().contains(dow)) {
+				testAndQuarantine(person, day, params, params.getTestingRate());
+			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
 
-			testAndQuarantine(person, day, rate);
+				double rate = person.matchActivities(dow, testingConfig.getActivities(),
+						(act, v) -> Math.max(v, testingRateForActivities.get(type).getOrDefault(act, params.getTestingRate())), 0d);
+
+				testAndQuarantine(person, day, params, rate);
+			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && params.getTestDays().contains(dow)) {
+
+				double rate = person.matchActivities(dow, testingConfig.getActivities(),
+						(act, v) -> Math.max(v, testingRateForActivities.get(type).getOrDefault(act, params.getTestingRate())), 0d);
+
+				testAndQuarantine(person, day, params, rate);
+			}
+
 		}
+
 	}
 
 	/**
@@ -134,7 +143,7 @@ public class DefaultTestingModel implements TestingModel {
 	 *
 	 * @return true if the person was tested (test result does not matter)
 	 */
-	protected boolean testAndQuarantine(EpisimPerson person, int day, double testingRate) {
+	protected boolean testAndQuarantine(EpisimPerson person, int day, TestingConfigGroup.TestingParams params, double testingRate) {
 
 		if (testingRate == 0)
 			return false;
@@ -147,13 +156,12 @@ public class DefaultTestingModel implements TestingModel {
 
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 		if (status == EpisimPerson.DiseaseStatus.infectedButNotContagious || status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered) {
-			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= testingConfig.getFalsePositiveRate() ? EpisimPerson.TestStatus.negative : EpisimPerson.TestStatus.positive;
+			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= params.getFalsePositiveRate() ? EpisimPerson.TestStatus.negative : EpisimPerson.TestStatus.positive;
 			person.setTestStatus(testStatus, day);
 
-		} else if (status == EpisimPerson.DiseaseStatus.contagious ||
-				status == EpisimPerson.DiseaseStatus.showingSymptoms) {
+		} else if (status == EpisimPerson.DiseaseStatus.contagious || status == EpisimPerson.DiseaseStatus.showingSymptoms) {
 
-			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= testingConfig.getFalseNegativeRate() ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
+			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= params.getFalseNegativeRate() ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
 			person.setTestStatus(testStatus, day);
 		}
 
@@ -162,7 +170,7 @@ public class DefaultTestingModel implements TestingModel {
 			quarantinePerson(person, day);
 		}
 
-		testingCapacity--;
+		testingCapacity.merge(params.getType(), -1, Integer::sum);
 		return true;
 	}
 
