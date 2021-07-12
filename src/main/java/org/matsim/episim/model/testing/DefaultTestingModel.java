@@ -154,12 +154,11 @@ public class DefaultTestingModel implements TestingModel {
 		if (testingRate != 1d && rnd.nextDouble() >= testingRate)
 			return false;
 
-		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
-		if (status == EpisimPerson.DiseaseStatus.infectedButNotContagious || status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered) {
+		if (params.getType().shouldDetectNegative(person, day)) {
 			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= params.getFalsePositiveRate() ? EpisimPerson.TestStatus.negative : EpisimPerson.TestStatus.positive;
 			person.setTestStatus(testStatus, day);
 
-		} else if (status == EpisimPerson.DiseaseStatus.contagious || status == EpisimPerson.DiseaseStatus.showingSymptoms) {
+		} else if (params.getType().canDetectPositive(person, day)) {
 
 			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= params.getFalseNegativeRate() ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
 			person.setTestStatus(testStatus, day);
