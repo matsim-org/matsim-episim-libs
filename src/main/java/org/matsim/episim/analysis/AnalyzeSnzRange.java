@@ -121,10 +121,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
 			break;
 		case Berlin:
-			IntSet zipCodesBerlin = new IntOpenHashSet();
-			for (int i = 10115; i <= 14199; i++)
-				zipCodesBerlin.add(i);
-			zipCodes.put("Berlin", zipCodesBerlin);
+			zipCodes = findZipCodesForAnyArea("Berlin");
 			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
 			break;
 		case BerlinDistricts:
@@ -354,7 +351,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				}
 
 				if (countingDays % 7 == 0)
-					log.info("Finished week " + countingDays / 7);
+					log.info("Finished week " + countingDays / 7 + " of " + (int)Math.floor((double)filesWithData.size()/7) + " weeks");
 
 				countingDays++;
 			}

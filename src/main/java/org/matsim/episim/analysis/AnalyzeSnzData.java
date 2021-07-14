@@ -125,11 +125,10 @@ class AnalyzeSnzData implements Callable<Integer> {
 					zipCodesBerchtesgaden, getPercentageResults, baseDays);
 			break;
 		case Berlin:
-			IntSet zipCodesBerlin = new IntOpenHashSet();
-			for (int i = 10115; i <= 14199; i++)
-				zipCodesBerlin.add(i);
-			snz.writeDataForCertainArea(outputFolder.resolve("BerlinSnzData_daily_until.csv"), zipCodesBerlin,
-					getPercentageResults, baseDays);
+			HashMap<String, IntSet> zipCodesBerlin = snz.findZipCodesForAnyArea("Berlin");
+			snz.writeDataForCertainArea(
+					outputFolder.resolve(zipCodesBerlin.keySet().iterator().next() + "SnzData_daily_until.csv"),
+					zipCodesBerlin.values().iterator().next(), getPercentageResults, baseDays);
 			break;
 		case BerlinDistrcits:
 			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();

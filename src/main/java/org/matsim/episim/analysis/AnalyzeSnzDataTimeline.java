@@ -63,7 +63,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	private static final Joiner JOIN = Joiner.on(";");
 
 	private enum AnalyseOptions {
-		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends, dailyResults, Mo_Do
+		onlyWeekdays, onlySaturdays, onlySundays, weeklyResultsOfAllDays, onlyWeekends, dailyResults, Mo_Do, Fr_Sa
 	};
 
 	private enum AnalyseAreas {
@@ -135,10 +135,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					selectedOutputData, null);
 			break;
 		case Berlin:
-			IntSet zipCodesBerlin = new IntOpenHashSet();
-			for (int i = 10115; i <= 14199; i++)
-				zipCodesBerlin.add(i);
-			zipCodes.put("Berlin", zipCodesBerlin);
+			zipCodes = findZipCodesForAnyArea("Berlin");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
 					selectedOutputData, null);
 			break;
@@ -437,13 +434,27 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 								anaylzedDaysPerAreaAndPeriod);
 					}
 					break;
+				case Fr_Sa:
+					if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.FRIDAY)) {
+
+						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+					}
+					if (day.equals(DayOfWeek.SATURDAY)) {
+						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
+								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
+								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+								anaylzedDaysPerAreaAndPeriod);
+					}
+					break;
 				default:
 					break;
 
 				}
 
 				if (countingDays % 7 == 0)
-					log.info("Finished week " + countingDays / 7);
+					log.info("Finished week " + countingDays / 7 + " of " + (int)Math.floor((double)filesWithData.size()/7) + " weeks");
 
 				countingDays++;
 			}
@@ -500,6 +511,12 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-DoNumbers"));
 				else
 					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
+				break;
+			case Fr_Sa:
+				if (!getPercentageResults)
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Fr-SaNumbers"));
+				else
+					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Fr-Sa"));
 				break;
 			default:
 				break;
@@ -611,13 +628,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 			for (String hour : sumsNonHomeEndArea.keySet()) {
 				sumsNonHomeEndArea.put(hour, Math.round(
-						(sumsNonHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+						(sumsNonHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea))));
 				sumsNonHomeStartArea.put(hour, Math.round(
-						(sumsNonHomeStartArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+						(sumsNonHomeStartArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea))));
 				sumsHomeStartArea.put(hour, Math.round(
-						(sumsHomeStartArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+						(sumsHomeStartArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea))));
 				sumsHomeEndArea.put(hour, Math.round(
-						(sumsHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea)) * 1000));
+						(sumsHomeEndArea.getDouble(hour) / anaylzedDaysPerAreaAndPeriod.get(certainArea))));
 			}
 			if (baseForAreas.get(certainArea).get("startHomeActs").isEmpty()) {
 				baseForAreas.get(certainArea).get("startHomeActs").putAll(sumsHomeStart.get(certainArea));
@@ -675,16 +692,16 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						} else {
 							rowEndHome.add(String
 									.valueOf(round2Decimals((double) sumsHomeEnd.get(certainArea).getDouble(string)
-											/ personsInThisArea.get(certainArea))));
+											/ personsInThisArea.get(certainArea)*1000)));
 							rowStartHome.add(String
 									.valueOf(round2Decimals((double) sumsHomeStart.get(certainArea).getDouble(string)
-											/ personsInThisArea.get(certainArea))));
+											/ personsInThisArea.get(certainArea)*1000)));
 							rowEndNonHome.add(String
 									.valueOf(round2Decimals((double) sumsNonHomeEnd.get(certainArea).getDouble(string)
-											/ personsInThisArea.get(certainArea))));
+											/ personsInThisArea.get(certainArea)*1000)));
 							rowStartNonHome.add(String
 									.valueOf(round2Decimals((double) sumsNonHomeStart.get(certainArea).getDouble(string)
-											/ personsInThisArea.get(certainArea))));
+											/ personsInThisArea.get(certainArea)*1000)));
 						}
 						if (outputShareOutdoor) {
 							if (string.contains("total")) {
