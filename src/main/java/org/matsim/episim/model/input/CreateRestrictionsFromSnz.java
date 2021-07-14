@@ -414,8 +414,8 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 				JOIN.appendTo(writer, row);
 				writer.write("\n");
 
-				if (countingDays == 1 || countingDays % 5 == 0)
-					log.info("Finished day " + countingDays);
+				if (countingDays % 7 == 0)
+					log.info("Finished week " + countingDays / 7 + " of " + (int)Math.floor((double)filesWithData.size()/7) + " weeks");
 
 				countingDays++;
 			}
@@ -642,7 +642,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 				allSums.clear();
 			}
 			if (countingDays % 7 == 0)
-				log.info("Finished week " + countingDays / 7);
+				log.info("Finished week " + countingDays / 7 + " of " + (int)Math.floor((double)filesWithData.size()/7) + " weeks");
 			countingDays++;
 		}
 	}
