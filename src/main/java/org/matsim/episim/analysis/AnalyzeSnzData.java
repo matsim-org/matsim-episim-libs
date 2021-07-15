@@ -74,13 +74,14 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		AnalyseAreas selectedArea = AnalyseAreas.Berlin;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
-		AnalyseOptions selectedOutputOptions = AnalyseOptions.onlyWeekends;
+		AnalyseOptions selectedOutputOptions = AnalyseOptions.dailyResults;
+		String startDateStillUsingBaseDays = ""; //set in this format YYYYMMDD
 		String anyArea = "Berlin";
 		
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts 
 		boolean getPercentageResults = false;
 
-		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions);
+		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions, startDateStillUsingBaseDays);
 
 		log.info("Done!");
 
@@ -88,7 +89,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	}
 
 	private void writeData(AnalyseAreas selectedArea, boolean getPercentageResults, BaseDaysForComparison selectedBase,
-			String anyArea, AnalyseOptions selectedOutputOptions) throws IOException {
+			String anyArea, AnalyseOptions selectedOutputOptions, String startDateStillUsingBaseDays) throws IOException {
 		CreateRestrictionsFromSnz snz = new CreateRestrictionsFromSnz();
 		snz.setInput(inputFolder);
 		List<String> baseDays = Arrays.asList();
@@ -236,7 +237,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			default:
 				break;
 			}
-			snz.writeBundeslandDataForPublic(outputFolder, outputOption);
+			snz.writeBundeslandDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays);
 			break;
 		case Landkreise:
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
@@ -257,7 +258,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			default:
 				break;
 			}
-			snz.writeLandkreisDataForPublic(outputFolder, outputOption);
+			snz.writeLandkreisDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays);
 			break;
 		default:
 			break;
