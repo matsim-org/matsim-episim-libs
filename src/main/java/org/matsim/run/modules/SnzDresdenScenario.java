@@ -148,7 +148,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 
 		// Policy and restrictions
 		CreateRestrictionsFromCSV restrictions = new CreateRestrictionsFromCSV(episimConfig);
-		restrictions.setInput(INPUT.resolve("DresdenSnzData_daily_until20210531.csv"));
+		restrictions.setInput(INPUT.resolve("DresdenSnzData_daily_until20210709.csv"));
 
 		// Using the same base policy as berlin
 		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
