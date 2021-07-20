@@ -24,18 +24,21 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.Restriction;
 
 import javax.inject.Singleton;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,7 +55,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 	 * Empty constructor is needed for running scenario from command line.
 	 */
 	@SuppressWarnings("unused")
-	private SnzDresdenScenario() {
+	public SnzDresdenScenario() {
 	}
 
 	@Override
@@ -76,7 +79,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 
 		// Input files
 
-		config.plans().setInputFile(INPUT.resolve("dresden_snz_entirePopulation_emptyPlans_withDistricts_100pt_split.xml.gz").toString());
+		config.plans().setInputFile(INPUT.resolve("dresden_snz_entirePopulation_emptyPlans_withDistricts_100pt_split_noCoord.xml.gz").toString());
 
 		episimConfig.addInputEventsFile(INPUT.resolve("dresden_snz_episim_events_wt_100pt_split.xml.gz").toString())
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -145,15 +148,73 @@ public final class SnzDresdenScenario extends AbstractModule {
 				LocalDate.of(2020, 6, 15), tracingCapacity
 		));
 
+		// Vaccination capacity
+
+		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		vaccinationConfig.setEffectiveness(0.9);
+		vaccinationConfig.setDaysBeforeFullEffect(28);
+
+		Map<LocalDate, Integer> vaccinations = new HashMap<>();
+
+		int population = 4_800_000;
+
+		vaccinations.put(LocalDate.parse("2020-01-01"), 0);
+		vaccinations.put(LocalDate.parse("2020-12-27"), (int) (0.003 * population / 6));
+
+		// Vaccination compliance by age
+		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
+		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
+
+		// Vaccinate everybody with age above 0
+		vaccinationCompliance.put(0, 1d);
+
+		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
+
 
 		// Policy and restrictions
 		CreateRestrictionsFromCSV restrictions = new CreateRestrictionsFromCSV(episimConfig);
 		restrictions.setInput(INPUT.resolve("DresdenSnzData_daily_until20210709.csv"));
 
+		// restrictions.setExtrapolation(EpisimUtils.Extrapolation.linear); // TODO
+
 		// Using the same base policy as berlin
 		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 		builder.setActivityParticipation(restrictions);
 		FixedPolicy.ConfigBuilder policy = builder.build();
+
+		// Set compliance rate of 90% for cloth masks
+		policy.restrict(LocalDate.parse("2020-04-01"), Restriction.ofMask(FaceMask.CLOTH, 0.9), "pt");
+
+
+		// Testing rates
+
+		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
+		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
+
+		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
+
+		List<String> actsList = new ArrayList<String>();
+		actsList.add("leisure");
+		actsList.add("work");
+		actsList.add("business");
+		actsList.add("educ_kiga");
+		actsList.add("educ_primary");
+		actsList.add("educ_secondary");
+		actsList.add("educ_tertiary");
+		actsList.add("educ_other");
+		actsList.add("educ_higher");
+		testingConfigGroup.setActivities(actsList);
+
+		testingConfigGroup.getParams(TestType.RAPID_TEST).setFalseNegativeRate(0.3);
+		testingConfigGroup.getParams(TestType.RAPID_TEST).setFalsePositiveRate(0.03);
+
+		// Test 10% of persons doing these activities
+		testingConfigGroup.getParams(TestType.RAPID_TEST).setTestingRate(0.1);
+
+		// All households can get tested
+		testingConfigGroup.setHouseholdCompliance(1.0);
+
+		//LocalDate testingDate = LocalDate.parse("2021-04-19");
 
 		episimConfig.setPolicy(FixedPolicy.class, policy.build());
 		config.controler().setOutputDirectory("output-snz-dresden");
