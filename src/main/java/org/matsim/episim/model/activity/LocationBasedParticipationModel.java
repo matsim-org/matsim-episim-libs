@@ -34,19 +34,22 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 		if (episimConfig.getActivityHandling() == EpisimConfigGroup.ActivityHandling.duringContact)
 			throw new IllegalStateException("Participation model can only be used with activityHandling startOfDay");
 
-		if (episimConfig.getDistrictLevelRestrictions() != EpisimConfigGroup.DistrictLevelRestrictions.yes) {
-			throw new IllegalStateException("LocationBasedParticipationModel can only be used if location based restrictions are used");
-		}
+//		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.no) {
+//			throw new IllegalStateException("LocationBasedParticipationModel can only be used if location based restrictions are used");
+//		}
 
 		subdistrictFacilities = new HashMap<>();
-		if (scenario != null && !scenario.getActivityFacilities().getFacilities().isEmpty()) {
-			for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
-				String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
-				String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);
-				if (subdistrict != null) {
-					this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);
+		if (episimConfig.getDistrictLevelRestrictions() == EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) {
+			if (scenario != null && !scenario.getActivityFacilities().getFacilities().isEmpty()) {
+				for (ActivityFacility facility : scenario.getActivityFacilities().getFacilities().values()) {
+					String subdistrictAttributeName = episimConfig.getDistrictLevelRestrictionsAttribute();
+					String subdistrict = (String) facility.getAttributes().getAttribute(subdistrictAttributeName);
+					if (subdistrict != null) {
+						this.subdistrictFacilities.put(facility.getId().toString(), subdistrict);
+					}
 				}
 			}
+
 		}
 	}
 
@@ -64,15 +67,29 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 			Restriction restriction = im.get(context);
 			double remainingFraction = restriction.getRemainingFraction();
 
+
 			// Replaces global remaining fraction with local one, if applicable
-			if (facilityId != null) {
-				if (subdistrictFacilities.containsKey(facilityId.toString())) {
-					String subdistrict = subdistrictFacilities.get(facilityId.toString());
+			if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)) {
+				if (facilityId != null) {
+					if (subdistrictFacilities.containsKey(facilityId.toString())) {
+						String subdistrict = subdistrictFacilities.get(facilityId.toString());
+						if (restriction.getLocationBasedRf().containsKey(subdistrict)) {
+							remainingFraction = restriction.getLocationBasedRf().get(subdistrict);
+						}
+					}
+				}
+			} else if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)) {
+				if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
+					String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
 					if (restriction.getLocationBasedRf().containsKey(subdistrict)) {
 						remainingFraction = restriction.getLocationBasedRf().get(subdistrict);
 					}
+
 				}
 			}
+//			else {
+//				throw new IllegalStateException("LocationBasedParticipationModel only seperately implemented for home and activity locations. ");
+//			}
 
 			if (remainingFraction == 1.0)
 				trajectory.set(offset + i, true);
