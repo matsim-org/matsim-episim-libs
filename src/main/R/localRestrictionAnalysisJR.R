@@ -61,6 +61,45 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
   return(episim_final)
 }
 
+read_and_process_new_rki_data_incidenz <- function(filename){
+  rki <- read_excel(filename,
+                    sheet = "LK_7-Tage-Inzidenz (fixiert)", skip = 4)
+
+  rki_berlin <- rki %>%
+    filter(grepl("berlin", LK, ignore.case = TRUE)) %>%
+    select(-c("...1", "LKNR")) %>%
+    pivot_longer(!contains("LK"), names_to = "date", values_to = "cases")
+
+  for (i in 1:nrow(rki_berlin)) {
+    dateX <- as.character(rki_berlin$date[i])
+    if (grepl("44", dateX)) {
+      date_improved <- as.character(excel_numeric_to_date(as.numeric(dateX)))
+      rki_berlin$date[i] <- date_improved
+    } else {
+      date_improved <- dateX
+      rki_berlin$date[i] <- date_improved
+    }
+  }
+
+  ymd <- ymd(rki_berlin$date)
+  dmy <- dmy(rki_berlin$date)
+  ymd[is.na(ymd)] <- dmy[is.na(ymd)] # some dates are ambiguous, here we give
+  rki_berlin$date <- ymd
+
+
+  rki_berlin$LK <- rki_berlin$LK %>%
+    str_replace("SK Berlin ", "") %>%
+    str_replace("-", "_") %>%
+    str_replace("ö", "oe")
+
+
+  rki_berlin <- rki_berlin %>%
+    rename(district = LK) %>%
+    mutate(cases = cases / 7)
+
+  return(rki_berlin)
+}
+
 read_and_process_new_rki_data <- function(filename){
   rki <- read_excel(filename,
                     sheet = "LK_7-Tage-Fallzahlen (fixiert)", skip = 4)
@@ -130,16 +169,25 @@ ggplot(rki_old %>% filter(district == "Mitte"), aes(x = date, y = rki_cases_old)
   geom_line(aes(color = district))
 
 
+rki_new_inz <- rki_new <- read_and_process_new_rki_data_incidenz("Fallzahlen_Kum_Tab_9Juni.xlsx")
+ggplot(rki_new_inz, mapping = aes(x = date, y = cases)) +
+  geom_line(aes(color = district)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+  labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
+
 # 2) Display simulation data also per Bezirk
-episim_all_runs <- read_and_process_episim_events_BATCH("2021-06-21/","FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs <- read_and_process_episim_events_BATCH("2021-07-09/","FacilityToDistrictMapCOMPLETE.txt")
 
 ggplot(episim_all_runs %>%  filter(district == "Neukoelln"),
        mapping = aes(x = date, y = infections)) +
   geom_line(mapping = aes(color = districtLevelRestrictions))
 
+
+#, names_prefix = "districtLevelRestriction_"
+
 # 3) Compare data with & without localRestrictions
 rki_and_episim <- episim_all_runs %>%
-  pivot_wider(names_from = districtLevelRestrictions,values_from = infections, names_prefix = "districtLevelRestriction_") %>%
+  pivot_wider(names_from = districtLevelRestrictions,values_from = infections) %>%
   full_join(rki_new, by = c("date", "district")) %>%
   rename(rki_new = cases) %>%
   full_join(rki_old, by = c("date", "district")) %>%
@@ -147,8 +195,8 @@ rki_and_episim <- episim_all_runs %>%
   mutate(week = week(date)) %>%
   mutate(year = year(date)) %>%
   group_by(district, year, week) %>%
-  summarise(episim_base = mean(districtLevelRestriction_no, na.rm = TRUE),
-            episim_policy = mean(districtLevelRestriction_yes, na.rm = TRUE),
+  summarise(episim_base = mean(no, na.rm = TRUE),
+            episim_policy = mean(yesForHomeLocation, na.rm = TRUE),
             rki_new = mean(rki_new, na.rm = TRUE),
             rki_old = mean(rki_cases_old, na.rm = TRUE)) %>%
   mutate(week_year = as.Date(paste(year, week, 1, sep = "-"), "%Y-%U-%u")) %>%
@@ -167,6 +215,7 @@ ggplot(rki_and_episim , aes(x = week_year, y = cases)) + #%>% filter(district ==
   facet_wrap(~district,  ncol=4)
 
 # Single Plot for single district
+
 all_districts <- unique(rki_and_episim$district)
 district_to_profile <- "Treptow_Koepenick"
 ggplot(rki_and_episim %>% filter(district == district_to_profile), aes(x = week_year, y = cases)) +
@@ -179,7 +228,7 @@ ggplot(rki_and_episim %>% filter(district == district_to_profile), aes(x = week_
   scale_color_manual(values = c("blue", "magenta", "dark grey","dark grey"))
 
 
-agent_count_per_district <- read_delim("C:/Users/jakob/projects/matsim-episim/AgentCntPerDistrict.txt", delim = ";", col_names = FALSE) %>%
+agent_count_per_district <- read_delim("../../../AgentCntPerDistrict_OLD.txt", delim = ";", col_names = FALSE) %>%
   rename(district = X1, population = X2) %>% mutate(population = population * 4)
 
 ## Facet Plot - all districts - Incidenz
