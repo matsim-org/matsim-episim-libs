@@ -496,7 +496,7 @@ public class DefaultContactModelTest {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
 		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
 		// Add activity facilities to scenario

@@ -39,7 +39,7 @@ public class LocationBasedParticipationModelTest {
 
 		config = EpisimTestUtils.createTestConfig();
 		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
 		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 		episimConfig.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay);
 	}
