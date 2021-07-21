@@ -27,11 +27,17 @@ public class DifferentiateHomeSizeInEvents {
 
 	public static void main(String[] args) throws IOException {
 
+		int sample = 25;
 		String root = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/";
 		List<String> eventFiles = new ArrayList<>();
-		eventFiles.add(root + "be_2020-week_snz_episim_events_wt_25pt_split.xml.gz");
-		eventFiles.add(root + "be_2020-week_snz_episim_events_sa_25pt_split.xml.gz");
-		eventFiles.add(root + "be_2020-week_snz_episim_events_so_25pt_split.xml.gz");
+
+		String root_events = root;
+		if (sample != 25) {
+			root_events = root_events + "samples/";
+		}
+		eventFiles.add(root_events + "be_2020-week_snz_episim_events_wt_"+ sample +"pt_split.xml.gz");
+		eventFiles.add(root_events + "be_2020-week_snz_episim_events_sa_"+ sample +"pt_split.xml.gz");
+		eventFiles.add(root_events + "be_2020-week_snz_episim_events_so_"+ sample +"pt_split.xml.gz");
 
 		String shapeFile = "D:/Dropbox/Documents/VSP/episim/local_contact_intensity/LORs_with_living_space/lors.shp";
 
@@ -150,7 +156,7 @@ public class DifferentiateHomeSizeInEvents {
 				actType = actType + "_" + facilityToLivingSpace.get(facilityId);
 			}
 
-			ActivityEndEvent modifiedEvent = new ActivityEndEvent(activityStartEvent.getTime(),
+			ActivityStartEvent modifiedEvent = new ActivityStartEvent(activityStartEvent.getTime(),
 					activityStartEvent.getPersonId(),
 					activityStartEvent.getLinkId(),
 					facilityId,
