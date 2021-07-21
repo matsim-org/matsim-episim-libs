@@ -92,7 +92,7 @@ public abstract class AbstractContactModel implements ContactModel {
 		this.scenario = scenario;
 
 		subdistrictFacilities = new HashMap<>();
-		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)
 				&& scenario != null
 				&& !scenario.getActivityFacilities().getFacilities().isEmpty()) {
 
@@ -239,7 +239,7 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		// Applies location based restriction, if applicable
 		// So far, they are only applied for EpisimFacilities, not EpisimVehicles
-		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes) && container != null) {
+		if (episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) && container != null) {
 			if (subdistrictFacilities.containsKey(container.getContainerId().toString())) {
 				String subdistrict = subdistrictFacilities.get(container.getContainerId().toString());
 				if (r.getLocationBasedRf().containsKey(subdistrict)) {
@@ -247,6 +247,7 @@ public abstract class AbstractContactModel implements ContactModel {
 				}
 			}
 		}
+		// TODO: deal with option yesForHomeLocation
 
 		// avoid use of rnd if outcome is known beforehand
 		if (remainingFraction == 1)

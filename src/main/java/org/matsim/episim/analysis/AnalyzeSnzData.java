@@ -78,7 +78,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		String anyArea = "Berlin";
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
-		boolean getPercentageResults = false;
+		boolean getPercentageResults = true;
 
 		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions);
 
