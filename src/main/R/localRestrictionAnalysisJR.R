@@ -13,7 +13,7 @@ rm(list = ls())
 setwd("D:/Dropbox/Documents/VSP/episim/location_based_restrictions/")
 
 # Functions:
-read_and_process_episim_events_BATCH <- function(infection_events_directory, facilities_to_district_map){
+read_and_process_episim_events_BATCH <- function(infection_events_directory, facilities_to_district_map) {
   fac_to_district_map <- read_delim(facilities_to_district_map,
                                     ";", escape_double = FALSE, col_names = FALSE,
                                     trim_ws = TRUE) %>%
@@ -22,21 +22,32 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
 
   fac_to_district_map[is.na(fac_to_district_map)] <- "not_berlin"
 
-  info_df <- read_delim(paste0(infection_events_directory, "_info.txt") , delim = ";" )
+  info_df <- read_delim(paste0(infection_events_directory, "_info.txt"), delim = ";")
 
+  # gathers column names that should be included in final dataframe
+  col_names <- colnames(info_df)
+  relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
 
   episim_df_all_runs <- data.frame()
 
-  for(row in seq_len(nrow(info_df))){
+  for (row in seq_len(nrow(info_df))) {
+
+
     runId <- info_df$RunId[row]
     seed <- info_df$seed[row]
     districtLevelRestrictions <- info_df$districtLevelRestrictions[row]
-    df_for_run <- read_delim(file = paste0(infection_events_directory,runId,".infectionEvents.txt"),
-                            "\t", escape_double = FALSE, trim_ws = TRUE) %>%
-      select(date, facility) %>%
-      mutate(seed = seed, districtLevelRestrictions = districtLevelRestrictions)
 
-    episim_df_all_runs <- rbind(episim_df_all_runs,df_for_run)
+    df_for_run <- read_delim(file = paste0(infection_events_directory, runId, ".infectionEvents.txt"),
+                             "\t", escape_double = FALSE, trim_ws = TRUE) %>%
+      select(date, facility)
+
+    # adds important variables concerning run to df, so that individual runs can be filtered in later steps
+    for (var in relevant_cols) {
+      df_for_run[var] <- info_df[row, var]
+    }
+
+    episim_df_all_runs <- rbind(episim_df_all_runs, df_for_run)
+
   }
 
   episim_df2 <- episim_df_all_runs %>% filter(!grepl("^tr_", facility))
@@ -53,15 +64,15 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
     filter(!is.na(district)) %>%
     filter(district != "not_berlin") %>%
     select(!starts_with("facility")) %>%
-    group_by(date, district,seed,districtLevelRestrictions) %>%
+    group_by_all() %>%
     count() %>%
-    group_by(date,district,districtLevelRestrictions) %>%
+    group_by(across(c(-n, -seed))) %>%
     summarise(infections = mean(n))
 
   return(episim_final)
 }
 
-read_and_process_new_rki_data_incidenz <- function(filename){
+read_and_process_new_rki_data_incidenz <- function(filename) {
   rki <- read_excel(filename,
                     sheet = "LK_7-Tage-Inzidenz (fixiert)", skip = 4)
 
@@ -70,7 +81,7 @@ read_and_process_new_rki_data_incidenz <- function(filename){
     select(-c("...1", "LKNR")) %>%
     pivot_longer(!contains("LK"), names_to = "date", values_to = "cases")
 
-  for (i in 1:nrow(rki_berlin)) {
+  for (i in seq_len(nrow(rki_berlin))) {
     dateX <- as.character(rki_berlin$date[i])
     if (grepl("44", dateX)) {
       date_improved <- as.character(excel_numeric_to_date(as.numeric(dateX)))
@@ -100,7 +111,7 @@ read_and_process_new_rki_data_incidenz <- function(filename){
   return(rki_berlin)
 }
 
-read_and_process_new_rki_data <- function(filename){
+read_and_process_new_rki_data <- function(filename) {
   rki <- read_excel(filename,
                     sheet = "LK_7-Tage-Fallzahlen (fixiert)", skip = 4)
 
@@ -158,61 +169,59 @@ read_and_process_old_rki_data <- function(filename) {
 # 1) RKI Data
 
 rki_new <- read_and_process_new_rki_data("Fallzahlen_Kum_Tab_9Juni.xlsx")
-ggplot(rki_new, mapping = aes(x = date, y = cases)) +
-  geom_line(aes(color = district)) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-  labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
+# ggplot(rki_new, mapping = aes(x = date, y = cases)) +
+#   geom_line(aes(color = district)) +
+#   scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+#   labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
 
 rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
 
-ggplot(rki_old %>% filter(district == "Mitte"), aes(x = date, y = rki_cases_old)) +
-  geom_line(aes(color = district))
+# ggplot(rki_old %>% filter(district == "Mitte"), aes(x = date, y = rki_cases_old)) +
+#   geom_line(aes(color = district))
 
 
-rki_new_inz <- rki_new <- read_and_process_new_rki_data_incidenz("Fallzahlen_Kum_Tab_9Juni.xlsx")
-ggplot(rki_new_inz, mapping = aes(x = date, y = cases)) +
-  geom_line(aes(color = district)) +
-  scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-  labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
+# rki_new_inz <- rki_new <- read_and_process_new_rki_data_incidenz("Fallzahlen_Kum_Tab_9Juni.xlsx")
+# ggplot(rki_new_inz, mapping = aes(x = date, y = cases)) +
+#   geom_line(aes(color = district)) +
+#   scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+#   labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
 
 # 2) Display simulation data also per Bezirk
-episim_all_runs <- read_and_process_episim_events_BATCH("2021-07-09/","FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs <- read_and_process_episim_events_BATCH("2021-07-21-mitte/", "FacilityToDistrictMapCOMPLETE.txt")
 
-ggplot(episim_all_runs %>%  filter(district == "Neukoelln"),
-       mapping = aes(x = date, y = infections)) +
-  geom_line(mapping = aes(color = districtLevelRestrictions))
+#"2021-07-21-mitte/"
+# ggplot(episim_all_runs %>% filter(district == "Neukoelln"),
+#        mapping = aes(x = date, y = infections)) +
+#   geom_line(mapping = aes(color = districtLevelRestrictions))
 
-
-#, names_prefix = "districtLevelRestriction_"
 
 # 3) Compare data with & without localRestrictions
 rki_and_episim <- episim_all_runs %>%
-  pivot_wider(names_from = districtLevelRestrictions,values_from = infections) %>%
   full_join(rki_new, by = c("date", "district")) %>%
   rename(rki_new = cases) %>%
   full_join(rki_old, by = c("date", "district")) %>%
-  mutate(month = months(date)) %>%
+  rename(rki_old = rki_cases_old) %>%
   mutate(week = week(date)) %>%
   mutate(year = year(date)) %>%
-  group_by(district, year, week) %>%
-  summarise(episim_base = mean(no, na.rm = TRUE),
-            episim_policy = mean(yesForHomeLocation, na.rm = TRUE),
-            rki_new = mean(rki_new, na.rm = TRUE),
-            rki_old = mean(rki_cases_old, na.rm = TRUE)) %>%
-  mutate(week_year = as.Date(paste(year, week, 1, sep = "-"), "%Y-%U-%u")) %>%
-  pivot_longer(c(rki_new, rki_old, episim_base,episim_policy), names_to = "data_source", values_to = "cases")
+  group_by(across(c(-rki_old,-rki_new,-infections,-date))) %>%
+  mutate(episim = mean(infections, na.rm = TRUE),
+         rki_new = mean(rki_new, na.rm = TRUE),
+         rki_old = mean(rki_old, na.rm = TRUE)) %>%
+  distinct(across(c(-rki_old,-rki_new,-infections)),.keep_all = TRUE) %>%
+  select(-c("date","infections")) %>%
+  mutate(week_year = as.Date(paste(year, week, 1, sep = "-"), "%Y-%U-%u"))
 
 ## Facet Plot - all districts
 
-ggplot(rki_and_episim , aes(x = week_year, y = cases)) + #%>% filter(district == district_to_profile)
+ggplot(rki_and_episim, aes(x = week_year, y = cases)) + #%>% filter(district == district_to_profile)
   geom_line(aes(color = data_source)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
   labs(title = paste0("Infections per Day for Berlin Districts (Weekly Average)"),
        subtitle = "Comparison of Local vs. Global Activity Reductions",
        x = "Date", y = "New Infections") +
-  theme(axis.text.x = element_text(angle = 90))+                                        # Adjusting colors of line plot in ggplot2
-  scale_color_manual(values = c("blue", "magenta", "dark grey","dark grey")) +
-  facet_wrap(~district,  ncol=4)
+  theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
+  scale_color_manual(values = c("blue", "magenta", "dark grey", "dark grey")) +
+  facet_wrap(~district, ncol = 4)
 
 # Single Plot for single district
 
@@ -221,90 +230,28 @@ district_to_profile <- "Treptow_Koepenick"
 ggplot(rki_and_episim %>% filter(district == district_to_profile), aes(x = week_year, y = cases)) +
   geom_line(aes(color = data_source)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-  labs(title = paste0("Infections per Day for ",district_to_profile," (Weekly Average)"),
+  labs(title = paste0("Infections per Day for ", district_to_profile, " (Weekly Average)"),
        subtitle = "Comparison of Local vs. Global Activity Reductions",
        x = "Date", y = "New Infections") +
-  theme(axis.text.x = element_text(angle = 90))+                                        # Adjusting colors of line plot in ggplot2
-  scale_color_manual(values = c("blue", "magenta", "dark grey","dark grey"))
+  theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
+  scale_color_manual(values = c("blue", "magenta", "dark grey", "dark grey"))
 
 
 agent_count_per_district <- read_delim("../../../AgentCntPerDistrict_OLD.txt", delim = ";", col_names = FALSE) %>%
-  rename(district = X1, population = X2) %>% mutate(population = population * 4)
+  rename(district = X1, population = X2) %>%
+  mutate(population = population * 4)
 
 ## Facet Plot - all districts - Incidenz
 rki_and_episim_incidenz <- rki_and_episim %>%
   left_join(agent_count_per_district) %>%
-  mutate(incidence = cases/population * 100000 * 7)
+  mutate(incidence = cases / population * 100000 * 7)
 
-ggplot(rki_and_episim_incidenz , aes(x = week_year, y = incidence)) + #%>% filter(district == district_to_profile)
-geom_line(aes(color = data_source)) +
-scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-labs(title = paste0("7-Day Infections / 100k Pop for Berlin Districts"),
+ggplot(rki_and_episim_incidenz, aes(x = week_year, y = incidence)) + #%>% filter(district == district_to_profile)
+  geom_line(aes(color = data_source)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+  labs(title = paste0("7-Day Infections / 100k Pop for Berlin Districts"),
        subtitle = "Comparison of Local vs. Global Activity Reductions",
        x = "Date", y = "7-Day Infections / 100k Pop.") +
-theme(axis.text.x = element_text(angle = 90))+                                        # Adjusting colors of line plot in ggplot2
-scale_color_manual(values = c("blue", "magenta", "dark grey","dark grey")) +
-facet_wrap(~district,  ncol=4)
-
-
-
-
-
-
-
-
-
-
-
-#
-# read_and_process_episim_events <- function(events_filename, facilities_to_district_map){
-#   fac_to_district_map <- read_delim(facilities_to_district_map,
-#                                     ";", escape_double = FALSE, col_names = FALSE,
-#                                     trim_ws = TRUE) %>%
-#     rename("facility" = "X1") %>%
-#     rename("district" = "X2")
-#
-#   fac_to_district_map[is.na(fac_to_district_map)] <- "outta berlin"
-#
-#   fac_to_district_map$facility <- fac_to_district_map$facility %>%
-#     str_replace("[A-Z]$", "")
-#
-#   # episim
-#   episim_df <- read_delim(file = events_filename,
-#                           "\t", escape_double = FALSE, trim_ws = TRUE) %>% select(date, facility)
-#
-#   episim_df2 <- episim_df %>% filter(!grepl("^tr_", facility))
-#
-#   episim_df2$facility <- episim_df2$facility %>%
-#     str_replace("home_", "") %>%
-#     str_replace("_split\\d", "") %>%
-#     str_replace("[A-Z]$", "")
-#
-#   merged <- episim_df2 %>%
-#     left_join(fac_to_district_map, by = c("facility"), keep = TRUE)
-#
-#   na_facs <- merged %>%
-#     filter(is.na(district)) %>%
-#     pull(facility.x)
-#   length(unique(na_facs))
-#
-#   # All unique facilities in episim output: 39.734
-#
-#   # Unusable Portion of Data
-#   # 1st merge with no cleaning : 28.372 unique unmergable facs
-#   # remove home_ : 16.062
-#   # remove _split\\d : 9.282
-#   # remove tr_ : 7500
-#   # remove A/B at end : 6571
-#
-#
-#   episim_final <- merged %>%
-#     filter(!is.na(district)) %>%
-#     filter(district != "outta berlin") %>%
-#     select(!starts_with("facility")) %>%
-#     group_by(date, district) %>%
-#     count() %>%
-#     rename(infections = n)
-#
-#   return(episim_final)
-# }
+  theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
+  scale_color_manual(values = c("blue", "magenta", "dark grey", "dark grey")) +
+  facet_wrap(~district, ncol = 4)
