@@ -163,7 +163,7 @@ public class BMBF210716 implements BatchRun<BMBF210716.Params> {
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 		
-		TestType testType = TestType.valueOf(params.testType);
+//		TestType testType = TestType.valueOf(params.testType);
 		
 		TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 		TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
@@ -209,7 +209,7 @@ public class BMBF210716 implements BatchRun<BMBF210716.Params> {
 		workTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		leisureTests.put(LocalDate.parse("2021-06-24"), 0.0);
 
-		if (testType == TestType.RAPID_TEST) eduTests.put(LocalDate.parse("2021-08-06"), params.testingRateEduAfterHolidays);
+		eduTests.put(LocalDate.parse("2021-08-06"), params.testingRateRapidTest);
 		
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -223,19 +223,26 @@ public class BMBF210716 implements BatchRun<BMBF210716.Params> {
 				"educ_other", eduTests
 				)));
 		
-		if (testType == TestType.PCR) {
-			Map<LocalDate, Double> eduTestsPCR = new HashMap<LocalDate, Double>();
-			eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-			eduTestsPCR.put(LocalDate.parse("2021-08-06"), params.testingRateEduAfterHolidays);
-			pcrTest.setTestingRatePerActivityAndDate((Map.of(
-					"educ_kiga", eduTestsPCR,
-					"educ_primary", eduTestsPCR,
-					"educ_secondary", eduTestsPCR,
-					"educ_tertiary", eduTestsPCR,
-					"educ_higher", eduTestsPCR,
-					"educ_other", eduTestsPCR
-					)));	
-		}
+		Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> eduTestsPCR = new HashMap<LocalDate, Double>();
+		leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+		
+		eduTestsPCR.put(LocalDate.parse("2021-08-06"), params.testingRatePCRTest);
+		
+		pcrTest.setTestingRatePerActivityAndDate((Map.of(
+				"leisure", leisureTestsPCR,
+				"work", workTestsPCR,
+				"business", workTestsPCR,
+				"educ_kiga", eduTestsPCR,
+				"educ_primary", eduTestsPCR,
+				"educ_secondary", eduTestsPCR,
+				"educ_tertiary", eduTestsPCR,
+				"educ_higher", eduTestsPCR,
+				"educ_other", eduTestsPCR
+				)));
 
 		rapidTest.setTestingCapacity_pers_per_day(Map.of(
 				LocalDate.of(1970, 1, 1), 0, 
@@ -256,7 +263,8 @@ public class BMBF210716 implements BatchRun<BMBF210716.Params> {
 		@StringParameter({"no", "yes"})		
 		String masks;
 		
-		@Parameter({0.9, 0.8, 0.7})
+//		@Parameter({0.9, 0.8, 0.7})
+		@Parameter({0.9, 0.7})
 		double mutBVaccinationEffectiveness;
 		
 		@Parameter({0.8, 0.95})
@@ -272,14 +280,17 @@ public class BMBF210716 implements BatchRun<BMBF210716.Params> {
 		@Parameter({0.02})
 		double revaccinationSpeed;
 		
-		@Parameter({0.5, 1.0})
+		@Parameter({0.125, 0.25, 0.5, 1.0})
 		double ciCorrectionEdu;
 		
-		@StringParameter({"RAPID_TEST", "PCR"})		
-		String testType;
+//		@StringParameter({"RAPID_TEST", "PCR"})		
+//		String testType;
 		
 		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
-		double testingRateEduAfterHolidays;
+		double testingRateRapidTest;
+		
+		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
+		double testingRatePCRTest;
 
 	}
 
