@@ -153,8 +153,8 @@ public final class SnzDresdenScenario extends AbstractModule {
 		// Vaccination capacity
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(28);
+		vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 

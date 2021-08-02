@@ -9,6 +9,7 @@ import org.matsim.episim.TestingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -129,7 +130,7 @@ public class BMBF210618Mutations implements BatchRun<BMBF210618Mutations.Params>
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		double vaccineEffectiveness = vaccinationConfig.getEffectiveness();
+		double vaccineEffectiveness = vaccinationConfig.getParams(VaccinationType.generic).getEffectiveness();
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
