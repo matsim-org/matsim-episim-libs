@@ -34,11 +34,9 @@ import java.util.Map;
 public final class EpisimPersonStatusEvent extends Event implements HasPersonId {
 	public static final String EVENT_TYPE = "episimPersonStatus";
 	public static final String DISEASE_STATUS = "diseaseStatus";
-	private static final String QUARANTINE_STATUS = "quarantineStatus";
 
 	private final Id<Person> personId;
 	private final EpisimPerson.DiseaseStatus diseaseStatus;
-	private final EpisimPerson.QuarantineStatus quarantineStatus;
 
 	/**
 	 * Constructor for disease status.
@@ -46,17 +44,6 @@ public final class EpisimPersonStatusEvent extends Event implements HasPersonId 
 	public EpisimPersonStatusEvent(double time, Id<Person> personId, EpisimPerson.DiseaseStatus diseaseStatus) {
 		super(time);
 		this.diseaseStatus = diseaseStatus;
-		this.quarantineStatus = null;
-		this.personId = personId;
-	}
-
-	/**
-	 * Constructor for quarantine status.
-	 */
-	public EpisimPersonStatusEvent(double time, Id<Person> personId, EpisimPerson.QuarantineStatus quarantineStatus) {
-		super(time);
-		this.diseaseStatus = null;
-		this.quarantineStatus = quarantineStatus;
 		this.personId = personId;
 	}
 
@@ -80,9 +67,6 @@ public final class EpisimPersonStatusEvent extends Event implements HasPersonId 
 		// person, link, facility done by superclass
 		if (diseaseStatus != null)
 			attr.put(DISEASE_STATUS, this.diseaseStatus.name());
-
-		if (quarantineStatus != null)
-			attr.put(QUARANTINE_STATUS, this.quarantineStatus.name());
 
 		return attr;
 	}

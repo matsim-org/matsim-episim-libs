@@ -50,6 +50,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		delegate.addCustomEventMapper(EpisimInfectionEvent.EVENT_TYPE, getEpisimInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());
 		delegate.addCustomEventMapper(EpisimContactEvent.EVENT_TYPE, getEpisimContactEventMapper());
+		delegate.addCustomEventMapper(EpisimVaccinationEvent.EVENT_TYPE, getEpisimVaccinationEventMapper());
 	}
 
 	public void characters(char[] ch, int start, int length) throws SAXException {
@@ -112,6 +113,18 @@ public class EpisimEventsReader extends MatsimXmlParser {
 
 			return new EpisimContactEvent(time, person, contactPerson, container, attributes.get(ActivityEndEvent.ATTRIBUTE_ACTTYPE).intern(),
 					Double.parseDouble(attributes.get(EpisimContactEvent.DURATION)), Integer.parseInt(attributes.get(EpisimContactEvent.GROUP_SIZE)));
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimVaccinationEventMapper() {
+		return event -> {
+
+			Map<String, String> attr = event.getAttributes();
+			return new EpisimVaccinationEvent(
+					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),
+					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),
+					Boolean.parseBoolean(attr.get(EpisimVaccinationEvent.RE_VACCINATION))
+			);
 		};
 	}
 

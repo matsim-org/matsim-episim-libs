@@ -283,20 +283,39 @@ plt.legend(loc="best")
 
 from sklearn.metrics import mean_squared_log_error
 
-df = read_batch_run("C:/Users/chris/Downloads/summaries-aggr.zip")
+df = read_batch_run("data/summaries-aggr.zip")
+
+df = df[(df.diseaseImport=="1") & (df.avgTemperatures=="yes")]
 
 
 #%%
 
-for run in ("1", "3", "5", "7", "9"):
-    
-    start = "2020-09-01"
-    end = "2020-10-31"
-    
-    
-    rf = df[(df.date >= start) & (df.date <= end) & (df.RunId==run)]
-    h = hospital[(hospital.Datum >= start) & (hospital.Datum <= end)]
-    error_sick = mean_squared_log_error(h["Stationäre Behandlung"], rf.nSeriouslySick + rf.nCritical)
-    
-    print("Run ", run, error_sick)
+for run in df.run.value_counts().keys():
 
+    for act in df.activityLevel.value_counts().keys():
+    
+        for until in df.calibrationUntil.value_counts().keys():
+                    
+            tf = df[(df.calibrationUntil == until) & (df.activityLevel==act) & (df.run==run)]
+            
+            print(run, act, until)
+            print()
+    
+            start = "2020-03-01"
+        
+            rf = tf[(tf.date >= start) & (tf.date <= until)]
+            h = hospital[(hospital.Datum >= start) & (hospital.Datum <= until)]
+            error_sick = mean_squared_log_error(h["Stationäre Behandlung"], rf.nSeriouslySick + rf.nCritical)
+            
+            print("Train error", error_sick)
+    
+            start = "2020-09-01"
+            end = "2020-10-31"    
+        
+            rf = tf[(tf.date >= start) & (tf.date <= end)]
+            h = hospital[(hospital.Datum >= start) & (hospital.Datum <= end)]
+            error_sick = mean_squared_log_error(h["Stationäre Behandlung"], rf.nSeriouslySick + rf.nCritical)
+            
+            print("Pred error", error_sick)
+    
+            print("-------------")

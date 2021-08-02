@@ -19,6 +19,11 @@ public enum VirusStrain {
 	/**
 	 * South-african variant also known as auch 501Y.V2.
 	 */
-	B1351;
+	B1351,
+	
+	/**
+	 * unknown mutation
+	 */
+	MUTB;
 ;
 }

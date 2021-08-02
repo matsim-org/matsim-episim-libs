@@ -15,6 +15,7 @@ import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.*;
 import org.matsim.episim.model.ConfigurableProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.OpenBerlinScenario;
 import org.matsim.testcases.MatsimTestUtils;
@@ -178,8 +179,8 @@ public class RunEpisimIntegrationTest {
 
 		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 		testingConfig.setActivities(List.of("edu", "leisure"));
-		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
-		testingConfig.setTestingRate(0.8);
+		testingConfig.getParams(TestType.RAPID_TEST).setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+		testingConfig.getParams(TestType.RAPID_TEST).setTestingRate(0.8);
 
 		runner.run(it);
 	}

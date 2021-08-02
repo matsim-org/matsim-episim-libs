@@ -76,6 +76,13 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 	public String getInfectionType() {
 		return infectionType;
 	}
+	
+	/**
+	 * Variant which the person was infected with.
+	 */
+	public VirusStrain getStrain() {
+		return virusStrain;
+	}
 
 	public int getGroupSize() {
 		return groupSize;
