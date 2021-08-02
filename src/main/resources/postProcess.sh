@@ -18,7 +18,7 @@ hostname
 if [ -n "$SLURM_SUBMIT_DIR" ]; then
   echo "Using slurm"
   cd $SLURM_SUBMIT_DIR
-  module load java/11.0.7
+  module load java/11
   cmd="srun"
 else
   echo "Using qsub"

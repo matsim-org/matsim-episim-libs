@@ -559,9 +559,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
 
-		if (compliance == 0.0)
-			p.setVaccinable(false);
-		else p.setVaccinable(compliance == 1.0 || localRnd.nextDouble() < compliance);
+		p.setVaccinable(localRnd.nextDouble() < compliance);
 
 		return p;
 	}

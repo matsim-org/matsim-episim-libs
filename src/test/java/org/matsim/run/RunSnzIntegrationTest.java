@@ -11,6 +11,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
@@ -89,7 +90,7 @@ public class RunSnzIntegrationTest {
 
 		testingConfig.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 		testingConfig.setActivities(List.of("work", "leisure"));
-		testingConfig.setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
+		testingConfig.getParams(TestType.RAPID_TEST).setTestingCapacity_pers_per_day(Integer.MAX_VALUE);
 
 		runner.run(ITERATIONS);
 	}
