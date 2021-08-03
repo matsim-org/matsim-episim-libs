@@ -27,7 +27,6 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
 
     runId <- info_df$RunId[row]
     seed <- info_df$seed[row]
-    districtLevelRestrictions <- info_df$districtLevelRestrictions[row]
 
     df_for_run <- read_delim(file = paste0(infection_events_directory, runId, ".infectionEvents.txt"),
                              "\t", escape_double = FALSE, trim_ws = TRUE) %>%
@@ -136,8 +135,8 @@ read_and_process_new_rki_data <- function(filename) {
 
 
   rki_berlin <- rki_berlin %>%
-    rename(district = LK) %>%
-    mutate(cases = cases / 7)
+    mutate(cases = cases / 7) %>%
+    rename(district = LK, rki_new = cases)
 
   return(rki_berlin)
 }
@@ -152,6 +151,19 @@ read_and_process_old_rki_data <- function(filename) {
     summarise(rki_cases_old = sum(AnzahlFall)) %>%
     mutate(district = str_replace(district, "SK Berlin ", "")) %>%
     mutate(district = str_replace(district, "-", "_")) %>%
-    mutate(district = str_replace(district, "ö", "oe"))
+    mutate(district = str_replace(district, "ö", "oe")) %>%
+    rename(rki_old = rki_cases_old)
   return(rki_berlin_old)
+}
+
+plot_allDistrict_cases <- function (merged_weekly, color_scheme) {
+  ggplot(merged_weekly, aes(x = week_year, y = infections)) +
+    geom_line(aes(color = scenario)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+    labs(title = paste0("Infections per Day for Berlin Districts (Weekly Average)"),
+         subtitle = "Comparison of Local vs. Global Activity Reductions",
+         x = "Date", y = "New Infections") +
+    theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
+    scale_color_manual(values = color_scheme) +
+    facet_wrap(~district, ncol = 4)
 }
