@@ -211,7 +211,7 @@ public class FixedPolicyTest {
 	public void hospitalReg() {
 
 		FixedPolicy.ConfigBuilder config = FixedPolicy.config()
-				.restrict(1, Restriction.of(0.5), "work")
+				.restrict(1, Restriction.of(0.95), "work")
 				.restrict(2, Restriction.of(ShutdownPolicy.REG_HOSPITAL), "work")
 				.restrict(3, Restriction.of(ShutdownPolicy.REG_HOSPITAL), "work");
 
