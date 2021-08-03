@@ -337,7 +337,9 @@ public final class InfectionEventHandler implements Externalizable {
 				// person that didn't move will be put at home the whole day
 				if (!person.hasActivity(day)) {
 					person.setStartOfDay(day);
-					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
+					// if a person has a home event modified with living space (i.e. home_25 means 25m2 living space per person), then this home type should be used consistently.
+					String homeActWithSize = person.getTrajectory().stream().map(x -> x.params.getContainerName()).filter(x -> x.contains("home_")).findFirst().orElse("home");
+					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent(homeActWithSize, this::createActivityType);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
 					person.setLastFacilityId(facility.getContainerId(), day, true);
