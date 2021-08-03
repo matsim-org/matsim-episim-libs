@@ -7,162 +7,14 @@ library(readxl)
 library(tidyverse)
 library(janitor)
 library(lubridate)
+# library(here)
 
 rm(list = ls())
-
 setwd("D:/Dropbox/Documents/VSP/episim/location_based_restrictions/")
 
-# Functions:
-read_and_process_episim_events_BATCH <- function(infection_events_directory, facilities_to_district_map) {
-  fac_to_district_map <- read_delim(facilities_to_district_map,
-                                    ";", escape_double = FALSE, col_names = FALSE,
-                                    trim_ws = TRUE) %>%
-    rename("facility" = "X1") %>%
-    rename("district" = "X2")
+# load all functions
+source("C:/Users/jakob/projects/matsim-episim/src/main/R/utilsJR.R",encoding='utf-8')
 
-  fac_to_district_map[is.na(fac_to_district_map)] <- "not_berlin"
-
-  info_df <- read_delim(paste0(infection_events_directory, "_info.txt"), delim = ";")
-
-  # gathers column names that should be included in final dataframe
-  col_names <- colnames(info_df)
-  relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
-
-  episim_df_all_runs <- data.frame()
-
-  for (row in seq_len(nrow(info_df))) {
-
-
-    runId <- info_df$RunId[row]
-    seed <- info_df$seed[row]
-    districtLevelRestrictions <- info_df$districtLevelRestrictions[row]
-
-    df_for_run <- read_delim(file = paste0(infection_events_directory, runId, ".infectionEvents.txt"),
-                             "\t", escape_double = FALSE, trim_ws = TRUE) %>%
-      select(date, facility)
-
-    # adds important variables concerning run to df, so that individual runs can be filtered in later steps
-    for (var in relevant_cols) {
-      df_for_run[var] <- info_df[row, var]
-    }
-
-    episim_df_all_runs <- rbind(episim_df_all_runs, df_for_run)
-
-  }
-
-  episim_df2 <- episim_df_all_runs %>% filter(!grepl("^tr_", facility))
-
-  merged <- episim_df2 %>%
-    left_join(fac_to_district_map, by = c("facility"), keep = TRUE)
-
-  na_facs <- merged %>%
-    filter(is.na(district)) %>%
-    pull(facility.x)
-  length(unique(na_facs))
-
-  episim_final <- merged %>%
-    filter(!is.na(district)) %>%
-    filter(district != "not_berlin") %>%
-    select(!starts_with("facility")) %>%
-    group_by_all() %>%
-    count() %>%
-    group_by(across(c(-n, -seed))) %>%
-    summarise(infections = mean(n))
-
-  return(episim_final)
-}
-
-read_and_process_new_rki_data_incidenz <- function(filename) {
-  rki <- read_excel(filename,
-                    sheet = "LK_7-Tage-Inzidenz (fixiert)", skip = 4)
-
-  rki_berlin <- rki %>%
-    filter(grepl("berlin", LK, ignore.case = TRUE)) %>%
-    select(-c("...1", "LKNR")) %>%
-    pivot_longer(!contains("LK"), names_to = "date", values_to = "cases")
-
-  for (i in seq_len(nrow(rki_berlin))) {
-    dateX <- as.character(rki_berlin$date[i])
-    if (grepl("44", dateX)) {
-      date_improved <- as.character(excel_numeric_to_date(as.numeric(dateX)))
-      rki_berlin$date[i] <- date_improved
-    } else {
-      date_improved <- dateX
-      rki_berlin$date[i] <- date_improved
-    }
-  }
-
-  ymd <- ymd(rki_berlin$date)
-  dmy <- dmy(rki_berlin$date)
-  ymd[is.na(ymd)] <- dmy[is.na(ymd)] # some dates are ambiguous, here we give
-  rki_berlin$date <- ymd
-
-
-  rki_berlin$LK <- rki_berlin$LK %>%
-    str_replace("SK Berlin ", "") %>%
-    str_replace("-", "_") %>%
-    str_replace("ö", "oe")
-
-
-  rki_berlin <- rki_berlin %>%
-    rename(district = LK) %>%
-    mutate(cases = cases / 7)
-
-  return(rki_berlin)
-}
-
-read_and_process_new_rki_data <- function(filename) {
-  rki <- read_excel(filename,
-                    sheet = "LK_7-Tage-Fallzahlen (fixiert)", skip = 4)
-
-  rki_berlin <- rki %>%
-    filter(grepl("berlin", LK, ignore.case = TRUE)) %>%
-    select(-c("...1", "LKNR")) %>%
-    pivot_longer(!contains("LK"), names_to = "date", values_to = "cases")
-
-  for (i in 1:nrow(rki_berlin)) {
-    dateX <- as.character(rki_berlin$date[i])
-    if (grepl("44", dateX)) {
-      date_improved <- as.character(excel_numeric_to_date(as.numeric(dateX)))
-      rki_berlin$date[i] <- date_improved
-    } else {
-      date_improved <- dateX
-      rki_berlin$date[i] <- date_improved
-    }
-  }
-
-  ymd <- ymd(rki_berlin$date)
-  dmy <- dmy(rki_berlin$date)
-  ymd[is.na(ymd)] <- dmy[is.na(ymd)] # some dates are ambiguous, here we give
-  rki_berlin$date <- ymd
-
-
-  rki_berlin$LK <- rki_berlin$LK %>%
-    str_replace("SK Berlin ", "") %>%
-    str_replace("-", "_") %>%
-    str_replace("ö", "oe")
-
-
-  rki_berlin <- rki_berlin %>%
-    rename(district = LK) %>%
-    mutate(cases = cases / 7)
-
-  return(rki_berlin)
-}
-
-read_and_process_old_rki_data <- function(filename) {
-  rki_old <- read_csv(filename)
-  rki_berlin_old <- rki_old %>%
-    filter(grepl("berlin", Landkreis, ignore.case = TRUE)) %>%
-    mutate(date = as.Date(Refdatum, format = "%m/%d/%Y"), district = Landkreis) %>% ## TODO: RefDatum or Meldedaturm
-    select(district, AnzahlFall, date) %>%
-    group_by(district, date) %>%
-    summarise(rki_cases_old = sum(AnzahlFall)) %>%
-    mutate(district = str_replace(district, "SK Berlin ", "")) %>%
-    mutate(district = str_replace(district, "-", "_")) %>%
-    mutate(district = str_replace(district, "ö", "oe"))
-  return(rki_berlin_old)
-}
 
 ######################################################################################################
 
@@ -187,40 +39,50 @@ rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
 #   labs(title = paste0("Daily  Cases in Berlin"), x = "Date", y = "Cases")
 
 # 2) Display simulation data also per Bezirk
-episim_all_runs <- read_and_process_episim_events_BATCH("2021-07-21-mitte/", "FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs <- read_and_process_episim_events_BATCH("2021-07-22/", "FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs2 <- episim_all_runs %>%
+  filter(locationBasedRestrictions == "yesForHomeLocation") %>%
+  filter(thetaFactor == 1.1)
 
-#"2021-07-21-mitte/"
-# ggplot(episim_all_runs %>% filter(district == "Neukoelln"),
-#        mapping = aes(x = date, y = infections)) +
-#   geom_line(mapping = aes(color = districtLevelRestrictions))
+episim_base <- read_and_process_episim_events_BATCH("2021-07-21-mitte/", "FacilityToDistrictMapCOMPLETE.txt")
+episim_base2 <- episim_base %>%
+  filter(locationBasedRestrictions == "no") %>%
+  filter(restrictBerlinMitteOctober2020 == "no") %>%
+  filter(activityHandling == "startOfDay") %>%
+  rename(episim_base = infections)
 
 
-# 3) Compare data with & without localRestrictions
-rki_and_episim <- episim_all_runs %>%
+# 3) Merge episim results with rki data, average infections over one week
+rki_and_episim <- episim_all_runs2 %>%
+  full_join(episim_base2, by = c("date", "district")) %>%
   full_join(rki_new, by = c("date", "district")) %>%
   rename(rki_new = cases) %>%
   full_join(rki_old, by = c("date", "district")) %>%
   rename(rki_old = rki_cases_old) %>%
   mutate(week = week(date)) %>%
   mutate(year = year(date)) %>%
-  group_by(across(c(-rki_old,-rki_new,-infections,-date))) %>%
+  group_by(across(c(-rki_old,-rki_new,-infections,-date,-episim_base))) %>%
   mutate(episim = mean(infections, na.rm = TRUE),
+         episim_base = mean(episim_base, na.rm = TRUE),
          rki_new = mean(rki_new, na.rm = TRUE),
          rki_old = mean(rki_old, na.rm = TRUE)) %>%
-  distinct(across(c(-rki_old,-rki_new,-infections)),.keep_all = TRUE) %>%
+  distinct(across(c(-rki_old,-rki_new,-infections,-episim_base)),.keep_all = TRUE) %>%
   select(-c("date","infections")) %>%
   mutate(week_year = as.Date(paste(year, week, 1, sep = "-"), "%Y-%U-%u"))
 
 ## Facet Plot - all districts
+rki_and_episim2 <- rki_and_episim %>%
+  pivot_longer(cols = c(episim,episim_base,rki_old,rki_new), names_to = "situation", values_to = "cases",)
 
-ggplot(rki_and_episim, aes(x = week_year, y = cases)) + #%>% filter(district == district_to_profile)
-  geom_line(aes(color = data_source)) +
+
+ggplot(rki_and_episim2, aes(x = week_year, y = cases)) +
+  geom_line(aes(color = situation)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
   labs(title = paste0("Infections per Day for Berlin Districts (Weekly Average)"),
        subtitle = "Comparison of Local vs. Global Activity Reductions",
        x = "Date", y = "New Infections") +
   theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
-  scale_color_manual(values = c("blue", "magenta", "dark grey", "dark grey")) +
+  scale_color_manual(values = c("blue", "magenta", "dark grey", "dark grey")) + #,
   facet_wrap(~district, ncol = 4)
 
 # Single Plot for single district
