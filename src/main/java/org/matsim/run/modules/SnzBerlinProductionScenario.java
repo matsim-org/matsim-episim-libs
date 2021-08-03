@@ -649,20 +649,20 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		// Change localRf for specific activty type and district
 		if (restrictBerlinMitteOctober2020 == RestrictBerlinMitteOctober2020.work) {
 			// the locationBasedRf must first be cloned to avoid side effects; without clone, changing work will also change leisure, business, and visit activite
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"work");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "work");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "work");
+			builder.apply("2020-10-01", "2021-10-31", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"work");
+//			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "work");
+			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work");
+//			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "work");
 		} else if (restrictBerlinMitteOctober2020 == RestrictBerlinMitteOctober2020.leisure) {
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"leisure");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "leisure");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "leisure");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "leisure");
+			builder.apply("2020-10-01", "2021-10-31", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"leisure");
+//			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "leisure");
+			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "leisure");
+//			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "leisure");
 		} else if (restrictBerlinMitteOctober2020 == RestrictBerlinMitteOctober2020.work_and_leisure) {
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"work","leisure");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "work","leisure");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work","leisure");
-			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "work","leisure");
+			builder.apply("2020-10-01", "2021-10-31", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"work","leisure");
+//			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "work","leisure");
+			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work","leisure");
+//			builder.apply("2020-10-01", "2021-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "work","leisure");
 		}
 
 		episimConfig.setPolicy(builder.build());

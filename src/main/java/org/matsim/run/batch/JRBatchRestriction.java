@@ -16,9 +16,9 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setActivityHandling(ActivityHandling.startOfDay)
-				.setRestrictBerlinMitteOctober2020(params != null ? params.restrictBerlinMitteOctober2020 : SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.no) //params != null ? params.restrictBerlinMitteOctober2020 : SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.no)
+				.setRestrictBerlinMitteOctober2020(params != null ? params.restrictBerlinMitteOctober2020 : SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.no)
 				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : SnzBerlinProductionScenario.LocationBasedRestrictions.no)
-				.setSample(1)
+				.setSample(25)
 				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.no)
 				.createSnzBerlinProductionScenario();
 	}
@@ -51,7 +51,7 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 		@EnumParameter(SnzBerlinProductionScenario.LocationBasedRestrictions.class)
 		SnzBerlinProductionScenario.LocationBasedRestrictions locationBasedRestrictions;
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(5)
 		public long seed;
 
 		@EnumParameter(SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.class)

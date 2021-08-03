@@ -309,3 +309,5 @@ def calc_r_reduction(base_case, base_variables, df, group_by=None):
                                         std=("reduction", "std"), sem=("reduction", "sem"))
 
     return result
+
+# aggregate_batch_run("C:/Users/jakob/projects/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2021-08-02/summaries.zip")
