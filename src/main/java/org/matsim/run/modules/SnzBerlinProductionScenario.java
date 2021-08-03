@@ -456,15 +456,14 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
 		//location based restrictions
 		if (locationBasedRestrictions != LocationBasedRestrictions.no) {
+			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
 			if (locationBasedRestrictions.equals(LocationBasedRestrictions.yesForActivityLocation)) {
 				episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
-				episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 			}
 
 			if (locationBasedRestrictions.equals(LocationBasedRestrictions.yesForHomeLocation)) {
 				episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation);
-				episimConfig.setDistrictLevelRestrictionsAttribute("berlin-neighborhood");
 			}
 
 			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
@@ -649,11 +648,21 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		// Change localRf for specific activty type and district
 		if (restrictBerlinMitteOctober2020 == RestrictBerlinMitteOctober2020.work) {
-			builder.apply("2020-10-01", "2020-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work");
+			// the locationBasedRf must first be cloned to avoid side effects; without clone, changing work will also change leisure, business, and visit activite
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"work");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "work");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "work");
 		} else if (restrictBerlinMitteOctober2020 == RestrictBerlinMitteOctober2020.leisure) {
-			builder.apply("2020-10-01", "2020-10-31", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "leisure");
 		} else if (restrictBerlinMitteOctober2020 == RestrictBerlinMitteOctober2020.work_and_leisure) {
-			builder.apply("2020-10-01", "2020-10-31", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work", "leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String,Double>) e.get("locationBasedRf")).clone()),"work","leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Spandau", 0.), "work","leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Mitte", 0.), "work","leisure");
+			builder.apply("2020-03-01", "2021-03-01", (d, e) -> ((HashMap<String,Double>) e.get("locationBasedRf")).put("Lichtenberg", 0.), "work","leisure");
 		}
 
 		episimConfig.setPolicy(builder.build());
