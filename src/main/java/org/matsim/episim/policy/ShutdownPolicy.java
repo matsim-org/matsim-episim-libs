@@ -38,6 +38,11 @@ import java.util.Map;
  */
 public abstract class ShutdownPolicy {
 
+	/**
+	 * Magic number to indicate this entry should be replaced based on hospital numbers.
+	 */
+	public static final Double REG_HOSPITAL = -200d;
+
 	private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);
 
 	protected final Config config;

@@ -205,4 +205,35 @@ public class FixedPolicyTest {
 		assertThat(r.get("home").getLocationBasedRf().size()).isEqualTo(0);
 
 	}
+
+
+	@Test
+	public void hospitalReg() {
+
+		FixedPolicy.ConfigBuilder config = FixedPolicy.config()
+				.restrict(1, Restriction.of(0.5), "work")
+				.restrict(2, Restriction.of(ShutdownPolicy.REG_HOSPITAL), "work")
+				.restrict(3, Restriction.of(ShutdownPolicy.REG_HOSPITAL), "work");
+
+
+		FixedPolicy policy = new FixedPolicy(config.build());
+		LocalDate now = LocalDate.now();
+		policy.init(now, r);
+
+
+		double frac = 1;
+		for (int i = 1; i < 10; i++) {
+
+			EpisimReporting.InfectionReport report = EpisimTestUtils.createReportHospital(now.plusDays(i), i, (i-1) * 300);
+			policy.updateRestrictions(report, r);
+
+			assertThat(r.get("work").getRemainingFraction())
+					.isLessThan(frac);
+
+			frac = r.get("work").getRemainingFraction();
+		}
+
+		assertThat(frac).isLessThan(0.6);
+
+	}
 }

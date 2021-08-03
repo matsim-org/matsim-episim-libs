@@ -81,6 +81,10 @@ public interface RestrictionInput {
 				result.add(predict);
 			}
 
+		} else if (type == EpisimUtils.Extrapolation.regHospital) {
+			for (int i = 0; i < n; i++) {
+				result.add(ShutdownPolicy.REG_HOSPITAL);
+			}
 		}
 
 
@@ -90,8 +94,9 @@ public interface RestrictionInput {
 	/**
 	 * Resamples given values to weekly averages, ignoring weekend and holidays.
 	 * The resampling result will be feed into consumer function {@code f} and not returned directly.
+	 *
 	 * @param start start of sampling interval
-	 * @param f bi consumer that receives the date and average weekly value
+	 * @param f     bi consumer that receives the date and average weekly value
 	 * @return date for next week after last sampling
 	 */
 	static LocalDate resampleAvgWeekday(Map<LocalDate, Double> values, LocalDate start, BiConsumer<LocalDate, Double> f) {
@@ -131,9 +136,9 @@ public interface RestrictionInput {
 	}
 
 	static LocalDate resampleAvgWeekdayBySubdistrict(Map<LocalDate, Double> daysGlobal,
-													 Map<String, Map<LocalDate, Double>> daysPerDistrict,
-													 LocalDate start,
-													 TriConsumer<LocalDate, Double, Map<String, Double>> f) {
+	                                                 Map<String, Map<LocalDate, Double>> daysPerDistrict,
+	                                                 LocalDate start,
+	                                                 TriConsumer<LocalDate, Double, Map<String, Double>> f) {
 
 		Set<LocalDate> ignored;
 		try {

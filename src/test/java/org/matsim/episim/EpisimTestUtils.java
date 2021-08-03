@@ -203,5 +203,17 @@ public class EpisimTestUtils {
 		return report;
 	}
 
+	/**
+	 * Report with incidence per 100k inhabitants.
+	 */
+	public static EpisimReporting.InfectionReport createReportHospital(LocalDate date, long day, int hospital) {
+		EpisimReporting.InfectionReport report = new EpisimReporting.InfectionReport("test", 0, date.toString(), day);
+
+		report.nSusceptible = 100_000 - hospital;
+		report.nSeriouslySick = hospital;
+
+		return report;
+	}
+
 
 }
