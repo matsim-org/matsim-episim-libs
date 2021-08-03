@@ -44,6 +44,7 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
+import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -51,10 +52,7 @@ import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.io.*;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -739,12 +737,51 @@ public final class InfectionEventHandler implements Externalizable {
 
 		activityParticipationModel.setRestrictionsForIteration(iteration, im);
 
+		log.warn("JR POPULATION FILE : " + scenario.getConfig().plans().getInputFile());
+
+		Map<String, Long> popCountPerDistrict = new HashMap<>();
+		for (EpisimPerson person : personMap.values()) {
+
+			if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
+				String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
+				long cnt = popCountPerDistrict.getOrDefault(subdistrict, 0L) + 1;
+				popCountPerDistrict.put(subdistrict, cnt);
+			}
+		}
+
+		log.warn("POPULATION COUNT PER DISTRICT :\n" + popCountPerDistrict);
+
 		for (EpisimPerson person : personMap.values()) {
 			// update person activity participation for the day
 			activityParticipationModel.updateParticipation(person, person.getActivityParticipation(),
 					person.getStartOfDay(day), person.getActivities(day));
 
 			testingModel.performTesting(person, iteration);
+		}
+		if (activityParticipationModel instanceof LocationBasedParticipationModel) {
+//			System.out.println("ZERO COUNT: " + ((LocationBasedParticipationModel) activityParticipationModel).zeroCnt);
+			long zeroCnt = ((LocationBasedParticipationModel) activityParticipationModel).zeroCnt;
+			try {
+				BufferedWriter writer = new BufferedWriter(new FileWriter("output/zeroCount.txt", true));
+//				writer.append(' ');
+				writer.append("iteration " + iteration + ": " + zeroCnt + "\n");
+
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			log.warn("ZERO COUNT for iteration "+iteration + ": " + zeroCnt);
+			((LocationBasedParticipationModel) activityParticipationModel).zeroCnt = 0;
+
+			Map<String, Long> districtCount = ((LocationBasedParticipationModel) activityParticipationModel).districtCount;
+			log.warn("district COUNT for iteration " + iteration + ": " + districtCount);
+			((LocationBasedParticipationModel) activityParticipationModel).districtCount = new HashMap<>();
+
+			for (Map.Entry<String, Restriction> entry : im.entrySet()) {
+				log.warn("**********   " + entry.getKey() + "   ************\n"+entry.getValue().asMap());
+			}
+//			log.warn(im);
 		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 

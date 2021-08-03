@@ -21,6 +21,9 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 	private final EpisimConfigGroup episimConfig;
 	private ImmutableMap<String, Restriction> im;
 
+	public long zeroCnt = 0;
+	public Map<String, Long> districtCount = new HashMap<>();
+
 	/**
 	 * Map of each ActivityFacility with the corresponding subdistrict
 	 */
@@ -75,6 +78,8 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 						String subdistrict = subdistrictFacilities.get(facilityId.toString());
 						if (restriction.getLocationBasedRf().containsKey(subdistrict)) {
 							remainingFraction = restriction.getLocationBasedRf().get(subdistrict);
+							long cnt = districtCount.getOrDefault(subdistrict, 0L) + 1;
+							districtCount.put(subdistrict, cnt);
 						}
 					}
 				}
@@ -83,6 +88,8 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 					String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
 					if (restriction.getLocationBasedRf().containsKey(subdistrict)) {
 						remainingFraction = restriction.getLocationBasedRf().get(subdistrict);
+						long cnt = districtCount.getOrDefault(subdistrict, 0L) + 1;
+						districtCount.put(subdistrict, cnt);
 					}
 
 				}
@@ -97,6 +104,10 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 				trajectory.set(offset + i, false);
 			else
 				trajectory.set(offset + i, rnd.nextDouble() < remainingFraction);
+
+			if (remainingFraction == 0.000696969) {
+ 				zeroCnt++;
+			}
 
 		}
 	}
