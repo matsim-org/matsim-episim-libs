@@ -1,17 +1,13 @@
 package org.matsim.run.batch;
 
-import com.google.inject.AbstractModule;
 import org.matsim.core.config.Config;
-import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
 
 import static org.matsim.episim.EpisimConfigGroup.ActivityHandling;
-import static org.matsim.episim.EpisimConfigGroup.DistrictLevelRestrictions;
 
 public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 
@@ -19,10 +15,10 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
-				.setActivityHandling(params != null ? params.activityHandling : ActivityHandling.startOfDay)
-				.setRestrictBerlinMitteOctober2020(params != null ? params.restrictBerlinMitteOctober2020 : SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.no)
+				.setActivityHandling(ActivityHandling.startOfDay)
+				.setRestrictBerlinMitteOctober2020(params != null ? params.restrictBerlinMitteOctober2020 : SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.no) //params != null ? params.restrictBerlinMitteOctober2020 : SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.no)
 				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : SnzBerlinProductionScenario.LocationBasedRestrictions.no)
-				.setSample(25)
+				.setSample(1)
 				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.no)
 				.createSnzBerlinProductionScenario();
 	}
@@ -37,6 +33,8 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 
 		SnzBerlinProductionScenario module = getBindings(id, params);
 
+
+		assert module != null;
 		Config config = module.config();
 
 		config.global().setRandomSeed(params.seed);
@@ -53,14 +51,14 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 		@EnumParameter(SnzBerlinProductionScenario.LocationBasedRestrictions.class)
 		SnzBerlinProductionScenario.LocationBasedRestrictions locationBasedRestrictions;
 
-		@GenerateSeeds(5)
+		@GenerateSeeds(1)
 		public long seed;
 
 		@EnumParameter(SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020.class)
 		SnzBerlinProductionScenario.RestrictBerlinMitteOctober2020 restrictBerlinMitteOctober2020;
 
-		@EnumParameter(ActivityHandling.class)
-		ActivityHandling activityHandling;
+//		@EnumParameter(ActivityHandling.class)
+//		ActivityHandling activityHandling;
 
 	}
 

@@ -16,8 +16,14 @@ import static org.matsim.episim.EpisimConfigGroup.*;
 public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity.Params> {
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().setSnapshot(SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
+	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
+		return new SnzBerlinProductionScenario.Builder()
+				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
+				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
+				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : SnzBerlinProductionScenario.LocationBasedRestrictions.no)
+				.setActivityHandling(ActivityHandling.startOfDay)
+				.setSample(1)
+				.createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -28,40 +34,39 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
-				SnzBerlinProductionScenario.Snapshot.no).setSample(25).setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
-				.createSnzBerlinProductionScenario();
+		SnzBerlinProductionScenario module = getBindings(id, params);
+		assert module != null;
+
 		Config config = module.config();
 
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		episimConfig.setDistrictLevelRestrictions(DistrictLevelRestrictions.no);
-//		episimConfig.setDistrictLevelRestrictions(params.districtLevelRestrictions);
-
-		episimConfig.setActivityHandling(ActivityHandling.startOfDay);
-
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+
+
+		//		episimConfig.setDistrictLevelRestrictions(DistrictLevelRestrictions.no);
+		//		episimConfig.setDistrictLevelRestrictions(params.districtLevelRestrictions);
+
+		//		episimConfig.setActivityHandling(ActivityHandling.startOfDay);
+
 		return config;
 	}
 
 	public static final class Params {
 
-//		@EnumParameter(DistrictLevelRestrictions.class)
-//		DistrictLevelRestrictions districtLevelRestrictions;
+		@EnumParameter(SnzBerlinProductionScenario.LocationBasedRestrictions.class)
+		SnzBerlinProductionScenario.LocationBasedRestrictions locationBasedRestrictions;
 
-		@GenerateSeeds(1)
+		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.75,1,1.25,1.5})
+		@Parameter({1.0, 1.05, 1.10, 1.15, 1.2, 1.25})
 		double thetaFactor;
 
 //		@EnumParameter(SnzBerlinProductionScenario.LocationBasedContactIntensity.class)
 //		SnzBerlinProductionScenario.LocationBasedContactIntensity locationBasedContactIntensity;
 
-
-		//		@EnumParameter(ActivityHandling.class) //TODO Why does this cause errors?
-		//		ActivityHandling activityHandling;
 
 	}
 
