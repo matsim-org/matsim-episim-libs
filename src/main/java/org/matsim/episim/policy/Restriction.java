@@ -143,12 +143,11 @@ public final class Restriction {
 	}
 
 
-
 	/**
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null,
+		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE, null,
 				new ClosingHours(0, 0), Map.of(), new HashMap<>());
 	}
 
@@ -156,21 +155,21 @@ public final class Restriction {
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null, null,null, null, null, new HashMap<>());
+		return new Restriction(remainingFraction, null, null, null, null, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null, new HashMap<>());
+		return new Restriction(remainingFraction, ciCorrection, null, null, null, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
-		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage, new HashMap<>());
+		return new Restriction(remainingFraction, ciCorrection, null, null, null, null, maskUsage, new HashMap<>());
 	}
 
 	/**
@@ -178,7 +177,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance), new HashMap<>());
+		return new Restriction(remainingFraction, null, null, null, null, null, Map.of(mask, maskCompliance), new HashMap<>());
 	}
 
 	/**
@@ -187,7 +186,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate), new HashMap<>());
+		return new Restriction(null, null, null, null, null, null, Map.of(mask, complianceRate), new HashMap<>());
 	}
 
 	/**
@@ -195,28 +194,28 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
-		return new Restriction(null, null, null,null, null, null, maskUsage, new HashMap<>());
+		return new Restriction(null, null, null, null, null, null, maskUsage, new HashMap<>());
 	}
 
 	/**
 	 * Creates a restriction with certain facilities closed. Should not be combined with other restrictions.
 	 */
 	public static Restriction ofClosedFacilities(List<String> closed) {
-		return new Restriction(null, null, null,null, closed, null, null, new HashMap<>());
+		return new Restriction(null, null, null, null, closed, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null,null, null, null, null, new HashMap<>());
+		return new Restriction(null, ciCorrection, null, null, null, null, null, new HashMap<>());
 	}
 
 	/**
 	 * Creates a restriction with limited maximum group size of activities.
 	 */
 	public static Restriction ofGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, maxGroupSize, null,null, null, null, new HashMap<>());
+		return new Restriction(null, null, maxGroupSize, null, null, null, null, new HashMap<>());
 	}
 
 	/**
@@ -240,7 +239,7 @@ public final class Restriction {
 
 		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
-		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>());
+		return new Restriction(null, null, null, null, null, closed, null, new HashMap<>());
 	}
 
 	public static Restriction ofLocationBasedRf(Map<String, Double> locationBasedRf) {
@@ -317,7 +316,7 @@ public final class Restriction {
 
 			if (e.getValue() == 1d) return e.getKey();
 			else if (Double.isNaN(p))
-				p =rnd.nextDouble();
+				p = rnd.nextDouble();
 
 			if (p < e.getValue())
 				return e.getKey();
@@ -330,7 +329,7 @@ public final class Restriction {
 	/**
 	 * Check whether one time falls into a closing hour.
 	 *
-	 * @param sod      timestamp as seconds of day
+	 * @param sod        timestamp as seconds of day
 	 * @param adjustFrom when true result time is shifted to be later, otherwise shifted to start of closing hour
 	 * @return adjusted time, unchanged when not in closing hour. Otherwise moved to closing hours
 	 */
@@ -340,7 +339,7 @@ public final class Restriction {
 
 		if (adjustFrom) {
 			if (ch.overnight)
-				return sod >= ch.from ? ch.length - (sod - ch.from) : ch.length -  (sod + 86400 - ch.from);
+				return sod >= ch.from ? ch.length - (sod - ch.from) : ch.length - (sod + 86400 - ch.from);
 
 			return ch.length - (sod - ch.from);
 		} else {
@@ -429,7 +428,7 @@ public final class Restriction {
 			maskUsage.clear();
 			maskUsage.putAll(r.maskUsage);
 		}
-		if (r.locationBasedRf !=null && !r.locationBasedRf.isEmpty()) {
+		if (r.locationBasedRf != null && !r.locationBasedRf.isEmpty()) {
 			locationBasedRf = new HashMap<>();
 			locationBasedRf.putAll(r.locationBasedRf);
 
@@ -438,7 +437,7 @@ public final class Restriction {
 
 	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
-	 *
+	 * <p>
 	 * localRf: if new restriction has a Rf, the localRf will NOT be included in merged result; reason: to aid users who
 	 * manually enter restrictions, but forget to clear the localRf.
 	 *
@@ -446,71 +445,97 @@ public final class Restriction {
 	 */
 	void merge(Map<String, Object> restriction) {
 
-		Double otherRf = (Double) restriction.get("fraction");
-		Double otherE = (Double) restriction.get("ciCorrection");
-		Integer otherGroup = (Integer) restriction.get("maxGroupSize");
-		Integer otherReduced = (Integer) restriction.get("reducedGroupSize");
-		ClosingHours otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
+		Double oldRf = (Double) restriction.get("fraction");
+		Double oldE = (Double) restriction.get("ciCorrection");
+		Integer oldGroup = (Integer) restriction.get("maxGroupSize");
+		Integer oldReduced = (Integer) restriction.get("reducedGroupSize");
+		ClosingHours oldClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
-		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
+		Map<FaceMask, Double> oldMasks = new EnumMap<>(FaceMask.class);
 		((Map<String, Double>) restriction.get("masks"))
-				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
+				.forEach((k, v) -> oldMasks.put(FaceMask.valueOf(k), v));
 
-		Map<String, Double> otherLocationBasedRf = new HashMap<>();
-		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
+		Map<String, Double> oldLocationBasedRf = new HashMap<>();
+		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> oldLocationBasedRf.put(key, value)));
 
-		// if new and old Restriction have equal Rfs: warn
-		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)){
-			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
+
+		// if old and new restriction have localRf:
+		// use all new values for localRf
+		// if new localRf doesn't have value for a district, use value from old localRf
+//		if (!oldLocationBasedRf.isEmpty() && !locationBasedRf.isEmpty()) {
+//			for (Map.Entry<String, Double> oldEntry : oldLocationBasedRf.entrySet()) {
+//
+//				locationBasedRf.putIfAbsent(oldEntry.getKey(), oldEntry.getValue());
+//
+//			}
+//		}
+
+		// if old and new restriction have Rf: warn & use new remaining fraction
+		if (remainingFraction != null && oldRf != null && !remainingFraction.equals(oldRf)) {
+			log.warn("Duplicated remainingFraction; old value(" + oldRf + ") replaced with new value(" + remainingFraction + ")");
 		}
 		// if new Restriction doesn't have value for Rf:
 		// 1) keep old value for Rf
 		// 2) check whether new Restriction has localRf, and if not, then use localRf from old Restriction
-		else if (remainingFraction == null){
-			remainingFraction = otherRf;
+		else if (remainingFraction == null) {
+			remainingFraction = oldRf;
 
-			if (!locationBasedRf.isEmpty() && !otherLocationBasedRf.isEmpty() && !locationBasedRf.equals(otherLocationBasedRf)) {
-				log.warn("Duplicated locationBasedRf usage; existing value=" + locationBasedRf + "; new value=" + otherLocationBasedRf + "; keeping existing value.");
+			if (!locationBasedRf.isEmpty() && !oldLocationBasedRf.isEmpty() && !locationBasedRf.equals(oldLocationBasedRf)) {
+
+				log.warn("Duplicated locationBasedRf; old value(" + oldLocationBasedRf + ") was merged with new value(" + locationBasedRf + ")");
+
+				mergeLocationBasedRf(oldLocationBasedRf);
+
+				log.warn("Result of merge: " + locationBasedRf);
+
 			} else if (locationBasedRf.isEmpty()) {
-				locationBasedRf.putAll(otherLocationBasedRf);
+				locationBasedRf.putAll(oldLocationBasedRf);
 			}
 		} else {
 			if ((locationBasedRf == null || locationBasedRf.isEmpty())
-					&& (!otherLocationBasedRf.isEmpty() || otherLocationBasedRf != null)) {
+					&& (!oldLocationBasedRf.isEmpty() || oldLocationBasedRf != null)) {
 
 				log.warn("localRf removed during merge, as new remainingFraction was provided");
+			} else {
+				mergeLocationBasedRf(oldLocationBasedRf);
 			}
 		}
 
 
-
-
-		if (ciCorrection != null && otherE != null && !ciCorrection.equals(otherE))
-			log.warn("Duplicated ci correction " + ciCorrection + " and " + otherE);
+		if (ciCorrection != null && oldE != null && !ciCorrection.equals(oldE))
+			log.warn("Duplicated ci correction " + ciCorrection + " and " + oldE);
 		else if (ciCorrection == null)
-			ciCorrection = otherE;
+			ciCorrection = oldE;
 
-		if (maxGroupSize != null && otherGroup != null && !maxGroupSize.equals(otherGroup))
-			log.warn("Duplicated max group size " + maxGroupSize + " and " + otherGroup);
+		if (maxGroupSize != null && oldGroup != null && !maxGroupSize.equals(oldGroup))
+			log.warn("Duplicated max group size " + maxGroupSize + " and " + oldGroup);
 		else if (maxGroupSize == null)
-			maxGroupSize = otherGroup;
+			maxGroupSize = oldGroup;
 
-		if (reducedGroupSize != null && otherReduced != null && !reducedGroupSize.equals(otherReduced))
-			log.warn("Duplicated reduced group size " + reducedGroupSize + " and " + otherReduced);
+		if (reducedGroupSize != null && oldReduced != null && !reducedGroupSize.equals(oldReduced))
+			log.warn("Duplicated reduced group size " + reducedGroupSize + " and " + oldReduced);
 		else if (reducedGroupSize == null)
-			reducedGroupSize = otherReduced;
+			reducedGroupSize = oldReduced;
 
-		if (closingHours != null && otherClosingH != null && !closingHours.equals(otherClosingH))
-			log.warn("Duplicated max closing hours " + closingHours + " and " + otherClosingH);
+		if (closingHours != null && oldClosingH != null && !closingHours.equals(oldClosingH))
+			log.warn("Duplicated max closing hours " + closingHours + " and " + oldClosingH);
 		else if (closingHours == null)
-			closingHours = otherClosingH;
+			closingHours = oldClosingH;
 
-		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks)) {
-			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value.");
+		if (!maskUsage.isEmpty() && !oldMasks.isEmpty() && !maskUsage.equals(oldMasks)) {
+			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + oldMasks + "; keeping existing value.");
 			log.warn("(full new restriction=" + restriction + ")");
 		} else if (maskUsage.isEmpty())
-			maskUsage.putAll(otherMasks);
+			maskUsage.putAll(oldMasks);
 
+	}
+
+	private void mergeLocationBasedRf(Map<String, Double> oldLocationBasedRf) {
+		for (Map.Entry<String, Double> oldEntry : oldLocationBasedRf.entrySet()) {
+
+			locationBasedRf.putIfAbsent(oldEntry.getKey(), oldEntry.getValue());
+
+		}
 	}
 
 	public Double getRemainingFraction() {
