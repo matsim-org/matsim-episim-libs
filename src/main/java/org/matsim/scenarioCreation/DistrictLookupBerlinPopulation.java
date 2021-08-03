@@ -18,14 +18,28 @@ import java.util.Map;
 
 public class DistrictLookupBerlinPopulation {
 
+	private static final int SAMPLE = 25;
+	private static final String ATTRIBUTE_NAME = "subdistrict";
+	private static final boolean ADD_ATTRIBUTE_TO_POPULATION_FILE = true;
+	private static final boolean COUNT_AGENTS_IN_EACH_DISTRICT = false;
+	private static final boolean PRINT_PERSON_TO_DISTRICT_MAP = false;
+
+
 	public static void main(String[] args) throws IOException {
 
-		boolean addAttributeToPopulationFile = false;
-		boolean countAgentsInEachDistrict = true;
-		boolean printPersonToDistrictMap = false;
+		String root = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/";
 
-		String inputPopulation = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz";
-		String outputPopulation = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_25pt_split.xml.gz";
+		String inputPopulation = "be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_" + SAMPLE + "pt_split.xml.gz";
+		String outputPopulation = "be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_" + SAMPLE + "pt_split.xml.gz";
+
+		if (SAMPLE == 25) {
+			inputPopulation = root + inputPopulation;
+			outputPopulation = root + outputPopulation;
+		} else if (SAMPLE == 1) {
+			inputPopulation = root + "samples/" + inputPopulation;
+			outputPopulation = root + "samples/" + outputPopulation;
+
+		}
 
 		String shapeFile = "../public-svn/matsim/scenarios/countries/de/episim/original-data/PLZ-in-germany/plz-gebiete.shp";
 		String shapeCRS = "EPSG:4326";
@@ -71,7 +85,7 @@ public class DistrictLookupBerlinPopulation {
 
 				for (String neighborhoodName : subdistricts.keySet()) {
 					if (subdistricts.get(neighborhoodName).contains(Integer.parseInt(plz))) {
-						p.getAttributes().putAttribute("subdistrict", neighborhoodName);
+						p.getAttributes().putAttribute(ATTRIBUTE_NAME, neighborhoodName);
 						personIdToNeighborhoodMap.put(p.getId().toString(), neighborhoodName);
 					}
 				}
@@ -90,14 +104,14 @@ public class DistrictLookupBerlinPopulation {
 
 //		log.info("Finished with failed lookup for {} out of {} persons.", unknown, population.getPersons().size());
 
-		if (addAttributeToPopulationFile) {
+		if (ADD_ATTRIBUTE_TO_POPULATION_FILE) {
 
 			PopulationUtils.writePopulation(population, outputPopulation);
 
 		}
 
 
-		if (printPersonToDistrictMap) {
+		if (PRINT_PERSON_TO_DISTRICT_MAP) {
 			FileWriter writer = new FileWriter("PersonToDistrictMap.txt");
 			BufferedWriter writer1 = new BufferedWriter(writer);
 			for (Map.Entry<String, String> personIdToNeighbhorhood : personIdToNeighborhoodMap.entrySet()) {
@@ -109,7 +123,7 @@ public class DistrictLookupBerlinPopulation {
 		}
 
 		Map<String, Integer> agentCntPerDistrict = new HashMap<>();
-		if (countAgentsInEachDistrict) {
+		if (COUNT_AGENTS_IN_EACH_DISTRICT) {
 			for (String district : personIdToNeighborhoodMap.values()) {
 				Integer cnt = agentCntPerDistrict.getOrDefault(district, 0) + 1;
 				agentCntPerDistrict.put(district, cnt);
