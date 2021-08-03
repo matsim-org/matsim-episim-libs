@@ -88,7 +88,13 @@ public class EpisimContainer<T> {
 	 * The id of the ReplayEventTask that handles the events for this container
 	 */
 	private int taskId = 0;
-	
+
+	/**
+	 * This counts the number of persons in this container
+	 * which have the DiseaseStatus contagious or showingSymptoms. 	
+	 */
+ 	private int contagiousCounter = 0;
+
 	EpisimContainer(Id<T> containerId) {
 		this.containerId = containerId;
 	}
@@ -154,6 +160,9 @@ public class EpisimContainer<T> {
 		boolean wasRemoved = personsAsList.remove(person);
 		if (!wasRemoved)
 			log.warn( "Person {} was not in container {}", person.getPersonId(), containerId);
+
+		if (person.infectedButNotSerious())
+			contagiousCounter -= 1;
 	}
 
 	/**
@@ -253,5 +262,19 @@ public class EpisimContainer<T> {
 	public List<EpisimPerson> getPersons() {
 		// Using Collections.unmodifiableList(...) puts huge pressure on the GC if its called hundred thousand times per second
 		return personsAsList;
+	}
+
+
+	public void countContagious(int add) {
+		contagiousCounter += add;
+		assert contagiousCounter >= 0 : "We can not have a negative number of contagious persons"; 
+	}
+
+	public void resetContagiousCounter() {
+		contagiousCounter = 0;
+	}
+	
+	public boolean containsContagious() {
+		return contagiousCounter > 0;
 	}
 }

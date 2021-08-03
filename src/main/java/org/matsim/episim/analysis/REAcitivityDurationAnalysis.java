@@ -1,5 +1,5 @@
 /* *********************************************************************** *
- * project: org.matsim.*
+b	 * project: org.matsim.*
  * EditRoutesTest.java
  *                                                                         *
  * *********************************************************************** *
@@ -39,23 +39,20 @@ import org.matsim.core.population.PopulationUtils;
 
 public class REAcitivityDurationAnalysis {
 
-	private final static Map<String, HashMap<String, Double>> activityStartMap = new HashMap<>();
-	private final static Map<String, HashMap<String, Double>> activityEndMap = new HashMap<>();
+	private final static Map<String, HashMap<String, Double>> startedActivitiesMap = new HashMap<>();
+	private final static Map<String, HashMap<String, Double>> finishedActivitiesMap = new HashMap<>();
+	private final static Map<String, HashMap<String, Double>> personActivitiesMap = new HashMap<>();
+	private final static Map<String, Integer> countActivities = new HashMap<>();
 	private static Population population;
 
 	public static void main(String[] args) {
 
-		String inputFileEvents = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_episim_events_wt_25pt_split.xml.gz";
+		String inputFileEvents = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_episim_events_so_25pt_split.xml.gz";
 		String inputFilePop = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz";
 //		String inputFile = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_100pt.xml.gz";
 
 		population = PopulationUtils.readPopulation(inputFilePop);
-		int countPersons = 0;
-		for (Person person : population.getPersons().values()) {
-			if (person.getAttributes().getAttribute("district")!= null && person.getAttributes().getAttribute("district").toString().equals("Berlin"))
-				countPersons++;
-		}
-		
+
 		EventsManager events = EventsUtils.createEventsManager();
 
 		REActivityDurationEventHandler reActivityDurationEventHandler = new REActivityDurationEventHandler();
@@ -66,36 +63,92 @@ public class REAcitivityDurationAnalysis {
 
 		reader.readFile(inputFileEvents);
 
-		for (String activityType : activityEndMap.keySet()) {
-			double sumDurations = 0;
-			for (String personId : activityEndMap.get(activityType).keySet()) {
-				/*
-				 * if activities has started but not finished, the end of the day will be used
-				 * as the endTime
-				 */
-				if (activityStartMap.get(activityType).containsKey(personId)) {
-					sumDurations = sumDurations + activityEndMap.get(activityType).get(personId)
-							+ (86400. - activityStartMap.get(activityType).get(personId));
-				} else
-					sumDurations = sumDurations + activityEndMap.get(activityType).get(personId);
+		// if activity has not finished until 2 am they will finished at 2 am
+		for (String activityType : startedActivitiesMap.keySet()) {
+			for (String personId : startedActivitiesMap.get(activityType).keySet()) {
+				countActivities.replace(activityType, countActivities.get(activityType) + 1);
+				if (finishedActivitiesMap.get(activityType).containsKey(personId)) {
+					double durationBefore = finishedActivitiesMap.get(activityType).get(personId);
+					double additiotionalDuration = 93600. - startedActivitiesMap.get(activityType).get(personId);
+					finishedActivitiesMap.get(activityType).replace(personId, durationBefore + additiotionalDuration);
+					personActivitiesMap.get(personId).replace(activityType, durationBefore + additiotionalDuration);
+				} else {
+					double additiotionalDuration = 93600. - startedActivitiesMap.get(activityType).get(personId);
+					finishedActivitiesMap.get(activityType).put(personId, additiotionalDuration);
+					personActivitiesMap.get(personId).put(activityType, additiotionalDuration);
+				}
 			}
-			System.out.println(activityType + ";" + activityEndMap.get(activityType).size() * 4 + ";"
-					+ (sumDurations / activityEndMap.get(activityType).size() / 3600));
 		}
 
-		
-		System.out.println("Number of persons in population in Berlin: " + countPersons * 4);
+		for (String personID : personActivitiesMap.keySet()) {
+			double sumAct = 0;
+			for (double sum : personActivitiesMap.get(personID).values())
+				sumAct = sumAct + sum;
+			if (sumAct != 86400.) {
+				throw new RuntimeException("Day of Person has not 24h");
+			}
+		}
+		int countPersons = 0;
+		for (Person person : population.getPersons().values()) {
+			if (person.getAttributes().getAttribute("district") != null
+					&& person.getAttributes().getAttribute("district").toString().equals("Berlin"))
+				countPersons++;
+			else
+				continue;
 
+			// checks if a person had no activities and add a 24h home activity
+			boolean containsPerson = false;
+			if (!countActivities.containsKey("onlyHome"))
+				countActivities.put("onlyHome", 0);
+			for (HashMap<String, Double> personEndSet : finishedActivitiesMap.values())
+				if (personEndSet.containsKey(person.getId().toString()))
+					containsPerson = true;
+			if (!containsPerson) {
+				countActivities.replace("onlyHome", countActivities.get("onlyHome") + 1);
+				if (!finishedActivitiesMap.containsKey("onlyHome")) {
+					HashMap<String, Double> personSet = new HashMap<>();
+					finishedActivitiesMap.put("onlyHome", personSet);
+				}
+				String personId = person.getId().toString();
+				HashMap<String, Double> personSetEnd = finishedActivitiesMap.get("onlyHome");
+				double fullDayTime = 86400.;
+				personSetEnd.put(personId, fullDayTime);
+			}
+		}
+		System.out.println(
+				"Aktivität;Anzahl Personen;Mittlere Dauer pro Person mit dieser Aktivität;Mittlere Dauer Population;Anzahl Aktivitäten;Mittlere Dauer pro Aktivität");
+		for (String activityType : finishedActivitiesMap.keySet()) {
+			double sumDurations = 0;
+			for (String personId : finishedActivitiesMap.get(activityType).keySet()) {
+				sumDurations = sumDurations + finishedActivitiesMap.get(activityType).get(personId);
+			}
+			System.out.println(activityType + ";" + finishedActivitiesMap.get(activityType).size() * 4 + ";"
+					+ (sumDurations / finishedActivitiesMap.get(activityType).size() / 3600) + ";"
+					+ (finishedActivitiesMap.get(activityType).size()
+							* (sumDurations / finishedActivitiesMap.get(activityType).size() / 3600) / countPersons)
+					+ ";" + countActivities.get(activityType) * 4 + ";"
+					+ (sumDurations / countActivities.get(activityType) / 3600));
+		}
+		System.out.println("Number of persons in population in Berlin: " + countPersons * 4);
 	}
 
 	static Population getPopulation() {
 		return population;
 	}
+
 	static Map<String, HashMap<String, Double>> getStartMap() {
-		return activityStartMap;
+		return startedActivitiesMap;
 	}
 
 	static Map<String, HashMap<String, Double>> getEndMap() {
-		return activityEndMap;
+		return finishedActivitiesMap;
+	}
+
+	public static Map<String, HashMap<String, Double>> getPersonactivitiesMap() {
+		return personActivitiesMap;
+	}
+
+	public static Map<String, Integer> getCountActivities() {
+		return countActivities;
 	}
 }

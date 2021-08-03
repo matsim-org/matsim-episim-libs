@@ -228,7 +228,7 @@ def objective_hospital(trial):
     jvm = trial.study.user_attrs["jvm_opts"]
 
     # Run trials for all seeds in parallel
-    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --number %d --runs %d --calibParameter %.12f --days 195" \
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 8 --number %d --runs %d --calibParameter %.12f --days 270" \
           % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
@@ -240,7 +240,7 @@ def objective_hospital(trial):
 
     results = []
     for i in range(1, trial.study.user_attrs["runs"] + 1):
-        res = calc_multi_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2020-09-01")
+        res = calc_multi_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2020-11-01")
         results.append(res)
 
     df = pd.DataFrame(results, columns=["error_cases", "error_sick", "error_critical", "peak", "dz"])
@@ -347,7 +347,7 @@ if __name__ == "__main__":
     parser.add_argument("--district", type=str, default="Berlin",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionScenario")
-    parser.add_argument("--runs", type=int, default=8, help="Number of runs per objective")
+    parser.add_argument("--runs", type=int, default=15, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")

@@ -584,7 +584,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210608_tegel_until20210430.csv").toFile(),
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210711_tegel_until20210430.csv").toFile(),
 						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5. );
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {

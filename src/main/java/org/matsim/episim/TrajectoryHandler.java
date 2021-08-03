@@ -144,6 +144,8 @@ final class TrajectoryHandler {
 			if (!responsibleFacility.test(facility.getContainerId()))
 				continue;
 
+			facility.resetContagiousCounter();
+
 			Iterator<EpisimPerson> it = facility.getPersons().iterator();
 
 			while (it.hasNext()) {
@@ -164,7 +166,8 @@ final class TrajectoryHandler {
 
 					contactModel.infectionDynamicsFacility(person, facility, now);
 					facility.removePerson(person, it);
-				}
+				} else if (person.infectedButNotSerious())
+					facility.countContagious(1);
 			}
 		}
 
@@ -259,10 +262,15 @@ final class TrajectoryHandler {
 
 		reporting.handleEvent(activityEndEvent);
 
-		contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
+		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.no ||
+		    episimFacility.containsContagious()) {
+			contactModel.infectionDynamicsFacility(episimPerson, episimFacility, now);
+		}
 
-		double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
-		episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
+		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.yes) {
+			double timeSpent = now - episimFacility.getContainerEnteringTime(episimPerson.getPersonId());
+			episimPerson.addSpentTime(activityEndEvent.getActType(), timeSpent);
+		}
 
 		episimFacility.removePerson(episimPerson);
 	}
@@ -303,12 +311,17 @@ final class TrajectoryHandler {
 
 		reporting.handleEvent(leavesVehicleEvent);
 
-		contactModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
+		if (episimConfig.getContagiousOptimization() == EpisimConfigGroup.ContagiousOptimization.no || 
+			episimVehicle.containsContagious()) {
+			contactModel.infectionDynamicsVehicle(episimPerson, episimVehicle, now);
+		}
 
-		double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
 
-		// This type depends on the params defined in the scenario
-		episimPerson.addSpentTime("pt", timeSpent);
+		if (episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.yes) {
+			double timeSpent = now - episimVehicle.getContainerEnteringTime(episimPerson.getPersonId());
+
+			episimPerson.addSpentTime("pt", timeSpent);
+		}
 
 		// remove person from vehicle:
 		episimVehicle.removePerson(episimPerson);

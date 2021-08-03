@@ -86,46 +86,44 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		AnalyseAreas selectedArea = AnalyseAreas.Landkreise;
-		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.onlyWeekends;
+		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
 		String anyArea = "Berlin";
-		analyseData(selectedArea, selectedOptionForAnalyse, anyArea);
+		String startDateStillUsingBaseDays = ""; //set in this format YYYYMMDD
+		analyseData(selectedArea, selectedOptionForAnalyse, anyArea, startDateStillUsingBaseDays);
 
 		log.info("Done!");
 
 		return 0;
 	}
 
-	private void analyseData(AnalyseAreas selectedArea, AnalyseOptions selectedOptionForAnalyse, String anyArea)
-			throws IOException {
+	private void analyseData(AnalyseAreas selectedArea, AnalyseOptions selectedOptionForAnalyse, String anyArea,
+			String startDateStillUsingBaseDays) throws IOException {
 		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
 
 		switch (selectedArea) {
 		case AnyArea:
 			zipCodes = findZipCodesForAnyArea(anyArea);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Bundeslaender:
 			zipCodes = findZIPCodesForBundeslaender();
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, outputFolder);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, outputFolder, startDateStillUsingBaseDays);
 			break;
 		case Landkreise:
 			zipCodes = findZIPCodesForLandkreise();
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, outputFolder);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, outputFolder, startDateStillUsingBaseDays);
 			break;
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 			zipCodes.put("Berchtesgaden", zipCodesBerchtesgaden);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Berlin:
-			IntSet zipCodesBerlin = new IntOpenHashSet();
-			for (int i = 10115; i <= 14199; i++)
-				zipCodesBerlin.add(i);
-			zipCodes.put("Berlin", zipCodesBerlin);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			zipCodes = findZipCodesForAnyArea("Berlin");
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case BerlinDistricts:
 			zipCodes.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119, 10785,
@@ -153,34 +151,34 @@ class AnalyzeSnzRange implements Callable<Integer> {
 					new IntOpenHashSet(List.of(10315, 13057, 10317, 10318, 10319, 10365, 10367, 10369, 13055, 13059)));
 			zipCodes.put("Reinickendorf", new IntOpenHashSet(List.of(13403, 13405, 13407, 13409, 13435, 13437, 13439,
 					13465, 13467, 13469, 13503, 13505, 13507, 13509, 13629)));
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Bonn:
 			IntSet zipCodesBonn = new IntOpenHashSet();
 			for (int i = 53100; i <= 53299; i++)
 				zipCodesBonn.add(i);
 			zipCodes.put("Bonn", zipCodesBonn);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Germany:
 			IntSet zipCodesGER = new IntOpenHashSet();
 			for (int i = 0; i <= 99999; i++)
 				zipCodesGER.add(i);
 			zipCodes.put("Germany", zipCodesGER);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Hamburg:
 			IntSet zipCodesHamburg = new IntOpenHashSet();
 			for (int i = 22000; i <= 22999; i++)
 				zipCodesHamburg.add(i);
 			zipCodes.put("Hamburg", zipCodesHamburg);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Heinsberg:
 			IntSet zipCodesHeinsberg = new IntOpenHashSet(
 					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 			zipCodes.put("Heinsberg", zipCodesHeinsberg);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Collogne:
 			IntSet zipCodesCollogne = new IntOpenHashSet(List.of(50667, 50668, 50670, 50672, 50674, 50676, 50677, 50678,
@@ -188,7 +186,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 					50931, 50933, 50935, 50937, 50939, 50968, 50969, 50996, 50997, 50999, 51061, 51063, 51065, 51067,
 					51069, 51103, 51105, 51107, 51109, 51143, 51145, 51147, 51149));
 			zipCodes.put("Collogne", zipCodesCollogne);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Frankfurt:
 			IntSet zipCodesFrankfurt = new IntOpenHashSet();
@@ -196,29 +194,29 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				zipCodesFrankfurt.add(i);
 			zipCodesFrankfurt.addAll(List.of(65929, 65931, 65933, 65934, 65936));
 			zipCodes.put("FrankfurtMain", zipCodesFrankfurt);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 		case Mannheim:
 			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
 					68229, 68239, 68259, 68305, 68307, 68309));
 			zipCodes.put("Mannheim", zipCodesMannheim);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Munich:
 			IntSet zipCodesMunich = new IntOpenHashSet();
 			for (int i = 80331; i <= 81929; i++)
 				zipCodesMunich.add(i);
 			zipCodes.put("Munich", zipCodesMunich);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Test:
 			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
 			zipCodes.put("Test", zipCodesTest);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		case Wolfsburg:
 			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
 			zipCodes.put("Wolfsburg", zipCodesWolfsburg);
-			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null);
+			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, null, startDateStillUsingBaseDays);
 			break;
 		default:
 			break;
@@ -234,7 +232,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	 * @throws IOException
 	 */
 	private void analyzeDataForCertainAreas(HashMap<String, IntSet> zipCodes, AnalyseOptions selectedOptionForAnalyse,
-			Path selectedOutputFolder) throws IOException {
+			Path selectedOutputFolder, String startDateStillUsingBaseDays) throws IOException {
 
 		log.info("Searching for files in the folder: " + inputFolder);
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
@@ -268,6 +266,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				sums.put(certainArea, new Object2DoubleOpenHashMap<>());
 
 			int countingDays = 1;
+			boolean reachedStartDate = false;
 			HashMap<String, Integer> anaylzedDaysPerAreaAndPeriod = new HashMap<String, Integer>();
 
 			// will contain the last parsed date
@@ -280,81 +279,93 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				LocalDate date = LocalDate.parse(dateString, FMT);
 				DayOfWeek day = date.getDayOfWeek();
 
-				switch (selectedOptionForAnalyse) {
-				case weeklyResultsOfAllDays:
-					readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-						for (String area : sums.keySet())
-							sums.get(area).clear();
-					}
-					break;
-				case onlyWeekdays:
-					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)) {
-						List<String> areasWithBankHoliday = new ArrayList<>();
-						getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
-						readDataOfTheDay(zipCodes, sums, file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod,
-								lkAssignemt);
-					}
-					if (day.equals(DayOfWeek.FRIDAY)) {
-						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-						for (String area : sums.keySet())
-							sums.get(area).clear();
-					}
-					break;
-				case onlySaturdays:
-					if (day.equals(DayOfWeek.SATURDAY)) {
-						readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-						for (String area : sums.keySet())
-							sums.get(area).clear();
-					}
-					break;
-				case onlySundays:
-					if (day.equals(DayOfWeek.SUNDAY)) {
-						readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-						for (String area : sums.keySet())
-							sums.get(area).clear();
-					}
-					break;
-				case onlyWeekends:
-					if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
-						readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-					if (day.equals(DayOfWeek.SUNDAY)) {
-						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-						for (String area : sums.keySet())
-							sums.get(area).clear();
-						;
-					}
-					break;
-				case dailyResults:
-					readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-					writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-					for (String area : sums.keySet())
-						sums.get(area).clear();
-					break;
-				case Mo_Do:
-					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
-							&& !day.equals(DayOfWeek.FRIDAY)) {
-						List<String> areasWithBankHoliday = new ArrayList<>();
-						getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
-						readDataOfTheDay(zipCodes, sums, file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod,
-								lkAssignemt);
-					}
-					if (day.equals(DayOfWeek.THURSDAY)) {
-						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
-						for (String area : sums.keySet())
-							sums.get(area).clear();
-					}
-					break;
-				default:
-					break;
+				if (dateString.equals(startDateStillUsingBaseDays))
+					reachedStartDate = true;
 
+				if (startDateStillUsingBaseDays.equals("") || reachedStartDate) {
+
+					switch (selectedOptionForAnalyse) {
+					case weeklyResultsOfAllDays:
+						readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+						if (day.equals(DayOfWeek.SUNDAY)) {
+							writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString,
+									sums);
+							for (String area : sums.keySet())
+								sums.get(area).clear();
+						}
+						break;
+					case onlyWeekdays:
+						if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)) {
+							List<String> areasWithBankHoliday = new ArrayList<>();
+							getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
+							readDataOfTheDay(zipCodes, sums, file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod,
+									lkAssignemt);
+						}
+						if (day.equals(DayOfWeek.FRIDAY)) {
+							writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString,
+									sums);
+							for (String area : sums.keySet())
+								sums.get(area).clear();
+						}
+						break;
+					case onlySaturdays:
+						if (day.equals(DayOfWeek.SATURDAY)) {
+							readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+							writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString,
+									sums);
+							for (String area : sums.keySet())
+								sums.get(area).clear();
+						}
+						break;
+					case onlySundays:
+						if (day.equals(DayOfWeek.SUNDAY)) {
+							readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+							writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString,
+									sums);
+							for (String area : sums.keySet())
+								sums.get(area).clear();
+						}
+						break;
+					case onlyWeekends:
+						if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
+							readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+						if (day.equals(DayOfWeek.SUNDAY)) {
+							writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString,
+									sums);
+							for (String area : sums.keySet())
+								sums.get(area).clear();
+							;
+						}
+						break;
+					case dailyResults:
+						readDataOfTheDay(zipCodes, sums, file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+						writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString, sums);
+						for (String area : sums.keySet())
+							sums.get(area).clear();
+						break;
+					case Mo_Do:
+						if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
+								&& !day.equals(DayOfWeek.FRIDAY)) {
+							List<String> areasWithBankHoliday = new ArrayList<>();
+							getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
+							readDataOfTheDay(zipCodes, sums, file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod,
+									lkAssignemt);
+						}
+						if (day.equals(DayOfWeek.THURSDAY)) {
+							writeOutput(selectedOptionForAnalyse, writer, anaylzedDaysPerAreaAndPeriod, dateString,
+									sums);
+							for (String area : sums.keySet())
+								sums.get(area).clear();
+						}
+						break;
+					default:
+						break;
+
+					}
 				}
-
 				if (countingDays % 7 == 0)
-					log.info("Finished week " + countingDays / 7);
+					log.info("Finished week " + countingDays / 7 + " of "
+							+ (int) Math.floor((double) filesWithData.size() / 7) + " weeks");
 
 				countingDays++;
 			}
@@ -363,25 +374,25 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			Path finalPath = null;
 			switch (selectedOptionForAnalyse) {
 			case weeklyResultsOfAllDays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekly"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekly"));
 				break;
 			case onlyWeekdays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekdays"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekdays"));
 				break;
 			case onlySaturdays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_saturdays"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_saturdays"));
 				break;
 			case onlySundays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_sundays"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_sundays"));
 				break;
 			case onlyWeekends:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekends"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekends"));
 				break;
 			case dailyResults:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_daily"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_daily"));
 				break;
 			case Mo_Do:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
+				finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
 				break;
 			default:
 				break;
@@ -394,7 +405,9 @@ class AnalyzeSnzRange implements Callable<Integer> {
 		}
 	}
 
-	/** Writes the output of the analyzed time period.
+	/**
+	 * Writes the output of the analyzed time period.
+	 * 
 	 * @param selectedOptionForAnalyse
 	 * @param writer
 	 * @param anaylzedDaysPerAreaAndPeriod
@@ -413,18 +426,20 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			}
 		}
 		for (String certainArea : sums.keySet()) {
-		List<String> row = new ArrayList<>();
-		row.add(dateString);
-		row.add(certainArea);
-		row.add(String.valueOf((int)sums.get(certainArea).getDouble("nPersons")));
-		row.add(String.valueOf(round2Decimals(sums.get(certainArea).getDouble("nMobilePersons")
-				/ sums.get(certainArea).getDouble("nPersons")) * 100));
-		row.add(String.valueOf(round2Decimals(sums.get(certainArea).getDouble("dailyRangeSum")
-				/ sums.get(certainArea).getDouble("nPersons"))));
+			List<String> row = new ArrayList<>();
+			row.add(dateString);
+			row.add(certainArea);
+			row.add(String.valueOf((int) sums.get(certainArea).getDouble("nPersons")));
+			row.add(String.valueOf(round2Decimals(
+					sums.get(certainArea).getDouble("nMobilePersons") / sums.get(certainArea).getDouble("nPersons"))
+					* 100));
+			row.add(String.valueOf(round2Decimals(
+					sums.get(certainArea).getDouble("dailyRangeSum") / sums.get(certainArea).getDouble("nPersons"))));
 
-		JOIN.appendTo(writer, row);
-		writer.write("\n");
+			JOIN.appendTo(writer, row);
+			writer.write("\n");
 		}
+		anaylzedDaysPerAreaAndPeriod.clear();
 	}
 
 	/**
@@ -507,7 +522,6 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				return bundesland;
 		return null;
 	}
-
 
 	/**
 	 * Reads the file with the person statistics for all lists of zip Codes and

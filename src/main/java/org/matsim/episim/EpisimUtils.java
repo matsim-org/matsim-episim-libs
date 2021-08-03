@@ -357,7 +357,7 @@ public final class EpisimUtils {
 	/**
 	 * Type of interpolation of activity pattern.
 	 */
-	public enum Extrapolation {none, linear, exponential}
+	public enum Extrapolation {none, linear, exponential, regHospital}
 
 	/**
 	 * Function fitter using least squares.

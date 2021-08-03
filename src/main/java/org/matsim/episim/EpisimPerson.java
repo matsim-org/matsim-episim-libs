@@ -424,6 +424,8 @@ public final class EpisimPerson implements Attributable {
 		this.vaccinationType = type;
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
+
+		reporting.reportVaccination(personId, iteration, false);
 	}
 
 	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
@@ -432,6 +434,8 @@ public final class EpisimPerson implements Attributable {
 
 		this.reVaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
+
+		reporting.reportVaccination(personId, iteration, true);
 	}
 
 	public TestStatus getTestStatus() {
@@ -881,4 +885,16 @@ public final class EpisimPerson implements Attributable {
 	 */
 	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
+    /**
+	 * If the ContagiousOptimization is enabled, containers count how many 
+	 * persons satisfy this predicate to call the infectionsDynamics methods 
+     * only in the case that at least one person in the container 
+	 * can infect another (or in the infectedButNotContagious case,
+	 * inform other persons later thanks to tracking).	
+	 */
+	public boolean infectedButNotSerious() {
+		return (status == DiseaseStatus.infectedButNotContagious || 
+				status == DiseaseStatus.contagious ||
+				status == DiseaseStatus.showingSymptoms);
+	}
 }

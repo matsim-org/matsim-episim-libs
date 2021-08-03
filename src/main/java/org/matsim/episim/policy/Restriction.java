@@ -65,12 +65,17 @@ public final class Restriction {
 	private Map<String, Double> locationBasedRf;
 
 	/**
+	 * Stores if this restriction should be extrapolated.
+	 */
+	private boolean extrapolate = false;
+
+	/**
 	 * Constructor.
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
 						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf) {
 
-		if (remainingFraction != null && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
+		if (remainingFraction != null && !Objects.equals(remainingFraction, ShutdownPolicy.REG_HOSPITAL) && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
 		if (ciCorrection != null && (Double.isNaN(ciCorrection) || ciCorrection < 0))
 			throw new IllegalArgumentException("contact intensity correction must be larger than 0 but is=" + ciCorrection);
@@ -536,6 +541,14 @@ public final class Restriction {
 			locationBasedRf.putIfAbsent(oldEntry.getKey(), oldEntry.getValue());
 
 		}
+	}
+
+	boolean isExtrapolate() {
+		return extrapolate;
+	}
+
+	void setExtrapolate(boolean extrapolate) {
+		this.extrapolate = extrapolate;
 	}
 
 	public Double getRemainingFraction() {

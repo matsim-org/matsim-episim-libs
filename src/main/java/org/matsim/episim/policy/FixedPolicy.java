@@ -92,6 +92,10 @@ public final class FixedPolicy extends ShutdownPolicy {
 				if (date.isBefore(start)) {
 					Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
 					entry.getValue().update(r);
+
+					if (ShutdownPolicy.REG_HOSPITAL.equals(r.getRemainingFraction()))
+						entry.getValue().setExtrapolate(true);
+
 				}
 			}
 		}
@@ -104,8 +108,21 @@ public final class FixedPolicy extends ShutdownPolicy {
 			if (!config.hasPath(entry.getKey())) continue;
 
 			Restriction r = readForDay(report, config, entry.getKey());
-			if (r != null)
+			if (r != null) {
+
+				if (ShutdownPolicy.REG_HOSPITAL.equals(r.getRemainingFraction()))
+					entry.getValue().setExtrapolate(true);
+
 				entry.getValue().update(r);
+			}
+
+			if (entry.getValue().isExtrapolate()) {
+
+				double hospital = (report.nCritical + report.nSeriouslySick) * (100_000d / report.nTotal());
+				double rf = 1 - (1 - Math.exp(-hospital / (3838 * (100_000d / report.nTotal()))));
+				entry.getValue().setRemainingFraction(rf);
+			}
+
 		}
 	}
 
@@ -193,7 +210,6 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @param date        the date (yyyy-mm-dd) when it will be in effect
 		 * @param restriction restriction to apply
 		 * @param activities  activities to restrict
-		 *
 		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, Restriction, String...)}
 		 */
 		@SuppressWarnings("unchecked")
@@ -224,7 +240,6 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * @param date        the date (yyyy-mm-dd) when it will be in effect
 		 * @param restriction restriction to apply
 		 * @param activities  activities to restrict
-		 *
 		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, Restriction, String...)}
 		 */
 		@SuppressWarnings("unchecked")
@@ -311,7 +326,6 @@ public final class FixedPolicy extends ShutdownPolicy {
 		 * Same as {@link #restrict(long, Restriction, String...)}  with default values.
 		 *
 		 * @deprecated -- discouraged syntax; rather use {@link #restrict(LocalDate, double, String...)}
-		 *
 		 */
 		public ConfigBuilder restrict(long day, double fraction, String... activities) {
 			return restrict(day, Restriction.of(fraction), activities);
@@ -387,8 +401,8 @@ public final class FixedPolicy extends ShutdownPolicy {
 		/**
 		 * Applies a function on the raw config for certain acitivies.
 		 *
-		 * @param from from date (inclusive)
-		 * @param to to date (inclusive)
+		 * @param from       from date (inclusive)
+		 * @param to         to date (inclusive)
 		 * @param activities activities where to apply
 		 * @implNote Unstable API that might be removed,
 		 * @deprecated unstable API

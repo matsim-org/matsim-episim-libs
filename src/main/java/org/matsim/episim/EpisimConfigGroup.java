@@ -79,6 +79,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
+	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
+	private static final String REPORT_TIME_USE = "reportTimeUse";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -159,6 +161,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
+	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
+	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
 	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -727,6 +731,27 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
 
+	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
+	public ContagiousOptimization getContagiousOptimization() {
+		return this.contagiousContainerOptimization;
+	}
+
+	@StringSetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
+	public void setContagiousOptimization(ContagiousOptimization contagiousOptimization) {
+		this.contagiousContainerOptimization = contagiousOptimization;
+	}
+
+	@StringGetter(REPORT_TIME_USE)
+	public ReportTimeUse getReportTimeUse() {
+		return reportTimeUse;
+	}
+
+	@StringSetter(REPORT_TIME_USE)
+	public void setReportTimeUse(ReportTimeUse reportTimeUse) {
+		this.reportTimeUse = reportTimeUse;
+	}
+	
+
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
 		// this is, I think, necessary for the automatic reading from file, and possibly for the commandline stuff.
@@ -972,6 +997,26 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		yesForHomeLocation,
 		no
 	}
+
+ 
+    /** 
+     * In the case that this optimization is enabled, the infectionDynamics
+     * methods are only called, if a contagious person is in the container
+     */	
+	public enum ContagiousOptimization {
+		yes,
+		no
+	}
+	
+	/**
+	 * The used time tracking costs a lot of CPU cycles, so this 
+     * can be disabled with
+     */
+	public enum ReportTimeUse {
+		yes,
+		no
+	}
+
 
 
 	/**
