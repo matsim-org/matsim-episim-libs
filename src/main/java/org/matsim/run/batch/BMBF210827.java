@@ -1,8 +1,10 @@
 package org.matsim.run.batch;
 
+import com.google.inject.AbstractModule;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.TestingConfigGroup.TestingParams;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
@@ -23,45 +25,45 @@ import java.util.Map;
 
 
 /**
- * Calibration
+ * Different scenarios for report
  */
-public class Calibration implements BatchRun<Calibration.Params> {
+public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 
 	@Override
-	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder()
-				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
-				.createSnzBerlinProductionScenario();
+	public AbstractModule getBindings(int id, @Nullable Params params) {
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(SnzBerlinProductionScenario.Snapshot.no).createSnzBerlinProductionScenario();
 	}
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "calibration");
+		return Metadata.of("berlin", "mutations");
 	}
 
 //	@Override
 //	public int getOffset() {
-//		return 10000;
+//		return 20000;
 //	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = getBindings(id, params);
 
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
+				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
+				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
+				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
+				.createSnzBerlinProductionScenario();
 		Config config = module.config();
+
 		config.global().setRandomSeed(params.seed);
+
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(1.781459599227274e-05);
+//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+//		episimConfig.setStartFromSnapshot("../episim-snapshot-270-2020-11-20.zip");
+//		episimConfig.setSnapshotInterval(30);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
-
-		if (id == 1)
-			episimConfig.setSnapshotInterval(100);
 
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
@@ -74,13 +76,18 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 		LocalDate date1 = LocalDate.parse("2021-08-06");
 		//kein zusätzliches Lüften mehr nach den Sommerferien
-		builder.restrict("2021-08-07", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		builder.restrict("2021-08-07", Restriction.ofCiCorrection(params.ciCorrectionEdu), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		builder.restrict(date1, 1.0, "shop_daily", "shop_other", "errands");
 
 		builder.restrict(date1, 1.0, "work", "business", "leisure", "visit");
 
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
+
+		if(params.masks.equals("no")) {
+			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), AbstractSnzScenario2020.DEFAULT_ACTIVITIES);
+			builder.restrict(date1, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.0, FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.0)), "pt");
+		}
 
 		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 		builder.apply("2021-06-24", "2021-08-05", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
@@ -111,34 +118,51 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1 - vaccineEffectiveness));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1 - vaccineEffectiveness));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse("2021-04-07"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(0.9 / vaccineEffectiveness);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setReVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1 - 0.9));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
-
-		for (int i = 0; i < 15; i++) vaccinationCompliance.put(i, 0.0);
-		for (int i = 16; i < 120; i++) vaccinationCompliance.put(i, 0.8);
+		if (params.vaccinationAgeGroup.equals("6m")) {
+			vaccinationCompliance.put(0, params.vaccinationCompliance * 0.5);
+			for(int i = 1; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		}
+		if (params.vaccinationAgeGroup.equals("12y")) {
+			for(int i = 0; i<11; i++) vaccinationCompliance.put(i, 0.0);
+			for(int i = 12; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		}
+		if (params.vaccinationAgeGroup.equals("16y")) {
+			for(int i = 0; i<15; i++) vaccinationCompliance.put(i, 0.0);
+			for(int i = 16; i<120; i++) vaccinationCompliance.put(i, params.vaccinationCompliance);
+		}
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
+
+		Map<LocalDate, Integer> reVaccinations = new HashMap<>();
+
+		if (!params.revaccinationDate.equals("no")) {
+			reVaccinations.put(LocalDate.parse("2020-01-01"), 0);
+			reVaccinations.put(LocalDate.parse(params.revaccinationDate), (int) (params.revaccinationSpeed * 4_831_120));
+			vaccinationConfig.setReVaccinationCapacity_pers_per_day(reVaccinations);
+		}
 
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 
 //		TestType testType = TestType.valueOf(params.testType);
 
-		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
-		TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+		TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
+		TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
 
 		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 
@@ -171,7 +195,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		workTests.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 
-		for (int i = 1; i <= 31; i++) {
+		for (int i = 1; i<=31; i++) {
 			leisureTests.put(testingStartDate.plusDays(i), 0.05 * i / 31.);
 			workTests.put(testingStartDate.plusDays(i), 0.05 * i / 31.);
 			eduTests.put(testingStartDate.plusDays(i), 0.2 * i / 31.);
@@ -181,7 +205,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		workTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		leisureTests.put(LocalDate.parse("2021-06-24"), 0.0);
 
-		eduTests.put(LocalDate.parse("2021-08-06"), 0.2);
+		eduTests.put(LocalDate.parse("2021-08-06"), params.testingRateRapidTest);
 
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -193,7 +217,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 				"educ_tertiary", eduTests,
 				"educ_higher", eduTests,
 				"educ_other", eduTests
-		)));
+				)));
 
 		Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
@@ -202,7 +226,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 
-		eduTestsPCR.put(LocalDate.parse("2021-08-06"), 0.1);
+		eduTestsPCR.put(LocalDate.parse("2021-08-06"), params.testingRatePCRTest);
 
 		pcrTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTestsPCR,
@@ -214,7 +238,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 				"educ_tertiary", eduTestsPCR,
 				"educ_higher", eduTestsPCR,
 				"educ_other", eduTestsPCR
-		)));
+				)));
 
 		rapidTest.setTestingCapacity_pers_per_day(Map.of(
 				LocalDate.of(1970, 1, 1), 0,
@@ -229,20 +253,46 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(1)
 		public long seed;
 
-		@Parameter({0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3})
-		double thetaFactor;
+		@StringParameter({"no", "yes"})
+		String masks;
+
+//		@Parameter({0.9, 0.8, 0.7})
+		@Parameter({0.9, 0.7})
+		double mutBVaccinationEffectiveness;
+
+		@Parameter({0.8, 0.95})
+		double vaccinationCompliance;
+
+		@StringParameter({"6m", "12y", "16y"})
+		String vaccinationAgeGroup;
+
+//		@StringParameter({"no", "2021-10-01"})
+		@StringParameter({"no"})
+		String revaccinationDate;
+
+		@Parameter({0.02})
+		double revaccinationSpeed;
+
+		@Parameter({0.125, 0.25, 0.5, 1.0})
+		double ciCorrectionEdu;
+
+		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
+		double testingRateRapidTest;
+
+		@Parameter({0.0, 0.2, 0.4, 0.6, 0.8, 1.0})
+		double testingRatePCRTest;
 
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, Calibration.class.getName(),
+				RunParallel.OPTION_SETUP, BMBF210827.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(280),
 				RunParallel.OPTION_METADATA
 		};
 

@@ -311,6 +311,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		episimConfig.setActivityHandling(activityHandling);
 
+		episimConfig.setThreads(6);
+
 //		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 //				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 //
@@ -397,8 +399,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210504";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+"_v2.csv"));
+		String untilDate = "20210709";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210709.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
