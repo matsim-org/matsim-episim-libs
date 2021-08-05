@@ -367,6 +367,8 @@ public final class EpisimPerson implements Attributable {
 
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
+
+		reporting.reportVaccination(personId, iteration, false);
 	}
 
 	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
@@ -375,6 +377,8 @@ public final class EpisimPerson implements Attributable {
 
 		this.reVaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
+
+		reporting.reportVaccination(personId, iteration, true);
 	}
 
 	public TestStatus getTestStatus() {

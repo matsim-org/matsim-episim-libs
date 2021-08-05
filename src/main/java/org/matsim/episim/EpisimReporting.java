@@ -29,16 +29,15 @@ import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.Event;
+import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.episim.events.EpisimContactEvent;
-import org.matsim.episim.events.EpisimInfectionEvent;
-import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.events.EpisimTracingEvent;
+import org.matsim.episim.events.*;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.EpisimWriter;
@@ -417,7 +416,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @param infectionType activities of both persons
 	 */
 	public void reportInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, String infectionType,
-								VirusStrain strain, double prob, EpisimContainer<?> container) {
+	                            VirusStrain strain, double prob, EpisimContainer<?> container) {
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -453,7 +452,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @see EpisimContactEvent
 	 */
 	public void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-							  StringBuilder actType, double duration) {
+	                          StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
@@ -530,10 +529,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	/**
+	 * Report the vaccination of a person.
+	 */
+	void reportVaccination(Id<Person> personId, int iteration, boolean reVaccination) {
+		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, reVaccination));
+	}
+
+
+	/**
 	 * Write container statistic to file.
 	 */
 	public void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
-									 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
+	                                 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
 
 		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "totalUsers", "maxGroupSize");
 
@@ -598,7 +605,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		if (iteration == 0) return;
 
 		// Crucial episim events are always written, others only if enabled
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 
