@@ -72,7 +72,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private Tracing tracing = Tracing.yes;
 		private Vaccinations vaccinations = Vaccinations.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
-		private EasterModel easterModel = EasterModel.yes;
+		private EasterModel easterModel = EasterModel.no;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
 		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
@@ -399,8 +399,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210709";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210709.csv"));
+		String untilDate = "20210802";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210802.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {

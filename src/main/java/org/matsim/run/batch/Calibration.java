@@ -56,7 +56,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(1.781459599227274e-05);
+		episimConfig.setCalibrationParameter(1.3265460138376995e-05);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
@@ -120,9 +120,9 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-04-07"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(0.9 / vaccineEffectiveness);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setReVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1 - 0.9));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
@@ -232,8 +232,11 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@GenerateSeeds(30)
 		public long seed;
 
-		@Parameter({0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3})
+		@Parameter({0.9, 0.95, 1.0, 1.05, 1.1})
 		double thetaFactor;
+
+		@Parameter({0.9, 0.8, 0.7})
+		double mutBVaccinationEffectiveness;
 
 	}
 
