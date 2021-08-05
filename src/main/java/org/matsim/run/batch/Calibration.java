@@ -232,10 +232,10 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@GenerateSeeds(30)
 		public long seed;
 
-		@Parameter({0.9, 0.95, 1.0, 1.05, 1.1})
+		@Parameter({0.8, 0.9, 1.0, 1.1, 1.2})
 		double thetaFactor;
 
-		@Parameter({0.9, 0.8, 0.7})
+		@Parameter({0.8, 0.7})
 		double mutBVaccinationEffectiveness;
 
 	}

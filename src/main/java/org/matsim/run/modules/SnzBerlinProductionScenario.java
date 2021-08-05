@@ -438,7 +438,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
-		episimConfig.setPolicy(builder.build());
 
 		//tracing
 		if (this.tracing == Tracing.yes) {
@@ -484,7 +483,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.665;
+				double fraction = 0.5925;
 
 				if (this.christmasModel == ChristmasModel.restrictive) {
 					builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
@@ -509,7 +508,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.68;
+				double fraction = 0.72;
 				builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
 				builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);

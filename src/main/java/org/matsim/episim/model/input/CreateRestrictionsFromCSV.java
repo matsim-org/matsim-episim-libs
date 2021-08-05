@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
@@ -118,6 +119,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 				.toArray(String[]::new);
 
 		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
+		AtomicReference<LocalDate> until = new AtomicReference<>(start);
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
 
@@ -133,17 +135,19 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 				}
 				trend.add(avg);
 				builder.restrictWithDistrict(date, avgPerDistrict, avg, act);
+				until.set(date);
 			});
 		} else {
 			RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -> {
 				trend.add(avg);
 				builder.restrict(date, avg, act);
+				until.set(date);
 			});
 		}
 
 		// Use last weeks for the trend
 		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
-		start = start.plusDays(7);
+		start = until.get().plusDays(7);
 
 		List<Double> extrapolateGlobal = RestrictionInput.extrapolate(recentTrend, 25, extrapolation);
 
