@@ -73,7 +73,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		Path tempFile = Files.createTempFile("episim", "csv");
 		tempFile.toFile().deleteOnExit();
 
-		writeDataForCertainArea(tempFile, areaCodes, true, null);
+		writeDataForCertainArea(tempFile, areaCodes, true, null, new HashSet<String>());
 		delegate.setInput(tempFile);
 
 		return delegate.createPolicy();
@@ -299,9 +299,11 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 	/**
 	 * Analyze data and write result to {@code outputFile}.
+	 * 
+	 * @param datesToIgnore
 	 */
 	public void writeDataForCertainArea(Path outputFile, IntSet zipCodes, boolean getPercentageResults,
-			List<String> baseDays) throws IOException {
+			List<String> baseDays, Set<String> datesToIgnore) throws IOException {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 		HashMap<String, Set<String>> lkAssignemt = createLKAssignmentToBL();
@@ -378,6 +380,9 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			// Analyzes all files with the mobility data
 			for (File file : filesWithData) {
 
+				dateString = file.getName().split("_")[0];
+				if (datesToIgnore.contains(dateString))
+					continue;
 				Object2DoubleMap<String> sums = readDurations(file, zipCodes);
 
 				dateString = file.getName().split("_")[0];
@@ -444,10 +449,12 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	 * Analyze data and write result to {@code outputFile}. The result contains data
 	 * for all Bundeslaender.
 	 * 
+	 * @param datesToIgnore
+	 * 
 	 * @param outputOption
 	 */
 	public void writeBundeslandDataForPublic(Path outputFile, String selectedOutputOption,
-			String startDateStillUsingBaseDays) throws IOException {
+			String startDateStillUsingBaseDays, Set<String> datesToIgnore) throws IOException {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 
@@ -468,7 +475,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
 
 			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer, zipCodesBL,
-					startDateStillUsingBaseDays);
+					startDateStillUsingBaseDays, datesToIgnore);
 			writer.close();
 
 			Path finalPath = null;
@@ -493,10 +500,12 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	 * Analyze data and write result to {@code outputFile}. The result contains data
 	 * for all Bundeslaender.
 	 * 
+	 * @param datesToIgnore
+	 * 
 	 * @param selectedOutputOptions
 	 */
 	public void writeLandkreisDataForPublic(Path outputFile, String selectedOutputOption,
-			String startDateStillUsingBaseDays) throws IOException {
+			String startDateStillUsingBaseDays, Set<String> datesToIgnore) throws IOException {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 
@@ -516,7 +525,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			HashMap<String, IntSet> zipCodesLK = findZIPCodesForLandkreise();
 
 			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer, zipCodesLK,
-					startDateStillUsingBaseDays);
+					startDateStillUsingBaseDays, datesToIgnore);
 
 			writer.close();
 			Path finalPath = null;
@@ -546,11 +555,12 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 	 * @param allHolidays
 	 * @param writer
 	 * @param zipCodesAreas
+	 * @param datesToIgnore
 	 * @throws IOException
 	 */
 	private void readAndWriteResultsOfAllDays(String selectedOutputOptions, List<File> filesWithData,
-			BufferedWriter writer, HashMap<String, IntSet> zipCodesAreas, String startDateStillUsingBaseDays)
-			throws IOException {
+			BufferedWriter writer, HashMap<String, IntSet> zipCodesAreas, String startDateStillUsingBaseDays,
+			Set<String> datesToIgnore) throws IOException {
 
 		Map<DayOfWeek, Map<String, Object2DoubleMap<String>>> base = new EnumMap<>(DayOfWeek.class);
 		Map<String, Integer> personsPerArea = new HashMap<>();
@@ -580,21 +590,25 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 				getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
 
 				if (selectedOutputOptions.contains("daily")) {
-					readDurations(file, zipCodesAreas, allSums, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+					if (!datesToIgnore.contains(dateString))
+						readDurations(file, zipCodesAreas, allSums, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					writeOutput = true;
 				} else if (selectedOutputOptions.contains("weekly")) {
-					readDurations(file, zipCodesAreas, allSums, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+					if (!datesToIgnore.contains(dateString))
+						readDurations(file, zipCodesAreas, allSums, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 					if (day.equals(DayOfWeek.SUNDAY))
 						writeOutput = true;
 				} else if (selectedOutputOptions.contains("weekdays")) {
-					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)) {
+					if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
+							&& !datesToIgnore.contains(dateString)) {
 						readDurations(file, zipCodesAreas, allSums, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod,
 								lkAssignemt);
 						if (day.equals(DayOfWeek.FRIDAY))
 							writeOutput = true;
 					}
 				} else if (selectedOutputOptions.contains("weekends")) {
-					if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY)) {
+					if ((day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
+							&& !datesToIgnore.contains(dateString)) {
 						readDurations(file, zipCodesAreas, allSums, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 						if (day.equals(DayOfWeek.SUNDAY))
 							writeOutput = true;
@@ -603,54 +617,56 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 				if (writeOutput) {
 					writeOutput = false;
-					for (String nameOfArea : allSums.keySet()) {
-						dateString = file.getName().split("_")[0];
-						day = date.getDayOfWeek();
+					if (!anaylzedDaysPerAreaAndPeriod.values().isEmpty())
+						for (String nameOfArea : allSums.keySet()) {
+							dateString = file.getName().split("_")[0];
+							day = date.getDayOfWeek();
 
-						// mean sum of the analyzed days
-						Object2DoubleMap<String> sums = allSums.get(nameOfArea);
-						for (String activity : sums.keySet())
-							sums.put(activity, sums.getDouble(activity) / anaylzedDaysPerAreaAndPeriod.get(nameOfArea));
+							// mean sum of the analyzed days
+							Object2DoubleMap<String> sums = allSums.get(nameOfArea);
+							for (String activity : sums.keySet())
+								sums.put(activity,
+										sums.getDouble(activity) / anaylzedDaysPerAreaAndPeriod.get(nameOfArea));
 
-						// set base
-						if (day != DayOfWeek.SUNDAY)
-							if (areasWithBankHoliday.contains(nameOfArea))
-								day = DayOfWeek.SUNDAY;
+							// set base
+							if (day != DayOfWeek.SUNDAY)
+								if (areasWithBankHoliday.contains(nameOfArea))
+									day = DayOfWeek.SUNDAY;
 
-						if (base.containsKey(day)) {
-							if (!base.get(day).containsKey(nameOfArea))
+							if (base.containsKey(day)) {
+								if (!base.get(day).containsKey(nameOfArea))
+									base.get(day).put(nameOfArea, sums);
+							} else {
+								HashMap<String, Object2DoubleMap<String>> wd = new HashMap<String, Object2DoubleMap<String>>();
+								HashMap<String, Object2DoubleMap<String>> sa = new HashMap<String, Object2DoubleMap<String>>();
+								HashMap<String, Object2DoubleMap<String>> so = new HashMap<String, Object2DoubleMap<String>>();
+								base.put(DayOfWeek.MONDAY, wd);
+								base.put(DayOfWeek.TUESDAY, wd);
+								base.put(DayOfWeek.WEDNESDAY, wd);
+								base.put(DayOfWeek.THURSDAY, wd);
+								base.put(DayOfWeek.FRIDAY, wd);
+								base.put(DayOfWeek.SATURDAY, sa);
+								base.put(DayOfWeek.SUNDAY, so);
+
 								base.get(day).put(nameOfArea, sums);
-						} else {
-							HashMap<String, Object2DoubleMap<String>> wd = new HashMap<String, Object2DoubleMap<String>>();
-							HashMap<String, Object2DoubleMap<String>> sa = new HashMap<String, Object2DoubleMap<String>>();
-							HashMap<String, Object2DoubleMap<String>> so = new HashMap<String, Object2DoubleMap<String>>();
-							base.put(DayOfWeek.MONDAY, wd);
-							base.put(DayOfWeek.TUESDAY, wd);
-							base.put(DayOfWeek.WEDNESDAY, wd);
-							base.put(DayOfWeek.THURSDAY, wd);
-							base.put(DayOfWeek.FRIDAY, wd);
-							base.put(DayOfWeek.SATURDAY, sa);
-							base.put(DayOfWeek.SUNDAY, so);
+							}
 
-							base.get(day).put(nameOfArea, sums);
+							// add the number of persons in this area from data
+							if (personsPerArea.isEmpty())
+								personsPerArea = getPersonsInThisZIPCodes(zipCodesAreas, inputFolder.toFile());
+
+							List<String> row = new ArrayList<>();
+							row.add(dateString);
+							row.add(nameOfArea);
+							row.add(String.valueOf(round2Decimals(
+									sums.getDouble("notAtHome") / personsPerArea.get(nameOfArea) / 3600)));
+							row.add(String.valueOf(Math.round(
+									(sums.getDouble("notAtHome") / base.get(day).get(nameOfArea).getDouble("notAtHome")
+											- 1) * 100)));
+							JOIN_LK.appendTo(writer, row);
+							writer.write("\n");
+
 						}
-
-						// add the number of persons in this area from data
-						if (personsPerArea.isEmpty())
-							personsPerArea = getPersonsInThisZIPCodes(zipCodesAreas, inputFolder.toFile());
-
-						List<String> row = new ArrayList<>();
-						row.add(dateString);
-						row.add(nameOfArea);
-						row.add(String.valueOf(
-								round2Decimals(sums.getDouble("notAtHome") / personsPerArea.get(nameOfArea) / 3600)));
-						row.add(String.valueOf(Math.round(
-								(sums.getDouble("notAtHome") / base.get(day).get(nameOfArea).getDouble("notAtHome") - 1)
-										* 100)));
-						JOIN_LK.appendTo(writer, row);
-						writer.write("\n");
-
-					}
 
 					anaylzedDaysPerAreaAndPeriod.clear();
 					allSums.clear();
