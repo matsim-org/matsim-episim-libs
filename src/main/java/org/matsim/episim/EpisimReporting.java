@@ -312,7 +312,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					throw new IllegalArgumentException("Unexpected value: " + person.getReVaccinationStatus());
 			}
 
-			if (person.daysSinceTest(iteration) == 0) {
+			// stats are collected one day after the test has been performed
+			if (person.daysSinceTest(iteration) == 1) {
 				report.nTested++;
 				district.nTested++;
 			}

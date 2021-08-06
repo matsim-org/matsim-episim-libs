@@ -3,7 +3,6 @@ package org.matsim.run.batch;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.testing.TestType;
@@ -11,7 +10,6 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
-import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
@@ -31,6 +29,8 @@ public class Calibration implements BatchRun<Calibration.Params> {
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
+				.setWeatherModel(params == null ? SnzBerlinProductionScenario.WeatherModel.midpoints_200_250 : params.weatherModel)
+				.setImportFactor(params == null ? 1d : params.importFactor)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
 				.createSnzBerlinProductionScenario();
@@ -56,7 +56,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(1.3265460138376995e-05);
+		episimConfig.setCalibrationParameter(1.534558994278839e-05);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
@@ -85,11 +85,13 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 		builder.apply("2021-06-24", "2021-08-05", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 
+		/* These entries will have no effect when extrapolation is based on hospital numbers
 		builder.restrict("2021-10-11", 0.83, "work", "business");
 		builder.restrict("2021-10-23", 1.0, "work", "business");
 
 		builder.restrict("2021-12-20", 0.83, "work", "business");
 		builder.restrict("2022-01-02", 1.0, "work", "business");
+		 */
 
 		builder.restrict("2021-12-20", 0.2, "educ_higher");
 		builder.restrict("2022-01-02", 1.0, "educ_higher");
@@ -122,13 +124,14 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setReVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1 - params.mutBVaccinationEffectiveness));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
 
-		for (int i = 0; i < 15; i++) vaccinationCompliance.put(i, 0.0);
-		for (int i = 16; i < 120; i++) vaccinationCompliance.put(i, 0.8);
+		for (int i = 0; i <= 15; i++) vaccinationCompliance.put(i, 0.0);
+		for (int i = 16; i <= 35; i++) vaccinationCompliance.put(i, 0.7);
+		for (int i = 30; i <= 120; i++) vaccinationCompliance.put(i, 0.8);
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
@@ -229,13 +232,19 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(30)
+		@GenerateSeeds(20)
 		public long seed;
 
-		@Parameter({0.8, 0.9, 1.0, 1.1, 1.2})
+		@Parameter({0.9, 1.0, 1.1})
 		double thetaFactor;
 
-		@Parameter({0.8, 0.7})
+		@Parameter({0.9, 1.0, 1.1})
+		double importFactor;
+
+		@EnumParameter(SnzBerlinProductionScenario.WeatherModel.class)
+		SnzBerlinProductionScenario.WeatherModel weatherModel;
+
+		@Parameter({0.7})
 		double mutBVaccinationEffectiveness;
 
 	}

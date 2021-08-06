@@ -488,8 +488,6 @@ public final class Restriction {
 		}
 
 
-
-
 		if (ciCorrection != null && otherE != null && !ciCorrection.equals(otherE))
 			log.warn("Duplicated ci correction " + ciCorrection + " and " + otherE);
 		else if (ciCorrection == null)
