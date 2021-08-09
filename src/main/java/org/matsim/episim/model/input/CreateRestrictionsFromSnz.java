@@ -469,7 +469,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 		try {
 			String[] header = new String[] { "date", "BundeslandID", "outOfHomeDuration",
 					"percentageChangeComparedToBeforeCorona" };
-			JOIN.appendTo(writer, header);
+			JOIN_LK.appendTo(writer, header);
 			writer.write("\n");
 
 			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
@@ -509,7 +509,7 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 
-		Path thisOutputFile = outputFile.resolve("mobilityData_OverviewLK_new.csv");
+		Path thisOutputFile = outputFile.resolve("LK_mobilityData_new.csv");
 
 		Collections.sort(filesWithData);
 		log.info("Searching for files in the folder: " + inputFolder);
@@ -530,13 +530,13 @@ public class CreateRestrictionsFromSnz implements ActivityParticipation {
 			writer.close();
 			Path finalPath = null;
 			if (selectedOutputOption.contains("daily"))
-				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_daily"));
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "daily"));
 			else if (selectedOutputOption.contains("weekly"))
-				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_weekly"));
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekly"));
 			else if (selectedOutputOption.contains("weekdays"))
-				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_weekdays"));
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekdays"));
 			else if (selectedOutputOption.contains("weekends"))
-				finalPath = Path.of(thisOutputFile.toString().replace("LK_new", "LK_weekends"));
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekends"));
 
 			Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 
