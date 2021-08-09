@@ -129,9 +129,11 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
 
-		for (int i = 0; i <= 15; i++) vaccinationCompliance.put(i, 0.0);
-		for (int i = 16; i <= 35; i++) vaccinationCompliance.put(i, 0.7);
-		for (int i = 30; i <= 120; i++) vaccinationCompliance.put(i, 0.8);
+		for (int i = 0; i < 16; i++) vaccinationCompliance.put(i, 0.0);
+		for (int i = 16; i < 25; i++) vaccinationCompliance.put(i, 0.7);
+		for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
+		for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
+		for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
@@ -241,7 +243,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@Parameter({0.9, 1.0, 1.1})
 		double importFactor;
 
-		@EnumParameter(SnzBerlinProductionScenario.WeatherModel.class)
+		@EnumParameter(value = SnzBerlinProductionScenario.WeatherModel.class, ignore = "no")
 		SnzBerlinProductionScenario.WeatherModel weatherModel;
 
 		@Parameter({0.7})
