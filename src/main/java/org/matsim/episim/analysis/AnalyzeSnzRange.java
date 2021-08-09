@@ -88,10 +88,10 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.AnyArea;
+		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
 		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.onlyWeekdays;
 		String anyArea = "Berlin";
-		String startDateStillUsingBaseDays = "20210615"; // set in this format YYYYMMDD
+		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD
 		boolean ignoreDates = true;
 		Set<String> datesToIgnore = Resources
 				.readLines(Resources.getResource("mobilityDatesToIgnore.txt"), StandardCharsets.UTF_8).stream()
@@ -461,25 +461,25 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			} else {
 				switch (selectedOptionForAnalyse) {
 				case weeklyResultsOfAllDays:
-					finalPath = Path.of(outputFile.toString().replace("new", "_weekly"));
+					finalPath = Path.of(outputFile.toString().replace("new", "weekly"));
 					break;
 				case onlyWeekdays:
-					finalPath = Path.of(outputFile.toString().replace("new", "_weekdays"));
+					finalPath = Path.of(outputFile.toString().replace("new", "weekdays"));
 					break;
 				case onlySaturdays:
-					finalPath = Path.of(outputFile.toString().replace("new", "_saturdays"));
+					finalPath = Path.of(outputFile.toString().replace("new", "saturdays"));
 					break;
 				case onlySundays:
-					finalPath = Path.of(outputFile.toString().replace("new", "_sundays"));
+					finalPath = Path.of(outputFile.toString().replace("new", "sundays"));
 					break;
 				case onlyWeekends:
-					finalPath = Path.of(outputFile.toString().replace("new", "_weekends"));
+					finalPath = Path.of(outputFile.toString().replace("new", "weekends"));
 					break;
 				case dailyResults:
-					finalPath = Path.of(outputFile.toString().replace("new", "_daily"));
+					finalPath = Path.of(outputFile.toString().replace("new", "daily"));
 					break;
 				case Mo_Do:
-					finalPath = Path.of(outputFile.toString().replace("new", "_Mo-Do"));
+					finalPath = Path.of(outputFile.toString().replace("new", "Mo-Do"));
 					break;
 				default:
 					break;
