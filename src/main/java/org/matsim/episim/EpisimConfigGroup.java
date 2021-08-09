@@ -162,7 +162,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
-	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
+	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
 	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -750,7 +750,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setReportTimeUse(ReportTimeUse reportTimeUse) {
 		this.reportTimeUse = reportTimeUse;
 	}
-	
+
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
@@ -997,18 +997,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		no
 	}
 
- 
-    /** 
+
+    /**
      * In the case that this optimization is enabled, the infectionDynamics
      * methods are only called, if a contagious person is in the container
-     */	
+     */
 	public enum ContagiousOptimization {
 		yes,
 		no
 	}
-	
+
 	/**
-	 * The used time tracking costs a lot of CPU cycles, so this 
+	 * The used time tracking costs a lot of CPU cycles, so this
      * can be disabled with
      */
 	public enum ReportTimeUse {
