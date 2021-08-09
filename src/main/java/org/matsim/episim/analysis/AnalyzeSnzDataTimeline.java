@@ -570,22 +570,22 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			} else {
 				switch (selectedOptionForAnalyse) {
 				case weeklyResultsOfAllDays:
-					finalPath = Path.of(outputFile.toString().replace("new", "Weekly"));
+					finalPath = Path.of(outputFile.toString().replace("new", "weekly"));
 					break;
 				case onlyWeekdays:
-					finalPath = Path.of(outputFile.toString().replace("new", "Weekdays"));
+					finalPath = Path.of(outputFile.toString().replace("new", "weekdays"));
 					break;
 				case onlySaturdays:
-					finalPath = Path.of(outputFile.toString().replace("new", "Saturdays"));
+					finalPath = Path.of(outputFile.toString().replace("new", "saturdays"));
 					break;
 				case onlySundays:
-					finalPath = Path.of(outputFile.toString().replace("new", "Sundays"));
+					finalPath = Path.of(outputFile.toString().replace("new", "sundays"));
 					break;
 				case onlyWeekends:
-					finalPath = Path.of(outputFile.toString().replace("new", "Weekends"));
+					finalPath = Path.of(outputFile.toString().replace("new", "weekends"));
 					break;
 				case dailyResults:
-					finalPath = Path.of(outputFile.toString().replace("new", "Daily"));
+					finalPath = Path.of(outputFile.toString().replace("new", "daily"));
 					break;
 				case Mo_Do:
 					finalPath = Path.of(outputFile.toString().replace("new", "Mo-Do"));
