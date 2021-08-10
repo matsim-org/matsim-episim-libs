@@ -31,15 +31,15 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
-import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.AdjustedPolicy;
@@ -124,7 +124,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.tracing = tracing;
 			return this;
 		}
-		public Builder setVaccinations( Vaccinations vaccinations ){
+
+		public Builder setVaccinations(Vaccinations vaccinations) {
 			this.vaccinations = vaccinations;
 			return this;
 		}
@@ -133,7 +134,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.christmasModel = christmasModel;
 			return this;
 		}
-		public Builder setEasterModel( EasterModel easterModel ){
+
+		public Builder setEasterModel(EasterModel easterModel) {
 			this.easterModel = easterModel;
 			return this;
 		}
@@ -179,15 +181,25 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	}
 
 	public static enum DiseaseImport {yes, onlySpring, no}
+
 	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+
 	public static enum Masks {yes, no}
+
 	public static enum Tracing {yes, no}
+
 	public static enum Vaccinations {yes, no}
+
 	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
+
 	public static enum ChristmasModel {no, restrictive, permissive}
-	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175, midpoints_200_250}
+
+	public static enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
+
 	public static enum AdjustRestrictions {yes, no}
+
 	public static enum EasterModel {yes, no}
+
 	public static enum LocationBasedRestrictions {yes, no}
 
 	private final int sample;
@@ -274,7 +286,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		else
 			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 
-		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
 			if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
 				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
 			} else {
@@ -526,7 +538,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210711_tegel_until20210430.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5. );
+						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -558,6 +570,46 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
 			vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
+
+			Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
+
+			share.put(LocalDate.parse("2020-01-01"), Map.of(VaccinationType.mRNA, 1d, VaccinationType.vector, 0d));
+			share.put(LocalDate.parse("2020-12-28"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
+			share.put(LocalDate.parse("2021-01-04"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
+			share.put(LocalDate.parse("2021-01-11"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
+			share.put(LocalDate.parse("2021-01-18"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
+			share.put(LocalDate.parse("2021-01-25"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
+			share.put(LocalDate.parse("2021-02-01"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
+			share.put(LocalDate.parse("2021-02-08"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
+			share.put(LocalDate.parse("2021-02-15"), Map.of(VaccinationType.mRNA, 0.75d, VaccinationType.vector, 0.25d));
+			share.put(LocalDate.parse("2021-02-22"), Map.of(VaccinationType.mRNA, 0.63d, VaccinationType.vector, 0.37d));
+			share.put(LocalDate.parse("2021-03-01"), Map.of(VaccinationType.mRNA, 0.52d, VaccinationType.vector, 0.48d));
+			share.put(LocalDate.parse("2021-03-08"), Map.of(VaccinationType.mRNA, 0.45d, VaccinationType.vector, 0.55d));
+			share.put(LocalDate.parse("2021-03-15"), Map.of(VaccinationType.mRNA, 0.75d, VaccinationType.vector, 0.25d));
+			share.put(LocalDate.parse("2021-03-22"), Map.of(VaccinationType.mRNA, 0.55d, VaccinationType.vector, 0.45d));
+			share.put(LocalDate.parse("2021-03-29"), Map.of(VaccinationType.mRNA, 0.71d, VaccinationType.vector, 0.29d));
+			share.put(LocalDate.parse("2021-04-05"), Map.of(VaccinationType.mRNA, 0.77d, VaccinationType.vector, 0.23d));
+			share.put(LocalDate.parse("2021-04-12"), Map.of(VaccinationType.mRNA, 0.76d, VaccinationType.vector, 0.24d));
+			share.put(LocalDate.parse("2021-04-19"), Map.of(VaccinationType.mRNA, 0.70d, VaccinationType.vector, 0.30d));
+			share.put(LocalDate.parse("2021-04-26"), Map.of(VaccinationType.mRNA, 0.91d, VaccinationType.vector, 0.09d));
+			share.put(LocalDate.parse("2021-05-03"), Map.of(VaccinationType.mRNA, 0.78d, VaccinationType.vector, 0.22d));
+			share.put(LocalDate.parse("2021-05-10"), Map.of(VaccinationType.mRNA, 0.81d, VaccinationType.vector, 0.19d));
+			share.put(LocalDate.parse("2021-05-17"), Map.of(VaccinationType.mRNA, 0.70d, VaccinationType.vector, 0.30d));
+			share.put(LocalDate.parse("2021-05-24"), Map.of(VaccinationType.mRNA, 0.67d, VaccinationType.vector, 0.33d));
+			share.put(LocalDate.parse("2021-05-31"), Map.of(VaccinationType.mRNA, 0.72d, VaccinationType.vector, 0.28d));
+			share.put(LocalDate.parse("2021-06-07"), Map.of(VaccinationType.mRNA, 0.74d, VaccinationType.vector, 0.26d));
+			share.put(LocalDate.parse("2021-06-14"), Map.of(VaccinationType.mRNA, 0.79d, VaccinationType.vector, 0.21d));
+			share.put(LocalDate.parse("2021-06-21"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
+			share.put(LocalDate.parse("2021-06-28"), Map.of(VaccinationType.mRNA, 0.91d, VaccinationType.vector, 0.09d));
+			share.put(LocalDate.parse("2021-07-05"), Map.of(VaccinationType.mRNA, 0.91d, VaccinationType.vector, 0.09d));
+			share.put(LocalDate.parse("2021-07-12"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
+			share.put(LocalDate.parse("2021-07-19"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
+			share.put(LocalDate.parse("2021-07-26"), Map.of(VaccinationType.mRNA, 0.86d, VaccinationType.vector, 0.14d));
+			share.put(LocalDate.parse("2021-08-02"), Map.of(VaccinationType.mRNA, 0.85d, VaccinationType.vector, 0.15d));
+			share.put(LocalDate.parse("2021-08-09"), Map.of(VaccinationType.mRNA, 0.86d, VaccinationType.vector, 0.14d));
+
+			vaccinationConfig.setVaccinationShare(share);
+
 
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();
 

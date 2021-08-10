@@ -27,9 +27,9 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		
-		if (params == null) return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();	
-			
+
+		if (params == null) return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();
+
 		return getModule(params);
 	}
 
@@ -37,7 +37,7 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "basePaper");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 1000;
@@ -45,14 +45,14 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		
+
 		SnzBerlinProductionScenario module = getModule(params);
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
-		
+
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-				
-		episimConfig.setCalibrationParameter(1.7E-5 * params.thetaFactor);		
+
+		episimConfig.setCalibrationParameter(1.7E-5 * params.thetaFactor);
 
 		return config;
 	}
@@ -64,7 +64,7 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 		Tracing tracing = Tracing.no;
 		ChristmasModel christmasModel = ChristmasModel.no;
 		WeatherModel weatherModel = WeatherModel.no;
-		
+
 		if (params.run.contains("2_withSpringImport")) {
 			diseaseImport = DiseaseImport.onlySpring;
 		}
@@ -94,7 +94,7 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 		if (params.withTracing.contains("yes")) {
 			tracing = Tracing.yes;
 		}
-		
+
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( diseaseImport ).setRestrictions( restrictions ).setMasks( masks ).setTracing(
 				tracing ).setChristmasModel(christmasModel).setWeatherModel(weatherModel).createSnzBerlinProductionScenario();
 		return module;
@@ -104,22 +104,22 @@ public class BerlinSensitivityRuns implements BatchRun<BerlinSensitivityRuns.Par
 
 		@GenerateSeeds(10)
 		public long seed;
-		
+
 //		@Parameter({1.8E-5, 1.7E-5, 1.6E-5, 1.5E-5, 1.4E-5, 1.3E-5, 1.27E-5, 1.1E-5, 1.E-5})
 //		double theta;
-		
+
 		@StringParameter({"1_base", "2_withSpringImport", "3_withRestrictions", "4_withWeatherModel_175_175", "5_withWeatherModel_175_250", "6_withSummerImport"})
 		public String run;
-		
+
 		@StringParameter({"no", "yes"})
 		public String withMasks;
-		
+
 		@StringParameter({"no", "yes"})
 		public String withTracing;
-		
+
 		@StringParameter({"no"})
 		public String withLeisureFactor;
-		
+
 		@Parameter({0.6, 0.8, 1.0, 1.2})
 		double thetaFactor;
 

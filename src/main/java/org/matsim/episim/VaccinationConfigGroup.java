@@ -5,7 +5,6 @@ import com.google.common.base.Splitter;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VaccinationType;
-import org.matsim.episim.model.VirusStrain;
 
 import java.time.LocalDate;
 import java.util.EnumMap;
@@ -25,9 +24,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String COMPLIANCE = "compliance";
 	private static final String CAPACITY = "vaccinationCapacity";
 	private static final String RECAPACITY = "reVaccinationCapacity";
+	private static final String SHARE = "vaccinationShare";
 
 	private static final String GROUPNAME = "episimVaccination";
-
 
 
 	/**
@@ -39,6 +38,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of re-vaccinations available per day.
 	 */
 	private final NavigableMap<LocalDate, Integer> reVaccinationCapacity = new TreeMap<>();
+
+	/**
+	 * Share of vaccination for the different {@link VaccinationType}.
+	 */
+	private final NavigableMap<LocalDate, Map<VaccinationType, Double>> vaccinationShare = new TreeMap<>(Map.of(LocalDate.EPOCH, Map.of(VaccinationType.generic, 1d)));
 
 	/**
 	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
@@ -87,10 +91,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	@Override
 	public ConfigGroup createParameterSet(String type) {
-		if (VirusStrainConfigGroup.StrainParams.SET_TYPE.equals(type)) {
+		if (VaccinationParams.SET_TYPE.equals(type)) {
 			return new VaccinationParams();
 		}
-		throw new IllegalArgumentException("Unknown type" + type);
+		throw new IllegalArgumentException("Unknown type " + type);
 	}
 
 	@Override
@@ -153,6 +157,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(CAPACITY)
 	void setVaccinationCapacity(String capacity) {
 
+		if (capacity.isBlank())
+			return;
+
 		Map<String, String> map = SPLITTER.split(capacity);
 		setVaccinationCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
@@ -179,6 +186,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(RECAPACITY)
 	void setReVaccinationCapacity(String capacity) {
 
+		if (capacity.isBlank())
+			return;
+
 		Map<String, String> map = SPLITTER.split(capacity);
 		setReVaccinationCapacity_pers_per_day(map.entrySet().stream().collect(Collectors.toMap(
 				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
@@ -192,12 +202,48 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 
 	/**
+	 * Set the vaccination share per date.
+	 */
+	public void setVaccinationShare(Map<LocalDate, Map<VaccinationType, Double>> share) {
+		this.vaccinationShare.clear();
+		this.vaccinationShare.putAll(share);
+	}
+
+	/**
+	 * Return vaccination share per date.
+	 */
+	public NavigableMap<LocalDate, Map<VaccinationType, Double>> getVaccinationShare() {
+		return vaccinationShare;
+	}
+
+	@StringGetter(SHARE)
+	String getVaccinationShareString() {
+		Map<LocalDate, String> collect =
+				vaccinationShare.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> JOINER.join(e.getValue())));
+
+		return Joiner.on("|").withKeyValueSeparator(">").join(collect);
+	}
+
+	@StringSetter(SHARE)
+	void setVaccinationShare(String value) {
+
+		Map<String, String> share = Splitter.on("|").withKeyValueSeparator(">").split(value);
+		Map<LocalDate, Map<VaccinationType, Double>> collect = share.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()),
+				e -> SPLITTER.split(e.getValue()).entrySet().stream().collect(Collectors.toMap(k -> VaccinationType.valueOf(k.getKey()), k -> Double.parseDouble(k.getValue())))
+		));
+
+		setVaccinationShare(collect);
+	}
+
+	/**
 	 * Holds strain specific options.
 	 */
 	public static final class VaccinationParams extends ReflectiveConfigGroup {
 
 		static final String SET_TYPE = "vaccinationParams";
 
+		private static final String TYPE = "type";
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
@@ -221,6 +267,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		VaccinationParams() {
 			super(SET_TYPE);
+		}
+
+		@StringGetter(TYPE)
+		public VaccinationType getType() {
+			return type;
+		}
+
+		@StringSetter(TYPE)
+		public void setType(VaccinationType type) {
+			this.type = type;
 		}
 
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
