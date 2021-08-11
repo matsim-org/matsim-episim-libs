@@ -133,6 +133,7 @@ read_and_process_new_rki_data <- function(filename) {
     str_replace("-", "_") %>%
     str_replace("ö", "oe")
 
+  glimpse(rki_berlin)
 
   rki_berlin <- rki_berlin %>%
     mutate(cases = cases / 7) %>%
@@ -156,7 +157,7 @@ read_and_process_old_rki_data <- function(filename) {
   return(rki_berlin_old)
 }
 
-plot_allDistrict_cases <- function (merged_weekly, color_scheme) {
+plot_allDistrict_cases <- function(merged_weekly, color_scheme) {
   ggplot(merged_weekly, aes(x = week_year, y = infections)) +
     geom_line(aes(color = scenario)) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +

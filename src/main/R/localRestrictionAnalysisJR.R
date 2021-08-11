@@ -21,16 +21,24 @@ source("C:/Users/jakob/projects/matsim-episim/src/main/R/utilsJR.R", encoding = 
 # RKI Data
 rki_new <- read_and_process_new_rki_data("Fallzahlen_Kum_Tab_9Juni.xlsx")
 rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
-
 # Read episim data and filter, such that only relevant situations are present
-episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-03-both/", "FacilityToDistrictMapCOMPLETE.txt")
+# "2021-08-06-drastic/"
+episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-06-mitte/", "FacilityToDistrictMapCOMPLETE.txt")
+# episim_all_runs <- episim_all_runs_raw %>%
+#   filter(locationBasedRestrictions == "yesForActivityLocation") %>%
+#   filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
+#   ungroup() %>%
+#   select(-"locationBasedRestrictions") %>%
+#   pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
+#   rename(restrict_no = no, restrict_leisure = leisure) # This is where we choose correct names
+
 episim_all_runs <- episim_all_runs_raw %>%
-  filter(locationBasedRestrictions == "yesForHomeLocation") %>%
-  filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
+  filter(locationBasedRestrictions == "yesForHomeLocation" | locationBasedRestrictions == "no") %>%
+  filter(restrictBerlinMitteOctober2020 == "no") %>% #restrictBerlinMitteOctober2020 == "leisure" |
   ungroup() %>%
-  select(-"locationBasedRestrictions") %>%
-  pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
-  rename(restrict_no = no, restrict_leisure = leisure) # This is where we choose correct names
+  select(-"restrictBerlinMitteOctober2020") %>%
+  pivot_wider(names_from = "locationBasedRestrictions", values_from = "infections") %>%
+  rename(base = no, local_Rf = yesForHomeLocation)
 
 # BEFORE MERGING:
 # each dataset should have "date", "district" + a seperate column per situation (with good name)
@@ -47,6 +55,7 @@ merged_tidy <- episim_all_runs %>%
   pivot_longer(!c("date", "district"), names_to = "scenario", values_to = "infections")
 
 # find infections per week
+
 merged_weekly <- merged_tidy %>%
   mutate(week = week(date)) %>%
   mutate(year = year(date)) %>%
@@ -62,7 +71,9 @@ merged_weekly <- merged_tidy %>%
 
 ## Facet Plot - all districts (for single district, add filter)
 color_scheme <- c("magenta", "blue", "dark grey", "dark grey")
-plot_allDistrict_cases(merged_weekly,color_scheme)
+plot_allDistrict_cases(merged_weekly %>% filter(act == "work"),color_scheme)
+
+
 
 
 
