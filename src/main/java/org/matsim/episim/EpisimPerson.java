@@ -653,7 +653,7 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public int getAge() {
-		assert age != -1 : "Person=" + getPersonId().toString() + " has no age. Age dependent progression is not possible.";
+		assert age != -1 : "Person=" + getPersonId().toString() + " has no age.";
 		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
 
 		return age;
@@ -886,14 +886,14 @@ public final class EpisimPerson implements Attributable {
 	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
 
     /**
-	 * If the ContagiousOptimization is enabled, containers count how many 
-	 * persons satisfy this predicate to call the infectionsDynamics methods 
-     * only in the case that at least one person in the container 
+	 * If the ContagiousOptimization is enabled, containers count how many
+	 * persons satisfy this predicate to call the infectionsDynamics methods
+     * only in the case that at least one person in the container
 	 * can infect another (or in the infectedButNotContagious case,
-	 * inform other persons later thanks to tracking).	
+	 * inform other persons later thanks to tracking).
 	 */
 	public boolean infectedButNotSerious() {
-		return (status == DiseaseStatus.infectedButNotContagious || 
+		return (status == DiseaseStatus.infectedButNotContagious ||
 				status == DiseaseStatus.contagious ||
 				status == DiseaseStatus.showingSymptoms);
 	}

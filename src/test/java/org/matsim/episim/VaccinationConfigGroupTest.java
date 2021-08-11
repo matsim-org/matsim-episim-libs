@@ -62,6 +62,27 @@ public class VaccinationConfigGroupTest {
 		assertThat(ConfigUtils.addOrGetModule(loaded, VaccinationConfigGroup.class).getVaccinationShare())
 				.containsKey(LocalDate.of(2021, 2, 2));
 
+	}
+
+
+	@Test
+	public void prob() {
+
+		VaccinationConfigGroup config = new VaccinationConfigGroup();
+
+		assertThat(config.getVaccinationTypeProb(LocalDate.now()))
+				.containsEntry(VaccinationType.generic, 1d)
+				.containsEntry(VaccinationType.mRNA, 1d);
+
+		config.setVaccinationShare(Map.of(
+				LocalDate.parse("2021-02-02"), Map.of(VaccinationType.mRNA, 0.8d, VaccinationType.vector, 0.2d)
+		));
+
+		assertThat(config.getVaccinationTypeProb(LocalDate.parse("2021-02-02")))
+				.containsEntry(VaccinationType.generic, 0d)
+				.containsEntry(VaccinationType.mRNA, 0.8d)
+				.containsEntry(VaccinationType.vector, 1d);
+
 
 	}
 }

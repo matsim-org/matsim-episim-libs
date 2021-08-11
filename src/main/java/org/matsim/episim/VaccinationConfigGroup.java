@@ -4,6 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
+import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
@@ -205,6 +206,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Set the vaccination share per date.
 	 */
 	public void setVaccinationShare(Map<LocalDate, Map<VaccinationType, Double>> share) {
+		for (Map<VaccinationType, Double> v : share.values()) {
+			double total = v.values().stream().sorted().mapToDouble(Double::doubleValue).sum();
+			if (total > 1) throw new IllegalArgumentException("Sum of shares must be < 1");
+		}
+
 		this.vaccinationShare.clear();
 		this.vaccinationShare.putAll(share);
 	}
@@ -214,6 +220,31 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public NavigableMap<LocalDate, Map<VaccinationType, Double>> getVaccinationShare() {
 		return vaccinationShare;
+	}
+
+	/**
+	 * Return the cumulative probability for all vaccination types, based on {@link #getVaccinationShare()}.
+	 *
+	 * @param date date to lookup
+	 */
+	public Map<VaccinationType, Double> getVaccinationTypeProb(LocalDate date) {
+
+		EnumMap<VaccinationType, Double> prob = new EnumMap<>(VaccinationType.class);
+
+		Map<VaccinationType, Double> share = EpisimUtils.findValidEntry(vaccinationShare, null, date);
+
+		if (share == null)
+			share = Map.of(VaccinationType.generic, 1d);
+
+		double total = share.values().stream().sorted().mapToDouble(Double::doubleValue).sum();
+
+		double sum = 1 - total;
+		for (VaccinationType t : VaccinationType.values()) {
+			sum += share.getOrDefault(t, 0d);
+			prob.put(t, sum);
+		}
+
+		return prob;
 	}
 
 	@StringGetter(SHARE)

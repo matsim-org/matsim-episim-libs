@@ -30,7 +30,8 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		return new SnzBerlinProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setWeatherModel(params == null ? SnzBerlinProductionScenario.WeatherModel.midpoints_200_250 : params.weatherModel)
-				.setImportFactor(params == null ? 1d : params.importFactor)
+				.setImportFactorBeforeJune(params == null ? 1d : params.importFactorBeforeJune)
+				.setImportFactorAfterJune(params == null ? 1d: params.importFactorAfterJune)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
 				.createSnzBerlinProductionScenario();
@@ -40,11 +41,6 @@ public class Calibration implements BatchRun<Calibration.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
-
-//	@Override
-//	public int getOffset() {
-//		return 10000;
-//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
@@ -240,10 +236,13 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@Parameter({0.9, 1.0, 1.1})
 		double thetaFactor;
 
-		@Parameter({0.9, 1.0, 1.1})
-		double importFactor;
+		@Parameter({3, 4, 5})
+		double importFactorBeforeJune;
 
-		@EnumParameter(value = SnzBerlinProductionScenario.WeatherModel.class, ignore = "no")
+		@Parameter({0.25, 0.5, 0.75})
+		double importFactorAfterJune;
+
+		@EnumParameter(value = SnzBerlinProductionScenario.WeatherModel.class, ignore = {"no", "midpoints_175_175"})
 		SnzBerlinProductionScenario.WeatherModel weatherModel;
 
 		@Parameter({0.7})
