@@ -47,7 +47,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzData.class);
 
 	private enum AnalyseAreas {
-		Germany, Berlin, BerlinDistrcits, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test,
+		Germany, Berlin, BerlinDistricts, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test,
 		Bundeslaender, Tuebingen, Landkreise, AnyArea
 	};
 
@@ -131,7 +131,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 					outputFolder.resolve(zipCodesBerlin.keySet().iterator().next() + "SnzData_daily_until.csv"),
 					zipCodesBerlin.values().iterator().next(), getPercentageResults, baseDays);
 			break;
-		case BerlinDistrcits:
+		case BerlinDistricts:
 			HashMap<String, IntSet> berlinDistricts = new HashMap<String, IntSet>();
 			berlinDistricts.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119,
 					10785, 13359, 10787, 10557, 13353, 10555, 13351, 13349, 10551, 13347)));
