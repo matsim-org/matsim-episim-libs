@@ -95,7 +95,7 @@ public final class SnzCologneScenario extends AbstractModule {
 
 		// Calibration parameter
 
-		episimConfig.setCalibrationParameter(1.7E-5 * 0.8); // TODO
+		episimConfig.setCalibrationParameter(1.7E-5); // TODO
 		episimConfig.setStartDate("2020-02-25");
 
 
@@ -158,7 +158,7 @@ public final class SnzCologneScenario extends AbstractModule {
 
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
-		int population = 4_800_000;
+		int population = 2_352_480;
 
 		vaccinations.put(LocalDate.parse("2020-01-01"), 0);
 		vaccinations.put(LocalDate.parse("2020-12-27"), (int) (0.003 * population / 6));
