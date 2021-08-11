@@ -739,17 +739,17 @@ public final class InfectionEventHandler implements Externalizable {
 
 		log.warn("JR POPULATION FILE : " + scenario.getConfig().plans().getInputFile());
 
-		Map<String, Long> popCountPerDistrict = new HashMap<>();
-		for (EpisimPerson person : personMap.values()) {
-
-			if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
-				String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
-				long cnt = popCountPerDistrict.getOrDefault(subdistrict, 0L) + 1;
-				popCountPerDistrict.put(subdistrict, cnt);
-			}
-		}
-
-		log.warn("POPULATION COUNT PER DISTRICT :\n" + popCountPerDistrict);
+//		Map<String, Long> popCountPerDistrict = new HashMap<>();
+//		for (EpisimPerson person : personMap.values()) {
+//
+//			if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
+//				String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
+//				long cnt = popCountPerDistrict.getOrDefault(subdistrict, 0L) + 1;
+//				popCountPerDistrict.put(subdistrict, cnt);
+//			}
+//		}
+//
+//		log.warn("POPULATION COUNT PER DISTRICT :\n" + popCountPerDistrict);
 
 		for (EpisimPerson person : personMap.values()) {
 			// update person activity participation for the day
@@ -764,23 +764,23 @@ public final class InfectionEventHandler implements Externalizable {
 			try {
 				BufferedWriter writer = new BufferedWriter(new FileWriter("output/zeroCount.txt", true));
 //				writer.append(' ');
-				writer.append("iteration " + iteration + ": " + zeroCnt + "\n");
+				writer.append(episimConfig.getDistrictLevelRestrictions() + " - ZERO COUNT for iteration "+iteration + ": " + zeroCnt + "\n");
 
 				writer.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 
-			log.warn("ZERO COUNT for iteration "+iteration + ": " + zeroCnt);
+			log.warn(episimConfig.getDistrictLevelRestrictions() + " - ZERO COUNT for iteration "+iteration + ": " + zeroCnt);
 			((LocationBasedParticipationModel) activityParticipationModel).zeroCnt = 0;
 
 			Map<String, Long> districtCount = ((LocationBasedParticipationModel) activityParticipationModel).districtCount;
 			log.warn("district COUNT for iteration " + iteration + ": " + districtCount);
 			((LocationBasedParticipationModel) activityParticipationModel).districtCount = new HashMap<>();
 
-			for (Map.Entry<String, Restriction> entry : im.entrySet()) {
-				log.warn("**********   " + entry.getKey() + "   ************\n"+entry.getValue().asMap());
-			}
+//			for (Map.Entry<String, Restriction> entry : im.entrySet()) {
+//				log.warn("**********   " + entry.getKey() + "   ************\n"+entry.getValue().asMap());
+//			}
 //			log.warn(im);
 		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);

@@ -168,7 +168,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 							.setFormatted(true)
 							.setComments(false)
 							.setOriginComments(false)
-							.setJson(false)));
+							.setJson(true)));
 
 			Files.writeString(Paths.get(base + "progression.conf"),
 					episimConfig.getProgressionConfig().root().render(ConfigRenderOptions.defaults()

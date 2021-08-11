@@ -56,6 +56,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
@@ -83,7 +84,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
 
-		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.yesForHomeLocation;
+		private EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions = EpisimConfigGroup.DistrictLevelRestrictions.no;
 		private LocationBasedContactIntensity locationBasedContactIntensity = LocationBasedContactIntensity.no;
 		private RestrictBerlinMitteOctober2020 restrictBerlinMitteOctober2020 = RestrictBerlinMitteOctober2020.no;
 
@@ -127,7 +128,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.tracing = tracing;
 			return this;
 		}
-		public Builder setVaccinations( Vaccinations vaccinations ){
+
+		public Builder setVaccinations(Vaccinations vaccinations) {
 			this.vaccinations = vaccinations;
 			return this;
 		}
@@ -136,7 +138,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.christmasModel = christmasModel;
 			return this;
 		}
-		public Builder setEasterModel( EasterModel easterModel ){
+
+		public Builder setEasterModel(EasterModel easterModel) {
 			this.easterModel = easterModel;
 			return this;
 		}
@@ -180,8 +183,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 
-		public Builder setLocationBasedRestrictions(LocationBasedRestrictions localRf) {
-			this.locationBasedRestrictions = localRf;
+		public Builder setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions) {
+			this.locationBasedRestrictions = locationBasedRestrictions;
 			return this;
 		}
 
@@ -229,7 +232,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final double imprtFctMult;
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
-	private final LocationBasedRestrictions locationBasedRestrictions;
+	private final EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions;
 	private final LocationBasedContactIntensity locationBasedContactIntensity;
 	private final RestrictBerlinMitteOctober2020 restrictBerlinMitteOctober2020;
 
@@ -298,7 +301,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		else
 			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 
-		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
 			bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
 //			if (locationBasedRestrictions != LocationBasedRestrictions.no) {
 //				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
@@ -348,14 +351,14 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		episimConfig.setActivityHandling(activityHandling);
 
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
-//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
-//				.addDays(DayOfWeek.SATURDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
-//				.addDays(DayOfWeek.SUNDAY);
+		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+		//
+		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		//				.addDays(DayOfWeek.SATURDAY);
+		//
+		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		//				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
@@ -450,19 +453,19 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 		String untilDate = "20210518";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until"+ untilDate+".csv"));
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
 
 		config.facilities().setInputFile(INPUT.resolve("be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz").toString());
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
 		//location based restrictions
-		if (locationBasedRestrictions != LocationBasedRestrictions.no) {
+		if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
 			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
-			if (locationBasedRestrictions.equals(LocationBasedRestrictions.yesForActivityLocation)) {
+			if (locationBasedRestrictions.equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)) {
 				episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
 			}
 
-			if (locationBasedRestrictions.equals(LocationBasedRestrictions.yesForHomeLocation)) {
+			if (locationBasedRestrictions.equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)) {
 				episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation);
 			}
 
@@ -501,7 +504,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		//tracing
 		if (this.tracing == Tracing.yes) {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-//			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+			//			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 			int offset = 46;
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 			tracingConfig.setTracingProbability(0.5);
@@ -522,6 +525,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
+
+			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+				throw new RuntimeException("locationBasedRestrictions currently doesn't support christmas model");
+			}
+
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
@@ -556,6 +564,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 		if (this.easterModel == EasterModel.yes) {
+			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+				throw new RuntimeException("locationBasedRestrictions currently doesn't support easter model");
+			}
 			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
 			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
@@ -585,7 +596,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210711_tegel_until20210430.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5. );
+						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -607,9 +618,31 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-//			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-//			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-//			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			//			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			//			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			//			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+
+			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+				// applies same leisure adjustment from above to the localRf
+				builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "leisure");
+				builder.apply("2020-10-15", "2020-12-14", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = 1 - leisureFactor * (1 - v)), "leisure");
+
+				// following four blocks mimic the work/business adjustments
+				builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-04-03", "2020-04-17", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+
+				builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-06-26", "2020-08-07", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+
+				builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-10-09", "2020-10-23", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+
+				builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-12-18", "2021-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+
+			}
+
+
 		}
 		//vacinations
 		if (this.vaccinations.equals(Vaccinations.yes)) {
@@ -684,9 +717,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
 
 		// save some time for not needed inputs (facilities are needed for location based restrictions)
-		if (locationBasedRestrictions == LocationBasedRestrictions.no) {
-			config.facilities().setInputFile(null);
-		}
+		//		if (locationBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.no) {
+		//			config.facilities().setInputFile(null);
+		//		}
 
 		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
 
