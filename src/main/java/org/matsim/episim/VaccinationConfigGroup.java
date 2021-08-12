@@ -338,6 +338,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		@StringSetter(EFFECTIVENESS)
 		void setEffectiveness(String value) {
+			if (value.isBlank()) return;
+
 			this.effectiveness.clear();
 			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
 				this.effectiveness.put(VirusStrain.valueOf(e.getKey()), Double.parseDouble(e.getValue()));
@@ -388,6 +390,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		@StringSetter(BOOST_EFFECTIVENESS)
 		void setBoostEffectiveness(String value) {
+			if (value.isBlank()) return;
+
 			this.boostEffectiveness.clear();
 			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
 				this.boostEffectiveness.put(VirusStrain.valueOf(e.getKey()), Double.parseDouble(e.getValue()));

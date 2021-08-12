@@ -221,7 +221,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(20)
+		@GenerateSeeds(5)
 		public long seed;
 
 		@Parameter({0.9, 1.0, 1.1})
