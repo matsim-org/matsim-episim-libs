@@ -4,8 +4,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
-import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
 
 import java.time.LocalDate;
 import java.util.EnumMap;
@@ -277,6 +277,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String TYPE = "type";
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
+		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 
 		private VaccinationType type;
@@ -289,7 +290,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
 		 */
-		private double effectiveness = 0.96;
+		private Map<VirusStrain, Double> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2, 0.9));
+
+		/**
+		 * Effectiveness after booster shot.
+		 */
+		private Map<VirusStrain, Double> boostEffectiveness = new EnumMap<>(VirusStrain.class);
 
 		/**
 		 * Factor for probability if person is vaccinated.
@@ -330,15 +336,86 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			this.daysBeforeFullEffect = daysBeforeFullEffect;
 		}
 
-		@StringGetter(EFFECTIVENESS)
-		public double getEffectiveness() {
-			return effectiveness;
+		@StringSetter(EFFECTIVENESS)
+		void setEffectiveness(String value) {
+			this.effectiveness.clear();
+			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
+				this.effectiveness.put(VirusStrain.valueOf(e.getKey()), Double.parseDouble(e.getValue()));
+			}
 		}
 
-		@StringSetter(EFFECTIVENESS)
-		public void setEffectiveness(double effectiveness) {
-			this.effectiveness = effectiveness;
+		@StringGetter(EFFECTIVENESS)
+		String getEffectivenessString() {
+			return JOINER.join(effectiveness);
 		}
+
+		/**
+		 * Return effectiveness against base variant.
+		 *
+		 * @deprecated use {@link #getEffectiveness(VirusStrain)}
+		 */
+		@Deprecated
+		public double getEffectiveness() {
+			return getEffectiveness(VirusStrain.SARS_CoV_2);
+		}
+
+		/**
+		 * Return effectiveness against base variant.
+		 * @deprecated use {@link #setEffectiveness(VirusStrain, double)}
+		 */
+		@Deprecated
+		public void setEffectiveness(double effectiveness) {
+			setEffectiveness(VirusStrain.SARS_CoV_2, effectiveness);
+		}
+
+		/**
+		 * Get the effectiveness against virus strain.
+		 */
+		public double getEffectiveness(VirusStrain strain) {
+			return effectiveness.getOrDefault(strain, effectiveness.get(VirusStrain.SARS_CoV_2));
+		}
+
+		/**
+		 * Set the effectiveness against a virus strain.
+		 */
+		public VaccinationParams setEffectiveness(VirusStrain strain, double effectiveness) {
+			this.effectiveness.put(strain, effectiveness);
+			return this;
+		}
+
+		////
+
+
+		@StringSetter(BOOST_EFFECTIVENESS)
+		void setBoostEffectiveness(String value) {
+			this.boostEffectiveness.clear();
+			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
+				this.boostEffectiveness.put(VirusStrain.valueOf(e.getKey()), Double.parseDouble(e.getValue()));
+			}
+		}
+
+		@StringGetter(BOOST_EFFECTIVENESS)
+		String getBoostEffectivenessString() {
+			return JOINER.join(boostEffectiveness);
+		}
+
+		/**
+		 * Get the boost effectiveness against virus strain. If not set will be same as base effectiveness.
+		 */
+		public double getBoostEffectiveness(VirusStrain strain) {
+			return boostEffectiveness.getOrDefault(strain, getEffectiveness(strain));
+		}
+
+		/**
+		 * Set the boost effectiveness against a virus strain.
+		 */
+		public VaccinationParams setBoostEffectiveness(VirusStrain strain, double effectiveness) {
+			this.boostEffectiveness.put(strain, effectiveness);
+			return this;
+		}
+
+
+
 
 	}
 

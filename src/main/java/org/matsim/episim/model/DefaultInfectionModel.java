@@ -68,29 +68,38 @@ public final class DefaultInfectionModel implements InfectionModel {
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
 		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());
+		VirusStrain strain = virusStrain.getStrain();
+
 		double vaccineEffectiveness;
 
 		// minimum effectiveness, independent of time
 		double min;
 		// use re vaccine effectiveness if person received the new vaccine
 		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			vaccineEffectiveness = virusStrain.getReVaccineEffectiveness();
+			vaccineEffectiveness = params.getBoostEffectiveness(strain) ;
 			// effectiveness of second vaccine is never below first
-			min = virusStrain.getVaccineEffectiveness();
+			min = params.getEffectiveness(strain);
 		} else {
-			vaccineEffectiveness = virusStrain.getVaccineEffectiveness();
+			vaccineEffectiveness = params.getEffectiveness(strain);
 			min = 0;
 		}
 
 		// full effect
-		if (daysVaccinated >= config.getParams(target.getVaccinationType()).getDaysBeforeFullEffect())
-			return 1 - config.getParams(target.getVaccinationType()).getEffectiveness() * Math.max(min, vaccineEffectiveness);
+		if (daysVaccinated >= params.getDaysBeforeFullEffect())
+			return 1 - Math.max(min, vaccineEffectiveness);
 
-		// slightly reduced but nearly full effect after 3 days
-		else if (daysVaccinated >= 3) {
-			return 1 - config.getParams(target.getVaccinationType()).getEffectiveness() * Math.max(min, 0.94 * vaccineEffectiveness);
+		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
+
+		// 50% of the effect is achieved after a few days, then linearly increased
+		else if (daysVaccinated >= 5) {
+			double from = 0.5;
+
+			double days = params.getDaysBeforeFullEffect() - 5;
+
+			return 1 - Math.max(min, vaccineEffectiveness * (from + from * (daysVaccinated - 5) / days));
 		}
 
-		return 1 - min * config.getParams(target.getVaccinationType()).getEffectiveness();
+		return 1 - min;
 	}
 }

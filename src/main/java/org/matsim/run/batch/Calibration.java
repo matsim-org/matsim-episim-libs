@@ -31,7 +31,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setWeatherModel(params == null ? SnzBerlinProductionScenario.WeatherModel.midpoints_200_250 : params.weatherModel)
 				.setImportFactorBeforeJune(params == null ? 1d : params.importFactorBeforeJune)
-				.setImportFactorAfterJune(params == null ? 1d: params.importFactorAfterJune)
+				.setImportFactorAfterJune(params == null ? 1d : params.importFactorAfterJune)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
 				.createSnzBerlinProductionScenario();
@@ -96,34 +96,25 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 
 		//mutations and vaccinations
-		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
-		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayB117.put(LocalDate.parse("2020-11-30"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
-
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		double vaccineEffectiveness = vaccinationConfig.getParams(VaccinationType.generic).getEffectiveness();
-
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1 - vaccineEffectiveness));
-
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1 - vaccineEffectiveness));
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse("2021-04-07"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setReVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1 - params.mutBVaccinationEffectiveness));
 
-		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
+		vaccinationConfig.getParams(VaccinationType.mRNA)
+				.setEffectiveness(VirusStrain.MUTB, params.mutBVaccinationEffectiveness)
+				.setBoostEffectiveness(VirusStrain.MUTB, 0.9);
 
+		vaccinationConfig.getParams(VaccinationType.vector)
+				.setEffectiveness(VirusStrain.MUTB, params.mutBVaccinationEffectiveness)
+				.setBoostEffectiveness(VirusStrain.MUTB, 0.9);
+
+		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
 		for (int i = 0; i < 16; i++) vaccinationCompliance.put(i, 0.0);
 		for (int i = 16; i < 25; i++) vaccinationCompliance.put(i, 0.7);

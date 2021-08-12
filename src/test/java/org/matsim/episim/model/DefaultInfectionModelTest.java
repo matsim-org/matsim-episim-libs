@@ -13,36 +13,49 @@ public class DefaultInfectionModelTest {
 	public void getVaccinationEffectiveness() {
 
 		VaccinationConfigGroup vacConfig = new VaccinationConfigGroup();
-		vacConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vacConfig.getParams(VaccinationType.generic)
+				.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
+				.setBoostEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
+				.setEffectiveness(VirusStrain.B1351, 0.2)
+				.setBoostEffectiveness(VirusStrain.B1351, 0.9)
+				.setDaysBeforeFullEffect(42);
 
 		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
 		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);
-		cov2.setVaccineEffectiveness(1);
-		cov2.setReVaccineEffectiveness(1);
-
 		VirusStrainConfigGroup.StrainParams escape = strainConfig.getOrAddParams(VirusStrain.B1351);
-		escape.setVaccineEffectiveness(0.2);
-		escape.setReVaccineEffectiveness(1);
+
 
 		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
 
 		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
 
 		assertThat(
-				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 1)
+				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 0)
 		).isEqualTo(1.0);
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 3)
-		).isEqualTo(1.0 - 0.94 * 0.9);
+		).isEqualTo(1.0);
+
+		assertThat(
+				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 5)
+		).isEqualTo(1 - 0.45);
+
+		assertThat(
+				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 5)
+		).isEqualTo(1.0 - 0.2/2);
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 30)
+		).isCloseTo(0.246, Offset.offset(0.001));
+
+		assertThat(
+				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 42)
 		).isCloseTo(0.1, Offset.offset(0.001));
 
 		assertThat(
-				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 30)
-		).isCloseTo(0.82, Offset.offset(0.001));
+				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 42)
+		).isCloseTo(0.8, Offset.offset(0.001));
 
 
 		// test with re vaccination
@@ -56,22 +69,22 @@ public class DefaultInfectionModelTest {
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 1)
-		).isEqualTo(0.82);
+		).isEqualTo(0.8);
 
 		assertThat(
-				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 3)
+				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 5)
 		).isCloseTo(0.1, Offset.offset(0.001));
 
 		assertThat(
-				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 3)
-		).isEqualTo(1.0 - 0.94 * 0.9);
+				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 5)
+		).isEqualTo(1.0 - 0.45);
 
 		assertThat(
-				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 30)
+				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 42)
 		).isCloseTo(0.1, Offset.offset(0.001));
 
 		assertThat(
-				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 30)
+				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 42)
 		).isCloseTo(0.1, Offset.offset(0.001));
 
 	}

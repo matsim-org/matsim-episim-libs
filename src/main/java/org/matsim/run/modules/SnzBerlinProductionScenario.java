@@ -28,11 +28,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
-import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
@@ -564,11 +561,22 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 //			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 //			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 		}
-		//vacinations
+
+
+		// vaccinations
+		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+
 		if (this.vaccinations.equals(Vaccinations.yes)) {
-			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-			vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
-			vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
+			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
+					.setEffectiveness(VirusStrain.B117, 0.9)
+					.setDaysBeforeFullEffect(42);
+
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
+					.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
+					.setEffectiveness(VirusStrain.B117, 0.9)
+					.setDaysBeforeFullEffect(42);
+
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 
 			Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
@@ -643,9 +651,23 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			vaccinations.put(LocalDate.parse("2021-06-25"), (int) ((0.583 - 0.535) * population / 19));
 			vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
 
-
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
+
+		// mutations
+		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+
+		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
+		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayB117.put(LocalDate.parse("2020-11-30"), 1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.5);
+
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.5);
+
 
 		episimConfig.setPolicy(builder.build());
 
