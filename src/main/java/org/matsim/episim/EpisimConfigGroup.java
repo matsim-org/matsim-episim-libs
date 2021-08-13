@@ -162,7 +162,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
-	private RestrictSpecificDistrict restrictSpecificDistrict = RestrictSpecificDistrict.no;
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
 	private int threads = 2;
@@ -732,17 +731,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setDistrictLevelRestrictionsAttribute(String districtLevelRestrictionsAttribute) {
 		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
-
-	@StringGetter(RESTRICT_SPECIFIC_DISTRICT)
-	public RestrictSpecificDistrict getRestrictSpecificDistrict() {
-		return this.restrictSpecificDistrict;
-	}
-
-	@StringSetter(RESTRICT_SPECIFIC_DISTRICT)
-	public void setRestrictSpecificDistrict(RestrictSpecificDistrict restrictSpecificDistrict) {
-		this.restrictSpecificDistrict = restrictSpecificDistrict;
-	}
-
 
 	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
 	public ContagiousOptimization getContagiousOptimization() {

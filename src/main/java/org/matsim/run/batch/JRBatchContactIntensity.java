@@ -20,7 +20,7 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
-				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : SnzBerlinProductionScenario.LocationBasedRestrictions.no)
+				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.no)
 				.setActivityHandling(ActivityHandling.startOfDay)
 				.setSample(1)
 				.createSnzBerlinProductionScenario();
@@ -55,8 +55,8 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 
 	public static final class Params {
 
-		@EnumParameter(SnzBerlinProductionScenario.LocationBasedRestrictions.class)
-		SnzBerlinProductionScenario.LocationBasedRestrictions locationBasedRestrictions;
+		@EnumParameter(EpisimConfigGroup.DistrictLevelRestrictions.class)
+		EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions;
 
 		@GenerateSeeds(5)
 		public long seed;
