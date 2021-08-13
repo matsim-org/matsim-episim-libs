@@ -278,6 +278,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
+		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 
 		private VaccinationType type;
@@ -296,6 +297,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * Effectiveness after booster shot.
 		 */
 		private Map<VirusStrain, Double> boostEffectiveness = new EnumMap<>(VirusStrain.class);
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+		private double factorShowingSymptoms = 1.0;
 
 		/**
 		 * Factor for probability if person is vaccinated.
@@ -322,8 +328,20 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringSetter(FACTOR_SERIOUSLY_SICK)
-		public void setFactorSeriouslySick(double factorSeriouslySick) {
+		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
 			this.factorSeriouslySick = factorSeriouslySick;
+			return this;
+		}
+
+		@StringGetter(FACTOR_SHOWINGS_SYMPTOMS)
+		public double getFactorShowingSymptoms() {
+			return factorShowingSymptoms;
+		}
+
+		@StringSetter(FACTOR_SHOWINGS_SYMPTOMS)
+		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
+			this.factorShowingSymptoms = factorShowingSymptoms;
+			return this;
 		}
 
 		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
@@ -417,10 +435,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			this.boostEffectiveness.put(strain, effectiveness);
 			return this;
 		}
-
-
-
-
 	}
 
 }

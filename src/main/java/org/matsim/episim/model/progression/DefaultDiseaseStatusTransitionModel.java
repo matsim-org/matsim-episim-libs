@@ -29,7 +29,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 				return EpisimPerson.DiseaseStatus.contagious;
 
 			case contagious:
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
+						vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms() : 1d))
 					return EpisimPerson.DiseaseStatus.showingSymptoms;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;

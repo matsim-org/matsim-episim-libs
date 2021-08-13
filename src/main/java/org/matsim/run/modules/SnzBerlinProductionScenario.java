@@ -570,11 +570,15 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 					.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
 					.setEffectiveness(VirusStrain.B117, 0.9)
+					.setFactorShowingSymptoms(0.5)
+					.setFactorSeriouslySick(0.5)
 					.setDaysBeforeFullEffect(42);
 
 			vaccinationConfig.getOrAddParams(VaccinationType.vector)
 					.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
 					.setEffectiveness(VirusStrain.B117, 0.9)
+					.setFactorShowingSymptoms(0.5)
+					.setFactorSeriouslySick(0.5)
 					.setDaysBeforeFullEffect(42);
 
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
@@ -664,10 +668,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.5);
-
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.5);
-
 
 		episimConfig.setPolicy(builder.build());
 

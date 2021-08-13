@@ -158,6 +158,10 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 			return factorSeriouslySick;
 		}
 
+		/**
+		 * Configure this in the vaccination config instead. Nonetheless, for now this value will still be respected.
+		 */
+		@Deprecated
 		@StringSetter(FACTOR_SERIOUSLY_SICK_VAC)
 		public void setFactorSeriouslySickVaccinated(double factorSeriouslySickVaccinated) {
 			this.factorSeriouslySickVaccinated = factorSeriouslySickVaccinated;

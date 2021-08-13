@@ -104,15 +104,18 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-04-07"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1 - params.mutBVaccinationEffectiveness));
 
 		vaccinationConfig.getParams(VaccinationType.mRNA)
 				.setEffectiveness(VirusStrain.MUTB, params.mutBVaccinationEffectiveness)
-				.setBoostEffectiveness(VirusStrain.MUTB, 0.9);
+				.setBoostEffectiveness(VirusStrain.MUTB, 0.9)
+				.setFactorShowingSymptoms(0.5)
+				.setFactorSeriouslySick(0.2 / (1 - params.mutBVaccinationEffectiveness));
 
 		vaccinationConfig.getParams(VaccinationType.vector)
 				.setEffectiveness(VirusStrain.MUTB, params.mutBVaccinationEffectiveness)
-				.setBoostEffectiveness(VirusStrain.MUTB, 0.9);
+				.setBoostEffectiveness(VirusStrain.MUTB, 0.9)
+				.setFactorShowingSymptoms(0.5)
+				.setFactorSeriouslySick(0.2 / (1 - params.mutBVaccinationEffectiveness));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
@@ -230,7 +233,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@Parameter({3, 4, 5})
 		double importFactorBeforeJune;
 
-		@Parameter({0.25, 0.5, 0.75})
+		@Parameter({0.25, 0.42, 0.5, 0.75})
 		double importFactorAfterJune;
 
 		@EnumParameter(value = SnzBerlinProductionScenario.WeatherModel.class, ignore = {"no", "midpoints_175_175"})
