@@ -30,7 +30,7 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 
 			case contagious:
 				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
-						vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms() : 1d))
+						vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms(person.getVirusStrain()) : 1d))
 					return EpisimPerson.DiseaseStatus.showingSymptoms;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -40,7 +40,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ? vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick() : 1.0))
+						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
+						vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick(person.getVirusStrain()) : 1.0))
 					return EpisimPerson.DiseaseStatus.seriouslySick;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -78,10 +79,6 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 	 */
 	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
 		return 0.25;
-	}
-
-	protected double getProbaOfTransitioningToContagious(EpisimPerson person) {
-		return 1.;
 	}
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {

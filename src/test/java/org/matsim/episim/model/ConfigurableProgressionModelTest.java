@@ -259,9 +259,10 @@ public class ConfigurableProgressionModelTest {
 		// reinfection after susceptible
 		p.setDiseaseStatus(30 * 86400, DiseaseStatus.infectedButNotContagious);
 
-		for (int day = 30; day <= 33; day++) {
+		for (int day = 30; day <= 34; day++) {
 			model.updateState(p, day);
 			if (day == 33) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.infectedButNotContagious);
+			if (day == 34) assertThat(p.getDiseaseStatus()).isEqualTo(DiseaseStatus.contagious);
 		}
 
 	}

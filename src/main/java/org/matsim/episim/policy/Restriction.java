@@ -3,6 +3,7 @@ package org.matsim.episim.policy;
 import com.typesafe.config.Config;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.poi.util.Beta;
 import org.matsim.api.core.v01.Id;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.facilities.ActivityFacility;
@@ -246,6 +247,16 @@ public final class Restriction {
 		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
 		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>());
+	}
+
+	/**
+	 * Restrict percentage of activities for unvaccinated and susceptible persons.
+	 *
+	 * @param remainingFraction remaining fraction of unvaccinated persons, i.e. 0 bans this activity for all unvaccinated persons.
+	 */
+	@Beta
+	public static Restriction ofExposedRf(double remainingFraction) {
+		return new Restriction(null, null, null, null, null, null, null, new HashMap<>());
 	}
 
 	public static Restriction ofLocationBasedRf(Map<String, Double> locationBasedRf) {

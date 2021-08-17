@@ -2,6 +2,7 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import it.unimi.dsi.fastutil.doubles.DoubleDoublePair;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VaccinationType;
@@ -278,8 +279,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
-		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
-		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
+		private static final String FACTORS = "factors";
+
+		private static final DoubleDoublePair DEFAULT_FACTORS = DoubleDoublePair.of(1d, 1d);
 
 		private VaccinationType type;
 
@@ -299,14 +301,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private Map<VirusStrain, Double> boostEffectiveness = new EnumMap<>(VirusStrain.class);
 
 		/**
-		 * Factor for probability if person is vaccinated.
+		 * Contains the probability factor for persons transitioning to showing symptoms and seriously sick
 		 */
-		private double factorShowingSymptoms = 1.0;
-
-		/**
-		 * Factor for probability if person is vaccinated.
-		 */
-		private double factorSeriouslySick = 1.0;
+		private Map<VirusStrain, DoubleDoublePair> factors = new EnumMap<>(VirusStrain.class);
 
 		VaccinationParams() {
 			super(SET_TYPE);
@@ -322,26 +319,49 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			this.type = type;
 		}
 
-		@StringGetter(FACTOR_SERIOUSLY_SICK)
-		public double getFactorSeriouslySick() {
-			return factorSeriouslySick;
-		}
 
-		@StringSetter(FACTOR_SERIOUSLY_SICK)
+		@Deprecated
 		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
-			this.factorSeriouslySick = factorSeriouslySick;
-			return this;
+			throw new UnsupportedOperationException("Use .setFactors(...)");
 		}
 
-		@StringGetter(FACTOR_SHOWINGS_SYMPTOMS)
-		public double getFactorShowingSymptoms() {
-			return factorShowingSymptoms;
-		}
-
-		@StringSetter(FACTOR_SHOWINGS_SYMPTOMS)
+		@Deprecated
 		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
-			this.factorShowingSymptoms = factorShowingSymptoms;
+			throw new UnsupportedOperationException("Use .setFactors(...)");
+		}
+
+		/**
+		 * Set factors for specific virus strain.
+		 */
+		public VaccinationParams setFactors(VirusStrain strain, double showingSymptoms, double seriouslySick) {
+			factors.put(strain, DoubleDoublePair.of(showingSymptoms, seriouslySick));
 			return this;
+		}
+
+		public double getFactorShowingSymptoms(VirusStrain strain) {
+			return factors.getOrDefault(strain, DEFAULT_FACTORS).firstDouble();
+		}
+
+		public double getFactorSeriouslySick(VirusStrain strain) {
+			return factors.getOrDefault(strain, DEFAULT_FACTORS).secondDouble();
+		}
+
+
+		@StringGetter(FACTORS)
+		String getFactors() {
+			return JOINER.join(factors);
+		}
+
+		@StringSetter(FACTORS)
+		void setFactors(String value) {
+			if (value.isBlank()) return;
+
+			this.factors.clear();
+			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
+
+				String[] s = e.getValue().substring(1, e.getValue().length() - 1).split(",");
+				this.factors.put(VirusStrain.valueOf(e.getKey()), DoubleDoublePair.of(Double.parseDouble(s[0]), Double.parseDouble(s[1])));
+			}
 		}
 
 		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
