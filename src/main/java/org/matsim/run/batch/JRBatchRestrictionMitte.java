@@ -22,8 +22,8 @@ public class JRBatchRestrictionMitte implements BatchRun<JRBatchRestrictionMitte
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 				// parameters often changed:
-//				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.no)
-				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
+				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.no)
+				//				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
 				.setSample(1)
 				// not changed often:
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
@@ -53,8 +53,8 @@ public class JRBatchRestrictionMitte implements BatchRun<JRBatchRestrictionMitte
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		// Change localRf for specific activty type and district
-		String fromDateLocalRestriction = "2020-10-01";
-		String toDateLocalRestriction = "2020-10-31";
+		String fromDateLocalRestriction = "2020-01-01";//"2020-10-01";
+		String toDateLocalRestriction = "2022-01-01";//"2020-10-31";
 		List<String> districtsToRestrict = Lists.newArrayList("Mitte");
 		double newLocalRf = 0.000077777;
 		switch (params.restrictSpecificDistricts) {
@@ -102,7 +102,7 @@ public class JRBatchRestrictionMitte implements BatchRun<JRBatchRestrictionMitte
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, JRBatchRestrictionMitte.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(360),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(15),
 				RunParallel.OPTION_METADATA
 		};
 

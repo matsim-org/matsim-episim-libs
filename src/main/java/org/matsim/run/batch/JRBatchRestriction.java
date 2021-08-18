@@ -24,7 +24,9 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 				// parameters often changed:
 				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.no)
 				//.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
-				.setSample(25)
+				.setSample(1)
+				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
+				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
 
 
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
@@ -55,7 +57,7 @@ public class JRBatchRestriction implements BatchRun<JRBatchRestriction.Params> {
 		@EnumParameter(EpisimConfigGroup.DistrictLevelRestrictions.class)
 		EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions;
 
-		@GenerateSeeds(3)
+		@GenerateSeeds(1)
 		public long seed;
 
 	}

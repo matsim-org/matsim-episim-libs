@@ -56,7 +56,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
@@ -214,9 +213,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 	public static enum EasterModel {yes, no}
 
-	//	public static enum LocationBasedRestrictions {yesForActivityLocation, yesForHomeLocation, no}
 	public static enum LocationBasedContactIntensity {yes, no}
-	//	public static enum RestrictBerlinMitteOctober2020 {no, work, leisure, work_and_leisure}
 
 	private final int sample;
 	private final int importOffset;
@@ -306,11 +303,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
 			bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
-			//			if (locationBasedRestrictions != LocationBasedRestrictions.no) {
-			//				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
-			//			} else {
-			//				bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
-			//			}
 		}
 	}
 
@@ -318,8 +310,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		//		if (this.sample != 25 && this.sample != 100)
-		//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25 && this.sample != 100)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -353,7 +345,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 
 		episimConfig.setActivityHandling(activityHandling);
-		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
+
 
 		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 		//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -460,25 +452,18 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		String untilDate = "20210518";
 		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
 
+		//location based restrictions
+		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
 		config.facilities().setInputFile(INPUT.resolve("be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz").toString());
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
-		//location based restrictions
 		List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
 				"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
 				"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
+
 		if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
 			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
-			if (locationBasedRestrictions.equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation)) {
-				episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
-			}
-
-			if (locationBasedRestrictions.equals(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)) {
-				episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation);
-			}
-
 			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
-
 
 				Map<String, Path> subdistrictInputs = new HashMap<>();
 				for (String subdistrict : subdistricts) {
@@ -531,10 +516,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
 
-//			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
-//				throw new RuntimeException("locationBasedRestrictions currently doesn't support christmas model");
-//			}
-
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
@@ -571,8 +552,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 						builder.restrictWithDistrict(LocalDate.parse("2020-12-24"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
 					}
 					if (this.christmasModel == ChristmasModel.permissive) {
-						builder.restrictWithDistrict(LocalDate.parse("2020-12-24"), makeUniformLocalRf(subdistricts, 1.0),1.0, act);
-						builder.restrictWithDistrict(LocalDate.parse("2020-12-31"), makeUniformLocalRf(subdistricts, 1.0),1.0, act);
+						builder.restrictWithDistrict(LocalDate.parse("2020-12-24"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
+						builder.restrictWithDistrict(LocalDate.parse("2020-12-31"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
 						builder.restrictWithDistrict(LocalDate.parse("2021-01-02"), makeUniformLocalRf(subdistricts, fraction), fraction, act);
 					}
 				}
@@ -600,11 +581,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
 					builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
 				} else {
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-02"),makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-03"),makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-04"),makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-05"),makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-06"),makeUniformLocalRf(subdistricts, fraction), fraction, act);
+					builder.restrictWithDistrict(LocalDate.parse("2021-04-02"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
+					builder.restrictWithDistrict(LocalDate.parse("2021-04-03"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
+					builder.restrictWithDistrict(LocalDate.parse("2021-04-04"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
+					builder.restrictWithDistrict(LocalDate.parse("2021-04-05"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
+					builder.restrictWithDistrict(LocalDate.parse("2021-04-06"), makeUniformLocalRf(subdistricts, fraction), fraction, act);
 				}
 			}
 		}
@@ -651,16 +632,16 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 				// following four blocks mimic the work/business adjustments
 				builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
-				builder.apply("2020-04-03", "2020-04-17", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+				builder.apply("2020-04-03", "2020-04-17", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
 				builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
-				builder.apply("2020-06-26", "2020-08-07", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+				builder.apply("2020-06-26", "2020-08-07", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
 				builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
-				builder.apply("2020-10-09", "2020-10-23", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+				builder.apply("2020-10-09", "2020-10-23", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
 				builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
-				builder.apply("2020-12-18", "2021-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor *  v), "work","business");
+				builder.apply("2020-12-18", "2021-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
 			}
 

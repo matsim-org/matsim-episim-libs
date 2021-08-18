@@ -11,9 +11,9 @@ library(lubridate)
 
 rm(list = ls())
 
-file_pattern <- "C:/Users/jakob/projects/matsim-episim/output/locationBasedRestrictions_yesForHomeLocation/locationBasedRestrictions2.policy.conf"
-
-df <- data.frame(number = unlist(fromJSON(file_pattern, flatten = TRUE)))
+file <- "C:/Users/jakob/projects/matsim-episim/output/locationBasedRestrictions_yesForHomeLocation-seed_4711/locationBasedRestrictions2.policy.conf"
+# file <- "C:/Users/jakob/projects/matsim-episim/TESTpolicy.conf"
+df <- data.frame(number = unlist(fromJSON(file, flatten = TRUE)))
 
 
 df$rownames <- rownames(df)
@@ -27,21 +27,27 @@ df_clean3 <- df_clean2 %>%
   select(-col_type) %>%
   mutate(date = as.Date(date, format = "%Y-%m-%d"))
 
-df_avg <- df_clean3 %>%
-  filter(district != "Berlin") %>%
-  group_by(activity, date) %>%
-  summarise(number = mean(number)) %>%
-  mutate(district = "average")
+# df_avg <- df_clean3 %>%
+#   filter(district != "Berlin") %>%
+#   group_by(activity, date) %>%
+#   summarise(number = mean(number)) %>%
+#   mutate(district = "average")
 
-df_clean_avg <- rbind(df_clean3 %>% filter(district == "Berlin"), df_avg)
-ggplot(df_clean_avg %>% filter(!grepl('edu', activity)), aes(date, number)) +
-  geom_line(aes(color = district)) +
-  facet_wrap(~activity, ncol = 4)
+# df_clean_avg <- rbind(df_clean3 %>% filter(district == "Berlin"), df_avg)
+# ggplot(df_clean_avg %>% filter(!grepl('edu', activity)), aes(date, number)) +
+#   geom_line(aes(color = district)) +
+#   facet_wrap(~activity, ncol = 4)
 
-
+district_list <- unique(df_clean$district)
 # ggplot(df4, aes(x = as.Date(date,format = "%Y-%m-%d"), y = number)) +
-ggplot(df_clean3 %>% filter(activity == "leisure"), aes(x = date, y = number)) +
-  geom_line(aes(color = district))
+ggplot(df_clean3 %>% filter(activity == "work"),# & (district == "Berlin" | district==paste0(district_list[7]))),
+       aes(x = date, y = number)) +
+  geom_line(aes(col=district)) +
+  xlim(ymd("2020-10-17"),ymd("2020-12-16")) +
+  labs(y="remaining fraction")+
+  theme_minimal()#' +
+  # facet_wrap(~district, ncol = 4) #aes(color = district)
+
 
 
 df_clean3 %>%
@@ -97,10 +103,15 @@ df_kiez_clean <- df_kiez_raw %>%
   pivot_longer(cols = !c(district, date), names_to = "activity", values_to = "reduction")
 
 
-df_kiez_avg <- df_kiez_clean %>%
-  group_by(date, activity) %>%
-  summarise(reduction = mean(reduction)) %>%
-  mutate(scenario = "average")
+ggplot(df_kiez_clean %>% filter(activity == "notAtHome" & date > ymd("2020-11-1") & date < ymd("2021-02-01") ))+#& district == "Charlottenburg_Wilmersdorf")) +
+  geom_line(aes(date,reduction)) +
+  facet_wrap(~district,nrow   = 4)+
+  xlim(ymd("2020-10-17"),ymd("2020-12-16"))
+
+# df_kiez_avg <- df_kiez_clean %>%
+#   group_by(date, activity) %>%
+#   summarise(reduction = mean(reduction)) %>%
+#   mutate(scenario = "average")
 
 
 # for Berlin:
@@ -109,42 +120,44 @@ df_berlin <- read_delim(file = paste0(folder, "Berlin", file_pattern),
                         "\t", escape_double = FALSE, trim_ws = TRUE) %>%
   mutate(date = ymd(date)) %>%
   pivot_longer(cols = !date, names_to = "activity", values_to = "reduction") %>%
-  mutate(scenario = "berlin")
+  mutate(district = "Berlin")
 
-df_join <- rbind(df_kiez_avg, df_berlin) %>%
-  pivot_wider(names_from = "scenario", values_from = "reduction") %>%
-  mutate(difference = average - berlin) %>%
-  pivot_longer(cols = !c(activity, date), names_to = "scenario", values_to = "reduction")
+df_join <- rbind(df_kiez_clean, df_berlin) #' %>%
+  # pivot_wider(names_from = "scenario", values_from = "reduction")
+# %>%
+#   mutate(difference = average - berlin) %>%
+#   pivot_longer(cols = !c(activity, date), names_to = "scenario", values_to = "reduction")
 
 
-ggplot(df_join %>% filter(activity == "notAtHome" & scenario != "difference"), aes(date, reduction)) +
-  geom_point(aes(color = scenario)) #+
+ggplot(df_join %>% filter(activity == "notAtHome" & (district == "Berlin" | district=="Spandau")), aes(date, reduction)) +
+  geom_line(aes(color = district)) +
+  xlim(ymd("2020-11-17"),ymd("2020-12-16"))#+
 # ylim(NA, 100)
 
 
 # This plot shows that averaging the kiezes results in LESS ACTIVITY REDUCTION (more activity, more infection) than the berlin value...
 # This points to a systematic error...
-ggplot(df_join %>% filter(scenario == "difference" & activity == "notAtHome"), aes(date, reduction)) +
-  geom_point()
-
-mean_diff <- mean((df_join %>% filter(scenario == "difference"))$reduction)
-print(paste0("mean difference: ", mean_diff))
-
-total_size <- length((df_join %>% filter(scenario == "difference" & activity == "notAtHome"))$reduction)
-num_above_zero <- length((df_join %>% filter(scenario == "difference" & activity == "notAtHome" & reduction > 0))$reduction)
-
-print(paste0(num_above_zero, " of ", total_size, " are above 0: ", num_above_zero/total_size*100, " pct"))
-
+# ggplot(df_join %>% filter(scenario == "difference" & activity == "notAtHome"), aes(date, reduction)) +
+#   geom_point()
+#
+# mean_diff <- mean((df_join %>% filter(scenario == "difference"))$reduction)
+# print(paste0("mean difference: ", mean_diff))
+#
+# total_size <- length((df_join %>% filter(scenario == "difference" & activity == "notAtHome"))$reduction)
+# num_above_zero <- length((df_join %>% filter(scenario == "difference" & activity == "notAtHome" & reduction > 0))$reduction)
+#
+# print(paste0(num_above_zero, " of ", total_size, " are above 0: ", num_above_zero/total_size*100, " pct"))
+#
 # ok, now that we know that the district average is systematically above berlin value (less activity reduction), we should find out why;
 # maybe check the individual districts.
 
-df_kiez_clean %>%
-  filter(activity == "notAtHome") %>%
-  group_by(district) %>%
-  summarise(red = mean(reduction)) %>%
-  summarise(red = mean(red))
-
-df_berlin %>% filter(activity == "notAtHome") %>% summarise(red = mean(reduction))
+# df_kiez_clean %>%
+#   filter(activity == "notAtHome") %>%
+#   group_by(district) %>%
+#   summarise(red = mean(reduction)) %>%
+#   summarise(red = mean(red))
+#
+# df_berlin %>% filter(activity == "notAtHome") %>% summarise(red = mean(reduction))
 
 # Xberg_Fhein have the highest reduction: -20%
 # Treptow_Koepenick have the lowest reduction: -10%

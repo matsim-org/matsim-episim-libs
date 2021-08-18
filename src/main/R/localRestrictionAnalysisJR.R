@@ -23,7 +23,9 @@ rki_new <- read_and_process_new_rki_data("Fallzahlen_Kum_Tab_9Juni.xlsx")
 rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
 # Read episim data and filter, such that only relevant situations are present
 # "2021-08-06-drastic/"
-episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-06-mitte/", "FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-06-drastic/", "FacilityToDistrictMapCOMPLETE.txt")
+# 2021-08-06-drastic
+# 2021-08-06-mitte
 # episim_all_runs <- episim_all_runs_raw %>%
 #   filter(locationBasedRestrictions == "yesForActivityLocation") %>%
 #   filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
@@ -32,13 +34,24 @@ episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-06-mitte/",
 #   pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
 #   rename(restrict_no = no, restrict_leisure = leisure) # This is where we choose correct names
 
+# episim_all_runs <- episim_all_runs_raw %>%
+#   # filter(locationBasedRestrictions == "yesForHomeLocation" | locationBasedRestrictions == "no") %>%
+#   filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
+#   filter(locationBasedRestrictions == "yesForHomeLocation") %>%
+#   ungroup() %>%
+#   # select(-"restrictBerlinMitteOctober2020") # %>%
+#   select(-"locationBasedRestrictions")
+#   pivot_wider(names_from = "locationBasedRestrictions", values_from = "infections") %>%
+#   rename(base = no, local_Rf = yesForHomeLocation)
+
 episim_all_runs <- episim_all_runs_raw %>%
-  filter(locationBasedRestrictions == "yesForHomeLocation" | locationBasedRestrictions == "no") %>%
-  filter(restrictBerlinMitteOctober2020 == "no") %>% #restrictBerlinMitteOctober2020 == "leisure" |
+  filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
+  filter(locationBasedRestrictions == "yesForHomeLocation") %>%
   ungroup() %>%
-  select(-"restrictBerlinMitteOctober2020") %>%
-  pivot_wider(names_from = "locationBasedRestrictions", values_from = "infections") %>%
-  rename(base = no, local_Rf = yesForHomeLocation)
+  select(-"locationBasedRestrictions") %>%
+  pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
+  rename(base = no, restrict_mitte = leisure)
+
 
 # BEFORE MERGING:
 # each dataset should have "date", "district" + a seperate column per situation (with good name)
@@ -61,42 +74,17 @@ merged_weekly <- merged_tidy %>%
   mutate(year = year(date)) %>%
   select(-date) %>%
   group_by(across(-infections)) %>%
-  summarise(infections = mean(infections,na.rm = TRUE)) %>%
+  summarise(infections = mean(infections, na.rm = TRUE)) %>%
   mutate(week_year = as.Date(paste(year, week, 1, sep = "-"), "%Y-%U-%u")) %>%
   ungroup() %>%
-  select(!c(week,year))
+  select(!c(week, year))
 
 
 ######## III - PLOT ##########
 
 ## Facet Plot - all districts (for single district, add filter)
 color_scheme <- c("magenta", "blue", "dark grey", "dark grey")
-plot_allDistrict_cases(merged_weekly %>% filter(act == "work"),color_scheme)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+plot_allDistrict_cases(merged_weekly, color_scheme) #%>% filter(district =="Friedrichshain_Kreuzberg")
 
 
 #
