@@ -568,15 +568,15 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		if (this.vaccinations.equals(Vaccinations.yes)) {
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-					.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
-					.setEffectiveness(VirusStrain.B117, 0.9)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 0.9d)
+					)
+
 					.setFactorShowingSymptoms(0.5)
 					.setFactorSeriouslySick(0.5)
 					.setDaysBeforeFullEffect(42);
 
 			vaccinationConfig.getOrAddParams(VaccinationType.vector)
-					.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
-					.setEffectiveness(VirusStrain.B117, 0.9)
 					.setFactorShowingSymptoms(0.5)
 					.setFactorSeriouslySick(0.5)
 					.setDaysBeforeFullEffect(42);

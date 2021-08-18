@@ -106,14 +106,10 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
 
 		vaccinationConfig.getParams(VaccinationType.mRNA)
-				.setEffectiveness(VirusStrain.MUTB, params.mutBVaccinationEffectiveness)
-				.setBoostEffectiveness(VirusStrain.MUTB, 0.9)
 				.setFactorShowingSymptoms(0.5)
 				.setFactorSeriouslySick(0.2 / (1 - params.mutBVaccinationEffectiveness));
 
 		vaccinationConfig.getParams(VaccinationType.vector)
-				.setEffectiveness(VirusStrain.MUTB, params.mutBVaccinationEffectiveness)
-				.setBoostEffectiveness(VirusStrain.MUTB, 0.9)
 				.setFactorShowingSymptoms(0.5)
 				.setFactorSeriouslySick(0.2 / (1 - params.mutBVaccinationEffectiveness));
 

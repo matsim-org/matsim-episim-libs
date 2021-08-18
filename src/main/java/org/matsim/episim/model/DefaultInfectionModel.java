@@ -66,7 +66,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 * Calculate the current effectiveness of vaccination.
 	 */
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
-		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 
 		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());
 		VirusStrain strain = virusStrain.getStrain();
@@ -77,29 +77,16 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double min;
 		// use re vaccine effectiveness if person received the new vaccine
 		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			vaccineEffectiveness = params.getBoostEffectiveness(strain) ;
+			vaccineEffectiveness = params.getBoostEffectiveness(strain, daysVaccinated) ;
 			// effectiveness of second vaccine is never below first
-			min = params.getEffectiveness(strain);
+			min = params.getEffectiveness(strain, params.getDaysBeforeFullEffect());
 		} else {
-			vaccineEffectiveness = params.getEffectiveness(strain);
+			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);
 			min = 0;
 		}
 
-		// full effect
-		if (daysVaccinated >= params.getDaysBeforeFullEffect())
-			return 1 - Math.max(min, vaccineEffectiveness);
-
 		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
-		// 50% of the effect is achieved after a few days, then linearly increased
-		else if (daysVaccinated >= 5) {
-			double from = 0.5;
-
-			double days = params.getDaysBeforeFullEffect() - 5;
-
-			return 1 - Math.max(min, vaccineEffectiveness * (from + from * (daysVaccinated - 5) / days));
-		}
-
-		return 1 - min;
+		return 1 - Math.max(min, vaccineEffectiveness);
 	}
 }

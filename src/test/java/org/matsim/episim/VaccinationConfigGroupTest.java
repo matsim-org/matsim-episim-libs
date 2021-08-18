@@ -6,6 +6,7 @@ import org.junit.rules.TemporaryFolder;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,6 +84,49 @@ public class VaccinationConfigGroupTest {
 				.containsEntry(VaccinationType.mRNA, 0.8d)
 				.containsEntry(VaccinationType.vector, 1d);
 
+	}
+
+
+	@Test
+	public void parameter() throws IOException {
+
+		Config config = ConfigUtils.createConfig();
+		VaccinationConfigGroup group = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+
+		group.getOrAddParams(VaccinationType.generic)
+				.setDaysBeforeFullEffect(30)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(10, 0.5)
+						.atDay(20, 0.8)
+						.atFullEffect(0.99))
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B1351)
+						.atDay(0, 0.1)
+						.atDay(10, 0.4)
+				);
+
+		File file = tmp.newFile("tmp.xml");
+		ConfigUtils.writeConfig(config, file.toString());
+
+		Config loaded = ConfigUtils.loadConfig(file.toString());
+		VaccinationConfigGroup.VaccinationParams cmp = ConfigUtils.addOrGetModule(loaded, VaccinationConfigGroup.class).getParams(VaccinationType.generic);
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 10))
+				.isEqualTo(0.5);
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 15))
+				.isEqualTo(0.65);
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 20))
+				.isEqualTo(0.8);
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 25))
+				.isEqualTo(0.895);
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 30))
+				.isEqualTo(0.99);
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 35))
+				.isEqualTo(0.99);
 
 	}
 }

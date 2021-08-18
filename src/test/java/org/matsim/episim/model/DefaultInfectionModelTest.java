@@ -2,7 +2,10 @@ package org.matsim.episim.model;
 
 import org.assertj.core.data.Offset;
 import org.junit.Test;
-import org.matsim.episim.*;
+import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.VirusStrainConfigGroup;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -14,11 +17,21 @@ public class DefaultInfectionModelTest {
 
 		VaccinationConfigGroup vacConfig = new VaccinationConfigGroup();
 		vacConfig.getParams(VaccinationType.generic)
-				.setEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
-				.setBoostEffectiveness(VirusStrain.SARS_CoV_2, 0.9)
-				.setEffectiveness(VirusStrain.B1351, 0.2)
-				.setBoostEffectiveness(VirusStrain.B1351, 0.9)
-				.setDaysBeforeFullEffect(42);
+				.setDaysBeforeFullEffect(42)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(4, 0)
+						.atDay(5, 0.45)
+						.atFullEffect(0.9))
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(5, 0)
+						.atFullEffect(0.9))
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B1351)
+						.atDay(4, 0)
+						.atDay(5, 0.1)
+						.atFullEffect(0.2))
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B1351)
+						.atDay(5, 0.2)
+						.atFullEffect(0.9));
 
 		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
 		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);
@@ -43,7 +56,7 @@ public class DefaultInfectionModelTest {
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 5)
-		).isEqualTo(1.0 - 0.2/2);
+		).isEqualTo(1.0 - 0.2 / 2);
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 30)
@@ -77,7 +90,11 @@ public class DefaultInfectionModelTest {
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 5)
-		).isEqualTo(1.0 - 0.45);
+		).isEqualTo(0.8);
+
+		assertThat(
+				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 10)
+		).isCloseTo(0.705, Offset.offset(0.01));
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 42)

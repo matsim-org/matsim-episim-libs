@@ -2,7 +2,6 @@ package org.matsim.episim;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
-import it.unimi.dsi.fastutil.doubles.DoubleDoublePair;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VaccinationType;
@@ -279,31 +278,46 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
-		private static final String FACTORS = "factors";
-
-		private static final DoubleDoublePair DEFAULT_FACTORS = DoubleDoublePair.of(1d, 1d);
+		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
+		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 
 		private VaccinationType type;
 
 		/**
 		 * Number of days until vaccination goes into full effect.
 		 */
-		private int daysBeforeFullEffect = 21;
+		private int daysBeforeFullEffect = 28;
 
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
 		 */
-		private Map<VirusStrain, Double> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2, 0.9));
+		private Map<VirusStrain, Parameter> effectiveness = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(4, 0)
+						.atDay(5, 0.45)
+						.atFullEffect(0.9)
+		));
 
 		/**
 		 * Effectiveness after booster shot.
 		 */
-		private Map<VirusStrain, Double> boostEffectiveness = new EnumMap<>(VirusStrain.class);
+		private Map<VirusStrain, Parameter> boostEffectiveness = new EnumMap<>(VirusStrain.class);
 
 		/**
-		 * Contains the probability factor for persons transitioning to showing symptoms and seriously sick
+		 * Factor for probability if person is vaccinated.
 		 */
-		private Map<VirusStrain, DoubleDoublePair> factors = new EnumMap<>(VirusStrain.class);
+		private Map<VirusStrain, Parameter> factorShowingSymptoms = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(5, 0.5)
+		));
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+		private Map<VirusStrain, Parameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(5, 0.5)
+		));
 
 		VaccinationParams() {
 			super(SET_TYPE);
@@ -319,141 +333,253 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			this.type = type;
 		}
 
-
-		@Deprecated
-		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
-			throw new UnsupportedOperationException("Use .setFactors(...)");
-		}
-
-		@Deprecated
-		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
-			throw new UnsupportedOperationException("Use .setFactors(...)");
-		}
-
-		/**
-		 * Set factors for specific virus strain.
-		 */
-		public VaccinationParams setFactors(VirusStrain strain, double showingSymptoms, double seriouslySick) {
-			factors.put(strain, DoubleDoublePair.of(showingSymptoms, seriouslySick));
-			return this;
-		}
-
-		public double getFactorShowingSymptoms(VirusStrain strain) {
-			return factors.getOrDefault(strain, DEFAULT_FACTORS).firstDouble();
-		}
-
-		public double getFactorSeriouslySick(VirusStrain strain) {
-			return factors.getOrDefault(strain, DEFAULT_FACTORS).secondDouble();
-		}
-
-
-		@StringGetter(FACTORS)
-		String getFactors() {
-			return JOINER.join(factors);
-		}
-
-		@StringSetter(FACTORS)
-		void setFactors(String value) {
-			if (value.isBlank()) return;
-
-			this.factors.clear();
-			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-
-				String[] s = e.getValue().substring(1, e.getValue().length() - 1).split(",");
-				this.factors.put(VirusStrain.valueOf(e.getKey()), DoubleDoublePair.of(Double.parseDouble(s[0]), Double.parseDouble(s[1])));
-			}
-		}
-
 		@StringGetter(DAYS_BEFORE_FULL_EFFECT)
 		public int getDaysBeforeFullEffect() {
 			return daysBeforeFullEffect;
 		}
 
 		@StringSetter(DAYS_BEFORE_FULL_EFFECT)
-		public void setDaysBeforeFullEffect(int daysBeforeFullEffect) {
+		public VaccinationParams setDaysBeforeFullEffect(int daysBeforeFullEffect) {
 			this.daysBeforeFullEffect = daysBeforeFullEffect;
+			return this;
+		}
+
+		private VaccinationParams setParamsInternal(Map<VirusStrain, Parameter> map, Parameter[] params) {
+			for (Parameter p : params) {
+				for (VirusStrain s : p.strain) {
+					p.setDaysBeforeFullEffect(getDaysBeforeFullEffect());
+					map.put(s, p);
+				}
+			}
+			return this;
+		}
+
+		/**
+		 * Interpolate parameter for day after vaccination.
+		 *
+		 * @param map    map for lookup
+		 * @param strain virus strain
+		 * @param day    days since vaccination
+		 * @return interpolated factor
+		 */
+		private double getParamsInternal(Map<VirusStrain, Parameter> map, VirusStrain strain, int day) {
+			Parameter p = map.getOrDefault(strain, map.get(VirusStrain.SARS_CoV_2));
+			return p.get(day);
+		}
+
+		public VaccinationParams setEffectiveness(Parameter... parameters) {
+			return setParamsInternal(effectiveness, parameters);
+		}
+
+		public VaccinationParams setBoostEffectiveness(Parameter... parameters) {
+			return setParamsInternal(boostEffectiveness, parameters);
+		}
+
+		public VaccinationParams setFactorShowingSymptoms(Parameter... parameters) {
+			return setParamsInternal(factorShowingSymptoms, parameters);
+		}
+
+		public VaccinationParams setFactorSeriouslySick(Parameter... parameters) {
+			return setParamsInternal(factorSeriouslySick, parameters);
+		}
+
+		public double getEffectiveness(VirusStrain strain, int day) {
+			return getParamsInternal(effectiveness, strain, day);
+		}
+
+		public double getBoostEffectiveness(VirusStrain strain, int day) {
+			return getParamsInternal(boostEffectiveness.containsKey(strain) ? boostEffectiveness : effectiveness, strain, day);
+		}
+
+		public double getFactorShowingSymptoms(VirusStrain strain, int day) {
+			return getParamsInternal(factorShowingSymptoms, strain, day);
+		}
+
+		public double getFactorSeriouslySick(VirusStrain strain, int day) {
+			return getParamsInternal(factorSeriouslySick, strain, day);
+		}
+
+		/**
+		 * Load serialized parameters
+		 */
+		private void setParamsInternal(Map<VirusStrain, Parameter> map, String value) {
+			map.clear();
+			if (value.isBlank()) return;
+
+			map.clear();
+			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
+				map.put(VirusStrain.valueOf(e.getKey()), Parameter.parse(e.getValue()));
+			}
+		}
+
+		private String getParamsInternal(Map<VirusStrain, Parameter> map) {
+
+			Map<VirusStrain, String> result = map.entrySet().stream().collect(Collectors.toMap(
+					Map.Entry::getKey,
+					e -> e.getValue().toString()
+			));
+
+			return JOINER.join(result);
 		}
 
 		@StringSetter(EFFECTIVENESS)
 		void setEffectiveness(String value) {
-			if (value.isBlank()) return;
-
-			this.effectiveness.clear();
-			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-				this.effectiveness.put(VirusStrain.valueOf(e.getKey()), Double.parseDouble(e.getValue()));
-			}
+			setParamsInternal(effectiveness, value);
 		}
 
 		@StringGetter(EFFECTIVENESS)
 		String getEffectivenessString() {
-			return JOINER.join(effectiveness);
+			return getParamsInternal(effectiveness);
+		}
+
+		@StringSetter(BOOST_EFFECTIVENESS)
+		void setBoostEffectiveness(String value) {
+			setParamsInternal(boostEffectiveness, value);
+		}
+
+		@StringGetter(BOOST_EFFECTIVENESS)
+		String getBoostEffectivenessString() {
+			return getParamsInternal(boostEffectiveness);
+		}
+
+		@StringSetter(FACTOR_SHOWINGS_SYMPTOMS)
+		void setFactorShowingSymptoms(String value) {
+			setParamsInternal(factorShowingSymptoms, value);
+		}
+
+		@StringGetter(FACTOR_SHOWINGS_SYMPTOMS)
+		String getFactorShowingSymptoms() {
+			return getParamsInternal(factorShowingSymptoms);
+		}
+
+		@StringSetter(FACTOR_SERIOUSLY_SICK)
+		void setFactorSeriouslySick(String value) {
+			setParamsInternal(factorSeriouslySick, value);
+		}
+
+		@StringGetter(FACTOR_SERIOUSLY_SICK)
+		String getFactorSeriouslySick() {
+			return getParamsInternal(factorSeriouslySick);
 		}
 
 		/**
 		 * Return effectiveness against base variant.
 		 *
-		 * @deprecated use {@link #getEffectiveness(VirusStrain)}
+		 * @deprecated use {@link #getEffectiveness(VirusStrain, int)}
 		 */
 		@Deprecated
 		public double getEffectiveness() {
-			return getEffectiveness(VirusStrain.SARS_CoV_2);
+			return getEffectiveness(VirusStrain.SARS_CoV_2, getDaysBeforeFullEffect());
 		}
 
 		/**
 		 * Return effectiveness against base variant.
-		 * @deprecated use {@link #setEffectiveness(VirusStrain, double)}
+		 *
+		 * @deprecated use {@link #setEffectiveness(Parameter...)}
 		 */
 		@Deprecated
 		public void setEffectiveness(double effectiveness) {
-			setEffectiveness(VirusStrain.SARS_CoV_2, effectiveness);
+			throw new UnsupportedOperationException("Use .setEffectiveness(Parameter...)");
 		}
 
-		/**
-		 * Get the effectiveness against virus strain.
-		 */
-		public double getEffectiveness(VirusStrain strain) {
-			return effectiveness.getOrDefault(strain, effectiveness.get(VirusStrain.SARS_CoV_2));
+		@Deprecated
+		public VaccinationParams setFactorSeriouslySick(double factorSeriouslySick) {
+			throw new UnsupportedOperationException("Use .setFactorSeriouslySick(Parameter...)");
 		}
 
-		/**
-		 * Set the effectiveness against a virus strain.
-		 */
-		public VaccinationParams setEffectiveness(VirusStrain strain, double effectiveness) {
-			this.effectiveness.put(strain, effectiveness);
-			return this;
+		@Deprecated
+		public VaccinationParams setFactorShowingSymptoms(double factorShowingSymptoms) {
+			throw new UnsupportedOperationException("Use .setFactorShowingSymptoms(Parameter...)");
 		}
 
-		////
+	}
 
+	/**
+	 * Creates an empty {@link Parameter} progression for one or multiple strain.
+	 */
+	public static Parameter forStrain(VirusStrain... strain) {
+		return new Parameter(strain);
+	}
 
-		@StringSetter(BOOST_EFFECTIVENESS)
-		void setBoostEffectiveness(String value) {
-			if (value.isBlank()) return;
+	/**
+	 * Holds the temporal progression of certain value for each virus strains.
+	 */
+	public static final class Parameter {
 
-			this.boostEffectiveness.clear();
-			for (Map.Entry<String, String> e : SPLITTER.split(value).entrySet()) {
-				this.boostEffectiveness.put(VirusStrain.valueOf(e.getKey()), Double.parseDouble(e.getValue()));
+		private static final Splitter.MapSplitter SPLITTER = Splitter.on("|").withKeyValueSeparator(">");
+		private static final Joiner.MapJoiner JOINER = Joiner.on("|").withKeyValueSeparator(">");
+
+		private final VirusStrain[] strain;
+		private final NavigableMap<Integer, Double> map = new TreeMap<>();
+
+		private Parameter(VirusStrain[] strain) {
+			this.strain = strain;
+		}
+
+		private Parameter(Map<String, String> map) {
+			this.strain = new VirusStrain[0];
+			for (Map.Entry<String, String> e : map.entrySet()) {
+				this.map.put(Integer.parseInt(e.getKey()), Double.parseDouble(e.getValue()));
 			}
-		}
 
-		@StringGetter(BOOST_EFFECTIVENESS)
-		String getBoostEffectivenessString() {
-			return JOINER.join(boostEffectiveness);
 		}
 
 		/**
-		 * Get the boost effectiveness against virus strain. If not set will be same as base effectiveness.
+		 * Sets the value for a parameter at a specific day.
 		 */
-		public double getBoostEffectiveness(VirusStrain strain) {
-			return boostEffectiveness.getOrDefault(strain, getEffectiveness(strain));
-		}
-
-		/**
-		 * Set the boost effectiveness against a virus strain.
-		 */
-		public VaccinationParams setBoostEffectiveness(VirusStrain strain, double effectiveness) {
-			this.boostEffectiveness.put(strain, effectiveness);
+		public Parameter atDay(int day, double value) {
+			map.put(day, value);
 			return this;
+		}
+
+
+		/**
+		 * Sets the value for parameter for the day of full effect.
+		 * {@link VaccinationParams#setDaysBeforeFullEffect(int)} has to be set before calling this method!
+		 */
+		public Parameter atFullEffect(double value) {
+			map.put(Integer.MAX_VALUE, value);
+			return this;
+		}
+
+
+		/**
+		 * Interpolate for given day.
+		 */
+		private double get(int day) {
+
+			Map.Entry<Integer, Double> floor = map.floorEntry(day);
+
+			if (floor == null)
+				return map.firstEntry().getValue();
+
+			if (floor.getKey().equals(day))
+				return floor.getValue();
+
+			Map.Entry<Integer, Double> ceil = map.ceilingEntry(day);
+
+			// there is no higher entry to interpolate
+			if (ceil == null)
+				return floor.getValue();
+
+			double between = ceil.getKey() - floor.getKey();
+			double diff = day - floor.getKey();
+			return floor.getValue() + diff * (ceil.getValue() - floor.getValue()) / between;
+		}
+
+		private void setDaysBeforeFullEffect(int daysBeforeFullEffect) {
+			if (map.containsKey(Integer.MAX_VALUE))
+				map.put(daysBeforeFullEffect, map.remove(Integer.MAX_VALUE));
+		}
+
+		@Override
+		public String toString() {
+			return JOINER.join(map);
+		}
+
+		private static Parameter parse(String value) {
+			Map<String, String> m = SPLITTER.split(value);
+			return new Parameter(m);
 		}
 	}
 

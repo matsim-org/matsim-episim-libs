@@ -313,7 +313,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			}
 
 			// stats are collected one day after the test has been performed
-			if (person.daysSinceTest(iteration) == 1) {
+			if (person.daysSinceTest(iteration) == 1 && person.getTestStatus() != EpisimPerson.TestStatus.untested) {
 				report.nTested++;
 				district.nTested++;
 			}
