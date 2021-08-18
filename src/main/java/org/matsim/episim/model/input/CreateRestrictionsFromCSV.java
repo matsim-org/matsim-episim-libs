@@ -100,14 +100,16 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		boolean locationBasedRfActive = !episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.no)
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
+		String colToRead = "notAtHome";
+
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-		Map<LocalDate, Double> days = readInput(input, "notAtHome", alpha);
+		Map<LocalDate, Double> days = readInput(input, colToRead, alpha);
 
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
 		if (locationBasedRfActive) {
 			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
-				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), "notAtHomeExceptLeisureAndEdu", alpha));
+				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), colToRead, alpha));
 			}
 		}
 

@@ -72,7 +72,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.Berlin;
+		AnalyseAreas selectedArea = AnalyseAreas.AnyArea;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
 		AnalyseOptions selectedOutputOptions = AnalyseOptions.dailyResults;
 		String startDateStillUsingBaseDays = ""; //set in this format YYYYMMDD
