@@ -303,7 +303,7 @@ public final class Restriction {
 				!config.hasPath("reducedGroupSize") || config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
 				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
-				enumMap, locationBasedRf, config.getIsNull("susceptibleRf") ? null : config.getDouble("susceptibleRf")
+				enumMap, locationBasedRf, config.getIsNull("susceptibleRf") ? null : config.getDouble("susceptibleRf"), null
 		);
 	}
 
