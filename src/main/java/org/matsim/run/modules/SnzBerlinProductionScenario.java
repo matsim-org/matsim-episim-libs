@@ -409,7 +409,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 		String untilDate = "20210802";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210802.csv"));
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210815.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
@@ -534,8 +534,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210711_tegel_until20210430.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(),
+						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -557,9 +557,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-//			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-//			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-//			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 		}
 
 
@@ -567,19 +567,80 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 
 		if (this.vaccinations.equals(Vaccinations.yes)) {
+			double effectivnessMRNA = 0.7;
+			double factorShowingSymptomsMRNA = 0.05 / (1 - effectivnessMRNA); //95% protection against symptoms
+			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
+			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-							.atDay(1, 0.9d)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 					)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setDaysBeforeFullEffect(fullEffectMRNA); 
+		
+		double effectivnessVector = 0.5;
+		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
+		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsMRNA); //85% protection against severe disease
+		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 
-					.setFactorShowingSymptoms(0.5)
-					.setFactorSeriouslySick(0.5)
-					.setDaysBeforeFullEffect(42);
-
-			vaccinationConfig.getOrAddParams(VaccinationType.vector)
-					.setFactorShowingSymptoms(0.5)
-					.setFactorSeriouslySick(0.5)
-					.setDaysBeforeFullEffect(42);
+		vaccinationConfig.getOrAddParams(VaccinationType.vector)
+			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+					.atDay(1, 0.0)
+					.atFullEffect(effectivnessVector)
+					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+			)
+			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.atDay(1, 0.0)
+					.atFullEffect(effectivnessVector)
+					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+					.atDay(1, 1.0)
+					.atFullEffect(factorShowingSymptomsVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.atDay(1, 1.0)
+					.atFullEffect(factorShowingSymptomsVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+					.atDay(1, 1.0)
+					.atFullEffect(factorSeriouslySickVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.atDay(1, 1.0)
+					.atFullEffect(factorSeriouslySickVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setDaysBeforeFullEffect(fullEffectVector); //second shot after 6 weeks, full effect one week after second shot
 
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 
@@ -658,16 +719,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
 
-		// mutations
-		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
-		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayB117.put(LocalDate.parse("2020-11-30"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
-
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
 
 		episimConfig.setPolicy(builder.build());
 
