@@ -49,7 +49,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	/**
 	 * Which persons are selected for testing.
 	 */
-	private Selection selection = Selection.ALL_PERSONS;
+	private Selection selection = Selection.SUSCEPTIBLE;
 
 	/**
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
@@ -441,6 +441,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 * All persons will be tested.
 		 */
 		ALL_PERSONS,
+
+		/**
+		 * Select non vaccinated and non recovered persons only.
+		 */
+		SUSCEPTIBLE,
 
 		/**
 		 * Only persons with covid like symptoms are tested.

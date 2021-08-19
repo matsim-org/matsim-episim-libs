@@ -111,8 +111,10 @@ public class DefaultTestingModel implements TestingModel {
 			return;
 
 		// vaccinated and recovered persons are not tested
-		if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.recovered || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
-				person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect()))
+		if (testingConfig.getSelection() != TestingConfigGroup.Selection.ALL_PERSONS &
+				(person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.recovered || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
+						person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect()))
+		)
 			return;
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
