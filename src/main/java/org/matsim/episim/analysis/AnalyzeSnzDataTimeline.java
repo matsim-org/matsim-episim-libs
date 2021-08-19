@@ -21,6 +21,8 @@
 package org.matsim.episim.analysis;
 
 import com.google.common.base.Joiner;
+import com.google.common.io.Resources;
+
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
@@ -31,6 +33,7 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.utils.io.IOUtils;
+
 import picocli.CommandLine;
 
 import java.io.BufferedReader;
@@ -47,6 +50,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 
 /**
  * @author:rewert This class reads analysis the SENEZON timeline data for every
@@ -68,7 +72,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 	private enum AnalyseAreas {
 		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg,
-		Collogne, Frankfurt, AnyArea, Bundeslaender, Landkreise
+		Collogne, Frankfurt, AnyArea, Bundeslaender, Landkreise, UpdateMobilityDashboardData
 	}
 
 	private enum OutputData {
@@ -91,14 +95,21 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 		boolean getPercentageResults = false;
 		boolean outputShareOutdoor = false;
-		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
-		AnalyseAreas selectedArea = AnalyseAreas.Landkreise;
-		OutputData selectedOutputData = OutputData.EndNonHome22_5;
-		String startDateStillUsingBaseDays = ""; //set in this format YYYYMMDD
-		String anyArea = "Berlin";
+		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
+		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.onlyWeekends;
+		OutputData selectedOutputData = OutputData.EndNonHome;
+		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD
+		String anyArea = "Köln";
+		boolean ignoreDates = true;
+
+		Set<String> datesToIgnore = Resources
+				.readLines(Resources.getResource("mobilityDatesToIgnore.txt"), StandardCharsets.UTF_8).stream()
+				.map(String::toString).collect(Collectors.toSet());
+		if (ignoreDates == false)
+			datesToIgnore.clear();
 
 		analyseData(selectedArea, selectedOptionForAnalyse, selectedOutputData, getPercentageResults,
-				outputShareOutdoor, anyArea, startDateStillUsingBaseDays);
+				outputShareOutdoor, anyArea, startDateStillUsingBaseDays, datesToIgnore);
 
 		log.info("Done!");
 
@@ -107,38 +118,38 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 	private void analyseData(AnalyseAreas selectedArea, AnalyseOptions selectedOptionForAnalyse,
 			OutputData selectedOutputData, boolean getPercentageResults, boolean outputShareOutdoor, String anyArea,
-			String startDateStillUsingBaseDays) throws IOException {
+			String startDateStillUsingBaseDays, Set<String> datesToIgnore) throws IOException {
 		HashMap<String, IntSet> zipCodes = new HashMap<String, IntSet>();
 
 		switch (selectedArea) {
 		case AnyArea:
 			zipCodes = findZipCodesForAnyArea(anyArea);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Bundeslaender:
 			zipCodes = findZIPCodesForBundeslaender();
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, outputFolder, startDateStillUsingBaseDays);
+					selectedOutputData, outputFolder, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Landkreise:
 			zipCodes = findZIPCodesForLandkreise();
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, outputFolder, startDateStillUsingBaseDays);
+					selectedOutputData, outputFolder, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Berchtesgaden:
 			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
 					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
 			zipCodes.put("Berchtesgaden", zipCodesBerchtesgaden);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Berlin:
 			zipCodes = findZipCodesForAnyArea("Berlin");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case BerlinDistricts:
 			zipCodes.put("Mitte", new IntOpenHashSet(List.of(10115, 10559, 13355, 10117, 10623, 13357, 10119, 10785,
@@ -167,7 +178,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			zipCodes.put("Reinickendorf", new IntOpenHashSet(List.of(13403, 13405, 13407, 13409, 13435, 13437, 13439,
 					13465, 13467, 13469, 13503, 13505, 13507, 13509, 13629)));
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Bonn:
 			IntSet zipCodesBonn = new IntOpenHashSet();
@@ -175,7 +186,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesBonn.add(i);
 			zipCodes.put("Bonn", zipCodesBonn);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Germany:
 			IntSet zipCodesGER = new IntOpenHashSet();
@@ -183,7 +194,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesGER.add(i);
 			zipCodes.put("Germany", zipCodesGER);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Hamburg:
 			IntSet zipCodesHamburg = new IntOpenHashSet();
@@ -191,14 +202,14 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesHamburg.add(i);
 			zipCodes.put("Hamburg", zipCodesHamburg);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Heinsberg:
 			IntSet zipCodesHeinsberg = new IntOpenHashSet(
 					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
 			zipCodes.put("Heinsberg", zipCodesHeinsberg);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Collogne:
 			IntSet zipCodesCollogne = new IntOpenHashSet(List.of(50667, 50668, 50670, 50672, 50674, 50676, 50677, 50678,
@@ -207,7 +218,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 					51069, 51103, 51105, 51107, 51109, 51143, 51145, 51147, 51149));
 			zipCodes.put("Collogne", zipCodesCollogne);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Frankfurt:
 			IntSet zipCodesFrankfurt = new IntOpenHashSet();
@@ -216,13 +227,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			zipCodesFrankfurt.addAll(List.of(65929, 65931, 65933, 65934, 65936));
 			zipCodes.put("FrankfurtMain", zipCodesFrankfurt);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 		case Mannheim:
 			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
 					68229, 68239, 68259, 68305, 68307, 68309));
 			zipCodes.put("Mannheim", zipCodesMannheim);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Munich:
 			IntSet zipCodesMunich = new IntOpenHashSet();
@@ -230,20 +241,33 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				zipCodesMunich.add(i);
 			zipCodes.put("Munich", zipCodesMunich);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Test:
 			IntSet zipCodesTest = new IntOpenHashSet(List.of(1067));
 			zipCodes.put("Test", zipCodesTest);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Wolfsburg:
 			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
 			zipCodes.put("Wolfsburg", zipCodesWolfsburg);
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays);
+					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
+		case UpdateMobilityDashboardData:
+			zipCodes = findZIPCodesForLandkreise();
+			selectedOutputData = OutputData.EndNonHome22_5;
+			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
+			selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
+			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
+					selectedOutputData, outputFolder, startDateStillUsingBaseDays, datesToIgnore);
+			selectedOptionForAnalyse = AnalyseOptions.onlyWeekdays;
+			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
+					selectedOutputData, outputFolder, startDateStillUsingBaseDays, datesToIgnore);
+			selectedOptionForAnalyse = AnalyseOptions.onlyWeekends;
+			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
+					selectedOutputData, outputFolder, startDateStillUsingBaseDays, datesToIgnore);
 		default:
 			break;
 
@@ -259,11 +283,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	 * @param selectedOptionForAnalyse
 	 * @param selectedOutputData
 	 * @param selectedOutputFolder
+	 * @param datesToIgnore
 	 * @throws IOException
 	 */
 	private void analyzeDataForCertainAreas(HashMap<String, IntSet> zipCodes, boolean getPercentageResults,
 			boolean outputShareOutdoor, AnalyseOptions selectedOptionForAnalyse, OutputData selectedOutputData,
-			Path selectedOutputFolder, String startDateStillUsingBaseDays) throws IOException {
+			Path selectedOutputFolder, String startDateStillUsingBaseDays, Set<String> datesToIgnore)
+			throws IOException {
 
 		log.info("Searching for files in the folder: " + inputFolder);
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
@@ -274,13 +300,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			if (selectedOutputFolder.toString().contains("bundeslaender"))
 				outputFile = selectedOutputFolder.resolve("BL_" + "Timeline_until.csv");
 			else if (selectedOutputFolder.toString().contains("landkreise"))
-				outputFile = selectedOutputFolder.resolve("LK_" + "Timeline_until.csv");
+				outputFile = selectedOutputFolder.resolve("LK_nightHoursSum_new.csv");
 			else
 				outputFile = selectedOutputFolder.resolve("Timeline_until.csv");
 		else if (zipCodes.size() == 1)
 			outputFile = outputFolder.resolve(zipCodes.keySet().iterator().next() + "SnzDataTimeline_until.csv");
 		else
-			outputFile = selectedOutputFolder.resolve("Timeline_until.csv");
+			outputFile = outputFolder.resolve("Timeline_until.csv");
 
 		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
 		HashMap<String, Set<String>> lkAssignemt = createLKAssignmentToBL();
@@ -357,9 +383,10 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 					switch (selectedOptionForAnalyse) {
 					case weeklyResultsOfAllDays:
-						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, file,
-								null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						if (day.equals(DayOfWeek.SUNDAY)) {
+						if (!datesToIgnore.contains(dateString))
+							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+									file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+						if (day.equals(DayOfWeek.SUNDAY) && !anaylzedDaysPerAreaAndPeriod.values().isEmpty()) {
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
 									writerShare, anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString,
 									sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
@@ -368,13 +395,14 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 						break;
 					case onlyWeekdays:
-						if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)) {
+						if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
+								&& !datesToIgnore.contains(dateString)) {
 							List<String> areasWithBankHoliday = new ArrayList<>();
 							getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
 							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 									file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 						}
-						if (day.equals(DayOfWeek.FRIDAY)) {
+						if (day.equals(DayOfWeek.FRIDAY) && !anaylzedDaysPerAreaAndPeriod.values().isEmpty()) {
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
 									writerShare, anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString,
 									sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
@@ -383,7 +411,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 						break;
 					case onlySaturdays:
-						if (day.equals(DayOfWeek.SATURDAY)) {
+						if (day.equals(DayOfWeek.SATURDAY) && !datesToIgnore.contains(dateString)) {
 							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 									file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
@@ -394,7 +422,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 						break;
 					case onlySundays:
-						if (day.equals(DayOfWeek.SUNDAY)) {
+						if (day.equals(DayOfWeek.SUNDAY) && !datesToIgnore.contains(dateString)) {
 							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 									file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
@@ -405,10 +433,11 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 						break;
 					case onlyWeekends:
-						if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
+						if ((day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.SUNDAY))
+								&& !datesToIgnore.contains(dateString))
 							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 									file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						if (day.equals(DayOfWeek.SUNDAY)) {
+						if (day.equals(DayOfWeek.SUNDAY) && !anaylzedDaysPerAreaAndPeriod.values().isEmpty()) {
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
 									writerShare, anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString,
 									sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
@@ -417,23 +446,25 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 						break;
 					case dailyResults:
-						readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, file,
-								null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
-						writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer, writerShare,
-								anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString, sumsHomeStart,
-								sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
-						clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
-								anaylzedDaysPerAreaAndPeriod);
+						if (!datesToIgnore.contains(dateString)) {
+							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+									file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
+							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
+									writerShare, anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString,
+									sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
+							clearSums(sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
+									anaylzedDaysPerAreaAndPeriod);
+						}
 						break;
 					case Mo_Do:
 						if (!day.equals(DayOfWeek.SATURDAY) && !day.equals(DayOfWeek.SUNDAY)
-								&& !day.equals(DayOfWeek.FRIDAY)) {
+								&& !day.equals(DayOfWeek.FRIDAY) && !datesToIgnore.contains(dateString)) {
 							List<String> areasWithBankHoliday = new ArrayList<>();
 							getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
 							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 									file, areasWithBankHoliday, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 						}
-						if (day.equals(DayOfWeek.THURSDAY)) {
+						if (day.equals(DayOfWeek.THURSDAY) && !anaylzedDaysPerAreaAndPeriod.values().isEmpty()) {
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
 									writerShare, anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString,
 									sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
@@ -442,12 +473,13 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 						}
 						break;
 					case Fr_Sa:
-						if (day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.FRIDAY)) {
+						if ((day.equals(DayOfWeek.SATURDAY) || day.equals(DayOfWeek.FRIDAY))
+								&& !datesToIgnore.contains(dateString)) {
 
 							readDataOfTheDay(zipCodes, sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd,
 									file, null, anaylzedDaysPerAreaAndPeriod, lkAssignemt);
 						}
-						if (day.equals(DayOfWeek.SATURDAY)) {
+						if (day.equals(DayOfWeek.SATURDAY) && !anaylzedDaysPerAreaAndPeriod.values().isEmpty()) {
 							writeOutput(getPercentageResults, outputShareOutdoor, selectedOutputData, writer,
 									writerShare, anaylzedDaysPerAreaAndPeriod, header, baseForAreas, dateString,
 									sumsHomeStart, sumsHomeEnd, sumsNonHomeStart, sumsNonHomeEnd, personsInThisArea);
@@ -472,63 +504,98 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				writerShare.close();
 
 			Path finalPath = null;
-			switch (selectedOptionForAnalyse) {
-			case weeklyResultsOfAllDays:
-				if (!getPercentageResults)
-					finalPath = Path
-							.of(outputFile.toString().replace("until", "until" + dateString + "_WeeklyNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekly"));
-				break;
-			case onlyWeekdays:
-				if (!getPercentageResults)
-					finalPath = Path
-							.of(outputFile.toString().replace("until", "until" + dateString + "_WeekdaysNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekdays"));
-				break;
-			case onlySaturdays:
-				if (!getPercentageResults)
-					finalPath = Path
-							.of(outputFile.toString().replace("until", "until" + dateString + "_SaturdaysNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Saturdays"));
-				break;
-			case onlySundays:
-				if (!getPercentageResults)
-					finalPath = Path
-							.of(outputFile.toString().replace("until", "until" + dateString + "_SundaysNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Sundays"));
-				break;
-			case onlyWeekends:
-				if (!getPercentageResults)
-					finalPath = Path
-							.of(outputFile.toString().replace("until", "until" + dateString + "_WeekendsNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekends"));
-				break;
-			case dailyResults:
-				if (!getPercentageResults)
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_DailyNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Daily"));
-				break;
-			case Mo_Do:
-				if (!getPercentageResults)
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-DoNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
-				break;
-			case Fr_Sa:
-				if (!getPercentageResults)
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Fr-SaNumbers"));
-				else
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Fr-Sa"));
-				break;
-			default:
-				break;
+			if (outputFile.toString().contains("until")) {
+				switch (selectedOptionForAnalyse) {
+				case weeklyResultsOfAllDays:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_WeeklyNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekly"));
+					break;
+				case onlyWeekdays:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_WeekdaysNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekdays"));
+					break;
+				case onlySaturdays:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_SaturdaysNumbers"));
+					else
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_Saturdays"));
+					break;
+				case onlySundays:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_SundaysNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Sundays"));
+					break;
+				case onlyWeekends:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_WeekendsNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Weekends"));
+					break;
+				case dailyResults:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_DailyNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Daily"));
+					break;
+				case Mo_Do:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-DoNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
+					break;
+				case Fr_Sa:
+					if (!getPercentageResults)
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_Fr-SaNumbers"));
+					else
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Fr-Sa"));
+					break;
+				default:
+					break;
 
+				}
+			} else {
+				switch (selectedOptionForAnalyse) {
+				case weeklyResultsOfAllDays:
+					finalPath = Path.of(outputFile.toString().replace("new", "weekly"));
+					break;
+				case onlyWeekdays:
+					finalPath = Path.of(outputFile.toString().replace("new", "weekdays"));
+					break;
+				case onlySaturdays:
+					finalPath = Path.of(outputFile.toString().replace("new", "saturdays"));
+					break;
+				case onlySundays:
+					finalPath = Path.of(outputFile.toString().replace("new", "sundays"));
+					break;
+				case onlyWeekends:
+					finalPath = Path.of(outputFile.toString().replace("new", "weekends"));
+					break;
+				case dailyResults:
+					finalPath = Path.of(outputFile.toString().replace("new", "daily"));
+					break;
+				case Mo_Do:
+					finalPath = Path.of(outputFile.toString().replace("new", "Mo-Do"));
+					break;
+				case Fr_Sa:
+					finalPath = Path.of(outputFile.toString().replace("new", "Fr-Sa"));
+					break;
+				default:
+					break;
+				}
 			}
 			if (outputShareOutdoor)
 				Files.move(outputFileShare, Path.of(finalPath.toString().replace("Timeline", "Outdoorshare")),
