@@ -55,6 +55,7 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.lang.invoke.VarHandle;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -591,7 +592,7 @@ public final class InfectionEventHandler implements Externalizable {
 			};
 
 			// create child injector with separate instance of models
-			Injector inj = GuiceUtils.createCopiedInjector(injector, List.of(childModule), ContactModel.class, InfectionModel.class);
+			Injector inj = GuiceUtils.createCopiedInjector(injector, List.of(childModule), ContactModel.class, InfectionModel.class, FaceMaskModel.class);
 
 			TrajectoryHandler handler = inj.getInstance(TrajectoryHandler.class);
 			handlers.add(handler);
@@ -880,7 +881,7 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 		// report infections in order
-		infections.stream().sorted(Comparator.comparingDouble(Event::getTime))
+		infections.stream().sorted()
 				.forEach(reporting::reportInfection);
 	}
 

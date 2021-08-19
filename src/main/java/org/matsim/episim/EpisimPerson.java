@@ -358,7 +358,7 @@ public final class EpisimPerson implements Attributable {
 	 * Adds an infection possibility to this persons. Will be executed in {@link #checkInfection()}
 	 */
 	synchronized public void possibleInfection(EpisimInfectionEvent event) {
-		if (earliestInfection == null || event.getTime() < earliestInfection.getTime()) {
+		if (earliestInfection == null || event.compareTo(earliestInfection) < 0) {
 			earliestInfection = event;
 		}
 	}
@@ -425,7 +425,7 @@ public final class EpisimPerson implements Attributable {
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 
-		reporting.reportVaccination(personId, iteration, false);
+		reporting.reportVaccination(personId, iteration, type, false);
 	}
 
 	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
@@ -435,7 +435,7 @@ public final class EpisimPerson implements Attributable {
 		this.reVaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 
-		reporting.reportVaccination(personId, iteration, true);
+		reporting.reportVaccination(personId, iteration, vaccinationType,true);
 	}
 
 	public TestStatus getTestStatus() {

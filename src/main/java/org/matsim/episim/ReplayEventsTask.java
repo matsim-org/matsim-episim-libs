@@ -25,6 +25,7 @@ import org.matsim.api.core.v01.events.*;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
+import java.lang.invoke.VarHandle;
 import java.util.Collection;
 import java.util.List;
 
@@ -40,8 +41,8 @@ final public class ReplayEventsTask implements Runnable {
 	 * taskId is in [0, numThreads - 1], and each thread must have
 	 * a different taskId
 	 */
-	private int taskId;
-	private int numThreads;
+	private final int taskId;
+	private final int numThreads;
 
 
 	public ReplayEventsTask(TrajectoryHandler trajectoryHandler,
@@ -67,7 +68,7 @@ final public class ReplayEventsTask implements Runnable {
 	boolean handlesVehicle(Id<Vehicle> id) {
 		return trajectoryHandler.getEpisimVehicle(id).getTaskId() == taskId;
 	}
-	
+
 	public void run() {
 		trajectoryHandler.reportCpuTime("start", taskId);
 		trajectoryHandler.onStartDay(this::handlesFacility, this::handlesVehicle);
