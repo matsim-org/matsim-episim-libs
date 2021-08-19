@@ -76,7 +76,7 @@ public class EpisimTestUtils {
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("leis").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("work").setContactIntensity(1));
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("edu").setContactIntensity(1));
-		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr").setContactIntensity(1));
+		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("tr", "pt").setContactIntensity(1));
 
 		return config;
 	}
@@ -133,6 +133,28 @@ public class EpisimTestUtils {
 		}
 
 		return p;
+	}
+
+
+	/**
+	 * Create person with activity trajectory.
+	 */
+	public static EpisimPerson createPerson(String... activities) {
+
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+
+		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
+
+		for (String act : activities) {
+			p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(act),null);
+		}
+
+		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
+
+		p.initParticipation();
+
+		return p;
+
 	}
 
 	/**
@@ -214,6 +236,5 @@ public class EpisimTestUtils {
 
 		return report;
 	}
-
 
 }

@@ -1,5 +1,6 @@
 package org.matsim.episim;
 
+import org.assertj.core.data.Offset;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -98,10 +99,12 @@ public class VaccinationConfigGroupTest {
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(10, 0.5)
 						.atDay(20, 0.8)
-						.atFullEffect(0.99))
+						.atFullEffect(0.99)
+						.atDay(100, 0.8)
+				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B1351)
-						.atDay(0, 0.1)
-						.atDay(10, 0.4)
+						.atDay(0, 0.5)
+						.atDay(10, 0.2)
 				);
 
 		File file = tmp.newFile("tmp.xml");
@@ -126,7 +129,13 @@ public class VaccinationConfigGroupTest {
 				.isEqualTo(0.99);
 
 		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 35))
-				.isEqualTo(0.99);
+				.isCloseTo(0.976, Offset.offset(0.01));
+
+		assertThat(cmp.getEffectiveness(VirusStrain.SARS_CoV_2, 65))
+				.isEqualTo(0.895);
+
+		assertThat(cmp.getFactorShowingSymptoms(VirusStrain.B1351, 5))
+				.isEqualTo(0.35);
 
 	}
 }

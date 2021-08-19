@@ -97,6 +97,7 @@ public final class Restriction {
 		this.maxGroupSize = maxGroupSize;
 		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
+		this.susceptibleRf = susceptibleRf;
 
 		if (closed != null) {
 			this.closed = closed.stream().map(s -> Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());
