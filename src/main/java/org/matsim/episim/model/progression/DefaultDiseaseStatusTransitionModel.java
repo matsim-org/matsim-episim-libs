@@ -2,6 +2,7 @@ package org.matsim.episim.model.progression;
 
 import com.google.inject.Inject;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 
@@ -41,7 +42,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
-						vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)) : 1.0))
+						vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)) : 1.0)
+						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
 					return EpisimPerson.DiseaseStatus.seriouslySick;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -65,6 +67,17 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 			default:
 				throw new IllegalStateException("No state transition defined for " + person.getDiseaseStatus());
 		}
+	}	
+	
+	/**
+	 * Probability that a person transitions from {@code showingSymptoms} to {@code seriouslySick} when person was already infected.
+	 */
+	protected double getFactorRecovered(EpisimPerson person, int day) {
+
+		int daysSince = person.daysSince(DiseaseStatus.recovered, day);
+		
+		//we assume about 20% loss of protection against severe progression every year
+		return Math.min(0.2 * (daysSince / 365), 1.0);
 	}
 
 	/**
