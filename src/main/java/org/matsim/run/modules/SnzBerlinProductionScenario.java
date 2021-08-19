@@ -572,6 +572,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
 			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setDaysBeforeFullEffect(fullEffectMRNA)
 					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessMRNA)
@@ -602,7 +603,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 							.atFullEffect(factorSeriouslySickMRNA)
 							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setDaysBeforeFullEffect(fullEffectMRNA); 
+					; 
 		
 		double effectivnessVector = 0.5;
 		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
@@ -610,6 +611,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
+			.setDaysBeforeFullEffect(fullEffectVector)
 			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 					.atDay(1, 0.0)
 					.atFullEffect(effectivnessVector)
@@ -640,7 +642,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					.atFullEffect(factorSeriouslySickVector)
 					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 			)
-			.setDaysBeforeFullEffect(fullEffectVector); //second shot after 6 weeks, full effect one week after second shot
+			;
 
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 
