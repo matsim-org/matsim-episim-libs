@@ -32,4 +32,22 @@ public interface ActivityParticipationModel {
 	void updateParticipation(EpisimPerson person, BitSet trajectory, int offset,
 							 List<EpisimPerson.PerformedActivity> activities);
 
+	/**
+	 * Apply quarantine restrictions to this persons trajectory.
+	 */
+	default void applyQuarantine(EpisimPerson person, BitSet trajectory, int offset, List<EpisimPerson.PerformedActivity> activities) {
+
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.full) {
+			for (int i = 0; i < trajectory.size(); i++) {
+				trajectory.set(i, false);
+			}
+		} else if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome) {
+
+			for (int i = 0; i < activities.size(); i++) {
+				EpisimPerson.PerformedActivity act = activities.get(i);
+				if (!act.actType().startsWith("home"))
+					trajectory.set(offset + i, false);
+			}
+		}
+	}
 }

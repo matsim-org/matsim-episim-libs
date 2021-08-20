@@ -200,13 +200,11 @@ public abstract class AbstractContactModel implements ContactModel {
 	private boolean activityRelevantForInfectionDynamics(EpisimPerson person, EpisimContainer<?> container, Map<String,
 			Restriction> restrictions, SplittableRandom rnd) {
 
-
 		EpisimPerson.PerformedActivity act = container.getPerformedActivity(person.getPersonId());
 
 		// Check if person is home quarantined
 		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.atHome && !act.actType().startsWith("home"))
 			return false;
-
 
 		// enforce max group sizes
 		Restriction r = restrictions.get(act.params.getContainerName());

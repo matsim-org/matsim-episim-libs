@@ -747,6 +747,9 @@ public final class InfectionEventHandler implements Externalizable {
 					person.getStartOfDay(day), person.getActivities(day));
 
 			testingModel.performTesting(person, iteration);
+
+			activityParticipationModel.applyQuarantine(person, person.getActivityParticipation(), person.getStartOfDay(day), person.getActivities(day));
+
 		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
