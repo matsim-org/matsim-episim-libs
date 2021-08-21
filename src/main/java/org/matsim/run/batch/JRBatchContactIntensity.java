@@ -19,10 +19,10 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
-				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
-				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.no)
+				.setLocationBasedContactIntensity(params != null ? params.locationBasedContactIntensity : SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
+				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : DistrictLevelRestrictions.yesForHomeLocation)
 				.setActivityHandling(ActivityHandling.startOfDay)
-				.setSample(1)
+				.setSample(25)
 				.createSnzBerlinProductionScenario();
 	}
 
@@ -44,12 +44,6 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
-
-		//		episimConfig.setDistrictLevelRestrictions(DistrictLevelRestrictions.no);
-		//		episimConfig.setDistrictLevelRestrictions(params.districtLevelRestrictions);
-
-		//		episimConfig.setActivityHandling(ActivityHandling.startOfDay);
-
 		return config;
 	}
 
@@ -61,11 +55,11 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({1.0, 1.05, 1.10, 1.15, 1.2, 1.25})
+		@Parameter({1.0, 1.05, 1.10})
 		double thetaFactor;
 
-//		@EnumParameter(SnzBerlinProductionScenario.LocationBasedContactIntensity.class)
-//		SnzBerlinProductionScenario.LocationBasedContactIntensity locationBasedContactIntensity;
+		@EnumParameter(SnzBerlinProductionScenario.LocationBasedContactIntensity.class)
+		SnzBerlinProductionScenario.LocationBasedContactIntensity locationBasedContactIntensity;
 
 
 	}

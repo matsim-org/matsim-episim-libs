@@ -23,7 +23,10 @@ rki_new <- read_and_process_new_rki_data("Fallzahlen_Kum_Tab_9Juni.xlsx")
 rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
 # Read episim data and filter, such that only relevant situations are present
 # "2021-08-06-drastic/"
-episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-06-drastic/", "FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-18-ci/", "FacilityToDistrictMapCOMPLETE.txt")
+episim_all_runs_raw2222 <- read_and_process_episim_events_BATCH("2021-08-18/", "FacilityToDistrictMapCOMPLETE.txt")
+
+
 # 2021-08-06-drastic
 # 2021-08-06-mitte
 # episim_all_runs <- episim_all_runs_raw %>%
@@ -34,23 +37,40 @@ episim_all_runs_raw <- read_and_process_episim_events_BATCH("2021-08-06-drastic/
 #   pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
 #   rename(restrict_no = no, restrict_leisure = leisure) # This is where we choose correct names
 
+
+# for localRf runs
 # episim_all_runs <- episim_all_runs_raw %>%
-#   # filter(locationBasedRestrictions == "yesForHomeLocation" | locationBasedRestrictions == "no") %>%
-#   filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
-#   filter(locationBasedRestrictions == "yesForHomeLocation") %>%
+#   filter(locationBasedRestrictions == "yesForHomeLocation" | locationBasedRestrictions == "no") %>%
 #   ungroup() %>%
-#   # select(-"restrictBerlinMitteOctober2020") # %>%
-#   select(-"locationBasedRestrictions")
 #   pivot_wider(names_from = "locationBasedRestrictions", values_from = "infections") %>%
 #   rename(base = no, local_Rf = yesForHomeLocation)
 
+
+# For contact intensity runs
 episim_all_runs <- episim_all_runs_raw %>%
-  filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
+filter(locationBasedContactIntensity=="yes") %>%
+filter(thetaFactor == 1.1) %>%
+filter(locationBasedRestrictions == "yesForHomeLocation") %>%
+ungroup() %>%
+pivot_wider(names_from = "locationBasedRestrictions", values_from = "infections") %>%
+select(-c("locationBasedContactIntensity","thetaFactor")) %>%
+rename(adjCI = yesForHomeLocation)
+
+##### for comparison purposes:
+episim_all_runs2222 <- episim_all_runs_raw2222 %>%
   filter(locationBasedRestrictions == "yesForHomeLocation") %>%
   ungroup() %>%
-  select(-"locationBasedRestrictions") %>%
-  pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
-  rename(base = no, restrict_mitte = leisure)
+  pivot_wider(names_from = "locationBasedRestrictions", values_from = "infections") %>%
+  rename( noCI = yesForHomeLocation)
+
+
+# episim_all_runs <- episim_all_runs_raw %>%
+#   filter(restrictBerlinMitteOctober2020 == "leisure" | restrictBerlinMitteOctober2020 == "no") %>%
+#   filter(locationBasedRestrictions == "yesForHomeLocation") %>%
+#   ungroup() %>%
+#   select(-"locationBasedRestrictions") %>%
+#   pivot_wider(names_from = "restrictBerlinMitteOctober2020", values_from = "infections") %>%
+#   rename(base = no, restrict_mitte = leisure)
 
 
 # BEFORE MERGING:
@@ -63,6 +83,7 @@ episim_all_runs <- episim_all_runs_raw %>%
 
 # merge datasets and make tidy
 merged_tidy <- episim_all_runs %>%
+  full_join(episim_all_runs2222, by = c("date", "district")) %>%
   full_join(rki_new, by = c("date", "district")) %>%
   full_join(rki_old, by = c("date", "district")) %>%
   pivot_longer(!c("date", "district"), names_to = "scenario", values_to = "infections")
@@ -83,7 +104,7 @@ merged_weekly <- merged_tidy %>%
 ######## III - PLOT ##########
 
 ## Facet Plot - all districts (for single district, add filter)
-color_scheme <- c("magenta", "blue", "dark grey", "dark grey")
+color_scheme <- c("magenta", "blue", "dark grey", "dark grey") #,
 plot_allDistrict_cases(merged_weekly, color_scheme) #%>% filter(district =="Friedrichshain_Kreuzberg")
 
 

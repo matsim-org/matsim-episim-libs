@@ -78,6 +78,12 @@ public class JRBatchRestrictionMitte implements BatchRun<JRBatchRestrictionMitte
 					builder.apply(fromDateLocalRestriction, toDateLocalRestriction, (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).put(district, newLocalRf), "work", "leisure");
 				}
 				break;
+			case "school":
+				builder.apply(fromDateLocalRestriction, toDateLocalRestriction, (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "educ_primary", "educ_kiga","educ_secondary", "educ_tertiary", "educ_other");
+				for (String district : districtsToRestrict) {
+					builder.apply(fromDateLocalRestriction, toDateLocalRestriction, (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).put(district, newLocalRf), "educ_primary", "educ_kiga","educ_secondary", "educ_tertiary", "educ_other");
+				}
+				break;
 		}
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
@@ -93,7 +99,7 @@ public class JRBatchRestrictionMitte implements BatchRun<JRBatchRestrictionMitte
 		@GenerateSeeds(1)
 		public long seed;
 
-		@StringParameter({"no", "work", "leisure", "work_and_leisure"})
+		@StringParameter({"no", "work", "leisure", "work_and_leisure", "school"})
 		String restrictSpecificDistricts;
 
 	}

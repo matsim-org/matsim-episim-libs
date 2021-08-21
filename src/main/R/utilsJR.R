@@ -24,11 +24,17 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
 
   for (row in seq_len(nrow(info_df))) {
 
-
     runId <- info_df$RunId[row]
     seed <- info_df$seed[row]
 
-    df_for_run <- read_delim(file = paste0(infection_events_directory, runId, ".infectionEvents.txt"),
+    file_name <- paste0(infection_events_directory, runId, ".infectionEvents.txt")
+
+    if(!file.exists(file_name)) {
+      warning(paste0(file_name, " does not exist"))
+      next
+    }
+
+    df_for_run <- read_delim(file = file_name,
                              "\t", escape_double = FALSE, trim_ws = TRUE) %>%
       select(date, facility)
 
@@ -161,8 +167,9 @@ plot_allDistrict_cases <- function(merged_weekly, color_scheme) {
   ggplot(merged_weekly, aes(x = week_year, y = infections)) +
     geom_line(aes(color = scenario)) +
     scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-    labs(title = paste0("Infections per Day for Berlin Districts (Weekly Average)"),
-         subtitle = "Comparison of Local vs. Global Activity Reductions",
+    labs(
+      # title = paste0("Infections per Day for Berlin Districts (Weekly Average)"),
+      #    subtitle = "Comparison of Local vs. Global Activity Reductions",
          x = "Date", y = "New Infections") +
     theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
     scale_color_manual(values = color_scheme) +
