@@ -45,7 +45,7 @@ public abstract class ShutdownPolicy {
 
 	private static final Logger log = LogManager.getLogger(ShutdownPolicy.class);
 
-	protected final Config config;
+	public Config config;
 
 	/**
 	 * Constructor from config.

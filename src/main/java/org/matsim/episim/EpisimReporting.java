@@ -107,7 +107,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter virusStrains;
 	private BufferedWriter cpuTime;
 
-	private String memorizedDate = null;
+	String memorizedDate = null;
 
 
 	@Inject

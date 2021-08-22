@@ -310,8 +310,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25 && this.sample != 100)
-			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		if (this.sample != 25 && this.sample != 100)
+//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 

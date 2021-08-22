@@ -22,6 +22,7 @@ package org.matsim.episim;
 
 import com.google.inject.Inject;
 import com.google.inject.Provider;
+import com.typesafe.config.ConfigRenderOptions;
 import org.apache.commons.compress.archivers.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.logging.log4j.LogManager;
@@ -39,6 +40,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 
@@ -127,6 +129,28 @@ public final class EpisimRunner {
 		handler.finish();
 
 		reporting.close();
+
+		String outDir = config.controler().getOutputDirectory();
+		String base = "";
+		// file names depend on the run name
+		if (config.controler().getRunId() != null) {
+			base = outDir + "/" + config.controler().getRunId() + ".";
+		} else if (!outDir.endsWith("/")) {
+			base = outDir + "/";
+		} else
+			base = outDir;
+
+		try {
+			Files.writeString(Paths.get(base + "policyEND.conf"),
+					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
+							.setFormatted(true)
+							.setComments(false)
+							.setOriginComments(false)
+							.setJson(true)));
+		} catch (IOException e) {
+			log.error("Could not write policy config", e);
+		}
+
 	}
 
 	/**
