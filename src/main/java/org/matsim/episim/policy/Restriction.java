@@ -144,6 +144,7 @@ public final class Restriction {
 		this.closingHours = closingHours;
 		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
 		this.locationBasedRf = locationBasedRf;
+		this.susceptibleRf = susceptibleRf;
 
 		if (closed != null) {
 			this.closed = closed.stream().map(s -> Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());
@@ -536,7 +537,7 @@ public final class Restriction {
 
 		if (susceptibleRf != null && otherSRf != null && !susceptibleRf.equals(otherSRf))
 			log.warn("Duplicated susceptible fraction " + susceptibleRf + " and " + otherSRf);
-		else if (closingHours == null)
+		else if (susceptibleRf == null)
 			susceptibleRf = otherSRf;
 
 		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks)) {
@@ -600,6 +601,7 @@ public final class Restriction {
 		return maskUsage;
 	}
 
+	@Nullable
 	public Double getSusceptibleRf() {
 		return susceptibleRf;
 	}
