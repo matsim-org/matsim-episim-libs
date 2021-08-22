@@ -603,11 +603,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 							.atFullEffect(factorSeriouslySickMRNA)
 							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					; 
+					;
 		
 		double effectivnessVector = 0.5;
 		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
-		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsMRNA); //85% protection against severe disease
+		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
