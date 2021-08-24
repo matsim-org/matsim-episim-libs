@@ -4,6 +4,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
+import org.matsim.episim.TestingConfigGroup.Selection;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
@@ -52,6 +53,11 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "calibration");
 	}
+	
+//	@Override
+//	public int getOffset() {
+//		return 10000;
+//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
@@ -112,11 +118,10 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		if (!params.fractionUnv.equals("no")) {
 			double fraction = Double.parseDouble(params.fractionUnv);
 			builder.restrict("2021-09-06", Restriction.ofSusceptibleRf(fraction), "leisure", "work", "business");
-			System.out.println("here");
 		}
 
 
-
+		
 		// These entries will have no effect when extrapolation is based on hospital numbers
 //		builder.restrict("2021-10-11", 0.83, "work", "business");
 //		builder.restrict("2021-10-23", 1.0, "work", "business");
@@ -150,14 +155,15 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
+		infPerDayMUTB.put(LocalDate.parse("2021-03-23"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
 
-		
-		if (params.delta1Vac.equals("0.5")) {
-			double effectivnessMRNA = params.deltaEscape * 0.7;
-			double factorShowingSymptomsMRNA = params.deltaEscape * 0.05 / (1 - effectivnessMRNA);
+		double deltaEscape = 0.7;
+		String delta1Vac = "0.5";
+		if (delta1Vac.equals("0.5")) {
+			double effectivnessMRNA = deltaEscape * 0.7;
+			double factorShowingSymptomsMRNA = deltaEscape * 0.05 / (1 - effectivnessMRNA);
 			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); 
 			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
@@ -170,20 +176,20 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 					)
 					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 							.atDay(1, 1.0)
-							.atDay(fullEffectMRNA-7, factorShowingSymptomsMRNA*2.)
+							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
 							.atFullEffect(factorShowingSymptomsMRNA)
 							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 							.atDay(1, 1.0)
-							.atDay(fullEffectMRNA-7, factorSeriouslySickMRNA*2.)
+							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
 							.atFullEffect(factorSeriouslySickMRNA)
 							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					; 
 		
-			double effectivnessVector = params.deltaEscape * 0.5;
-			double factorShowingSymptomsVector = params.deltaEscape * 0.25 / (1 - effectivnessVector);
+			double effectivnessVector = deltaEscape * 0.5;
+			double factorShowingSymptomsVector = deltaEscape * 0.25 / (1 - effectivnessVector);
 			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
 			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 		
@@ -197,13 +203,13 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 1.0)
-						.atDay(fullEffectVector-7, factorShowingSymptomsVector*2.)
+						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
 						.atFullEffect(factorShowingSymptomsVector)
 						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 1.0)
-						.atDay(fullEffectVector-7, factorSeriouslySickVector*2.)
+						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
 						.atFullEffect(factorSeriouslySickVector)
 						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
@@ -211,8 +217,8 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		}
 		
 		else {
-			double effectivnessMRNA = params.deltaEscape * 0.7;
-			double factorShowingSymptomsMRNA = params.deltaEscape * 0.05 / (1 - effectivnessMRNA);
+			double effectivnessMRNA = deltaEscape * 0.7;
+			double factorShowingSymptomsMRNA = deltaEscape * 0.05 / (1 - effectivnessMRNA);
 			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); 
 			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
@@ -234,8 +240,8 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 					)
 					; 
 		
-			double effectivnessVector = params.deltaEscape * 0.5;
-			double factorShowingSymptomsVector = params.deltaEscape * 0.25 / (1 - effectivnessVector);
+			double effectivnessVector = deltaEscape * 0.5;
+			double factorShowingSymptomsVector = deltaEscape * 0.25 / (1 - effectivnessVector);
 			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
 			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 		
@@ -262,18 +268,36 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
+		
+		if (params.vacCompl.equals("current")) {
+			for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
+			for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.7);
+			for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
+			for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
+			for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
+			for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
+		}
+		else if (params.vacCompl.equals("0.9")) {
+			for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
+			for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.9);
+			for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.9);
+			for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.9);
+			for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.9);
+			for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
+		}
+		else {
+			throw new RuntimeException();
+		}
 
-		for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
-		for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, params.vaccinate1217);
-		for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
-		for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
-		for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
-		for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
+		
+		if (params.testVac.equals("yes")) {
+			testingConfigGroup.setSelection(TestingConfigGroup.Selection.ALL_PERSONS);
+		}
 
 //		TestType testType = TestType.valueOf(params.testType);
 
@@ -299,7 +323,7 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 
 		pcrTest.setFalseNegativeRate(0.1);
 		pcrTest.setFalsePositiveRate(0.01);
-
+		
 		testingConfigGroup.setHouseholdCompliance(1.0);
 
 		LocalDate testingStartDate = LocalDate.parse("2021-03-19");
@@ -312,17 +336,24 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 
 		for (int i = 1; i <= 31; i++) {
-			leisureTests.put(testingStartDate.plusDays(i), 0.2 * i / 31.);
+			leisureTests.put(testingStartDate.plusDays(i),  0.2 * i / 31.);
 			workTests.put(testingStartDate.plusDays(i), 0.2 * i / 31.);
 			eduTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
 		}
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		workTests.put(LocalDate.parse("2021-06-04"), 0.1);
-		leisureTests.put(LocalDate.parse("2021-06-04"), 0.1);
+		workTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestWork);
+
+		
+		leisureTests.put(LocalDate.parse("2021-06-04"),  0.1);
+		leisureTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestLeis);
+		
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
 		eduTests.put(LocalDate.parse("2021-08-30"), 0.4);
+		eduTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestEdu);
+
 
 
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
@@ -343,8 +374,13 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+		
+		eduTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestEdu);
+		workTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestWork);
+		leisureTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestLeis);
 
-		eduTestsPCR.put(LocalDate.parse("2021-08-06"), 0.1);
+
+//		eduTestsPCR.put(LocalDate.parse("2021-08-06"), 0.1);
 
 		pcrTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTestsPCR,
@@ -374,25 +410,40 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 		
-		@Parameter({2.3, 2.5, 2.7})
+		@Parameter({2.4})
 		double deltaInf;
 		
-		@StringParameter({"2021-03-30", "2021-04-07"})
-		String deltaDate;
-		
-		@Parameter({0.7, 1.0})
-		double deltaEscape;
-		
-		@StringParameter({"alpha", "0.5"})
-		String delta1Vac;
+//		@StringParameter({"alpha", "0.5"})
+//		String delta1Vac;
 		
 		@StringParameter({"no"})
 		String schoolMasks;
 		
-		@Parameter({0.7})
-		double vaccinate1217;
+		@StringParameter({"current", "0.9"})
+		String vacCompl;
 		
-		@StringParameter({"no", "0.75", "0.5"})
+		@Parameter({0.0, 1.0})
+		double rapidTestEdu;
+		
+		@Parameter({0.0, 1.0})
+		double rapidTestLeis;
+		
+		@Parameter({0.0, 1.0})
+		double rapidTestWork;
+		
+		@Parameter({0.0, 1.0})
+		double pcrTestEdu;
+		
+		@Parameter({0.0, 1.0})
+		double pcrTestLeis;
+		
+		@Parameter({0.0, 1.0})
+		double pcrTestWork;
+		
+		@StringParameter({"yes", "no"})
+		String testVac;
+
+		@StringParameter({"no", "0.0"})
 		String fractionUnv;
 
 	}

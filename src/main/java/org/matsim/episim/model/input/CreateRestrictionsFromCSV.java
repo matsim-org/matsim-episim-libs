@@ -25,7 +25,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private final EpisimConfigGroup episimConfig;
 	private Path input;
 	private double alpha = 1.;
-	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
+	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.regHospital;
 	private Map<String, Path> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
