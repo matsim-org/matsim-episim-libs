@@ -103,12 +103,12 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 				FaceMask.SURGICAL, 0.45)),
 				"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		
-		if (params.schoolMasks.equals("no")) {
+//		if (params.schoolMasks.equals("no")) {
 			builder.restrict(LocalDate.parse("2021-09-06"), Restriction.ofMask(Map.of(
 					FaceMask.N95, 0.0,
 					FaceMask.SURGICAL, 0.0)),
 					"educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		}
+//		}
 		
 		
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
@@ -155,115 +155,64 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse("2021-03-23"), 1);
+		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
 
-		double deltaEscape = 0.7;
-		String delta1Vac = "0.5";
-		if (delta1Vac.equals("0.5")) {
-			double effectivnessMRNA = deltaEscape * 0.7;
-			double factorShowingSymptomsMRNA = deltaEscape * 0.05 / (1 - effectivnessMRNA);
-			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); 
-			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
-			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-					.setDaysBeforeFullEffect(fullEffectMRNA)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-							.atDay(1, 0.0)
-							.atDay(fullEffectMRNA-7, effectivnessMRNA/2.)
-							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-							.atDay(1, 1.0)
-							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
-							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-							.atDay(1, 1.0)
-							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
-							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					; 
-		
-			double effectivnessVector = deltaEscape * 0.5;
-			double factorShowingSymptomsVector = deltaEscape * 0.25 / (1 - effectivnessVector);
-			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
-			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
-		
-			vaccinationConfig.getOrAddParams(VaccinationType.vector)
-				.setDaysBeforeFullEffect(fullEffectVector)
+		double effectivnessMRNA = params.deltaVacEffect;
+		double factorShowingSymptomsMRNA =  0.12 / (1 - effectivnessMRNA);
+		double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); 
+		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+				.setDaysBeforeFullEffect(fullEffectMRNA)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 0.0)
-						.atDay(fullEffectVector-7, effectivnessVector/2.)
-						.atFullEffect(effectivnessVector)
-						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA-7, effectivnessMRNA/2.)
+						.atFullEffect(effectivnessMRNA)
+						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 1.0)
-						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
-						.atFullEffect(factorShowingSymptomsVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
+						.atFullEffect(factorShowingSymptomsMRNA)
+						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 1.0)
-						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
-						.atFullEffect(factorSeriouslySickVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
+						.atFullEffect(factorSeriouslySickMRNA)
+						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				;
-		}
+				; 
 		
-		else {
-			double effectivnessMRNA = deltaEscape * 0.7;
-			double factorShowingSymptomsMRNA = deltaEscape * 0.05 / (1 - effectivnessMRNA);
-			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); 
-			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
-			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-					.setDaysBeforeFullEffect(fullEffectMRNA)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-							.atDay(1, 0.0)
-							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-							.atDay(1, 1.0)
-							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-							.atDay(1, 1.0)
-							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					; 
+		double effectivnessVector = params.deltaVacEffect * 0.5/0.7;
+		double factorShowingSymptomsVector = 0.32 / (1 - effectivnessVector);
+		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
+		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 		
-			double effectivnessVector = deltaEscape * 0.5;
-			double factorShowingSymptomsVector = deltaEscape * 0.25 / (1 - effectivnessVector);
-			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
-			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+		vaccinationConfig.getOrAddParams(VaccinationType.vector)
+			.setDaysBeforeFullEffect(fullEffectVector)
+			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.atDay(1, 0.0)
+					.atDay(fullEffectVector-7, effectivnessVector/2.)
+					.atFullEffect(effectivnessVector)
+					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.atDay(1, 1.0)
+					.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
+					.atFullEffect(factorShowingSymptomsVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.atDay(1, 1.0)
+					.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
+					.atFullEffect(factorSeriouslySickVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			;
 		
-			vaccinationConfig.getOrAddParams(VaccinationType.vector)
-				.setDaysBeforeFullEffect(fullEffectVector)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-						.atDay(1, 0.0)
-						.atFullEffect(effectivnessVector)
-						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-						.atDay(1, 1.0)
-						.atFullEffect(factorShowingSymptomsVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-						.atDay(1, 1.0)
-						.atFullEffect(factorSeriouslySickVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-				;
-		}
+		
 		
 		
 
@@ -343,16 +292,18 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		workTests.put(LocalDate.parse("2021-06-04"), 0.1);
-		workTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestWork);
+//		workTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestWork);
 
 		
 		leisureTests.put(LocalDate.parse("2021-06-04"),  0.1);
-		leisureTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestLeis);
+		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
+
+//		leisureTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestLeis);
 		
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
 		eduTests.put(LocalDate.parse("2021-08-30"), 0.4);
-		eduTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestEdu);
+//		eduTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestEdu);
 
 
 
@@ -375,9 +326,9 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		
-		eduTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestEdu);
-		workTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestWork);
-		leisureTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestLeis);
+//		eduTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestEdu);
+//		workTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestWork);
+//		leisureTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestLeis);
 
 
 //		eduTestsPCR.put(LocalDate.parse("2021-08-06"), 0.1);
@@ -410,40 +361,46 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 		
-		@Parameter({2.4})
+		@Parameter({2.25, 2.3, 2.35, 2.4, 2.45, 2.5, 2.55, 2.6, 2.65, 2.7})
 		double deltaInf;
+		
+		@Parameter({0.0, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8})
+		double deltaVacEffect;
 		
 //		@StringParameter({"alpha", "0.5"})
 //		String delta1Vac;
 		
-		@StringParameter({"no"})
-		String schoolMasks;
+//		@StringParameter({"no"})
+//		String schoolMasks;
 		
-		@StringParameter({"current", "0.9"})
+		@StringParameter({"2021-03-16", "2021-03-23", "2021-03-30", "2021-04-01", "2021-04-07"})
+		String deltaDate;
+		
+		@StringParameter({"current"})
 		String vacCompl;
 		
-		@Parameter({0.0, 1.0})
-		double rapidTestEdu;
+//		@Parameter({0.0})
+//		double rapidTestEdu;
+//		
+//		@Parameter({0.0})
+//		double rapidTestLeis;
+//		
+//		@Parameter({0.0})
+//		double rapidTestWork;
+//		
+//		@Parameter({0.0})
+//		double pcrTestEdu;
+//		
+//		@Parameter({0.0})
+//		double pcrTestLeis;
+//		
+//		@Parameter({0.0})
+//		double pcrTestWork;
 		
-		@Parameter({0.0, 1.0})
-		double rapidTestLeis;
-		
-		@Parameter({0.0, 1.0})
-		double rapidTestWork;
-		
-		@Parameter({0.0, 1.0})
-		double pcrTestEdu;
-		
-		@Parameter({0.0, 1.0})
-		double pcrTestLeis;
-		
-		@Parameter({0.0, 1.0})
-		double pcrTestWork;
-		
-		@StringParameter({"yes", "no"})
+		@StringParameter({"no"})
 		String testVac;
 
-		@StringParameter({"no", "0.0"})
+		@StringParameter({"no"})
 		String fractionUnv;
 
 	}
