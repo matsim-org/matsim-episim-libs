@@ -3,7 +3,9 @@ package org.matsim.episim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.events.EventsManagerImpl;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
@@ -11,7 +13,7 @@ import org.mockito.Mockito;
 import javax.annotation.Nullable;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.Arrays;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -214,6 +216,22 @@ public class EpisimTestUtils {
 
 		return report;
 	}
+
+	public static Map<String,EpisimReporting.InfectionReport> createReportSubdistrict(LocalDate date, long day, Map<String,Integer> showingSymptoms) {
+
+		Map<String, EpisimReporting.InfectionReport> reports = new HashMap<>();
+		for (String subdistrict : showingSymptoms.keySet()) {
+
+			EpisimReporting.InfectionReport report = new EpisimReporting.InfectionReport(subdistrict, 0, date.toString(), day);
+
+			report.nSusceptible = 100_000;
+			report.nShowingSymptomsCumulative = showingSymptoms.get(subdistrict);
+			reports.put(subdistrict, report);
+		}
+
+		return reports;
+	}
+
 
 
 }

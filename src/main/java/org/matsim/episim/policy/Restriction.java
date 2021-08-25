@@ -440,6 +440,10 @@ public final class Restriction {
 		}
 	}
 
+	void updateLocationBasedRf(Restriction r) {
+		locationBasedRf.putAll(r.locationBasedRf);
+	}
+
 	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
 	 * <p>

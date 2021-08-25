@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import org.apache.commons.collections.map.HashedMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -335,6 +336,123 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			report.nShowingSymptomsCumulative += nShowingSymptoms;
 			report.nSeriouslySickCumulative += nSeriouslySick;
 			report.nCriticalCumulative += nCritical;
+		}
+
+		reports.forEach((k, v) -> v.scale(1 / sampleSize));
+
+		return reports;
+	}
+
+
+	/**
+	 * Creates infections reports for the day. Grouped by subdistrict, but always containing a "total" entry.
+	 */
+	Map<String, InfectionReport> createReportsLocal(Collection<EpisimPerson> persons, int iteration) {
+
+		Map<String, InfectionReport> reports = new LinkedHashMap<>();
+
+		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+
+//		InfectionReport report = new InfectionReport("total", time, date, iteration);
+//		reports.put("total", report);
+
+		String subdistrictName;
+		String subdistrictAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
+		for (EpisimPerson person : persons) {
+			if (person.getAttributes().getAsMap().containsKey(subdistrictAttribute)) {
+				subdistrictName = (String) person.getAttributes().getAttribute(subdistrictAttribute);
+			} else {
+				continue;
+			}
+
+			// Also aggregate by subdistrict if applicable
+			InfectionReport subdistrict = reports.computeIfAbsent(subdistrictName == null ? "unknown"
+					: subdistrictName, name -> new InfectionReport(name, time, date, iteration));
+			switch (person.getDiseaseStatus()) {
+				case susceptible:
+					subdistrict.nSusceptible++;
+					break;
+				case infectedButNotContagious:
+					subdistrict.nInfectedButNotContagious++;
+					subdistrict.nTotalInfected++;
+					break;
+				case contagious:
+					subdistrict.nContagious++;
+					subdistrict.nTotalInfected++;
+					break;
+				case showingSymptoms:
+					subdistrict.nShowingSymptoms++;
+					subdistrict.nTotalInfected++;
+					break;
+				case seriouslySick:
+				case seriouslySickAfterCritical:
+					subdistrict.nSeriouslySick++;
+					subdistrict.nTotalInfected++;
+					break;
+				case critical:
+					subdistrict.nCritical++;
+					subdistrict.nTotalInfected++;
+					break;
+				case recovered:
+					subdistrict.nRecovered++;
+					break;
+				default:
+					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
+			}
+//			switch (person.getQuarantineStatus()) {
+//				// For now there is no separation in the report between full and home
+//				case atHome:
+//					report.nInQuarantineHome++;
+//					district.nInQuarantineHome++;
+//					break;
+//				case full:
+//					report.nInQuarantineFull++;
+//					district.nInQuarantineFull++;
+//					break;
+//				case no:
+//					break;
+//				default:
+//					throw new IllegalStateException("Unexpected value: " + person.getQuarantineStatus());
+//			}
+//
+//			switch (person.getVaccinationStatus()) {
+//				case yes:
+//					report.nVaccinated++;
+//					district.nVaccinated++;
+//				case no:
+//					break;
+//				default:
+//					throw new IllegalArgumentException("Unexpected value: " + person.getVaccinationStatus());
+//			}
+//
+//			switch (person.getReVaccinationStatus()) {
+//				case yes:
+//					report.nReVaccinated++;
+//					district.nReVaccinated++;
+//				case no:
+//					break;
+//				default:
+//					throw new IllegalArgumentException("Unexpected value: " + person.getReVaccinationStatus());
+//			}
+//
+//			if (person.daysSinceTest(iteration) == 0) {
+//				report.nTested++;
+//				district.nTested++;
+//			}
+		}
+
+		for (String subdistrict : reports.keySet()) {
+
+			int nContagious = cumulativeCases.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(subdistrict, 0);
+			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(subdistrict, 0);
+			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(subdistrict, 0);
+			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(subdistrict, 0);
+
+			reports.get(subdistrict).nContagiousCumulative = nContagious;
+			reports.get(subdistrict).nShowingSymptomsCumulative = nShowingSymptoms;
+			reports.get(subdistrict).nSeriouslySickCumulative = nSeriouslySick;
+			reports.get(subdistrict).nCriticalCumulative = nCritical;
 		}
 
 		reports.forEach((k, v) -> v.scale(1 / sampleSize));

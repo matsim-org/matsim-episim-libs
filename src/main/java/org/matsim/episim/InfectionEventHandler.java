@@ -47,6 +47,7 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.policy.AdaptivePolicyLocal;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
@@ -746,7 +747,12 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
-		policy.updateRestrictions(report, im);
+
+		if (policy instanceof AdaptivePolicyLocal) {
+			((AdaptivePolicyLocal) policy).updateRestrictionsLocal(reporting.createReportsLocal(personMap.values(), iteration), im);
+		} else {
+			policy.updateRestrictions(report, im);
+		}
 
 		reporting.reportCpuTime(iteration, "TestingModel", "start", -1);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
@@ -754,8 +760,6 @@ public final class InfectionEventHandler implements Externalizable {
 		testingModel.beforeStateUpdates(personMap, iteration, this.report);
 
 		activityParticipationModel.setRestrictionsForIteration(iteration, im);
-
-		log.warn("JR POPULATION FILE : " + scenario.getConfig().plans().getInputFile());
 
 		//		Map<String, Long> popCountPerDistrict = new HashMap<>();
 		//		for (EpisimPerson person : personMap.values()) {
@@ -955,7 +959,6 @@ public final class InfectionEventHandler implements Externalizable {
 			incidencePerDistrict.put(districtEntry.getKey(), incidenz);
 			System.out.println(districtEntry.getKey() + " has incidence of " + incidenz);
 		}
-
 
 
 		List<String> districtsToRestrict = new ArrayList<>();

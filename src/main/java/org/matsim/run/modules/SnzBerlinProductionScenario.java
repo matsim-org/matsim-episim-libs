@@ -215,6 +215,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 	public static enum LocationBasedContactIntensity {yes, no}
 
+	public static enum AdaptiveRestrictions {yesGlobal, yesLocal, no}
+
 	private final int sample;
 	private final int importOffset;
 	private final DiseaseImport diseaseImport;
@@ -489,6 +491,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
+
 		episimConfig.setPolicy(builder.build());
 
 		//tracing
