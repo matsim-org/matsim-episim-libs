@@ -47,10 +47,7 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
-import org.matsim.episim.policy.AdaptivePolicyLocal;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.*;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
@@ -748,8 +745,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 
-		if (policy instanceof AdaptivePolicyLocal) {
-			((AdaptivePolicyLocal) policy).updateRestrictionsLocal(reporting.createReportsLocal(personMap.values(), iteration), im);
+		if (policy instanceof AdaptivePolicy && policy.config.getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
+				((AdaptivePolicy) policy).updateRestrictions(reporting.createReportsLocal(personMap.values(), iteration), im);
 		} else {
 			policy.updateRestrictions(report, im);
 		}

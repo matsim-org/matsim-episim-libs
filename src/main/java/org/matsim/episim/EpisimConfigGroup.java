@@ -79,6 +79,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
+	private static final String DISTRICTS = "districts";
 	private static final String AUTOMATICALLY_RESTRICT_DISTRICTS = "automaticallyRestrictDistricts";
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
@@ -163,6 +164,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private AutomaticallyRestrictDistricts automaticallyRestrictDistricts = AutomaticallyRestrictDistricts.no;
 	private String districtLevelRestrictionsAttribute = "";
+	private List<String> districts = new ArrayList<>();
+
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
 	private int threads = 2;
@@ -732,6 +735,27 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setDistrictLevelRestrictionsAttribute(String districtLevelRestrictionsAttribute) {
 		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
+
+	public void setDistricts(List<String> districts) {
+		this.districts = districts;
+	}
+
+	public List<String> getDistricts() {
+		return this.districts;
+
+	}
+
+	@StringSetter(DISTRICTS)
+	void setDistricts(String districts) {
+		this.districts = Splitter.on(";").splitToList(districts);
+	}
+
+	@StringGetter(DISTRICTS)
+	String getDistrictsString() {
+		return Joiner.on(";").join(this.districts);
+	}
+
+
 
 	@StringGetter(AUTOMATICALLY_RESTRICT_DISTRICTS)
 	public AutomaticallyRestrictDistricts getAutomaticallyRestrictDistricts() {

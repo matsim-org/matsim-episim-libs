@@ -411,8 +411,10 @@ public final class Restriction {
 	 */
 	void update(Restriction r) {
 		// All values may be optional and are only set if present
-		if (r.getRemainingFraction() != null)
+		if (r.getRemainingFraction() != null) {
 			remainingFraction = r.getRemainingFraction();
+//			locationBasedRf = new HashMap<>();
+		}
 
 		if (r.getCiCorrection() != null)
 			ciCorrection = r.getCiCorrection();
@@ -440,7 +442,7 @@ public final class Restriction {
 		}
 	}
 
-	void updateLocationBasedRf(Restriction r) {
+	void updateLocalRfWithoutRemovingDistrictEntries(Restriction r) {
 		locationBasedRf.putAll(r.locationBasedRf);
 	}
 

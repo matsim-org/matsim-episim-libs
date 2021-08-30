@@ -354,8 +354,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
 
-//		InfectionReport report = new InfectionReport("total", time, date, iteration);
-//		reports.put("total", report);
+		InfectionReport report = new InfectionReport("total", time, date, iteration);
+		reports.put("total", report);
 
 		String subdistrictName;
 		String subdistrictAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
@@ -371,30 +371,43 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					: subdistrictName, name -> new InfectionReport(name, time, date, iteration));
 			switch (person.getDiseaseStatus()) {
 				case susceptible:
+					report.nSusceptible++;
 					subdistrict.nSusceptible++;
 					break;
 				case infectedButNotContagious:
+					report.nInfectedButNotContagious++;
+					report.nTotalInfected++;
 					subdistrict.nInfectedButNotContagious++;
 					subdistrict.nTotalInfected++;
 					break;
 				case contagious:
+					report.nContagious++;
+					report.nTotalInfected++;
 					subdistrict.nContagious++;
 					subdistrict.nTotalInfected++;
 					break;
 				case showingSymptoms:
+					report.nShowingSymptoms++;
+					report.nTotalInfected++;
 					subdistrict.nShowingSymptoms++;
 					subdistrict.nTotalInfected++;
 					break;
 				case seriouslySick:
 				case seriouslySickAfterCritical:
+					report.nSeriouslySick++;
+					report.nTotalInfected++;
 					subdistrict.nSeriouslySick++;
 					subdistrict.nTotalInfected++;
 					break;
 				case critical:
+					report.nCritical++;
+					report.nTotalInfected++;
 					subdistrict.nCritical++;
 					subdistrict.nTotalInfected++;
 					break;
 				case recovered:
+					report.nRecovered++;
+					report.nTotalInfected++;
 					subdistrict.nRecovered++;
 					break;
 				default:
@@ -453,6 +466,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			reports.get(subdistrict).nShowingSymptomsCumulative = nShowingSymptoms;
 			reports.get(subdistrict).nSeriouslySickCumulative = nSeriouslySick;
 			reports.get(subdistrict).nCriticalCumulative = nCritical;
+
+			// Sum for total report
+			report.nContagiousCumulative += nContagious;
+			report.nShowingSymptomsCumulative += nShowingSymptoms;
+			report.nSeriouslySickCumulative += nSeriouslySick;
+			report.nCriticalCumulative += nCritical;
 		}
 
 		reports.forEach((k, v) -> v.scale(1 / sampleSize));

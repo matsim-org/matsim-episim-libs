@@ -42,9 +42,7 @@ import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
-import org.matsim.episim.policy.AdjustedPolicy;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.*;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -62,7 +60,9 @@ import java.util.Map;
  */
 public final class SnzBerlinProductionScenario extends AbstractModule {
 
+
 	public static class Builder {
+
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
@@ -85,6 +85,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		private EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions = EpisimConfigGroup.DistrictLevelRestrictions.no;
 		private LocationBasedContactIntensity locationBasedContactIntensity = LocationBasedContactIntensity.no;
+		private AdaptiveRestrictions adaptiveRestrictions = AdaptiveRestrictions.no;
 
 
 		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
@@ -191,6 +192,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			return this;
 		}
 
+		public Builder setAdaptiveRestrictions(AdaptiveRestrictions adaptiveRestrictions) {
+			this.adaptiveRestrictions = adaptiveRestrictions;
+			return this;
+		}
+
 	}
 
 	public static enum DiseaseImport {yes, onlySpring, no}
@@ -238,6 +244,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	private final double importFactorAfterJune;
 	private final EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions;
 	private final LocationBasedContactIntensity locationBasedContactIntensity;
+	private final AdaptiveRestrictions adaptiveRestrictions;
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -273,6 +280,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.easterModel = builder.easterModel;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
 		this.locationBasedContactIntensity = builder.locationBasedContactIntensity;
+		this.adaptiveRestrictions = builder.adaptiveRestrictions;
 	}
 
 	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -298,10 +306,17 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 
-		if (adjustRestrictions == AdjustRestrictions.yes)
+		if (adjustRestrictions == AdjustRestrictions.yes) {
 			bind(ShutdownPolicy.class).to(AdjustedPolicy.class).in(Singleton.class);
-		else
+			if (adaptiveRestrictions != AdaptiveRestrictions.no) {
+				throw (new RuntimeException("adjust restrictions & adaptive restrictions cannot be turned on simultaneously"));
+			}
+		} else if (adaptiveRestrictions != AdaptiveRestrictions.no) {
+			bind(ShutdownPolicy.class).to(AdaptivePolicy.class).in(Singleton.class);
+		} else {
 			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
+		}
+
 
 		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
 			bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
@@ -312,8 +327,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-//		if (this.sample != 25 && this.sample != 100)
-//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		//		if (this.sample != 25 && this.sample != 100)
+		//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 

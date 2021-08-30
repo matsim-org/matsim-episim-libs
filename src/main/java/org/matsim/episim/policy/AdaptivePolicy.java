@@ -21,16 +21,19 @@
 package org.matsim.episim.policy;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Injector;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import it.unimi.dsi.fastutil.objects.*;
+import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimReporting;
 
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * This policy enforces restrictions based on the number of available intensive care beds
@@ -42,6 +45,12 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	 * Amount of days incidence has to stay below the trigger to lift restrictions.
 	 */
 	private static final int INTERVAL_DAY = 14;
+
+
+	/**
+	 * Date after which restricted policy can be applied.
+	 */
+	private final LocalDate startDate;
 
 	/**
 	 * Incidences triggers for configured activities.
@@ -66,23 +75,66 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Store incidence for each day.
 	 */
-	private final Object2DoubleSortedMap<LocalDate> cumCases = new Object2DoubleAVLTreeMap<>();
+	private final Map<String, Object2DoubleSortedMap<LocalDate>> cumCases = new HashMap<>(); // new Object2DoubleAVLTreeMap<>();
 
 	/**
-	 * Whether currently in lockdown.
+	 * Whether currently following initial, restricted (lockdown) or open policies
 	 */
-	private final Object2BooleanMap<String> inLockdown = new Object2BooleanOpenHashMap<>();
+	private final Map<String, Map<String, RestrictionStatus>> restrictionStatus = new HashMap<>();
+
+	/**
+	 * List of subdistricts
+	 */
+	private List<String> subdistricts;
+
+	private enum RestrictionStatus {
+		initial,
+		restricted,
+		open
+	}
+
+	public enum RestrictionScope {
+		local,
+		global
+	}
+
+	private final RestrictionScope restrictionScope;
+
+	private final String TOTAL = "total";
+
 
 	/**
 	 * Constructor from config.
 	 */
+	@Inject
+	public AdaptivePolicy(@Named("policy") Config policyConfig, Injector injector) {
+		this(policyConfig);
+		org.matsim.core.config.Config config = injector.getInstance(org.matsim.core.config.Config.class);
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.subdistricts = episimConfig.getDistricts();
+
+	}
+
+	/**
+	 * Constructor from config.
+	 */
+
+	public AdaptivePolicy(Config config, List<String> subdistricts) {
+		this(config);
+		this.subdistricts = subdistricts;
+	}
+
 	public AdaptivePolicy(Config config) {
 		super(config);
 		incidenceTriggers = config.getConfig("incidences");
 		restrictedPolicy = config.getConfig("restricted-policy");
 		openPolicy = config.getConfig("open-policy");
 		initialPolicy = config.hasPath("init-policy") ? config.getConfig("init-policy") : null;
+		startDate = config.hasPath("start-date") ? LocalDate.parse(String.valueOf(config.getValue("start-date").unwrapped())) : LocalDate.MIN;
+		restrictionScope = config.hasPath("restriction-scope") ? config.getEnum(RestrictionScope.class, "restriction-scope") : RestrictionScope.global;
+		this.subdistricts = null;
 	}
+
 
 	/**
 	 * Create a config builder for {@link AdaptivePolicy}.
@@ -93,10 +145,32 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
-		if (initialPolicy != null && !initialPolicy.isEmpty()) {
 
+		// for restriction scope of global and local:
+		restrictionStatus.putIfAbsent(TOTAL, new HashMap<>());
+		for (String act : restrictions.keySet()) {
+			restrictionStatus.get(TOTAL).put(act, RestrictionStatus.initial);
+		}
+
+		if (initialPolicy != null && !initialPolicy.isEmpty()) {
 			for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
-				updateRestrictions(start, initialPolicy, e.getKey(), e.getValue());
+				updateRestrictions(start, initialPolicy, e.getKey(), e.getValue(), TOTAL);
+			}
+		}
+
+
+		if (restrictionScope.equals(RestrictionScope.local)) {
+			for (String district : subdistricts) {
+				restrictionStatus.putIfAbsent(district, new HashMap<>());
+				for (String act : restrictions.keySet()) {
+					restrictionStatus.get(district).put(act, RestrictionStatus.initial);
+				}
+
+				if (initialPolicy != null && !initialPolicy.isEmpty()) {
+					for (Map.Entry<String, Restriction> e : restrictions.entrySet()) {
+						updateRestrictions(start, initialPolicy, e.getKey(), e.getValue(), district);
+					}
+				}
 			}
 		}
 	}
@@ -106,13 +180,55 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		init(start, restrictions);
 	}
 
+
+	// when RestrictionScope == global
 	@Override
 	public void updateRestrictions(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions) {
 
 		LocalDate date = LocalDate.parse(report.date);
+		String location = TOTAL;
 
-		calculateCases(report);
-		Object2DoubleSortedMap<LocalDate> cases = cumCases.tailMap(date.minus(INTERVAL_DAY + 6, ChronoUnit.DAYS));
+		// This allows the initial policy to change day to day
+		if (initialPolicy != null && !initialPolicy.isEmpty()) {
+			for (String act : restrictions.keySet()) {
+				if (restrictionStatus.get(location).get(act).equals(RestrictionStatus.initial)) {
+					updateRestrictions(date, initialPolicy, act, restrictions.get(act), location);
+				}
+			}
+		}
+
+		updateRestrictionsForLocation(report, restrictions, date, location);
+	}
+
+
+	// RestrictionScope == local
+	public void updateRestrictions(Map<String, EpisimReporting.InfectionReport> reportsLocal, ImmutableMap<String, Restriction> restrictions) {
+
+
+		for (String location : reportsLocal.keySet()) {
+			EpisimReporting.InfectionReport report = reportsLocal.get(location);
+			LocalDate date = LocalDate.parse(report.date);
+
+			// This allows the initial policy to change day to day
+			if (initialPolicy != null && !initialPolicy.isEmpty()) {
+				for (String act : restrictions.keySet()) {
+					if (restrictionStatus.get(location).get(act).equals(RestrictionStatus.initial)) {
+						updateRestrictions(date, initialPolicy, act, restrictions.get(act), RestrictionScope.global.name());
+					}
+				}
+			}
+
+			updateRestrictionsForLocation(report, restrictions, date, location);
+
+		}
+
+
+	}
+
+	private void updateRestrictionsForLocation(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions, LocalDate date, String location) {
+		calculateCases(report, location);
+		Object2DoubleSortedMap<LocalDate> cases = cumCases.get(location).tailMap(date.minus(INTERVAL_DAY + 6, ChronoUnit.DAYS));
+
 
 		Object2DoubleSortedMap<LocalDate> incidence = new Object2DoubleAVLTreeMap<>();
 
@@ -129,6 +245,11 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		if (incidence.isEmpty())
 			return;
 
+		// if startDate has not yet been reached, only initial restrictions can apply.
+		if (date.isBefore(startDate)) {
+			return;
+		}
+
 		// TODO: use first incidence to decide whether in lockdown or not
 
 		for (Map.Entry<String, ConfigValue> e : incidenceTriggers.entrySet()) {
@@ -136,16 +257,17 @@ public class AdaptivePolicy extends ShutdownPolicy {
 			String act = e.getKey();
 			List<Double> trigger = (List<Double>) e.getValue().unwrapped();
 
-			if (inLockdown.getBoolean(act)) {
+			if (restrictionStatus.get(location).get(act).equals(RestrictionStatus.restricted)) {
 				if (incidence.values().stream().allMatch(inc -> inc <= trigger.get(0))) {
-					updateRestrictions(date, openPolicy, act, restrictions.get(act));
-					inLockdown.put(act, false);
+					updateRestrictions(date, openPolicy, act, restrictions.get(act), location);
+					restrictionStatus.get(location).put(act, RestrictionStatus.open);
 				}
 
 			} else {
 				if (incidence.getDouble(incidence.lastKey()) >= trigger.get(1)) {
-					updateRestrictions(date, restrictedPolicy, act, restrictions.get(act));
-					inLockdown.put(act, true);
+					updateRestrictions(date, restrictedPolicy, act, restrictions.get(act), location);
+					restrictionStatus.get(location).put(act, RestrictionStatus.restricted);
+					// TODO: what happens if restrictions aren't updated because restriction date has not occured yet; restrictionStatus should not change in this case
 				}
 			}
 		}
@@ -154,12 +276,13 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	/**
 	 * Calculate incidence depending
 	 */
-	private void calculateCases(EpisimReporting.InfectionReport report) {
+	private void calculateCases(EpisimReporting.InfectionReport report, String location) {
 		double cases = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());
-		this.cumCases.put(LocalDate.parse(report.date), cases);
+		this.cumCases.putIfAbsent(location, new Object2DoubleAVLTreeMap());
+		this.cumCases.get(location).put(LocalDate.parse(report.date), cases);
 	}
 
-	private void updateRestrictions(LocalDate start, Config policy, String act, Restriction restriction) {
+	private void updateRestrictions(LocalDate start, Config policy, String act, Restriction restriction, String location) {
 
 		// activity name
 		if (!policy.hasPath(act))
@@ -167,13 +290,39 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 		Config actConfig = policy.getConfig(act);
 
-		for (Map.Entry<String, ConfigValue> days : actConfig.root().entrySet()) {
-			if (days.getKey().startsWith("day")) continue;
+		// the restriction should be updated using the closest date before the current date. That is why the keys
+		// are first sorted in descending order, and the loop is exited when a fitting value is found.
+		NavigableSet<String> descendingDates = (new TreeSet<>(actConfig.root().keySet())).descendingSet();
+		for (String date : descendingDates) {
+			if (date.startsWith("day")) continue;
 
-			LocalDate date = LocalDate.parse(days.getKey());
-			if (date.isBefore(start)) {
-				Restriction r = Restriction.fromConfig(actConfig.getConfig(days.getKey()));
-				restriction.update(r);
+			if (LocalDate.parse(date).isBefore(start)) {
+				Restriction r = Restriction.fromConfig(actConfig.getConfig(date));
+
+				// if RestrictionScope == global, then the old Restriction is updated entirely by the new Restriction
+				// if RestrictionScope == local and location == total --> only total parameters are changed, local ones are let be
+				// if RestrictionScope == local and location == Kreuzberg, etc. --> then that neighborhood is changed, but total is left intact.
+
+				if (this.restrictionScope.equals(RestrictionScope.global)) {
+					restriction.update(r);
+				} else if (this.restrictionScope.equals(RestrictionScope.local)) {
+					if (location.equals(TOTAL)) {
+						Restriction rUpdate = Restriction.clone(r);
+						rUpdate.getLocationBasedRf().clear();
+						restriction.update(rUpdate);
+					} else {
+						Map<String, Double> restrictionForSingleDistrict = new HashMap<>();
+						if (r.getLocationBasedRf().containsKey(location)) {
+							restrictionForSingleDistrict.put(location, r.getLocationBasedRf().get(location));
+						}
+
+						Restriction restrictionForDistrict = Restriction.ofLocationBasedRf(restrictionForSingleDistrict);
+
+						restriction.updateLocalRfWithoutRemovingDistrictEntries(restrictionForDistrict);
+					}
+
+				}
+				break; // this break is needed so that closest date to current date is chosen.
 			}
 		}
 	}
@@ -234,5 +383,24 @@ public class AdaptivePolicy extends ShutdownPolicy {
 			params.put("restricted-policy", policy.params);
 			return this;
 		}
+
+		/**
+		 * Define date after which restricted policy can be applied
+		 */
+		public ConfigBuilder startDate(String startDate) {
+			params.put("start-date", startDate);
+			return this;
+		}
+
+		/**
+		 * Define scope: global or local
+		 */
+		public ConfigBuilder restrictionScope(String restrictionScope) {
+			params.put("restriction-scope", restrictionScope);
+			return this;
+		}
+
 	}
 }
+
+
