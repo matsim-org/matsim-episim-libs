@@ -133,8 +133,8 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		
 		//weather model
 		try {
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(),
-					SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5.);
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(),
+					SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, params.midpoint, 5., params.alpha);
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -156,8 +156,30 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
+		
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-06-14").plusDays(0),
+				LocalDate.parse("2021-06-21").plusDays(0), 1.0, params.importFactor * 1.6);
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  params.importFactor, LocalDate.parse("2021-06-21").plusDays(0),
+				LocalDate.parse("2021-06-28").plusDays(0), 1.6, 2.8);
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  params.importFactor, LocalDate.parse("2021-06-28").plusDays(0),
+				LocalDate.parse("2021-07-05").plusDays(0), 2.8, 4.6);
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  params.importFactor, LocalDate.parse("2021-07-05").plusDays(0),
+				LocalDate.parse("2021-07-12").plusDays(0), 4.6, 5.9);
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  params.importFactor, LocalDate.parse("2021-07-12").plusDays(0),
+				LocalDate.parse("2021-07-19").plusDays(0), 5.9, 7.3);
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  params.importFactor, LocalDate.parse("2021-07-19").plusDays(0),
+				LocalDate.parse("2021-07-26").plusDays(0), 7.3, 10.2);
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  params.importFactor, LocalDate.parse("2021-07-26").plusDays(0),
+				LocalDate.parse("2021-08-02").plusDays(0), 10.2, 13.2);
+
+		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-08-09").plusDays(0),
+					LocalDate.parse("2021-08-31").plusDays(0), params.importFactor * 13.2, 1.0);
+		
+		
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(params.deltaSeriouslySick);
+
 
 		double effectivnessMRNA = params.deltaVacEffect;
 		double factorShowingSymptomsMRNA =  0.12 / (1 - effectivnessMRNA);
@@ -285,18 +307,19 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 
 		for (int i = 1; i <= 31; i++) {
-			leisureTests.put(testingStartDate.plusDays(i),  0.2 * i / 31.);
-			workTests.put(testingStartDate.plusDays(i), 0.2 * i / 31.);
+			leisureTests.put(testingStartDate.plusDays(i),  params.tesRateLeisureWork * i / 31.);
+			workTests.put(testingStartDate.plusDays(i), params.tesRateLeisureWork * i / 31.);
 			eduTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
 		}
+		
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
-		workTests.put(LocalDate.parse("2021-06-04"), 0.1);
+		workTests.put(LocalDate.parse("2021-06-04"), params.tesRateLeisureWork2);
 //		workTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestWork);
 
 		
-		leisureTests.put(LocalDate.parse("2021-06-04"),  0.1);
-		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
+		leisureTests.put(LocalDate.parse("2021-06-04"),  params.tesRateLeisureWork2);
+//		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
 
 //		leisureTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestLeis);
 		
@@ -352,6 +375,18 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		pcrTest.setTestingCapacity_pers_per_day(Map.of(
 				LocalDate.of(1970, 1, 1), 0,
 				testingStartDate, Integer.MAX_VALUE));
+		
+		
+		if (params.tracingCapacity > 200) {
+			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+			int tracingCapacity = 200;
+			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+					LocalDate.of(2020, 4, 1), (int) (tracingCapacity * 0.2),
+					LocalDate.of(2020, 6, 15), tracingCapacity,
+					LocalDate.of(2021, 4, 15), params.tracingCapacity
+			));
+		}
+
 
 		return config;
 	}
@@ -361,11 +396,29 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 		
-		@Parameter({2.25, 2.3, 2.35, 2.4, 2.45, 2.5, 2.55, 2.6, 2.65, 2.7})
+		@Parameter({1.0})
+		double importFactor;
+		
+		@Parameter({1.0})
+		double alpha;
+		
+		@Parameter({22.5, 20.0})
+		double midpoint;
+		
+		@Parameter({2.2, 2.4, 2.6})
 		double deltaInf;
 		
-		@Parameter({0.0, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8})
+		@Parameter({0.7})
 		double deltaVacEffect;
+		
+		@Parameter({0.25})
+		double tesRateLeisureWork;
+		
+		@Parameter({0.05, 0.1})
+		double tesRateLeisureWork2;
+		
+		@IntParameter({200, 400})
+		int tracingCapacity;
 		
 //		@StringParameter({"alpha", "0.5"})
 //		String delta1Vac;
@@ -373,7 +426,7 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 //		@StringParameter({"no"})
 //		String schoolMasks;
 		
-		@StringParameter({"2021-03-16", "2021-03-23", "2021-03-30", "2021-04-01", "2021-04-07"})
+		@StringParameter({"2021-03-01", "2021-03-15", "2021-04-01", "2021-04-15", "2021-05-01"})
 		String deltaDate;
 		
 		@StringParameter({"current"})
@@ -396,6 +449,9 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 //		
 //		@Parameter({0.0})
 //		double pcrTestWork;
+		
+		@Parameter({1.0, 2.0})
+		double deltaSeriouslySick;
 		
 		@StringParameter({"no"})
 		String testVac;
