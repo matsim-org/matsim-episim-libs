@@ -409,7 +409,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 		String untilDate = "20210802";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210815.csv"));
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210822.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
