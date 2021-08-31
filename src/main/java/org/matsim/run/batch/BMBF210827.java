@@ -396,19 +396,19 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 		
-		@Parameter({1.0})
+		@Parameter({1.0, 2.0, 4.0})
 		double importFactor;
 		
 		@Parameter({1.0})
 		double alpha;
 		
-		@Parameter({22.5, 20.0})
+		@Parameter({22.5})
 		double midpoint;
 		
-		@Parameter({2.2, 2.4, 2.6})
+		@Parameter({2.0, 2.2, 2.4, 2.6})
 		double deltaInf;
 		
-		@Parameter({0.7})
+		@Parameter({0.5, 0.7})
 		double deltaVacEffect;
 		
 		@Parameter({0.25})
@@ -417,7 +417,7 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 		@Parameter({0.05, 0.1})
 		double tesRateLeisureWork2;
 		
-		@IntParameter({200, 400})
+		@IntParameter({200})
 		int tracingCapacity;
 		
 //		@StringParameter({"alpha", "0.5"})
@@ -450,7 +450,7 @@ public class BMBF210827 implements BatchRun<BMBF210827.Params> {
 //		@Parameter({0.0})
 //		double pcrTestWork;
 		
-		@Parameter({1.0, 2.0})
+		@Parameter({2.0})
 		double deltaSeriouslySick;
 		
 		@StringParameter({"no"})
