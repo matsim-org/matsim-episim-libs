@@ -35,6 +35,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
+import org.matsim.episim.EpisimPerson.VaccinationStatus;
 import org.matsim.episim.events.*;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
@@ -80,6 +81,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCases = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
 
+	/**
+	 * Aggregated cumulative vaccinated cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
+	 */
+	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinated = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
+	
 	/**
 	 * Number of daily infections per virus strain.
 	 */
@@ -156,6 +162,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
+		
+		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
+		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
+		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
+		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
 
 		writeConfigFiles();
 	}
@@ -228,7 +239,16 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		for (EpisimPerson person : persons) {
 			String districtName = (String) person.getAttributes().getAttribute("district");
-
+			
+			boolean isVaccinated = false;
+			if (person.getVaccinationStatus() == VaccinationStatus.yes) {
+				VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+				int fullEffect = vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
+				if (person.getReVaccinationStatus() == VaccinationStatus.yes | person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect) {
+					isVaccinated = true;
+				}
+			}
+			
 			// Also aggregate by district
 			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
 					: districtName, name -> new InfectionReport(name, report.time, report.date, report.day));
@@ -236,24 +256,46 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				case susceptible:
 					report.nSusceptible++;
 					district.nSusceptible++;
+					if (isVaccinated) {
+						report.nSusceptibleVaccinated++;
+						district.nSusceptibleVaccinated++;
+					}
 					break;
 				case infectedButNotContagious:
 					report.nInfectedButNotContagious++;
 					district.nInfectedButNotContagious++;
 					report.nTotalInfected++;
 					district.nTotalInfected++;
+					if (isVaccinated) {
+						report.nInfectedButNotContagiousVaccinated++;
+						district.nInfectedButNotContagiousVaccinated++;
+						report.nTotalInfectedVaccinated++;
+						district.nTotalInfectedVaccinated++;
+					}
 					break;
 				case contagious:
 					report.nContagious++;
 					district.nContagious++;
 					report.nTotalInfected++;
 					district.nTotalInfected++;
+					if (isVaccinated) {
+						report.nContagiousVaccinated++;
+						district.nContagiousVaccinated++;
+						report.nTotalInfectedVaccinated++;
+						district.nTotalInfectedVaccinated++;
+					}
 					break;
 				case showingSymptoms:
 					report.nShowingSymptoms++;
 					district.nShowingSymptoms++;
 					report.nTotalInfected++;
 					district.nTotalInfected++;
+					if (isVaccinated) {
+						report.nShowingSymptomsVaccinated++;
+						district.nShowingSymptomsVaccinated++;
+						report.nTotalInfectedVaccinated++;
+						district.nTotalInfectedVaccinated++;
+					}
 					break;
 				case seriouslySick:
 				case seriouslySickAfterCritical:
@@ -261,16 +303,32 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					district.nSeriouslySick++;
 					report.nTotalInfected++;
 					district.nTotalInfected++;
+					if (isVaccinated) {
+						report.nSeriouslySickVaccinated++;
+						district.nSeriouslySickVaccinated++;
+						report.nTotalInfectedVaccinated++;
+						district.nTotalInfectedVaccinated++;
+					}
 					break;
 				case critical:
 					report.nCritical++;
 					district.nCritical++;
 					report.nTotalInfected++;
 					district.nTotalInfected++;
+					if (isVaccinated) {
+						report.nCriticalVaccinated++;
+						district.nCriticalVaccinated++;
+						report.nTotalInfectedVaccinated++;
+						district.nTotalInfectedVaccinated++;
+					}
 					break;
 				case recovered:
 					report.nRecovered++;
 					district.nRecovered++;
+					if (isVaccinated) {
+						report.nRecoveredVaccinated++;
+						district.nRecoveredVaccinated++;
+					}
 					break;
 				default:
 					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
@@ -324,17 +382,32 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
 			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
 			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
+			
+			int nContagiousVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);
+			int nShowingSymptomsVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
+			int nSeriouslySickVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
+			int nCriticalVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
 
 			reports.get(district).nContagiousCumulative = nContagious;
 			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;
 			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;
 			reports.get(district).nCriticalCumulative = nCritical;
+			
+			reports.get(district).nContagiousCumulativeVaccinated = nContagiousVaccinated;
+			reports.get(district).nShowingSymptomsCumulativeVaccinated = nShowingSymptomsVaccinated;
+			reports.get(district).nSeriouslySickCumulativeVaccinated = nSeriouslySickVaccinated;
+			reports.get(district).nCriticalCumulativeVaccinated = nCriticalVaccinated;
 
 			// Sum for total report
 			report.nContagiousCumulative += nContagious;
 			report.nShowingSymptomsCumulative += nShowingSymptoms;
 			report.nSeriouslySickCumulative += nSeriouslySick;
 			report.nCriticalCumulative += nCritical;
+			
+			report.nContagiousCumulativeVaccinated += nContagiousVaccinated;
+			report.nShowingSymptomsCumulativeVaccinated += nShowingSymptomsVaccinated;
+			report.nSeriouslySickCumulativeVaccinated += nSeriouslySickVaccinated;
+			report.nCriticalCumulativeVaccinated += nCriticalVaccinated;
 		}
 
 		reports.forEach((k, v) -> v.scale(1 / sampleSize));
@@ -385,23 +458,39 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);
 			array[InfectionsWriterFields.date.ordinal()] = r.date;
 			array[InfectionsWriterFields.nSusceptible.ordinal()] = Long.toString(r.nSusceptible);
+			array[InfectionsWriterFields.nSusceptibleVaccinated.ordinal()] = Long.toString(r.nSusceptibleVaccinated);
+
 			array[InfectionsWriterFields.nInfectedButNotContagious.ordinal()] = Long.toString(r.nInfectedButNotContagious);
+			array[InfectionsWriterFields.nInfectedButNotContagiousVaccinated.ordinal()] = Long.toString(r.nInfectedButNotContagiousVaccinated);
 			array[InfectionsWriterFields.nContagious.ordinal()] = Long.toString(r.nContagious);
+			array[InfectionsWriterFields.nContagiousVaccinated.ordinal()] = Long.toString(r.nContagiousVaccinated);
 			array[InfectionsWriterFields.nContagiousCumulative.ordinal()] = Long.toString(r.nContagiousCumulative);
+			array[InfectionsWriterFields.nContagiousCumulativeVaccinated.ordinal()] = Long.toString(r.nContagiousCumulativeVaccinated);
+
 			array[InfectionsWriterFields.nShowingSymptoms.ordinal()] = Long.toString(r.nShowingSymptoms);
+			array[InfectionsWriterFields.nShowingSymptomsVaccinated.ordinal()] = Long.toString(r.nShowingSymptomsVaccinated);
 			array[InfectionsWriterFields.nShowingSymptomsCumulative.ordinal()] = Long.toString(r.nShowingSymptomsCumulative);
+			array[InfectionsWriterFields.nShowingSymptomsCumulativeVaccinated.ordinal()] = Long.toString(r.nShowingSymptomsCumulativeVaccinated);
 			array[InfectionsWriterFields.nRecovered.ordinal()] = Long.toString(r.nRecovered);
+			array[InfectionsWriterFields.nRecoveredVaccinated.ordinal()] = Long.toString(r.nRecoveredVaccinated);
 
 			array[InfectionsWriterFields.nTotalInfected.ordinal()] = Long.toString((r.nTotalInfected));
+			array[InfectionsWriterFields.nTotalInfectedVaccinated.ordinal()] = Long.toString((r.nTotalInfectedVaccinated));
 			array[InfectionsWriterFields.nInfectedCumulative.ordinal()] = Long.toString((r.nTotalInfected + r.nRecovered));
+			array[InfectionsWriterFields.nInfectedCumulativeVaccinated.ordinal()] = Long.toString((r.nTotalInfectedVaccinated + r.nRecoveredVaccinated));
 
 			array[InfectionsWriterFields.nInQuarantineFull.ordinal()] = Long.toString(r.nInQuarantineFull);
 			array[InfectionsWriterFields.nInQuarantineHome.ordinal()] = Long.toString(r.nInQuarantineHome);
 
 			array[InfectionsWriterFields.nSeriouslySick.ordinal()] = Long.toString(r.nSeriouslySick);
+			array[InfectionsWriterFields.nSeriouslySickVaccinated.ordinal()] = Long.toString(r.nSeriouslySickVaccinated);
 			array[InfectionsWriterFields.nSeriouslySickCumulative.ordinal()] = Long.toString(r.nSeriouslySickCumulative);
+			array[InfectionsWriterFields.nSeriouslySickCumulativeVaccinated.ordinal()] = Long.toString(r.nSeriouslySickCumulativeVaccinated);
+
 			array[InfectionsWriterFields.nCritical.ordinal()] = Long.toString(r.nCritical);
+			array[InfectionsWriterFields.nCriticalVaccinated.ordinal()] = Long.toString(r.nCriticalVaccinated);
 			array[InfectionsWriterFields.nCriticalCumulative.ordinal()] = Long.toString(r.nCriticalCumulative);
+			array[InfectionsWriterFields.nCriticalCumulativeVaccinated.ordinal()] = Long.toString(r.nCriticalCumulativeVaccinated);
 
 			array[InfectionsWriterFields.nVaccinated.ordinal()] = Long.toString(r.nVaccinated);
 			array[InfectionsWriterFields.nReVaccinated.ordinal()] = Long.toString(r.nReVaccinated);
@@ -694,9 +783,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	enum InfectionsWriterFields {
-		time, day, date, nSusceptible, nInfectedButNotContagious, nContagious, nShowingSymptoms, nSeriouslySick, nCritical, nTotalInfected,
-		nInfectedCumulative, nContagiousCumulative, nShowingSymptomsCumulative, nSeriouslySickCumulative, nCriticalCumulative,
-		nRecovered, nInQuarantineFull, nInQuarantineHome, nVaccinated, nReVaccinated, nTested, district
+		time, day, date, nSusceptible, nSusceptibleVaccinated, nInfectedButNotContagious, nInfectedButNotContagiousVaccinated, nContagious, nContagiousVaccinated, nShowingSymptoms, nShowingSymptomsVaccinated, nSeriouslySick, nSeriouslySickVaccinated, nCritical, nCriticalVaccinated, nTotalInfected,
+		nTotalInfectedVaccinated, nInfectedCumulative, nInfectedCumulativeVaccinated, nContagiousCumulative, nContagiousCumulativeVaccinated, nShowingSymptomsCumulative, nShowingSymptomsCumulativeVaccinated, nSeriouslySickCumulative, nSeriouslySickCumulativeVaccinated, nCriticalCumulative,
+		nCriticalCumulativeVaccinated, nRecovered, nRecoveredVaccinated, nInQuarantineFull, nInQuarantineHome, nVaccinated, nReVaccinated, nTested, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}
@@ -724,6 +813,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		public long nCriticalCumulative = 0;
 		public long nTotalInfected = 0;
 		public long nRecovered = 0;
+		public long nSusceptibleVaccinated = 0;
+		public long nInfectedButNotContagiousVaccinated = 0;
+		public long nContagiousVaccinated = 0;
+		public long nContagiousCumulativeVaccinated = 0;
+		public long nShowingSymptomsVaccinated = 0;
+		public long nShowingSymptomsCumulativeVaccinated = 0;
+		public long nSeriouslySickVaccinated = 0;
+		public long nSeriouslySickCumulativeVaccinated = 0;
+		public long nCriticalVaccinated = 0;
+		public long nCriticalCumulativeVaccinated = 0;
+		public long nTotalInfectedVaccinated = 0;
+		public long nRecoveredVaccinated = 0;
 		public long nInQuarantineFull = 0;
 		public long nInQuarantineHome = 0;
 		public long nVaccinated = 0;
@@ -760,6 +861,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			nCriticalCumulative *= factor;
 			nTotalInfected *= factor;
 			nRecovered *= factor;
+			nSusceptibleVaccinated *= factor;
+			nInfectedButNotContagiousVaccinated *= factor;
+			nContagiousVaccinated *= factor;
+			nContagiousCumulativeVaccinated *= factor;
+			nShowingSymptomsVaccinated *= factor;
+			nShowingSymptomsCumulativeVaccinated *= factor;
+			nSeriouslySickVaccinated *= factor;
+			nSeriouslySickCumulativeVaccinated *= factor;
+			nCriticalVaccinated *= factor;
+			nCriticalCumulativeVaccinated *= factor;
+			nTotalInfectedVaccinated *= factor;
+			nRecoveredVaccinated *= factor;
 			nInQuarantineFull *= factor;
 			nInQuarantineHome *= factor;
 			nVaccinated *= factor;
