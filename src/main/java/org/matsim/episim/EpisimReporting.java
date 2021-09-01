@@ -85,7 +85,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Aggregated cumulative vaccinated cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
 	 */
 	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinated = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
-	
+
 	/**
 	 * Number of daily infections per virus strain.
 	 */
@@ -98,6 +98,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private final double sampleSize;
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
 	/**
 	 * Current day / iteration.
 	 */
@@ -140,6 +141,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		}
 
 		this.config = config;
+		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		this.writer = writer;
 		this.manager = manager;
 
@@ -162,7 +164,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
-		
+
 		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
 		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
 		cumulativeCasesVaccinated.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
@@ -225,6 +227,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	/**
+	 * Checks whether a person is vaccinated (and has full effectiveness).
+	 */
+	private boolean isVaccinated(EpisimPerson person) {
+		if (person.getVaccinationStatus() != VaccinationStatus.yes)
+			return false;
+
+		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
+
+		return person.getReVaccinationStatus() == VaccinationStatus.yes || person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect;
+	}
+
+	/**
 	 * Creates infections reports for the day. Grouped by district, but always containing a "total" entry.
 	 */
 	Map<String, InfectionReport> createReports(Collection<EpisimPerson> persons, int iteration) {
@@ -239,16 +253,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		for (EpisimPerson person : persons) {
 			String districtName = (String) person.getAttributes().getAttribute("district");
-			
-			boolean isVaccinated = false;
-			if (person.getVaccinationStatus() == VaccinationStatus.yes) {
-				VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-				int fullEffect = vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
-				if (person.getReVaccinationStatus() == VaccinationStatus.yes | person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect) {
-					isVaccinated = true;
-				}
-			}
-			
+
+			boolean isVaccinated = isVaccinated(person);
+
 			// Also aggregate by district
 			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
 					: districtName, name -> new InfectionReport(name, report.time, report.date, report.day));
@@ -382,7 +389,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
 			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
 			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(district, 0);
-			
+
 			int nContagiousVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(district, 0);
 			int nShowingSymptomsVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(district, 0);
 			int nSeriouslySickVaccinated = cumulativeCasesVaccinated.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(district, 0);
@@ -392,7 +399,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			reports.get(district).nShowingSymptomsCumulative = nShowingSymptoms;
 			reports.get(district).nSeriouslySickCumulative = nSeriouslySick;
 			reports.get(district).nCriticalCumulative = nCritical;
-			
+
 			reports.get(district).nContagiousCumulativeVaccinated = nContagiousVaccinated;
 			reports.get(district).nShowingSymptomsCumulativeVaccinated = nShowingSymptomsVaccinated;
 			reports.get(district).nSeriouslySickCumulativeVaccinated = nSeriouslySickVaccinated;
@@ -403,7 +410,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			report.nShowingSymptomsCumulative += nShowingSymptoms;
 			report.nSeriouslySickCumulative += nSeriouslySick;
 			report.nCriticalCumulative += nCritical;
-			
+
 			report.nContagiousCumulativeVaccinated += nContagiousVaccinated;
 			report.nShowingSymptomsCumulativeVaccinated += nShowingSymptomsVaccinated;
 			report.nSeriouslySickCumulativeVaccinated += nSeriouslySickVaccinated;
@@ -610,6 +617,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				newStatus == EpisimPerson.DiseaseStatus.showingSymptoms || newStatus == EpisimPerson.DiseaseStatus.critical) {
 			String districtName = (String) person.getAttributes().getAttribute("district");
 			cumulativeCases.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
+
+			if (isVaccinated(person))
+				cumulativeCasesVaccinated.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
 		}
 
 		manager.processEvent(event);
@@ -758,7 +768,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				out.writeInt(kv.getIntValue());
 			}
 		}
-		
+
 		out.writeInt(cumulativeCasesVaccinated.size());
 
 		for (Map.Entry<EpisimPerson.DiseaseStatus, Object2IntMap<String>> e : cumulativeCasesVaccinated.entrySet()) {
@@ -789,7 +799,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				cumulativeCases.get(state).put(key, in.readInt());
 			}
 		}
-		
+
 		int statesVaccinated = in.readInt();
 		for (int i = 0; i < statesVaccinated; i++) {
 			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];
