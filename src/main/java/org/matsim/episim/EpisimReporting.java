@@ -758,6 +758,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				out.writeInt(kv.getIntValue());
 			}
 		}
+		
+		out.writeInt(cumulativeCasesVaccinated.size());
+
+		for (Map.Entry<EpisimPerson.DiseaseStatus, Object2IntMap<String>> e : cumulativeCasesVaccinated.entrySet()) {
+			out.writeInt(e.getKey().ordinal());
+			Object2IntMap<String> map = e.getValue();
+			out.writeInt(map.size());
+
+			for (Object2IntMap.Entry<String> kv : map.object2IntEntrySet()) {
+				writeChars(out, kv.getKey());
+				out.writeInt(kv.getIntValue());
+			}
+		}
 
 		for (VirusStrain value : VirusStrain.values()) {
 			out.writeInt(strains.getInt(value));
@@ -774,6 +787,16 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			for (int j = 0; j < size; j++) {
 				String key = readChars(in);
 				cumulativeCases.get(state).put(key, in.readInt());
+			}
+		}
+		
+		int statesVaccinated = in.readInt();
+		for (int i = 0; i < statesVaccinated; i++) {
+			EpisimPerson.DiseaseStatus state = EpisimPerson.DiseaseStatus.values()[in.readInt()];
+			int size = in.readInt();
+			for (int j = 0; j < size; j++) {
+				String key = readChars(in);
+				cumulativeCasesVaccinated.get(state).put(key, in.readInt());
 			}
 		}
 
