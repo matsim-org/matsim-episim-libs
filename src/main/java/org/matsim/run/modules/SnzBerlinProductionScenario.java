@@ -438,22 +438,24 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("business").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("visit").setContactIntensity(9.24).setSpacesPerFacility(spaces); // 33/3.57
 		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
+		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1);
 
-		if (locationBasedContactIntensity == LocationBasedContactIntensity.yes) {
-			episimConfig.getOrAddContainerParams("home_15").setContactIntensity(1.47).setSpacesPerFacility(1);
-			episimConfig.getOrAddContainerParams("home_25").setContactIntensity(0.88).setSpacesPerFacility(1);
-			episimConfig.getOrAddContainerParams("home_35").setContactIntensity(0.63).setSpacesPerFacility(1);
-			episimConfig.getOrAddContainerParams("home_45").setContactIntensity(0.49).setSpacesPerFacility(1);
-			episimConfig.getOrAddContainerParams("home_55").setContactIntensity(0.40).setSpacesPerFacility(1);
-			episimConfig.getOrAddContainerParams("home_65").setContactIntensity(0.34).setSpacesPerFacility(1);
-			episimConfig.getOrAddContainerParams("home_75").setContactIntensity(0.29).setSpacesPerFacility(1);
 
-			// weighted average of contact intensities (39 m2 per person)
-			episimConfig.getOrAddContainerParams("home").setContactIntensity(0.56).setSpacesPerFacility(1);
-
-		} else {
-			episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
-		}
+//		if (locationBasedContactIntensity == LocationBasedContactIntensity.yes) {
+//			episimConfig.getOrAddContainerParams("home_15").setContactIntensity(1.47).setSpacesPerFacility(1);
+//			episimConfig.getOrAddContainerParams("home_25").setContactIntensity(0.88).setSpacesPerFacility(1);
+//			episimConfig.getOrAddContainerParams("home_35").setContactIntensity(0.63).setSpacesPerFacility(1);
+//			episimConfig.getOrAddContainerParams("home_45").setContactIntensity(0.49).setSpacesPerFacility(1);
+//			episimConfig.getOrAddContainerParams("home_55").setContactIntensity(0.40).setSpacesPerFacility(1);
+//			episimConfig.getOrAddContainerParams("home_65").setContactIntensity(0.34).setSpacesPerFacility(1);
+//			episimConfig.getOrAddContainerParams("home_75").setContactIntensity(0.29).setSpacesPerFacility(1);
+//
+//			// weighted average of contact intensities (39 m2 per person)
+//			episimConfig.getOrAddContainerParams("home").setContactIntensity(0.56).setSpacesPerFacility(1);
+//
+//		} else {
+//			episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
+//		}
 
 		// todo: use the plain 1/v values (1./3.57, 1./33, ...) and multiply theta with 33.  kai, feb'21
 

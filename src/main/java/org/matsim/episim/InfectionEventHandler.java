@@ -115,7 +115,7 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Holds the current restrictions in place for all the activities.
 	 */
-	private Map<String, Restriction> restrictions;
+	private final Map<String, Restriction> restrictions;
 
 	/**
 	 * Policy that will be enforced at the end of each day.
@@ -174,9 +174,6 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private EpisimReporting.InfectionReport report;
 
-
-	private Map<Object, Double> populationCntPerDistrict;
-
 	@Inject
 	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
 		this.injector = injector;
@@ -190,6 +187,12 @@ public final class InfectionEventHandler implements Externalizable {
 		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
+
+		//TODO: move to production scenario
+		if (!episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.no) && this.policy instanceof AdaptivePolicy) {
+			this.reporting.districtAttribute = "subdistrict";
+		}
+
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
@@ -199,17 +202,6 @@ public final class InfectionEventHandler implements Externalizable {
 		this.testingModel = injector.getInstance(TestingModel.class);
 		this.executor = injector.getInstance(ExecutorService.class);
 
-		String districtLevelRestrictionsAttribute = this.episimConfig.getDistrictLevelRestrictionsAttribute();
-		this.populationCntPerDistrict = new HashMap<>();
-		for (Person person : this.scenario.getPopulation().getPersons().values()) {
-			if (person.getAttributes().getAsMap().containsKey(districtLevelRestrictionsAttribute)) {
-				String district = (String) person.getAttributes().getAttribute(districtLevelRestrictionsAttribute);
-				double cnt = populationCntPerDistrict.getOrDefault(district, 0.) + 1;
-				populationCntPerDistrict.put(district, cnt);
-			}
-		}
-
-		System.out.println("");
 	}
 
 	/**
@@ -737,6 +729,8 @@ public final class InfectionEventHandler implements Externalizable {
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 		this.report = reports.get("total");
 
+
+
 		reporting.reporting(reports, iteration, report.date);
 		reporting.reportCpuTime(iteration, "ReportTimeUse", "start", -2);
 		reporting.reportTimeUse(restrictions.keySet(), personMap.values(), iteration, report.date);
@@ -745,8 +739,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 
-		if (policy instanceof AdaptivePolicy && policy.config.getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
-				((AdaptivePolicy) policy).updateRestrictions(reporting.createReportsLocal(personMap.values(), iteration), im);
+		if (policy instanceof AdaptivePolicy && policy.getConfig().getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
+				((AdaptivePolicy) policy).updateRestrictions(reports, im); //reporting.createReports(personMap.values(), iteration,episimConfig.getDistrictLevelRestrictionsAttribute())
 		} else {
 			policy.updateRestrictions(report, im);
 		}
@@ -757,18 +751,6 @@ public final class InfectionEventHandler implements Externalizable {
 		testingModel.beforeStateUpdates(personMap, iteration, this.report);
 
 		activityParticipationModel.setRestrictionsForIteration(iteration, im);
-
-		//		Map<String, Long> popCountPerDistrict = new HashMap<>();
-		//		for (EpisimPerson person : personMap.values()) {
-		//
-		//			if (person.getAttributes().getAsMap().containsKey(episimConfig.getDistrictLevelRestrictionsAttribute())) {
-		//				String subdistrict = person.getAttributes().getAttribute(episimConfig.getDistrictLevelRestrictionsAttribute()).toString();
-		//				long cnt = popCountPerDistrict.getOrDefault(subdistrict, 0L) + 1;
-		//				popCountPerDistrict.put(subdistrict, cnt);
-		//			}
-		//		}
-		//
-		//		log.warn("POPULATION COUNT PER DISTRICT :\n" + popCountPerDistrict);
 
 		for (EpisimPerson person : personMap.values()) {
 			// update person activity participation for the day
@@ -796,11 +778,6 @@ public final class InfectionEventHandler implements Externalizable {
 			Map<String, Long> districtCount = ((LocationBasedParticipationModel) activityParticipationModel).districtCount;
 			log.warn("district COUNT for iteration " + iteration + ": " + districtCount);
 			((LocationBasedParticipationModel) activityParticipationModel).districtCount = new HashMap<>();
-
-			//			for (Map.Entry<String, Restriction> entry : im.entrySet()) {
-			//				log.warn("**********   " + entry.getKey() + "   ************\n"+entry.getValue().asMap());
-			//			}
-			//			log.warn(im);
 		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
@@ -928,59 +905,16 @@ public final class InfectionEventHandler implements Externalizable {
 		List<EpisimInfectionEvent> infections = new ArrayList<>();
 
 
-		Map<String, Double> infectionPerDistrict = new HashMap<>();
-
-		String districtLevelRestrictionsAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
 		// "execute" collected infections
 		for (EpisimPerson person : personMap.values()) {
 			EpisimInfectionEvent e;
-			if ((e = person.checkInfection()) != null) {
+			if ((e = person.checkInfection()) != null)
 				infections.add(e);
-				if (person.getAttributes().getAsMap().containsKey(districtLevelRestrictionsAttribute)) {
-					String district = (String) person.getAttributes().getAttribute(districtLevelRestrictionsAttribute);
-					double cnt = infectionPerDistrict.getOrDefault(district, 0.) + 1;
-					infectionPerDistrict.put(district, cnt);
-				}
-			}
 		}
 
 		// report infections in order
 		infections.stream().sorted(Comparator.comparingDouble(Event::getTime))
 				.forEach(reporting::reportInfection);
-
-
-		// find incidenz
-		Map<String, Double> incidencePerDistrict = new HashMap<>();
-		for (Map.Entry<String, Double> districtEntry : infectionPerDistrict.entrySet()) {
-			double incidenz = districtEntry.getValue() * 100_000 / this.populationCntPerDistrict.get(districtEntry.getKey()); //TODO: 7 day or per day? Is this formula correct?
-			incidencePerDistrict.put(districtEntry.getKey(), incidenz);
-			System.out.println(districtEntry.getKey() + " has incidence of " + incidenz);
-		}
-
-
-		List<String> districtsToRestrict = new ArrayList<>();
-		for (Map.Entry<String, Double> incidenceEntry : incidencePerDistrict.entrySet()) {
-			if (incidenceEntry.getValue() > 100) { // TODO: make customizable
-				districtsToRestrict.add(incidenceEntry.getKey());
-			}
-		}
-
-		if (!districtsToRestrict.isEmpty() && episimConfig.getAutomaticallyRestrictDistricts() == EpisimConfigGroup.AutomaticallyRestrictDistricts.yes) {
-
-			String fromDateLocalRestriction = LocalDate.parse(reporting.memorizedDate).plusDays(1).toString();
-			String toDateLocalRestriction = LocalDate.parse(reporting.memorizedDate).plusDays(15).toString(); // 2 weeks
-			double newLocalRf = 0.000077777; //TODO: change eventually (user configurable)
-			FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-			builder.apply(fromDateLocalRestriction, toDateLocalRestriction, (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "leisure");
-			for (String district : districtsToRestrict) {
-				builder.apply(fromDateLocalRestriction, toDateLocalRestriction, (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).put(district, newLocalRf), "leisure");
-			}
-			episimConfig.setPolicy(FixedPolicy.class, builder.build());
-			policy.config = episimConfig.getPolicy(); //TODO: I'm not really allowed to do this, am I...
-			System.out.println(districtsToRestrict + " are in lockdown from " + fromDateLocalRestriction + " to " + toDateLocalRestriction);
-
-		}
-
 	}
 
 	/**

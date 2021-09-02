@@ -5,7 +5,7 @@
 
 
 # Functions:
-read_and_process_episim_events_BATCH <- function(infection_events_directory, facilities_to_district_map) {
+read_and_process_episim_infections <- function(directory, facilities_to_district_map) {
   fac_to_district_map <- read_delim(facilities_to_district_map,
                                     ";", escape_double = FALSE, col_names = FALSE,
                                     trim_ws = TRUE) %>%
@@ -14,7 +14,7 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
 
   fac_to_district_map[is.na(fac_to_district_map)] <- "not_berlin"
 
-  info_df <- read_delim(paste0(infection_events_directory, "_info.txt"), delim = ";")
+  info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
 
   # gathers column names that should be included in final dataframe
   col_names <- colnames(info_df)
@@ -27,7 +27,7 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
     runId <- info_df$RunId[row]
     seed <- info_df$seed[row]
 
-    file_name <- paste0(infection_events_directory, runId, ".infectionEvents.txt")
+    file_name <- paste0(directory, runId, ".infectionEvents.txt")
 
     if(!file.exists(file_name)) {
       warning(paste0(file_name, " does not exist"))
@@ -68,6 +68,47 @@ read_and_process_episim_events_BATCH <- function(infection_events_directory, fac
 
   return(episim_final)
 }
+
+
+
+read_and_process_episim_timeUse<- function(directory) {
+
+  info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
+
+  # gathers column names that should be included in final dataframe
+  col_names <- colnames(info_df)
+  relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
+
+  episim_df_all_runs <- data.frame()
+  for (row in seq_len(nrow(info_df))) {
+
+    runId <- info_df$RunId[row]
+
+    file_name <- paste0(directory, runId, ".timeUse.txt")
+
+    if(!file.exists(file_name)) {
+      warning(paste0(file_name, " does not exist"))
+      next
+    }
+
+    df_for_run <- read_delim(file = file_name,
+                             "\t", escape_double = FALSE, trim_ws = TRUE) %>%
+      pivot_longer(!c("day","date"),names_to = "activity", values_to = "time")
+
+    # adds important variables concerning run to df, so that individual runs can be filtered in later steps
+    for (var in relevant_cols) {
+      df_for_run[var] <- info_df[row, var]
+    }
+
+    episim_df_all_runs <- rbind(episim_df_all_runs, df_for_run)
+
+  }
+
+
+  return(episim_df_all_runs)
+}
+
+
 
 read_and_process_new_rki_data_incidenz <- function(filename) {
   rki <- read_excel(filename,

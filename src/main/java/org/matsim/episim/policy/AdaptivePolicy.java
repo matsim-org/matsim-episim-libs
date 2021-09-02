@@ -206,6 +206,10 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 
 		for (String location : reportsLocal.keySet()) {
+
+			if (!restrictionStatus.containsKey(location)) {
+				continue;
+			}
 			EpisimReporting.InfectionReport report = reportsLocal.get(location);
 			LocalDate date = LocalDate.parse(report.date);
 
@@ -213,7 +217,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 			if (initialPolicy != null && !initialPolicy.isEmpty()) {
 				for (String act : restrictions.keySet()) {
 					if (restrictionStatus.get(location).get(act).equals(RestrictionStatus.initial)) {
-						updateRestrictions(date, initialPolicy, act, restrictions.get(act), RestrictionScope.global.name());
+						updateRestrictions(date, initialPolicy, act, restrictions.get(act), location);
 					}
 				}
 			}
@@ -221,11 +225,14 @@ public class AdaptivePolicy extends ShutdownPolicy {
 			updateRestrictionsForLocation(report, restrictions, date, location);
 
 		}
+		System.out.println( "LEISURE : " + restrictions.get("leisure").getRemainingFraction());
+		System.out.println( "LEISURE : " + restrictions.get("leisure").getLocationBasedRf());
 
 
 	}
 
 	private void updateRestrictionsForLocation(EpisimReporting.InfectionReport report, ImmutableMap<String, Restriction> restrictions, LocalDate date, String location) {
+
 		calculateCases(report, location);
 		Object2DoubleSortedMap<LocalDate> cases = cumCases.get(location).tailMap(date.minus(INTERVAL_DAY + 6, ChronoUnit.DAYS));
 
@@ -261,12 +268,15 @@ public class AdaptivePolicy extends ShutdownPolicy {
 				if (incidence.values().stream().allMatch(inc -> inc <= trigger.get(0))) {
 					updateRestrictions(date, openPolicy, act, restrictions.get(act), location);
 					restrictionStatus.get(location).put(act, RestrictionStatus.open);
+					System.out.println("ADAPTIVE POLICY: " + location + " opened on " + date.toString());
 				}
 
 			} else {
 				if (incidence.getDouble(incidence.lastKey()) >= trigger.get(1)) {
 					updateRestrictions(date, restrictedPolicy, act, restrictions.get(act), location);
 					restrictionStatus.get(location).put(act, RestrictionStatus.restricted);
+					System.out.println("ADAPTIVE POLICY: " + location + " restricted on " + date.toString());
+
 					// TODO: what happens if restrictions aren't updated because restriction date has not occured yet; restrictionStatus should not change in this case
 				}
 			}
@@ -304,6 +314,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 				// if RestrictionScope == local and location == Kreuzberg, etc. --> then that neighborhood is changed, but total is left intact.
 
 				if (this.restrictionScope.equals(RestrictionScope.global)) {
+					restriction.getLocationBasedRf().clear();
 					restriction.update(r);
 				} else if (this.restrictionScope.equals(RestrictionScope.local)) {
 					if (location.equals(TOTAL)) {

@@ -80,7 +80,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
 	private static final String DISTRICTS = "districts";
-	private static final String AUTOMATICALLY_RESTRICT_DISTRICTS = "automaticallyRestrictDistricts";
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 
@@ -162,7 +161,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
-	private AutomaticallyRestrictDistricts automaticallyRestrictDistricts = AutomaticallyRestrictDistricts.no;
 	private String districtLevelRestrictionsAttribute = "";
 	private List<String> districts = new ArrayList<>();
 
@@ -755,18 +753,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		return Joiner.on(";").join(this.districts);
 	}
 
-
-
-	@StringGetter(AUTOMATICALLY_RESTRICT_DISTRICTS)
-	public AutomaticallyRestrictDistricts getAutomaticallyRestrictDistricts() {
-		return this.automaticallyRestrictDistricts;
-	}
-
-	@StringSetter(AUTOMATICALLY_RESTRICT_DISTRICTS)
-	public void setAutomaticallyRestrictDistricts(AutomaticallyRestrictDistricts automaticallyRestrictDistricts ) {
-		this.automaticallyRestrictDistricts = automaticallyRestrictDistricts;
-	}
-
 	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
 	public ContagiousOptimization getContagiousOptimization() {
 		return this.contagiousContainerOptimization;
@@ -1033,12 +1019,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		yesForHomeLocation,
 		no
 	}
-
-	public enum AutomaticallyRestrictDistricts{
-		yes,
-		no
-	}
-
 
     /**
      * In the case that this optimization is enabled, the infectionDynamics

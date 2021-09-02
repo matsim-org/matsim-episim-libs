@@ -110,6 +110,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	String memorizedDate = null;
 
+	String districtAttribute;
+
 
 	@Inject
 	EpisimReporting(Config config, EpisimWriter writer, EventsManager manager) {
@@ -158,6 +160,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
 		cumulativeCases.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
+
+		districtAttribute = "district";
 
 		writeConfigFiles();
 	}
@@ -229,7 +233,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		reports.put("total", report);
 
 		for (EpisimPerson person : persons) {
-			String districtName = (String) person.getAttributes().getAttribute("district");
+			String districtName = (String) person.getAttributes().getAttribute(this.districtAttribute);
 
 			// Also aggregate by district
 			InfectionReport district = reports.computeIfAbsent(districtName == null ? "unknown"
@@ -343,142 +347,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		return reports;
 	}
 
-
-	/**
-	 * Creates infections reports for the day. Grouped by subdistrict, but always containing a "total" entry.
-	 */
-	Map<String, InfectionReport> createReportsLocal(Collection<EpisimPerson> persons, int iteration) {
-
-		Map<String, InfectionReport> reports = new LinkedHashMap<>();
-
-		double time = EpisimUtils.getCorrectedTime(EpisimUtils.getStartOffset(episimConfig.getStartDate()), 0., iteration);
-		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
-
-		InfectionReport report = new InfectionReport("total", time, date, iteration);
-		reports.put("total", report);
-
-		String subdistrictName;
-		String subdistrictAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
-		for (EpisimPerson person : persons) {
-			if (person.getAttributes().getAsMap().containsKey(subdistrictAttribute)) {
-				subdistrictName = (String) person.getAttributes().getAttribute(subdistrictAttribute);
-			} else {
-				continue;
-			}
-
-			// Also aggregate by subdistrict if applicable
-			InfectionReport subdistrict = reports.computeIfAbsent(subdistrictName == null ? "unknown"
-					: subdistrictName, name -> new InfectionReport(name, time, date, iteration));
-			switch (person.getDiseaseStatus()) {
-				case susceptible:
-					report.nSusceptible++;
-					subdistrict.nSusceptible++;
-					break;
-				case infectedButNotContagious:
-					report.nInfectedButNotContagious++;
-					report.nTotalInfected++;
-					subdistrict.nInfectedButNotContagious++;
-					subdistrict.nTotalInfected++;
-					break;
-				case contagious:
-					report.nContagious++;
-					report.nTotalInfected++;
-					subdistrict.nContagious++;
-					subdistrict.nTotalInfected++;
-					break;
-				case showingSymptoms:
-					report.nShowingSymptoms++;
-					report.nTotalInfected++;
-					subdistrict.nShowingSymptoms++;
-					subdistrict.nTotalInfected++;
-					break;
-				case seriouslySick:
-				case seriouslySickAfterCritical:
-					report.nSeriouslySick++;
-					report.nTotalInfected++;
-					subdistrict.nSeriouslySick++;
-					subdistrict.nTotalInfected++;
-					break;
-				case critical:
-					report.nCritical++;
-					report.nTotalInfected++;
-					subdistrict.nCritical++;
-					subdistrict.nTotalInfected++;
-					break;
-				case recovered:
-					report.nRecovered++;
-					report.nTotalInfected++;
-					subdistrict.nRecovered++;
-					break;
-				default:
-					throw new IllegalStateException("Unexpected value: " + person.getDiseaseStatus());
-			}
-//			switch (person.getQuarantineStatus()) {
-//				// For now there is no separation in the report between full and home
-//				case atHome:
-//					report.nInQuarantineHome++;
-//					district.nInQuarantineHome++;
-//					break;
-//				case full:
-//					report.nInQuarantineFull++;
-//					district.nInQuarantineFull++;
-//					break;
-//				case no:
-//					break;
-//				default:
-//					throw new IllegalStateException("Unexpected value: " + person.getQuarantineStatus());
-//			}
-//
-//			switch (person.getVaccinationStatus()) {
-//				case yes:
-//					report.nVaccinated++;
-//					district.nVaccinated++;
-//				case no:
-//					break;
-//				default:
-//					throw new IllegalArgumentException("Unexpected value: " + person.getVaccinationStatus());
-//			}
-//
-//			switch (person.getReVaccinationStatus()) {
-//				case yes:
-//					report.nReVaccinated++;
-//					district.nReVaccinated++;
-//				case no:
-//					break;
-//				default:
-//					throw new IllegalArgumentException("Unexpected value: " + person.getReVaccinationStatus());
-//			}
-//
-//			if (person.daysSinceTest(iteration) == 0) {
-//				report.nTested++;
-//				district.nTested++;
-//			}
-		}
-
-		for (String subdistrict : reports.keySet()) {
-
-			int nContagious = cumulativeCases.get(EpisimPerson.DiseaseStatus.contagious).getOrDefault(subdistrict, 0);
-			int nShowingSymptoms = cumulativeCases.get(EpisimPerson.DiseaseStatus.showingSymptoms).getOrDefault(subdistrict, 0);
-			int nSeriouslySick = cumulativeCases.get(EpisimPerson.DiseaseStatus.seriouslySick).getOrDefault(subdistrict, 0);
-			int nCritical = cumulativeCases.get(EpisimPerson.DiseaseStatus.critical).getOrDefault(subdistrict, 0);
-
-			reports.get(subdistrict).nContagiousCumulative = nContagious;
-			reports.get(subdistrict).nShowingSymptomsCumulative = nShowingSymptoms;
-			reports.get(subdistrict).nSeriouslySickCumulative = nSeriouslySick;
-			reports.get(subdistrict).nCriticalCumulative = nCritical;
-
-			// Sum for total report
-			report.nContagiousCumulative += nContagious;
-			report.nShowingSymptomsCumulative += nShowingSymptoms;
-			report.nSeriouslySickCumulative += nSeriouslySick;
-			report.nCriticalCumulative += nCritical;
-		}
-
-		reports.forEach((k, v) -> v.scale(1 / sampleSize));
-
-		return reports;
-	}
-
 	/**
 	 * Writes the infection report to csv.
 	 *
@@ -513,10 +381,34 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.append(virusStrains, strainOut);
 		strains.clear();
 
+		if (this.districtAttribute.equals("subdistrict")) { // TODO: only temp solution
+			InfectionReport total = reports.get("total");
+			InfectionReport unknown = reports.get("unknown");
+			InfectionReport berlin = new InfectionReport("Berlin", total.time, total.date, total.day);
+			berlin.nSusceptible = total.nSusceptible - unknown.nSusceptible;
+			berlin.nInfectedButNotContagious = total.nInfectedButNotContagious - unknown.nInfectedButNotContagious;
+			berlin.nContagious = total.nContagious - unknown.nContagious;
+			berlin.nContagiousCumulative = total.nContagiousCumulative - unknown.nContagiousCumulative;
+			berlin.nShowingSymptoms = total.nShowingSymptoms - unknown.nShowingSymptoms;
+			berlin.nShowingSymptomsCumulative = total.nShowingSymptomsCumulative - unknown.nShowingSymptomsCumulative;
+			berlin.nRecovered = total.nRecovered - unknown.nRecovered;
+			berlin.nTotalInfected = total.nTotalInfected - unknown.nTotalInfected;
+			berlin.nInQuarantineFull = total.nInQuarantineFull - unknown.nInQuarantineFull;
+			berlin.nInQuarantineHome = total.nInQuarantineHome - unknown.nInQuarantineHome;
+			berlin.nSeriouslySick = total.nSeriouslySick - unknown.nSeriouslySick;
+			berlin.nSeriouslySickCumulative = total.nSeriouslySickCumulative - unknown.nSeriouslySickCumulative;
+			berlin.nCritical = total.nCritical - unknown.nCritical;
+			berlin.nCriticalCumulative = total.nCriticalCumulative - unknown.nCriticalCumulative;
+			berlin.nVaccinated = total.nVaccinated - unknown.nVaccinated;
+			berlin.nReVaccinated = total.nReVaccinated - unknown.nReVaccinated;
+			berlin.nTested = total.nTested - unknown.nTested;
+
+			reports.put("Berlin", berlin);
+		}
+
 		// Write all reports for each district
 		for (InfectionReport r : reports.values()) {
 			if (r.name.equals("total")) continue;
-
 			String[] array = new String[InfectionsWriterFields.values().length];
 			array[InfectionsWriterFields.time.ordinal()] = Double.toString(r.time);
 			array[InfectionsWriterFields.day.ordinal()] = Long.toString(r.day);
@@ -656,7 +548,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		if (newStatus == EpisimPerson.DiseaseStatus.seriouslySick || newStatus == EpisimPerson.DiseaseStatus.contagious ||
 				newStatus == EpisimPerson.DiseaseStatus.showingSymptoms || newStatus == EpisimPerson.DiseaseStatus.critical) {
-			String districtName = (String) person.getAttributes().getAttribute("district");
+			String districtName = (String) person.getAttributes().getAttribute(this.districtAttribute);
 			cumulativeCases.get(newStatus).mergeInt(districtName == null ? "unknown" : districtName, 1, Integer::sum);
 		}
 

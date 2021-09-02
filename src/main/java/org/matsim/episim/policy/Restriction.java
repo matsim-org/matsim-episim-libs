@@ -454,7 +454,7 @@ public final class Restriction {
 	 *
 	 * @see #asMap()
 	 */
-	void merge(Map<String, Object> restriction) {
+	public void merge(Map<String, Object> restriction) {
 
 		Double oldRf = (Double) restriction.get("fraction");
 		Double oldE = (Double) restriction.get("ciCorrection");
