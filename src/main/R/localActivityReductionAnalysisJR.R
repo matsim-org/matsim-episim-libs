@@ -13,7 +13,7 @@ rm(list = ls())
 
 # file <- "C:/Users/jakob/projects/matsim-episim/output/locationBasedRestrictions_yesForHomeLocation-seed_4711/locationBasedRestrictions2.policy.conf"
 # file <- "C:/Users/jakob/projects/matsim-episim/TESTpolicy.conf"
-file <- "C:/Users/jakob/projects/matsim-episim/output/locationBasedRestrictions1.policyEND.conf"
+file <- "C:/Users/jakob/Desktop/adaptLocal22.policyEND.conf"
 df <- data.frame(number = unlist(fromJSON(file, flatten = TRUE)))
 
 

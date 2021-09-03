@@ -5,7 +5,7 @@
 
 library(readxl)
 library(tidyverse)
-setwd("C:/Users/jakob/projects/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/")
+path <-"C:/Users/jakob/projects/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/"
 file_names <- list.files(path = ".",
                 pattern = "0407.csv")
 

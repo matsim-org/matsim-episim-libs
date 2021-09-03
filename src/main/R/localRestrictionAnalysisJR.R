@@ -81,7 +81,7 @@ episim_all_runs_raw <- read_and_process_episim_infections(directory, "FacilityTo
 
 episim_all_runs <- episim_all_runs_raw %>%
   filter(restrictedFraction == 0.6) %>%
-  filter(trigger == 100.) %>%
+  filter(trigger == 10.) %>%
   filter(adaptivePolicy == "yesGlobal" | adaptivePolicy=="yesLocal") %>%
   ungroup() %>%
   select(-c("trigger","restrictedFraction")) %>%

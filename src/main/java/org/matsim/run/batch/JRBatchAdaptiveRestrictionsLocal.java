@@ -15,6 +15,8 @@ import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.*;
 
+import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
+
 
 public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiveRestrictionsLocal.Params> {
 
@@ -22,15 +24,16 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder()
-				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
-				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
-				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-				.setVaccinations(SnzBerlinProductionScenario.Vaccinations.no)
+		return new Builder()
+				.setSnapshot(Snapshot.no)
+				.setChristmasModel(ChristmasModel.no)
+				.setEasterModel(EasterModel.no)
+				.setVaccinations(Vaccinations.no)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
-				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : SnzBerlinProductionScenario.AdaptiveRestrictions.no)
+				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : AdaptiveRestrictions.no)
 				.setSample(DEBUG ? 1 : 25)
+				.setTracing(Tracing.yes)
 				.createSnzBerlinProductionScenario();
 
 	}
@@ -44,7 +47,7 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG) {
-			if (params.adaptivePolicy != SnzBerlinProductionScenario.AdaptiveRestrictions.yesLocal ||
+			if (params.adaptivePolicy != AdaptiveRestrictions.yesLocal ||
 					params.restrictedFraction != 0.2 || params.trigger != 50.
 				//					|| params.tracingCapacity != 200 || params.tracingProbability == 1.0
 				//					|| params.tracingStrategy != NONE
@@ -89,7 +92,7 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 
 		// global
 		String startDate = DEBUG ? "2020-04-01" : "2020-08-01";
-		if (params.adaptivePolicy.equals(SnzBerlinProductionScenario.AdaptiveRestrictions.yesGlobal)) {
+		if (params.adaptivePolicy.equals(AdaptiveRestrictions.yesGlobal)) {
 			com.typesafe.config.Config policy = AdaptivePolicy.config()
 					.startDate(startDate)
 					.restrictionScope(AdaptivePolicy.RestrictionScope.global.toString())
@@ -138,7 +141,7 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 
 		// local
 
-		else if (params.adaptivePolicy.equals(SnzBerlinProductionScenario.AdaptiveRestrictions.yesLocal)) {
+		else if (params.adaptivePolicy.equals(AdaptiveRestrictions.yesLocal)) {
 			com.typesafe.config.Config policy = AdaptivePolicy.config()
 					.startDate(startDate)
 					.restrictionScope(AdaptivePolicy.RestrictionScope.local.toString())
@@ -184,16 +187,25 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 			episimConfig.setPolicy(AdaptivePolicy.class, policy);
 		}
 
-
 		// TRACING
+		// based on BerlinSecondLockdown.java
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
-		tracingConfig.setStrategy(Enum.valueOf(TracingConfigGroup.Strategy.class, params.tracingStrategy));
-		tracingConfig.setLocationThreshold(3);
-		tracingConfig.setTracingDelay_days(1);
-		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
-		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
+		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+				LocalDate.of(2020, 4, 1), 300,
+				LocalDate.of(2020, 6, 15), 2000,
+				LocalDate.of(2020,8,1), params.tracingCapacity
+		));
 		tracingConfig.setTracingProbability(params.tracingProbability);
+
+
+		//		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+		//		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
+		//		tracingConfig.setStrategy(TracingConfigGroup.Strategy.INDIVIDUAL_ONLY);
+		////		tracingConfig.setStrategy(Enum.valueOf(TracingConfigGroup.Strategy.class, params.tracingStrategy));
+		//		tracingConfig.setLocationThreshold(3);
+		//		tracingConfig.setTracingDelay_days(1);
+		//		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
+		//		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
 
 		return config;
 	}
@@ -208,32 +220,34 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 	public static final class Params {
 
 		// Adaptive Policy
-		@EnumParameter(SnzBerlinProductionScenario.AdaptiveRestrictions.class)
-		SnzBerlinProductionScenario.AdaptiveRestrictions adaptivePolicy;
+		@EnumParameter(AdaptiveRestrictions.class)
+		AdaptiveRestrictions adaptivePolicy;
 
 		@GenerateSeeds(1)
 		public long seed;
 
-		@Parameter({0.2, 0.4, 0.6})
+		//		@Parameter({0.2, 0.4, 0.6})
+		@Parameter({0.6})
 		double restrictedFraction;
 		//
 		//		@Parameter({0.9})
 		//		double openFraction;
 
 		//		@Parameter({Integer.MAX_VALUE, 100.})
-		@Parameter({5, 10, 50, 100})
+		//		@Parameter({5, 10, 50, 100})
+		@Parameter({10})
 		double trigger;
 
 
 		// Tracing:
 
-//		@EnumParameter(value = TracingConfigGroup.Strategy.class, ignore = "RANDOM")
-//		TracingConfigGroup.Strategy tracingStrategy;
+		//		@EnumParameter(value = TracingConfigGroup.Strategy.class, ignore = "RANDOM")
+		//		TracingConfigGroup.Strategy tracingStrategy;
 
-		@StringParameter({"INDIVIDUAL_ONLY", "NONE"})
-		String tracingStrategy;
+//		@StringParameter({"INDIVIDUAL_ONLY", "NONE"})
+//		String tracingStrategy;
 
-		@IntParameter({200, 1000}) //Integer.MAX_VALUE
+		@IntParameter({0, 2000, 4000, Integer.MAX_VALUE})
 		int tracingCapacity;
 
 		@Parameter({0.6, 1.0})
