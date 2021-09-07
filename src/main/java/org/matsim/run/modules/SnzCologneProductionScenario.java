@@ -240,7 +240,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model
+		double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model, -> 2_352_480
 
 		if (this.sample != 25 && this.sample != 100)
 			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
@@ -325,7 +325,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		RestrictionInput activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
 		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210802.csv"));
-		
+
 		ConfigBuilder builder = null;
 		try {
 			builder = (ConfigBuilder) activityParticipation.createPolicy();
@@ -333,7 +333,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-		
+
 		builder.restrict(LocalDate.parse("2020-03-16"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-04-27"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-06-29"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -345,7 +345,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-		
+
 		builder.restrict(LocalDate.parse("2020-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-01-11"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -354,8 +354,8 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		builder.restrict(LocalDate.parse("2021-08-17"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		
-	
+
+
 		{
 			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			for (int ii = 0; ii <= 14; ii++) {
@@ -363,17 +363,17 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 				double clothFraction = 1./3. * 0.9;
 				double ffpFraction = 1./3. * 0.9;
 				double surgicalFraction = 1./3. * 0.9;
-				
+
 				builder.restrict(date, Restriction.ofMask(Map.of(
 						FaceMask.CLOTH, clothFraction * ii / 14,
 						FaceMask.N95, ffpFraction * ii / 14,
 						FaceMask.SURGICAL, surgicalFraction * ii / 14)),
 						"pt", "shop_daily", "shop_other", "errands");
-			}	
+			}
 		}
 
-		
-		
+
+
 		//tracing
 		if (this.tracing == Tracing.yes) {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
@@ -476,7 +476,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					;
-		
+
 		double effectivnessVector = 0.5;
 		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
 		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
@@ -560,7 +560,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
-			int population = (int) (4_800_000 * cologneFactor);
+			int population = 2_352_480;
 
 			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
 

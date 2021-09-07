@@ -222,9 +222,10 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 
 	/**
 	 * Writes one line into the info.txt for one run.
+	 *
 	 * @return config file name
 	 */
-	static String  writeRunToInfo(BufferedWriter infoWriter, Path batchOutput, PreparedRun prepare, PreparedRun.Run run, String runName) throws IOException {
+	static String writeRunToInfo(BufferedWriter infoWriter, Path batchOutput, PreparedRun prepare, PreparedRun.Run run, String runName) throws IOException {
 		String runId = runName + run.id;
 		String configFileName = "config_" + runName + run.id + ".xml";
 
