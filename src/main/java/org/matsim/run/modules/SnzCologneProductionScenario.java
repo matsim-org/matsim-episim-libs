@@ -72,6 +72,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		private double imprtFctMult = 1.;
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
+		private double leisureOffset = 0.0;
 
 		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
@@ -143,6 +144,11 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
+
+		public Builder setLeisureOffset(double offset) {
+			this.leisureOffset = offset;
+			return this;
+		}
 	}
 
 	public static enum DiseaseImport {yes, onlySpring, no}
@@ -171,6 +177,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 	private final double imprtFctMult;
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
+	private final double leisureOffset;
 	private final LocationBasedRestrictions locationBasedRestrictions;
 
 	/**
@@ -198,6 +205,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		this.vaccinations = builder.vaccinations;
 		this.weatherModel = builder.weatherModel;
 		this.imprtFctMult = builder.imprtFctMult;
+		this.leisureOffset = builder.leisureOffset;
 		this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
@@ -420,9 +428,9 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 
 		// TODO: is this still needed with adjusted policy?
 		//leisure & work factor
-		double leisureFactor = 1.6;
 		if (this.restrictions != Restrictions.no) {
-			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+//			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", (double) e.get("fraction") - leisureOffset), "leisure");
 
 			double workVacFactor = 0.92;
 			builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");

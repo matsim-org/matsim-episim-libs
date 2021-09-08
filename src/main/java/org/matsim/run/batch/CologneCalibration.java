@@ -35,6 +35,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
+				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
 				.createSnzCologneProductionScenario();
 	}
 
@@ -53,14 +54,14 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setProgressionConfig(progressionConfig(params, Transition.config()).build());
 		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
-		
+
 		episimConfig.setCalibrationParameter(1.0e-05);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83 * params.thetaFactor);
-	
+
 
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
@@ -71,14 +72,14 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
 		episimConfig.setCurfewCompliance(curfewCompliance);
 
-		
+
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
 		builder.restrict("2021-12-20", 0.2, "educ_higher");
 		builder.restrict("2022-01-02", 1.0, "educ_higher");
-		
-		
+
+
 		episimConfig.setPolicy(builder.build());
-		
+
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
@@ -87,12 +88,12 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	
+
 
 		//mutations and vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		
+
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayB117.put(LocalDate.parse("2020-12-05"), 1);
@@ -104,7 +105,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
-		
+
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-06-14").plusDays(0),
 				LocalDate.parse("2021-06-21").plusDays(0), 1.0, 0.5 * params.importFactor * 1.6);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-06-21").plusDays(0),
@@ -122,8 +123,8 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-08-09").plusDays(0),
 					LocalDate.parse("2021-08-31").plusDays(0), 0.5 * params.importFactor * 13.2, 1.0);
-		
-		
+
+
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(params.deltaSeriouslySick);
@@ -131,7 +132,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		double effectivnessMRNA = params.deltaVacEffect;
 		double factorShowingSymptomsMRNA =  0.12 / (1 - effectivnessMRNA);
-		double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); 
+		double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA);
 		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 				.setDaysBeforeFullEffect(fullEffectMRNA)
@@ -153,13 +154,13 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 						.atFullEffect(factorSeriouslySickMRNA)
 						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				; 
-		
+				;
+
 		double effectivnessVector = params.deltaVacEffect * 0.5/0.7;
 		double factorShowingSymptomsVector = 0.32 / (1 - effectivnessVector);
 		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
-		
+
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
 			.setDaysBeforeFullEffect(fullEffectVector)
 			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
@@ -183,7 +184,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 			;
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
-		
+
 		for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
 		for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.7);
 		for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
@@ -220,7 +221,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		pcrTest.setFalseNegativeRate(0.1);
 		pcrTest.setFalsePositiveRate(0.01);
-		
+
 		testingConfigGroup.setHouseholdCompliance(1.0);
 
 		LocalDate testingStartDate = LocalDate.parse("2021-03-19");
@@ -237,18 +238,18 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 			workTests.put(testingStartDate.plusDays(i), params.tesRateLeisureWork * i / 31.);
 			eduTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
 		}
-		
+
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		workTests.put(LocalDate.parse("2021-06-04"), params.tesRateLeisureWork2);
 //		workTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestWork);
 
-		
+
 		leisureTests.put(LocalDate.parse("2021-06-04"),  params.tesRateLeisureWork2);
 //		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
 
 //		leisureTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestLeis);
-		
+
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
 		eduTests.put(LocalDate.parse("2021-08-30"), 0.4);
@@ -274,7 +275,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-		
+
 //		eduTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestEdu);
 //		workTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestWork);
 //		leisureTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestLeis);
@@ -301,49 +302,52 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		pcrTest.setTestingCapacity_pers_per_day(Map.of(
 				LocalDate.of(1970, 1, 1), 0,
 				testingStartDate, Integer.MAX_VALUE));
-	
+
 
 		return config;
 	}
 
 	public static final class Params {
 
-		@GenerateSeeds(5)
+		@GenerateSeeds(20)
 		public long seed;
-		
+
 		@Parameter({4.0})
 		double importFactor;
-		
+
 		@Parameter({0.8, 0.9, 1.0, 1.1, 1.2})
 		double thetaFactor;
-		
+
+		@Parameter({0.0, 0.05, 0.1, 0.15, 0.2})
+		double leisureOffset;
+
 		@Parameter({1.0})
 		double alpha;
-		
+
 		@Parameter({2.2})
 		double deltaInf;
-		
+
 		@Parameter({0.7})
 		double deltaVacEffect;
-		
+
 		@Parameter({0.25})
 		double tesRateLeisureWork;
-		
+
 		@Parameter({0.05})
 		double tesRateLeisureWork2;
-		
+
 //		@StringParameter({"alpha", "0.5"})
 //		String delta1Vac;
-		
+
 //		@StringParameter({"no"})
 //		String schoolMasks;
-		
+
 		@StringParameter({"2021-05-01"})
 		String deltaDate;
-		
+
 		@Parameter({2.0})
 		double deltaSeriouslySick;
-		
+
 
 	}
 
@@ -358,17 +362,17 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		RunParallel.main(args2);
 	}
-	
+
 	/**
 	 * Adds progression config to the given builder.
-	 * @param params 
+	 * @param params
 	 */
 	private static Transition.Builder progressionConfig(Params params, Transition.Builder builder) {
-		
+
 		Transition transitionRecSus;
-		
+
 		transitionRecSus = Transition.logNormalWithMedianAndStd(180., 10.);
-		
+
 		return builder
 				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
 				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
@@ -396,7 +400,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
-				
+
 				.from(EpisimPerson.DiseaseStatus.recovered,
 						to(EpisimPerson.DiseaseStatus.susceptible, transitionRecSus))
 				;

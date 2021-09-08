@@ -120,6 +120,10 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 				double hospital = (report.nCritical + report.nSeriouslySick) * (100_000d / report.nTotal());
 				double rf = 1 - (1 - Math.exp(-hospital / (3838 * (100_000d / report.nTotal()))));
+
+				if (rf < 0)
+					log.warn("Remaining fraction smaller 0: {} (critical/sick: {}/{}, total: {})", rf, report.nCritical, report.nSeriouslySick, report.nTotal());
+
 				entry.getValue().setRemainingFraction(rf);
 			}
 
