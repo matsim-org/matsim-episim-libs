@@ -51,6 +51,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -114,6 +115,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter cpuTime;
 
 	private String memorizedDate = null;
+
+	/**
+	 * flag to ensure only one threads writes certain outputs.
+	 */
+	private AtomicBoolean writeFlag = new AtomicBoolean(false);
 
 
 	@Inject
@@ -430,6 +436,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void reporting(Map<String, InfectionReport> reports, int iteration, String date) {
 
 		memorizedDate = date;
+		writeFlag.set(false);
 
 		if (iteration == 0) return;
 
@@ -670,8 +677,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
 
 		try {
-			this.outdoorFraction.flush();
-			writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+
+			// ensures only one thread call this once every iteration
+			if (writeFlag.compareAndSet(false, true)) {
+				this.outdoorFraction.flush();
+				writer.append(this.outdoorFraction, new String[]{String.valueOf(iteration), date, String.valueOf(outdoorFraction)});
+			}
 		} catch (IOException e) {
 			// will only write to the writer if it is still open
 			// when reading snapshot there may be a situation where it is closed
