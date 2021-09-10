@@ -29,7 +29,7 @@ read_and_process_episim_infections <- function(directory, facilities_to_district
 
     file_name <- paste0(directory, runId, ".infectionEvents.txt")
 
-    if(!file.exists(file_name)) {
+    if (!file.exists(file_name)) {
       warning(paste0(file_name, " does not exist"))
       next
     }
@@ -70,8 +70,41 @@ read_and_process_episim_infections <- function(directory, facilities_to_district
 }
 
 
+# read_and_process_episim_timeUse <- function(directory) {
+#
+#   info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
+#
+#   # gathers column names that should be included in final dataframe
+#   col_names <- colnames(info_df)
+#   relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
+#
+#   episim_df_all_runs <- data.frame()
+#   for (row in seq_len(nrow(info_df))) {
+#
+#     runId <- info_df$RunId[row]
+#
+#     file_name <- paste0(directory, runId, ".timeUse.txt")
+#
+#     if (!file.exists(file_name)) {
+#       warning(paste0(file_name, " does not exist"))
+#       next
+#     }
+#
+#     df_for_run <- read_delim(file = file_name,
+#                              "\t", escape_double = FALSE, trim_ws = TRUE) %>%
+#       pivot_longer(!c("day", "date"), names_to = "activity", values_to = "time")
+#
+#     # adds important variables concerning run to df, so that individual runs can be filtered in later steps
+#     for (var in relevant_cols) {
+#       df_for_run[var] <- info_df[row, var]
+#     }
+#
+#     episim_df_all_runs <- rbind(episim_df_all_runs, df_for_run)
+#
+#   }
+# }
 
-read_and_process_episim_timeUse<- function(directory) {
+read_combine_episim_output <- function(directory, file_root) {
 
   info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
 
@@ -84,16 +117,14 @@ read_and_process_episim_timeUse<- function(directory) {
 
     runId <- info_df$RunId[row]
 
-    file_name <- paste0(directory, runId, ".timeUse.txt")
+    file_name <- paste0(directory, runId, ".", file_root)
 
-    if(!file.exists(file_name)) {
+    if (!file.exists(file_name)) {
       warning(paste0(file_name, " does not exist"))
       next
     }
 
-    df_for_run <- read_delim(file = file_name,
-                             "\t", escape_double = FALSE, trim_ws = TRUE) %>%
-      pivot_longer(!c("day","date"),names_to = "activity", values_to = "time")
+    df_for_run <- read_delim(file = file_name,"\t", escape_double = FALSE, trim_ws = TRUE)
 
     # adds important variables concerning run to df, so that individual runs can be filtered in later steps
     for (var in relevant_cols) {
@@ -104,10 +135,8 @@ read_and_process_episim_timeUse<- function(directory) {
 
   }
 
-
   return(episim_df_all_runs)
 }
-
 
 
 read_and_process_new_rki_data_incidenz <- function(filename) {
@@ -204,15 +233,24 @@ read_and_process_old_rki_data <- function(filename) {
   return(rki_berlin_old)
 }
 
-plot_allDistrict_cases <- function(merged_weekly, color_scheme) {
-  ggplot(merged_weekly, aes(x = week_year, y = infections)) +
-    geom_line(aes(color = scenario)) +
-    scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-    labs(
-      # title = paste0("Infections per Day for Berlin Districts (Weekly Average)"),
-      #    subtitle = "Comparison of Local vs. Global Activity Reductions",
-         x = "Date", y = "New Infections") +
-    theme(axis.text.x = element_text(angle = 90)) +                                        # Adjusting colors of line plot in ggplot2
-    scale_color_manual(values = color_scheme) +
-    facet_wrap(~district, ncol = 4)
+merge_tidy_average <- function(episim_all_runs, rki_new, rki_old) {
+  # BEFORE MERGING:
+  # each dataset should have "date", "district" + a seperate column per situation (with good name)
+  # delete all other columns!
+  merged_tidy <- episim_all_runs %>%
+    full_join(rki_new, by = c("date", "district")) %>%
+    full_join(rki_old, by = c("date", "district")) %>%
+    pivot_longer(!c("date", "district"), names_to = "scenario", values_to = "infections")
+
+  merged_weekly <- merged_tidy %>%
+    mutate(week = isoweek(date)) %>% # iso 8601 standard: week always begins with Monday; week 1 must contains January 4th
+    mutate(year = isoyear(date)) %>%
+    group_by(across(-c(infections, date))) %>%
+    summarise(infections = mean(infections, na.rm = TRUE), date = mean(date, na.rm = TRUE)) %>%
+    ungroup() %>%
+    select(!c(week, year))
+
+  return(merged_weekly)
+
 }
+

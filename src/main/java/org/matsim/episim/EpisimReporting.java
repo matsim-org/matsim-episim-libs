@@ -107,6 +107,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter outdoorFraction;
 	private BufferedWriter virusStrains;
 	private BufferedWriter cpuTime;
+	private BufferedWriter adaptiveRestrictions;
 
 	String memorizedDate = null;
 
@@ -151,6 +152,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
+
+		adaptiveRestrictions = EpisimWriter.prepare(base + "adaptiveRestrictions.tsv", "day", "date", "location", "activity", "policy");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -213,6 +216,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
+
+		adaptiveRestrictions = EpisimWriter.prepare(base + "adaptiveRestrictions.tsv");
+
 		memorizedDate = date;
 
 		// Write config files again to overwrite these from snapshot
@@ -620,6 +626,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				String.valueOf(taskId)});
 	}
 
+	void reportAdaptiveRestrictions(int day, String date, String location, String activity, String policy) {
+		if (iteration == 0) return;
+		writer.append(adaptiveRestrictions, EpisimWriter.JOINER.join(day, date, location, activity, policy));
+		writer.append(adaptiveRestrictions, "\n");
+	}
+
 	@Override
 	public void close() {
 
@@ -631,6 +643,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(outdoorFraction);
 		writer.close(virusStrains);
 		writer.close(cpuTime);
+		writer.close(adaptiveRestrictions);
 
 	}
 
