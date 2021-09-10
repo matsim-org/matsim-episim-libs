@@ -96,7 +96,8 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayB117.put(LocalDate.parse("2020-12-05"), 1);
+
+		infPerDayB117.put(LocalDate.parse(params.alphaDate), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.7);
@@ -309,17 +310,20 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(20)
+		@GenerateSeeds(16)
 		public long seed;
 
 		@Parameter({4.0})
 		double importFactor;
 
-		@Parameter({0.8, 0.9, 1.0, 1.1, 1.2})
+		@Parameter({0.8, 0.9, 1.0})
 		double thetaFactor;
 
-		@Parameter({0.0, 0.05, 0.1, 0.15, 0.2})
+		@Parameter({0.25, 0.3, 0.35})
 		double leisureOffset;
+
+		@StringParameter({"2020-12-05", "2020-12-12", "2020-12-19", "2020-12-26"})
+		String alphaDate;
 
 		@Parameter({1.0})
 		double alpha;
