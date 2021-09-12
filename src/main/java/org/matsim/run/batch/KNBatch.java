@@ -14,7 +14,7 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.matsim.run.modules.SnzBerlinProductionScenario.Builder;
+import static org.matsim.run.modules.SnzCologneProductionScenario.Builder;
 
 
 /**
@@ -25,16 +25,16 @@ public class KNBatch implements BatchRun<KNBatch.Params> {
 
 	@Override public AbstractModule getBindings( int id, @Nullable Params params ) {
 		log.warn("entering getBindings ...");
-		return new Builder().createSnzBerlinProductionScenario(); }
+		return new Builder().createSnzCologneProductionScenario(); }
 
 	@Override public Metadata getMetadata() {
-		return Metadata.of("berlin", "calibration");
+		return Metadata.of("cologne", "calibration");
 	}
 
 	@Override public Config prepareConfig(int id, Params params) {
 		log.warn("entering prepareConfig ...");
 
-		Config config = new Builder().setImportFactor( params.imprtFctMult ).createSnzBerlinProductionScenario().config();
+		Config config = new Builder().setImportFactor( params.imprtFctMult ).createSnzCologneProductionScenario().config();
 
 		config.global().setRandomSeed( Long.parseLong( params.seed ) );
 

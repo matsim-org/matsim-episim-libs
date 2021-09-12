@@ -58,6 +58,7 @@ import java.util.Map;
 public final class SnzCologneProductionScenario extends AbstractModule {
 
 	public static class Builder {
+		public double scale = 1.;
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
@@ -80,74 +81,63 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			this.importFactorBeforeJune = importFactorBeforeJune;
 			return this;
 		}
-
 		public Builder setImportFactorAfterJune(double importFactorAfterJune) {
 			this.importFactorAfterJune = importFactorAfterJune;
 			return this;
 		}
-
 		public Builder setSample(int sample) {
 			this.sample = sample;
 			return this;
 		}
-
 		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
 			this.diseaseImport = diseaseImport;
 			return this;
 		}
-
 		public Builder setRestrictions(Restrictions restrictions) {
 			this.restrictions = restrictions;
 			return this;
 		}
-
 		public Builder setTracing(Tracing tracing) {
 			this.tracing = tracing;
 			return this;
 		}
-
 		public Builder setVaccinations(Vaccinations vaccinations) {
 			this.vaccinations = vaccinations;
 			return this;
 		}
-
 		public Builder setWeatherModel(WeatherModel weatherModel) {
 			this.weatherModel = weatherModel;
 			return this;
 		}
-
 		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
 			this.infectionModel = infectionModel;
 			return this;
 		}
-
 		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
-
 		public Builder setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
 			this.activityHandling = activityHandling;
 			return this;
 		}
-
 		public SnzCologneProductionScenario createSnzCologneProductionScenario() {
 			return new SnzCologneProductionScenario(this);
 		}
-
 		public Builder setImportOffset(int importOffset) {
 			this.importOffset = importOffset;
 			return this;
 		}
-
 		public Builder setImportFactor(double imprtFctMult) {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
-
 		public Builder setLeisureOffset(double offset) {
 			this.leisureOffset = offset;
 			return this;
+		}
+		public Builder setScaleOfRestrictions(double scale) {
+			this.scale = scale; return this;
 		}
 	}
 
@@ -173,6 +163,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 	private final Class<? extends InfectionModel> infectionModel;
 	private final Class<? extends VaccinationModel> vaccinationModel;
 	private final EpisimConfigGroup.ActivityHandling activityHandling;
+	private final double scale;
 
 	private final double imprtFctMult;
 	private final double importFactorBeforeJune;
@@ -209,6 +200,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
+		this.scale = builder.scale;
 	}
 
 	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
@@ -330,7 +322,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 
 
 		//restrictions and masks
-		RestrictionInput activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+		RestrictionInput activityParticipation = new CreateRestrictionsFromCSV(episimConfig).setScale( scale );
 
 		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210802.csv"));
 

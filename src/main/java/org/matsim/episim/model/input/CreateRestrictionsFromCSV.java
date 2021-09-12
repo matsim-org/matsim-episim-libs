@@ -25,6 +25,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private final EpisimConfigGroup episimConfig;
 	private Path input;
 	private double alpha = 1.;
+	private double scale = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.regHospital;
 	private Map<String, Path> subdistrictInput;
 
@@ -58,6 +59,10 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		return alpha;
 	}
 
+	public CreateRestrictionsFromCSV setScale( double scale ){
+		this.scale = scale;
+		return this;
+	}
 	public CreateRestrictionsFromCSV setExtrapolation(EpisimUtils.Extrapolation extrapolation) {
 		this.extrapolation = extrapolation;
 		return this;
@@ -67,7 +72,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		return extrapolation;
 	}
 
-	static Map<LocalDate, Double> readInput(Path input, String column, double alpha) throws IOException {
+	static Map<LocalDate, Double> readInput( Path input, String column, double alpha, double scale ) throws IOException {
 
 		try (BufferedReader in = Files.newBufferedReader(input)) {
 
@@ -82,10 +87,10 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 				int value = Integer.parseInt(record.get(column));
 
-				double remainingFraction = 1. + (value / 100.);
+				double remainingFraction = (1. + (value / 100.))/scale; // e.g. "1.2"
 
 				// modulate reduction with alpha:
-				double reduction = Math.min(1., alpha * (1. - remainingFraction));
+				double reduction = Math.min(1., alpha * (1. - remainingFraction)); // e.g. min( 1., alpha * (1-1.2) ) = min( 1., alpha * -0.2 ) ... i.e. the "alpha" does not help with values > 100.
 				days.put(date, Math.min(1, 1 - reduction));
 			}
 
@@ -102,13 +107,13 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-		Map<LocalDate, Double> days = readInput(input, "notAtHome", alpha);
+		Map<LocalDate, Double> days = readInput(input, "notAtHome", alpha, scale );
 
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
 		if (locationBasedRfActive) {
 			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
-				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), "notAtHomeExceptLeisureAndEdu", alpha));
+				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), "notAtHomeExceptLeisureAndEdu", alpha, scale ) );
 			}
 		}
 

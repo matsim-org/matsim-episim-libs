@@ -2,7 +2,8 @@ library(tidyverse)
 library(lubridate)
 library(cowplot)
 
-rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
+#rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
+rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/cologne-cases.csv")
 # cc %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> cc2
 cc2 <- rkiCasesReferenceDate %>%
   mutate( date=make_date(year,month,day)) %>%
@@ -10,15 +11,16 @@ cc2 <- rkiCasesReferenceDate %>%
   group_by(year,week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
-rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
-# dd %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> dd2
-dd2 <- rkiCasesReportingDate %>%
-  mutate( date=make_date(year,month,day)) %>%
-  mutate( year = year(date), week = isoweek(date) ) %>%
-  group_by(year,week) %>%
-  summarise(mean=mean(cases),date=mean(date))
+# rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
+# # dd %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> dd2
+# dd2 <- rkiCasesReportingDate %>%
+#   mutate( date=make_date(year,month,day)) %>%
+#   mutate( year = year(date), week = isoweek(date) ) %>%
+#   group_by(year,week) %>%
+#   summarise(mean=mean(cases),date=mean(date))
 
-reducedActParticip <- read_tsv("~/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20201227.csv")
+# reducedActParticip <- read_tsv("~/shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/BerlinSnzData_daily_until20201227.csv")
+reducedActParticip <- read_tsv("~/shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/KölnSnzData_daily_until20210802.csv")
 reducedActParticip2 <- reducedActParticip %>%
   mutate( date=ymd(date)) %>%
   filter( !wday(date) %in% c(1,6,7) ) %>%
@@ -29,8 +31,8 @@ reducedActParticip2 <- reducedActParticip %>%
   summarise(mean=1+0.01*mean(notAtHomeExceptLeisureAndEdu),date=mean(date))
 reducedActParticip2
 
-rkiSurveillance <- read_delim("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv",";")
-rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(`Beginn Meldewoche`) )
+# rkiSurveillance <- read_delim("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv",";")
+# rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(`Beginn Meldewoche`) )
 
 hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv')
 hospital2 <- hospital %>%
@@ -285,6 +287,10 @@ base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_4711/"
 #base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_7564655870752979346/"
 #base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_4711/"
 
+# base <- "output/seed_4711-importFactor_4.0-thetaFactor_0.9-leisureOffset_0.3-alphaDate_2022-01-01-alpha_1.0-deltaInf_2.2-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-deltaSeriouslySick_2.0/"
+# base <- "output/seed_4711-importFactor_4.0-thetaFactor_16.0-leisureOffset_0.3-alphaDate_2022-01-01-alpha_1.0-deltaInf_2.2-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-deltaSeriouslySick_2.0/"
+base <- "output/seed_4711-importFactor_4.0-thetaFactor_1.0-leisureOffset_0.3-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfRestrictions_1.0/"
+
 # ---
 
 infectionsFilename <- Sys.glob(file.path(base, "*infections.txt" ) )
@@ -330,11 +336,11 @@ restrictions2 <- separate(restrictions,"leisure", into = c("leisure", NA, NA), s
 
 p1 <- ggplot() + scale_y_log10() +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
-  geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
-  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
-  geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=150*`Anteil positiver Tests Lagebericht Berlin`), color="purple", size=2, show.legend = TRUE) +
+  # geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
+  # geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
+  # geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=150*`Anteil positiver Tests Lagebericht Berlin`), color="purple", size=2, show.legend = TRUE) +
   geom_point(data=infections2, mapping = aes(x=date,y=newShowingSymptoms), color="orange", size=2 ) +
-  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
+  geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.1,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
   scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-05-01')), expand = expansion() ) +
@@ -357,7 +363,8 @@ p2 <- ggplot() + scale_y_log10() +
 #+
 #  geom_label( data = labels, mapping = aes(x=date,y=ypos,label=text) )
 
-plot_grid( p1, p2, ncol = 1 )
+#plot_grid( p1, p2, ncol = 1 )
+plot_grid( p1, ncol = 1 )
 
 # library(sf)
 

@@ -36,6 +36,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
+				.setScaleOfRestrictions( params==null ? 1d : params.scaleOfRestrictions )
 				.createSnzCologneProductionScenario();
 	}
 
@@ -310,26 +311,26 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(16)
+		@GenerateSeeds(1)
 		public long seed;
 
 		@Parameter({4.0})
 		double importFactor;
 
-		@Parameter({0.8, 0.9, 1.0})
+		@Parameter({1.0})
 		double thetaFactor;
 
-		@Parameter({0.25, 0.3, 0.35})
+		@Parameter({0.3})
 		double leisureOffset;
 
-		@StringParameter({"2020-12-05", "2020-12-12", "2020-12-19", "2020-12-26"})
+		@StringParameter({"2022-01-01"}) // for time being, do not introduce Alpha et all
 		String alphaDate;
 
-		@Parameter({1.0})
-		double alpha;
+//		@Parameter({1.0})
+		double alpha = 1.0;
 
-		@Parameter({2.2})
-		double deltaInf;
+//		@Parameter({2.2})
+		double deltaInf = 2.2;
 
 		@Parameter({0.7})
 		double deltaVacEffect;
@@ -346,11 +347,14 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 //		@StringParameter({"no"})
 //		String schoolMasks;
 
-		@StringParameter({"2021-05-01"})
+		@StringParameter({"2022-01-01"})
 		String deltaDate;
 
-		@Parameter({2.0})
-		double deltaSeriouslySick;
+//		@Parameter({2.0})
+		double deltaSeriouslySick = 2.0;
+
+		@Parameter( {1.0} )
+		double scaleOfRestrictions;
 
 
 	}
@@ -360,7 +364,8 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 				RunParallel.OPTION_SETUP, CologneCalibration.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
+				RunParallel.OPTION_TASK_THREADS, Integer.toString( 4 ),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(100),
 				RunParallel.OPTION_METADATA
 		};
 
