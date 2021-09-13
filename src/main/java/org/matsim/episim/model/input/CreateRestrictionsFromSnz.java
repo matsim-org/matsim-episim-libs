@@ -119,7 +119,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Searches the number of persons in all the different areas
-	 * 
+	 *
 	 * @param zipCodesForAreas
 	 * @param inputPulder
 	 * @return
@@ -153,7 +153,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Searches the number of persons in all this area
-	 * 
+	 *
 	 * @param zipCodes
 	 * @param inputPulder
 	 * @return
@@ -181,7 +181,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Read durations from a single input file for different areas for a day.
-	 * 
+	 *
 	 * @param allSums
 	 * @param areasWithBankHoliday
 	 * @param anaylzedDaysPerAreaAndPeriod
@@ -281,6 +281,35 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 		return sums;
 	}
 
+	static Object2DoubleMap<String> readActivitiesCounts(File file, IntSet zipCodes) throws IOException {
+
+		Object2DoubleMap<String> sums = new Object2DoubleOpenHashMap<>();
+
+		try (BufferedReader reader = IOUtils.getBufferedReader(file.toString())) {
+			CSVParser parse = CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader().parse(reader);
+
+			int i = parse.getHeaderNames().indexOf("22-23h");
+
+			for (CSVRecord record : parse) {
+
+				if (!record.get("type").equals("endNonHomeActs"))
+					continue;
+
+				if (!record.get("zipCode").contains("NULL")) {
+					int zipCode = Integer.parseInt(record.get("zipCode"));
+					if (zipCodes.contains(zipCode)) {
+
+						for (int j = i; j < record.size(); j++) {
+							sums.mergeDouble("notAtHome_22", Double.parseDouble(record.get(j)), Double::sum);
+						}
+					}
+				}
+			}
+		}
+
+		return sums;
+	}
+
 	/**
 	 * Read in all durations from input folder.
 	 */
@@ -299,7 +328,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Analyze data and write result to {@code outputFile}.
-	 * 
+	 *
 	 * @param datesToIgnore
 	 */
 	public void writeDataForCertainArea(Path outputFile, IntSet zipCodes, boolean getPercentageResults,
@@ -364,6 +393,8 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 									LocalDate date = LocalDate.parse(dateString, FMT);
 
 									Object2DoubleMap<String> sums = readDurations(file, zipCodes);
+									File temporal = new File(file.toString().replace("zipCode", "tagesgang"));
+									sums.putAll(readActivitiesCounts(temporal, zipCodes));
 
 									DayOfWeek day = date.getDayOfWeek();
 
@@ -384,6 +415,9 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 				if (datesToIgnore.contains(dateString))
 					continue;
 				Object2DoubleMap<String> sums = readDurations(file, zipCodes);
+
+				File temporal = new File(file.toString().replace("zipCode", "tagesgang"));
+				sums.putAll(readActivitiesCounts(temporal, zipCodes));
 
 				dateString = file.getName().split("_")[0];
 				LocalDate date = LocalDate.parse(dateString, FMT);
@@ -448,9 +482,9 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 	/**
 	 * Analyze data and write result to {@code outputFile}. The result contains data
 	 * for all Bundeslaender.
-	 * 
+	 *
 	 * @param datesToIgnore
-	 * 
+	 *
 	 * @param outputOption
 	 */
 	public void writeBundeslandDataForPublic(Path outputFile, String selectedOutputOption,
@@ -499,9 +533,9 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 	/**
 	 * Analyze data and write result to {@code outputFile}. The result contains data
 	 * for all Bundeslaender.
-	 * 
+	 *
 	 * @param datesToIgnore
-	 * 
+	 *
 	 * @param selectedOutputOptions
 	 */
 	public void writeLandkreisDataForPublic(Path outputFile, String selectedOutputOption,
@@ -549,7 +583,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 	/**
 	 * Reads the data files and writes the output depending on the selected output
 	 * option.
-	 * 
+	 *
 	 * @param selectedOutputOptions
 	 * @param filesWithData
 	 * @param allHolidays
@@ -681,7 +715,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Creates an assignment of the landkreise to the Bundeslaender
-	 * 
+	 *
 	 * @return
 	 * @throws IOException
 	 */
@@ -709,7 +743,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Returns the Bundesland where is Landkreis is located
-	 * 
+	 *
 	 * @param area
 	 * @param lKAssignment
 	 * @return
@@ -727,7 +761,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Assigns the zip codes to a Bundesland
-	 * 
+	 *
 	 * @return
 	 * @throws IOException
 	 */
@@ -756,7 +790,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Assigns the zip codes to Landkreise
-	 * 
+	 *
 	 * @return
 	 * @throws IOException
 	 */
@@ -789,7 +823,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 	/**
 	 * Finds the zipCodes for any Area. If more than one area contains the input
 	 * String an exception is thrown.
-	 * 
+	 *
 	 * @param anyArea
 	 * @return
 	 * @throws IOException
@@ -832,7 +866,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Reads all bank holidays for Germany and each Bundesland
-	 * 
+	 *
 	 * @return
 	 * @throws IOException
 	 */
@@ -867,7 +901,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Finds all bundeslaender with bank holiday on this day
-	 * 
+	 *
 	 * @param areasWithBankHoliday
 	 * @param allHolidays
 	 * @param date
@@ -883,7 +917,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	/**
 	 * Rounds the number 2 places after the comma
-	 * 
+	 *
 	 */
 	static double round2Decimals(double number) {
 		return Math.round(number * 100) * 0.01;
@@ -891,7 +925,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 	private enum Types {
 		date, accomp, business, education, errands, home, leisure, shop_daily, shop_other, traveling, undefined, visit,
-		work, notAtHome, notAtHomeExceptLeisureAndEdu, notAtHomeExceptEdu
+		work, notAtHome, notAtHomeExceptLeisureAndEdu, notAtHomeExceptEdu, notAtHome_22,
 	}
 
 }

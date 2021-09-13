@@ -32,6 +32,7 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -93,6 +94,8 @@ class AnalyzeSnzData implements Callable<Integer> {
 				.map(String::toString).collect(Collectors.toSet());
 		if (ignoreDates == false)
 			datesToIgnore.clear();
+
+		Files.createDirectories(outputFolder);
 
 		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions, startDateStillUsingBaseDays, datesToIgnore);
 
