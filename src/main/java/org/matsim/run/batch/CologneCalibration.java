@@ -35,8 +35,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
-				.setScaleOfRestrictions( params==null ? 1d : params.scaleOfRestrictions )
+				.setScaleOfRestrictions( params==null ? 1d : params.scaleOfUnrestricted )
 				.createSnzCologneProductionScenario();
 	}
 
@@ -66,8 +65,15 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+		// (this means it pulls out the policy that was configured in the production scenario)
+
+		// set leisure to 66% nov until mid-may:
+		builder.apply("2020-10-15", "2021-05-15", (d, e) -> e.put("fraction", params.leisureFraction), "leisure");
+
+		// --- curfew:
 
 		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
+
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
 		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
@@ -84,7 +90,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5., params.alpha);
+					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5., params.tmpVsSeason );
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -309,68 +315,6 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		return config;
 	}
 
-	public static final class Params {
-
-		@GenerateSeeds(1)
-		public long seed;
-
-		@Parameter({4.0})
-		double importFactor;
-
-		@Parameter({1.0})
-		double thetaFactor;
-
-		@Parameter({0.3})
-		double leisureOffset;
-
-		@StringParameter({"2022-01-01"}) // for time being, do not introduce Alpha et all
-		String alphaDate;
-
-//		@Parameter({1.0})
-		double alpha = 1.0;
-
-//		@Parameter({2.2})
-		double deltaInf = 2.2;
-
-		@Parameter({0.7})
-		double deltaVacEffect;
-
-		@Parameter({0.25})
-		double tesRateLeisureWork;
-
-		@Parameter({0.05})
-		double tesRateLeisureWork2;
-
-//		@StringParameter({"alpha", "0.5"})
-//		String delta1Vac;
-
-//		@StringParameter({"no"})
-//		String schoolMasks;
-
-		@StringParameter({"2022-01-01"})
-		String deltaDate;
-
-//		@Parameter({2.0})
-		double deltaSeriouslySick = 2.0;
-
-		@Parameter( {1.0} )
-		double scaleOfRestrictions;
-
-
-	}
-
-	public static void main(String[] args) {
-		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneCalibration.class.getName(),
-				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_TASK_THREADS, Integer.toString( 4 ),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(100),
-				RunParallel.OPTION_METADATA
-		};
-
-		RunParallel.main(args2);
-	}
 
 	/**
 	 * Adds progression config to the given builder.
@@ -413,6 +357,69 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 				.from(EpisimPerson.DiseaseStatus.recovered,
 						to(EpisimPerson.DiseaseStatus.susceptible, transitionRecSus))
 				;
+	}
+
+	public static void main(String[] args) {
+		String[] args2 = {
+				RunParallel.OPTION_SETUP, CologneCalibration.class.getName(),
+				RunParallel.OPTION_PARAMS, Params.class.getName(),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
+				RunParallel.OPTION_TASK_THREADS, Integer.toString( 4 ),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
+				RunParallel.OPTION_METADATA
+		};
+
+		RunParallel.main(args2);
+	}
+
+	public static final class Params {
+
+		@GenerateSeeds(1)
+		public long seed;
+
+		@Parameter({4.0})
+		double importFactor;
+
+		@Parameter({1.3})
+		double thetaFactor;
+
+		@Parameter({0.66})
+		double leisureFraction;
+
+		@StringParameter({"2022-01-01"}) // for time being, do not introduce Alpha at all
+		String alphaDate;
+
+		//		@Parameter({1.0})
+		double tmpVsSeason = 1.0;
+
+		//		@Parameter({2.2})
+		double deltaInf = 2.2;
+
+		@Parameter({0.7})
+		double deltaVacEffect;
+
+		@Parameter({0.25})
+		double tesRateLeisureWork;
+
+		@Parameter({0.05})
+		double tesRateLeisureWork2;
+
+//		@StringParameter({"alpha", "0.5"})
+//		String delta1Vac;
+
+//		@StringParameter({"no"})
+//		String schoolMasks;
+
+		@StringParameter({"2022-01-01"})
+		String deltaDate;
+
+		//		@Parameter({2.0})
+		double deltaSeriouslySick = 2.0;
+
+		@Parameter( {1.2} )
+		double scaleOfUnrestricted;
+
+
 	}
 
 

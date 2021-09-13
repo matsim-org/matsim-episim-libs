@@ -288,17 +288,30 @@ base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_4711/"
 #base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_4711/"
 
 # base <- "output/seed_4711-importFactor_4.0-thetaFactor_0.9-leisureOffset_0.3-alphaDate_2022-01-01-alpha_1.0-deltaInf_2.2-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-deltaSeriouslySick_2.0/"
-# base <- "output/seed_4711-importFactor_4.0-thetaFactor_16.0-leisureOffset_0.3-alphaDate_2022-01-01-alpha_1.0-deltaInf_2.2-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-deltaSeriouslySick_2.0/"
-base <- "output/seed_4711-importFactor_4.0-thetaFactor_1.0-leisureOffset_0.3-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfRestrictions_1.0/"
+base <- "output/seed_4711-importFactor_4.0-thetaFactor_1.3-leisureOffset_0.3-alphaDate_2022-01-01-alpha_1.0-deltaInf_2.2-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-deltaSeriouslySick_2.0/"
+# base <- "output/seed_4711-importFactor_4.0-thetaFactor_1.0-leisureOffset_0.3-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfRestrictions_1.0/"
+
+# base <- "output/seed_4711-importFactor_4.0-thetaFactor_2.0-leisureOffset_0.0-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfUnrestricted_1.3/"
+
+base <- "output/seed_4711-importFactor_10.0-thetaFactor_1.4-leisureOffset_0.3-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfUnrestricted_1.3/"
+
+# base <- "output/seed_4711-importFactor_4.0-thetaFactor_1.3-leisureOffset_0.3-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfUnrestricted_1.2/"
+# fairly good except: (1) leisure in nov'20 LOWER THAN leisure starting mid-dec'20, which is implausible; (2) infections start going up mid-jan'21 (presumably for same reason).
+
+# Attempt to fix that:
+# base <- "output/seed_4711-importFactor_4.0-thetaFactor_1.2-leisureOffset_0.2-alphaDate_2022-01-01-deltaVacEffect_0.7-tesRateLeisureWork_0.25-tesRateLeisureWork2_0.05-deltaDate_2022-01-01-scaleOfUnrestricted_1.2/"
+# but does not work: slope in october not steep enough; also no plausible trajectory afterwards.
+
+# from nighttime activities.  240 = 100%.  160 (since nov) = 66%.  Curfew starting 2021-04-17 is already in code.
 
 # ---
 
 infectionsFilename <- Sys.glob(file.path(base, "*infections.txt" ) )
 assertthat::assert_that( !is_empty(infectionsFilename) )
 
-infections <- read_tsv(infectionsFilename)
-infections2 <- infections %>%
-  filter(district=="Berlin") %>%
+infections2 <- read_tsv(infectionsFilename) %>%
+#  filter(district=="Berlin") %>%
+  filter(district=="Köln") %>%
   mutate( newShowingSymptoms=nShowingSymptomsCumulative-lag(nShowingSymptomsCumulative)) %>%
   mutate( week = isoweek(date),year=year(date) ) %>%
   group_by( year,week ) %>%
@@ -306,27 +319,21 @@ infections2 <- infections %>%
 
 # ---
 
-outdoorsFilename <- Sys.glob(file.path(base, "*outdoorFraction.tsv" ) )
-outdoors <- read_tsv(outdoorsFilename)
-outdoors2 <- outdoors %>%
+outdoors2 <- read_tsv(Sys.glob(file.path(base, "*outdoorFraction.tsv" ) )) %>%
   mutate( week = isoweek(date), year = year(date) ) %>%
   group_by( year,week ) %>%
   summarize( mean=1.1-mean(outdoorFraction), date=mean(date))
 
 # ---
 
-diseaseImportFilename <- Sys.glob(file.path(base, "*diseaseImport.tsv" ) )
-diseaseImport <- read_tsv(diseaseImportFilename)
-diseaseImport2 <- diseaseImport %>%
+diseaseImport2 <- read_tsv(Sys.glob(file.path(base, "*diseaseImport.tsv" ) )) %>%
   mutate( week = isoweek(date), year = year(date) ) %>%
   group_by( year,week ) %>%
   summarize( mean=mean(nInfected), date=mean(date))
 
 # ---
 
-restrictionsFilename <- Sys.glob(file.path(base, "*restrictions.txt"))
-restrictions <- read_tsv( restrictionsFilename )
-restrictions2 <- separate(restrictions,"leisure", into = c("leisure", NA, NA), sep = "_") %>%
+restrictions2 <- separate(read_tsv(Sys.glob(file.path(base, "*restrictions.txt"))), "leisure", into = c("leisure", NA, NA), sep = "_") %>%
   transform( leisure = as.numeric(leisure)) %>%
   mutate( year = year(date), week = isoweek(date) ) %>%
   group_by( year, week ) %>%
