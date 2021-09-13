@@ -149,6 +149,13 @@
             <version>1.5.0</version>
         </dependency>
 
+        <!-- Dependencies for zip archive access -->
+        <dependency>
+            <groupId>net.java.truevfs</groupId>
+            <artifactId>truevfs-comp-zip</artifactId>
+            <version>0.14.0</version>
+        </dependency>
+
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>

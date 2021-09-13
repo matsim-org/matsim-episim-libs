@@ -25,6 +25,9 @@ import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import net.java.truevfs.comp.zip.ZipEntry;
+import net.java.truevfs.comp.zip.ZipFile;
+import net.java.truevfs.comp.zip.ZipOutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -43,10 +46,7 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.*;
@@ -97,6 +97,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
 	private final double sampleSize;
+
+	/**
+	 * Whether all events are written into one file.
+	 */
+	private final boolean singleEvents;
+
+	/**
+	 * Zip output stream, when single events is true.
+	 */
+	private ZipOutputStream zipOut;
+
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
@@ -119,7 +130,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * flag to ensure only one threads writes certain outputs.
 	 */
-	private AtomicBoolean writeFlag = new AtomicBoolean(false);
+	private final AtomicBoolean writeFlag = new AtomicBoolean(false);
 
 
 	@Inject
@@ -135,11 +146,21 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			base = outDir;
 
 		episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		singleEvents = episimConfig.getSingleEventFile() == EpisimConfigGroup.SingleEventFile.yes;
 
 		try {
-			eventPath = Path.of(outDir, "events");
-			if (!Files.exists(eventPath))
-				Files.createDirectories(eventPath);
+			if (singleEvents) {
+				eventPath = Path.of(base + "events.zip");
+				if (!Files.exists(eventPath.getParent()))
+					Files.createDirectories(eventPath.getParent());
+
+				zipOut = new ZipOutputStream(Files.newOutputStream(eventPath));
+				zipOut.setMethod(12);
+			} else {
+				eventPath = Path.of(outDir, "events");
+				if (!Files.exists(eventPath))
+					Files.createDirectories(eventPath);
+			}
 
 		} catch (IOException e) {
 			log.error("Could not create output directory", e);
@@ -210,7 +231,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-					"outdoorFraction.tsv", "strains.tsv")) {
+					"outdoorFraction.tsv", "strains.tsv", "events.zip")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -227,6 +248,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
+
+		if (singleEvents)
+			zipOut = new ZipOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND), new ZipFile(eventPath));
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
@@ -556,7 +580,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @see EpisimContactEvent
 	 */
 	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-										   StringBuilder actType, double duration) {
+	                                       StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
@@ -584,11 +608,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	}
 
 	void reportTimeUse(Set<String> activities, Collection<EpisimPerson> persons, long iteration, String date) {
-		if (iteration == 0) return;
+		if (iteration == 0 || episimConfig.getReportTimeUse() == EpisimConfigGroup.ReportTimeUse.no) return;
 
 		Map<String, Double> avg = new ConcurrentHashMap<>();
 
-        activities.parallelStream().forEach(act -> {
+		activities.parallelStream().forEach(act -> {
 			int i = 1;
 			double timeSpent = 0;
 			for (EpisimPerson person : persons) {
@@ -713,6 +737,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(virusStrains);
 		writer.close(cpuTime);
 
+		if (singleEvents) {
+			try {
+				zipOut.close();
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
+		}
+
 	}
 
 	/**
@@ -748,7 +780,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		if (iteration == 0 || writeEvents == EpisimConfigGroup.WriteEvents.none)
 			return;
 
-		events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+		if (singleEvents) {
+			try {
+				ZipEntry entry = new ZipEntry(String.format("day_%03d.xml", iteration));
+				zipOut.putNextEntry(entry);
+
+				events = new BufferedWriter(new OutputStreamWriter(zipOut));
+
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
+		} else
+			events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
+
 		writer.append(events, "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<events version=\"1.0\">\n");
 	}
 
@@ -759,7 +803,17 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void flushEvents() {
 		if (events != null) {
 			writer.append(events, "</events>");
-			writer.close(events);
+
+			if (singleEvents) {
+				try {
+					writer.flush(events);
+					zipOut.closeEntry();
+					zipOut.flush();
+				} catch (IOException e) {
+					throw new UncheckedIOException(e);
+				}
+			} else
+				writer.close(events);
 		}
 	}
 

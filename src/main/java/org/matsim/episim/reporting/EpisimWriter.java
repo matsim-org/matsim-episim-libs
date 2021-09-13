@@ -192,4 +192,13 @@ public class EpisimWriter {
 			throw new UncheckedIOException(e);
 		}
 	}
+
+	public void flush(BufferedWriter writer) {
+		try {
+			writer.flush();
+		} catch (IOException e) {
+			log.error("Could not flush writer", e);
+			throw new UncheckedIOException(e);
+		}
+	}
 }

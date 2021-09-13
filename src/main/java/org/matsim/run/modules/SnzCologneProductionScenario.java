@@ -439,7 +439,9 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-07-01", "2021-08-13", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-07-01", "2021-08-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+
+			// TODO: end was 2021-08-13, scaling works only until there is data.
 	}
 
 

@@ -35,8 +35,8 @@ import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.*;
@@ -44,7 +44,6 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.DecimalFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -111,7 +110,7 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Creates an output directory, with a name based on current config and contact intensity..
+	 * Creates an output directory, with a name based on current config and contact intensity.
 	 */
 	public static void setOutputDirectory(Config config) {
 		StringBuilder outdir = new StringBuilder("output");
@@ -544,7 +543,7 @@ public final class EpisimUtils {
 //		System.exit(-1);
 		return outdoorFractions;
 	}
-	
+
 	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange, Double alpha) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
@@ -594,7 +593,7 @@ public final class EpisimUtils {
 //		System.exit(-1);
 		return outdoorFractions;
 	}
-	
+
 	private static double getOutDoorFractionFromDateAndTemp(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold, double alpha) {
 
 		double tMid;
@@ -653,7 +652,7 @@ public final class EpisimUtils {
 		else {
 			throw new RuntimeException("outDoorFractionFromDate not defined for month: " + month);
 		}
-		
+
 		return alpha * outDoorFractionFromTemperature + (1 - alpha) * outDoorFractionFromDate;
 	}
 

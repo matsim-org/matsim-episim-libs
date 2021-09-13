@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
@@ -397,7 +398,42 @@ public final class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * Applies a function on the raw config for certain acitivies.
+		 * Applies a function on the raw remaining fraction for certain activities. Note that, if no fractions are set then nothing will be executed.
+		 *
+		 * @param from       from date (inclusive)
+		 * @param to         to date (inclusive)
+		 * @param f          function to apply, first parameter is the date, second is the current remaining fraction
+		 * @param activities activities where to apply
+		 */
+		public ConfigBuilder applyToRf(String from, String to, BiFunction<LocalDate, Double, Double> f, String... activities) {
+
+			LocalDate fromDate = LocalDate.parse(from);
+			LocalDate toDate = LocalDate.parse(to);
+
+			for (String act : activities) {
+				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.get(act);
+
+				for (Map.Entry<String, Map<String, Object>> e : p.entrySet()) {
+					LocalDate other = LocalDate.parse(e.getKey());
+
+					Double rf = (Double) e.getValue().get("fraction");
+
+					// skip empty and special values
+					if (rf == null || rf < -100)
+						continue;
+
+					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) && (other.isEqual(toDate) || other.isBefore(toDate)))
+						e.getValue().put("fraction", f.apply(other, rf));
+
+				}
+			}
+
+			return this;
+
+		}
+
+		/**
+		 * Applies a function on the raw config for certain activities.
 		 *
 		 * @param from       from date (inclusive)
 		 * @param to         to date (inclusive)
