@@ -28,29 +28,33 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.*;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
-import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
-import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
  * Scenario for Cologne using Senozon events for different weekdays.
@@ -330,16 +334,20 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 
 
 		//restrictions and masks
-		RestrictionInput activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
+		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210802.csv"));
+		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210807.csv"));
 
-		ConfigBuilder builder = null;
+		// TODO
+
+		activityParticipation.setScale(1.0);
+		activityParticipation.setLeisureAsNightly(true);
+
+		ConfigBuilder builder;
 		try {
-			builder = (ConfigBuilder) activityParticipation.createPolicy();
+			builder = activityParticipation.createPolicy();
 		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			throw new UncheckedIOException(e1);
 		}
 
 		builder.restrict(LocalDate.parse("2020-03-16"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
@@ -368,18 +376,17 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			for (int ii = 0; ii <= 14; ii++) {
 				LocalDate date = masksCenterDate.plusDays(-14 / 2 + ii);
-				double clothFraction = 1./3. * 0.9;
-				double ffpFraction = 1./3. * 0.9;
-				double surgicalFraction = 1./3. * 0.9;
+				double clothFraction = 1. / 3. * 0.9;
+				double ffpFraction = 1. / 3. * 0.9;
+				double surgicalFraction = 1. / 3. * 0.9;
 
 				builder.restrict(date, Restriction.ofMask(Map.of(
-						FaceMask.CLOTH, clothFraction * ii / 14,
-						FaceMask.N95, ffpFraction * ii / 14,
-						FaceMask.SURGICAL, surgicalFraction * ii / 14)),
+								FaceMask.CLOTH, clothFraction * ii / 14,
+								FaceMask.N95, ffpFraction * ii / 14,
+								FaceMask.SURGICAL, surgicalFraction * ii / 14)),
 						"pt", "shop_daily", "shop_other", "errands");
 			}
 		}
-
 
 
 		//tracing
@@ -405,8 +412,6 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 
 
-
-
 		episimConfig.setInputDays(inputDays);
 
 		//outdoorFractions
@@ -426,24 +431,22 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			);
 		}
 
-		// TODO: is this still needed with adjusted policy?
 		//leisure & work factor
 		if (this.restrictions != Restrictions.no) {
 //			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
-			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", (double) e.get("fraction") - leisureOffset), "leisure");
+			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
-			double workVacFactor = 0.92;
-			builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-07-01", "2021-08-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
 
-			// TODO: end was 2021-08-13, scaling works only until there is data.
-	}
+			builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
+			builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
+			builder.applyToRf("2020-10-09", "2020-10-23", workVacFactor, "work", "business");
+			builder.applyToRf("2020-12-18", "2021-01-01", workVacFactor, "work", "business");
+			builder.applyToRf("2021-01-29", "2021-02-05", workVacFactor, "work", "business");
+			builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
+			builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
 
+		}
 
 		// vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -458,72 +461,72 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
 					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 1.0)
 							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 							.atDay(1, 1.0)
 							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 1.0)
 							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 							.atDay(1, 1.0)
 							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					;
+			;
 
-		double effectivnessVector = 0.5;
-		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
-		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
-		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+			double effectivnessVector = 0.5;
+			double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
+			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
+			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 
-		vaccinationConfig.getOrAddParams(VaccinationType.vector)
-			.setDaysBeforeFullEffect(fullEffectVector)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
+					.setDaysBeforeFullEffect(fullEffectVector)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessVector)
+							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessVector)
+							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
 			;
 
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
@@ -602,7 +605,6 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
-
 
 
 		episimConfig.setPolicy(builder.build());
