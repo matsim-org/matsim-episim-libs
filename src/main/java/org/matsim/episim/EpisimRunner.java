@@ -139,10 +139,12 @@ public final class EpisimRunner {
 		manager.resetHandlers(iteration);
 		handler.reset(iteration);
 
-		if (handler.isFinished())
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(this.config, EpisimConfigGroup.class);
+
+		if (episimConfig.isEndEarly() && handler.isFinished())
 			return false;
 
-		DayOfWeek day = EpisimUtils.getDayOfWeek(ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class), iteration);
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		// Process all events
 		replay.replayEvents(handler, day);

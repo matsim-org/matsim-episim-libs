@@ -28,6 +28,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private double alpha = 1.;
 	private double scale = 1.;
 	private boolean leisureAsNightly = false;
+	private double nightlyScale = 1.;
 	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.regHospital;
 	private Map<String, Path> subdistrictInput;
 
@@ -68,6 +69,11 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 	public CreateRestrictionsFromCSV setLeisureAsNightly(boolean leisureAsNightly) {
 		this.leisureAsNightly = leisureAsNightly;
+		return this;
+	}
+
+	public CreateRestrictionsFromCSV setNightlyScale(double nightlyScale) {
+		this.nightlyScale = nightlyScale;
 		return this;
 	}
 
@@ -122,19 +128,19 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 			act.remove("leisure");
 
-			createPolicy(builder, act.toArray(new String[0]), "notAtHome");
-			createPolicy(builder, new String[]{"leisure"}, "notAtHome_22");
+			createPolicy(builder, act.toArray(new String[0]), "notAtHome", scale);
+			createPolicy(builder, new String[]{"leisure"}, "notAtHome_22", nightlyScale);
 
 		} else {
 
-			createPolicy(builder, act.toArray(new String[0]), "notAtHome");
+			createPolicy(builder, act.toArray(new String[0]), "notAtHome", scale);
 
 		}
 
 		return builder;
 	}
 
-	private void createPolicy(FixedPolicy.ConfigBuilder builder, String[] act, String column) throws IOException {
+	private void createPolicy(FixedPolicy.ConfigBuilder builder, String[] act, String column, double scale) throws IOException {
 
 		// If active, the remaining fraction is calculated and saved for each subdistrict
 		boolean locationBasedRfActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)

@@ -82,6 +82,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 	private static final String SINGLE_EVENT_FILE = "singleEventFile";
+	private static final String END_EARLY = "endEarly";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -165,6 +166,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
 	private SingleEventFile singleEventFile = SingleEventFile.no;
+	private boolean endEarly = false;
 	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -924,6 +926,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	public Collection<EventFileParams> getInputEventsFiles() {
 		return (Collection<EventFileParams>) getParameterSets(EventFileParams.SET_TYPE);
+	}
+
+	/**
+	 * Whether simulation ends when there are no further infected persons.
+	 */
+	@StringGetter(END_EARLY)
+	public boolean isEndEarly() {
+		return endEarly;
+	}
+
+	@StringSetter(END_EARLY)
+	public void setEndEarly(boolean endEarly) {
+		this.endEarly = endEarly;
 	}
 
 	/**
