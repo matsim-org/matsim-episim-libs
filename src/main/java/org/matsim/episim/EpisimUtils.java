@@ -256,8 +256,11 @@ public final class EpisimUtils {
 		File[] fileList = new File(sourceDir).listFiles();
 		if (fileList == null) return;
 		for (File file : fileList) {
+
+			if (file.getName().equals("events.zip"))
+				assert true; // no op
 			// Zip files (i.e. other snapshots or large files) are not added
-			if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
+			else if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
 				continue;
 
 			if (file.isDirectory()) {

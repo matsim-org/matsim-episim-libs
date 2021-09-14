@@ -155,7 +155,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					Files.createDirectories(eventPath.getParent());
 
 				zipOut = new ZipOutputStream(Files.newOutputStream(eventPath));
-				zipOut.setMethod(12);
 			} else {
 				eventPath = Path.of(outDir, "events");
 				if (!Files.exists(eventPath))

@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
+import net.java.truevfs.comp.zip.ZipEntry;
+import net.java.truevfs.comp.zip.ZipFile;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -20,7 +22,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.testcases.MatsimTestUtils;
 
-import java.io.File;
+import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
 
@@ -92,7 +94,7 @@ public class RunEpisimSnapshotTest {
 	}
 
 	@Test
-	public void compareSnapshots() {
+	public void compareSnapshots() throws IOException {
 
 		episimConfig.setSnapshotInterval(15);
 		runner.run(30);
@@ -107,19 +109,33 @@ public class RunEpisimSnapshotTest {
 
 		for (File file : Objects.requireNonNull(new File(utils.getOutputDirectory()).listFiles())) {
 
-			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")
-					|| file.getName().endsWith("cputime.tsv")) continue;
+			if (file.getName().equals("events.zip")) {
 
-			assertThat(file)
-					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
+				File a = new File(file.getParentFile(), "events");
+				extract(file, a);
 
-			// check event files
-			if (file.getName().equals("events")) {
+				File b = new File(fromSnapshot, "events");
+				extract(new File(fromSnapshot, file.getName()), b);
+
+				assertThat(a).isNotEmptyDirectory();
+
+				for (File af : Objects.requireNonNull(a.listFiles())) {
+					assertThat(af).hasSameTextualContentAs(new File(b, af.getName()));
+				}
+
+			} else if (file.getName().equals("events")) {
 				for (File event : Objects.requireNonNull(file.listFiles())) {
 					assertThat(event)
 							.hasSameBinaryContentAs(new File(fromSnapshot, "events/" + event.getName()));
 				}
 			}
+
+
+			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")
+					|| file.getName().endsWith("cputime.tsv")) continue;
+
+			assertThat(file)
+					.hasSameTextualContentAs(new File(fromSnapshot, file.getName()));
 
 		}
 
@@ -134,4 +150,29 @@ public class RunEpisimSnapshotTest {
 
 		RunEpisimIntegrationTest.assertSimulationOutput(utils);
 	}
+
+
+	/**
+	 * Extract zip file for comparison.
+	 */
+	private static void extract(File file, File outputDir) throws IOException {
+
+		try (ZipFile zipFile = new ZipFile(file.toPath()).recoverLostEntries()) {
+			Enumeration<? extends ZipEntry> entries = zipFile.entries();
+			while (entries.hasMoreElements()) {
+				ZipEntry entry = entries.nextElement();
+				File entryDestination = new File(outputDir, entry.getName());
+				if (entry.isDirectory()) {
+					entryDestination.mkdirs();
+				} else {
+					entryDestination.getParentFile().mkdirs();
+					try (InputStream in = zipFile.getInputStream(entry.getName());
+					     OutputStream out = new FileOutputStream(entryDestination)) {
+						in.transferTo(out);
+					}
+				}
+			}
+		}
+	}
+
 }
