@@ -4,8 +4,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
-import net.java.truevfs.comp.zip.ZipEntry;
-import net.java.truevfs.comp.zip.ZipFile;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Rule;
@@ -25,6 +25,7 @@ import org.matsim.testcases.MatsimTestUtils;
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.zip.GZIPInputStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -109,7 +110,7 @@ public class RunEpisimSnapshotTest {
 
 		for (File file : Objects.requireNonNull(new File(utils.getOutputDirectory()).listFiles())) {
 
-			if (file.getName().equals("events.zip")) {
+			if (file.getName().equals("events.tar")) {
 
 				File a = new File(file.getParentFile(), "events");
 				extract(file, a);
@@ -131,7 +132,7 @@ public class RunEpisimSnapshotTest {
 			}
 
 
-			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz")
+			if (file.isDirectory() || file.getName().endsWith(".zip") || file.getName().endsWith(".xml") || file.getName().endsWith(".gz") || file.getName().endsWith(".tar")
 					|| file.getName().endsWith("cputime.tsv")) continue;
 
 			assertThat(file)
@@ -157,17 +158,17 @@ public class RunEpisimSnapshotTest {
 	 */
 	private static void extract(File file, File outputDir) throws IOException {
 
-		try (ZipFile zipFile = new ZipFile(file.toPath()).recoverLostEntries()) {
-			Enumeration<? extends ZipEntry> entries = zipFile.entries();
-			while (entries.hasMoreElements()) {
-				ZipEntry entry = entries.nextElement();
-				File entryDestination = new File(outputDir, entry.getName());
+		try (TarArchiveInputStream archive = new TarArchiveInputStream(new FileInputStream(file))) {
+
+			TarArchiveEntry entry;
+			while ((entry = archive.getNextTarEntry()) != null) {
+				File entryDestination = new File(outputDir, entry.getName().replace(".gz", ""));
 				if (entry.isDirectory()) {
 					entryDestination.mkdirs();
 				} else {
 					entryDestination.getParentFile().mkdirs();
-					try (InputStream in = zipFile.getInputStream(entry.getName());
-					     OutputStream out = new FileOutputStream(entryDestination)) {
+					try (OutputStream out = new FileOutputStream(entryDestination)) {
+						GZIPInputStream in = new GZIPInputStream(archive);
 						in.transferTo(out);
 					}
 				}

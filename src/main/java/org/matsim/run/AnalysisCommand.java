@@ -21,8 +21,8 @@
 package org.matsim.run;
 
 import com.google.common.base.Joiner;
-import net.java.truevfs.comp.zip.ZipEntry;
-import net.java.truevfs.comp.zip.ZipFile;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -38,6 +38,7 @@ import picocli.AutoComplete;
 import picocli.CommandLine;
 
 import javax.annotation.Nullable;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -45,6 +46,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Runnable class that does nothing by itself, but has to be invoked with one subcommand.
@@ -154,16 +156,14 @@ public class AnalysisCommand implements Runnable {
 			}
 		} else {
 
-			try (ZipFile zip = new ZipFile(events).recoverLostEntries()) {
-				Enumeration<? extends ZipEntry> entries = zip.entries();
+			try (TarArchiveInputStream ar = new TarArchiveInputStream(new FileInputStream(events.toFile()))) {
 
-				while (entries.hasMoreElements()) {
-					ZipEntry entry = entries.nextElement();
-
-					InputStream is = zip.getInputStream(entry.getName());
-
+				ArchiveEntry entry;
+				while ((entry = ar.getNextEntry()) != null) {
 					callback.accept(entry.getName());
-					new EpisimEventsReader(manager).parse(is);
+
+					new EpisimEventsReader(manager).parse(new NonClosingGZIPStream(ar));
+
 					read.add(entry.getName());
 				}
 
@@ -216,7 +216,7 @@ public class AnalysisCommand implements Runnable {
 		}
 
 		try {
-			Optional<Path> o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.zip")).findFirst();
+			Optional<Path> o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
 			return o.orElse(null);
 		} catch (IOException e) {
 			log.error("Error finding event files for {}", scenario);
@@ -235,6 +235,22 @@ public class AnalysisCommand implements Runnable {
 	@Override
 	public void run() {
 		throw new CommandLine.ParameterException(spec.commandLine(), "Missing required subcommand");
+	}
+
+	/**
+	 * This stream will not close the underlying stream.
+	 */
+	private static final class NonClosingGZIPStream extends GZIPInputStream {
+
+		public NonClosingGZIPStream(InputStream in) throws IOException {
+			super(in);
+		}
+
+		@Override
+		public void close() throws IOException {
+			// Don't close, but clean the inflater
+			inf.end();
+		}
 	}
 
 }

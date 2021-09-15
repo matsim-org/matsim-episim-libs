@@ -25,9 +25,8 @@ import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import net.java.truevfs.comp.zip.ZipEntry;
-import net.java.truevfs.comp.zip.ZipFile;
-import net.java.truevfs.comp.zip.ZipOutputStream;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -53,6 +52,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.zip.GZIPOutputStream;
 
 import static org.matsim.episim.EpisimUtils.readChars;
 import static org.matsim.episim.EpisimUtils.writeChars;
@@ -106,12 +106,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Zip output stream, when single events is true.
 	 */
-	private ZipOutputStream zipOut;
-
-	/**
-	 * Is set when zip out is appended from snapshot.
-	 */
-	private ZipFile appendee;
+	private TarArchiveOutputStream zipOut;
 
 	/**
 	 * Output for event files.
@@ -162,11 +157,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		try {
 			if (singleEvents) {
-				eventPath = Path.of(base + "events.zip");
+				eventPath = Path.of(base + "events.tar");
 				if (!Files.exists(eventPath.getParent()))
 					Files.createDirectories(eventPath.getParent());
 
-				zipOut = new ZipOutputStream(Files.newOutputStream(eventPath));
+				zipOut = new TarArchiveOutputStream(Files.newOutputStream(eventPath));
 				os = new ByteArrayOutputStream(1024);
 			} else {
 				eventPath = Path.of(outDir, "events");
@@ -244,7 +239,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-					"outdoorFraction.tsv", "strains.tsv", "events.zip")) {
+					"outdoorFraction.tsv", "strains.tsv", "events.tar")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -263,8 +258,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		memorizedDate = date;
 
 		if (singleEvents) {
-			appendee = new ZipFile(eventPath).recoverLostEntries();
-			zipOut = new ZipOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND), appendee);
+			zipOut = new TarArchiveOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND));
 		}
 
 		// Write config files again to overwrite these from snapshot
@@ -754,9 +748,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		if (singleEvents) {
 			try {
-				if (appendee != null)
-					appendee.close();
-
 				zipOut.close();
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
@@ -799,7 +790,12 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			return;
 
 		if (singleEvents) {
-			events = new OutputStreamWriter(os);
+			try {
+				// each entry is gzipped individually, otherwise we could not easily append files to the archive
+				events = new OutputStreamWriter(new GZIPOutputStream(os));
+			} catch (IOException e) {
+				throw new UncheckedIOException(e);
+			}
 		} else
 			events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
 
@@ -813,25 +809,24 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void flushEvents() {
 		if (events != null) {
 			writer.append(events, "</events>");
+			writer.close(events);
 
 			if (singleEvents) {
 				try {
-					ZipEntry entry = new ZipEntry(String.format("day_%03d.xml", iteration));
-					zipOut.putNextEntry(entry);
+					TarArchiveEntry entry = new TarArchiveEntry(String.format("day_%03d.xml.gz", iteration));
+					entry.setSize(os.size());
 
-					writer.flush(events);
+					zipOut.putArchiveEntry(entry);
+
 					os.writeTo(zipOut);
-
 					os.reset();
 
-					zipOut.closeEntry();
+					zipOut.closeArchiveEntry();
 					zipOut.flush();
 				} catch (IOException e) {
 					throw new UncheckedIOException(e);
 				}
 			}
-
-			writer.close(events);
 		}
 	}
 

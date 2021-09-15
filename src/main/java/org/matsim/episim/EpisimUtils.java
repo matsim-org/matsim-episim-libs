@@ -257,7 +257,7 @@ public final class EpisimUtils {
 		if (fileList == null) return;
 		for (File file : fileList) {
 
-			if (file.getName().equals("events.zip"))
+			if (file.getName().equals("events.tar"))
 				assert true; // no op
 			// Zip files (i.e. other snapshots or large files) are not added
 			else if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
