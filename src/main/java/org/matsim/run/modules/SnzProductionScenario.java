@@ -361,32 +361,32 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		return scenario;
 	}
 
-	public static enum DiseaseImport {yes, onlySpring, no}
+	public enum DiseaseImport {yes, onlySpring, no}
 
-	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
+	public enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
 
-	public static enum Masks {yes, no}
+	public enum Masks {yes, no}
 
-	public static enum Tracing {yes, no}
+	public enum Tracing {yes, no}
 
-	public static enum Vaccinations {yes, no}
+	public enum Vaccinations {yes, no}
 
-	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
+	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
-	public static enum ChristmasModel {no, restrictive, permissive}
+	public enum ChristmasModel {no, restrictive, permissive}
 
-	public static enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
+	public enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
 
-	public static enum AdjustRestrictions {yes, no}
+	public enum AdjustRestrictions {yes, no}
 
-	public static enum EasterModel {yes, no}
+	public enum EasterModel {yes, no}
 
-	public static enum LocationBasedRestrictions {yes, no}
+	public enum LocationBasedRestrictions {yes, no}
 
 	/**
 	 * Abstract builder with default config options.
 	 */
-	public abstract static class Builder {
+	public abstract static class Builder<T extends SnzProductionScenario> {
 		private int importOffset = 0;
 		private int sample = 25;
 		private DiseaseImport diseaseImport = DiseaseImport.yes;
@@ -408,87 +408,92 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
-		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
+		/**
+		 * Build the scenario module.
+		 */
+		public abstract T build();
+
+		public Builder<T> setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
 			return this;
 		}
 
-		public Builder setImportFactorAfterJune(double importFactorAfterJune) {
+		public Builder<T> setImportFactorAfterJune(double importFactorAfterJune) {
 			this.importFactorAfterJune = importFactorAfterJune;
 			return this;
 		}
 
-		public Builder setSample(int sample) {
+		public Builder<T> setSample(int sample) {
 			this.sample = sample;
 			return this;
 		}
 
-		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
+		public Builder<T> setDiseaseImport(DiseaseImport diseaseImport) {
 			this.diseaseImport = diseaseImport;
 			return this;
 		}
 
-		public Builder setRestrictions(Restrictions restrictions) {
+		public Builder<T> setRestrictions(Restrictions restrictions) {
 			this.restrictions = restrictions;
 			return this;
 		}
 
-		public Builder setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
+		public Builder<T> setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
 			this.adjustRestrictions = adjustRestrictions;
 			return this;
 		}
 
-		public Builder setMasks(Masks masks) {
+		public Builder<T> setMasks(Masks masks) {
 			this.masks = masks;
 			return this;
 		}
 
-		public Builder setTracing(Tracing tracing) {
+		public Builder<T> setTracing(Tracing tracing) {
 			this.tracing = tracing;
 			return this;
 		}
 
-		public Builder setVaccinations(Vaccinations vaccinations) {
+		public Builder<T> setVaccinations(Vaccinations vaccinations) {
 			this.vaccinations = vaccinations;
 			return this;
 		}
 
-		public Builder setChristmasModel(ChristmasModel christmasModel) {
+		public Builder<T> setChristmasModel(ChristmasModel christmasModel) {
 			this.christmasModel = christmasModel;
 			return this;
 		}
 
-		public Builder setEasterModel(EasterModel easterModel) {
+		public Builder<T> setEasterModel(EasterModel easterModel) {
 			this.easterModel = easterModel;
 			return this;
 		}
 
-		public Builder setWeatherModel(WeatherModel weatherModel) {
+		public Builder<T> setWeatherModel(WeatherModel weatherModel) {
 			this.weatherModel = weatherModel;
 			return this;
 		}
 
-		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
+		public Builder<T> setInfectionModel(Class<? extends InfectionModel> infectionModel) {
 			this.infectionModel = infectionModel;
 			return this;
 		}
 
-		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
+		public Builder<T> setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
 
-		public Builder setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
+		public Builder<T> setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
 			this.activityHandling = activityHandling;
 			return this;
 		}
 
-		public Builder setImportOffset(int importOffset) {
+		public Builder<T> setImportOffset(int importOffset) {
 			this.importOffset = importOffset;
 			return this;
 		}
 
-		public Builder setImportFactor(double imprtFctMult) {
+		public Builder<T> setImportFactor(double imprtFctMult) {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}

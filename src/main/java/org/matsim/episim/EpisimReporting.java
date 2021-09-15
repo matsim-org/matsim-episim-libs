@@ -108,6 +108,18 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private ZipOutputStream zipOut;
 
+	/**
+	 * Is set when zip out is appended from snapshot.
+	 */
+	private ZipFile appendee;
+
+	/**
+	 * Output for event files.
+	 */
+	private final ByteArrayOutputStream os;
+
+
+
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
@@ -115,7 +127,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Current day / iteration.
 	 */
 	private int iteration;
-	private BufferedWriter events;
+	private Writer events;
 	private BufferedWriter infectionReport;
 	private BufferedWriter infectionEvents;
 	private BufferedWriter restrictionReport;
@@ -155,8 +167,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					Files.createDirectories(eventPath.getParent());
 
 				zipOut = new ZipOutputStream(Files.newOutputStream(eventPath));
+				os = new ByteArrayOutputStream(1024);
 			} else {
 				eventPath = Path.of(outDir, "events");
+				os = null;
 				if (!Files.exists(eventPath))
 					Files.createDirectories(eventPath);
 			}
@@ -248,8 +262,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
 
-		if (singleEvents)
-			zipOut = new ZipOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND), new ZipFile(eventPath));
+		if (singleEvents) {
+			appendee = new ZipFile(eventPath).recoverLostEntries();
+			zipOut = new ZipOutputStream(Files.newOutputStream(eventPath, StandardOpenOption.APPEND), appendee);
+		}
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
@@ -738,6 +754,9 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		if (singleEvents) {
 			try {
+				if (appendee != null)
+					appendee.close();
+
 				zipOut.close();
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
@@ -780,15 +799,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			return;
 
 		if (singleEvents) {
-			try {
-				ZipEntry entry = new ZipEntry(String.format("day_%03d.xml", iteration));
-				zipOut.putNextEntry(entry);
-
-				events = new BufferedWriter(new OutputStreamWriter(zipOut));
-
-			} catch (IOException e) {
-				throw new UncheckedIOException(e);
-			}
+			events = new OutputStreamWriter(os);
 		} else
 			events = IOUtils.getBufferedWriter(eventPath.resolve(String.format("day_%03d.xml.gz", iteration)).toString());
 
@@ -805,14 +816,22 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			if (singleEvents) {
 				try {
+					ZipEntry entry = new ZipEntry(String.format("day_%03d.xml", iteration));
+					zipOut.putNextEntry(entry);
+
 					writer.flush(events);
+					os.writeTo(zipOut);
+
+					os.reset();
+
 					zipOut.closeEntry();
 					zipOut.flush();
 				} catch (IOException e) {
 					throw new UncheckedIOException(e);
 				}
-			} else
-				writer.close(events);
+			}
+
+			writer.close(events);
 		}
 	}
 
