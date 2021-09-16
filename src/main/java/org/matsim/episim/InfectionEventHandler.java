@@ -764,26 +764,6 @@ public final class InfectionEventHandler implements Externalizable {
 
 			testingModel.performTesting(person, iteration);
 		}
-		if (activityParticipationModel instanceof LocationBasedParticipationModel) {
-			//			System.out.println("ZERO COUNT: " + ((LocationBasedParticipationModel) activityParticipationModel).zeroCnt);
-			long zeroCnt = ((LocationBasedParticipationModel) activityParticipationModel).zeroCnt;
-			try {
-				BufferedWriter writer = new BufferedWriter(new FileWriter("output/zeroCount.txt", true));
-				//				writer.append(' ');
-				writer.append(episimConfig.getDistrictLevelRestrictions() + " - ZERO COUNT for iteration " + iteration + ": " + zeroCnt + "\n");
-
-				writer.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-
-			log.warn(episimConfig.getDistrictLevelRestrictions() + " - ZERO COUNT for iteration " + iteration + ": " + zeroCnt);
-			((LocationBasedParticipationModel) activityParticipationModel).zeroCnt = 0;
-
-			Map<String, Long> districtCount = ((LocationBasedParticipationModel) activityParticipationModel).districtCount;
-			log.warn("district COUNT for iteration " + iteration + ": " + districtCount);
-			((LocationBasedParticipationModel) activityParticipationModel).districtCount = new HashMap<>();
-		}
 		reporting.reportCpuTime(iteration, "TestingModel", "finished", -1);
 
 		handlers.forEach(h -> {

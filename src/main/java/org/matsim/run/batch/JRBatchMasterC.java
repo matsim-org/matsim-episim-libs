@@ -51,9 +51,9 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 
 		if (DEBUG) {
 			if (params.adaptivePolicy != AdaptiveRestrictions.yesLocal ||
-					params.restrictedFraction != 0.6 || params.trigger != 100.
-//					|| params.tracingCapacity != 2000 || params.tracingProbability != 1.0
-//					|| params.tracingDelay != 1
+					params.restrictedFraction != 0.6 || params.trigger != 100. || params.seed != 4711
+				//					|| params.tracingCapacity != 2000 || params.tracingProbability != 1.0
+				//					|| params.tracingDelay != 1
 			) {
 
 				return null;
