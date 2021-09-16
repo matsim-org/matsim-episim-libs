@@ -11,8 +11,9 @@ library(lubridate)
 
 rm(list = ls())
 
-file <- "C:/Users/jakob/projects/matsim-episim/output/locationBasedRestrictions_yesForHomeLocation-seed_4711/locationBasedRestrictions2.policy.conf"
+# file <- "C:/Users/jakob/projects/matsim-episim/output/locationBasedRestrictions_yesForHomeLocation-seed_4711/locationBasedRestrictions2.policy.conf"
 # file <- "C:/Users/jakob/projects/matsim-episim/TESTpolicy.conf"
+file <- "C:/Users/jakob/Desktop/adaptLocal22.policyEND.conf"
 df <- data.frame(number = unlist(fromJSON(file, flatten = TRUE)))
 
 
@@ -40,15 +41,15 @@ df_clean3 <- df_clean2 %>%
 
 district_list <- unique(df_clean$district)
 # ggplot(df4, aes(x = as.Date(date,format = "%Y-%m-%d"), y = number)) +
-ggplot(df_clean3 %>% filter(activity == "work"),# & (district == "Berlin" | district==paste0(district_list[7]))),
+ggplot(df_clean3 %>% filter(activity == "leisure"),# & (district == "Berlin" | district==paste0(district_list[7]))),
        aes(x = date, y = number)) +
   geom_line(aes(col=district)) +
-  xlim(ymd("2020-10-17"),ymd("2020-12-16")) +
+  # xlim(ymd("2020-10-17"),ymd("2020-12-16")) +
   labs(y="remaining fraction")+
   theme_minimal()#' +
   # facet_wrap(~district, ncol = 4) #aes(color = district)
 
-
+ddd <- unique((df_clean3 %>% filter(activity == "leisure" & number < 0.001 ))$district)
 
 df_clean3 %>%
   filter(date == as.Date("2020-11-08", format = "%Y-%m-%d") & district == "Steglitz_Zehlendorf") %>%

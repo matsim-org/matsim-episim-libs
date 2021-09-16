@@ -79,7 +79,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
-	private static final String RESTRICT_SPECIFIC_DISTRICT = "restrictSpecificDistrict";
+	private static final String DISTRICTS = "districts";
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 
@@ -162,6 +162,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
+	private List<String> districts = new ArrayList<>();
+
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
 	private int threads = 2;
@@ -732,6 +734,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
 
+	public void setDistricts(List<String> districts) {
+		this.districts = districts;
+	}
+
+	public List<String> getDistricts() {
+		return this.districts;
+
+	}
+
+	@StringSetter(DISTRICTS)
+	void setDistricts(String districts) {
+		this.districts = Splitter.on(";").splitToList(districts);
+	}
+
+	@StringGetter(DISTRICTS)
+	String getDistrictsString() {
+		return Joiner.on(";").join(this.districts);
+	}
+
 	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
 	public ContagiousOptimization getContagiousOptimization() {
 		return this.contagiousContainerOptimization;
@@ -978,7 +999,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public enum ActivityHandling {
 
 		/**
-		 * Activity participation is randdom during each contact.
+		 * Activity participation is random during each contact.
 		 */
 		duringContact,
 
@@ -998,14 +1019,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		yesForHomeLocation,
 		no
 	}
-
-	public enum RestrictSpecificDistrict {
-		no,
-		work,
-		leisure,
-		work_and_leisure
-	}
-
 
     /**
      * In the case that this optimization is enabled, the infectionDynamics
