@@ -20,7 +20,7 @@ import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
 public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiveRestrictionsLocal.Params> {
 
-	boolean DEBUG = false;
+	boolean DEBUG = true;
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
@@ -48,10 +48,11 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 
 		if (DEBUG) {
 			if (params.adaptivePolicy != AdaptiveRestrictions.yesLocal ||
-					params.restrictedFraction != 0.2 || params.trigger != 50.
-				//					|| params.tracingCapacity != 200 || params.tracingProbability == 1.0
-				//					|| params.tracingStrategy != NONE
+					params.restrictedFraction != 0.6 || params.trigger != 100.
+					|| params.tracingCapacity != 2000 || params.tracingProbability != 1.0
+					|| params.tracingDelay != 1
 			) {
+
 				return null;
 
 			}
@@ -65,7 +66,6 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-		//		episimConfig.setStartFromSnapshot("../episim-snapshot-270-2020-11-20.zip");
 
 		List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
 				"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
@@ -73,13 +73,9 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 		episimConfig.setDistricts(subdistricts);
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-		//		builder.clearAfter("2020-12-14");
-		//		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-
-		//		LocalDate date = LocalDate.parse("2020-04-01");
 
 		// General setup of adaptive restrictions
-		LocalDate date = LocalDate.MIN;
+		LocalDate minDate = LocalDate.MIN;
 
 		double workTrigger = params.trigger;
 		double leisureTrigger = params.trigger;
@@ -91,7 +87,7 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 		double restrictedFraction = params.restrictedFraction;
 
 		// global
-		String startDate = DEBUG ? "2020-04-01" : "2020-08-01";
+		String startDate = DEBUG ? "2020-04-05" : "2020-08-01";
 		if (params.adaptivePolicy.equals(AdaptiveRestrictions.yesGlobal)) {
 			com.typesafe.config.Config policy = AdaptivePolicy.config()
 					.startDate(startDate)
@@ -102,36 +98,36 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 					.incidenceTrigger(shopErrandsTrigger, shopErrandsTrigger, "shop_other", "shop_daily", "errands")
 					.initialPolicy(builder)
 					.restrictedPolicy(FixedPolicy.config()
-							.restrict(date, Restriction.of(restrictedFraction), "work")
-							.restrict(date, Restriction.of(restrictedFraction), "shop_daily")
-							.restrict(date, Restriction.of(restrictedFraction), "shop_other")
-							.restrict(date, Restriction.of(restrictedFraction), "errands")
-							.restrict(date, Restriction.of(restrictedFraction), "business")
-							.restrict(date, Restriction.of(restrictedFraction), "visit")
-							.restrict(date, Restriction.of(restrictedFraction), "leisure")
-							.restrict(date, Restriction.of(restrictedFraction), "educ_higher")
-							.restrict(date, Restriction.of(.2), "educ_kiga")
-							.restrict(date, Restriction.of(.2), "educ_primary")
-							.restrict(date, Restriction.of(.2), "educ_secondary")
-							.restrict(date, Restriction.of(.2), "educ_tertiary")
-							.restrict(date, Restriction.of(.2), "educ_other")
-							.restrict(date, Restriction.ofLocationBasedRf(new HashMap<>()), "work", "shop_daily", "shop_other", "errands", "business", "visit", "leisure", "educ_higher", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+							.restrict(minDate, Restriction.of(restrictedFraction), "work")
+							.restrict(minDate, Restriction.of(restrictedFraction), "shop_daily")
+							.restrict(minDate, Restriction.of(restrictedFraction), "shop_other")
+							.restrict(minDate, Restriction.of(restrictedFraction), "errands")
+							.restrict(minDate, Restriction.of(restrictedFraction), "business")
+							.restrict(minDate, Restriction.of(restrictedFraction), "visit")
+							.restrict(minDate, Restriction.of(restrictedFraction), "leisure")
+							.restrict(minDate, Restriction.of(restrictedFraction), "educ_higher")
+							.restrict(minDate, Restriction.of(.2), "educ_kiga")
+							.restrict(minDate, Restriction.of(.2), "educ_primary")
+							.restrict(minDate, Restriction.of(.2), "educ_secondary")
+							.restrict(minDate, Restriction.of(.2), "educ_tertiary")
+							.restrict(minDate, Restriction.of(.2), "educ_other")
+							.restrict(minDate, Restriction.ofLocationBasedRf(new HashMap<>()), "work", "shop_daily", "shop_other", "errands", "business", "visit", "leisure", "educ_higher", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 					)
 					.openPolicy(FixedPolicy.config()
-							.restrict(date, Restriction.of(openFraction), "work")
-							.restrict(date, Restriction.of(openFraction), "shop_daily")
-							.restrict(date, Restriction.of(openFraction), "shop_other")
-							.restrict(date, Restriction.of(openFraction), "errands")
-							.restrict(date, Restriction.of(openFraction), "business")
-							.restrict(date, Restriction.of(openFraction), "visit")
-							.restrict(date, Restriction.of(openFraction), "leisure")
-							.restrict(date, Restriction.of(openFraction), "educ_higher")
-							.restrict(date, Restriction.of(1.), "educ_kiga")
-							.restrict(date, Restriction.of(1.), "educ_primary")
-							.restrict(date, Restriction.of(1.), "educ_secondary")
-							.restrict(date, Restriction.of(1.), "educ_tertiary")
-							.restrict(date, Restriction.of(1.), "educ_other")
-							.restrict(date, Restriction.ofLocationBasedRf(new HashMap<>()), "work", "shop_daily", "shop_other", "errands", "business", "visit", "leisure", "educ_higher", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+							.restrict(minDate, Restriction.of(openFraction), "work")
+							.restrict(minDate, Restriction.of(openFraction), "shop_daily")
+							.restrict(minDate, Restriction.of(openFraction), "shop_other")
+							.restrict(minDate, Restriction.of(openFraction), "errands")
+							.restrict(minDate, Restriction.of(openFraction), "business")
+							.restrict(minDate, Restriction.of(openFraction), "visit")
+							.restrict(minDate, Restriction.of(openFraction), "leisure")
+							.restrict(minDate, Restriction.of(openFraction), "educ_higher")
+							.restrict(minDate, Restriction.of(1.), "educ_kiga")
+							.restrict(minDate, Restriction.of(1.), "educ_primary")
+							.restrict(minDate, Restriction.of(1.), "educ_secondary")
+							.restrict(minDate, Restriction.of(1.), "educ_tertiary")
+							.restrict(minDate, Restriction.of(1.), "educ_other")
+							.restrict(minDate, Restriction.ofLocationBasedRf(new HashMap<>()), "work", "shop_daily", "shop_other", "errands", "business", "visit", "leisure", "educ_higher", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 					)
 					.build();
 
@@ -151,36 +147,34 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 					.incidenceTrigger(shopErrandsTrigger, shopErrandsTrigger, "shop_other", "shop_daily", "errands")
 					.initialPolicy(builder)
 					.restrictedPolicy(FixedPolicy.config()
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "work")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "shop_daily")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "shop_other")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "errands")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "business")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "visit")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "leisure")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "educ_higher")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_kiga")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_primary")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_secondary")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_tertiary")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_other")
-							//							.restrict(date, Restriction.ofLocationBasedRf(new HashMap<>()), "work", "shop_daily", "shop_other", "errands", "business", "visit", "leisure", "educ_higher", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "work")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "shop_daily")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "shop_other")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "errands")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "business")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "visit")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "leisure")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, restrictedFraction), "educ_higher")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_kiga")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_primary")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_secondary")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_tertiary")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, .2), "educ_other")
 					)
 					.openPolicy(FixedPolicy.config()
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "work")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "shop_daily")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "shop_other")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "errands")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "business")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "visit")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "leisure")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "educ_higher")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_kiga")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_primary")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_secondary")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_tertiary")
-									.restrict(date, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_other")
-							//							.restrict(date, Restriction.ofLocationBasedRf(new HashMap<>()), "work", "shop_daily", "shop_other", "errands", "business", "visit", "leisure", "educ_higher", "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "work")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "shop_daily")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "shop_other")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "errands")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "business")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "visit")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "leisure")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, openFraction), "educ_higher")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_kiga")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_primary")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_secondary")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_tertiary")
+									.restrict(minDate, constructRestrictionWithLocalAndGlobalRf(subdistricts, 1.), "educ_other")
 					)
 					.build();
 
@@ -188,24 +182,26 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 		}
 
 		// TRACING
-		// based on BerlinSecondLockdown.java
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-				LocalDate.of(2020, 4, 1), 300,
-				LocalDate.of(2020, 6, 15), 2000,
-				LocalDate.of(2020,8,1), params.tracingCapacity
+
+		if (DEBUG) {
+			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(5);
+		}
+
+		tracingConfig.setTracingProbability(Map.of(
+				LocalDate.of(2020, 4, 1), 0.5,
+				LocalDate.parse(startDate), params.tracingProbability
 		));
-		tracingConfig.setTracingProbability(params.tracingProbability);
 
+		tracingConfig.setTracingDelay_days(Map.of(
+				LocalDate.of(2020,4,1),5,
+				LocalDate.parse(startDate), params.tracingDelay
+		));
 
-		//		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		//		tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(30);
-		//		tracingConfig.setStrategy(TracingConfigGroup.Strategy.INDIVIDUAL_ONLY);
-		////		tracingConfig.setStrategy(Enum.valueOf(TracingConfigGroup.Strategy.class, params.tracingStrategy));
-		//		tracingConfig.setLocationThreshold(3);
-		//		tracingConfig.setTracingDelay_days(1);
-		//		tracingConfig.setCapacityType(TracingConfigGroup.CapacityType.PER_PERSON);
-		//		tracingConfig.setTracingCapacity_pers_per_day(params.tracingCapacity);
+		tracingConfig.setTracingCapacity_pers_per_day(Map.of(
+				LocalDate.of(2020, 4, 1), 0,
+				LocalDate.parse(startDate), params.tracingCapacity
+		));
 
 		return config;
 	}
@@ -235,22 +231,19 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 
 		//		@Parameter({Integer.MAX_VALUE, 100.})
 		//		@Parameter({5, 10, 50, 100})
-		@Parameter({10})
+		@Parameter({10,100})
 		double trigger;
 
 
 		// Tracing:
 
-		//		@EnumParameter(value = TracingConfigGroup.Strategy.class, ignore = "RANDOM")
-		//		TracingConfigGroup.Strategy tracingStrategy;
-
-//		@StringParameter({"INDIVIDUAL_ONLY", "NONE"})
-//		String tracingStrategy;
-
-		@IntParameter({0, 2000, 4000, Integer.MAX_VALUE})
+		@IntParameter({0, 2000, Integer.MAX_VALUE})
 		int tracingCapacity;
 
-		@Parameter({0.6, 1.0})
+		@IntParameter({5, 1})
+		int tracingDelay;
+
+		@Parameter({0.5, 1.0})
 		double tracingProbability;
 
 	}

@@ -76,8 +76,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 	/**
 	 * Aggregated cumulative cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
+	 *
+	 * added extra layer of "geoAttribute", so that cumulative cases can be calculated
+	 * for different geographic scopes (e.g. State vs. County vs Neighborhood) -- jr, Sept'21
 	 */
-//	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCases2 = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
 	private final Map<String, Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>>> cumulativeCases = new HashMap<>();
 	/**
 	 * Number of daily infections per virus strain.

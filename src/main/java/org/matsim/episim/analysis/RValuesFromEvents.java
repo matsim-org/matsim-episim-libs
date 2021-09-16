@@ -296,7 +296,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 		else if (infectionType.endsWith("leisure")) activityType = "leisure";
 		else if (infectionType.endsWith("restaurant")) activityType = "restaurant";
 		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
-		else if (infectionType.endsWith("home")) activityType = "home";
+		else if (infectionType.endsWith("home") || infectionType.startsWith("home")) activityType = "home";
 		else if (infectionType.startsWith("pt")) activityType = "pt";
 		else activityType = "other";
 

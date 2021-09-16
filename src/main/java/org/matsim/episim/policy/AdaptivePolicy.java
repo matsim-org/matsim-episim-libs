@@ -22,6 +22,7 @@ package org.matsim.episim.policy;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Injector;
+import com.sun.istack.Nullable;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
 import it.unimi.dsi.fastutil.objects.*;
@@ -87,7 +88,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	 */
 	private List<String> subdistricts;
 
-	private enum RestrictionStatus {
+	public enum RestrictionStatus {
 		initial,
 		restricted,
 		open
@@ -112,7 +113,6 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		org.matsim.core.config.Config config = injector.getInstance(org.matsim.core.config.Config.class);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.subdistricts = episimConfig.getDistricts();
-
 	}
 
 	/**
@@ -135,6 +135,9 @@ public class AdaptivePolicy extends ShutdownPolicy {
 		this.subdistricts = null;
 	}
 
+	public Map<String, Map<String, RestrictionStatus>> getRestrictionStatus() {
+		return restrictionStatus;
+	}
 
 	/**
 	 * Create a config builder for {@link AdaptivePolicy}.
@@ -225,9 +228,6 @@ public class AdaptivePolicy extends ShutdownPolicy {
 			updateRestrictionsForLocation(report, restrictions, date, location);
 
 		}
-		System.out.println( "LEISURE : " + restrictions.get("leisure").getRemainingFraction());
-		System.out.println( "LEISURE : " + restrictions.get("leisure").getLocationBasedRf());
-
 
 	}
 
@@ -268,15 +268,12 @@ public class AdaptivePolicy extends ShutdownPolicy {
 				if (incidence.values().stream().allMatch(inc -> inc <= trigger.get(0))) {
 					updateRestrictions(date, openPolicy, act, restrictions.get(act), location);
 					restrictionStatus.get(location).put(act, RestrictionStatus.open);
-					System.out.println("ADAPTIVE POLICY: " + location + " opened on " + date.toString());
 				}
 
 			} else {
 				if (incidence.getDouble(incidence.lastKey()) >= trigger.get(1)) {
 					updateRestrictions(date, restrictedPolicy, act, restrictions.get(act), location);
 					restrictionStatus.get(location).put(act, RestrictionStatus.restricted);
-					System.out.println("ADAPTIVE POLICY: " + location + " restricted on " + date.toString());
-
 					// TODO: what happens if restrictions aren't updated because restriction date has not occured yet; restrictionStatus should not change in this case
 				}
 			}
@@ -284,7 +281,7 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	}
 
 	/**
-	 * Calculate incidence depending
+	 * Calculate incidence
 	 */
 	private void calculateCases(EpisimReporting.InfectionReport report, String location) {
 		double cases = report.nShowingSymptomsCumulative * (100_000d / report.nTotal());
@@ -314,22 +311,16 @@ public class AdaptivePolicy extends ShutdownPolicy {
 				// if RestrictionScope == local and location == Kreuzberg, etc. --> then that neighborhood is changed, but total is left intact.
 
 				if (this.restrictionScope.equals(RestrictionScope.global)) {
-					restriction.getLocationBasedRf().clear();
-					restriction.update(r);
+					restriction.update(r); //update automatically clears the location based rf
 				} else if (this.restrictionScope.equals(RestrictionScope.local)) {
 					if (location.equals(TOTAL)) {
-						Restriction rUpdate = Restriction.clone(r);
-						rUpdate.getLocationBasedRf().clear();
-						restriction.update(rUpdate);
+						restriction.updateGlobalValuesOnly(r);
 					} else {
-						Map<String, Double> restrictionForSingleDistrict = new HashMap<>();
-						if (r.getLocationBasedRf().containsKey(location)) {
-							restrictionForSingleDistrict.put(location, r.getLocationBasedRf().get(location));
+						Map<String, Double> locationBasedRf = restriction.getLocationBasedRf();
+						Map<String, Double> updater = r.getLocationBasedRf();
+						if (updater.containsKey(location)) {
+							locationBasedRf.put(location, updater.get(location));
 						}
-
-						Restriction restrictionForDistrict = Restriction.ofLocationBasedRf(restrictionForSingleDistrict);
-
-						restriction.updateLocalRfWithoutRemovingDistrictEntries(restrictionForDistrict);
 					}
 
 				}

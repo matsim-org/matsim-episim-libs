@@ -130,26 +130,6 @@ public final class EpisimRunner {
 
 		reporting.close();
 
-		String outDir = config.controler().getOutputDirectory();
-		String base = "";
-		// file names depend on the run name
-		if (config.controler().getRunId() != null) {
-			base = outDir + "/" + config.controler().getRunId() + ".";
-		} else if (!outDir.endsWith("/")) {
-			base = outDir + "/";
-		} else
-			base = outDir;
-
-		try {
-			Files.writeString(Paths.get(base + "policyEND.conf"),
-					episimConfig.getPolicy().root().render(ConfigRenderOptions.defaults()
-							.setFormatted(true)
-							.setComments(false)
-							.setOriginComments(false)
-							.setJson(true)));
-		} catch (IOException e) {
-			log.error("Could not write policy config", e);
-		}
 
 	}
 

@@ -413,7 +413,7 @@ public final class Restriction {
 		// All values may be optional and are only set if present
 		if (r.getRemainingFraction() != null) {
 			remainingFraction = r.getRemainingFraction();
-//			locationBasedRf = new HashMap<>();
+			locationBasedRf = new HashMap<>();
 		}
 
 		if (r.getCiCorrection() != null)
@@ -442,8 +442,34 @@ public final class Restriction {
 		}
 	}
 
-	void updateLocalRfWithoutRemovingDistrictEntries(Restriction r) {
-		locationBasedRf.putAll(r.locationBasedRf);
+	/**
+	 * Updates everything except for location based rf
+	 */
+	void updateGlobalValuesOnly(Restriction r) {
+		// All values may be optional and are only set if present
+		if (r.getRemainingFraction() != null) {
+			remainingFraction = r.getRemainingFraction();
+		}
+
+		if (r.getCiCorrection() != null)
+			ciCorrection = r.getCiCorrection();
+
+		if (r.getMaxGroupSize() != null)
+			maxGroupSize = r.getMaxGroupSize();
+
+		if (r.getReducedGroupSize() != null)
+			reducedGroupSize = r.getReducedGroupSize();
+
+		if (r.closed != null)
+			closed = r.closed;
+
+		if (r.closingHours != null)
+			closingHours = r.closingHours;
+
+		if (!r.maskUsage.isEmpty()) {
+			maskUsage.clear();
+			maskUsage.putAll(r.maskUsage);
+		}
 	}
 
 	/**
