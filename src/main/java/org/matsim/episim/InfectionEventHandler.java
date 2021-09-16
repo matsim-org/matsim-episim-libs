@@ -21,7 +21,6 @@
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
 import com.google.inject.AbstractModule;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -187,11 +186,6 @@ public final class InfectionEventHandler implements Externalizable {
 		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
-
-		//TODO: move to production scenario
-		if (!episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.no) && this.policy instanceof AdaptivePolicy) {
-			this.reporting.districtAttribute = "subdistrict";
-		}
 
 		this.localRnd = new SplittableRandom(config.global().getRandomSeed() + 65536);
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
@@ -740,9 +734,20 @@ public final class InfectionEventHandler implements Externalizable {
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 
 		if (policy instanceof AdaptivePolicy && policy.getConfig().getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
-				((AdaptivePolicy) policy).updateRestrictions(reports, im); //reporting.createReports(personMap.values(), iteration,episimConfig.getDistrictLevelRestrictionsAttribute())
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, episimConfig.getDistrictLevelRestrictionsAttribute());
+			((AdaptivePolicy) policy).updateRestrictions(reportsLocal, im);
 		} else {
 			policy.updateRestrictions(report, im);
+		}
+
+		if (policy instanceof AdaptivePolicy) {
+			Map<String, Map<String, AdaptivePolicy.RestrictionStatus>> restrictionStatus = ((AdaptivePolicy) policy).getRestrictionStatus();
+			for (String location : restrictionStatus.keySet()) {
+				Map<String, AdaptivePolicy.RestrictionStatus> stringRestrictionStatusMap = restrictionStatus.get(location);
+				for (String activity : stringRestrictionStatusMap.keySet()) {
+					reporting.reportAdaptiveRestrictions(iteration, date.toString(), location, activity, stringRestrictionStatusMap.get(activity).toString());
+				}
+			}
 		}
 
 		reporting.reportCpuTime(iteration, "TestingModel", "start", -1);
