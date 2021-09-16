@@ -38,6 +38,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
 /**
  * Set the restrictions based on fixed rules with day and {@link Restriction#getRemainingFraction()}.
@@ -120,6 +121,10 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 				double hospital = (report.nCritical + report.nSeriouslySick) * (100_000d / report.nTotal());
 				double rf = 1 - (1 - Math.exp(-hospital / (3838 * (100_000d / report.nTotal()))));
+
+				if (rf < 0)
+					log.warn("Remaining fraction smaller 0: {} (critical/sick: {}/{}, total: {})", rf, report.nCritical, report.nSeriouslySick, report.nTotal());
+
 				entry.getValue().setRemainingFraction(rf);
 			}
 
@@ -382,7 +387,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
 				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,
-						null, null, null, null, null, new HashMap<String, Double>(), restriction), activities);
+						null, null, null, null, null, new HashMap<String, Double>(), null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}
@@ -399,7 +404,42 @@ public final class FixedPolicy extends ShutdownPolicy {
 		}
 
 		/**
-		 * Applies a function on the raw config for certain acitivies.
+		 * Applies a function on the raw remaining fraction for certain activities. Note that, if no fractions are set then nothing will be executed.
+		 *
+		 * @param from       from date (inclusive)
+		 * @param to         to date (inclusive)
+		 * @param f          function to apply, first parameter is the date, second is the current remaining fraction
+		 * @param activities activities where to apply
+		 */
+		public ConfigBuilder applyToRf(String from, String to, BiFunction<LocalDate, Double, Double> f, String... activities) {
+
+			LocalDate fromDate = LocalDate.parse(from);
+			LocalDate toDate = LocalDate.parse(to);
+
+			for (String act : activities) {
+				Map<String, Map<String, Object>> p = (Map<String, Map<String, Object>>) params.get(act);
+
+				for (Map.Entry<String, Map<String, Object>> e : p.entrySet()) {
+					LocalDate other = LocalDate.parse(e.getKey());
+
+					Double rf = (Double) e.getValue().get("fraction");
+
+					// skip empty and special values
+					if (rf == null || rf < -100)
+						continue;
+
+					if ((other.isEqual(fromDate) || other.isAfter(fromDate)) && (other.isEqual(toDate) || other.isBefore(toDate)))
+						e.getValue().put("fraction", f.apply(other, rf));
+
+				}
+			}
+
+			return this;
+
+		}
+
+		/**
+		 * Applies a function on the raw config for certain activities.
 		 *
 		 * @param from       from date (inclusive)
 		 * @param to         to date (inclusive)

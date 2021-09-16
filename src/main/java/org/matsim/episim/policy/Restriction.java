@@ -3,6 +3,7 @@ package org.matsim.episim.policy;
 import com.typesafe.config.Config;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.poi.util.Beta;
 import org.matsim.api.core.v01.Id;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.facilities.ActivityFacility;
@@ -65,6 +66,12 @@ public final class Restriction {
 	private Map<String, Double> locationBasedRf;
 
 	/**
+	 * Fraction of susceptible persons, performing an activity.
+	 */
+	@Nullable
+	private Double susceptibleRf;
+
+	/**
 	 * Stores if this restriction should be extrapolated.
 	 */
 	private boolean extrapolate = false;
@@ -73,7 +80,8 @@ public final class Restriction {
 	 * Constructor.
 	 */
 	private Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
-						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf) {
+						@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf,
+	                    @Nullable Double susceptibleRf) {
 
 		if (remainingFraction != null && !Objects.equals(remainingFraction, ShutdownPolicy.REG_HOSPITAL) && (Double.isNaN(remainingFraction) || remainingFraction < 0 || remainingFraction > 1))
 			throw new IllegalArgumentException("remainingFraction must be between 0 and 1 but is=" + remainingFraction);
@@ -81,12 +89,15 @@ public final class Restriction {
 			throw new IllegalArgumentException("contact intensity correction must be larger than 0 but is=" + ciCorrection);
 		if (maskUsage != null && maskUsage.values().stream().anyMatch(p -> p < 0 || p > 1))
 			throw new IllegalArgumentException("Mask usage probabilities must be between [0, 1]");
+		if (susceptibleRf != null &&  (Double.isNaN(susceptibleRf) || susceptibleRf < 0 || susceptibleRf > 1))
+			throw new IllegalArgumentException("Susceptible fraction must be between 0 and 1 but is="+ susceptibleRf);
 
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
 		this.reducedGroupSize = reducedGroupSize;
 		this.closingHours = closingHours;
+		this.susceptibleRf = susceptibleRf;
 
 		if (closed != null) {
 			this.closed = closed.stream().map(s -> Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());
@@ -124,7 +135,8 @@ public final class Restriction {
 	 * @param maskUsage will only be used of other is null
 	 */
 	Restriction(@Nullable Double remainingFraction, @Nullable Double ciCorrection, @Nullable Integer maxGroupSize, @Nullable Integer reducedGroupSize,
-				@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf, Restriction other) {
+				@Nullable List<String> closed, @Nullable ClosingHours closingHours, @Nullable Map<FaceMask, Double> maskUsage, Map<String, Double> locationBasedRf,
+				@Nullable Double susceptibleRf, Restriction other) {
 		this.remainingFraction = remainingFraction;
 		this.ciCorrection = ciCorrection;
 		this.maxGroupSize = maxGroupSize;
@@ -132,6 +144,7 @@ public final class Restriction {
 		this.closingHours = closingHours;
 		this.maskUsage.putAll(other != null ? other.maskUsage : maskUsage);
 		this.locationBasedRf = locationBasedRf;
+		this.susceptibleRf = susceptibleRf;
 
 		if (closed != null) {
 			this.closed = closed.stream().map(s -> Id.create(s, ActivityFacility.class)).collect(Collectors.toSet());
@@ -148,33 +161,34 @@ public final class Restriction {
 	}
 
 
+
 	/**
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
 		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE, null,
-				new ClosingHours(0, 0), Map.of(), new HashMap<>());
+				new ClosingHours(0, 0), Map.of(), new HashMap<>(), 1d);
 	}
 
 	/**
 	 * Restriction only reducing the {@link #remainingFraction}.
 	 */
 	public static Restriction of(double remainingFraction) {
-		return new Restriction(remainingFraction, null, null, null, null, null, null, new HashMap<>());
+		return new Restriction(remainingFraction, null, null, null,null, null, null, new HashMap<>(), null);
 	}
 
 	/**
 	 * Restriction with remaining fraction and ci correction.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection) {
-		return new Restriction(remainingFraction, ciCorrection, null, null, null, null, null, new HashMap<>());
+		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, null, new HashMap<>(), null);
 	}
 
 	/**
 	 * Restriction with remaining fraction, ci correction and mask usage.
 	 */
 	public static Restriction of(double remainingFraction, double ciCorrection, Map<FaceMask, Double> maskUsage) {
-		return new Restriction(remainingFraction, ciCorrection, null, null, null, null, maskUsage, new HashMap<>());
+		return new Restriction(remainingFraction, ciCorrection, null, null,null, null, maskUsage, new HashMap<>(), null);
 	}
 
 	/**
@@ -182,7 +196,7 @@ public final class Restriction {
 	 * See {@link #ofMask(FaceMask, double)}.
 	 */
 	public static Restriction of(double remainingFraction, FaceMask mask, double maskCompliance) {
-		return new Restriction(remainingFraction, null, null, null, null, null, Map.of(mask, maskCompliance), new HashMap<>());
+		return new Restriction(remainingFraction, null, null, null,null, null, Map.of(mask, maskCompliance), new HashMap<>(), null);
 	}
 
 	/**
@@ -191,7 +205,7 @@ public final class Restriction {
 	 * @see #ofMask(Map)
 	 */
 	public static Restriction ofMask(FaceMask mask, double complianceRate) {
-		return new Restriction(null, null, null, null, null, null, Map.of(mask, complianceRate), new HashMap<>());
+		return new Restriction(null, null, null, null,null, null, Map.of(mask, complianceRate), new HashMap<>(), null);
 	}
 
 	/**
@@ -199,28 +213,28 @@ public final class Restriction {
 	 * Not defined probability goes into the {@link FaceMask#NONE}.
 	 */
 	public static Restriction ofMask(Map<FaceMask, Double> maskUsage) {
-		return new Restriction(null, null, null, null, null, null, maskUsage, new HashMap<>());
+		return new Restriction(null, null, null,null, null, null, maskUsage, new HashMap<>(), null);
 	}
 
 	/**
 	 * Creates a restriction with certain facilities closed. Should not be combined with other restrictions.
 	 */
 	public static Restriction ofClosedFacilities(List<String> closed) {
-		return new Restriction(null, null, null, null, closed, null, null, new HashMap<>());
+		return new Restriction(null, null, null,null, closed, null, null, new HashMap<>(), null);
 	}
 
 	/**
 	 * Creates a restriction, which has only a contact intensity correction set.
 	 */
 	public static Restriction ofCiCorrection(double ciCorrection) {
-		return new Restriction(null, ciCorrection, null, null, null, null, null, new HashMap<>());
+		return new Restriction(null, ciCorrection, null,null, null, null, null, new HashMap<>(), null);
 	}
 
 	/**
 	 * Creates a restriction with limited maximum group size of activities.
 	 */
 	public static Restriction ofGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, maxGroupSize, null, null, null, null, new HashMap<>());
+		return new Restriction(null, null, maxGroupSize, null,null, null, null, new HashMap<>(), null);
 	}
 
 	/**
@@ -230,7 +244,7 @@ public final class Restriction {
 	 * @param maxGroupSize maximum allowed group size
 	 */
 	public static Restriction ofReducedGroupSize(int maxGroupSize) {
-		return new Restriction(null, null, null, maxGroupSize, null, null, null, new HashMap<>());
+		return new Restriction(null, null, null, maxGroupSize, null, null, null, new HashMap<>(), null);
 	}
 
 	/**
@@ -244,12 +258,21 @@ public final class Restriction {
 
 		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
-		return new Restriction(null, null, null, null, null, closed, null, new HashMap<>());
+		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>(), null);
+	}
+
+	/**
+	 * Restrict percentage of activities for unvaccinated and susceptible persons.
+	 *
+	 * @param remainingFraction remaining fraction of unvaccinated persons, i.e. 0 bans this activity for all unvaccinated persons.
+	 */
+	@Beta
+	public static Restriction ofSusceptibleRf(double remainingFraction) {
+		return new Restriction(null, null, null, null, null, null, null, new HashMap<>(), remainingFraction);
 	}
 
 	public static Restriction ofLocationBasedRf(Map<String, Double> locationBasedRf) {
-
-		return new Restriction(null, null, null, null, null, null, null, locationBasedRf);
+		return new Restriction(null, null, null, null, null, null, null, locationBasedRf, null);
 
 	}
 
@@ -282,7 +305,7 @@ public final class Restriction {
 				!config.hasPath("reducedGroupSize") || config.getIsNull("reducedGroupSize") ? null : config.getInt("reducedGroupSize"),
 				!config.hasPath("closed") || config.getIsNull("closed") ? null : config.getStringList("closed"),
 				!config.hasPath("closingHours") || config.getIsNull("closingHours") ? null : asClosingHours(config.getIntList("closingHours")),
-				enumMap, locationBasedRf, null
+				enumMap, locationBasedRf, config.getIsNull("susceptibleRf") ? null : config.getDouble("susceptibleRf"), null
 		);
 	}
 
@@ -306,6 +329,7 @@ public final class Restriction {
 				restriction.closingHours,
 				null,
 				restriction.locationBasedRf == null ? new HashMap<>() : restriction.locationBasedRf,
+				restriction.susceptibleRf,
 				restriction);
 	}
 
@@ -425,6 +449,9 @@ public final class Restriction {
 		if (r.getReducedGroupSize() != null)
 			reducedGroupSize = r.getReducedGroupSize();
 
+		if (r.getSusceptibleRf() != null)
+			susceptibleRf = r.getSusceptibleRf();
+
 		if (r.closed != null)
 			closed = r.closed;
 
@@ -474,7 +501,7 @@ public final class Restriction {
 
 	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
-	 * <p>
+	 *
 	 * localRf: if new restriction has a Rf, the localRf will NOT be included in merged result; reason: to aid users who
 	 * manually enter restrictions, but forget to clear the localRf.
 	 *
@@ -482,95 +509,88 @@ public final class Restriction {
 	 */
 	public void merge(Map<String, Object> restriction) {
 
-		Double oldRf = (Double) restriction.get("fraction");
-		Double oldE = (Double) restriction.get("ciCorrection");
-		Integer oldGroup = (Integer) restriction.get("maxGroupSize");
-		Integer oldReduced = (Integer) restriction.get("reducedGroupSize");
-		ClosingHours oldClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
+		Double otherRf = (Double) restriction.get("fraction");
+		Double otherE = (Double) restriction.get("ciCorrection");
+		Integer otherGroup = (Integer) restriction.get("maxGroupSize");
+		Integer otherReduced = (Integer) restriction.get("reducedGroupSize");
+		Double otherSRf = (Double) restriction.get("susceptibleRf");
+		ClosingHours otherClosingH = asClosingHours((List<Integer>) restriction.get("closingHours"));
 
-		Map<FaceMask, Double> oldMasks = new EnumMap<>(FaceMask.class);
+		Map<FaceMask, Double> otherMasks = new EnumMap<>(FaceMask.class);
 		((Map<String, Double>) restriction.get("masks"))
-				.forEach((k, v) -> oldMasks.put(FaceMask.valueOf(k), v));
+				.forEach((k, v) -> otherMasks.put(FaceMask.valueOf(k), v));
 
-		Map<String, Double> oldLocationBasedRf = new HashMap<>();
-		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> oldLocationBasedRf.put(key, value)));
+		Map<String, Double> otherLocationBasedRf = new HashMap<>();
+		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
 
-
-		// if old and new restriction have localRf:
-		// use all new values for localRf
-		// if new localRf doesn't have value for a district, use value from old localRf
-//		if (!oldLocationBasedRf.isEmpty() && !locationBasedRf.isEmpty()) {
-//			for (Map.Entry<String, Double> oldEntry : oldLocationBasedRf.entrySet()) {
-//
-//				locationBasedRf.putIfAbsent(oldEntry.getKey(), oldEntry.getValue());
-//
-//			}
-//		}
-
-		// if old and new restriction have Rf: warn & use new remaining fraction
-		if (remainingFraction != null && oldRf != null && !remainingFraction.equals(oldRf)) {
-			log.warn("Duplicated remainingFraction; old value(" + oldRf + ") replaced with new value(" + remainingFraction + ")");
+		// if other and new restriction have Rf: warn & use new remaining fraction
+		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)) {
+			log.warn("Duplicated remainingFraction; other value(" + otherRf + ") replaced with new value(" + remainingFraction + ")");
 		}
 		// if new Restriction doesn't have value for Rf:
-		// 1) keep old value for Rf
-		// 2) check whether new Restriction has localRf, and if not, then use localRf from old Restriction
+		// 1) keep other value for Rf
+		// 2) check whether new Restriction has localRf, and if not, then use localRf from other Restriction
 		else if (remainingFraction == null) {
-			remainingFraction = oldRf;
+			remainingFraction = otherRf;
 
-			if (!locationBasedRf.isEmpty() && !oldLocationBasedRf.isEmpty() && !locationBasedRf.equals(oldLocationBasedRf)) {
+			if (!locationBasedRf.isEmpty() && !otherLocationBasedRf.isEmpty() && !locationBasedRf.equals(otherLocationBasedRf)) {
 
-				log.warn("Duplicated locationBasedRf; old value(" + oldLocationBasedRf + ") was merged with new value(" + locationBasedRf + ")");
+				log.warn("Duplicated locationBasedRf; other value(" + otherLocationBasedRf + ") was merged with new value(" + locationBasedRf + ")");
 
-				mergeLocationBasedRf(oldLocationBasedRf);
+				mergeLocationBasedRf(otherLocationBasedRf);
 
 				log.warn("Result of merge: " + locationBasedRf);
 
 			} else if (locationBasedRf.isEmpty()) {
-				locationBasedRf.putAll(oldLocationBasedRf);
+				locationBasedRf.putAll(otherLocationBasedRf);
 			}
 		} else {
 			if ((locationBasedRf == null || locationBasedRf.isEmpty())
-					&& (!oldLocationBasedRf.isEmpty() || oldLocationBasedRf != null)) {
+					&& (!otherLocationBasedRf.isEmpty() || otherLocationBasedRf != null)) {
 
 				log.warn("localRf removed during merge, as new remainingFraction was provided");
 			} else {
-				mergeLocationBasedRf(oldLocationBasedRf);
+				mergeLocationBasedRf(otherLocationBasedRf);
 			}
 		}
 
 
-		if (ciCorrection != null && oldE != null && !ciCorrection.equals(oldE))
-			log.warn("Duplicated ci correction " + ciCorrection + " and " + oldE);
+		if (ciCorrection != null && otherE != null && !ciCorrection.equals(otherE))
+			log.warn("Duplicated ci correction " + ciCorrection + " and " + otherE);
 		else if (ciCorrection == null)
-			ciCorrection = oldE;
+			ciCorrection = otherE;
 
-		if (maxGroupSize != null && oldGroup != null && !maxGroupSize.equals(oldGroup))
-			log.warn("Duplicated max group size " + maxGroupSize + " and " + oldGroup);
+		if (maxGroupSize != null && otherGroup != null && !maxGroupSize.equals(otherGroup))
+			log.warn("Duplicated max group size " + maxGroupSize + " and " + otherGroup);
 		else if (maxGroupSize == null)
-			maxGroupSize = oldGroup;
+			maxGroupSize = otherGroup;
 
-		if (reducedGroupSize != null && oldReduced != null && !reducedGroupSize.equals(oldReduced))
-			log.warn("Duplicated reduced group size " + reducedGroupSize + " and " + oldReduced);
+		if (reducedGroupSize != null && otherReduced != null && !reducedGroupSize.equals(otherReduced))
+			log.warn("Duplicated reduced group size " + reducedGroupSize + " and " + otherReduced);
 		else if (reducedGroupSize == null)
-			reducedGroupSize = oldReduced;
+			reducedGroupSize = otherReduced;
 
-		if (closingHours != null && oldClosingH != null && !closingHours.equals(oldClosingH))
-			log.warn("Duplicated max closing hours " + closingHours + " and " + oldClosingH);
+		if (closingHours != null && otherClosingH != null && !closingHours.equals(otherClosingH))
+			log.warn("Duplicated max closing hours " + closingHours + " and " + otherClosingH);
 		else if (closingHours == null)
-			closingHours = oldClosingH;
+			closingHours = otherClosingH;
 
-		if (!maskUsage.isEmpty() && !oldMasks.isEmpty() && !maskUsage.equals(oldMasks)) {
-			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + oldMasks + "; keeping existing value.");
+		if (susceptibleRf != null && otherSRf != null && !susceptibleRf.equals(otherSRf))
+			log.warn("Duplicated susceptible fraction " + susceptibleRf + " and " + otherSRf);
+		else if (susceptibleRf == null)
+			susceptibleRf = otherSRf;
+
+		if (!maskUsage.isEmpty() && !otherMasks.isEmpty() && !maskUsage.equals(otherMasks)) {
+			log.warn("Duplicated mask usage; existing value=" + maskUsage + "; new value=" + otherMasks + "; keeping existing value.");
 			log.warn("(full new restriction=" + restriction + ")");
 		} else if (maskUsage.isEmpty())
-			maskUsage.putAll(oldMasks);
-
+			maskUsage.putAll(otherMasks);
 	}
 
-	private void mergeLocationBasedRf(Map<String, Double> oldLocationBasedRf) {
-		for (Map.Entry<String, Double> oldEntry : oldLocationBasedRf.entrySet()) {
+	private void mergeLocationBasedRf(Map<String, Double> otherLocationBasedRf) {
+		for (Map.Entry<String, Double> otherEntry : otherLocationBasedRf.entrySet()) {
 
-			locationBasedRf.putIfAbsent(oldEntry.getKey(), oldEntry.getValue());
+			locationBasedRf.putIfAbsent(otherEntry.getKey(), otherEntry.getValue());
 
 		}
 	}
@@ -628,13 +648,9 @@ public final class Restriction {
 		return maskUsage;
 	}
 
-	void fullShutdown() {
-		remainingFraction = 0d;
-	}
-
-	void open() {
-		remainingFraction = 1d;
-		maskUsage = null;
+	@Nullable
+	public Double getSusceptibleRf() {
+		return susceptibleRf;
 	}
 
 	/**
@@ -660,6 +676,7 @@ public final class Restriction {
 		}
 
 		map.put("locationBasedRf", locationBasedRf);
+		map.put("susceptibleRf", susceptibleRf);
 
 		return map;
 	}

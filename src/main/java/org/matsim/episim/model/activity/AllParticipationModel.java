@@ -22,4 +22,9 @@ public final class AllParticipationModel implements ActivityParticipationModel {
 									List<EpisimPerson.PerformedActivity> activities) {
 
 	}
+
+	@Override
+	public void applyQuarantine(EpisimPerson person, BitSet trajectory, int offset, List<EpisimPerson.PerformedActivity> activities) {
+		// Nothing to do
+	}
 }

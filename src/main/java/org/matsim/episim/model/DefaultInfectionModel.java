@@ -66,7 +66,10 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 * Calculate the current effectiveness of vaccination.
 	 */
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
-		double daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());
+		VirusStrain strain = virusStrain.getStrain();
 
 		double vaccineEffectiveness;
 
@@ -74,23 +77,16 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double min;
 		// use re vaccine effectiveness if person received the new vaccine
 		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			vaccineEffectiveness = virusStrain.getReVaccineEffectiveness();
+			vaccineEffectiveness = params.getBoostEffectiveness(strain, daysVaccinated) ;
 			// effectiveness of second vaccine is never below first
-			min = virusStrain.getVaccineEffectiveness();
+			min = params.getEffectiveness(strain, params.getDaysBeforeFullEffect());
 		} else {
-			vaccineEffectiveness = virusStrain.getVaccineEffectiveness();
+			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);
 			min = 0;
 		}
 
-		// full effect
-		if (daysVaccinated >= config.getParams(target.getVaccinationType()).getDaysBeforeFullEffect())
-			return 1 - config.getParams(target.getVaccinationType()).getEffectiveness() * Math.max(min, vaccineEffectiveness);
+		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
-		// slightly reduced but nearly full effect after 3 days
-		else if (daysVaccinated >= 3) {
-			return 1 - config.getParams(target.getVaccinationType()).getEffectiveness() * Math.max(min, 0.94 * vaccineEffectiveness);
-		}
-
-		return 1 - min * config.getParams(target.getVaccinationType()).getEffectiveness();
+		return 1 - Math.max(min, vaccineEffectiveness);
 	}
 }

@@ -45,6 +45,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
@@ -65,7 +66,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 	 * Activity types used by this analysis.
 	 */
 	private static final List<String> ACTIVITY_TYPES = List.of(
-			"home", "leisure", "restaurant", "schools", "day care", "university", "work&business", "pt", "other"
+			"home", "leisure", "schools", "day care", "university", "work&business", "pt", "other"
 	);
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
@@ -116,34 +117,12 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 	private void calcValues(Path scenario, BufferedWriter rValues, BufferedWriter infectionsPerActivity) throws IOException {
 
-		Path eventFolder = scenario.resolve("events");
-		if (!Files.exists(eventFolder)) {
-			log.warn("No events found at {}", eventFolder);
-			return;
-		}
-
-
 		String id = AnalysisCommand.getScenarioPrefix(scenario);
 
-		EventsManager manager = EventsUtils.createEventsManager();
 		InfectionsHandler infHandler = new InfectionsHandler();
 		RHandler rHandler = new RHandler();
 
-		manager.addHandler(infHandler);
-		manager.addHandler(rHandler);
-
-		List<Path> eventFiles = Files.list(eventFolder)
-				.filter(p -> p.getFileName().toString().contains("xml.gz"))
-				.collect(Collectors.toList());
-
-		for (Path p : eventFiles) {
-			try {
-				new EpisimEventsReader(manager).readFile(p.toString());
-			} catch (UncheckedIOException e) {
-				log.warn("Caught UncheckedIOException. Could not read file {}", p);
-			}
-		}
-
+		List<String> eventFiles = AnalysisCommand.forEachEvent(scenario, s -> {}, infHandler, rHandler);
 
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
@@ -294,7 +273,6 @@ public class RValuesFromEvents implements Callable<Integer> {
 		else if (infectionType.endsWith("educ_higher")) activityType = "university";
 		else if (infectionType.endsWith("educ_kiga")) activityType = "day care";
 		else if (infectionType.endsWith("leisure")) activityType = "leisure";
-		else if (infectionType.endsWith("restaurant")) activityType = "restaurant";
 		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
 		else if (infectionType.endsWith("home") || infectionType.startsWith("home")) activityType = "home";
 		else if (infectionType.startsWith("pt")) activityType = "pt";

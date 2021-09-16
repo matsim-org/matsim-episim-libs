@@ -28,18 +28,15 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.activity.LocationBasedParticipationModel;
-import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.*;
@@ -70,7 +67,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		private Tracing tracing = Tracing.yes;
 		private Vaccinations vaccinations = Vaccinations.yes;
 		private ChristmasModel christmasModel = ChristmasModel.restrictive;
-		private EasterModel easterModel = EasterModel.yes;
+		private EasterModel easterModel = EasterModel.no;
 		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
 		private Snapshot snapshot = Snapshot.no;
 		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
@@ -211,7 +208,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 	public static enum ChristmasModel {no, restrictive, permissive}
 
-	public static enum WeatherModel {no, midpoints_175_250, midpoints_175_175, midpoints_200_250}
+	public static enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
 
 	public static enum AdjustRestrictions {yes, no}
 
@@ -316,8 +313,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		}
 
 
-		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
-			bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
+				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
 		}
 	}
 
@@ -325,8 +322,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		//		if (this.sample != 25 && this.sample != 100)
-		//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25 && this.sample != 100)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -361,15 +358,16 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		episimConfig.setActivityHandling(activityHandling);
 
+		episimConfig.setThreads(6);
 
-		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
-		//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-		//
-		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
-		//				.addDays(DayOfWeek.SATURDAY);
-		//
-		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
-		//				.addDays(DayOfWeek.SUNDAY);
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+//
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.SATURDAY);
+//
+//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+//				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
@@ -379,8 +377,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 		episimConfig.setThreads(8);
 
-		if (this.snapshot != Snapshot.no)
-			episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
+		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
@@ -423,7 +420,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-		//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -506,12 +503,11 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (this.masks == Masks.no) basePolicyBuilder.setMaskCompliance(0);
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
-		episimConfig.setPolicy(builder.build());
 
 		//tracing
 		if (this.tracing == Tracing.yes) {
 			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-			//			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
+//			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
 			int offset = 46;
 			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
 			tracingConfig.setTracingProbability(0.5);
@@ -532,7 +528,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
-
 			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
 			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
@@ -553,7 +548,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.665;
+				double fraction = 0.5925;
 
 				if (locationBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.no) {
 					if (this.christmasModel == ChristmasModel.restrictive) {
@@ -589,7 +584,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.contains("educ")) continue;
-				double fraction = 0.68;
+				double fraction = 0.72;
 
 				if (locationBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.no) {
 					builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
@@ -615,8 +610,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("berlinWeather_until20210711_tegel_until20210430.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(),
+						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -638,9 +633,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			//			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			//			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			//			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
 
 			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
 				// applies same leisure adjustment from above to the localRf
@@ -664,11 +659,89 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 
 		}
-		//vacinations
+
+
+		// vaccinations
+		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+
 		if (this.vaccinations.equals(Vaccinations.yes)) {
-			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-			vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
-			vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
+			double effectivnessMRNA = 0.7;
+			double factorShowingSymptomsMRNA = 0.05 / (1 - effectivnessMRNA); //95% protection against symptoms
+			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
+			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setDaysBeforeFullEffect(fullEffectMRNA)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					;
+
+		double effectivnessVector = 0.5;
+		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
+		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
+		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+
+		vaccinationConfig.getOrAddParams(VaccinationType.vector)
+			.setDaysBeforeFullEffect(fullEffectVector)
+			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+					.atDay(1, 0.0)
+					.atFullEffect(effectivnessVector)
+					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+			)
+			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.atDay(1, 0.0)
+					.atFullEffect(effectivnessVector)
+					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+					.atDay(1, 1.0)
+					.atFullEffect(factorShowingSymptomsVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.atDay(1, 1.0)
+					.atFullEffect(factorShowingSymptomsVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+					.atDay(1, 1.0)
+					.atFullEffect(factorSeriouslySickVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.atDay(1, 1.0)
+					.atFullEffect(factorSeriouslySickVector)
+					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+			)
+			;
+
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();
@@ -695,8 +768,18 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			vaccinations.put(LocalDate.parse("2021-04-10"), (int) ((0.183 - 0.140) * population / 7));
 			//extrapolated from 5.4. until 22.4.
 			vaccinations.put(LocalDate.parse("2021-04-17"), (int) ((0.207 - 0.123) * population / 17));
+
+			vaccinations.put(LocalDate.parse("2021-04-22"), (int) ((0.279 - 0.207) * population / 13));
+			vaccinations.put(LocalDate.parse("2021-05-05"), (int) ((0.404 - 0.279) * population / 23));
+			vaccinations.put(LocalDate.parse("2021-05-28"), (int) ((0.484 - 0.404) * population / 14));
+			vaccinations.put(LocalDate.parse("2021-06-11"), (int) ((0.535 - 0.484) * population / 14));
+			vaccinations.put(LocalDate.parse("2021-06-25"), (int) ((0.583 - 0.535) * population / 19));
+			vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
+
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
+
+
 
 		episimConfig.setPolicy(builder.build());
 

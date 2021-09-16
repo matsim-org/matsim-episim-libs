@@ -50,27 +50,27 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 	}
 
 	@Override
-	public void append(BufferedWriter writer, String[] array) {
+	public void append(Writer writer, String[] array) {
 		disruptor.publishEvent(arrayTranslator, writer, array);
 	}
 
 	@Override
-	public void append(BufferedWriter writer, String content) {
+	public void append(Writer writer, String content) {
 		disruptor.publishEvent(translator, writer, content, false);
 	}
 
 	@Override
-	public void append(BufferedWriter writer, Event event) {
+	public void append(Writer writer, Event event) {
 		disruptor.publishEvent(this, writer, event, -1d);
 	}
 
 	@Override
-	public void append(BufferedWriter writer, Event event, double correctedTime) {
+	public void append(Writer writer, Event event, double correctedTime) {
 		disruptor.publishEvent(this, writer, event, correctedTime);
 	}
 
 	@Override
-	public void close(BufferedWriter writer) {
+	public void close(Writer writer) {
 		disruptor.publishEvent(translator, writer, null, true);
 	}
 

@@ -41,35 +41,6 @@ public class AgeDependentDiseaseStatusTransitionModel extends DefaultDiseaseStat
 		this.episimConfig = episimConfig;
 	}
 
-	@Override
-	protected double getProbaOfTransitioningToContagious(EpisimPerson person) {
-
-		double proba = 1.;
-
-//		int age = EpisimUtils.getAge( person );
-//
-//		if (age < 10) {
-//			proba = 0.1 / 100;
-//		} else if (age < 20) {
-//			proba = 0.3 / 100;
-//		} else if (age < 30) {
-//			proba = 1.2 / 100;
-//		} else if (age < 40) {
-//			proba = 3.2 / 100;
-//		} else if (age < 50) {
-//			proba = 4.9 / 100;
-//		} else if (age < 60) {
-//			proba = 10.2 / 100;
-//		} else if (age < 70) {
-//			proba = 16.6 / 100;
-//		} else if (age < 80) {
-//			proba = 24.3 / 100;
-//		} else {
-//			proba = 27.3 / 100;
-//		}
-
-		return proba ;
-	}
 
 	@Override
 	protected double getProbaOfTransitioningToShowingSymptoms (EpisimPerson person) {

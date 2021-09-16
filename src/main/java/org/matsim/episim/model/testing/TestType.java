@@ -27,10 +27,10 @@ public enum TestType {
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 
 		if (this == RAPID_TEST) {
-			return status == EpisimPerson.DiseaseStatus.contagious || status == EpisimPerson.DiseaseStatus.showingSymptoms;
+			return (status == EpisimPerson.DiseaseStatus.contagious && person.daysSince(EpisimPerson.DiseaseStatus.contagious, day) >= 2) || status == EpisimPerson.DiseaseStatus.showingSymptoms;
 		} else if (this == PCR) {
 			return status == EpisimPerson.DiseaseStatus.contagious || status == EpisimPerson.DiseaseStatus.showingSymptoms ||
-					(status == EpisimPerson.DiseaseStatus.infectedButNotContagious && person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 1);
+					(status == EpisimPerson.DiseaseStatus.infectedButNotContagious && person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) >= 2);
 		}
 
 		throw new IllegalStateException("No testing procedure implemented.");
@@ -44,11 +44,12 @@ public enum TestType {
 		EpisimPerson.DiseaseStatus status = person.getDiseaseStatus();
 
 		if (this == RAPID_TEST) {
-			return status == EpisimPerson.DiseaseStatus.infectedButNotContagious || status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered;
+			return (status == EpisimPerson.DiseaseStatus.contagious && person.daysSince(EpisimPerson.DiseaseStatus.contagious, day) < 1)  || status == EpisimPerson.DiseaseStatus.infectedButNotContagious
+					|| status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered;
 
 		} else if (this == PCR) {
 			return status == EpisimPerson.DiseaseStatus.susceptible || status == EpisimPerson.DiseaseStatus.recovered ||
-					(status == EpisimPerson.DiseaseStatus.infectedButNotContagious && person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) < 1);
+					(status == EpisimPerson.DiseaseStatus.infectedButNotContagious && person.daysSince(EpisimPerson.DiseaseStatus.infectedButNotContagious, day) < 2);
 		}
 
 		throw new IllegalStateException("No testing procedure implemented.");

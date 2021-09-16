@@ -48,6 +48,9 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 	@CommandLine.Option(names = "--shape-file", description = "Path to shp file", required = true)
 	private Path shp;
 
+	@CommandLine.Option(names = "--shape-crs", description = "Path to shp file", defaultValue = "EPSG:4326")
+	private String shpCrs;
+
 	@CommandLine.Option(names = "--output", description = "Output path", required = true)
 	private Path output;
 
@@ -80,7 +83,7 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 
 	private Map<Id<ActivityFacility>, ActivityFacility> loadFacilities() throws IOException {
 
-		DistrictLookup.Index index = new DistrictLookup.Index(shp.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:4326"), "plz");
+		DistrictLookup.Index index = new DistrictLookup.Index(shp.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:25832", shpCrs), "plz");
 
 		// load scenario with only facilities
 		Config config = ConfigUtils.createConfig();
@@ -93,9 +96,10 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 		for (ActivityFacility value : facilities.values()) {
 
 			try {
-				if (index.query(value.getCoord().getX(), value.getCoord().getY()) != null) {
-					filtered.put(value.getId(), value);
-				}
+				// throws exception when not found
+				index.query(value.getCoord().getX(), value.getCoord().getY());
+				filtered.put(value.getId(), value);
+
 			} catch (NoSuchElementException e) {
 				// not found
 			}

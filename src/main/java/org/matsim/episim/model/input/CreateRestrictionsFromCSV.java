@@ -16,6 +16,8 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	// This class does not need a builder, because all functionality is in the create method.  One can re-configure the class and re-run the
@@ -24,7 +26,10 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private final EpisimConfigGroup episimConfig;
 	private Path input;
 	private double alpha = 1.;
-	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
+	private double scale = 1.;
+	private boolean leisureAsNightly = false;
+	private double nightlyScale = 1.;
+	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.regHospital;
 	private Map<String, Path> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {
@@ -57,6 +62,21 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		return alpha;
 	}
 
+	public CreateRestrictionsFromCSV setScale(double scale) {
+		this.scale = scale;
+		return this;
+	}
+
+	public CreateRestrictionsFromCSV setLeisureAsNightly(boolean leisureAsNightly) {
+		this.leisureAsNightly = leisureAsNightly;
+		return this;
+	}
+
+	public CreateRestrictionsFromCSV setNightlyScale(double nightlyScale) {
+		this.nightlyScale = nightlyScale;
+		return this;
+	}
+
 	public CreateRestrictionsFromCSV setExtrapolation(EpisimUtils.Extrapolation extrapolation) {
 		this.extrapolation = extrapolation;
 		return this;
@@ -66,7 +86,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 		return extrapolation;
 	}
 
-	static Map<LocalDate, Double> readInput(Path input, String column, double alpha) throws IOException {
+	static Map<LocalDate, Double> readInput(Path input, String column, double alpha, double scale) throws IOException {
 
 		try (BufferedReader in = Files.newBufferedReader(input)) {
 
@@ -81,10 +101,10 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 
 				int value = Integer.parseInt(record.get(column));
 
-				double remainingFraction = 1. + (value / 100.);
+				double remainingFraction = (1. + (value / 100.)) / scale; // e.g. "1.2"
 
 				// modulate reduction with alpha:
-				double reduction = Math.min(1., alpha * (1. - remainingFraction));
+				double reduction = Math.min(1., alpha * (1. - remainingFraction)); // e.g. min( 1., alpha * (1-1.2) ) = min( 1., alpha * -0.2 ) ... i.e. the "alpha" does not help with values > 100.
 				days.put(date, Math.min(1, 1 - reduction));
 			}
 
@@ -96,37 +116,53 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	@Override
 	public FixedPolicy.ConfigBuilder createPolicy() throws IOException {
 
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+
+		// activities to set:
+		List<String> act = episimConfig.getInfectionParams().stream()
+				.map(EpisimConfigGroup.InfectionParams::getContainerName)
+				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
+				.collect(Collectors.toList());
+
+		if (leisureAsNightly) {
+
+			act.remove("leisure");
+
+			createPolicy(builder, act.toArray(new String[0]), "notAtHome", scale);
+			createPolicy(builder, new String[]{"leisure"}, "notAtHome_22", nightlyScale);
+
+		} else {
+
+			createPolicy(builder, act.toArray(new String[0]), "notAtHome", scale);
+
+		}
+
+		return builder;
+	}
+
+	private void createPolicy(FixedPolicy.ConfigBuilder builder, String[] act, String column, double scale) throws IOException {
+
 		// If active, the remaining fraction is calculated and saved for each subdistrict
 		boolean locationBasedRfActive = !episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.no)
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
-		String colToRead = "notAtHome";
-
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)
-		Map<LocalDate, Double> days = readInput(input, colToRead, alpha);
+		Map<LocalDate, Double> days = readInput(input, column, alpha, scale);
 
 		// days per subdistrict
 		Map<String, Map<LocalDate, Double>> daysPerDistrict = new HashMap<>();
 		if (locationBasedRfActive) {
 			for (Map.Entry<String, Path> entry : subdistrictInput.entrySet()) {
-				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), colToRead, alpha));
+				daysPerDistrict.put(entry.getKey(), readInput(entry.getValue(), column, alpha, scale));
 			}
 		}
 
-		// activities to set:
-		String[] act = episimConfig.getInfectionParams().stream()
-				.map(EpisimConfigGroup.InfectionParams::getContainerName)
-				.filter(name -> !name.startsWith("edu") && !name.startsWith("pt") && !name.startsWith("tr") && !name.contains("home"))
-				.toArray(String[]::new);
-
 		LocalDate start = Objects.requireNonNull(Iterables.getFirst(days.keySet(), null), "CSV is empty");
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();
+		AtomicReference<LocalDate> until = new AtomicReference<>(start);
 
 		// trend used for extrapolation
 		List<Double> trend = new ArrayList<>();
 		Map<String, List<Double>> trendPerDistrict = new HashMap<>();
-
 
 		if (locationBasedRfActive) {
 			RestrictionInput.resampleAvgWeekdayBySubdistrict(days, daysPerDistrict, start, (date, avg, avgPerDistrict) -> {
@@ -135,17 +171,19 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 				}
 				trend.add(avg);
 				builder.restrictWithDistrict(date, avgPerDistrict, avg, act);
+				until.set(date);
 			});
 		} else {
 			RestrictionInput.resampleAvgWeekday(days, start, (date, avg) -> {
 				trend.add(avg);
 				builder.restrict(date, avg, act);
+				until.set(date);
 			});
 		}
 
 		// Use last weeks for the trend
 		List<Double> recentTrend = trend.subList(Math.max(0, trend.size() - 8), trend.size());
-		start = start.plusDays(7);
+		start = until.get().plusDays(7);
 
 		List<Double> extrapolateGlobal = RestrictionInput.extrapolate(recentTrend, 25, extrapolation);
 
@@ -173,7 +211,6 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 			}
 		}
 
-		return builder;
 	}
 
 	@Override

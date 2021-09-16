@@ -159,7 +159,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		// A healthy quarantined person is dismissed from quarantine after some time
 		if (releasePerson(person) && person.daysSinceQuarantine(day) > tracingConfig.getQuarantineDuration()) {
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
-			person.setTestStatus(TestStatus.negative, day - 1);
+			person.setTestStatus(TestStatus.untested, day - 1);
 		}
 
 		// person is reset to untested after two days of quarantine at home, if it was false positive

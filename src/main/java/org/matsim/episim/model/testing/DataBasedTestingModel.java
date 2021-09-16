@@ -39,7 +39,7 @@ public final class DataBasedTestingModel extends DefaultTestingModel {
 
 	@Inject
 	DataBasedTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, EpisimConfigGroup episimConfig) {
-		super(rnd, config, testingConfig, episimConfig);
+		super(rnd, config, testingConfig, null, episimConfig);
 
 		capacities = readActivities();
 	}

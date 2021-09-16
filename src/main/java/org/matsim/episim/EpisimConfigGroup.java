@@ -82,6 +82,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String DISTRICTS = "districts";
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
+	private static final String SINGLE_EVENT_FILE = "singleEventFile";
+	private static final String END_EARLY = "endEarly";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -165,7 +167,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private List<String> districts = new ArrayList<>();
 
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
-	private ReportTimeUse reportTimeUse = ReportTimeUse.yes;
+	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
+	private SingleEventFile singleEventFile = SingleEventFile.no;
+	private boolean endEarly = false;
 	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
@@ -763,6 +767,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.contagiousContainerOptimization = contagiousOptimization;
 	}
 
+	@StringGetter(SINGLE_EVENT_FILE)
+	public SingleEventFile getSingleEventFile() {
+		return singleEventFile;
+	}
+
+	@StringSetter(SINGLE_EVENT_FILE)
+	public void setSingleEventFile(SingleEventFile singleEventFile) {
+		this.singleEventFile = singleEventFile;
+	}
+
 	@StringGetter(REPORT_TIME_USE)
 	public ReportTimeUse getReportTimeUse() {
 		return reportTimeUse;
@@ -937,6 +951,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Whether simulation ends when there are no further infected persons.
+	 */
+	@StringGetter(END_EARLY)
+	public boolean isEndEarly() {
+		return endEarly;
+	}
+
+	@StringSetter(END_EARLY)
+	public void setEndEarly(boolean endEarly) {
+		this.endEarly = endEarly;
+	}
+
+	/**
 	 * Defines how facilities should be handled.
 	 */
 	public enum FacilitiesHandling {
@@ -1020,6 +1047,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		no
 	}
 
+
     /**
      * In the case that this optimization is enabled, the infectionDynamics
      * methods are only called, if a contagious person is in the container
@@ -1039,6 +1067,13 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 
+	/**
+	 * Whether to write all events into a single file.
+	 */
+	public enum SingleEventFile {
+		yes,
+		no
+	}
 
 	/**
 	 * Parameter set for one activity type.

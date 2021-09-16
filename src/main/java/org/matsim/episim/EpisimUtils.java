@@ -35,8 +35,8 @@ import org.apache.commons.math3.random.BitsStreamGenerator;
 import org.apache.commons.math3.util.FastMath;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.policy.FixedPolicy;
 
 import java.io.*;
@@ -44,7 +44,6 @@ import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.text.DecimalFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -111,7 +110,7 @@ public final class EpisimUtils {
 	}
 
 	/**
-	 * Creates an output directory, with a name based on current config and contact intensity..
+	 * Creates an output directory, with a name based on current config and contact intensity.
 	 */
 	public static void setOutputDirectory(Config config) {
 		StringBuilder outdir = new StringBuilder("output");
@@ -257,8 +256,11 @@ public final class EpisimUtils {
 		File[] fileList = new File(sourceDir).listFiles();
 		if (fileList == null) return;
 		for (File file : fileList) {
+
+			if (file.getName().equals("events.tar"))
+				assert true; // no op
 			// Zip files (i.e. other snapshots or large files) are not added
-			if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
+			else if (file.getName().endsWith(".zip") || file.getName().endsWith(".txt.gz"))
 				continue;
 
 			if (file.isDirectory()) {
@@ -544,6 +546,119 @@ public final class EpisimUtils {
 //		System.exit(-1);
 		return outdoorFractions;
 	}
+
+	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange, Double alpha) throws IOException {
+
+		Reader in = new FileReader(weatherCSV);
+		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+		LocalDate lastDate = null;
+		final Map<LocalDate, Double> outdoorFractions = new TreeMap<>();
+		for (CSVRecord record : records) {
+//			System.out.println( record );
+			LocalDate date = LocalDate.parse(record.get("date"), fmt);
+			if (record.get("tmax").isEmpty() || record.get("prcp").isEmpty()) {
+//				System.out.println("Skipping day because tmax or prcp data is not available. Date: " + date.toString());
+				continue;
+			}
+
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+
+			outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			lastDate = date;
+		}
+
+		in = new FileReader(avgWeatherCSV);
+		records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+		HashMap<String, Double> tmaxPerDay = new HashMap<String, Double>();
+		HashMap<String, Double> prcpPerDay = new HashMap<String, Double>();
+
+		for (CSVRecord record : records) {
+			String monthDay = record.get("monthDay");
+			double tMax = Double.parseDouble(record.get("tmax"));
+			double prcp = Double.parseDouble(record.get("prcp"));
+			tmaxPerDay.put(monthDay, tMax);
+			prcpPerDay.put(monthDay, prcp);
+		}
+
+		for (int i = 1; i < 365*3; i++) {
+			LocalDate date = lastDate.plusDays(i);
+			int month = date.getMonth().getValue();
+			int day = date.getDayOfMonth();
+			String monthDay = month + "-" + day;
+			double tMax = tmaxPerDay.get(monthDay);
+			double prcp = prcpPerDay.get(monthDay);
+			outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+		}
+
+//		System.exit(-1);
+		return outdoorFractions;
+	}
+
+	private static double getOutDoorFractionFromDateAndTemp(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold, double alpha) {
+
+		double tMid;
+		int date1 = 152; //01.06.
+		int date2 = 213; //01.08.
+		if (date.isLeapYear()) {
+			date1++;
+			date2++;
+		}
+//		final LocalDate date3 = LocalDate.of( 2020, 12, 31 );
+		if (date.getDayOfYear() < date1) {
+			tMid = TmidSpring;
+		} else if (date.getDayOfYear() > date2) {
+			tMid = TmidFall;
+		} else {
+			double fraction = 1. * (date.getDayOfYear() - date1) / (date2 - date1);
+			tMid = (1. - fraction) * TmidSpring + fraction * TmidFall;
+		}
+		double tAllIn = tMid - Trange;
+		double tAllOut = tMid + Trange;
+
+		double outDoorFractionFromTemperature = (tMax - tAllIn) / (tAllOut - tAllIn);
+
+		if (prcp > rainThreshold) outDoorFractionFromTemperature = outDoorFractionFromTemperature * 0.5;
+		if (outDoorFractionFromTemperature > 1.) outDoorFractionFromTemperature = 1.;
+		if (outDoorFractionFromTemperature < 0.) outDoorFractionFromTemperature = 0.;
+
+//		System.out.println( date + "; tMid=" + tMid + "; tMax=" + tMax + "; outDoorFraction=" + outDoorFraction ) ;
+		double outDoorFractionFromDate;
+		int month = date.getMonthValue();
+
+		if (month <= 3 || month >= 11) {
+			outDoorFractionFromDate = 0.0;
+		}
+		else if (month == 7 || month == 8) {
+			outDoorFractionFromDate = 1.0;
+		}
+		else if (month == 4 || month == 5 || month == 6) {
+			int lastMarch = 90;
+			int firstJuly = 182;
+			if (date.isLeapYear()) {
+				lastMarch++;
+				firstJuly++;
+			}
+			outDoorFractionFromDate = (double) (date.getDayOfYear() - lastMarch) / (double) (firstJuly - lastMarch);
+		}
+		else if (month == 9 || month == 10) {
+			int lastAugust = 243;
+			int firstNovember = 305;
+			if (date.isLeapYear()) {
+				lastAugust++;
+				firstNovember++;
+			}
+			outDoorFractionFromDate = 1 - (double) (date.getDayOfYear() - lastAugust) / (double) (firstNovember - lastAugust);
+		}
+		else {
+			throw new RuntimeException("outDoorFractionFromDate not defined for month: " + month);
+		}
+
+		return alpha * outDoorFractionFromTemperature + (1 - alpha) * outDoorFractionFromDate;
+	}
+
 
 	private static double getOutDoorFraction(LocalDate date, Double TmidSpring, Double TmidFall, Double Trange, double tMax, double prcp, double rainThreshold) {
 
