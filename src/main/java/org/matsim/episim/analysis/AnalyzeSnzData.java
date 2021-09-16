@@ -55,7 +55,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 	private enum AnalyseAreas {
 		Germany, Berlin, BerlinDistricts, Munich, Hamburg, Bonn, Heinsberg, Berchtesgaden, Mannheim, Wolfsburg, Test,
-		Bundeslaender, Tuebingen, Landkreise, AnyArea
+		Bundeslaender, Tuebingen, Landkreise, AnyArea, UpdateMobilityDashboardData
 	};
 
 	private enum AnalyseOptions {
@@ -82,7 +82,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		AnalyseAreas selectedArea = AnalyseAreas.AnyArea;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
 		AnalyseOptions selectedOutputOptions = AnalyseOptions.dailyResults;
-		String startDateStillUsingBaseDays = ""; //set in this format YYYYMMDD
+		String startDateStillUsingBaseDays = "20210610"; //set in this format YYYYMMDD
 		String anyArea = "Berlin";
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts

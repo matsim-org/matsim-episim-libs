@@ -322,8 +322,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25 && this.sample != 100)
-			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		if (this.sample != 25 && this.sample != 100)
+//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -654,6 +654,12 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 				builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
 				builder.apply("2020-12-18", "2021-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-03-26", "2021-04-09", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-06-25", "2021-08-06", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
 			}
 

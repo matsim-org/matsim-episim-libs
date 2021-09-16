@@ -80,6 +80,8 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 				"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
 		episimConfig.setDistricts(subdistricts);
 
+		episimConfig.setReportTimeUse(EpisimConfigGroup.ReportTimeUse.yes);
+
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		// General setup of adaptive restrictions
