@@ -12,6 +12,7 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzCologneProductionScenario.DiseaseImport;
 
 import javax.annotation.Nullable;
 
@@ -32,10 +33,24 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 	@Override
 	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
-
+		
+//		boolean leisureNightly = false;
+//		double leisureNightlyScale = 1.0;
+//		
+//		if (params != null) {
+//			if (params.leisureNightly.contains("true")) {
+//				leisureNightly = true;
+//				leisureNightlyScale = Double.parseDouble(params.leisureNightly.split("-")[1]);
+//			}
+//		}
+		
+		
 		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
+//				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
+//				.setLeisureNightly(leisureNightly)
+				.setScale(params == null ? 1.0 : params.scale)
+//				.setLeisureNightlyScale(leisureNightlyScale)
 				.createSnzCologneProductionScenario();
 	}
 
@@ -76,10 +91,34 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
 		builder.restrict("2021-12-20", 0.2, "educ_higher");
 		builder.restrict("2022-01-02", 1.0, "educ_higher");
+		
+		builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+
 
 
 		episimConfig.setPolicy(builder.build());
-
+		
+		
+		
+		Map<LocalDate, Integer> importMap = new HashMap<>();
+		double importFactorBeforeJune = 4.0;
+		double imprtFctMult = 1.0;
+		long importOffset = 0;
+		double cologneFactor = 0.5;
+		
+		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
+				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
+				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
+				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+		
+		importMap.put(LocalDate.parse("2020-07-19"), (int) (params.summerImportFactor * 32));
+		importMap.put(LocalDate.parse("2020-08-09"), 1);
+		
+		episimConfig.setInfections_pers_per_day(importMap);
+	
+		
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
@@ -105,25 +144,26 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
+		infPerDayMUTB.put(LocalDate.parse("2021-05-01"), 1);
 
+		double importFactor = 4.0;
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-06-14").plusDays(0),
-				LocalDate.parse("2021-06-21").plusDays(0), 1.0, 0.5 * params.importFactor * 1.6);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-06-21").plusDays(0),
+				LocalDate.parse("2021-06-21").plusDays(0), 1.0, 0.5 * importFactor * 1.6);
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-06-21").plusDays(0),
 				LocalDate.parse("2021-06-28").plusDays(0), 1.6, 2.8);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-06-28").plusDays(0),
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-06-28").plusDays(0),
 				LocalDate.parse("2021-07-05").plusDays(0), 2.8, 4.6);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-07-05").plusDays(0),
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-05").plusDays(0),
 				LocalDate.parse("2021-07-12").plusDays(0), 4.6, 5.9);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-07-12").plusDays(0),
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-12").plusDays(0),
 				LocalDate.parse("2021-07-19").plusDays(0), 5.9, 7.3);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-07-19").plusDays(0),
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-19").plusDays(0),
 				LocalDate.parse("2021-07-26").plusDays(0), 7.3, 10.2);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * params.importFactor, LocalDate.parse("2021-07-26").plusDays(0),
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-26").plusDays(0),
 				LocalDate.parse("2021-08-02").plusDays(0), 10.2, 13.2);
 
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-08-09").plusDays(0),
-					LocalDate.parse("2021-08-31").plusDays(0), 0.5 * params.importFactor * 13.2, 1.0);
+					LocalDate.parse("2021-08-31").plusDays(0), 0.5 * importFactor * 13.2, 1.0);
 
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
@@ -235,18 +275,18 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 
 		for (int i = 1; i <= 31; i++) {
-			leisureTests.put(testingStartDate.plusDays(i),  params.tesRateLeisureWork * i / 31.);
-			workTests.put(testingStartDate.plusDays(i), params.tesRateLeisureWork * i / 31.);
+			leisureTests.put(testingStartDate.plusDays(i),  0.25 * i / 31.);
+			workTests.put(testingStartDate.plusDays(i), 0.25 * i / 31.);
 			eduTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
 		}
 
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
-		workTests.put(LocalDate.parse("2021-06-04"), params.tesRateLeisureWork2);
+		workTests.put(LocalDate.parse("2021-06-04"), 0.05);
 //		workTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestWork);
 
 
-		leisureTests.put(LocalDate.parse("2021-06-04"),  params.tesRateLeisureWork2);
+		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
 //		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
 
 //		leisureTests.put(LocalDate.parse("2021-09-06"),  params.rapidTestLeis);
@@ -310,19 +350,28 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(16)
+		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({4.0})
-		double importFactor;
+//		@Parameter({4.0})
+//		double importFactor;
 
-		@Parameter({0.8, 0.9, 1.0})
+		@Parameter({1.1, 1.2, 1.3, 1.4})
 		double thetaFactor;
+		
+		@Parameter({1.0, 1.1, 1.2, 1.3, 1.4})
+		double scale;
+		
+		@Parameter({1.7, 1.8, 1.9, 2.0})
+		double leisureFactor;
+		
+//		@StringParameter({"true-1.0", "true-1.1", "true-1.2", "true-1.3", "true-1.4", "false"})
+//		String leisureNightly;
 
-		@Parameter({0.25, 0.3, 0.35})
-		double leisureOffset;
+//		@Parameter({0.25, 0.3, 0.35})
+//		double leisureOffset;
 
-		@StringParameter({"2020-12-05", "2020-12-12", "2020-12-19", "2020-12-26"})
+		@StringParameter({"2020-12-15"})
 		String alphaDate;
 
 		@Parameter({1.0})
@@ -333,21 +382,24 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		@Parameter({0.7})
 		double deltaVacEffect;
+		
+		@Parameter({0.25, 0.5, 0.75})
+		double summerImportFactor;
 
-		@Parameter({0.25})
-		double tesRateLeisureWork;
-
-		@Parameter({0.05})
-		double tesRateLeisureWork2;
+//		@Parameter({0.25})
+//		double tesRateLeisureWork;
+//
+//		@Parameter({0.05})
+//		double tesRateLeisureWork2;
 
 //		@StringParameter({"alpha", "0.5"})
 //		String delta1Vac;
 
 //		@StringParameter({"no"})
 //		String schoolMasks;
-
-		@StringParameter({"2021-05-01"})
-		String deltaDate;
+//
+//		@StringParameter({"2021-05-01"})
+//		String deltaDate;
 
 		@Parameter({2.0})
 		double deltaSeriouslySick;

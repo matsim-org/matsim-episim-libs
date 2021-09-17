@@ -77,6 +77,11 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		private double importFactorBeforeJune = 4.;
 		private double importFactorAfterJune = 0.5;
 		private double leisureOffset = 0.0;
+		private double scale = 1.0;
+		private boolean leisureNightly = false;
+		private double leisureNightlyScale = 1.0;
+
+
 
 		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
@@ -153,6 +158,21 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 			this.leisureOffset = offset;
 			return this;
 		}
+		
+		public Builder setScale(double scale) {
+			this.scale = scale;
+			return this;
+		}
+		
+		public Builder setLeisureNightly(boolean leisureNightly) {
+			this.leisureNightly = leisureNightly;
+			return this;
+		}
+		
+		public Builder setLeisureNightlyScale(double leisureNightlyScale) {
+			this.leisureNightlyScale = leisureNightlyScale;
+			return this;
+		}
 	}
 
 	public static enum DiseaseImport {yes, onlySpring, no}
@@ -182,6 +202,9 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
 	private final double leisureOffset;
+	private final double scale;
+	private final boolean leisureNightly;
+	private final double leisureNightlyScale;
 	private final LocationBasedRestrictions locationBasedRestrictions;
 
 	/**
@@ -210,6 +233,9 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		this.weatherModel = builder.weatherModel;
 		this.imprtFctMult = builder.imprtFctMult;
 		this.leisureOffset = builder.leisureOffset;
+		this.scale = builder.scale;
+		this.leisureNightly = builder.leisureNightly;
+		this.leisureNightlyScale = builder.leisureNightlyScale;
 		this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
@@ -219,7 +245,9 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;
-			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
+			int diseaseImport = (int) Math.round(importFactor * (a + fraction * (b - a)));
+			diseaseImport = Math.max(diseaseImport, 1);
+			importMap.put(start.plusDays(i), diseaseImport);
 		}
 	}
 
@@ -338,10 +366,9 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 
 		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210807.csv"));
 
-		// TODO
-
-		activityParticipation.setScale(1.0);
-		activityParticipation.setLeisureAsNightly(true);
+		activityParticipation.setScale(this.scale);
+		activityParticipation.setLeisureAsNightly(this.leisureNightly);
+		activityParticipation.setNightlyScale(this.leisureNightlyScale);
 
 		ConfigBuilder builder;
 		try {
@@ -434,7 +461,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		//leisure & work factor
 		if (this.restrictions != Restrictions.no) {
 //			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
-			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
+//			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
 			BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
 
