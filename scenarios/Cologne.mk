@@ -1,7 +1,7 @@
 
-in = $(WD)/snz/Cologne/original-data
-out = $(WD)/snz/Cologne/episim-input
-tmp = $(WD)/snz/Cologne/processed-data
+in = $(WD)/snz/CologneV2/original-data
+out = $(WD)/snz/CologneV2/episim-input
+tmp = $(WD)/snz/CologneV2/processed-data
 
 Cologne: $(out)/cologne_snz_episim_events_wt_25pt_split.xml.gz $(out)/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz
 	echo "Building Cologne scenario"
@@ -9,6 +9,7 @@ Cologne: $(out)/cologne_snz_episim_events_wt_25pt_split.xml.gz $(out)/cologne_sn
 $(tmp)/personIds.diluted.txt.gz:
 	$(sc) filterPersons $(in)/de2020gsmwt_events_reduced.xml.gz\
 	 --facilities $(in)/facilities_assigned_simplified.xml.gz\
+	 --attributes $(in)/populationAttributes.xml.gz\
 	 --shape-file $(out)/../shape-File/cologne-shp.shp\
 	 --shape-crs EPSG:25832\
 	 --output $@
