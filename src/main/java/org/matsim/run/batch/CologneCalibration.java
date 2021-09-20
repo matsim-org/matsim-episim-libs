@@ -33,18 +33,18 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 	@Override
 	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
-		
+
 //		boolean leisureNightly = false;
 //		double leisureNightlyScale = 1.0;
-//		
+//
 //		if (params != null) {
 //			if (params.leisureNightly.contains("true")) {
 //				leisureNightly = true;
 //				leisureNightlyScale = Double.parseDouble(params.leisureNightly.split("-")[1]);
 //			}
 //		}
-		
-		
+
+
 		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
@@ -81,6 +81,9 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
+		// TODO
+		//builder.setHospitalScale(2.0);
+
 		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
@@ -91,34 +94,34 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
 		builder.restrict("2021-12-20", 0.2, "educ_higher");
 		builder.restrict("2022-01-02", 1.0, "educ_higher");
-		
+
 		builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - params.leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
 
 
 
 		episimConfig.setPolicy(builder.build());
-		
-		
-		
+
+
+
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		double importFactorBeforeJune = 4.0;
 		double imprtFctMult = 1.0;
 		long importOffset = 0;
 		double cologneFactor = 0.5;
-		
+
 		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
 				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
 		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
 				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
 		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
 				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-		
+
 		importMap.put(LocalDate.parse("2020-07-19"), (int) (params.summerImportFactor * 32));
 		importMap.put(LocalDate.parse("2020-08-09"), 1);
-		
+
 		episimConfig.setInfections_pers_per_day(importMap);
-	
-		
+
+
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
@@ -358,13 +361,13 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		@Parameter({1.1, 1.2, 1.3, 1.4})
 		double thetaFactor;
-		
+
 		@Parameter({1.0, 1.1, 1.2, 1.3, 1.4})
 		double scale;
-		
+
 		@Parameter({1.7, 1.8, 1.9, 2.0})
 		double leisureFactor;
-		
+
 //		@StringParameter({"true-1.0", "true-1.1", "true-1.2", "true-1.3", "true-1.4", "false"})
 //		String leisureNightly;
 
@@ -382,7 +385,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 		@Parameter({0.7})
 		double deltaVacEffect;
-		
+
 		@Parameter({0.25, 0.5, 0.75})
 		double summerImportFactor;
 
