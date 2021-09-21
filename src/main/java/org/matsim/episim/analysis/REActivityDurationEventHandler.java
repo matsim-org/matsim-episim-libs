@@ -39,11 +39,11 @@ import org.matsim.core.gbl.Gbl;
  * @author rewert
  */
 
-public class REActivityDurationEventHandler implements ActivityStartEventHandler, ActivityEndEventHandler {
+class REActivityDurationEventHandler implements ActivityStartEventHandler, ActivityEndEventHandler {
 
 	private final Map<String, HashMap<String, Double>> activityStartMap;
 	private final Map<String, HashMap<String, Double>> activityEndMap;
-	public REActivityDurationEventHandler( Map<String, HashMap<String, Double>> activityStartMap, Map<String, HashMap<String, Double>> activityEndMap ){
+	REActivityDurationEventHandler( Map<String, HashMap<String, Double>> activityStartMap, Map<String, HashMap<String, Double>> activityEndMap ){
 		this.activityStartMap = activityStartMap;
 		this.activityEndMap = activityEndMap;
 	}
@@ -65,7 +65,7 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 			Gbl.assertIf(!personSetStart.containsKey( personId + "_1" ) );
 			personSetStart.put( personId + "_1", event.getTime() );
 			// In general, a person should have finished the previous activity before starting the next one.  So I think that this can
-			// only happen with the "over night" messyness.  If at all.  kai, sep'21
+			// only happen with the "overnight" messiness.  If at all.  kai, sep'21
 		}
 	}
 	/*
@@ -85,17 +85,18 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 
 		HashMap<String, Double> personMapStart = activityStartMap.get( event.getActType() );
 
+		// if no startAcitivity take place. Assume midnight as startTime
+
 		if (personMapStart != null && !personMapStart.containsKey(personId)) {
 			personMapEnd.put(personId, event.getTime());
 			activityEndMap.put( event.getActType(), personMapEnd );
 		} else {
-			// if no startAcitivity take place. Assume midnight as startTime
 
-//				double durationBefore;
-//				if (personMapEnd == null || personMapEnd.get(personId) == null)
-//					durationBefore = 0;
-//				else
-//					durationBefore = personMapEnd.get(personId);
+			double durationBefore;
+			if (personMapEnd == null || personMapEnd.get(personId) == null)
+				durationBefore = 0;
+			else
+				durationBefore = personMapEnd.get(personId);
 
 			double startTime;
 			if (personMapStart == null){
@@ -108,11 +109,11 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 
 			//change personId if you want to analyze all activities without analyze for summarized result for each person
 			if ( personMapEnd.containsKey(personId ) ) {
-//					personMapEnd.replace(personId, durationBefore + duration);
-				while (personMapEnd.containsKey(personId)){
-					personId = personId + "_1";
-				}
-				personMapEnd.put(personId, duration);
+				personMapEnd.replace(personId, durationBefore + duration);
+//				while (personMapEnd.containsKey(personId)){
+//					personId = personId + "_1";
+//				}
+//				personMapEnd.put(personId, duration);
 			} else{
 				personMapEnd.put( personId, duration );
 			}
@@ -121,9 +122,8 @@ public class REActivityDurationEventHandler implements ActivityStartEventHandler
 	}
 
 	private static boolean personIsInRegionOfInterest( Id<Person> personId1 ){
-		return REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes()
-						  .getAttribute( "district" ) != null && REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes()
-														    .getAttribute( "district" ).toString().equals( "Berlin" );
+		return REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes().getAttribute( "district" ) != null
+				       && REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes().getAttribute( "district" ).toString().equals( "Berlin" );
 	}
 
 }
