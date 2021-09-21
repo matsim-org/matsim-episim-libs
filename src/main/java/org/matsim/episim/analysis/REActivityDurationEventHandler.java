@@ -22,7 +22,6 @@ package org.matsim.episim.analysis;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Function;
 
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.events.ActivityEndEvent;
@@ -42,10 +41,10 @@ import org.matsim.core.gbl.Gbl;
 class REActivityDurationEventHandler implements ActivityStartEventHandler, ActivityEndEventHandler {
 
 	private final Map<String, HashMap<String, Double>> activityStartMap;
-	private final Map<String, HashMap<String, Double>> activityEndMap;
-	REActivityDurationEventHandler( Map<String, HashMap<String, Double>> activityStartMap, Map<String, HashMap<String, Double>> activityEndMap ){
-		this.activityStartMap = activityStartMap;
-		this.activityEndMap = activityEndMap;
+	private final Map<String, HashMap<String, Double>> activityDurationMap;
+	REActivityDurationEventHandler( Map<String, HashMap<String, Double>> activityDurationMap, Map<String, HashMap<String, Double>> activityEndMap ){
+		this.activityStartMap = activityDurationMap;
+		this.activityDurationMap = activityEndMap;
 	}
 	// counts the persons in each acticityType and safes the time of the
 	// startActivity
@@ -79,45 +78,45 @@ class REActivityDurationEventHandler implements ActivityStartEventHandler, Activ
 			return;
 		}
 
-		HashMap<String, Double> personMapEnd = activityEndMap.computeIfAbsent( event.getActType(), k -> new HashMap<>() );
+		HashMap<String, Double> activityDurationsOfActivityType = activityDurationMap.computeIfAbsent( event.getActType(), k -> new HashMap<>() );
 
 		String personId = personId1.toString();
 
-		HashMap<String, Double> personMapStart = activityStartMap.get( event.getActType() );
+		HashMap<String, Double> activityStartTimesOfActivityType = activityStartMap.get( event.getActType() );
 
-		// if no startAcitivity take place. Assume midnight as startTime
 
-		if (personMapStart != null && !personMapStart.containsKey(personId)) {
-			personMapEnd.put(personId, event.getTime());
-			activityEndMap.put( event.getActType(), personMapEnd );
+		if (activityStartTimesOfActivityType != null && !activityStartTimesOfActivityType.containsKey(personId)) {
+			// if no startAcitivity take place. Assume midnight as startTime
+			activityDurationsOfActivityType.put(personId, event.getTime());
+			activityDurationMap.put( event.getActType(), activityDurationsOfActivityType );
 		} else {
 
 			double durationBefore;
-			if (personMapEnd == null || personMapEnd.get(personId) == null)
+			if ( activityDurationsOfActivityType.get( personId ) == null ){
 				durationBefore = 0;
-			else
-				durationBefore = personMapEnd.get(personId);
-
+			} else{
+				durationBefore = activityDurationsOfActivityType.get( personId );
+			}
 			double startTime;
-			if (personMapStart == null){
+			if (activityStartTimesOfActivityType == null){
 				startTime = 0;
 			} else {
-				startTime = personMapStart.get(personId);
-				personMapStart.remove(personId);
+				startTime = activityStartTimesOfActivityType.get(personId);
+				activityStartTimesOfActivityType.remove(personId);
 			}
 			double duration = event.getTime() - startTime;
 
 			//change personId if you want to analyze all activities without analyze for summarized result for each person
-			if ( personMapEnd.containsKey(personId ) ) {
-				personMapEnd.replace(personId, durationBefore + duration);
-//				while (personMapEnd.containsKey(personId)){
+			if ( activityDurationsOfActivityType.containsKey(personId ) ) {
+				activityDurationsOfActivityType.replace(personId, durationBefore + duration);
+//				while (activityDurationsOfActivityType.containsKey(personId)){
 //					personId = personId + "_1";
 //				}
-//				personMapEnd.put(personId, duration);
+//				activityDurationsOfActivityType.put(personId, duration);
 			} else{
-				personMapEnd.put( personId, duration );
+				activityDurationsOfActivityType.put( personId, duration );
 			}
-			activityEndMap.put( event.getActType(), personMapEnd );
+			activityDurationMap.put( event.getActType(), activityDurationsOfActivityType );
 		}
 	}
 
