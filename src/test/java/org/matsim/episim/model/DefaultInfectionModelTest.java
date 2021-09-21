@@ -6,6 +6,7 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.events.EpisimInfectionEvent;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -103,6 +104,36 @@ public class DefaultInfectionModelTest {
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 42)
 		).isCloseTo(0.1, Offset.offset(0.001));
+
+	}
+
+	@Test
+	public void immunityEffectiveness() {
+
+		VaccinationConfigGroup vacConfig = new VaccinationConfigGroup();
+		vacConfig.getOrAddParams(VaccinationType.natural)
+				.setDaysBeforeFullEffect(0)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(180, 0.1)
+						.atFullEffect(0.9));
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);
+
+
+		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
+
+		p.possibleInfection(new EpisimInfectionEvent(0, p.getPersonId(), p.getPersonId(), null, "somewhere", 1, VirusStrain.SARS_CoV_2, 1d));
+		p.checkInfection();
+		p.setDiseaseStatus(1000, EpisimPerson.DiseaseStatus.recovered);
+		p.setDiseaseStatus(2000, EpisimPerson.DiseaseStatus.susceptible);
+
+
+		assertThat(DefaultInfectionModel.getImmunityEffectiveness(cov2, p, vacConfig, 0))
+				.isCloseTo(0.1, Offset.offset(0.0001));
+
+		assertThat(DefaultInfectionModel.getImmunityEffectiveness(cov2, p, vacConfig, 280))
+				.isCloseTo(0.9, Offset.offset(0.0001));
 
 	}
 }

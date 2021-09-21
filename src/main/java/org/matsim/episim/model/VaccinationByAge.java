@@ -43,7 +43,7 @@ public class VaccinationByAge implements VaccinationModel {
 
 		for (EpisimPerson p : persons.values()) {
 			if (p.isVaccinable() &&
-					p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
+					p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration) &&
 					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no) )&&
 					p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
 

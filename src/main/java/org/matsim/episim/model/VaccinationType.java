@@ -7,6 +7,11 @@ public enum VaccinationType {
 
 	generic,
 	mRNA,
-	vector
+	vector,
+
+	/**
+	 * Not a real vaccination, but used to describe the profile for persons that have been infected and gained a natural immunity.
+	 */
+	natural
 
 }

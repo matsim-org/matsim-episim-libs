@@ -51,8 +51,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
-				: getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
+		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
 				* susceptibility
@@ -66,6 +65,10 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 * Calculate the current effectiveness of vaccination.
 	 */
 	static double getVaccinationEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
+
+		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return 1;
+
 		int daysVaccinated = target.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
 
 		VaccinationConfigGroup.VaccinationParams params = config.getParams(target.getVaccinationType());
@@ -77,7 +80,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double min;
 		// use re vaccine effectiveness if person received the new vaccine
 		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			vaccineEffectiveness = params.getBoostEffectiveness(strain, daysVaccinated) ;
+			vaccineEffectiveness = params.getBoostEffectiveness(strain, daysVaccinated);
 			// effectiveness of second vaccine is never below first
 			min = params.getEffectiveness(strain, params.getDaysBeforeFullEffect());
 		} else {
@@ -88,5 +91,23 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
 		return 1 - Math.max(min, vaccineEffectiveness);
+	}
+
+	/**
+	 * Calculate factor for natural immunity after infection.
+	 */
+	static double getImmunityEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
+
+		if (target.getNumInfections() < 1 || !target.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))
+			return 1;
+
+		if (!config.hasParams(VaccinationType.natural))
+			return 1;
+
+		int daysSince = target.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration);
+
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);
+
+		return 1 - params.getEffectiveness(virusStrain.getStrain(), daysSince);
 	}
 }

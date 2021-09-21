@@ -517,6 +517,13 @@ public final class EpisimPerson implements Attributable {
 		return numInfections;
 	}
 
+	/**
+	 * Whether this person is handled as a recovered person.
+	 */
+	public boolean isRecentlyRecovered(int currentDay) {
+		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && numInfections >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= 180);
+	}
+
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
@@ -823,7 +830,7 @@ public final class EpisimPerson implements Attributable {
 	public enum QuarantineStatus {full, atHome, no}
 
 	/**
-	 * Latest test result of this persons.
+	 * Latest test result of this person.
 	 */
 	public enum TestStatus {untested, positive, negative}
 

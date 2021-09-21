@@ -77,6 +77,13 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Whether config contains certain type.
+	 */
+	public boolean hasParams(VaccinationType type) {
+		return params.containsKey(type);
+	}
+
+	/**
 	 * Get an existing or add new parameter set.
 	 */
 	public VaccinationParams getOrAddParams(VaccinationType type) {

@@ -41,7 +41,7 @@ public class RandomVaccination implements VaccinationModel {
 
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(EpisimPerson::isVaccinable)
-				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
+				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration))
 				.filter(p -> p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no))
 				.filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 				.collect(Collectors.toList());

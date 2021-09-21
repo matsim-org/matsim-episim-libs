@@ -46,7 +46,7 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 
 			// reduce fraction for persons that are not vaccinated
 			if (context.getSusceptibleRf() != null && context.getSusceptibleRf() != 1d)
-				if (!(person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.recovered || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
+				if (!(person.isRecentlyRecovered(iteration) || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
 						person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect())))
 					r *= context.getSusceptibleRf();
 
