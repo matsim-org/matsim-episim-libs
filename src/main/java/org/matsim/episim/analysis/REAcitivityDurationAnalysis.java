@@ -58,7 +58,7 @@ public class REAcitivityDurationAnalysis {
 		
 		EventsManager events = EventsUtils.createEventsManager();
 
-		REActivityDurationEventHandler reActivityDurationEventHandler = new REActivityDurationEventHandler();
+		REActivityDurationEventHandler reActivityDurationEventHandler = new REActivityDurationEventHandler(activityStartMap,activityEndMap);
 
 		events.addHandler(reActivityDurationEventHandler);
 
@@ -74,28 +74,27 @@ public class REAcitivityDurationAnalysis {
 				 * as the endTime
 				 */
 				if (activityStartMap.get(activityType).containsKey(personId)) {
-					sumDurations = sumDurations + activityEndMap.get(activityType).get(personId)
-							+ (86400. - activityStartMap.get(activityType).get(personId));
-				} else
-					sumDurations = sumDurations + activityEndMap.get(activityType).get(personId);
+					sumDurations = sumDurations + activityEndMap.get(activityType).get(personId) + (86400. - activityStartMap.get(activityType).get(personId));
+				} else {
+					sumDurations = sumDurations + activityEndMap.get( activityType ).get( personId );
+				}
 			}
-			System.out.println(activityType + ";" + activityEndMap.get(activityType).size() * 4 + ";"
-					+ (sumDurations / activityEndMap.get(activityType).size() / 3600));
+			System.out.println(activityType + ";" + activityEndMap.get(activityType).size() * 4 + ";" + (sumDurations / activityEndMap.get(activityType).size() / 3600));
 		}
 
 		
-		System.out.println("Number of persons in population in Berlin: " + countPersons * 4);
+		System.out.println("Number of persons in population in Berlin; " + countPersons * 4);
 
 	}
 
 	static Population getPopulation() {
 		return population;
 	}
-	static Map<String, HashMap<String, Double>> getStartMap() {
-		return activityStartMap;
-	}
-
-	static Map<String, HashMap<String, Double>> getEndMap() {
-		return activityEndMap;
-	}
+//	static Map<String, HashMap<String, Double>> getStartMap() {
+//		return activityStartMap;
+//	}
+//
+//	static Map<String, HashMap<String, Double>> getEndMap() {
+//		return activityEndMap;
+//	}
 }
