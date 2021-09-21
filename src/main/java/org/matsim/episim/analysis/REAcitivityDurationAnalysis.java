@@ -82,7 +82,6 @@ public class REAcitivityDurationAnalysis {
 			System.out.println(activityType + ";" + activityEndMap.get(activityType).size() * 4 + ";" + (sumDurations / activityEndMap.get(activityType).size() / 3600));
 		}
 
-		
 		System.out.println("Number of persons in population in Berlin; " + countPersons * 4);
 
 	}
