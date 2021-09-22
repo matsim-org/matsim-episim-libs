@@ -45,7 +45,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
@@ -117,12 +116,34 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 	private void calcValues(Path scenario, BufferedWriter rValues, BufferedWriter infectionsPerActivity) throws IOException {
 
+		Path eventFolder = scenario.resolve("events");
+		if (!Files.exists(eventFolder)) {
+			log.warn("No events found at {}", eventFolder);
+			return;
+		}
+
+
 		String id = AnalysisCommand.getScenarioPrefix(scenario);
 
+		EventsManager manager = EventsUtils.createEventsManager();
 		InfectionsHandler infHandler = new InfectionsHandler();
 		RHandler rHandler = new RHandler();
 
-		List<String> eventFiles = AnalysisCommand.forEachEvent(scenario, s -> {}, infHandler, rHandler);
+		manager.addHandler(infHandler);
+		manager.addHandler(rHandler);
+
+		List<Path> eventFiles = Files.list(eventFolder)
+				.filter(p -> p.getFileName().toString().contains("xml.gz"))
+				.collect(Collectors.toList());
+
+		for (Path p : eventFiles) {
+			try {
+				new EpisimEventsReader(manager).readFile(p.toString());
+			} catch (UncheckedIOException e) {
+				log.warn("Caught UncheckedIOException. Could not read file {}", p);
+			}
+		}
+
 
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
