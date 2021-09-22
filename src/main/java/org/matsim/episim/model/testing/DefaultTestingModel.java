@@ -30,12 +30,17 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing rates for configured activities for current day.
 	 */
-	private Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
+	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
 
 	/**
 	 * Ids of households that are not compliant.
 	 */
 	private final Set<String> nonCompliantHouseholds = new HashSet<>();
+
+	/**
+	 * Whether to test all persons on this day.
+	 */
+	private boolean testAllPersons;
 
 	@Inject
 	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
@@ -50,6 +55,8 @@ public class DefaultTestingModel implements TestingModel {
 	public void setIteration(int day) {
 
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+
+		testAllPersons = testingConfig.getTestAllPersonsAfter() != null && date.isAfter(testingConfig.getTestAllPersonsAfter());
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
 
@@ -111,8 +118,7 @@ public class DefaultTestingModel implements TestingModel {
 			return;
 
 		// vaccinated and recovered persons are not tested
-		if (testingConfig.getSelection() != TestingConfigGroup.Selection.ALL_PERSONS &
-				(person.isRecentlyRecovered(day) || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
+		if (!testAllPersons & (person.isRecentlyRecovered(day) || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
 						person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect()))
 		)
 			return;
