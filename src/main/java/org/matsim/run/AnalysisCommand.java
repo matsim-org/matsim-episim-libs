@@ -138,6 +138,7 @@ public class AnalysisCommand implements Runnable {
 			try {
 				eventFiles = Files.list(events)
 						.filter(p -> p.getFileName().toString().contains("xml.gz"))
+						.sorted(Comparator.comparing(p -> p.getFileName().toString()))
 						.collect(Collectors.toList());
 			} catch (IOException e) {
 				throw new java.io.UncheckedIOException(e);
