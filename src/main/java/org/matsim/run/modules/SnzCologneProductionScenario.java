@@ -364,7 +364,7 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		//restrictions and masks
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210807.csv"));
+		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210917.csv"));
 
 		activityParticipation.setScale(this.scale);
 		activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -397,6 +397,8 @@ public final class SnzCologneProductionScenario extends AbstractModule {
 		builder.restrict(LocalDate.parse("2021-08-17"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 
 		{

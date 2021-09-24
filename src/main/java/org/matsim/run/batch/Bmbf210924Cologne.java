@@ -3,6 +3,7 @@ package org.matsim.run.batch;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
@@ -13,13 +14,16 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
-import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzCologneProductionScenario.DiseaseImport;
 
 import javax.annotation.Nullable;
 
 import static org.matsim.episim.model.Transition.to;
 
 import java.io.IOException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,39 +32,47 @@ import java.util.Map;
 
 
 /**
- * bmbf runs
+ * Calibration
  */
-public class BMBF210903 implements BatchRun<BMBF210903.Params> {
+public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 	@Override
-	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
-
-		return new SnzBerlinProductionScenario.Builder()
+	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
+		
+//		boolean leisureNightly = false;
+//		double leisureNightlyScale = 1.0;
+//		
+//		if (params != null) {
+//			if (params.leisureNightly.contains("true")) {
+//				leisureNightly = true;
+//				leisureNightlyScale = Double.parseDouble(params.leisureNightly.split("-")[1]);
+//			}
+//		}
+		
+		
+		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-//				.setWeatherModel(params == null ? SnzBerlinProductionScenario.WeatherModel.midpoints_200_250 : params.weatherModel)
-//				.setImportFactorBeforeJune(params == null ? 1d : params.importFactorBeforeJune)
-//				.setImportFactorAfterJune(params == null ? 1d : params.importFactorAfterJune)
-				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
-				.createSnzBerlinProductionScenario();
+//				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
+//				.setLeisureNightly(leisureNightly)
+				.setScale(1.3)
+//				.setLeisureNightlyScale(leisureNightlyScale)
+				.createSnzCologneProductionScenario();
 	}
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "bmbf");
+		return Metadata.of("cologne", "calibration");
 	}
-
-//	@Override
-//	public int getOffset() {
-//		return 10000;
-//	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
+		
+		LocalDate restrictionDate = LocalDate.parse("2021-09-27");
 
-		SnzBerlinProductionScenario module = getBindings(id, params);
+		SnzCologneProductionScenario module = getBindings(id, params);
 
 		Config config = module.config();
+
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -70,71 +82,108 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 
 		episimConfig.setCalibrationParameter(1.0e-05);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83);
-
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-20210901/" + params.seed + "-270-2020-11-20.zip");
-
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83 * 1.4);
+		
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20210917/" + params.seed + "-270-2020-11-20.zip");
+		
 		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
 
-//		if (id == 1)
-//			episimConfig.setSnapshotInterval(100);
-
 		//restrictions
-		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy()).setHospitalScale(id);
+		
+//		builder.setHospitalScale(params.regrScale);
+		
 
-		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
+		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
-		curfewCompliance.put(LocalDate.parse("2021-04-06"), 1.0);
-		curfewCompliance.put(LocalDate.parse("2021-05-16"), 0.0);
+		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
+		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
+		
+		if (params.curfew.equals("yes")) curfewCompliance.put(restrictionDate, 1.0);
+
 		episimConfig.setCurfewCompliance(curfewCompliance);
-
-		//kein zusätzliches Lüften mehr nach den Sommerferien
-		builder.restrict("2021-08-07", Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-
-		//Maskenpflicht nach den Sommerferien
-		builder.restrict(LocalDate.parse("2021-08-07"), Restriction.ofMask(Map.of(
-				FaceMask.N95, 0.45,
-				FaceMask.SURGICAL, 0.45)),
-				"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-//		if (params.schoolMasks.equals("no")) {
-			builder.restrict(LocalDate.parse("2021-09-06"), Restriction.ofMask(Map.of(
-					FaceMask.N95, 0.0,
-					FaceMask.SURGICAL, 0.0)),
-					"educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-//		}
 
 
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
-		builder.restrict("2021-12-20", 0.2, "educ_higher");
-		builder.restrict("2022-01-02", 1.0, "educ_higher");
+		builder.restrict("2021-12-24", 0.2, "educ_higher");
+		builder.restrict("2022-01-08", 1.0, "educ_higher");
+		
+		builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
+		
+		builder.restrict("2021-08-17", Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
-		if (!params.workUnv.equals("no")) {
-			double fraction = Double.parseDouble(params.workUnv);
-			builder.restrict("2021-09-06", Restriction.ofSusceptibleRf(fraction), "work", "business");
+		if (params.masksEdu.equals("no")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		
+		if (params.monday.equals("edu0pct") || params.monday.equals("edu50pct")) {
+			double rf = 0.0;
+			if (params.monday.equals("edu50pct")) rf = 0.5;
+
+			for (int ii = 0; ii < Integer.MAX_VALUE; ii++) {
+				
+				LocalDate date = restrictionDate.plusDays(ii);
+				//ignore holidays
+				if (date.isAfter(LocalDate.parse("2021-10-11").minusDays(1)) && date.isBefore(LocalDate.parse("2021-10-23"))) continue;
+				if (date.isAfter(LocalDate.parse("2021-12-24")) && date.isBefore(LocalDate.parse("2022-01-08"))) continue;
+				
+				if (restrictionDate.plusDays(ii).getDayOfWeek() == DayOfWeek.MONDAY) {
+					builder.restrict(date, rf, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+					builder.restrict(date.plusDays(1), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+				}
+				if (restrictionDate.plusDays(ii).isAfter(LocalDate.parse("2023-06-01"))) {
+					break;
+				}
+			}
 		}
+		
 		if (!params.leisureUnv.equals("no")) {
 			double fraction = Double.parseDouble(params.leisureUnv);
-			builder.restrict("2021-09-06", Restriction.ofSusceptibleRf(fraction), "leisure");
+			builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(fraction), "leisure");
+		}
+		
+		episimConfig.setPolicy(builder.build());
+		
+		
+		if (params.monday.equals("sunday")) {
+			Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
+			for (int ii = 0; ii < Integer.MAX_VALUE; ii++) {
+				if (restrictionDate.plusDays(ii).getDayOfWeek() == DayOfWeek.MONDAY) {
+					inputDays.put(restrictionDate.plusDays(ii), DayOfWeek.SUNDAY);
+				}
+				if (restrictionDate.plusDays(ii).isAfter(LocalDate.parse("2023-06-01"))) {
+					break;
+				}
+			}
+			episimConfig.setInputDays(inputDays);
 		}
 
 
-
-		// These entries will have no effect when extrapolation is based on hospital numbers
-//		builder.restrict("2021-10-11", 0.83, "work", "business");
-//		builder.restrict("2021-10-23", 1.0, "work", "business");
-//
-//		builder.restrict("2021-12-20", 0.83, "work", "business");
-//		builder.restrict("2022-01-02", 1.0, "work", "business");
-
-		episimConfig.setPolicy(builder.build());
-
+		
+		
+		
+		Map<LocalDate, Integer> importMap = new HashMap<>();
+		double importFactorBeforeJune = 4.0;
+		double imprtFctMult = 1.0;
+		long importOffset = 0;
+		double cologneFactor = 0.5;
+		
+		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
+				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
+				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
+				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+		
+		importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
+		importMap.put(LocalDate.parse("2020-08-09"), 1);
+		
+		episimConfig.setInfections_pers_per_day(importMap);
+	
+		
 		//weather model
 		try {
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210905.csv").toFile(),
-					SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 22.5, 5.);
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, 18.5, 5., 1.0);
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -147,7 +196,8 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayB117.put(LocalDate.parse("2020-12-05"), 1);
+
+		infPerDayB117.put(LocalDate.parse(params.alphaDate), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.7);
@@ -155,34 +205,35 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse("2021-05-01"), 1);
+		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
 
-		double importFactor = params.importFactor;
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-06-14").plusDays(0),
-				LocalDate.parse("2021-06-21").plusDays(0), 1.0, importFactor * 1.6);
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  importFactor, LocalDate.parse("2021-06-21").plusDays(0),
-				LocalDate.parse("2021-06-28").plusDays(0), 1.6, 2.8);
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  importFactor, LocalDate.parse("2021-06-28").plusDays(0),
-				LocalDate.parse("2021-07-05").plusDays(0), 2.8, 4.6);
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  importFactor, LocalDate.parse("2021-07-05").plusDays(0),
-				LocalDate.parse("2021-07-12").plusDays(0), 4.6, 5.9);
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  importFactor, LocalDate.parse("2021-07-12").plusDays(0),
-				LocalDate.parse("2021-07-19").plusDays(0), 5.9, 7.3);
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  importFactor, LocalDate.parse("2021-07-19").plusDays(0),
-				LocalDate.parse("2021-07-26").plusDays(0), 7.3, 10.2);
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  importFactor, LocalDate.parse("2021-07-26").plusDays(0),
-				LocalDate.parse("2021-08-02").plusDays(0), 10.2, 13.2);
+		double importFactor = 4.0;
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-06-14").plusDays(0),
+//				LocalDate.parse("2021-06-21").plusDays(0), 1.0, 0.5 * importFactor * 1.6);
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-06-21").plusDays(0),
+//				LocalDate.parse("2021-06-28").plusDays(0), 1.6, 2.8);
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-06-28").plusDays(0),
+//				LocalDate.parse("2021-07-05").plusDays(0), 2.8, 4.6);
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-05").plusDays(0),
+//				LocalDate.parse("2021-07-12").plusDays(0), 4.6, 5.9);
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-12").plusDays(0),
+//				LocalDate.parse("2021-07-19").plusDays(0), 5.9, 7.3);
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-19").plusDays(0),
+//				LocalDate.parse("2021-07-26").plusDays(0), 7.3, 10.2);
+//		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB,  0.5 * importFactor, LocalDate.parse("2021-07-26").plusDays(0),
+//				LocalDate.parse("2021-08-02").plusDays(0), 10.2, 13.2);
+//
 
-		SnzBerlinProductionScenario.interpolateImport(infPerDayMUTB,  1.0, LocalDate.parse("2021-08-09").plusDays(0),
-					LocalDate.parse("2021-08-31").plusDays(0), importFactor * 13.2, 1.0);
+		infPerDayMUTB.put(LocalDate.parse("2021-07-25"), (int) (0.5 * 48 * 2));
+		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
 
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.2);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(2.0);
 
 
-		double effectivnessMRNA = params.deltaVacEffect;
+		double effectivnessMRNA = 0.7;
 		double factorShowingSymptomsMRNA =  0.12 / (1 - effectivnessMRNA);
 		double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA);
 		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
@@ -208,7 +259,7 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 				)
 				;
 
-		double effectivnessVector = params.deltaVacEffect * 0.5/0.7;
+		double effectivnessVector = 0.7 * 0.5/0.7;
 		double factorShowingSymptomsVector = 0.32 / (1 - effectivnessVector);
 		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
@@ -235,41 +286,23 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 			)
 			;
 
-
-
-
-
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
-//		if (params.vacCompl.equals("current")) {
-			for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
-			for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.7);
-			for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
-			for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
-			for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
-			for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
-//		}
-//		else if (params.vacCompl.equals("0.9")) {
-//			for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
-//			for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.9);
-//			for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.9);
-//			for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.9);
-//			for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.9);
-//			for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
-//		}
-//		else {
-//			throw new RuntimeException();
-//		}
-
+		for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
+		for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.7);
+		for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
+		for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
+		for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
+		for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-
-		if (params.testVac.equals("yes")) {
-			testingConfigGroup.setTestAllPersonsAfter(LocalDate.EPOCH);
-		}
+		
+		if (params.testVaccinated.equals("yes")) {
+ 			testingConfigGroup.setTestAllPersonsAfter(restrictionDate);
+ 		}
 
 //		TestType testType = TestType.valueOf(params.testType);
 
@@ -316,24 +349,18 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		workTests.put(LocalDate.parse("2021-06-04"), 0.05);
-		if (!params.workTests.equals("current"))
-			workTests.put(LocalDate.parse("2021-09-06"),  Double.parseDouble(params.workTests.split("-")[0]));
+		workTests.put(restrictionDate,  params.testRateWork);
 
 
-		leisureTests.put(LocalDate.parse("2021-06-04"),  0.05);
+		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
 //		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
 
-		if (!params.leisureTests.equals("current"))
-			leisureTests.put(LocalDate.parse("2021-09-06"), Double.parseDouble(params.leisureTests.split("-")[0]));
+		leisureTests.put(restrictionDate, params.testRateLeisure);
 
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
 		eduTests.put(LocalDate.parse("2021-08-30"), 0.4);
-
-		if (!params.eduTests.equals("current"))
-			eduTests.put(LocalDate.parse("2021-09-06"),  Double.parseDouble(params.eduTests.split("-")[0]));
-
-
+		eduTests.put(restrictionDate,  params.testRateEdu);
 
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -354,12 +381,9 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 
-		if (!params.eduTests.equals("current"))
-			eduTestsPCR.put(LocalDate.parse("2021-09-06"),  Double.parseDouble(params.eduTests.split("-")[1]));
-		if (!params.workTests.equals("current"))
-			workTestsPCR.put(LocalDate.parse("2021-09-06"),  Double.parseDouble(params.workTests.split("-")[1]));
-		if (!params.leisureTests.equals("current"))
-			leisureTestsPCR.put(LocalDate.parse("2021-09-06"),   Double.parseDouble(params.leisureTests.split("-")[1]));
+//		eduTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestEdu);
+//		workTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestWork);
+//		leisureTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestLeis);
 
 
 //		eduTestsPCR.put(LocalDate.parse("2021-08-06"), 0.1);
@@ -393,44 +417,85 @@ public class BMBF210903 implements BatchRun<BMBF210903.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({2.2})
-		double deltaInf;
+//		@Parameter({4.0})
+//		double importFactor;
 
-		@Parameter({0.7})
-		double deltaVacEffect;
+//		@Parameter({1.1, 1.2, 1.3, 1.4})
+//		double thetaFactor;
+		
+//		@Parameter({1.0, 1.1, 1.2, 1.3, 1.4})
+//		double scale;
+		
+//		@Parameter({1.9})
+//		double leisureFactor;
+		
+//		@StringParameter({"true-1.0", "true-1.1", "true-1.2", "true-1.3", "true-1.4", "false"})
+//		String leisureNightly;
 
-		@Parameter({4.0})
-		double importFactor;
+//		@Parameter({0.25, 0.3, 0.35})
+//		double leisureOffset;
+
+		@StringParameter({"2020-12-30"})
+		String alphaDate;
+		
+		@StringParameter({"2021-04-05"})
+		String deltaDate;
+		
+		@Parameter({0.0, 0.4})
+		double testRateEdu;
+		
+		@Parameter({0.05, 0.4})
+		double testRateWork;
+		
+		@Parameter({0.05, 0.4})
+		double testRateLeisure;
+		
+//		@Parameter({1.2, 1.3, 1.4})
+//		double regrScale;
+		
+		@StringParameter({"no", "yes"})
+		String curfew;
+		
+		@StringParameter({"no", "yes"})
+		String masksEdu;
+		
+		@StringParameter({"current", "sunday", "edu0pct"})
+		String monday;
+		
+		@StringParameter({"no", "yes"})
+		String testVaccinated;
+		
+		@StringParameter({"no", "0.5", "0.0"})
+		String leisureUnv;
+		
+//		@StringParameter({"2020-12-14"})
+//		String leisureFactorUntil;
+		
+//		@Parameter({0.25, 0.5, 0.75})
+//		double summerImportFactor;
+
+//		@Parameter({0.25})
+//		double tesRateLeisureWork;
+//
+//		@Parameter({0.05})
+//		double tesRateLeisureWork2;
 
 //		@StringParameter({"alpha", "0.5"})
 //		String delta1Vac;
 
 //		@StringParameter({"no"})
 //		String schoolMasks;
+//
+//		@StringParameter({"2021-05-01"})
+//		String deltaDate;
 
-		@StringParameter({"current", "0.0-0.2", "0.0-0.6",  "0.6-0.0"})
-		String eduTests;
 
-		@StringParameter({"current", "0.0-0.2", "0.0-0.6",  "0.6-0.0"})
-		String workTests;
-
-		@StringParameter({"current", "0.0-0.2", "0.0-0.6",  "0.6-0.0"})
-		String leisureTests;
-
-		@StringParameter({"no", "yes"})
-		String testVac;
-
-		@StringParameter({"no", "0.5"})
-		String workUnv;
-
-		@StringParameter({"no", "0.5", "0.0"})
-		String leisureUnv;
 
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, BMBF210903.class.getName(),
+				RunParallel.OPTION_SETUP, Bmbf210924Cologne.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),

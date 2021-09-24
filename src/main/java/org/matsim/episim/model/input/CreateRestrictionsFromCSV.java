@@ -29,7 +29,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private double scale = 1.;
 	private boolean leisureAsNightly = false;
 	private double nightlyScale = 1.;
-	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.regHospital;
+	private EpisimUtils.Extrapolation extrapolation = EpisimUtils.Extrapolation.none;
 	private Map<String, Path> subdistrictInput;
 
 	public CreateRestrictionsFromCSV(EpisimConfigGroup episimConfig) {

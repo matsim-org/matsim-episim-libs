@@ -547,7 +547,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring, Double TmidFall, Double Trange, Double alpha) throws IOException {
+	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
@@ -565,8 +565,14 @@ public final class EpisimUtils {
 
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
-
-			outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			
+			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
+				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
+			}
+			else {
+				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			}
+			
 			lastDate = date;
 		}
 
@@ -590,7 +596,12 @@ public final class EpisimUtils {
 			String monthDay = month + "-" + day;
 			double tMax = tmaxPerDay.get(monthDay);
 			double prcp = prcpPerDay.get(monthDay);
-			outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
+				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
+			}
+			else {
+				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+			}
 		}
 
 //		System.exit(-1);
