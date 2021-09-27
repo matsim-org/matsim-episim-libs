@@ -165,7 +165,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private String districtLevelRestrictionsAttribute = "";
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
-	private SingleEventFile singleEventFile = SingleEventFile.no;
+	private SingleEventFile singleEventFile = SingleEventFile.yes;
 	private boolean endEarly = false;
 	private int threads = 2;
 	/**
