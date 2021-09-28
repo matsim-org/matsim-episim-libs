@@ -13,12 +13,14 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -116,6 +118,61 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	}
 
 	/**
+	 * Configure default christmas model.
+	 */
+	public static void configureChristmasModel(ChristmasModel christmasModel, Map<LocalDate, DayOfWeek> inputDays, FixedPolicy.ConfigBuilder builder) {
+
+		inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
+
+		inputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
+
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			double fraction = 0.5925;
+
+			if (christmasModel == ChristmasModel.restrictive) {
+				builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
+			}
+			if (christmasModel == ChristmasModel.permissive) {
+				builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
+				builder.restrict(LocalDate.parse("2020-12-31"), 1.0, act);
+				builder.restrict(LocalDate.parse("2021-01-02"), fraction, act);
+			}
+		}
+
+	}
+
+
+	/**
+	 * Configure easter model.
+	 */
+	protected static void configureEasterModel(Map<LocalDate, DayOfWeek> inputDays, FixedPolicy.ConfigBuilder builder) {
+		inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			double fraction = 0.72;
+			builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
+		}
+	}
+
+
+	/**
 	 * Configure outdoor fractions for weather model.
 	 */
 	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather) {
@@ -149,32 +206,32 @@ public abstract class SnzProductionScenario extends AbstractModule {
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessMRNA)
-						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessMRNA)
-						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 		;
 
@@ -188,32 +245,32 @@ public abstract class SnzProductionScenario extends AbstractModule {
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessVector)
-						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessVector)
-						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				)
 				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 				);
 
 
