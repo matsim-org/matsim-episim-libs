@@ -17,8 +17,8 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
-import org.matsim.run.modules.SnzBerlinProductionScenario.EasterModel;
+import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzProductionScenario.EasterModel;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;

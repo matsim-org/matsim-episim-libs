@@ -371,8 +371,6 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	public enum Vaccinations {yes, no}
 
-	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
-
 	public enum ChristmasModel {no, restrictive, permissive}
 
 	public enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
@@ -387,31 +385,39 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	 * Abstract builder with default config options.
 	 */
 	public abstract static class Builder<T extends SnzProductionScenario> {
-		private int importOffset = 0;
-		private int sample = 25;
-		private DiseaseImport diseaseImport = DiseaseImport.yes;
-		private Restrictions restrictions = Restrictions.yes;
-		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
-		private Masks masks = Masks.yes;
-		private Tracing tracing = Tracing.yes;
-		private Vaccinations vaccinations = Vaccinations.yes;
-		private ChristmasModel christmasModel = ChristmasModel.restrictive;
-		private EasterModel easterModel = EasterModel.no;
-		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
-		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
-		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
-		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
+		int importOffset = 0;
+		int sample = 25;
+		DiseaseImport diseaseImport = DiseaseImport.yes;
+		Restrictions restrictions = Restrictions.yes;
+		AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
+		Masks masks = Masks.yes;
+		Tracing tracing = Tracing.yes;
+		Vaccinations vaccinations = Vaccinations.yes;
+		ChristmasModel christmasModel = ChristmasModel.restrictive;
+		EasterModel easterModel = EasterModel.no;
+		WeatherModel weatherModel = WeatherModel.midpoints_175_250;
+		EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
+		Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
+		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
-		private double imprtFctMult = 1.;
-		private double importFactorBeforeJune = 4.;
-		private double importFactorAfterJune = 0.5;
+		double imprtFctMult = 1.;
+		double importFactorBeforeJune = 4.;
+		double importFactorAfterJune = 0.5;
 
-		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
+		LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
 		/**
 		 * Build the scenario module.
 		 */
 		public abstract T build();
+
+		/**
+		 * Use {@link #build()}. This method is only here to avoid changes of old batch runs for now.
+		 */
+		@Deprecated
+		public T createSnzBerlinProductionScenario() {
+			return build();
+		}
 
 		public Builder<T> setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;

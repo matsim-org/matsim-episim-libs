@@ -15,7 +15,7 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
 import org.matsim.run.modules.SnzCologneProductionScenario.DiseaseImport;
 
 import javax.annotation.Nullable;
@@ -38,18 +38,18 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 	@Override
 	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
-		
+
 //		boolean leisureNightly = false;
 //		double leisureNightlyScale = 1.0;
-//		
+//
 //		if (params != null) {
 //			if (params.leisureNightly.contains("true")) {
 //				leisureNightly = true;
 //				leisureNightlyScale = Double.parseDouble(params.leisureNightly.split("-")[1]);
 //			}
 //		}
-		
-		
+
+
 		return new SnzCologneProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
@@ -66,7 +66,7 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		
+
 		LocalDate restrictionDate = LocalDate.parse("2021-09-27");
 
 		SnzCologneProductionScenario module = getBindings(id, params);
@@ -83,23 +83,23 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		episimConfig.setCalibrationParameter(1.0e-05);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83 * 1.4);
-		
+
 		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20210917/" + params.seed + "-270-2020-11-20.zip");
-		
+
 		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
 
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy()).setHospitalScale(id);
-		
+
 //		builder.setHospitalScale(params.regrScale);
-		
+
 
 		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
 		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
-		
+
 		if (params.curfew.equals("yes")) curfewCompliance.put(restrictionDate, 1.0);
 
 		episimConfig.setCurfewCompliance(curfewCompliance);
@@ -108,24 +108,24 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
 		builder.restrict("2021-12-24", 0.2, "educ_higher");
 		builder.restrict("2022-01-08", 1.0, "educ_higher");
-		
+
 		builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
-		
+
 		builder.restrict("2021-08-17", Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		if (params.masksEdu.equals("no")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		
+
 		if (params.monday.equals("edu0pct") || params.monday.equals("edu50pct")) {
 			double rf = 0.0;
 			if (params.monday.equals("edu50pct")) rf = 0.5;
 
 			for (int ii = 0; ii < Integer.MAX_VALUE; ii++) {
-				
+
 				LocalDate date = restrictionDate.plusDays(ii);
 				//ignore holidays
 				if (date.isAfter(LocalDate.parse("2021-10-11").minusDays(1)) && date.isBefore(LocalDate.parse("2021-10-23"))) continue;
 				if (date.isAfter(LocalDate.parse("2021-12-24")) && date.isBefore(LocalDate.parse("2022-01-08"))) continue;
-				
+
 				if (restrictionDate.plusDays(ii).getDayOfWeek() == DayOfWeek.MONDAY) {
 					builder.restrict(date, rf, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 					builder.restrict(date.plusDays(1), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
@@ -135,15 +135,15 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 				}
 			}
 		}
-		
+
 		if (!params.leisureUnv.equals("no")) {
 			double fraction = Double.parseDouble(params.leisureUnv);
 			builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(fraction), "leisure");
 		}
-		
+
 		episimConfig.setPolicy(builder.build());
-		
-		
+
+
 		if (params.monday.equals("sunday")) {
 			Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 			for (int ii = 0; ii < Integer.MAX_VALUE; ii++) {
@@ -158,28 +158,28 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		}
 
 
-		
-		
-		
+
+
+
 		Map<LocalDate, Integer> importMap = new HashMap<>();
 		double importFactorBeforeJune = 4.0;
 		double imprtFctMult = 1.0;
 		long importOffset = 0;
 		double cologneFactor = 0.5;
-		
+
 		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
 				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
 		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
 				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
 		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
 				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-		
+
 		importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
 		importMap.put(LocalDate.parse("2020-08-09"), 1);
-		
+
 		episimConfig.setInfections_pers_per_day(importMap);
-	
-		
+
+
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
@@ -299,7 +299,7 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-		
+
 		if (params.testVaccinated.equals("yes")) {
  			testingConfigGroup.setTestAllPersonsAfter(restrictionDate);
  		}
@@ -422,13 +422,13 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 //		@Parameter({1.1, 1.2, 1.3, 1.4})
 //		double thetaFactor;
-		
+
 //		@Parameter({1.0, 1.1, 1.2, 1.3, 1.4})
 //		double scale;
-		
+
 //		@Parameter({1.9})
 //		double leisureFactor;
-		
+
 //		@StringParameter({"true-1.0", "true-1.1", "true-1.2", "true-1.3", "true-1.4", "false"})
 //		String leisureNightly;
 
@@ -437,40 +437,40 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 		@StringParameter({"2020-12-30"})
 		String alphaDate;
-		
+
 		@StringParameter({"2021-04-05"})
 		String deltaDate;
-		
+
 		@Parameter({0.0, 0.4})
 		double testRateEdu;
-		
+
 		@Parameter({0.05, 0.4})
 		double testRateWork;
-		
+
 		@Parameter({0.05, 0.4})
 		double testRateLeisure;
-		
+
 //		@Parameter({1.2, 1.3, 1.4})
 //		double regrScale;
-		
+
 		@StringParameter({"no", "yes"})
 		String curfew;
-		
+
 		@StringParameter({"no", "yes"})
 		String masksEdu;
-		
+
 		@StringParameter({"current", "sunday", "edu0pct"})
 		String monday;
-		
+
 		@StringParameter({"no", "yes"})
 		String testVaccinated;
-		
+
 		@StringParameter({"no", "0.5", "0.0"})
 		String leisureUnv;
-		
+
 //		@StringParameter({"2020-12-14"})
 //		String leisureFactorUntil;
-		
+
 //		@Parameter({0.25, 0.5, 0.75})
 //		double summerImportFactor;
 

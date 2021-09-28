@@ -134,9 +134,9 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 				delegate = new SnzBerlinWeekScenario2020(25, false, false, OldSymmetricContactModel.class);
 			else
 				delegate = new SnzBerlinProductionScenario.Builder()
+						.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 						.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.no)
 						.setRestrictions(SnzBerlinProductionScenario.Restrictions.yes)
-						.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 						.setTracing(SnzBerlinProductionScenario.Tracing.no)
 						.setWeatherModel(SnzBerlinProductionScenario.WeatherModel.no)
 						.setInfectionModel(DefaultInfectionModel.class)

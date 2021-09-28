@@ -12,7 +12,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.*;
+import org.matsim.run.modules.SnzProductionScenario.*;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -32,13 +32,12 @@ public class BerlinVaccinationsWinterEnd implements BatchRun<BerlinVaccinationsW
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
 		if (params == null) {
-			return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-					Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(VaccinationByAge.class).createSnzBerlinProductionScenario();
+			return new SnzBerlinProductionScenario.Builder().setSnapshot(SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(VaccinationByAge.class).createSnzBerlinProductionScenario();
 		}
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 		if (params.vaccinationModel.equals("RandomVaccination")) vaccinationModel = RandomVaccination.class;
-		return new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(
+				SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -50,8 +49,8 @@ public class BerlinVaccinationsWinterEnd implements BatchRun<BerlinVaccinationsW
 	public Config prepareConfig(int id, Params params) {
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 		if (params.vaccinationModel.equals("RandomVaccination")) vaccinationModel = RandomVaccination.class;
-		SnzBerlinProductionScenario module = new Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot(
+				SnzBerlinProductionScenario.Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).setVaccinationModel(vaccinationModel).createSnzBerlinProductionScenario();
 
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);

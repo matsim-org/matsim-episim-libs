@@ -20,7 +20,6 @@
 
 package org.matsim.run.modules;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
@@ -28,8 +27,11 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.*;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
@@ -57,147 +59,24 @@ import java.util.Map;
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
  */
-public final class SnzBerlinProductionScenario extends AbstractModule {
+public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
-	public static class Builder {
-		private int importOffset = 0;
-		private int sample = 25;
-		private DiseaseImport diseaseImport = DiseaseImport.yes;
-		private Restrictions restrictions = Restrictions.yes;
-		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
-		private Masks masks = Masks.yes;
-		private Tracing tracing = Tracing.yes;
-		private Vaccinations vaccinations = Vaccinations.yes;
-		private ChristmasModel christmasModel = ChristmasModel.restrictive;
-		private EasterModel easterModel = EasterModel.no;
-		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
+	public static class Builder extends SnzProductionScenario.Builder<SnzBerlinProductionScenario> {
+
 		private Snapshot snapshot = Snapshot.no;
-		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
-		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
-		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
-
-		private double imprtFctMult = 1.;
-		private double importFactorBeforeJune = 4.;
-		private double importFactorAfterJune = 0.5;
-
-		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
-
-		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
-			this.importFactorBeforeJune = importFactorBeforeJune;
-			return this;
-		}
-
-		public Builder setImportFactorAfterJune(double importFactorAfterJune) {
-			this.importFactorAfterJune = importFactorAfterJune;
-			return this;
-		}
-
-		public Builder setSample(int sample) {
-			this.sample = sample;
-			return this;
-		}
-
-		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
-			this.diseaseImport = diseaseImport;
-			return this;
-		}
-
-		public Builder setRestrictions(Restrictions restrictions) {
-			this.restrictions = restrictions;
-			return this;
-		}
-
-		public Builder setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
-			this.adjustRestrictions = adjustRestrictions;
-			return this;
-		}
-
-		public Builder setMasks(Masks masks) {
-			this.masks = masks;
-			return this;
-		}
-
-		public Builder setTracing(Tracing tracing) {
-			this.tracing = tracing;
-			return this;
-		}
-
-		public Builder setVaccinations(Vaccinations vaccinations) {
-			this.vaccinations = vaccinations;
-			return this;
-		}
-
-		public Builder setChristmasModel(ChristmasModel christmasModel) {
-			this.christmasModel = christmasModel;
-			return this;
-		}
-
-		public Builder setEasterModel(EasterModel easterModel) {
-			this.easterModel = easterModel;
-			return this;
-		}
-
-		public Builder setWeatherModel(WeatherModel weatherModel) {
-			this.weatherModel = weatherModel;
-			return this;
-		}
 
 		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
 			return this;
 		}
 
-		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
-			this.infectionModel = infectionModel;
-			return this;
-		}
-
-		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
-			this.vaccinationModel = vaccinationModel;
-			return this;
-		}
-
-		public Builder setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
-			this.activityHandling = activityHandling;
-			return this;
-		}
-
-		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {
+		@Override
+		public SnzBerlinProductionScenario build() {
 			return new SnzBerlinProductionScenario(this);
-		}
-
-		public Builder setImportOffset(int importOffset) {
-			this.importOffset = importOffset;
-			return this;
-		}
-
-		public Builder setImportFactor(double imprtFctMult) {
-			this.imprtFctMult = imprtFctMult;
-			return this;
 		}
 	}
 
-	public static enum DiseaseImport {yes, onlySpring, no}
-
-	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
-
-	public static enum Masks {yes, no}
-
-	public static enum Tracing {yes, no}
-
-	public static enum Vaccinations {yes, no}
-
-	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
-
-	public static enum ChristmasModel {no, restrictive, permissive}
-
-	public static enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
-
-	public static enum AdjustRestrictions {yes, no}
-
-	public static enum EasterModel {yes, no}
-
-	public static enum LocationBasedRestrictions {yes, no}
+	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
 	private final int sample;
 	private final int importOffset;
@@ -576,72 +455,72 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
 					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 1.0)
 							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 							.atDay(1, 1.0)
 							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 							.atDay(1, 1.0)
 							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
 					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 							.atDay(1, 1.0)
 							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					;
-		
-		double effectivnessVector = 0.5;
-		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
-		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
-		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+			;
 
-		vaccinationConfig.getOrAddParams(VaccinationType.vector)
-			.setDaysBeforeFullEffect(fullEffectVector)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
+			double effectivnessVector = 0.5;
+			double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
+			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
+			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
+					.setDaysBeforeFullEffect(fullEffectVector)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessVector)
+							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessVector)
+							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
 			;
 
 			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
@@ -720,7 +599,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
-
 
 
 		episimConfig.setPolicy(builder.build());

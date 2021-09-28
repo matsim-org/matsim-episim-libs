@@ -14,9 +14,9 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
+import org.matsim.run.modules.SnzProductionScenario.Tracing;
 
 import javax.annotation.Nullable;
 
