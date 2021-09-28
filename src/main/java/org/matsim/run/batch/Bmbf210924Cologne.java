@@ -3,7 +3,6 @@ package org.matsim.run.batch;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
@@ -15,13 +14,8 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
-import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
-import org.matsim.run.modules.SnzCologneProductionScenario.DiseaseImport;
 
 import javax.annotation.Nullable;
-
-import static org.matsim.episim.model.Transition.to;
-
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -29,6 +23,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.matsim.episim.model.Transition.to;
 
 
 /**
@@ -51,12 +47,12 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 
 		return new SnzCologneProductionScenario.Builder()
-				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
 //				.setLeisureNightly(leisureNightly)
 				.setScale(1.3)
+				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureNightlyScale(leisureNightlyScale)
-				.createSnzCologneProductionScenario();
+				.build();
 	}
 
 	@Override

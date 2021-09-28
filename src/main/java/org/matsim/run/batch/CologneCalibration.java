@@ -12,7 +12,6 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
-import org.matsim.run.modules.SnzCologneProductionScenario.DiseaseImport;
 
 import javax.annotation.Nullable;
 
@@ -46,12 +45,12 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 
 		return new SnzCologneProductionScenario.Builder()
+				.setScale(params == null ? 1.0 : params.scale)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
 //				.setLeisureNightly(leisureNightly)
-				.setScale(params == null ? 1.0 : params.scale)
 //				.setLeisureNightlyScale(leisureNightlyScale)
-				.createSnzCologneProductionScenario();
+				.build();
 	}
 
 	@Override
