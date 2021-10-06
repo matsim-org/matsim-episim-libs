@@ -30,6 +30,7 @@ import org.matsim.api.core.v01.events.handler.ActivityEndEventHandler;
 import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.gbl.Gbl;
+import org.matsim.utils.objectattributes.attributable.Attributes;
 
 /**
  * EventHanlder calculating the number of persons for one activityType and the
@@ -51,7 +52,7 @@ class REActivityDurationEventHandler implements ActivityStartEventHandler, Activ
 	@Override
 	public void handleEvent(ActivityStartEvent event) {
 		final Id<Person> personId1 = event.getPersonId();
-		if( !personIsInRegionOfInterest( personId1 ) ){
+		if( !personIsOfInterest( personId1 ) ){
 			return;
 		}
 
@@ -74,7 +75,7 @@ class REActivityDurationEventHandler implements ActivityStartEventHandler, Activ
 	@Override
 	public void handleEvent(ActivityEndEvent event) {
 		final Id<Person> personId1 = event.getPersonId();
-		if( !personIsInRegionOfInterest( personId1 ) ){
+		if( !personIsOfInterest( personId1 ) ){
 			return;
 		}
 
@@ -120,9 +121,12 @@ class REActivityDurationEventHandler implements ActivityStartEventHandler, Activ
 		}
 	}
 
-	private static boolean personIsInRegionOfInterest( Id<Person> personId1 ){
-		return REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes().getAttribute( "district" ) != null
-				       && REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes().getAttribute( "district" ).toString().equals( "Berlin" );
+	static boolean personIsOfInterest( Id<Person> personId1 ){
+		final Attributes attributes = REAcitivityDurationAnalysis.getPopulation().getPersons().get( personId1 ).getAttributes();
+		return attributes.getAttribute( "district" ) != null
+				       && attributes.getAttribute( "district" ).toString().equals( "Berlin" )
+				&& (int) attributes.getAttribute( "microm:modeled:age" ) < 18
+				;
 	}
 
 }

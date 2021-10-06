@@ -46,7 +46,7 @@ public class REAcitivityDurationAnalysis {
 
 	public static void main(String[] args) {
 
-		String inputFileEvents = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_episim_events_so_25pt_split.xml.gz";
+		String inputFileEvents = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_episim_events_wt_25pt_split.xml.gz";
 		String inputFilePop = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz";
 //		String inputFile = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020_snz_episim_events_100pt.xml.gz";
 
@@ -57,7 +57,7 @@ public class REAcitivityDurationAnalysis {
 		int countPersons = 0;
 		Set<String> allPersons = new HashSet<>();
 		for (Person person : population.getPersons().values()) {
-			if (person.getAttributes().getAttribute("district")!= null && person.getAttributes().getAttribute("district").toString().equals("Berlin")){
+			if ( REActivityDurationEventHandler.personIsOfInterest( person.getId() ) ) {
 				countPersons++;
 				allPersons.add( person.getId().toString() );
 			}
