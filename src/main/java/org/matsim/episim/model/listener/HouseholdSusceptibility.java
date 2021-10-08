@@ -1,5 +1,6 @@
 package org.matsim.episim.model.listener;
 
+import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
@@ -19,6 +20,12 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 	 * Susceptibility for each household.
 	 */
 	private final Object2DoubleMap<String> houseHoldSusceptibility = new Object2DoubleOpenHashMap<>();
+	private final Config config;
+
+	@Inject
+	public HouseholdSusceptibility(Config config) {
+		this.config = config;
+	}
 
 	@Override
 	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
@@ -35,7 +42,9 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 	 */
 	private double sample(SplittableRandom rnd) {
 
-		// TODO: implement
+		if (rnd.nextDouble() < config.pHouseholds)
+			return config.susceptibility;
+
 		return 1.0;
 	}
 
@@ -47,6 +56,30 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 
 	@Override
 	public String toString() {
-		return "HouseholdSusceptibility{}";
+		return "HouseholdSusceptibility{p=" + config.pHouseholds + ", susp=" + config.susceptibility + "}";
 	}
+
+	/**
+	 * @param pHouseholds    Percentage of households that have a modified susceptibility
+	 * @param susceptibility adjusted susceptibility
+	 */
+	public static Config newConfig(double pHouseholds, double susceptibility) {
+		return new Config(pHouseholds, susceptibility);
+	}
+
+
+	/**
+	 * Holds config options for this class.
+	 */
+	public static final class Config {
+
+		private final double pHouseholds;
+		private final double susceptibility;
+
+		private Config(double pHouseholds, double susceptibility) {
+			this.pHouseholds = pHouseholds;
+			this.susceptibility = susceptibility;
+		}
+	}
+
 }
