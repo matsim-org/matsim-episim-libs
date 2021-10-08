@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -35,10 +36,10 @@ import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.AllParticipationModel;
 import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
@@ -76,7 +77,7 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
 
-		// Ah, ok, here one sees how it is plugged together.  kai, apr'20
+		Multibinder.newSetBinder(binder(), SimulationStartListener.class);
 	}
 
 	@Provides

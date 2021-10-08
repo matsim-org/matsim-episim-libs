@@ -86,6 +86,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding

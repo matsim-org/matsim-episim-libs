@@ -54,6 +54,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding

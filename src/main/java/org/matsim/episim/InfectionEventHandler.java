@@ -21,11 +21,9 @@
 package org.matsim.episim;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.AbstractModule;
-import com.google.inject.Inject;
-import com.google.inject.Injector;
-import com.google.inject.TypeLiteral;
+import com.google.inject.*;
 import com.google.inject.name.Names;
+import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -505,6 +503,15 @@ public final class InfectionEventHandler implements Externalizable {
 			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
 			p.setVaccinable(localRnd.nextDouble() < compliance);
 		});
+
+		Set<SimulationStartListener> listener = (Set<SimulationStartListener>) injector.getInstance(Key.get(Types.setOf(SimulationStartListener.class)));
+
+		for (SimulationStartListener s : listener) {
+
+			log.info("Executing simulation start listener {}", s.toString());
+
+			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+		}
 
 		balanceContainersByLoad(estimatedLoad);
 

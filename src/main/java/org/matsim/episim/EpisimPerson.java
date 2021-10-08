@@ -198,6 +198,11 @@ public final class EpisimPerson implements Attributable {
 	private VaccinationType vaccinationType = VaccinationType.generic;
 
 	/**
+	 * Individual susceptibility of a person.
+	 */
+	private double susceptibility = 1;
+
+	/**
 	 * Lookup age from attributes.
 	 */
 	private static int getAge(Attributes attrs) {
@@ -281,6 +286,7 @@ public final class EpisimPerson implements Attributable {
 		in.readBoolean();
 
 		vaccinationType = VaccinationType.values()[in.readInt()];
+		susceptibility = in.readDouble();
 	}
 
 	/**
@@ -330,6 +336,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
 		out.writeInt(vaccinationType.ordinal());
+		out.writeDouble(susceptibility);
 	}
 
 	public Id<Person> getPersonId() {
@@ -445,6 +452,14 @@ public final class EpisimPerson implements Attributable {
 	public void setTestStatus(TestStatus testStatus, int iteration) {
 		this.testStatus = testStatus;
 		this.testDate = iteration;
+	}
+
+	public void setSusceptibility(double susceptibility) {
+		this.susceptibility = susceptibility;
+	}
+
+	public double getSusceptibility() {
+		return susceptibility;
 	}
 
 	/**
