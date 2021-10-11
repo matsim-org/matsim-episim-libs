@@ -14,6 +14,8 @@ import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
+import com.graphhopper.routing.RoundTripRouting.Params;
+
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.LocalDate;
@@ -164,7 +166,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 		
 		if (params.newVacConfig.equals("yes")) {
-			adaptVacinationConfig(vaccinationConfig);
+			adaptVacinationConfig(vaccinationConfig, params.vacFac);
 		}
 			
 		//testing
@@ -276,10 +278,14 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		return config;
 	}
 
-	private void adaptVacinationConfig(VaccinationConfigGroup vaccinationConfig) {
+	private void adaptVacinationConfig(VaccinationConfigGroup vaccinationConfig, double vacFac) {
 		
-		double effectivnessAlphaMRNA = 0.97;
-		double effectivnessDeltaMRNA = 0.94;
+//		double effectivnessAlphaMRNA = 0.97;
+		double effectivnessAlphaMRNA = 1.0 - vacFac * 0.03;
+		
+//		double effectivnessDeltaMRNA = 0.94;
+		double effectivnessDeltaMRNA = 1.0 - vacFac * 0.06;
+
 		double factorShowingSymptomsMRNA = 0.5;
 		double factorSeriouslySickMRNA = 0.5;
 		
@@ -289,20 +295,26 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessAlphaMRNA)
-						.atDay(100, 0.95)
-						.atDay(400, 0.92)
+//						.atDay(100, 0.95)
+//						.atDay(400, 0.92)
+						.atDay(100, 1.0 - vacFac * 0.05)
+						.atDay(400, 1.0 - vacFac * 0.08)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessAlphaMRNA)
-						.atDay(100, 0.95)
-						.atDay(400, 0.92)
+//						.atDay(100, 0.95)
+//						.atDay(400, 0.92)
+						.atDay(100, 1.0 - vacFac * 0.05)
+						.atDay(400, 1.0 - vacFac * 0.08)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessDeltaMRNA)
-						.atDay(100, 0.9)
-						.atDay(400, 0.84)
+//						.atDay(100, 0.9)
+//						.atDay(400, 0.84)
+						.atDay(100, 1.0 - vacFac * 0.1)
+						.atDay(400, 1.0 - vacFac * 0.16)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
@@ -330,8 +342,12 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 				)
 		;
 		
-		double effectivnessAlphaVector = 0.82;
-		double effectivnessDeltaVector = 0.54;
+//		double effectivnessAlphaVector = 0.82;
+		double effectivnessAlphaVector = 1.0 - vacFac * 0.18;
+
+//		double effectivnessDeltaVector = 0.54;
+		double effectivnessDeltaVector = 1.0 - vacFac * 0.46;
+
 		double factorShowingSymptomsVector = 0.5;
 		double factorSeriouslySickVector = 0.5;
 		
@@ -341,20 +357,26 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessAlphaVector)
-						.atDay(100, 0.74)
-						.atDay(400, 0.62)
+//						.atDay(100, 0.74)
+//						.atDay(400, 0.62)
+						.atDay(100, 1.0 - vacFac * 0.26)
+						.atDay(400, 1.0 - vacFac * 0.38)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessAlphaVector)
-						.atDay(100, 0.74)
-						.atDay(400, 0.62)
+//						.atDay(100, 0.74)
+//						.atDay(400, 0.62)
+						.atDay(100, 1.0 - vacFac * 0.26)
+						.atDay(400, 1.0 - vacFac * 0.38)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessDeltaVector)
-						.atDay(100, 0.42)
-						.atDay(400, 0.3)
+//						.atDay(100, 0.42)
+//						.atDay(400, 0.3)
+						.atDay(100, 1.0 - vacFac * 0.58)
+						.atDay(400, 1.0 - vacFac * 0.7)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
@@ -382,8 +404,12 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 				)
 		;
 		
-		double effectivnessAlphaNatural = 0.96;
-		double effectivnessDeltaNatural = 0.9;
+//		double effectivnessAlphaNatural = 0.96;
+		double effectivnessAlphaNatural = 1.0 - vacFac * 0.04;
+
+//		double effectivnessDeltaNatural = 0.9;
+		double effectivnessDeltaNatural = 1.0 - vacFac * 0.1;
+
 		double factorShowingSymptomsNatural = 0.5;
 		double factorSeriouslySickNatural = 0.5;
 		
@@ -393,20 +419,26 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessAlphaNatural)
-						.atDay(100, 0.94)
-						.atDay(400, 0.89)
+//						.atDay(100, 0.94)
+//						.atDay(400, 0.89)
+						.atDay(100, 1.0 - vacFac * 0.06)
+						.atDay(400, 1.0 - vacFac * 0.11)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessAlphaNatural)
-						.atDay(100, 0.94)
-						.atDay(400, 0.89)
+//						.atDay(100, 0.94)
+//						.atDay(400, 0.89)
+						.atDay(100, 1.0 - vacFac * 0.06)
+						.atDay(400, 1.0 - vacFac * 0.11)
 				)
 				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 0.0)
 						.atFullEffect(effectivnessDeltaNatural)
-						.atDay(100, 0.84)
-						.atDay(400, 0.76)
+//						.atDay(100, 0.84)
+//						.atDay(400, 0.76)
+						.atDay(100, 1.0 - vacFac * 0.16)
+						.atDay(400, 1.0 - vacFac * 0.24)
 				)
 				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 1.0)
@@ -457,7 +489,10 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@Parameter({0.05})
 		double testRateLeisure;
 		
-		@IntParameter({180, Integer.MAX_VALUE})
+		@Parameter({0.0, 0.5, 1.0})
+		double vacFac;
+		
+		@IntParameter({1, Integer.MAX_VALUE})
 		int recSus;
 
 		@StringParameter({"no"})
@@ -469,7 +504,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@StringParameter({"no"})
 		String ageDep;
 		
-		@StringParameter({"no", "yes"})
+		@StringParameter({"yes"})
 		String newVacConfig;
 
 	}
