@@ -61,6 +61,8 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		private double scale = 1.0;
 		private boolean leisureNightly = false;
 		private double leisureNightlyScale = 1.0;
+		private double householdSusc = 1.0;
+
 
 		@Override
 		public SnzCologneProductionScenario build() {
@@ -91,6 +93,11 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			this.leisureNightlyScale = leisureNightlyScale;
 			return this;
 		}
+		
+		public Builder setHouseholdSusc(double householdSusc) {
+			this.householdSusc = householdSusc;
+			return this;
+		}
 	}
 
 	private final int sample;
@@ -111,6 +118,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 	private final double scale;
 	private final boolean leisureNightly;
 	private final double leisureNightlyScale;
+	private final double householdSusc;
 	private final LocationBasedRestrictions locationBasedRestrictions;
 
 	/**
@@ -142,6 +150,8 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		this.scale = builder.scale;
 		this.leisureNightly = builder.leisureNightly;
 		this.leisureNightlyScale = builder.leisureNightlyScale;
+		this.householdSusc = builder.householdSusc;
+
 		this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
@@ -158,6 +168,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 	@Override
 	protected void configure() {
+
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
@@ -173,8 +184,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		}
 
 		// TODO: bind desired config
-		bind(HouseholdSusceptibility.Config.class).toInstance(HouseholdSusceptibility.newConfig(0, 1.0));
-
+		bind(HouseholdSusceptibility.Config.class).toInstance(HouseholdSusceptibility.newConfig(householdSusc, 5.0));
 		Multibinder.newSetBinder(binder(), SimulationStartListener.class)
 				.addBinding().to(HouseholdSusceptibility.class);
 
@@ -188,7 +198,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		if (this.sample != 25 && this.sample != 100)
 			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
-
+		
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -265,9 +275,11 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		builder.restrict(LocalDate.parse("2021-07-05"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-08-17"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2021-10-18"), 1.0, "educ_higher");
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		
 
 		{
 			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
@@ -283,6 +295,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 								FaceMask.SURGICAL, surgicalFraction * ii / 14)),
 						"pt", "shop_daily", "shop_other", "errands");
 			}
+			builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		}
 
 
@@ -314,7 +327,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		//leisure & work factor
 		if (this.restrictions != Restrictions.no) {
-//			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
 			BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
