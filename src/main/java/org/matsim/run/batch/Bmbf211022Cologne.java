@@ -147,8 +147,15 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-04-05"), 1);
 
 		//disease import 2021
-		infPerDayMUTB.put(LocalDate.parse("2021-07-25"), (int) (0.5 * 48 * 2));
-		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
+		
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * params.impFac, LocalDate.parse("2021-07-03").plusDays(0),
+				LocalDate.parse("2021-07-25").plusDays(0), 1, 48);
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * params.impFac, LocalDate.parse("2021-07-26").plusDays(0),
+				LocalDate.parse("2021-08-17").plusDays(0), 48, 1);
+		infPerDayMUTB.put(LocalDate.parse("2021-08-18"), 1);
+		
+//		infPerDayMUTB.put(LocalDate.parse("2021-07-25"), (int) (0.5 * 48 * 2));
+//		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.2);
@@ -207,6 +214,16 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		
+		if (!params.vaccine.equals("cur")) {
+			Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
+			if(params.vaccine.equals("mRNA"))
+				share.put(LocalDate.parse("2020-01-01"), Map.of(VaccinationType.mRNA, 1d, VaccinationType.vector, 0d));
+			if(params.vaccine.equals("vector"))
+				share.put(LocalDate.parse("2020-01-01"), Map.of(VaccinationType.mRNA, 0d, VaccinationType.vector, 1d));
+			vaccinationConfig.setVaccinationShare(share);
+		}
+
+		
 		adaptVacinationConfig(vaccinationConfig, params.vacFac);
 			
 		//testing
@@ -255,13 +272,13 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		workTests.put(LocalDate.parse("2021-06-04"), 0.05);
-		workTests.put(restrictionDate,  params.testRateWork);
+		workTests.put(restrictionDate,  0.05);
 
 
 		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
 //		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
 
-		leisureTests.put(restrictionDate, params.testRateLeisure);
+		leisureTests.put(restrictionDate, 0.05);
 
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
@@ -523,16 +540,19 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //		@Parameter({0.0, 0.33})
 //		double pHousehold;
 
-		@Parameter({0.05})
-		double testRateWork;
-
-		@Parameter({0.05})
-		double testRateLeisure;
+//		@Parameter({0.05})
+//		double testRateWork;
+//
+//		@Parameter({0.05})
+//		double testRateLeisure;
+		
+		@Parameter({1.0, 2.0, 3.0})
+		double impFac;
 		
 		@Parameter({0.5, 1.0})
 		double vacFac;
 		
-		@Parameter({18.5, 20.0, 22.5, 25.0})
+		@Parameter({18.5, 25.0})
 		double tmid;
 		
 		@Parameter({1.0, 2.0})
@@ -541,7 +561,10 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@StringParameter({"cur", "incr"})
 		String vacCompl;
 		
-		@IntParameter({1, Integer.MAX_VALUE})
+		@StringParameter({"cur", "mRNA", "vector"})
+		String vaccine;
+		
+		@IntParameter({1})
 		int recSus;
 
 		@StringParameter({"no"})
