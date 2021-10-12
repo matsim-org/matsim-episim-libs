@@ -37,8 +37,8 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 
 		double pHousehold = 0.0;
 		
-		if (params != null) 
-			pHousehold = params.pHousehold;
+//		if (params != null) 
+//			pHousehold = params.pHousehold;
 		
 		return new SnzCologneProductionScenario.Builder()
 				.setScale(1.3)
@@ -122,7 +122,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, 18.5, 5., 1.0);
+					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, params.tmid, 5., 1.0);
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -157,17 +157,57 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
 		for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
-		for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.7);
-		for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
-		for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
-		for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
-		for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
+		if (params.vacCompl.equals("cur")) {
+			for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.7);
+			for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.7);
+			for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.75);
+			for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
+			for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
+		}
+		if (params.vacCompl.equals("incr")) {
+			for (int i = 12; i < 18; i++) vaccinationCompliance.put(i, 0.8);
+			for (int i = 18; i < 25; i++) vaccinationCompliance.put(i, 0.8);
+			for (int i = 25; i < 40; i++) vaccinationCompliance.put(i, 0.8);
+			for (int i = 40; i < 65; i++) vaccinationCompliance.put(i, 0.8);
+			for (int i = 65; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
+		}
+
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 		
-		if (params.newVacConfig.equals("yes")) {
-			adaptVacinationConfig(vaccinationConfig, params.vacFac);
-		}
+		Map<LocalDate, Integer> vaccinations = new HashMap<>();
+
+		vaccinations.put(LocalDate.parse("2020-01-01"), 0);
+		double population = 2_352_480;
+		vaccinations.put(LocalDate.parse("2020-12-27"), (int) (0.003 * population / 6));
+		vaccinations.put(LocalDate.parse("2021-01-02"), (int) ((0.007 - 0.004) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-01-09"), (int) ((0.013 - 0.007) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-01-16"), (int) ((0.017 - 0.013) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-01-23"), (int) ((0.024 - 0.017) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-01-30"), (int) ((0.030 - 0.024) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-02-06"), (int) ((0.034 - 0.030) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-02-13"), (int) ((0.039 - 0.034) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-02-20"), (int) ((0.045 - 0.039) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-02-27"), (int) ((0.057 - 0.045) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-03-06"), (int) ((0.071 - 0.057) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-03-13"), (int) ((0.088 - 0.071) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-03-20"), (int) ((0.105 - 0.088) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-03-27"), (int) ((0.120 - 0.105) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-04-03"), (int) ((0.140 - 0.120) * population / 7));
+		vaccinations.put(LocalDate.parse("2021-04-10"), (int) ((0.183 - 0.140) * population / 7));
+		//extrapolated from 5.4. until 22.4.
+		vaccinations.put(LocalDate.parse("2021-04-17"), (int) ((0.207 - 0.123) * population / 17));
+
+		vaccinations.put(LocalDate.parse("2021-04-22"), (int) ((0.279 - 0.207) * population / 13));
+		vaccinations.put(LocalDate.parse("2021-05-05"), (int) ((0.404 - 0.279) * params.vacSpeed * population / 23));
+		vaccinations.put(LocalDate.parse("2021-05-28"), (int) ((0.484 - 0.404) * params.vacSpeed * population / 14));
+		vaccinations.put(LocalDate.parse("2021-06-11"), (int) ((0.535 - 0.484) * params.vacSpeed * population / 14));
+		vaccinations.put(LocalDate.parse("2021-06-25"), (int) ((0.583 - 0.535) * params.vacSpeed * population / 19));
+		vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * params.vacSpeed * population / 14)); // until 07-28
+
+		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
+		
+		adaptVacinationConfig(vaccinationConfig, params.vacFac);
 			
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
@@ -226,7 +266,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
 		eduTests.put(LocalDate.parse("2021-08-30"), 0.4);
-		eduTests.put(restrictionDate,  params.testRateEdu);
+		eduTests.put(restrictionDate,  0.4);
 
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -474,14 +514,14 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.4})
-		double testRateEdu;
+//		@Parameter({0.4})
+//		double testRateEdu;
 		
-		@Parameter({0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0})
+		@Parameter({1.0})
 		double thetaFactor;
 		
-		@Parameter({0.0, 0.33, 0.66})
-		double pHousehold;
+//		@Parameter({0.0, 0.33})
+//		double pHousehold;
 
 		@Parameter({0.05})
 		double testRateWork;
@@ -489,8 +529,17 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@Parameter({0.05})
 		double testRateLeisure;
 		
-		@Parameter({0.0, 0.5, 1.0})
+		@Parameter({0.5, 1.0})
 		double vacFac;
+		
+		@Parameter({18.5, 20.0, 22.5, 25.0})
+		double tmid;
+		
+		@Parameter({1.0, 2.0})
+		double vacSpeed;
+		
+		@StringParameter({"cur", "incr"})
+		String vacCompl;
 		
 		@IntParameter({1, Integer.MAX_VALUE})
 		int recSus;
@@ -504,8 +553,8 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@StringParameter({"no"})
 		String ageDep;
 		
-		@StringParameter({"yes"})
-		String newVacConfig;
+//		@StringParameter({"yes"})
+//		String newVacConfig;
 
 	}
 
