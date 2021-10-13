@@ -76,12 +76,12 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
 		// age susceptibility increases by 28% every 10 years
-		if (params.ageDep.equals("yes")) {
-			episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() / 3.);
-			Map<Integer, Double> map = new HashMap<>();
-			for (int i = 0; i<120; i++) map.put(i, Math.pow(1.02499323, i));
-			episimConfig.setAgeSusceptibility(map);
-		}
+//		if (params.ageDep.equals("yes")) {
+//			episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() / 3.);
+//			Map<Integer, Double> map = new HashMap<>();
+//			for (int i = 0; i<120; i++) map.put(i, Math.pow(1.02499323, i));
+//			episimConfig.setAgeSusceptibility(map);
+//		}
 		
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy()).setHospitalScale(id);
@@ -91,7 +91,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
 		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
-		if (params.curfew.equals("yes")) curfewCompliance.put(restrictionDate, 1.0);
+//		if (params.curfew.equals("yes")) curfewCompliance.put(restrictionDate, 1.0);
 		episimConfig.setCurfewCompliance(curfewCompliance);
 
 		//masks
@@ -144,7 +144,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse("2021-04-05"), 1);
+		infPerDayMUTB.put(LocalDate.parse(params.deltaDate), 1);
 
 		//disease import 2021
 		
@@ -158,7 +158,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.2);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(2.0);
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
@@ -546,7 +546,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //		@Parameter({0.05})
 //		double testRateLeisure;
 		
-		@Parameter({1.0, 2.0, 3.0})
+		@Parameter({1.0, 3.0})
 		double impFac;
 		
 		@Parameter({0.5, 1.0})
@@ -555,26 +555,33 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		@Parameter({18.5, 25.0})
 		double tmid;
 		
-		@Parameter({1.0, 2.0})
+		@Parameter({1.0})
 		double vacSpeed;
 		
 		@StringParameter({"cur", "incr"})
 		String vacCompl;
 		
-		@StringParameter({"cur", "mRNA", "vector"})
+		@StringParameter({"2021-04-05", "2021-04-19", "2021-05-04", "2021-05-17"})
+		String deltaDate;
+		
+		@Parameter({2.2, 2.5, 2.8})
+		double deltaInf;
+		
+//		@StringParameter({"cur", "mRNA", "vector"})
+		@StringParameter({"cur"})
 		String vaccine;
 		
 		@IntParameter({1})
 		int recSus;
 
-		@StringParameter({"no"})
-		String curfew;
-
+//		@StringParameter({"no"})
+//		String curfew;
+//
 		@StringParameter({"no"})
 		String masksEdu;
 		
-		@StringParameter({"no"})
-		String ageDep;
+//		@StringParameter({"no"})
+//		String ageDep;
 		
 //		@StringParameter({"yes"})
 //		String newVacConfig;
