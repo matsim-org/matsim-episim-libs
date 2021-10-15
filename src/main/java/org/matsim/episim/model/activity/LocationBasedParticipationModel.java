@@ -105,10 +105,6 @@ public class LocationBasedParticipationModel implements ActivityParticipationMod
 			else
 				trajectory.set(offset + i, rnd.nextDouble() < remainingFraction);
 
-			if (remainingFraction == 0.000077777) {
- 				zeroCnt++;
-			}
-
 		}
 	}
 }
