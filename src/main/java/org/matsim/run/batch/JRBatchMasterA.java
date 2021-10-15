@@ -18,7 +18,7 @@ import static org.matsim.episim.EpisimConfigGroup.ActivityHandling;
 
 public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 
-	boolean DEBUG = false;
+	boolean DEBUG = true;
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
@@ -27,6 +27,8 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setActivityHandling(ActivityHandling.startOfDay)
 				.createSnzBerlinProductionScenario();
+
+//		.setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override

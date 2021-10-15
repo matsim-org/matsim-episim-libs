@@ -579,7 +579,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 			// TODO: this need to be set earlier in the policy builder
 			if (this.adjustRestrictions != AdjustRestrictions.no) {
-				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
+				throw new RuntimeException("Easter model currently only works when adjusted restrictions are switched off!");
 			}
 
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
@@ -654,6 +654,9 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 				builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
 				builder.apply("2020-12-18", "2021-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-01-29", "2021-02-05", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
 				builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
 				builder.apply("2021-03-26", "2021-04-09", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
