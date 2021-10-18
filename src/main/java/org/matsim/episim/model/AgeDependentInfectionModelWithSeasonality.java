@@ -9,8 +9,7 @@ import org.matsim.episim.policy.Restriction;
 import java.util.Map;
 import java.util.SplittableRandom;
 
-import static org.matsim.episim.model.DefaultInfectionModel.getImmunityEffectiveness;
-import static org.matsim.episim.model.DefaultInfectionModel.getVaccinationEffectiveness;
+import static org.matsim.episim.model.DefaultInfectionModel.*;
 
 /**
  * Extension of the {@link DefaultInfectionModel}, with age-dependent additions.
@@ -72,6 +71,7 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+				* getVaccinationInfectivity(infector, params, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* params.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding

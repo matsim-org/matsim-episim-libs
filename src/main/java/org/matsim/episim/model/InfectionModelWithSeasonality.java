@@ -11,8 +11,7 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SplittableRandom;
 
-import static org.matsim.episim.model.DefaultInfectionModel.getImmunityEffectiveness;
-import static org.matsim.episim.model.DefaultInfectionModel.getVaccinationEffectiveness;
+import static org.matsim.episim.model.DefaultInfectionModel.*;
 
 /**
  * Extension of the {@link DefaultInfectionModel} with a seasonality component.
@@ -61,6 +60,7 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness()

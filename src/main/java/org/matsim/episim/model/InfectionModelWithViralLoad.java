@@ -13,7 +13,10 @@ import java.util.Map;
 /**
  * Extension of the {@link DefaultInfectionModel}, with additional parameter {@link #SUSCEPTIBILITY} and {@link #VIRAL_LOAD},
  *  which are read from each person individually.
+ *
+ * @deprecated not supported anymore, this functionality can also be integrated into the regular model via person attributes.
  */
+@Deprecated
 public final class InfectionModelWithViralLoad implements InfectionModel {
 
 	public static final String SUSCEPTIBILITY = "susceptibility";

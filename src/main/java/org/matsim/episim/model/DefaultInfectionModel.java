@@ -54,6 +54,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness()
@@ -92,6 +93,19 @@ public final class DefaultInfectionModel implements InfectionModel {
 		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
 		return 1 - Math.max(min, vaccineEffectiveness);
+	}
+
+	/**
+	 * Reduced infectivity of a vaccinated persson.
+	 */
+	static double getVaccinationInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
+
+		if (infector.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return 1;
+
+		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());
+
+		return params.getInfectivity(strain.getStrain(), iteration);
 	}
 
 	/**

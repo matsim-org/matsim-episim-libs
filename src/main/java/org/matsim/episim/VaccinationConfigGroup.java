@@ -284,6 +284,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String TYPE = "type";
 		private static final String DAYS_BEFORE_FULL_EFFECT = "daysBeforeFullEffect";
 		private static final String EFFECTIVENESS = "effectiveness";
+		private static final String INFECTIVITY = "infectivity";
 		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
 		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
@@ -303,6 +304,15 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 						.atDay(4, 0)
 						.atDay(5, 0.45)
 						.atFullEffect(0.9)
+		));
+
+		/**
+		 * Infectivity of a vaccinated person towards others.
+		 */
+		private Map<VirusStrain, Parameter> infectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(0, 1)
+						.atFullEffect(1.0)
 		));
 
 		/**
@@ -394,6 +404,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return getParamsInternal(effectiveness, strain, day);
 		}
 
+		public double getInfectivity(VirusStrain strain, int day) {
+			return getParamsInternal(infectivity, strain, day);
+		}
+		
 		public double getBoostEffectiveness(VirusStrain strain, int day) {
 			return getParamsInternal(boostEffectiveness.containsKey(strain) ? boostEffectiveness : effectiveness, strain, day);
 		}
@@ -405,7 +419,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		public double getFactorSeriouslySick(VirusStrain strain, int day) {
 			return getParamsInternal(factorSeriouslySick, strain, day);
 		}
-
 		/**
 		 * Load serialized parameters
 		 */
@@ -467,6 +480,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
 		String getFactorSeriouslySick() {
 			return getParamsInternal(factorSeriouslySick);
+		}
+
+		@StringSetter(INFECTIVITY)
+		void setInfectivity(String value) {
+			setParamsInternal(infectivity, value);
+		}
+
+		@StringGetter(INFECTIVITY)
+		public String getInfectivity() {
+			return getParamsInternal(infectivity);
 		}
 
 		/**
