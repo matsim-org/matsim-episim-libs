@@ -136,4 +136,46 @@ public class DefaultInfectionModelTest {
 				.isCloseTo(0.9, Offset.offset(0.0001));
 
 	}
+
+	@Test
+	public void config() {
+
+		VaccinationConfigGroup vaccinationConfig = new VaccinationConfigGroup();
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);
+
+
+		double effectivnessMRNA = 0.7;
+
+		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+				.setDaysBeforeFullEffect(fullEffectMRNA)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 0.0)
+						.atFullEffect(effectivnessMRNA)
+						.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+				);
+
+		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0);
+
+		Offset<Double> offset = Offset.offset(0.001);
+
+		assertThat(DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vaccinationConfig, 1))
+				.isCloseTo(1, offset);
+
+		assertThat(DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vaccinationConfig, 5))
+				.isCloseTo(0.941, offset);
+
+		assertThat(DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vaccinationConfig, 49))
+				.isCloseTo(0.3, offset);
+
+		assertThat(DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vaccinationConfig, 180))
+				.isCloseTo(0.35, offset);
+
+		assertThat(DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vaccinationConfig, 360))
+				.isCloseTo(0.419, offset);
+
+	}
 }

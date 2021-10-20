@@ -6,7 +6,7 @@ impf <- read_tsv("https://impfdashboard.de/static/data/germany_vaccinations_time
 
 df <- impf %>%
     mutate(mrna=dosen_biontech_erst_kumulativ+dosen_moderna_erst_kumulativ-lag(dosen_moderna_erst_kumulativ) - lag(dosen_biontech_erst_kumulativ)) %>%
-    mutate(vector=dosen_johnson_kumulativ - lag(dosen_johnson_kumulativ) + dosen_astrazeneca_erst_kumulativ - lag(dosen_astrazeneca_erst_kumulativ)) %>%
+    mutate(vector=dosen_johnson_kumulativ - lag(dosen_johnson_kumulativ) + dosen_astra_erst_kumulativ - lag(dosen_astra_erst_kumulativ)) %>%
     group_by(week = cut(date, "week")) %>%
     summarise(mrna = sum(mrna), vector=sum(vector)) %>%
     mutate(mrnaShare=mrna/(mrna + vector))
