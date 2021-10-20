@@ -69,7 +69,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 
 		episimConfig.setCalibrationParameter(1.0e-05);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83 * 1.4 * params.thetaFactor);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83 * 1.4);
 
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20210917/" + params.seed + "-270-2020-11-20.zip");
 //		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
@@ -92,6 +92,9 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
 //		if (params.curfew.equals("yes")) curfewCompliance.put(restrictionDate, 1.0);
 		episimConfig.setCurfewCompliance(curfewCompliance);
+		
+		builder.restrict("2021-10-10", 0.92 * 0.79, "work", "business");
+		builder.restrict("2021-10-24", 0.79, "work", "business");
 
 		//masks
 		if (params.masksEdu.equals("no")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
@@ -146,6 +149,7 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		
 		if(params.deltaInf == 2.2) infPerDayMUTB.put(LocalDate.parse("2021-04-05"), 1);
 		else if (params.deltaInf == 2.8) infPerDayMUTB.put(LocalDate.parse("2021-04-19"), 1);
+		else if (params.deltaInf == 3.4) infPerDayMUTB.put(LocalDate.parse("2021-05-03"), 1);
 		else throw new RuntimeException();
 		
 		//disease import 2021
@@ -225,7 +229,9 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		}
 
 		
-		adaptVacinationEffectiveness(vaccinationConfig, params.vacEff);
+		adaptVacinationEffectiveness(vaccinationConfig, params.effDeltaMRNA, params.effFactor, params.vacInf);
+		
+		if (params.booster.equals("yes")) configureBooster(vaccinationConfig);
 			
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
@@ -336,13 +342,14 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 		return config;
 	}
 
-	private void adaptVacinationEffectiveness(VaccinationConfigGroup vaccinationConfig, double vacEff) {
+	private void adaptVacinationEffectiveness(VaccinationConfigGroup vaccinationConfig, double effDeltaMRNA, double effFactor, double vacInf) {
 		
-		double effectivnessAlphaMRNA = 0.97;		
-		double effectivnessDeltaMRNA = vacEff;
+		double effectivnessAlphaMRNA = 0.97 * effFactor;		
+		double effectivnessDeltaMRNA = effDeltaMRNA * effFactor;
 
 		double factorShowingSymptomsMRNA = 0.5;
 		double factorSeriouslySickMRNA = 0.5;
+		double infectivityMRNA = vacInf;
 		
 		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
@@ -389,13 +396,26 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickMRNA)
 				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityMRNA)
+				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityMRNA)
+				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityMRNA)
+				)
 		;
 		
-		double effectivnessAlphaVector = 0.82;
-		double effectivnessDeltaVector = 0.54;
+		double effectivnessAlphaVector = 0.82 * effFactor;
+		double effectivnessDeltaVector = 0.54 * effFactor;
 
 		double factorShowingSymptomsVector = 0.5;
 		double factorSeriouslySickVector = 0.5;
+		double infectivityVector = vacInf;
 		
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
@@ -442,13 +462,26 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickVector)
 				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityVector)
+				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityVector)
+				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityVector)
+				)		
 		;
 		
-		double effectivnessAlphaNatural = 0.96;
+		double effectivnessAlphaNatural = 0.96 ;
 		double effectivnessDeltaNatural = 0.9;
 
 		double factorShowingSymptomsNatural = 0.5;
 		double factorSeriouslySickNatural = 0.5;
+		double infectivityNatural = vacInf;
 		
 		int fullEffectNatural = 7;
 		vaccinationConfig.getOrAddParams(VaccinationType.natural)
@@ -495,9 +528,55 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickNatural)
 				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityNatural)
+				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityNatural)
+				)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+						.atDay(1, 1.0)
+						.atFullEffect(infectivityNatural)
+				)
 		;
 		
 		
+	}
+	
+	private void configureBooster(VaccinationConfigGroup vaccinationConfig) {
+		
+		Map<LocalDate, Integer> boosterVaccinations = new HashMap<>();
+		
+		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
+		boosterVaccinations.put(LocalDate.parse("2021-11-01"), (int) (2_352_480 * 0.02));
+		
+		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
+		
+		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 0.9)
+				)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+						.atDay(1, 0.9)
+				)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+						.atDay(1, 0.9)
+				)	
+		;
+				
+		vaccinationConfig.getOrAddParams(VaccinationType.vector)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 0.9)
+				)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+						.atDay(1, 0.9)
+				)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+						.atDay(1, 0.9)
+				)		
+		;
 	}
 
 	public static final class Params {
@@ -508,8 +587,8 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //		@Parameter({0.4})
 //		double testRateEdu;
 		
-		@Parameter({1.0})
-		double thetaFactor;
+//		@Parameter({1.0})
+//		double thetaFactor;
 		
 //		@Parameter({0.0, 0.33})
 //		double pHousehold;
@@ -520,28 +599,37 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //		@Parameter({0.05})
 //		double testRateLeisure;
 		
-		@Parameter({1.0, 3.0})
+		@Parameter({3.0})
 		double impFac;
 		
-		@Parameter({0.9, 0.8, 0.7, 0.6})
-		double vacEff;
+		@Parameter({0.9, 0.85, 0.8, 0.75, 0.7})
+		double effDeltaMRNA;
+		
+		@Parameter({1.0, 0.75, 0.5})
+		double effFactor;
 		
 //		@StringParameter({"mRNADelta", "mRNA", "all"})
 //		String vacEffDecrType;
 		
-		@Parameter({18.5, 25.0})
+		@Parameter({15.0, 18.5})
 		double tmid;
 		
 		@Parameter({1.0})
 		double vacSpeed;
 		
-		@StringParameter({"cur", "incr"})
+		@Parameter({0.5, 1.0})
+		double vacInf;
+		
+		@StringParameter({"cur"})
 		String vacCompl;
+		
+		@StringParameter({"yes", "no"})
+		String booster;
 		
 //		@StringParameter({"2021-04-05", "2021-04-19"})
 //		String deltaDate;
 		
-		@Parameter({2.2, 2.8})
+		@Parameter({2.2, 2.8, 3.4})
 		double deltaInf;
 		
 //		@StringParameter({"cur", "mRNA", "vector"})

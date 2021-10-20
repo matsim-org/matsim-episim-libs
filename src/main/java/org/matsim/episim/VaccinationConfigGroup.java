@@ -387,6 +387,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		public VaccinationParams setEffectiveness(Parameter... parameters) {
 			return setParamsInternal(effectiveness, parameters);
 		}
+		
+		public VaccinationParams setInfectivity(Parameter... parameters) {
+			return setParamsInternal(infectivity, parameters);
+		}
 
 		public VaccinationParams setBoostEffectiveness(Parameter... parameters) {
 			return setParamsInternal(boostEffectiveness, parameters);

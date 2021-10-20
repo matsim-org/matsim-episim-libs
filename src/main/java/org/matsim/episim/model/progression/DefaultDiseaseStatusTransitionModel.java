@@ -40,8 +40,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-						* getSeriouslySickFactor(person, vaccinationConfig, day)
-						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
+						* getSeriouslySickFactor(person, vaccinationConfig, day))
+//						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
 					return EpisimPerson.DiseaseStatus.seriouslySick;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
