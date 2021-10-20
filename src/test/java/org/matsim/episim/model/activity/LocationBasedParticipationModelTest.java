@@ -13,6 +13,7 @@ import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacilitiesFactory;
 import org.matsim.facilities.ActivityFacility;
@@ -27,6 +28,7 @@ public class LocationBasedParticipationModelTest {
 	private Config config;
 	private SplittableRandom rnd;
 	private EpisimConfigGroup episimConfig;
+	private VaccinationConfigGroup vaccinationConfig;
 
 	private final double POPULATION_SIZE = 10000.;
 	private final Percentage PERCENTAGE_OFFSET = Percentage.withPercentage(5.);
@@ -42,6 +44,8 @@ public class LocationBasedParticipationModelTest {
 		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation);
 		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 		episimConfig.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay);
+
+		vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 	}
 
 	/**
@@ -88,7 +92,7 @@ public class LocationBasedParticipationModelTest {
 
 
 		// Create LocationBasedParticipationModel
-		LocationBasedParticipationModel activityParticipationModel = new LocationBasedParticipationModel(rnd, episimConfig, scenario);
+		LocationBasedParticipationModel activityParticipationModel = new LocationBasedParticipationModel(rnd, episimConfig, vaccinationConfig, scenario);
 
 		ImmutableMap<String, Restriction> restrictionsImmutable = ImmutableMap.copyOf(restrictions);
 

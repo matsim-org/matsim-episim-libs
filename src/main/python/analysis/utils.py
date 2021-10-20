@@ -310,4 +310,4 @@ def calc_r_reduction(base_case, base_variables, df, group_by=None):
 
     return result
 
-aggregate_batch_run("C:/Users/jakob/projects/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2021-09-13-masterC-5seeds/summaries.zip")
+aggregate_batch_run("C:/Users/jakob/projects/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2021-10-19-masterA/summaries.zip")
