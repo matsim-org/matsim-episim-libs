@@ -243,7 +243,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		//restrictions and masks
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20210917.csv"));
+		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20211017.csv"));
 
 		activityParticipation.setScale(this.scale);
 		activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -341,6 +341,8 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			builder.applyToRf("2021-01-29", "2021-02-05", workVacFactor, "work", "business");
 			builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
 			builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
+			builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
+
 
 		}
 
