@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunParallel;
@@ -13,15 +14,18 @@ import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.matsim.episim.EpisimConfigGroup.ActivityHandling;
 import static org.matsim.episim.model.Transition.to;
 
 public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 
-	boolean DEBUG = true;
+	boolean DEBUG = false;
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
@@ -77,10 +81,29 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 
 		episimConfig.setPolicy(builder.build()); //FixedPolicy.class,
 
-		// added changed progression model
-//		episimConfig.setProgressionConfig(progressionConfig(params, Transition.config()).build());
-//		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
+		// added stuff from BMBF210903
+		{
 
+			episimConfig.setCalibrationParameter(1.0e-05);
+
+			episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83);
+
+
+			// added changed progression model
+			episimConfig.setProgressionConfig(progressionConfig(params, Transition.config()).build());
+			episimConfig.setDaysInfectious(Integer.MAX_VALUE);
+
+
+			//weather model
+			try {
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210905.csv").toFile(),
+						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 22.5, 5., 1.0);
+				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+		}
 
 		return config;
 	}
