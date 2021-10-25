@@ -11,6 +11,7 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -43,7 +44,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "rCalc");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 600;
@@ -59,23 +60,23 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		episimConfig.setStartFromSnapshot("episim-snapshot-330-2021-01-19.zip");
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(1);
+		vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(1);
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 				episimConfig.getStartDate(), 0,
 				LocalDate.parse("2020-12-27"), (int) (2000 * 4./3.),
 				LocalDate.parse("2021-01-25"), (int) (3000 * 4./3.)
 				));
-		
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		
+
 		LocalDate interventionDate = LocalDate.parse(params.interventionDate);
 		builder.clearAfter("2021-02-21");
 		if (params.intervention.startsWith("v_")) interventionDate = interventionDate.minusDays(14);
@@ -181,7 +182,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 					interventionDate.plusDays(1), (int) (0)
 					));
 			break;
-		case "v_20":				
+		case "v_20":
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(
 					episimConfig.getStartDate(), 0,
 					LocalDate.parse("2020-12-27"), (int)(2000 * 4./3.),
@@ -226,7 +227,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 					interventionDate.plusDays(1), (int) (0)
 					));
 			break;
-			
+
 		default:
 			throw new IllegalArgumentException("Unknown intervention: " + params.intervention);
 	}
@@ -235,7 +236,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
-		
+
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
@@ -249,15 +250,15 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 
 		@StringParameter({"2020-12-15"})
 		String newVariantDate;
-		
-		@StringParameter({"none", 
+
+		@StringParameter({"none",
 			"l_100", "l_50", "l_0", "l_c_18-5", "l_c_19-5", "l_c_20-5", "l_c_21-5", "l_c_22-5",
 			"w_100", "w_50", "w_0", "w_ffp",
 			"s_50", "s_100", "s_100_masks", "s_50_masks",
 			"t_0.75_5_200", "t_0.5_3_200", "t_0.5_5_inf", "t_0.75_3_inf",
 			"v_10", "v_20", "v_40", "v_60", "v_80", "v_100"})
 		String intervention;
-		
+
 		@StringParameter({"2021-03-08"})
 		String interventionDate;
 
@@ -267,7 +268,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, RCalculator.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(330),
 				RunParallel.OPTION_METADATA
 		};

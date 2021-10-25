@@ -26,13 +26,15 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributable;
 import org.matsim.utils.objectattributes.attributable.Attributes;
-import org.matsim.vehicles.Vehicle;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
@@ -56,8 +58,9 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Whole trajectory over all days of the week.
+	 * Entries contain the starting time of activities and the performed activity.
 	 */
-	private final List<Activity> trajectory = new ArrayList<>();
+	private final List<PerformedActivity> trajectory = new ArrayList<>();
 
 	/**
 	 * The position in the trajectory at the start for each day of the week.
@@ -71,10 +74,21 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * The first visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 * Can be null if person does not start in a container.
 	 */
 	private final Id<ActivityFacility>[] firstFacilityId = new Id[7];
 
+	/**
+	 * The last visited {@link org.matsim.facilities.ActivityFacility} for each day.
+	 * This is null if a person does not end its day in a container.
+	 */
+	private final Id<ActivityFacility>[] lastFacilityId = new Id[7];
 	// Fields above are initialized from the sim and not persisted
+
+	/**
+	 * Whether person stays in container at the and of a day.
+	 */
+	private final boolean[] staysInContainer = new boolean[7];
 
 	/**
 	 * Traced contacts with other persons.
@@ -92,9 +106,17 @@ public final class EpisimPerson implements Attributable {
 	private final Object2DoubleMap<String> spentTime = new Object2DoubleOpenHashMap<>(4);
 
 	/**
-	 * The {@link EpisimContainer} the person is currently located in.
+	 * Activity participation of the current day. Same length as {@link #trajectory}
 	 */
-	private EpisimContainer<?> currentContainer = null;
+	private BitSet activityParticipation;
+
+	/**
+	 * In the parallel version of the {@link ReplayHandler}, the infections
+	 * are not happen in a chronically order. The earliestInfections
+	 * check therefore, that the first infection is valued as the important
+	 * infection
+	 */
+	private EpisimInfectionEvent earliestInfection = null;
 
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
@@ -150,7 +172,10 @@ public final class EpisimPerson implements Attributable {
 	 */
 	private int testDate = -1;
 
-	private int currentPositionInTrajectory;
+	/**
+	 * How many times a person did go through the infected -> recovered cycle.
+	 */
+	private int numInfections = 0;
 
 	/**
 	 * Age of the person in years.
@@ -168,6 +193,16 @@ public final class EpisimPerson implements Attributable {
 	private boolean vaccinable = true;
 
 	/**
+	 * Received vaccination type.
+	 */
+	private VaccinationType vaccinationType = VaccinationType.generic;
+
+	/**
+	 * Individual susceptibility of a person.
+	 */
+	private double susceptibility = 1;
+
+	/**
 	 * Lookup age from attributes.
 	 */
 	private static int getAge(Attributes attrs) {
@@ -181,6 +216,10 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		return age;
+	}
+
+	public List<PerformedActivity> getTrajectory() {
+		return trajectory;
 	}
 
 	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
@@ -200,9 +239,7 @@ public final class EpisimPerson implements Attributable {
 	 *
 	 * @param persons map of all persons in the simulation
 	 */
-	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons,
-	          Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities,
-	          Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) throws IOException {
+	void read(ObjectInput in, Map<Id<Person>, EpisimPerson> persons) throws IOException {
 
 		int n = in.readInt();
 		traceableContactPersons.clear();
@@ -217,20 +254,6 @@ public final class EpisimPerson implements Attributable {
 			int status = in.readInt();
 			statusChanges.put(DiseaseStatus.values()[status], in.readDouble());
 		}
-
-		// Current container is set
-		if (in.readBoolean()) {
-			boolean isVehicle = in.readBoolean();
-			String name = readChars(in);
-			if (isVehicle) {
-				currentContainer = vehicles.get(Id.create(name, Vehicle.class));
-			} else
-				currentContainer = facilities.get(Id.create(name, ActivityFacility.class));
-
-			if (currentContainer == null)
-				throw new IllegalStateException("Could not reconstruct container: " + name);
-		} else
-			currentContainer = null;
 
 		if (in.readBoolean()) {
 			infectionContainer = Id.create(readChars(in), ActivityFacility.class);
@@ -256,11 +279,14 @@ public final class EpisimPerson implements Attributable {
 		vaccinationDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
-		currentPositionInTrajectory = in.readInt();
 		traceable = in.readBoolean();
+		numInfections = in.readInt();
 
-		// vaccinable, which is not restored
+		// vaccinable, which is not restored from snapshot
 		in.readBoolean();
+
+		vaccinationType = VaccinationType.values()[in.readInt()];
+		susceptibility = in.readDouble();
 	}
 
 	/**
@@ -278,12 +304,6 @@ public final class EpisimPerson implements Attributable {
 		for (Map.Entry<DiseaseStatus, Double> e : statusChanges.entrySet()) {
 			out.writeInt(e.getKey().ordinal());
 			out.writeDouble(e.getValue());
-		}
-
-		out.writeBoolean(currentContainer != null);
-		if (currentContainer != null) {
-			out.writeBoolean(currentContainer instanceof InfectionEventHandler.EpisimVehicle);
-			writeChars(out, currentContainer.getContainerId().toString());
 		}
 
 		out.writeBoolean(infectionContainer != null);
@@ -312,9 +332,11 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(vaccinationDate);
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
-		out.writeInt(currentPositionInTrajectory);
 		out.writeBoolean(traceable);
+		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
+		out.writeInt(vaccinationType.ordinal());
+		out.writeDouble(susceptibility);
 	}
 
 	public Id<Person> getPersonId() {
@@ -327,10 +349,47 @@ public final class EpisimPerson implements Attributable {
 
 	public void setDiseaseStatus(double now, DiseaseStatus status) {
 		this.status = status;
+
+		// when person goes back to susceptible, old states are removed
+		if (status == DiseaseStatus.susceptible) {
+			statusChanges.keySet().removeIf(p -> p != DiseaseStatus.recovered);
+		}
+
 		if (!statusChanges.containsKey(status))
 			statusChanges.put(status, now);
 
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
+	}
+
+	/**
+	 * Adds an infection possibility to this persons. Will be executed in {@link #checkInfection()}
+	 */
+	synchronized public void possibleInfection(EpisimInfectionEvent event) {
+		if (earliestInfection == null || event.compareTo(earliestInfection) < 0) {
+			earliestInfection = event;
+		}
+	}
+
+	/**
+	 * Update state with a stored {@link EpisimInfectionEvent}.
+	 *
+	 * @return the event if an infection has occurred.
+	 */
+	public EpisimInfectionEvent checkInfection() {
+		if (earliestInfection != null) {
+
+			EpisimInfectionEvent event = this.earliestInfection;
+			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);
+			setVirusStrain(event.getVirusStrain());
+			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
+			setInfectionType(event.getInfectionType());
+			numInfections++;
+
+			this.earliestInfection = null;
+			return event;
+		}
+
+		return null;
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
@@ -358,17 +417,22 @@ public final class EpisimPerson implements Attributable {
 		return vaccinationStatus;
 	}
 
+	public VaccinationType getVaccinationType() {
+		return vaccinationType;
+	}
+
 	public VaccinationStatus getReVaccinationStatus() {
 		return reVaccinationStatus;
 	}
 
-	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
+	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
+		this.vaccinationType = type;
 		this.vaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 
-		reporting.reportVaccination(personId, iteration, false);
+		reporting.reportVaccination(personId, iteration, type, false);
 	}
 
 	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
@@ -378,7 +442,7 @@ public final class EpisimPerson implements Attributable {
 		this.reVaccinationStatus = vaccinationStatus;
 		this.vaccinationDate = iteration;
 
-		reporting.reportVaccination(personId, iteration, true);
+		reporting.reportVaccination(personId, iteration, vaccinationType,true);
 	}
 
 	public TestStatus getTestStatus() {
@@ -388,6 +452,14 @@ public final class EpisimPerson implements Attributable {
 	public void setTestStatus(TestStatus testStatus, int iteration) {
 		this.testStatus = testStatus;
 		this.testDate = iteration;
+	}
+
+	public void setSusceptibility(double susceptibility) {
+		this.susceptibility = susceptibility;
+	}
+
+	public double getSusceptibility() {
+		return susceptibility;
 	}
 
 	/**
@@ -401,7 +473,7 @@ public final class EpisimPerson implements Attributable {
 	public int daysSince(DiseaseStatus status, int currentDay) {
 		if (!statusChanges.containsKey(status)) throw new IllegalStateException("Person was never " + status);
 
-		double day = Math.floor(statusChanges.get(status) / 86400d);
+		double day = Math.floor(statusChanges.get(status) / EpisimUtils.DAY);
 
 		return currentDay - (int) day;
 	}
@@ -453,7 +525,21 @@ public final class EpisimPerson implements Attributable {
 		return currentDay - testDate;
 	}
 
-	public void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
+	/**
+	 * Number of times person was infected.
+	 */
+	public int getNumInfections() {
+		return numInfections;
+	}
+
+	/**
+	 * Whether this person is handled as a recovered person.
+	 */
+	public boolean isRecentlyRecovered(int currentDay) {
+		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && numInfections >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= 180);
+	}
+
+	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
 		// check if both persons have tracing capability
 		if (isTraceable() && personWrapper.isTraceable()) {
 			// Always use the latest tracking date
@@ -465,10 +551,12 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Get all traced contacts that happened after certain time.
 	 */
-	public List<EpisimPerson> getTraceableContactPersons(double after) {
+	public synchronized List<EpisimPerson> getTraceableContactPersons(double after) {
+		// needs to be sorted or results will be non deterministic with multithreading
 		return traceableContactPersons.object2DoubleEntrySet()
 				.stream().filter(p -> p.getDoubleValue() >= after)
 				.map(Map.Entry::getKey)
+				.sorted(Comparator.comparing(EpisimPerson::getPersonId))
 				.collect(Collectors.toList());
 
 		// yyyy if the computationally intensive operation is to search by time, we should sort traceableContactPersons by time.  To simplify this, I
@@ -507,36 +595,23 @@ public final class EpisimPerson implements Attributable {
 		this.vaccinable = vaccinable;
 	}
 
-	void addToTrajectory(Activity trajectoryElement) {
-		trajectory.add(trajectoryElement);
+	public PerformedActivity addToTrajectory(double time, EpisimConfigGroup.InfectionParams trajectoryElement, Id<ActivityFacility> facilityId) {
+		PerformedActivity act = new PerformedActivity(time, trajectoryElement, facilityId);
+		trajectory.add(act);
+		return act;
 	}
 
-	public List<Activity> getTrajectory() {
-		return trajectory;
-	}
 
-	public int getCurrentPositionInTrajectory() {
-		return this.currentPositionInTrajectory;
-	}
-
-	void incrementCurrentPositionInTrajectory() {
-		this.currentPositionInTrajectory++;
-	}
-
-	void resetCurrentPositionInTrajectory(DayOfWeek day) {
-		currentPositionInTrajectory = startOfDay[day.getValue() - 1];
-	}
-
-	void setStartOfDay(DayOfWeek day, int position) {
-		startOfDay[day.getValue() - 1] = position;
+	void setStartOfDay(DayOfWeek day) {
+		startOfDay[day.getValue() - 1] = trajectory.size();
 	}
 
 	int getStartOfDay(DayOfWeek day) {
 		return startOfDay[day.getValue() - 1];
 	}
 
-	void setEndOfDay(DayOfWeek day, int position) {
-		endOfDay[day.getValue() - 1] = position;
+	void setEndOfDay(DayOfWeek day) {
+		endOfDay[day.getValue() - 1] = trajectory.size();
 	}
 
 	int getEndOfDay(DayOfWeek day) {
@@ -544,19 +619,8 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Check whether a person has one of the given activities on a certain week day.
-	 */
-	public boolean hasActivity(DayOfWeek day, Set<String> activities) {
-		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
-			if (activities.contains(trajectory.get(i).params.getContainerName()))
-				return true;
-		}
-
-		return false;
-	}
-
-	/**
 	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
+	 * This method takes {@link #activityParticipation} into account.
 	 *
 	 * @param reduce       reduce function called on each activities with current result
 	 * @param defaultValue default value and initial value for the reduce function
@@ -566,12 +630,32 @@ public final class EpisimPerson implements Attributable {
 		T result = defaultValue;
 		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
 			String act = trajectory.get(i).params.getContainerName();
-			if (activities.contains(act))
+			if (activityParticipation.get(i) && activities.contains(act))
 				result = reduce.apply(act, result);
 		}
 
 		return result;
 
+	}
+
+	/**
+	 * Whether this person has any activity for given day.
+	 * Used during initialization. After that it should always return true.
+	 */
+	boolean hasActivity(DayOfWeek day) {
+		return getStartOfDay(day) < trajectory.size();
+	}
+
+	/**
+	 * Init participation bit set.
+	 */
+	void initParticipation() {
+		activityParticipation = new BitSet(trajectory.size());
+		activityParticipation.set(0, trajectory.size(), true);
+	}
+
+	public BitSet getActivityParticipation() {
+		return activityParticipation;
 	}
 
 	/**
@@ -581,23 +665,8 @@ public final class EpisimPerson implements Attributable {
 		startOfDay[target.getValue() - 1] = startOfDay[source.getValue() - 1];
 		endOfDay[target.getValue() - 1] = endOfDay[source.getValue() - 1];
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
-	}
-
-	public EpisimContainer<?> getCurrentContainer() {
-		return currentContainer;
-	}
-
-	/**
-	 * Set the container the person is currently contained in. {@link #removeCurrentContainer(EpisimContainer)} must be called before a new
-	 * container can be set.
-	 */
-	public void setCurrentContainer(EpisimContainer<?> container) {
-		if (this.currentContainer != null)
-			throw new IllegalStateException(String.format("Person in more than one container at once. Person=%s in %s and %s",
-					this.getPersonId(), container.getContainerId(), this.currentContainer.getContainerId()));
-
-
-		this.currentContainer = container;
+		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];
+		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];
 	}
 
 	@Override
@@ -606,7 +675,7 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public int getAge() {
-		assert age != -1 : "Person=" + getPersonId().toString() + " has no age. Age dependent progression is not possible.";
+		assert age != -1 : "Person=" + getPersonId().toString() + " has no age.";
 		assert age >= 0 && age <= 120 : "Age of person=" + getPersonId().toString() + " is not plausible. Age is=" + age;
 
 		return age;
@@ -619,20 +688,6 @@ public final class EpisimPerson implements Attributable {
 		return age != -1 ? age : defaultAge;
 	}
 
-	/**
-	 * Whether person is currently in a container.
-	 */
-	public boolean isInContainer() {
-		return currentContainer != null;
-	}
-
-	public void removeCurrentContainer(EpisimContainer<?> container) {
-		if (this.currentContainer != container)
-			throw new IllegalStateException(String.format("Person is currently in %s, but not in removed one %s", currentContainer, container));
-
-		this.currentContainer = null;
-	}
-
 	Id<ActivityFacility> getFirstFacilityId(DayOfWeek day) {
 		return firstFacilityId[day.getValue() - 1];
 	}
@@ -641,8 +696,21 @@ public final class EpisimPerson implements Attributable {
 		this.firstFacilityId[day.getValue() - 1] = firstFacilityId;
 	}
 
-	public void setInfectionContainer(EpisimContainer<?> container) {
-		this.infectionContainer = (Id<ActivityFacility>) container.getContainerId();
+	Id<ActivityFacility> getLastFacilityId(DayOfWeek day) {
+		return lastFacilityId[day.getValue() - 1];
+	}
+
+	void setLastFacilityId(Id<ActivityFacility> lastFacilityId, DayOfWeek day, boolean stays) {
+		this.lastFacilityId[day.getValue() - 1] = lastFacilityId;
+		this.staysInContainer[day.getValue() - 1] = stays;
+	}
+
+	void setStaysInContainer(DayOfWeek day, boolean stays) {
+		this.staysInContainer[day.getValue() - 1] = stays;
+	}
+
+	boolean getStaysInContainer(DayOfWeek day) {
+		return staysInContainer[day.getValue() - 1];
 	}
 
 	public Id<ActivityFacility> getInfectionContainer() {
@@ -660,7 +728,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Add amount of time to spent time for an activity.
 	 */
-	public void addSpentTime(String actType, double timeSpent) {
+	public synchronized void addSpentTime(String actType, double timeSpent) {
 		spentTime.mergeDouble(actType, timeSpent, Double::sum);
 	}
 
@@ -678,6 +746,91 @@ public final class EpisimPerson implements Attributable {
 				'}';
 	}
 
+	private int findActivity(DayOfWeek day, double time) {
+		// do a linear search for matching activity
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time > time)
+				return i;
+		}
+		return last;
+	}
+
+	private int findFirstActivity(DayOfWeek day, double time) {
+		int last = getEndOfDay(day) - 1;
+		for (int i = getStartOfDay(day); i < last; i++) {
+			if (trajectory.get(i + 1).time >= time)
+				return i;
+		}
+		return last;
+	}
+
+	/**
+	 * Checks whether a certain activity is performed.
+	 */
+	boolean checkActivity(DayOfWeek day, double time) {
+		return activityParticipation.get(findActivity(day, time));
+	}
+
+	boolean checkFirstActivity(DayOfWeek day, double time) {
+		return activityParticipation.get(findFirstActivity(day, time));
+	}
+
+	/**
+	 * Checks whether the next activity is performed.
+	 */
+	boolean checkNextActivity(DayOfWeek day, double time) {
+		int idx = findActivity(day, time);
+
+		if (idx < getEndOfDay(day) - 1)
+			return activityParticipation.get(idx + 1);
+
+		return true;
+	}
+
+	public List<PerformedActivity> getActivities(DayOfWeek day) {
+		int offset = getStartOfDay(day);
+		return trajectory.subList(offset, getEndOfDay(day));
+	}
+
+
+	/**
+	 * Return the first activity of a person for specific day.
+	 */
+	PerformedActivity getFirstActivity(DayOfWeek day) {
+		return trajectory.get(getStartOfDay(day));
+	}
+
+	PerformedActivity getLastActivity(DayOfWeek day) {
+		return trajectory.get(getEndOfDay(day) - 1);
+	}
+
+	/**
+	 * Get the activity normally performed by a person on a specific day and time.
+	 */
+	public PerformedActivity getActivity(DayOfWeek day, double time) {
+
+		assert getStartOfDay(day) >= 0;
+		assert getEndOfDay(day) <= trajectory.size();
+
+		return trajectory.get(findActivity(day, time));
+	}
+
+	/**
+	 * Get the next activity of a person.
+	 *
+	 * @see #getActivity(DayOfWeek, double)
+	 */
+	@Nullable
+	public PerformedActivity getNextActivity(DayOfWeek day, double time) {
+		int idx = findActivity(day, time);
+
+		if (idx < getEndOfDay(day) - 1)
+			return trajectory.get(idx + 1);
+
+		return null;
+	}
+
 	/**
 	 * Disease status of a person.
 	 */
@@ -692,7 +845,7 @@ public final class EpisimPerson implements Attributable {
 	public enum QuarantineStatus {full, atHome, no}
 
 	/**
-	 * Latest test result of this persons.
+	 * Latest test result of this person.
 	 */
 	public enum TestStatus {untested, positive, negative}
 
@@ -702,26 +855,68 @@ public final class EpisimPerson implements Attributable {
 	public enum VaccinationStatus {yes, no}
 
 	/**
-	 * Activity performed by a person. Holds the type and its infection params.
+	 * Stores when an activity is performed and in which context.
 	 */
-	public static final class Activity {
+	public static final class PerformedActivity {
 
-		public final String actType;
+		public final double time;
 		public final EpisimConfigGroup.InfectionParams params;
+		public final Id<ActivityFacility> facilityId;
+
+
+		public PerformedActivity(double time, EpisimConfigGroup.InfectionParams params, Id<ActivityFacility> facilityId) {
+			this.time = time;
+			this.params = params;
+			this.facilityId = facilityId;
+		}
 
 		/**
-		 * Constructor.
+		 * Starting time of an activity.
 		 */
-		public Activity(String actType, EpisimConfigGroup.InfectionParams params) {
-			this.actType = actType;
-			this.params = params;
+		public double time() {
+			return time;
 		}
+
+		/**
+		 * Activity type as string.
+		 */
+		public String actType() {
+			// container name is quite misleading and not the correct anymore.
+			return params.getContainerName();
+		}
+
+		/**
+		 * Facility Id for performed activity
+		 */
+		public Id<ActivityFacility> getFacilityId() {
+			return this.facilityId;
+		}
+
 
 		@Override
 		public String toString() {
-			return "Activity{" +
-					"actType='" + actType + '\'' +
+			return "PerformedActivity{" +
+					"time=" + time +
+					", params=" + params +
 					'}';
 		}
+	}
+
+	/**
+	 * Not further specified activity that is used during initialization.
+	 */
+	static final PerformedActivity UNSPECIFIC_ACTIVITY = new PerformedActivity(Double.NaN, null, null);
+
+    /**
+	 * If the ContagiousOptimization is enabled, containers count how many
+	 * persons satisfy this predicate to call the infectionsDynamics methods
+     * only in the case that at least one person in the container
+	 * can infect another (or in the infectedButNotContagious case,
+	 * inform other persons later thanks to tracking).
+	 */
+	public boolean infectedButNotSerious() {
+		return (status == DiseaseStatus.infectedButNotContagious ||
+				status == DiseaseStatus.contagious ||
+				status == DiseaseStatus.showingSymptoms);
 	}
 }

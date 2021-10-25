@@ -82,6 +82,7 @@ public final class EpisimRunner {
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
 
+		reporting.reportCpuTime(0, "Init", "start", -1);
 		// reporting will write events if necessary
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
@@ -106,6 +107,7 @@ public final class EpisimRunner {
 			}
 		}
 
+		reporting.reportCpuTime(0, "Init", "finished", -1);
 
 		log.info("Starting from iteration {}...", iteration);
 
@@ -122,6 +124,8 @@ public final class EpisimRunner {
 
 		}
 
+		handler.finish();
+
 		reporting.close();
 	}
 
@@ -135,10 +139,12 @@ public final class EpisimRunner {
 		manager.resetHandlers(iteration);
 		handler.reset(iteration);
 
-		if (handler.isFinished())
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(this.config, EpisimConfigGroup.class);
+
+		if (episimConfig.isEndEarly() && handler.isFinished())
 			return false;
 
-		DayOfWeek day = EpisimUtils.getDayOfWeek(ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class), iteration);
+		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 
 		// Process all events
 		replay.replayEvents(handler, day);

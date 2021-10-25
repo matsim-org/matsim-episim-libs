@@ -10,11 +10,12 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.AgeDependentInfectionModelWithSeasonality;
-import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ContactModel;
 import org.matsim.episim.model.InfectionModel;
 import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.episim.model.ProgressionModel;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.AbstractSnzScenario2020;
@@ -40,7 +41,7 @@ public class MunichDiseaseImport implements BatchRun<MunichDiseaseImport.Params>
 					@Override
 					protected void configure() {
 						bind(ContactModel.class).to(OldSymmetricContactModel.class).in(Singleton.class);
-						bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+						bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 						bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 					}
 //					@Provides

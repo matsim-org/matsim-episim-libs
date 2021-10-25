@@ -31,6 +31,8 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimConfigGroup.InfectionParams;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinScenario25pct2020.BasePolicyBuilder;
@@ -136,7 +138,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(contactModel).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 	}
 
@@ -238,7 +240,7 @@ public class SnzBerlinWeekScenario2020 extends AbstractSnzScenario2020 {
 			}
 		}
 
-		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.build();
+		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
 
 		// yyyyyy why this? Could you please comment?  kai, sep/20
 		// we're setting ciCorrection at educ facilities to 0.5 after summer holidays (the assumption is that from that point onwards windows are opened regularly)

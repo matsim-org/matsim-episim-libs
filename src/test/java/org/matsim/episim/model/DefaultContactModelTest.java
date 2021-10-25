@@ -6,19 +6,23 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.assertj.core.data.Offset;
 import org.junit.Before;
 import org.junit.Test;
+import org.matsim.api.core.v01.Coord;
+import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.RestrictionTest;
+import org.matsim.facilities.ActivityFacilitiesFactory;
+import org.matsim.facilities.ActivityFacility;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.SplittableRandom;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -34,13 +38,15 @@ public class DefaultContactModelTest {
 	private DefaultContactModel model;
 	private InfectionModel infectionModel;
 	private Map<String, Restriction> restrictions;
+	private EpisimReporting reporting;
+	private SplittableRandom rnd;
 
 
 	@Before
 	public void setup() {
 		// No verification, since it results in oom error
-		EpisimReporting reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
-		SplittableRandom rnd = new SplittableRandom(1);
+		reporting = Mockito.mock(EpisimReporting.class, Mockito.withSettings().stubOnly());
+		rnd = new SplittableRandom(1);
 
 		config = EpisimTestUtils.createTestConfig();
 		final EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -68,7 +74,7 @@ public class DefaultContactModelTest {
 		for (int i = 0; i < 30_000; i++) {
 			InfectionEventHandler.EpisimFacility container = f.get();
 			EpisimPerson person = p.apply(container);
-			model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
+			model.infectionDynamicsFacility(person, container, jointTime.getSeconds());
 			if (person.getDiseaseStatus() == EpisimPerson.DiseaseStatus.infectedButNotContagious)
 				infections++;
 		}
@@ -93,7 +99,7 @@ public class DefaultContactModelTest {
 
 			while (!container.getPersons().isEmpty()) {
 				EpisimPerson person = container.getPersons().get(r.nextInt(container.getPersons().size()));
-				model.infectionDynamicsFacility(person, container, jointTime.getSeconds(), actType);
+				model.infectionDynamicsFacility(person, container, jointTime.getSeconds());
 				EpisimTestUtils.removePerson(container, person);
 			}
 
@@ -341,12 +347,11 @@ public class DefaultContactModelTest {
 	public void vaccinated() {
 
 		VaccinationConfigGroup vac = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vac.setEffectiveness(1.0);
-		vac.setDaysBeforeFullEffect(0);
+		vac.getParams(VaccinationType.generic).setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2).atDay(0, 1.0d));
 
 		Function<InfectionEventHandler.EpisimFacility, EpisimPerson> fp = f -> {
 			EpisimPerson p = EpisimTestUtils.createPerson("c10", f);
-			p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
+			p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes,  VaccinationType.generic, 0);
 			return p;
 		};
 
@@ -356,7 +361,10 @@ public class DefaultContactModelTest {
 		assertThat(rate)
 				.isEqualTo(0);
 
-		vac.setDaysBeforeFullEffect(15);
+		vac.getParams(VaccinationType.generic).setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+				.atDay(0, 0.1)
+				.atDay(15, 1.0d));
+
 		rate = sampleInfectionRate(Duration.ofMinutes(10), "c10",
 				() -> EpisimTestUtils.createFacility(9, "c10", 10, EpisimTestUtils.CONTAGIOUS), fp);
 
@@ -412,14 +420,14 @@ public class DefaultContactModelTest {
 		assertThat(noTracking)
 				// Compares arguments of the calls [person1, person2, time, activity]
 				.usingElementComparator((o1, o2) -> {
-					EpisimPerson p1 = (EpisimPerson) o1[0];
-					EpisimPerson p2 = (EpisimPerson) o2[0];
+					EpisimInfectionEvent p1 = (EpisimInfectionEvent) o1[0];
+					EpisimInfectionEvent p2 = (EpisimInfectionEvent) o2[0];
 
 					boolean same = p1.getPersonId().equals(p2.getPersonId());
 					if (!same) return -1;
 
 					return ComparisonChain.start()
-							.compare((double) o1[2], (double) o2[2])
+							.compare(p1.getTime(), p2.getTime())
 							.result();
 				})
 				.hasSizeGreaterThan(0)
@@ -476,6 +484,71 @@ public class DefaultContactModelTest {
 					.isCloseTo(p.getRight(), Offset.offset(0.01));
 
 		}
+
+	}
+
+	/**
+	 * Tests that locationBasedRestrictions. There are three facilities in different NYC boroughs: Bronx, Queens,
+	 * and Staten Island. There are location based restrictions for the first two. The infection rate should be roughly
+	 * the same as the remaining fraction; therefore we expect rates of 0.0 and 0.5 for Bronx and Queens respectively.
+	 * Since there is no location based restriction for Staten Island, the default remaining fraction should be used, 1.0
+	 */
+	@Test
+	public void locationBasedRestrictions() {
+
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
+		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+
+		// Add activity facilities to scenario
+		Scenario scenario = ScenarioUtils.loadScenario(config);
+
+		ActivityFacilitiesFactory factory = scenario.getActivityFacilities().getFactory();
+		ActivityFacility bronxFacility = factory.createActivityFacility(Id.create("BronxFacility", ActivityFacility.class), new Coord(0, 0));
+		bronxFacility.getAttributes().putAttribute("subdistrict", "Bronx");
+
+		ActivityFacility queensFacility = factory.createActivityFacility(Id.create("QueensFacility", ActivityFacility.class), new Coord(0, 0));
+		queensFacility.getAttributes().putAttribute("subdistrict", "Queens");
+
+		ActivityFacility statenIslandFacility = factory.createActivityFacility(Id.create("StatenIslandFacility", ActivityFacility.class), new Coord(100, 100));
+		statenIslandFacility.getAttributes().putAttribute("subdistrict", "StatenIsland");
+
+		scenario.getActivityFacilities().addActivityFacility(bronxFacility);
+		scenario.getActivityFacilities().addActivityFacility(queensFacility);
+		scenario.getActivityFacilities().addActivityFacility(statenIslandFacility);
+
+
+		// Add location based restrictions for Bronx and Queens
+		Map<String, Double> nycBoroughs = new HashMap<>();
+		nycBoroughs.put("Bronx", 0.0);
+		nycBoroughs.put("Queens", 0.5);
+		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.ofLocationBasedRf(nycBoroughs)));
+		restrictions.put("c10", RestrictionTest.update(restrictions.get("c10"), Restriction.of(1.0)));
+
+		// These 2 lines are necessary repeats from setup(); TODO: a more elegant solution
+		model = new DefaultContactModel(rnd, config, reporting, infectionModel, scenario);
+		model.setRestrictionsForIteration(1, restrictions);
+
+		double rateBronx = sampleInfectionRate(Duration.ofHours(6), "c10",
+				() -> EpisimTestUtils.createFacility("BronxFacility", 10, "c10", 21, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c10", f)
+		);
+
+		double rateQueens = sampleInfectionRate(Duration.ofHours(6), "c10",
+				() -> EpisimTestUtils.createFacility("QueensFacility", 10, "c10", 21, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c10", f)
+		);
+
+		double rateStatenIsland = sampleInfectionRate(Duration.ofHours(6), "c10",
+				() -> EpisimTestUtils.createFacility("StatenIslandFacility", 10, "c10", 21, EpisimTestUtils.CONTAGIOUS),
+				f -> EpisimTestUtils.createPerson("c10", f)
+		);
+
+		Offset<Double> offset = Offset.offset(0.1);
+		assertThat(rateBronx).isCloseTo(0.0, offset);
+		assertThat(rateQueens).isCloseTo(0.5, offset);
+		assertThat(rateStatenIsland).isCloseTo(1.0, offset);
 
 	}
 

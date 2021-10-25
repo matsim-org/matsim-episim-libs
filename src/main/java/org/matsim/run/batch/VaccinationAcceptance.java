@@ -8,14 +8,15 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TestingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
-import org.matsim.run.modules.SnzBerlinProductionScenario.EasterModel;
+import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzProductionScenario.EasterModel;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
@@ -40,7 +41,7 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "vaccination acceptance");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 5000;
@@ -48,7 +49,7 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		
+
 		ChristmasModel christmasModel = SnzBerlinProductionScenario.ChristmasModel.valueOf(params.christmasModel);
 		EasterModel easterModel = SnzBerlinProductionScenario.EasterModel.valueOf(params.easterModel);
 
@@ -62,7 +63,7 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
 		episimConfig.setStartFromSnapshot("../episim-snapshot-270-2020-11-20.zip");
 //		episimConfig.setSnapshotInterval(30);
@@ -80,25 +81,25 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 		curfewCompliance.put(LocalDate.parse("2021-04-06"), 0.5);
 
 		episimConfig.setCurfewCompliance(curfewCompliance);
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
-		
+
+
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		
+
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		
+
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setFactorSeriouslySick(0.5);
+		vaccinationConfig.getParams(VaccinationType.generic).setFactorSeriouslySick(0.5);
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
-		
+
 		for(int i = 0; i<18; i++) vaccinationCompliance.put(i, 0.);
 		for(int i = 18; i<120; i++) vaccinationCompliance.put(i, params.vaccinationAcceptance);
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
-		
+
 		if (!params.vaccination.equals("current")) {
 			Map<LocalDate, Integer> vaccinations = new HashMap<>();
 			for(Entry<LocalDate, Integer> e : vaccinationConfig.getVaccinationCapacity().entrySet()) vaccinations.put(e.getKey(), e.getValue());
@@ -109,12 +110,12 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 			vaccinations.put(LocalDate.parse("2021-06-01"), (int) (dailyPercentageJune * population));
 			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
-		
-		
+
+
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-		
+
 		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
-				
+
 		List<String> actsList = new ArrayList<String>();
 		actsList.add("leisure");
 		actsList.add("work");
@@ -125,17 +126,17 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 		actsList.add("educ_tertiary");
 		actsList.add("educ_other");
 		testingConfigGroup.setActivities(actsList);
-		
+
 		testingConfigGroup.setFalseNegativeRate(0.3);
 		testingConfigGroup.setFalsePositiveRate(0.03);
 		testingConfigGroup.setHouseholdCompliance(1.0);
-						
+
 		LocalDate testingDate = LocalDate.parse("2021-04-19");
-		
+
 		double leisureRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[2]) / 100.;
 		double workRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[1]) / 100.;
 		double eduRate = Integer.parseInt(params.testingRateEduWorkLeisure.split("-")[0]) / 100.;
-		
+
 		testingConfigGroup.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", Map.of(
 						LocalDate.parse("2020-01-01"), 0.,
@@ -172,9 +173,9 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 				)));
 
 		testingConfigGroup.setTestingCapacity_pers_per_day(Map.of(
-				LocalDate.of(1970, 1, 1), 0, 
+				LocalDate.of(1970, 1, 1), 0,
 				testingDate, Integer.MAX_VALUE));
-	
+
 		return config;
 	}
 
@@ -182,29 +183,29 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 
 		@GenerateSeeds(5)
 		public long seed;
-		
+
 		@StringParameter({"permissive", "restrictive"})
 		String christmasModel;
-		
+
 		@StringParameter({"yes", "no"})
 		String easterModel;
-		
+
 		@StringParameter({"2020-12-10", "2020-12-05", "2020-11-30", "2020-11-25"})
 		String b117Date;
-		
+
 		@Parameter({0.7, 0.8, 0.9, 1.0})
 		double vaccinationAcceptance;
-		
+
 //		@Parameter({1.0, 1.5})
 //		double factorSeriouslySickB117;
-//		
+//
 //		@Parameter({1.0, 0.5})
 //		double factorSeriouslySickVaccine;
-		
+
 //		@StringParameter({"0-0-0", "20-5-5"})
 		@StringParameter({"20-5-5"})
 		String testingRateEduWorkLeisure;
-		
+
 		@StringParameter({"current", "prediction"})
 		String vaccination;
 
@@ -214,7 +215,7 @@ public class VaccinationAcceptance implements BatchRun<VaccinationAcceptance.Par
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, VaccinationAcceptance.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
 				RunParallel.OPTION_METADATA
 		};

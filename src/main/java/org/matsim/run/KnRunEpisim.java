@@ -41,6 +41,8 @@ import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
@@ -135,7 +137,7 @@ public class KnRunEpisim {
 					bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
 				} else {
 					bind( InfectionModel.class ).to( AgeDependentInfectionModelWithSeasonality.class ).in( Singleton.class );
-					bind( ProgressionModel.class ).to( AgeDependentProgressionModel.class ).in( Singleton.class );
+					bind( DiseaseStatusTransitionModel.class ).to( AgeDependentDiseaseStatusTransitionModel.class ).in( Singleton.class );
 					bind( FaceMaskModel.class ).to( DefaultFaceMaskModel.class ).in( Singleton.class );
 					bind( InitialInfectionHandler.class ).to( RandomInitialInfections.class ).in( Singleton.class );
 				}
@@ -302,7 +304,7 @@ public class KnRunEpisim {
 					r.setAlpha(1.);
 					basePolicyBuilder.setActivityParticipation(r);
 
-					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.build();
+					FixedPolicy.ConfigBuilder restrictions = basePolicyBuilder.buildFixed();
 					episimConfig.setPolicy(FixedPolicy.class, restrictions.build());
 
 					strb.append( "_ciCorr" ).append(Joiner.on("_").withKeyValueSeparator("@").join(basePolicyBuilder.getCiCorrections()));

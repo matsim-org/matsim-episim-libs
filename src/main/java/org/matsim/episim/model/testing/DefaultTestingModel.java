@@ -17,6 +17,7 @@ import java.util.*;
 public class DefaultTestingModel implements TestingModel {
 
 	protected final SplittableRandom rnd;
+	protected final VaccinationConfigGroup vaccinationConfig;
 	protected final EpisimConfigGroup episimConfig;
 	protected final TestingConfigGroup testingConfig;
 	protected final Config config;
@@ -29,18 +30,24 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing rates for configured activities for current day.
 	 */
-	private Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
+	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
 
 	/**
 	 * Ids of households that are not compliant.
 	 */
 	private final Set<String> nonCompliantHouseholds = new HashSet<>();
 
+	/**
+	 * Whether to test all persons on this day.
+	 */
+	private boolean testAllPersons;
+
 	@Inject
-	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, EpisimConfigGroup episimConfig) {
+	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
 		this.config = config;
 		this.testingConfig = testingConfig;
+		this.vaccinationConfig = vaccinationConfig;
 		this.episimConfig = episimConfig;
 	}
 
@@ -48,6 +55,8 @@ public class DefaultTestingModel implements TestingModel {
 	public void setIteration(int day) {
 
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+
+		testAllPersons = testingConfig.getTestAllPersonsAfter() != null && date.isAfter(testingConfig.getTestAllPersonsAfter());
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
 
@@ -106,6 +115,12 @@ public class DefaultTestingModel implements TestingModel {
 		// person with positive test is not tested twice
 		// test status will be set when released from quarantine
 		if (person.getTestStatus() == EpisimPerson.TestStatus.positive)
+			return;
+
+		// vaccinated and recovered persons are not tested
+		if (!testAllPersons & (person.isRecentlyRecovered(day) || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
+						person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect()))
+		)
 			return;
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {

@@ -5,6 +5,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 
 import java.io.*;
+import java.time.DayOfWeek;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -68,6 +69,69 @@ public class EpisimPersonTest {
 	}
 
 	@Test
+	public void activities() {
+
+		EpisimPerson p = EpisimTestUtils.createPerson();
+
+		p.setStartOfDay(DayOfWeek.MONDAY);
+
+		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"),null);
+		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"),null);
+		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"),null);
+
+		p.setEndOfDay(DayOfWeek.MONDAY);
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 0).actType())
+				.isEqualTo("home");
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 1000).actType())
+				.isEqualTo("work");
+
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1000).actType())
+				.isEqualTo("edu");
+
+		assertThat(p.getActivity(DayOfWeek.MONDAY, 1001).actType())
+				.isEqualTo("work");
+
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 1001).actType())
+				.isEqualTo("edu");
+
+		assertThat(p.getNextActivity(DayOfWeek.MONDAY, 2001))
+				.isNull();
+	}
+
+	@Test
+	public void participation() {
+
+		EpisimPerson p = EpisimTestUtils.createPerson();
+
+		DayOfWeek d = DayOfWeek.MONDAY;
+		p.setStartOfDay(d);
+
+		p.addToTrajectory(0, new EpisimConfigGroup.InfectionParams("home"),null);
+		p.addToTrajectory(1000, new EpisimConfigGroup.InfectionParams("work"),null);
+		p.addToTrajectory(2000, new EpisimConfigGroup.InfectionParams("edu"),null);
+		p.addToTrajectory(3000, new EpisimConfigGroup.InfectionParams("leisure"),null);
+
+		p.setEndOfDay(d);
+		p.initParticipation();
+
+		p.getActivityParticipation().set(1, false);
+		p.getActivityParticipation().set(2, false);
+
+
+		assertThat(p.checkActivity(d, 0)).isEqualTo(true);
+		assertThat(p.checkActivity(d, 1000)).isEqualTo(false);
+		assertThat(p.checkActivity(d, 2500)).isEqualTo(false);
+		assertThat(p.checkActivity(d, 3100)).isEqualTo(true);
+
+
+		assertThat(p.checkNextActivity(d, 500)).isEqualTo(false);
+		assertThat(p.checkNextActivity(d, 2000)).isEqualTo(true);
+
+	}
+
+	@Test
 	public void readWrite() throws IOException {
 
 		EpisimPerson p1 = EpisimTestUtils.createPerson("work", null);
@@ -86,7 +150,7 @@ public class EpisimPersonTest {
 		Map<Id<Person>, EpisimPerson> persons = new HashMap<>();
 
 		EpisimPerson p2 = EpisimTestUtils.createPerson("c1.0", null);
-		p2.read(new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())), persons, null, null);
+		p2.read(new ObjectInputStream(new ByteArrayInputStream(out.toByteArray())), persons);
 
 		assertThat(p2.getDiseaseStatus())
 				.isEqualTo(EpisimPerson.DiseaseStatus.showingSymptoms);

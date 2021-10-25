@@ -47,7 +47,7 @@ public class ParamsBatch implements BatchRun<ParamsBatch.Params> {
 		((CreateRestrictionsFromCSV) basePolicyBuilder.getActivityParticipation()).setAlpha(params.alpha);
 		basePolicyBuilder.setCiCorrections(Map.of(params.ciDate, params.ci));
 
-		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.build().build());
+		episimConfig.setPolicy(FixedPolicy.class, basePolicyBuilder.buildFixed().build());
 
 		return config;
 	}

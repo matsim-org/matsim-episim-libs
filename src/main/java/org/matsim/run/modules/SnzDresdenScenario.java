@@ -27,6 +27,8 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.TracingConfigGroup.CapacityType;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.policy.FixedPolicy;
@@ -61,7 +63,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
 		bind(VaccinationModel.class).to(VaccinationByAge.class).in(Singleton.class);
 	}
@@ -151,8 +153,8 @@ public final class SnzDresdenScenario extends AbstractModule {
 		// Vaccination capacity
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(28);
+		vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
@@ -180,7 +182,7 @@ public final class SnzDresdenScenario extends AbstractModule {
 		// Using the same base policy as berlin
 		SnzBerlinScenario25pct2020.BasePolicyBuilder builder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
 		builder.setActivityParticipation(restrictions);
-		FixedPolicy.ConfigBuilder policy = builder.build();
+		FixedPolicy.ConfigBuilder policy = builder.buildFixed();
 
 		// Set compliance rate of 90% for cloth masks
 		policy.restrict(LocalDate.parse("2020-04-01"), Restriction.ofMask(FaceMask.CLOTH, 0.9), "pt");

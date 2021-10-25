@@ -81,8 +81,6 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 
 		private static final String STRAIN = "strain";
 		private static final String INFECTIOUSNESS = "infectiousness";
-		private static final String VACCINE_EFFECTIVENESS = "vaccineEffectiveness";
-		private static final String RE_VACCINE_EFFECTIVENESS = "reVaccineEffectiveness";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 		private static final String FACTOR_SERIOUSLY_SICK_VAC = "factorSeriouslySickVaccinated";
 
@@ -95,16 +93,6 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		 * v Infectiousness of this variant.
 		 */
 		private double infectiousness = 1.0;
-
-		/**
-		 * Vaccine effectiveness
-		 */
-		private double vaccineEffectiveness = 1.0;
-
-		/**
-		 * Vaccine effectiveness for the second vaccine.
-		 */
-		private double reVaccineEffectiveness = 1.0;
 
 		/**
 		 * Factor for probability
@@ -140,24 +128,24 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 			this.infectiousness = infectiousness;
 		}
 
-		@StringGetter(VACCINE_EFFECTIVENESS)
+		@Deprecated
 		public double getVaccineEffectiveness() {
-			return vaccineEffectiveness;
+			throw new RuntimeException("Deprecated: Configure effectiveness in hte vaccination config.");
 		}
 
-		@StringSetter(VACCINE_EFFECTIVENESS)
+		@Deprecated
 		public void setVaccineEffectiveness(double vaccineEffectiveness) {
-			this.vaccineEffectiveness = vaccineEffectiveness;
+			throw new RuntimeException("Deprecated: Configure effectiveness in hte vaccination config.");
 		}
 
-		@StringGetter(RE_VACCINE_EFFECTIVENESS)
+		@Deprecated
 		public double getReVaccineEffectiveness() {
-			return reVaccineEffectiveness;
+			throw new RuntimeException("Deprecated: Configure effectiveness in hte vaccination config.");
 		}
 
-		@StringSetter(RE_VACCINE_EFFECTIVENESS)
+		@Deprecated
 		public void setReVaccineEffectiveness(double vaccineEffectiveness) {
-			this.reVaccineEffectiveness = vaccineEffectiveness;
+			throw new RuntimeException("Deprecated: Configure effectiveness in hte vaccination config.");
 		}
 
 		@StringSetter(FACTOR_SERIOUSLY_SICK)
@@ -170,6 +158,10 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 			return factorSeriouslySick;
 		}
 
+		/**
+		 * Configure this in the vaccination config instead. Nonetheless, for now this value will still be respected.
+		 */
+		@Deprecated
 		@StringSetter(FACTOR_SERIOUSLY_SICK_VAC)
 		public void setFactorSeriouslySickVaccinated(double factorSeriouslySickVaccinated) {
 			this.factorSeriouslySickVaccinated = factorSeriouslySickVaccinated;

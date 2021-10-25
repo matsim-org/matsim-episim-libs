@@ -2,7 +2,7 @@
 #SBATCH --time=05:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=48
+#SBATCH --cpus-per-task=96
 #SBATCH -A bzz0020
 #$ -l h_rt=18000
 #$ -o ./logfile_$JOB_NAME_$JOB_ID.log
@@ -29,7 +29,7 @@ fi
 
 classpath="matsim-episim-*-SNAPSHOT.jar"
 # main
-main="analysis calculateRValues extractInfectionsByAge --population=$EPISIM_INPUT/<REPLACE>"
+main="analysis calculateRValues extractInfectionsByAge --population=$EPISIM_INPUT/<REPLACE> --district Berlin"
 
 java -version
 

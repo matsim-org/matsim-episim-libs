@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * Notifies when a person got infected by another person.
  */
-public final class EpisimInfectionEvent extends Event implements HasPersonId {
+public final class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<EpisimInfectionEvent> {
 
 	// TODO: hasLink or hasCoord?
 
@@ -76,12 +76,24 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 	public String getInfectionType() {
 		return infectionType;
 	}
-	
+
 	/**
 	 * Variant which the person was infected with.
 	 */
 	public VirusStrain getStrain() {
 		return virusStrain;
+	}
+
+	public int getGroupSize() {
+		return groupSize;
+	}
+
+	public VirusStrain getVirusStrain() {
+		return virusStrain;
+	}
+
+	public double getProbability() {
+		return probability;
 	}
 
 	@Override
@@ -96,5 +108,25 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId {
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
 
 		return attr;
+	}
+
+	@Override
+	public int compareTo(EpisimInfectionEvent o) {
+
+		// Defines a stable ordering for events
+
+		if (getTime() != o.getTime())
+			return Double.compare(getTime(), o.getTime());
+
+		if (infectorId != o.infectorId)
+			return infectorId.compareTo(o.infectorId);
+
+		if (containerId != o.containerId)
+			return containerId.toString().compareTo(o.containerId.toString());
+
+		if (probability != o.probability)
+			return Double.compare(probability, o.probability);
+
+		return 0;
 	}
 }

@@ -72,7 +72,7 @@ public class Percolation implements BatchRun<Percolation.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, Percolation.class.getName(),
 				RunParallel.OPTION_PARAMS, Percolation.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(2),
+				RunParallel.OPTION_TASKS, Integer.toString(2),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(10000),
 				"--no-reuse",
 				"--output=perc-syn"

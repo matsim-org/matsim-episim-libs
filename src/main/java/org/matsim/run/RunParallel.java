@@ -74,16 +74,20 @@ public class RunParallel<T> implements Callable<Integer> {
 	private Path output;
 
 	public static final String OPTION_SETUP = "--setup";
-	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.SMBatch}")
+	@CommandLine.Option(names = OPTION_SETUP, defaultValue = "${env:EPISIM_SETUP:-org.matsim.run.batch.JRBatch}")
 	private Class<? extends BatchRun<T>> setup;
 
 	public static final String OPTION_PARAMS = "--params";
-	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.SMBatch$Params}")
+	@CommandLine.Option(names = OPTION_PARAMS, defaultValue = "${env:EPISIM_PARAMS:-org.matsim.run.batch.JRBatch$Params}")
 	private Class<T> params;
 
-	public static final String OPTION_THREADS = "--threads";
-	@CommandLine.Option(names = OPTION_THREADS, defaultValue = "4", description = "Number of threads to use concurrently")
-	private int threads;
+	public static final String OPTION_TASKS = "--tasks";
+	@CommandLine.Option(names = OPTION_TASKS, defaultValue = "4", description = "Number of simulations to start concurrently")
+	private int tasks;
+
+	public static final String OPTION_TASK_THREADS = "--task-threads";
+	@CommandLine.Option(names = OPTION_TASK_THREADS, defaultValue = "-1", description = "Overwrite Number of threads per simulation")
+	private int taskThreads;
 
 	@CommandLine.Option(names = "--total-worker", defaultValue = "1", description = "Total number of worker processes available for this run." +
 			"The tasks will be split evenly between all processes using the index.")
@@ -152,7 +156,7 @@ public class RunParallel<T> implements Callable<Integer> {
 		// Same context as if would be run from config
 		URL context = new File("./input").toURI().toURL();
 
-		ExecutorService executor = Executors.newFixedThreadPool(threads);
+		ExecutorService executor = Executors.newFixedThreadPool(tasks);
 
 		// prepare run only if not given via constructor
 		if (prepare == null)
@@ -167,7 +171,7 @@ public class RunParallel<T> implements Callable<Integer> {
 
 		Scenario scenario = null;
 		ReplayHandler replay = null;
-		AsyncEpisimWriter writer = asyncIO ? new AsyncEpisimWriter(threads) : null;
+		AsyncEpisimWriter writer = asyncIO ? new AsyncEpisimWriter(tasks) : null;
 
 		if (noReuse) {
 			log.info("Reusing scenario and events is disabled.");
@@ -205,8 +209,12 @@ public class RunParallel<T> implements Callable<Integer> {
 
 			EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(run.config, EpisimConfigGroup.class);
 
+			if (taskThreads > -1) {
+				episimConfig.setThreads(taskThreads);
+			}
+
 			boolean sameInput = episimBase.getInputEventsFiles().containsAll(episimConfig.getInputEventsFiles()) &&
-					episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
+			episimConfig.getInputEventsFiles().containsAll(episimBase.getInputEventsFiles());
 
 			sameInput &= Objects.equals(baseConfig.vehicles().getVehiclesFile(), run.config.vehicles().getVehiclesFile());
 			sameInput &= Objects.equals(baseConfig.plans().getInputFile(), run.config.plans().getInputFile());
@@ -233,7 +241,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			infoWriter.close();
 		}
 
-		log.info("Created {} (out of {}) tasks for worker {} ({} threads available)", futures.size(), prepare.runs.size(), workerIndex, threads);
+		log.info("Created {} (out of {}) tasks for worker {} ({} max tasks available)", futures.size(), prepare.runs.size(), workerIndex, tasks);
 
 		// Wait for all futures to complete
 		CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).exceptionally( e -> {

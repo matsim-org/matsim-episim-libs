@@ -40,7 +40,7 @@ public interface ContactModel {
 	/**
 	 * This method is called when a persons leaves a facility at {@code now}.
 	 */
-	void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now, String actType);
+	void infectionDynamicsFacility(EpisimPerson personLeavingFacility, InfectionEventHandler.EpisimFacility facility, double now);
 	void notifyEnterFacility(EpisimPerson personEnteringFacility, InfectionEventHandler.EpisimFacility facility, double now);
 
 	/**

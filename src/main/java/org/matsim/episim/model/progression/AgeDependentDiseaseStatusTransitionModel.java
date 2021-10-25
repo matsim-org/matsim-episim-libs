@@ -18,57 +18,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  * #L%
  */
-package org.matsim.episim.model;
+package org.matsim.episim.model.progression;
 
 import org.matsim.episim.*;
 
 import com.google.inject.Inject;
+import org.matsim.episim.model.ConfigurableProgressionModel;
 
 import java.util.SplittableRandom;
 
 /**
  * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
  */
-public class AgeDependentProgressionModel extends ConfigurableProgressionModel {
+public class AgeDependentDiseaseStatusTransitionModel extends DefaultDiseaseStatusTransitionModel {
 
-	/**
-	 * Constructor as in {@link ConfigurableProgressionModel}.
-	 */
+	private final EpisimConfigGroup episimConfig;
+
 	@Inject
-	public AgeDependentProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-	                                    VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
-		super(rnd, episimConfig, tracingConfig, strainConfig, vaccinationConfig);
+	public AgeDependentDiseaseStatusTransitionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig,
+	                                                VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfigGroup) {
+		super(rnd, vaccinationConfig, strainConfigGroup);
+		this.episimConfig = episimConfig;
 	}
 
-	@Override
-	protected double getProbaOfTransitioningToContagious(EpisimPerson person) {
-
-		double proba = 1.;
-
-//		int age = EpisimUtils.getAge( person );
-//
-//		if (age < 10) {
-//			proba = 0.1 / 100;
-//		} else if (age < 20) {
-//			proba = 0.3 / 100;
-//		} else if (age < 30) {
-//			proba = 1.2 / 100;
-//		} else if (age < 40) {
-//			proba = 3.2 / 100;
-//		} else if (age < 50) {
-//			proba = 4.9 / 100;
-//		} else if (age < 60) {
-//			proba = 10.2 / 100;
-//		} else if (age < 70) {
-//			proba = 16.6 / 100;
-//		} else if (age < 80) {
-//			proba = 24.3 / 100;
-//		} else {
-//			proba = 27.3 / 100;
-//		}
-
-		return proba ;
-	}
 
 	@Override
 	protected double getProbaOfTransitioningToShowingSymptoms (EpisimPerson person) {

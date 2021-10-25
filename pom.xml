@@ -28,7 +28,7 @@
     <repositories>
 
         <!-- Repository for MATSim releases (MATSim is not on Maven central) -->
-        <repository>
+         <repository>
             <id>matsim</id>
             <url>https://repo.matsim.org/repository/matsim</url>
             <snapshots>
@@ -136,7 +136,7 @@
         <dependency>
             <groupId>it.unimi.dsi</groupId>
             <artifactId>fastutil</artifactId>
-            <version>8.3.1</version>
+            <version>8.5.4</version>
         </dependency>
         <dependency>
             <groupId>org.jgrapht</groupId>
@@ -148,7 +148,6 @@
             <artifactId>jgrapht-io</artifactId>
             <version>1.5.0</version>
         </dependency>
-
 
         <dependency>
             <groupId>com.fasterxml.jackson.dataformat</groupId>

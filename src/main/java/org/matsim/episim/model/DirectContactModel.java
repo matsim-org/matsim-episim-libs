@@ -36,6 +36,7 @@ import static org.matsim.episim.InfectionEventHandler.EpisimVehicle;
 /**
  * Model where persons are only interacting pairwise.
  */
+@Deprecated
 public final class DirectContactModel extends AbstractContactModel {
 
 	private static final Logger log = LogManager.getLogger(DirectContactModel.class);
@@ -72,7 +73,7 @@ public final class DirectContactModel extends AbstractContactModel {
 	}
 
 	@Override
-	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, EpisimFacility facility, double now, String actType) {
+	public void infectionDynamicsFacility(EpisimPerson personLeavingFacility, EpisimFacility facility, double now) {
 		infectionDynamicsGeneralized(personLeavingFacility, facility, now);
 	}
 
@@ -117,160 +118,7 @@ public final class DirectContactModel extends AbstractContactModel {
 	}
 
 	private void infectionDynamicsGeneralized(EpisimPerson personLeavingContainer, EpisimContainer<?> container, double now) {
-		// no infection possible if there is only one person
-		if (iteration == 0 || container.getPersons().size() == 1) {
-			removePersonFromGroups(container, personLeavingContainer, now);
-			return;
-		}
-
-		if (singlePersons.get(container) == personLeavingContainer) {
-			singlePersons.remove(container);
-			return;
-		}
-
-		if (!personRelevantForTrackingOrInfectionDynamics(personLeavingContainer, container, getRestrictions(), rnd)) {
-			removePersonFromGroups(container, personLeavingContainer, now);
-			// yyyyyy hat in diesem Modell die Konsequenz, dass, wenn jemand zu Hause bleibt, die andere Person alleine rumsitzt.  Somewhat plausible in public
-			// transport; not plausible in restaurant.
-			return;
-		}
-
-		// start tracking late as possible because of computational costs
-		boolean trackingEnabled = iteration >= trackingAfterDay;
-
-		Pair<EpisimPerson, Double> group = removePersonFromGroups(container, personLeavingContainer, now);
-
-		EpisimPerson contactPerson = group.getKey();
-
-		if (!personRelevantForTrackingOrInfectionDynamics(contactPerson, container, getRestrictions(), rnd)) {
-			return;
-		}
-
-		// we have thrown the random numbers, so we can bail out in some cases if we are not tracking:
-		if (!trackingEnabled) {
-			if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.infectedButNotContagious) {
-				return;
-			}
-			if (contactPerson.getDiseaseStatus() == DiseaseStatus.infectedButNotContagious) {
-				return;
-			}
-			if (personLeavingContainer.getDiseaseStatus() == contactPerson.getDiseaseStatus()) {
-				return;
-			}
-		} else if (!traceSusceptible && personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible
-				&& contactPerson.getDiseaseStatus() == DiseaseStatus.susceptible)
-			return;
-
-		String leavingPersonsActivity = personLeavingContainer.getTrajectory().get(personLeavingContainer.getCurrentPositionInTrajectory()).actType;
-		String otherPersonsActivity = contactPerson.getTrajectory().get(contactPerson.getCurrentPositionInTrajectory()).actType;
-
-		StringBuilder infectionType = getInfectionType(buffer, container, leavingPersonsActivity, otherPersonsActivity);
-
-		// use joint time in group as time
-		// TODO: this model does not support closing hours at the moment
-		double jointTimeInContainer = now - group.getValue();
-
-		log.debug("Contact of {} and {}, with {}", personLeavingContainer, contactPerson, jointTimeInContainer);
-
-		if (jointTimeInContainer == 0) {
-			return;
-		}
-
-		//forbid certain cross-activity interactions, keep track of contacts
-		if (container instanceof EpisimFacility) {
-			//home can only interact with home, leisure or work
-			if (infectionType.indexOf("home") >= 0 && infectionType.indexOf("leis") == -1 && infectionType.indexOf("work") == -1
-					&& !(leavingPersonsActivity.startsWith("home") && otherPersonsActivity.startsWith("home"))) {
-				// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
-				return;
-			} else if (infectionType.indexOf("edu") >= 0 && infectionType.indexOf("work") == -1 && !(leavingPersonsActivity.startsWith("edu") && otherPersonsActivity.startsWith("edu"))) {
-				//edu can only interact with work or edu
-				// yyyyyy we need to move out of these string convention based rules in code.  kai, aug'20
-				return;
-			}
-			if (trackingEnabled) {
-				trackContactPerson(personLeavingContainer, contactPerson, now, jointTimeInContainer, infectionType);
-			}
-
-			// Only a subset of contacts are reported at the moment
-			// tracking has to be enabled to report more contacts
-			reporting.reportContact(now, personLeavingContainer, contactPerson, container, infectionType, jointTimeInContainer);
-		}
-
-		if (!AbstractContactModel.personsCanInfectEachOther(personLeavingContainer, contactPerson)) {
-			return;
-		}
-
-		// person can only infect others 4 days after being contagious
-		if ((personLeavingContainer.hadDiseaseStatus(DiseaseStatus.contagious) &&
-				personLeavingContainer.daysSince(DiseaseStatus.contagious, iteration) > episimConfig.getDaysInfectious())
-				|| (contactPerson.hadDiseaseStatus(DiseaseStatus.contagious) &&
-				contactPerson.daysSince(DiseaseStatus.contagious, iteration) > episimConfig.getDaysInfectious()))
-			return;
-
-		if (jointTimeInContainer < 0 || jointTimeInContainer > 86400 * 7) {
-			log.warn(jointTimeInContainer);
-			throw new IllegalStateException("joint time in container is not plausible for personLeavingContainer=" + personLeavingContainer.getPersonId() + " and contactPerson=" + contactPerson.getPersonId() + ". Joint time is=" + jointTimeInContainer);
-		}
-
-		EpisimConfigGroup.InfectionParams leavingParams = getInfectionParams(container, personLeavingContainer, leavingPersonsActivity);
-
-		// activity params of the contact person and leaving person
-		EpisimConfigGroup.InfectionParams contactParams = getInfectionParams(container, contactPerson, otherPersonsActivity);
-
-		double contactIntensity = Math.min(leavingParams.getContactIntensity(), contactParams.getContactIntensity());
-
-		// need to differentiate which person might be the infector
-		if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.susceptible) {
-
-			double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
-					leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-			if (rnd.nextDouble() < prob)
-				infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
-
-		} else {
-			double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
-					contactParams, leavingParams, contactIntensity, jointTimeInContainer);
-
-			if (rnd.nextDouble() < prob)
-				infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
-		}
-//		}
-	}
-
-	/**
-	 * Remove a person from groups and form new groups.
-	 *
-	 * @return contact person if person was in group.
-	 */
-	private Pair<EpisimPerson, Double> removePersonFromGroups(EpisimContainer<?> container, EpisimPerson personLeavingContainer, double time) {
-		if (singlePersons.get(container) == personLeavingContainer) {
-			singlePersons.remove(container);
-			return null;
-		} else {
-			Group group = findGroup(container, personLeavingContainer);
-
-			// might happen during init when person leaves first
-			if (group == null)
-				return null;
-
-			// other person will be single person
-			EpisimPerson leftOverPerson = group.remove(personLeavingContainer);
-			if (!singlePersons.containsKey(container)) {
-				singlePersons.put(container, leftOverPerson);
-			} else {
-
-				// single person and left over person will form a new group
-				groups.get(container)
-						.add(Group.of(leftOverPerson, singlePersons.get(container), time));
-
-				singlePersons.remove(container);
-			}
-
-			groups.get(container).remove(group);
-
-			return Pair.of(leftOverPerson, group.time);
-		}
+		throw new UnsupportedOperationException();
 	}
 
 	/**

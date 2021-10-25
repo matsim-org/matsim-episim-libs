@@ -32,6 +32,7 @@ import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -83,8 +84,8 @@ class AnalyzeSnzData implements Callable<Integer> {
 		AnalyseOptions selectedOutputOptions = AnalyseOptions.onlyWeekends;
 		String startDateStillUsingBaseDays = "20210610"; //set in this format YYYYMMDD, only for Bundesländer and Landkreise
 		String anyArea = "Berlin";
-		
-		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts 
+
+		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
 		boolean getPercentageResults = true;
 		boolean ignoreDates = false;
 
@@ -93,7 +94,9 @@ class AnalyzeSnzData implements Callable<Integer> {
 				.map(String::toString).collect(Collectors.toSet());
 		if (ignoreDates == false)
 			datesToIgnore.clear();
-		
+
+		Files.createDirectories(outputFolder);
+
 		writeData(selectedArea, getPercentageResults, selectedBase, anyArea, selectedOutputOptions, startDateStillUsingBaseDays, datesToIgnore);
 
 		log.info("Done!");
@@ -107,7 +110,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		snz.setInput(inputFolder);
 		List<String> baseDays = Arrays.asList();
 		String outputOption = null;
-		
+
 		switch (selectedBase) {
 		case March2020:
 			break;
@@ -254,7 +257,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			break;
 		case Landkreise:
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
-			
+
 			switch (selectedOutputOptions) {
 			case weeklyResultsOfAllDays:
 				outputOption = "weekly";
