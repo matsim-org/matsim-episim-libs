@@ -42,10 +42,13 @@ public class VaccinationByAge implements VaccinationModel {
 			perAge[i] = new ArrayList<>();
 
 		for (EpisimPerson p : persons.values()) {
-			if (p.isVaccinable() &&
+			if (
+					p.isVaccinable() &&
 					p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration) &&
-					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no) )&&
-					p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
+					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no) ) &&
+					(p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) &&
+					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true))
+			{
 
 				perAge[p.getAge()].add(p);
 			}

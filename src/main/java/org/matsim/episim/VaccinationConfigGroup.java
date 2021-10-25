@@ -286,6 +286,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String INFECTIVITY = "infectivity";
 		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
+		private static final String BOOST_WAIT_PERIOD = "boostWaitPeriod";
 		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
 
@@ -295,6 +296,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * Number of days until vaccination goes into full effect.
 		 */
 		private int daysBeforeFullEffect = 28;
+
+		/**
+		 * Wait period before boost can be applied.
+		 */
+		private int boostWaitPeriod = 5* 30;
 
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
@@ -361,6 +367,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return this;
 		}
 
+		@StringSetter(BOOST_WAIT_PERIOD)
+		public void setBoostWaitPeriod(int boostWaitPeriod) {
+			this.boostWaitPeriod = boostWaitPeriod;
+		}
+
+		@StringGetter(BOOST_WAIT_PERIOD)
+		public int getBoostWaitPeriod() {
+			return boostWaitPeriod;
+		}
+
 		private VaccinationParams setParamsInternal(Map<VirusStrain, Parameter> map, Parameter[] params) {
 			for (Parameter p : params) {
 				for (VirusStrain s : p.strain) {
@@ -387,7 +403,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		public VaccinationParams setEffectiveness(Parameter... parameters) {
 			return setParamsInternal(effectiveness, parameters);
 		}
-		
+
 		public VaccinationParams setInfectivity(Parameter... parameters) {
 			return setParamsInternal(infectivity, parameters);
 		}
@@ -411,7 +427,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		public double getInfectivity(VirusStrain strain, int day) {
 			return getParamsInternal(infectivity, strain, day);
 		}
-		
+
 		public double getBoostEffectiveness(VirusStrain strain, int day) {
 			return getParamsInternal(boostEffectiveness.containsKey(strain) ? boostEffectiveness : effectiveness, strain, day);
 		}
