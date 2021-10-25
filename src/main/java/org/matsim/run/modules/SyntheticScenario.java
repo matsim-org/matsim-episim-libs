@@ -41,6 +41,8 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.ReplayHandler;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.run.batch.SyntheticBatch;
@@ -83,7 +85,7 @@ public class SyntheticScenario extends AbstractModule {
 	@Override
 	protected void configure() {
 		bind(ContactModel.class).to(params.contactModel).in(Singleton.class);
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 	}
 

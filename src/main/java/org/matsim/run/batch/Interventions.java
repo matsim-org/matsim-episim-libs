@@ -14,11 +14,11 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.DiseaseImport;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Masks;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Restrictions;
+import org.matsim.run.modules.SnzProductionScenario.DiseaseImport;
+import org.matsim.run.modules.SnzProductionScenario.Masks;
+import org.matsim.run.modules.SnzProductionScenario.Restrictions;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
+import org.matsim.run.modules.SnzProductionScenario.Tracing;
 
 import java.time.LocalDate;
 import java.util.Map;
@@ -39,8 +39,8 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		if (params == null)
 			return new SnzBerlinWeekScenario2020();
 
-		return new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.no ).setRestrictions( Restrictions.no ).setMasks( Masks.no ).setTracing( Tracing.no ).setSnapshot(
-				Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(
+				Snapshot.no ).setDiseaseImport( DiseaseImport.no ).setRestrictions( Restrictions.no ).setMasks( Masks.no ).setTracing( Tracing.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -52,33 +52,33 @@ public class Interventions implements BatchRun<Interventions.Params> {
 	public Config prepareConfig(int id, Params params) {
 
 		SnzBerlinProductionScenario module =
-				new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.no ).setRestrictions( Restrictions.no ).setMasks( Masks.no ).setTracing(
-						Tracing.no ).setSnapshot( Snapshot.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
-		
+				new SnzBerlinProductionScenario.Builder().setSnapshot( Snapshot.no ).setDiseaseImport( DiseaseImport.no ).setRestrictions( Restrictions.no ).setMasks( Masks.no ).setTracing(
+						Tracing.no ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
+
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		if (params.season.equals("summer")) {
 			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
-					LocalDate.parse("2020-01-01"), 0.8, 
+					LocalDate.parse("2020-01-01"), 0.8,
 					LocalDate.parse("2030-01-01"), 0.8)
 					);
-			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);	
+			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
 		}
 		else if (params.season.equals("winter")) {
 			Map<LocalDate, Double> leisureOutdoorFraction = new TreeMap<>(Map.of(
-					LocalDate.parse("2020-01-01"), 0.1, 
+					LocalDate.parse("2020-01-01"), 0.1,
 					LocalDate.parse("2030-01-01"), 0.1)
 					);
 			episimConfig.setLeisureOutdoorFraction(leisureOutdoorFraction);
-			
+
 		}
 		else throw new IllegalArgumentException("Season not implemented!");
 
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		
+
 		ConfigBuilder builder = FixedPolicy.config();
 		int interventionDay = 20;
 		switch (params.intervention) {
@@ -243,7 +243,7 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		default:
 			throw new IllegalArgumentException("Unknown intervention: " + params.intervention);
 	}
-		
+
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
 		return config;
@@ -257,10 +257,10 @@ public class Interventions implements BatchRun<Interventions.Params> {
 		@StringParameter({"none", "tracing60-4d-2d", "tracing60-2d-2d", "tracing90-4d-2d", "tracing90-2d-2d", "tracing90-4d-4d", "tracing90-2d-4d", "0.9FFP@WORK", "0.9CLOTH@PT&SHOP", "0.9CLOTH@SCHOOL", "workBusiness50", "workBusiness0", "leisure50", "leisure0", "errands50", "errands0", "shop50", "shop0", "educ_kiga50", "educ_kiga0",
 			"educ_school50", "educ_school0", "educ_higher50", "educ_higher0", "educ_other50", "educ_other0", "outOfHome90", "outOfHome50", "outOfHome0"})
 		public String intervention;
-		
+
 		@StringParameter({"summer", "winter"})
 		public String season;
-		
+
 
 
 	}

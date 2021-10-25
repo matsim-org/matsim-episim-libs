@@ -8,6 +8,7 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 
 import javax.inject.Inject;
 import java.io.Externalizable;
@@ -29,11 +30,13 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 * Stores the next state and after which day. (int & int) = 64bit
 	 */
 	private final Object2LongMap<Id<Person>> nextStateAndDay = new Object2LongOpenHashMap<>();
+	private final DiseaseStatusTransitionModel statusTransitionModel;
 
 	@Inject
-	AbstractProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig) {
+	AbstractProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, DiseaseStatusTransitionModel statusTransitionModel) {
 		this.rnd = rnd;
 		this.episimConfig = episimConfig;
+		this.statusTransitionModel = statusTransitionModel;
 	}
 
 	/**
@@ -60,7 +63,6 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 			if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
 				person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 
-			return;
 		}
 
 		// 0 is empty transition
@@ -78,13 +80,12 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 				person.setDiseaseStatus(now, next);
 				onTransition(person, now, day, status, next);
 
-				if (next != EpisimPerson.DiseaseStatus.recovered) {
-					if (updateNext(person, id, next))
-						updateState(person, day);
-				}
+				if (updateNext(person, id, next, day))
+					updateState(person, day);
+
 			}
 		} else {
-			if (updateNext(person, id, status))
+			if (updateNext(person, id, status, day))
 				updateState(person, day);
 		}
 	}
@@ -94,8 +95,15 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 	 *
 	 * @return true when there should be an immediate update again
 	 */
-	private boolean updateNext(EpisimPerson person, Id<Person> id, EpisimPerson.DiseaseStatus from) {
-		EpisimPerson.DiseaseStatus next = decideNextState(person);
+	private boolean updateNext(EpisimPerson person, Id<Person> id, EpisimPerson.DiseaseStatus from, int day) {
+
+		// clear transition
+		if (from == EpisimPerson.DiseaseStatus.susceptible) {
+			nextStateAndDay.removeLong(id);
+			return false;
+		}
+
+		EpisimPerson.DiseaseStatus next = statusTransitionModel.decideNextState(person, person.getDiseaseStatus(), day);
 		int nextTransitionDay = decideTransitionDay(person, from, next);
 
 		nextStateAndDay.put(id, compoundLong(next.ordinal(), nextTransitionDay));
@@ -104,10 +112,6 @@ abstract class AbstractProgressionModel implements ProgressionModel, Externaliza
 		return nextTransitionDay == 0;
 	}
 
-	/**
-	 * Choose the next state a person will attain.
-	 */
-	protected abstract EpisimPerson.DiseaseStatus decideNextState(EpisimPerson person);
 
 	/**
 	 * Chose how long a person stays in {@code from} until the disease changes to {@code to}.

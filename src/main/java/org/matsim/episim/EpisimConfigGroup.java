@@ -74,7 +74,15 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String AGE_SUSCEPTIBILITY = "ageSusceptibility";
 	private static final String AGE_INFECTIVITY = "ageInfectivity";
 	private static final String DAYS_INFECTIOUS = "daysInfectious";
+	private static final String ACTIVITY_HANDLING = "activityHandling";
+	private static final String THREADS = "threads";
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
+	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
+	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
+	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
+	private static final String REPORT_TIME_USE = "reportTimeUse";
+	private static final String SINGLE_EVENT_FILE = "singleEventFile";
+	private static final String END_EARLY = "endEarly";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -147,12 +155,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private SnapshotSeed snapshotSeed = SnapshotSeed.restore;
 	private FacilitiesHandling facilitiesHandling = FacilitiesHandling.snz;
+	private ActivityHandling activityHandling = ActivityHandling.duringContact;
 	private Config policyConfig = ConfigFactory.empty();
 	private Config progressionConfig = ConfigFactory.empty();
 	private String overwritePolicyLocation = null;
-	private Class<? extends ShutdownPolicy> policyClass = FixedPolicy.class;
 	private double maxContacts = 3.;
 	private int daysInfectious = 4;
+	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
+	private String districtLevelRestrictionsAttribute = "";
+	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
+	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
+	private SingleEventFile singleEventFile = SingleEventFile.yes;
+	private boolean endEarly = false;
+	private int threads = 2;
 	/**
 	 * Child susceptibility used in AgeDependentInfectionModelWithSeasonality.
 	 * Taken from https://doi.org/10.1101/2020.06.03.20121145
@@ -201,6 +216,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		clearParameterSetsForType(EventFileParams.SET_TYPE);
 		addInputEventsFile(inputEventsFile)
 				.addDays(DayOfWeek.values());
+	}
+
+	@StringSetter(THREADS)
+	public void setThreads(int threads) {
+		this.threads = threads;
+	}
+
+	@StringGetter(THREADS)
+	public int getThreads() {
+		return threads;
 	}
 
 	@StringGetter(WRITE_EVENTS)
@@ -402,21 +427,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.sampleSize = sampleSize;
 	}
 
-	@StringGetter("policyClass")
-	public String getPolicyClass() {
-		return policyClass.getName();
-	}
-
-	@StringSetter("policyClass")
-	public void setPolicyClass(String policyClass) {
-		try {
-			this.policyClass = (Class<? extends ShutdownPolicy>) ClassLoader.getSystemClassLoader().loadClass(policyClass);
-		} catch (ClassNotFoundException e) {
-			log.error("Policy class not found", e);
-			throw new IllegalArgumentException(e);
-		}
-	}
-
 	@StringGetter("policyConfig")
 	public String getPolicyConfig() {
 		if (overwritePolicyLocation != null)
@@ -465,9 +475,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Sets policy class and desired config.
+	 * @deprecated set policy class via guice.
+	 * @see #setPolicy(Config)
 	 */
+	@Deprecated
 	public void setPolicy(Class<? extends ShutdownPolicy> policy, Config config) {
-		this.policyClass = policy;
+		this.policyConfig = config;
+	}
+
+	/**
+	 * Sets policy config.
+	 */
+	public void setPolicy(Config config) {
 		this.policyConfig = config;
 	}
 
@@ -664,18 +683,6 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 
 	/**
-	 * Create a configured instance of the desired policy.
-	 */
-	public ShutdownPolicy createPolicyInstance() {
-		try {
-			return policyClass.getConstructor(Config.class).newInstance(policyConfig);
-		} catch (ReflectiveOperationException e) {
-			log.error("Could not create policy", e);
-			throw new IllegalStateException(e);
-		}
-	}
-
-	/**
 	 * Create restriction for each {@link InfectionParams}.
 	 */
 	public Map<String, Restriction> createInitialRestrictions() {
@@ -693,6 +700,71 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setFacilitiesHandling(FacilitiesHandling facilitiesHandling) {
 		this.facilitiesHandling = facilitiesHandling;
 	}
+
+
+	@StringGetter(ACTIVITY_HANDLING)
+	public ActivityHandling getActivityHandling() {
+		return activityHandling;
+	}
+
+	@StringSetter(ACTIVITY_HANDLING)
+	public void setActivityHandling(ActivityHandling activityHandling) {
+		this.activityHandling = activityHandling;
+	}
+
+	/**
+	 * District level restrictions for location based restrictions;
+	 */
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public DistrictLevelRestrictions getDistrictLevelRestrictions() {
+		return this.districtLevelRestrictions;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS)
+	public void setDistrictLevelRestrictions(DistrictLevelRestrictions districtLevelRestrictions) {
+		this.districtLevelRestrictions = districtLevelRestrictions;
+	}
+
+	@StringGetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public String getDistrictLevelRestrictionsAttribute() {
+		return this.districtLevelRestrictionsAttribute;
+	}
+
+	@StringSetter(DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE)
+	public void setDistrictLevelRestrictionsAttribute(String districtLevelRestrictionsAttribute) {
+		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
+	}
+
+	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
+	public ContagiousOptimization getContagiousOptimization() {
+		return this.contagiousContainerOptimization;
+	}
+
+	@StringSetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
+	public void setContagiousOptimization(ContagiousOptimization contagiousOptimization) {
+		this.contagiousContainerOptimization = contagiousOptimization;
+	}
+
+	@StringGetter(SINGLE_EVENT_FILE)
+	public SingleEventFile getSingleEventFile() {
+		return singleEventFile;
+	}
+
+	@StringSetter(SINGLE_EVENT_FILE)
+	public void setSingleEventFile(SingleEventFile singleEventFile) {
+		this.singleEventFile = singleEventFile;
+	}
+
+	@StringGetter(REPORT_TIME_USE)
+	public ReportTimeUse getReportTimeUse() {
+		return reportTimeUse;
+	}
+
+	@StringSetter(REPORT_TIME_USE)
+	public void setReportTimeUse(ReportTimeUse reportTimeUse) {
+		this.reportTimeUse = reportTimeUse;
+	}
+
 
 	@Override
 	public void addParameterSet(final ConfigGroup set) {
@@ -857,6 +929,19 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Whether simulation ends when there are no further infected persons.
+	 */
+	@StringGetter(END_EARLY)
+	public boolean isEndEarly() {
+		return endEarly;
+	}
+
+	@StringSetter(END_EARLY)
+	public void setEndEarly(boolean endEarly) {
+		this.endEarly = endEarly;
+	}
+
+	/**
 	 * Defines how facilities should be handled.
 	 */
 	public enum FacilitiesHandling {
@@ -911,6 +996,60 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		 * Overwrite the rng state with a new seed taken from config.
 		 */
 		reseed,
+	}
+
+	/**
+	 * Defines how activity participation is handled.
+	 */
+	public enum ActivityHandling {
+
+		/**
+		 * Activity participation is randdom during each contact.
+		 */
+		duringContact,
+
+		/**
+		 * Activity participation is fixed at start of the day.
+		 */
+		startOfDay
+
+	}
+
+
+	/**
+	 * Decides whether location based restrictions should be implemented
+	 */
+	public enum DistrictLevelRestrictions {
+		yes,
+		no
+	}
+
+
+    /**
+     * In the case that this optimization is enabled, the infectionDynamics
+     * methods are only called, if a contagious person is in the container
+     */
+	public enum ContagiousOptimization {
+		yes,
+		no
+	}
+
+	/**
+	 * The used time tracking costs a lot of CPU cycles, so this
+     * can be disabled with
+     */
+	public enum ReportTimeUse {
+		yes,
+		no
+	}
+
+
+	/**
+	 * Whether to write all events into a single file.
+	 */
+	public enum SingleEventFile {
+		yes,
+		no
 	}
 
 	/**

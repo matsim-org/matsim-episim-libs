@@ -15,6 +15,8 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
@@ -132,9 +134,9 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 				delegate = new SnzBerlinWeekScenario2020(25, false, false, OldSymmetricContactModel.class);
 			else
 				delegate = new SnzBerlinProductionScenario.Builder()
+						.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 						.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.no)
 						.setRestrictions(SnzBerlinProductionScenario.Restrictions.yes)
-						.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 						.setTracing(SnzBerlinProductionScenario.Tracing.no)
 						.setWeatherModel(SnzBerlinProductionScenario.WeatherModel.no)
 						.setInfectionModel(DefaultInfectionModel.class)
@@ -155,7 +157,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 			else
 				bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
 
-			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
+			bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		}
 
 		@Provides
@@ -203,7 +205,7 @@ public class BerlinPercolation implements BatchRun<BerlinPercolation.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, BerlinPercolation.class.getName(),
 				RunParallel.OPTION_PARAMS, BerlinPercolation.Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(2),
+				RunParallel.OPTION_TASKS, Integer.toString(2),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(10000),
 		};
 

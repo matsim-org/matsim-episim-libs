@@ -7,6 +7,7 @@ import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
@@ -34,7 +35,7 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "adaptivePolicy");
 	}
-	
+
 	@Override
 	public int getOffset() {
 		return 1500;
@@ -51,14 +52,14 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 		config.global().setRandomSeed(7564655870752979346L);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		episimConfig.setStartFromSnapshot("../" + params.scenario + "-episim-snapshot-364-2021-02-22.zip");
-//		episimConfig.setSnapshotInterval(30);			
+//		episimConfig.setSnapshotInterval(30);
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setEffectiveness(0.9);
-		vaccinationConfig.setDaysBeforeFullEffect(28);
+		vaccinationConfig.getParams(VaccinationType.generic).setEffectiveness(0.9);
+		vaccinationConfig.getParams(VaccinationType.generic).setDaysBeforeFullEffect(28);
 		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 		// 4/3 because model is bigger than just Berlin
 		int base = (int) (3000 * 4./3.);
@@ -86,9 +87,9 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 				episimConfig.setInfections_pers_per_day(VirusStrain.B1351, infPerDayB1351);
 			}
 
-		
+
 		LocalDate date = LocalDate.parse("2021-02-23");
-		
+
 		com.typesafe.config.Config policy = AdaptivePolicy.config()
 				.incidenceTrigger(params.workTrigger, params.workTrigger, "work", "business")
 				.incidenceTrigger(params.leisureTrigger, params.leisureTrigger, "leisure", "visit")
@@ -155,10 +156,10 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 //						.restrict(LocalDate.parse("2021-08-07"), Restriction.of(1.), "educ_tertiary")
 //						.restrict(LocalDate.parse("2021-08-07"), Restriction.of(1.), "educ_other")
 						)
-				.build();		
-		
+				.build();
+
 		episimConfig.setPolicy(AdaptivePolicy.class, policy);
-				
+
 		return config;
 	}
 
@@ -169,29 +170,29 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 
 		@IntParameter({3000, 10000})
 		int dailyInitialVaccinations;
-		
+
 //		@StringParameter({"B1351_1.35_0.0"})
 		@StringParameter({"base-b117-2.0"})
 		String scenario;
-		
+
 		@StringParameter({"yes-2.0-0.0"})
 		String B1351;
-		
+
 		@Parameter({0.8, 0.65})
 		double restrictedFraction;
-		
+
 		@Parameter({0.9})
 		double openFraction;
-		
+
 		@Parameter({Integer.MAX_VALUE, 50., 35., 20.})
 		double leisureTrigger;
-		
+
 		@Parameter({Integer.MAX_VALUE, 50., 35., 20.})
 		double workTrigger;
-		
+
 		@Parameter({Integer.MAX_VALUE, 50., 35., 20.})
 		double eduTrigger;
-		
+
 		@Parameter({Integer.MAX_VALUE, 50., 35., 20.})
 		double shopErrandsTrigger;
 	}
@@ -200,7 +201,7 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, SMAdaptivePolicy.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
 				RunParallel.OPTION_METADATA
 		};

@@ -3,12 +3,15 @@ package org.matsim.episim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
 
 import javax.annotation.Nullable;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 
@@ -16,7 +19,7 @@ public class EpisimTestUtils {
 
 	public static final Consumer<EpisimPerson> CONTAGIOUS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.contagious);
 	public static final Consumer<EpisimPerson> SYMPTOMS = person -> person.setDiseaseStatus(0., EpisimPerson.DiseaseStatus.showingSymptoms);
-	public static final Consumer<EpisimPerson> VACCINATED = person -> person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
+	public static final Consumer<EpisimPerson> VACCINATED = person -> person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
 
 	public static final Consumer<EpisimPerson> FULL_QUARANTINE = person -> {
 		person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.contagious);
@@ -59,6 +62,7 @@ public class EpisimTestUtils {
 		episimConfig.setSampleSize(1);
 		episimConfig.setMaxContacts(10);
 		episimConfig.setCalibrationParameter(0.001);
+		episimConfig.setThreads(1);
 
 		// No container name should be the prefix of another one
 		episimConfig.addContainerParams(new EpisimConfigGroup.InfectionParams("c00").setContactIntensity(0));
@@ -82,6 +86,13 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create facility with just an ID
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(String facId) {
+		return new InfectionEventHandler.EpisimFacility(Id.create(facId, ActivityFacility.class));
+	}
+
+	/**
 	 * Create facility with n persons in it.
 	 */
 	public static InfectionEventHandler.EpisimFacility createFacility(int n, String act, Consumer<EpisimPerson> init) {
@@ -99,24 +110,65 @@ public class EpisimTestUtils {
 	}
 
 	/**
+	 * Create a facility with certain group size and ID.
+	 */
+	public static InfectionEventHandler.EpisimFacility createFacility(String facId, int n, String act, int groupSize, Consumer<EpisimPerson> init) {
+		InfectionEventHandler.EpisimFacility container = createFacility(facId);
+		container.setMaxGroupSize(groupSize);
+		return addPersons(container, n, act, init);
+	}
+
+	/**
 	 * Create a person and add to container.
 	 */
 	public static EpisimPerson createPerson(String currentAct, @Nullable EpisimContainer<?> container) {
 		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 
-		p.getTrajectory().add(new EpisimPerson.Activity(currentAct, TEST_CONFIG.selectInfectionParams(currentAct)));
+		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
+		EpisimPerson.PerformedActivity act = p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(currentAct),null);
+		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
 
 		if (container != null) {
-			container.addPerson(p, 0);
+			container.addPerson(p, 0, act);
 		}
 
 		return p;
+	}
+
+
+	/**
+	 * Create person with activity trajectory.
+	 */
+	public static EpisimPerson createPerson(String... activities) {
+
+		EpisimPerson p = new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+
+		Arrays.stream(DayOfWeek.values()).forEach(p::setStartOfDay);
+
+		for (String act : activities) {
+			p.addToTrajectory(0, TEST_CONFIG.selectInfectionParams(act),null);
+		}
+
+		Arrays.stream(DayOfWeek.values()).forEach(p::setEndOfDay);
+
+		p.initParticipation();
+
+		return p;
+
 	}
 
 	/**
 	 * Create a person with specific reporting.
 	 */
 	public static EpisimPerson createPerson(EpisimReporting reporting) {
+		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
+	}
+
+
+	/**
+	 * Create uninitialized person without trajectory.
+	 */
+	public static EpisimPerson createPerson() {
 		return new EpisimPerson(Id.createPersonId(ID.getAndIncrement()), new Attributes(), reporting);
 	}
 
@@ -173,5 +225,16 @@ public class EpisimTestUtils {
 		return report;
 	}
 
+	/**
+	 * Report with incidence per 100k inhabitants.
+	 */
+	public static EpisimReporting.InfectionReport createReportHospital(LocalDate date, long day, int hospital) {
+		EpisimReporting.InfectionReport report = new EpisimReporting.InfectionReport("test", 0, date.toString(), day);
+
+		report.nSusceptible = 100_000 - hospital;
+		report.nSeriouslySick = hospital;
+
+		return report;
+	}
 
 }

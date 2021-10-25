@@ -14,19 +14,16 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
-import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.core.utils.io.IOUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.ReplayHandler;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.utils.objectattributes.ObjectAttributes;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
-import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.file.Path;
-import java.time.DayOfWeek;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -48,17 +45,44 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 	@CommandLine.Option(names = "--shape-file", description = "Path to shp file", required = true)
 	private Path shp;
 
+	@CommandLine.Option(names = "--attributes", description = "Path to population attributes", required = false)
+	private Path attributes;
+
+	@CommandLine.Option(names = "--shape-crs", description = "Path to shp file", defaultValue = "EPSG:4326")
+	private String shpCrs;
+
 	@CommandLine.Option(names = "--output", description = "Output path", required = true)
 	private Path output;
 
 	private Set<Id<Person>> persons;
 	Map<Id<ActivityFacility>, ActivityFacility> facilities;
 
+	public static void main(String[] args) {
+		new CommandLine(new FilterPersons()).execute(args);
+	}
+
 	@Override
 	public Integer call() throws Exception {
 
-		facilities = loadFacilities();
+		DistrictLookup.Index index = new DistrictLookup.Index(shp.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:25832", shpCrs), "plz");
+
 		persons = new HashSet<>();
+
+		if (attributes != null) {
+			log.info("Adding persons by home coordinates");
+
+			FilteredObjectAttributes attr = ConvertPersonAttributes.readAndFilterAttributes(attributes, new FilteredObjectAttributes(index));
+
+			for (Map.Entry<String, Map<String, Object>> e : attr.getAttributes().entrySet()) {
+				persons.add(Id.createPersonId(e.getKey()));
+			}
+
+			attr.clear();
+
+			log.info("Added {} persons", persons.size());
+		}
+
+		facilities = loadFacilities(index);
 
 		EventsManager manager = EventsUtils.createEventsManager();
 		manager.addHandler(this);
@@ -78,9 +102,7 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 		return 0;
 	}
 
-	private Map<Id<ActivityFacility>, ActivityFacility> loadFacilities() throws IOException {
-
-		DistrictLookup.Index index = new DistrictLookup.Index(shp.toFile(), TransformationFactory.getCoordinateTransformation("EPSG:25832", "EPSG:4326"), "plz");
+	private Map<Id<ActivityFacility>, ActivityFacility> loadFacilities(DistrictLookup.Index index) {
 
 		// load scenario with only facilities
 		Config config = ConfigUtils.createConfig();
@@ -93,9 +115,10 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 		for (ActivityFacility value : facilities.values()) {
 
 			try {
-				if (index.query(value.getCoord().getX(), value.getCoord().getY()) != null) {
-					filtered.put(value.getId(), value);
-				}
+				// throws exception when not found
+				index.query(value.getCoord().getX(), value.getCoord().getY());
+				filtered.put(value.getId(), value);
+
 			} catch (NoSuchElementException e) {
 				// not found
 			}
@@ -129,4 +152,55 @@ public class FilterPersons implements Callable<Integer>, BasicEventHandler {
 	public void reset(int iteration) {
 
 	}
+
+	/**
+	 * Filter for certain persons. This class should work but is badly designed because of API limitations.
+	 */
+	static final class FilteredObjectAttributes extends ObjectAttributes {
+
+
+		private final DistrictLookup.Index index;
+
+		private FilteredObjectAttributes(DistrictLookup.Index index) {
+			this.index = index;
+		}
+
+		@SuppressWarnings("unchecked")
+		Map<String, Map<String, Object>> getAttributes() {
+			try {
+				Field field = ObjectAttributes.class.getDeclaredField("attributes");
+				field.setAccessible(true);
+				return (Map<String, Map<String, Object>>) field.get(this);
+			} catch (ReflectiveOperationException e) {
+				throw new IllegalStateException("Could not retrieve attributes");
+			}
+		}
+
+		@Override
+		public Object putAttribute(String objectId, String attribute, Object value) {
+
+			// It appears this return value is never used
+			if (!attribute.equals("homeX") && !attribute.equals("homeY"))
+				return null;
+
+			// assume homeY is always second
+			if (attribute.equals("homeY")) {
+
+				try {
+					// throws exception when not found
+					index.query((Double) getAttribute(objectId, "homeX"), (Double) value);
+					return super.putAttribute(objectId, attribute, value);
+
+				} catch (NoSuchElementException e) {
+					// not found
+					getAttributes().remove(objectId);
+					return null;
+				}
+
+			}
+
+			return super.putAttribute(objectId, attribute, value);
+		}
+	}
+
 }

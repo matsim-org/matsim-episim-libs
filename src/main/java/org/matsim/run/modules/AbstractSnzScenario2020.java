@@ -6,9 +6,10 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.model.AgeDependentProgressionModel;
 import org.matsim.episim.model.ProgressionModel;
 import org.matsim.episim.model.Transition;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 
 import javax.inject.Singleton;
 
@@ -119,6 +120,10 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 
 				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+
+				.from(EpisimPerson.DiseaseStatus.recovered,
+						to(EpisimPerson.DiseaseStatus.susceptible, Transition.logNormalWithMean(360, 15)))
+
 				;
 
 		// yyyy Quellen für alle Aussagen oben??  "Es" oder "Eine Studie aus ..." ist mir eigentlich nicht genug.  kai, aug'20
@@ -130,8 +135,7 @@ public abstract class AbstractSnzScenario2020 extends AbstractModule {
 	protected void configure() {
 
 		// Use age dependent progression model
-		bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-		// WARNING: This does not affect runs with --config file, especially batch runs !!
+		bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 	}
 
 	/**

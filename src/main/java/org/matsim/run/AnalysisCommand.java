@@ -21,6 +21,8 @@
 package org.matsim.run;
 
 import com.google.common.base.Joiner;
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.api.experimental.events.EventsManager;
@@ -35,15 +37,16 @@ import org.matsim.episim.events.EpisimEventsReader;
 import picocli.AutoComplete;
 import picocli.CommandLine;
 
+import javax.annotation.Nullable;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Runnable class that does nothing by itself, but has to be invoked with one subcommand.
@@ -86,14 +89,14 @@ public class AnalysisCommand implements Runnable {
 		Set<Path> scenarios = new LinkedHashSet<>();
 
 		Files.list(output)
-				.filter(p -> Files.isDirectory(p))
+				.filter(Files::isDirectory)
 				.forEach(scenarios::add);
 
 		log.info("Read " + scenarios.size() + " files");
 		log.info(scenarios);
 
 		Files.list(output)
-				.filter(p -> Files.isDirectory(p))
+				.filter(Files::isDirectory)
 				.forEach(scenarios::add);
 
 		scenarios.parallelStream().forEach(scenario -> {
@@ -111,38 +114,68 @@ public class AnalysisCommand implements Runnable {
 	 * @param scenario path of the scenario, which contains the event folder
 	 * @param callback will be executed before reading an event file and pass the path
 	 * @param handler  handler for the events
+	 * @return list of read event files
 	 */
-	public static void forEachEvent(Path scenario, Consumer<Path> callback, EventHandler handler) {
+	public static List<String> forEachEvent(Path scenario, Consumer<String> callback, EventHandler... handler) {
 
-		Path eventFolder = scenario.resolve("events");
-		if (!Files.exists(eventFolder)) {
-			log.warn("No events found at {}", eventFolder);
-			return;
+		Path events = getEvents(scenario);
+		if (events == null) {
+			log.warn("No events found at {}", scenario);
+			return List.of();
 		}
 
 		EventsManager manager = EventsUtils.createEventsManager();
 		manager.initProcessing();
-		manager.addHandler(handler);
 
-		List<Path> eventFiles;
-		try {
-			eventFiles = Files.list(eventFolder)
-					.filter(p -> p.getFileName().toString().contains("xml.gz"))
-					.collect(Collectors.toList());
-		} catch (IOException e) {
-			throw new java.io.UncheckedIOException(e);
+		for (EventHandler h : handler) {
+			manager.addHandler(h);
 		}
 
-		for (Path p : eventFiles) {
+		List<String> read = new ArrayList<>();
+
+		if (Files.isDirectory(events)) {
+			List<Path> eventFiles;
 			try {
-				callback.accept(p);
-				new EpisimEventsReader(manager).readFile(p.toString());
-			} catch (UncheckedIOException e) {
-				log.warn("Caught UncheckedIOException. Could not read file {}", p);
+				eventFiles = Files.list(events)
+						.filter(p -> p.getFileName().toString().contains("xml.gz"))
+						.sorted(Comparator.comparing(p -> p.getFileName().toString()))
+						.collect(Collectors.toList());
+			} catch (IOException e) {
+				throw new java.io.UncheckedIOException(e);
+			}
+
+			for (Path p : eventFiles) {
+				try {
+					String name = p.getFileName().toString();
+					callback.accept(name);
+					new EpisimEventsReader(manager).readFile(p.toString());
+
+					read.add(name);
+				} catch (UncheckedIOException e) {
+					log.warn("Caught UncheckedIOException. Could not read file {}", p, e);
+				}
+			}
+		} else {
+
+			try (TarArchiveInputStream ar = new TarArchiveInputStream(new FileInputStream(events.toFile()))) {
+
+				ArchiveEntry entry;
+				while ((entry = ar.getNextEntry()) != null) {
+					callback.accept(entry.getName());
+
+					new EpisimEventsReader(manager).parse(new NonClosingGZIPStream(ar));
+
+					read.add(entry.getName());
+				}
+
+			} catch (IOException e) {
+				log.warn("Caught UncheckedIOException. Could not read file {}", events, e);
 			}
 		}
 
 		manager.finishProcessing();
+
+		return read;
 	}
 
 	/**
@@ -158,7 +191,7 @@ public class AnalysisCommand implements Runnable {
 
 		// If nothing was found, also try with events file
 		if (config.isEmpty())
-			config =  Files.find(scenario, 1,
+			config = Files.find(scenario, 1,
 					(path, attr) -> path.toString().endsWith("infectionEvents.txt")).findFirst();
 
 		if (config.isEmpty()) {
@@ -173,9 +206,52 @@ public class AnalysisCommand implements Runnable {
 		return name.substring(0, name.indexOf('.') + 1);
 	}
 
+	/**
+	 * Check if events are present for the scenario.
+	 */
+	@Nullable
+	public static Path getEvents(Path scenario) {
+
+		if (Files.isDirectory(scenario.resolve("events")) && !isEmpty(scenario.resolve("events"))) {
+			return scenario.resolve("events");
+		}
+
+		try {
+			Optional<Path> o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
+			return o.orElse(null);
+		} catch (IOException e) {
+			log.error("Error finding event files for {}", scenario);
+			return null;
+		}
+	}
+
+	private static boolean isEmpty(Path path) {
+		try {
+			return Files.list(path).findFirst().isEmpty();
+		} catch (IOException e) {
+			return true;
+		}
+	}
+
 	@Override
 	public void run() {
 		throw new CommandLine.ParameterException(spec.commandLine(), "Missing required subcommand");
+	}
+
+	/**
+	 * This stream will not close the underlying stream.
+	 */
+	private static final class NonClosingGZIPStream extends GZIPInputStream {
+
+		public NonClosingGZIPStream(InputStream in) throws IOException {
+			super(in);
+		}
+
+		@Override
+		public void close() throws IOException {
+			// Don't close, but clean the inflater
+			inf.end();
+		}
 	}
 
 }

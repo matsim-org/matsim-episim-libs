@@ -11,6 +11,8 @@ import org.matsim.episim.policy.Restriction;
 import java.util.Map;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.model.DefaultInfectionModel.*;
+
 /**
  * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependen additions.
  */
@@ -78,13 +80,13 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
-		}
+		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
+				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
@@ -129,7 +131,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		NormalDistribution dist = new NormalDistribution(0.5, 2.6);
 
 		for(int i = -5; i <= 10; i++) {
-			System.out.println(i + " " + dist.density(i));	
+			System.out.println(i + " " + dist.density(i));
 		}
 
 	}

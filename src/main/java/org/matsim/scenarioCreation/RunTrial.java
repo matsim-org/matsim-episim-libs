@@ -47,6 +47,9 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--runs", description = "Number of runs with different seeds", defaultValue = "3")
 	private int runs;
 
+	@CommandLine.Option(names = "--max-tasks", description = "Number of runs to run in parallel", defaultValue = "8")
+	private int maxTasks;
+
 	@CommandLine.Option(names = "--calibParameter", description = "Calibration parameter", defaultValue = "-1")
 	private double calibParameter;
 
@@ -95,12 +98,17 @@ public final class RunTrial implements Callable<Integer> {
 		List<List<Object>> paramValues = new ArrayList<>();
 		List<PreparedRun.Run> preparedRuns = new ArrayList<>();
 
+		// same seeding procedure as used in batch runs
+		Random rnd = new Random(1);
+
 		// Prepare trials like batch runs
 		for (int i = 1; i <= runs; i++) {
 			Injector injector = Guice.createInjector(Modules.override(new EpisimModule()).with(base));
 			Config config = injector.getInstance(Config.class);
 
-			TrialParams params = new TrialParams(config, i);
+			long seed = rnd.nextLong();
+
+			TrialParams params = new TrialParams(config, i, i == 1 ? 4711 : seed);
 			List<Object> args = List.of(i);
 
 			paramValues.add(args);
@@ -117,7 +125,7 @@ public final class RunTrial implements Callable<Integer> {
 		PreparedRun prepare = new PreparedRun(trial, List.of("run"), paramValues, preparedRuns);
 		RunParallel<TrialBatch> batch = new RunParallel<>(prepare);
 		int ret = new CommandLine(batch).execute(
-				RunParallel.OPTION_THREADS, String.valueOf(Math.min(Runtime.getRuntime().availableProcessors(), preparedRuns.size())),
+				RunParallel.OPTION_TASKS, String.valueOf(Math.min(maxTasks, preparedRuns.size())),
 				RunParallel.OPTION_ITERATIONS, String.valueOf(days),
 				"--output", String.format("output-%s/%d", name, number)
 		);
@@ -174,7 +182,7 @@ public final class RunTrial implements Callable<Integer> {
 
 				builder.setCiCorrections(original);
 
-				FixedPolicy.ConfigBuilder policyConf = builder.build();
+				FixedPolicy.ConfigBuilder policyConf = builder.buildFixed();
 
 				log.info("Setting policy to alpha={}, ciCorrection={}, correctionStart={}", alpha, correction, correctionStart);
 
@@ -218,13 +226,13 @@ public final class RunTrial implements Callable<Integer> {
 				episimConfig.setHospitalFactor(hospitalFactor);
 			}
 
-			if (params.run > 1) {
-				Random rnd = new Random(params.run);
-				long seed = rnd.nextLong();
-				log.info("Setting seed for run {} to {}", params.run, seed);
-				params.config.global().setRandomSeed(seed);
-				episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-			}
+			log.info("Setting seed for run {} to {}", params.run, params.seed);
+			params.config.global().setRandomSeed(params.seed);
+			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+
+			// events are not needed for calibration
+			episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.none);
+			episimConfig.setThreads(6);
 
 			return params.config;
 		}
@@ -239,10 +247,12 @@ public final class RunTrial implements Callable<Integer> {
 
 		private final Config config;
 		private final int run;
+		private final long seed;
 
-		public TrialParams(Config config, int run) {
+		public TrialParams(Config config, int run, long seed) {
 			this.config = config;
 			this.run = run;
+			this.seed = seed;
 		}
 	}
 

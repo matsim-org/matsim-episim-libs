@@ -9,6 +9,7 @@ import org.matsim.core.utils.io.IOUtils;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.io.Writer;
 import java.util.Map;
 
 /**
@@ -133,7 +134,7 @@ public class EpisimWriter {
 	/**
 	 * Append a new row to the writer, columns separated by separator.
 	 */
-	public void append(BufferedWriter writer, String[] array) {
+	public void append(Writer writer, String[] array) {
 		try {
 			writer.write(JOINER.join(array));
 			writer.write("\n");
@@ -146,7 +147,7 @@ public class EpisimWriter {
 	/**
 	 * Appends plain string to the writer.
 	 */
-	public void append(BufferedWriter writer, String string) {
+	public void append(Writer writer, String string) {
 		try {
 			writer.write(string);
 			writer.flush();
@@ -158,7 +159,7 @@ public class EpisimWriter {
 	/**
 	 * Appends an event as xml representation to the output.
 	 */
-	public void append(BufferedWriter writer, Event event) {
+	public void append(Writer writer, Event event) {
 		try {
 			writeEvent(writer, event, -1);
 		} catch (IOException e) {
@@ -170,9 +171,9 @@ public class EpisimWriter {
 	/**
 	 * Writes an event with corrected time attribute.
 	 *
-	 * @see #append(BufferedWriter, Event)
+	 * @see #append(Writer, Event)
 	 */
-	public void append(BufferedWriter writer, Event event, double correctedTime) {
+	public void append(Writer writer, Event event, double correctedTime) {
 		try {
 			writeEvent(writer, event, correctedTime);
 		} catch (IOException e) {
@@ -184,11 +185,20 @@ public class EpisimWriter {
 	/**
 	 * Close a writer for writing.
 	 */
-	public void close(BufferedWriter writer) {
+	public void close(Writer writer) {
 		try {
 			writer.close();
 		} catch (IOException e) {
 			log.error("Could not close writer", e);
+			throw new UncheckedIOException(e);
+		}
+	}
+
+	public void flush(Writer writer) {
+		try {
+			writer.flush();
+		} catch (IOException e) {
+			log.error("Could not flush writer", e);
 			throw new UncheckedIOException(e);
 		}
 	}

@@ -45,7 +45,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 	public Metadata getMetadata() {
 		return Metadata.of("berlin", "basePaper");
 	}
-	
+
 //	@Override
 //	public int getOffset() {
 //		return 10000;
@@ -53,7 +53,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		
+
 		double theta = 0.0;
 		double activityLevel = 0.0;
 		double temp1 = 17.5;
@@ -61,7 +61,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 		SnzBerlinProductionScenario.Masks masks = SnzBerlinProductionScenario.Masks.yes;
 		SnzBerlinProductionScenario.WeatherModel weatherModel = SnzBerlinProductionScenario.WeatherModel.midpoints_175_250;
 
-		
+
 		if (params.run.equals("base")) {
 			if (params.calibrationUntil.equals("2020-09-01")) theta = 1.3242211858016036e-05;
 			else if (params.calibrationUntil.equals("2020-08-01")) theta = 1.3003752011694416e-05;
@@ -78,7 +78,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 			else if (params.calibrationUntil.equals("2020-06-01")) theta = 1.2740569081654608e-05;
 			else if (params.calibrationUntil.equals("2020-05-01")) theta = 1.2716360988066567e-05;
 			else throw new RuntimeException();
-			
+
 		}
 		else if (params.run.equals("weather-20-25")) {
 			weatherModel = SnzBerlinProductionScenario.WeatherModel.midpoints_200_250;
@@ -90,16 +90,16 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 			else if (params.calibrationUntil.equals("2020-05-01")) theta = 1.1101742134854978e-05;
 			else throw new RuntimeException();
 		}
-		
+
 		else throw new RuntimeException();
-		
+
 
 		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
 				.setMasks(masks)
 				.setWeatherModel(weatherModel)
 				.createSnzBerlinProductionScenario();
 		Config config = module.config();
-		
+
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -125,24 +125,24 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 			weatherData = "berlinWeather_until20200430.csv";
 		}
 		else throw new RuntimeException();
-		
+
 		if (params.avgTemperatures.equals("no")) weatherData = "berlinWeather_until20210504.csv";
-		
-		
+
+
 		episimConfig.setCalibrationParameter(theta);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		LocalDate calibrationUntil = LocalDate.parse(params.calibrationUntil);
-		
-		
+
+
 		if (params.activityLevel.equals("frozen")) {
 			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 				if (act.startsWith("edu")) continue;
 				builder.clearAfter(params.calibrationUntil, act);
 				builder.restrict(calibrationUntil, activityLevel, act);
 			}
-			
+
 			if (calibrationUntil.equals(LocalDate.parse("2020-05-01")) || calibrationUntil.equals(LocalDate.parse("2020-06-01"))) {
 				builder.restrict("2020-06-28", activityLevel, "work", "business");
 				builder.restrict("2020-07-05", activityLevel, "work", "business");
@@ -153,7 +153,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 				builder.restrict("2020-08-09", activityLevel, "work", "business");
 				builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", 0.83 * (double) e.get("fraction")), "work", "business");
 			}
-			
+
 			if (calibrationUntil.equals(LocalDate.parse("2020-07-01"))) {
 				builder.restrict("2020-07-05", activityLevel, "work", "business");
 				builder.restrict("2020-07-12", activityLevel, "work", "business");
@@ -163,33 +163,33 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 				builder.restrict("2020-08-09", activityLevel, "work", "business");
 				builder.apply("2020-07-01", "2020-08-07", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 			}
-			
+
 			if (calibrationUntil.equals(LocalDate.parse("2020-08-01"))) {
 				builder.restrict("2020-08-02", activityLevel, "work", "business");
 				builder.restrict("2020-08-09", activityLevel, "work", "business");
 				builder.apply("2020-08-01", "2020-08-07", (d, e) -> e.put("fraction", 0.92 * (double) e.get("fraction")), "work", "business");
 			}
-			
+
 			builder.restrict("2020-10-11", activityLevel, "work", "business");
 			builder.restrict("2020-10-18", activityLevel, "work", "business");
 			builder.restrict("2020-10-25", activityLevel, "work", "business");
 			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", 0.83 * (double) e.get("fraction")), "work", "business");
 
 		}
-		
+
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		if (!params.diseaseImport.equals("real")) {
 			Map<LocalDate, Integer> diseaseImport = episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2);
 			Map<LocalDate, Integer> diseaseImportNew = new HashMap<LocalDate, Integer>();
 
-			
+
 			for (Entry<LocalDate, Integer> e : diseaseImport.entrySet()) {
 				if (e.getKey().isBefore(calibrationUntil))
-					diseaseImportNew.put(e.getKey(), e.getValue());		
+					diseaseImportNew.put(e.getKey(), e.getValue());
 			}
-			
+
 //			if (calibrationUntil.isBefore(LocalDate.parse("2020-06-15")))
 			if (params.diseaseImport.equals("1")) {
 				diseaseImportNew.put(calibrationUntil, 1);
@@ -198,7 +198,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 			episimConfig.setInfections_pers_per_day(diseaseImportNew);
 		}
 
-		
+
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve(weatherData).toFile(),
 					SnzBerlinProductionScenario.INPUT.resolve("berlinWeatherAvg2000-2020.csv").toFile(), 0.5, temp1, 25., 5. );
@@ -206,7 +206,7 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-				
+
 		return config;
 	}
 
@@ -214,30 +214,30 @@ public class BerlinOutOfSample implements BatchRun<BerlinOutOfSample.Params> {
 
 		@GenerateSeeds(30)
 		public long seed;
-		
-		@StringParameter({"base", "noMasks", "weather-20-25"})		
+
+		@StringParameter({"base", "noMasks", "weather-20-25"})
 		String run;
-		
-		@StringParameter({"real", "frozen"})		
+
+		@StringParameter({"real", "frozen"})
 		String activityLevel;
-		
-		@StringParameter({"2020-09-01", "2020-08-01", "2020-07-01", "2020-06-01", "2020-05-01"})		
+
+		@StringParameter({"2020-09-01", "2020-08-01", "2020-07-01", "2020-06-01", "2020-05-01"})
 		String calibrationUntil;
-		
+
 //		@StringParameter({"frozen", "1", "real"})
-		@StringParameter({"1", "real"})		
+		@StringParameter({"1", "real"})
 		String diseaseImport;
-		
-		@StringParameter({"yes", "no"})		
+
+		@StringParameter({"yes", "no"})
 		String avgTemperatures;
-		
+
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, BerlinOutOfSample.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_THREADS, Integer.toString(1),
+				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
 				RunParallel.OPTION_METADATA
 		};

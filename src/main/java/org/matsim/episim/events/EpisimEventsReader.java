@@ -29,6 +29,7 @@ import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.utils.io.MatsimXmlParser;
 import org.matsim.episim.EpisimContainer;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.xml.sax.Attributes;
@@ -123,6 +124,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			return new EpisimVaccinationEvent(
 					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),
 					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),
+					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),
 					Boolean.parseBoolean(attr.get(EpisimVaccinationEvent.RE_VACCINATION))
 			);
 		};

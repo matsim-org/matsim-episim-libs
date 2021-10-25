@@ -11,7 +11,11 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.OutputDirectoryLogging;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.activity.ActivityParticipationModel;
+import org.matsim.episim.model.activity.DefaultParticipationModel;
 import org.matsim.episim.model.testing.TestType;
+import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
@@ -29,7 +33,7 @@ import static org.matsim.run.RunEpisimIntegrationTest.assertSimulationOutput;
 @RunWith(Parameterized.class)
 public class RunSnzIntegrationTest {
 
-	private static final int ITERATIONS = 40;
+	private static final int ITERATIONS = 80;
 	static final Path INPUT = EpisimUtils.resolveInputPath("../public-svn/matsim/scenarios/countries/de/episim/openDataModel/input");
 
 	@Rule
@@ -116,14 +120,15 @@ public class RunSnzIntegrationTest {
 					.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 					.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.yes)
 					.setRestrictions(r)
-					.createSnzBerlinProductionScenario();
+					.build();
 		}
 
 		@Override
 		protected void configure() {
 			bind(ContactModel.class).to(SymmetricContactModel.class).in(Singleton.class);
-			bind(ProgressionModel.class).to(AgeDependentProgressionModel.class).in(Singleton.class);
-			bind(InfectionModel.class).to(AgeDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+			bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
+			bind(InfectionModel.class).to(AgeAndProgressionDependentInfectionModelWithSeasonality.class).in(Singleton.class);
+			bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
 		}
 
 		@Provides
@@ -154,6 +159,7 @@ public class RunSnzIntegrationTest {
 			episimConfig.setStartDate("2020-02-16");
 			episimConfig.setSampleSize(0.01);
 			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+			episimConfig.setThreads(2);
 
 			config.controler().setOutputDirectory(utils.getOutputDirectory());
 

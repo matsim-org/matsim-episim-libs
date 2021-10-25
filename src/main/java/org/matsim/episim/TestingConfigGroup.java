@@ -31,7 +31,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String HOUSEHOLD_COMPLIANCE = "householdCompliance";
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
-	private static final String SELECTION = "selection";
+	private static final String TEST_ALL_PERSONS_AFTER = "testAllPersonsAfter";
 	private static final String ACTIVITY_CAPACITIES = "activityCapacities";
 
 	private static final String GROUPNAME = "episimTesting";
@@ -42,14 +42,14 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private double householdCompliance = 1.0;
 
 	/**
-	 * Tracing and containment strategy.
+	 * Testing and containment strategy.
 	 */
 	private Strategy strategy = Strategy.NONE;
 
 	/**
-	 * Which persons are selected for testing.
+	 * Test all persons after this date
 	 */
-	private Selection selection = Selection.ALL_PERSONS;
+	private LocalDate testAllPersonsAfter = null;
 
 	/**
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
@@ -350,14 +350,18 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		this.strategy = strategy;
 	}
 
-	@StringGetter(SELECTION)
-	public Selection getSelection() {
-		return selection;
+	@StringSetter(TEST_ALL_PERSONS_AFTER)
+	void setTestAllPersonsAfter(String testAllPersonsAfter) {
+		this.testAllPersonsAfter = LocalDate.parse(testAllPersonsAfter);
 	}
 
-	@StringSetter(SELECTION)
-	public void setSelection(Selection selection) {
-		this.selection = selection;
+	public void setTestAllPersonsAfter(LocalDate testAllPersonsAfter) {
+		this.testAllPersonsAfter = testAllPersonsAfter;
+	}
+
+	@StringGetter(TEST_ALL_PERSONS_AFTER)
+	public LocalDate getTestAllPersonsAfter() {
+		return testAllPersonsAfter;
 	}
 
 	@StringGetter(ACTIVITY_CAPACITIES)
@@ -434,19 +438,4 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 		 */
 		FIXED_ACTIVITIES,
 	}
-
-	public enum Selection {
-
-		/**
-		 * All persons will be tested.
-		 */
-		ALL_PERSONS,
-
-		/**
-		 * Only persons with covid like symptoms are tested.
-		 */
-		//SYMPTOMS_ONLY
-
-	}
-
 }
