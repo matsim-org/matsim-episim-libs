@@ -1,5 +1,8 @@
 package org.matsim.run.batch;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Module;
+import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
@@ -8,12 +11,14 @@ import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
 
@@ -32,19 +37,28 @@ import static org.matsim.episim.model.Transition.to;
  */
 public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
-	@Override
-	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
-
-		double pHousehold = 0.0;
-		
-//		if (params != null) 
-//			pHousehold = params.pHousehold;
-		
+	public static SnzCologneProductionScenario getModule(Params params) {
 		return new SnzCologneProductionScenario.Builder()
 				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.build();
+	}
+
+	@Override
+	public Module getBindings(int id, @Nullable Params params) {
+		return Modules.override(getModule(params)).with(new AbstractModule() {
+			@Override
+			protected void configure() {
+
+				double pHousehold = 0.0;
+				bind(HouseholdSusceptibility.Config.class).toInstance(
+						HouseholdSusceptibility.newConfig(pHousehold, 5.0)
+								.withShape(SnzCologneProductionScenario.INPUT.resolve("CologneDistricts.zip"))
+								.withFeature("STT_NAME", "Altstadt/Nord")
+				);
+
+			}
+		});
 	}
 
 	@Override
@@ -57,7 +71,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 		LocalDate restrictionDate = LocalDate.parse("2021-11-01");
 
-		SnzCologneProductionScenario module = getBindings(id, params);
+		SnzCologneProductionScenario module = getModule(params);
 
 		Config config = module.config();
 
@@ -67,7 +81,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 		episimConfig.setProgressionConfig(progressionConfig(params, Transition.config()).build());
 		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
-		
+
 		episimConfig.setCalibrationParameter(1.0e-05);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83 * 1.4 * params.thetaFactor);
@@ -82,7 +96,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 			for (int i = 0; i<120; i++) map.put(i, Math.pow(1.02499323, i));
 			episimConfig.setAgeSusceptibility(map);
 		}
-		
+
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy()).setHospitalScale(id);
 
@@ -93,7 +107,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
 //		if (params.curfew.equals("yes")) curfewCompliance.put(restrictionDate, 1.0);
 		episimConfig.setCurfewCompliance(curfewCompliance);
-		
+
 //		builder.restrict("2021-10-10", 0.92 * 0.79, "work", "business");
 		builder.restrict("2021-10-24", 0.74, "work", "business");
 
@@ -105,7 +119,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 //			double fraction = Double.parseDouble(params.leisureUnv);
 //			builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(fraction), "leisure");
 //		}
-		
+
 		episimConfig.setPolicy(builder.build());
 
 		//disease import 2020
@@ -153,25 +167,25 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		
+
 //		if(params.deltaInf == 2.2) infPerDayMUTB.put(LocalDate.parse("2021-04-05"), 1);
 //		else if (params.deltaInf == 2.8) infPerDayMUTB.put(LocalDate.parse("2021-04-19"), 1);
 //		else if (params.deltaInf == 3.4) infPerDayMUTB.put(LocalDate.parse("2021-05-03"), 1);
 //		else throw new RuntimeException();
-		
+
 		infPerDayMUTB.put(LocalDate.parse("2021-05-17"), 1);
-		
+
 		//disease import 2021
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * params.impFac, LocalDate.parse("2021-07-03").plusDays(0),
 				LocalDate.parse("2021-07-25").plusDays(0), 1, 48);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * params.impFac, LocalDate.parse("2021-07-26").plusDays(0),
 				LocalDate.parse("2021-08-17").plusDays(0), 48, 1);
 		infPerDayMUTB.put(LocalDate.parse("2021-08-18"), 1);
-		
+
 //		infPerDayMUTB.put(LocalDate.parse("2021-07-25"), (int) (0.5 * 48 * 2));
 //		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
-		
+
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(params.deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(2.0);
 
@@ -195,7 +209,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
-		
+
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
 		vaccinations.put(LocalDate.parse("2020-01-01"), 0);
@@ -227,7 +241,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 		vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
-		
+
 //		if (!params.vaccine.equals("cur")) {
 //			Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
 //			if(params.vaccine.equals("mRNA"))
@@ -237,14 +251,14 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 //			vaccinationConfig.setVaccinationShare(share);
 //		}
 
-		
+
 		adaptVacinationEffectiveness(vaccinationConfig, params.effDeltaMRNA, params.vacInf, 0.09);
-		
+
 		if (params.boosterEff != 0.0) configureBooster(vaccinationConfig, params.boosterEff, params.boosterSpeed, params.endBooster);
-			
+
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-		
+
 //		if (params.testVaccinated.equals("yes")) {
 // 			testingConfigGroup.setTestAllPersonsAfter(restrictionDate);
 // 		}
@@ -356,17 +370,17 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 	}
 
 	private void adaptVacinationEffectiveness(VaccinationConfigGroup vaccinationConfig, double effDeltaMRNA, double vacInf, double hosDeltaMRNA) {
-		
+
 		double effectivnessAlphaMRNA =  1.0 - ((1.0 - 0.86) * 0.6);
 		double factorShowingSymptomsAlphaMRNA = 0.06 / (1 - effectivnessAlphaMRNA);
 		double factorSeriouslySickAlphaMRNA = 0.02 / ((1 - effectivnessAlphaMRNA) * factorShowingSymptomsAlphaMRNA);
-		
+
 		double effectivnessDeltaMRNA = 1.0 - ((1.0 - effDeltaMRNA) * 0.6);
 		double factorShowingSymptomsDeltaMRNA = 0.15 / (1 - effectivnessDeltaMRNA);
 		double factorSeriouslySickDeltaMRNA = hosDeltaMRNA / ((1 - effectivnessDeltaMRNA) * factorShowingSymptomsDeltaMRNA);
 
 		double infectivityMRNA = vacInf;
-		
+
 		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 				.setDaysBeforeFullEffect(fullEffectMRNA)
@@ -425,18 +439,18 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 						.atFullEffect(infectivityMRNA)
 				)
 		;
-		
-		
+
+
 		double effectivnessAlphaVector = 1.0 - ((1.0 - 0.52) * 0.6);
 		double factorShowingSymptomsAlphaVector = 0.25 / (1 - effectivnessAlphaVector);
 		double factorSeriouslySickAlphaVector = 0.02 / ((1 - effectivnessAlphaVector) * factorShowingSymptomsAlphaVector);
-		
+
 		double effectivnessDeltaVector = 1.0 - ((1.0 - 0.49) * 0.6);
 		double factorShowingSymptomsDeltaVector = 0.35 / (1 - effectivnessDeltaVector);
 		double factorSeriouslySickDeltaVector = 0.09 / ((1 - effectivnessDeltaVector) * factorShowingSymptomsDeltaVector);
-		
+
 		double infectivityVector = vacInf;
-		
+
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
 				.setDaysBeforeFullEffect(fullEffectVector)
@@ -493,16 +507,16 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityVector)
-				)		
+				)
 		;
-		
+
 		double effectivnessAlphaNatural = 0.96 ;
 		double effectivnessDeltaNatural = 0.9;
 
 		double factorShowingSymptomsNatural = 0.5;
 		double factorSeriouslySickNatural = 0.5;
 		double infectivityNatural = vacInf;
-		
+
 		int fullEffectNatural = 7;
 		vaccinationConfig.getOrAddParams(VaccinationType.natural)
 				.setDaysBeforeFullEffect(fullEffectNatural)
@@ -564,22 +578,22 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 						.atFullEffect(infectivityNatural)
 				)
 		;
-		
-		
+
+
 	}
-	
+
 	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterEff, double boosterSpeed, String endBooster) {
-		
+
 		Map<LocalDate, Integer> boosterVaccinations = new HashMap<>();
-				
+
 		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
 		boosterVaccinations.put(LocalDate.parse("2021-11-01"), (int) (2_352_480 * boosterSpeed));
 		boosterVaccinations.put(LocalDate.parse(endBooster), 0);
-		
+
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
-		 
+
 		double boostEffectiveness = 1.0 - ((1.0 - boosterEff) * 0.6);
-						
+
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
@@ -592,10 +606,10 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
-				)	
+				)
 				.setBoostWaitPeriod(5 * 30 + 6 * 7); //5 months after second shot
 		;
-				
+
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
 				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
@@ -620,71 +634,71 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 		@Parameter({0.05})
 		double testRateLeisure;
-		
+
 //		@StringParameter({"no", "yes"})
 //		String testVaccinated;
-		
+
 		@Parameter({0.9, 0.95, 1.0})
 		double thetaFactor;
-		
+
 		@Parameter({3.0})
 		double impFac;
-		
+
 		@Parameter({0.7})
 		double effDeltaMRNA;
-//		
+//
 //		@Parameter({0.09})
 //		double hosDeltaMRNA;
-		
+
 //		@Parameter({1.0, 0.75, 0.5})
 //		double effFactor;
-		
+
 //		@StringParameter({"mRNADelta", "mRNA", "all"})
 //		String vacEffDecrType;
-		
+
 //		@Parameter({15.0})
 //		double tmid;
-		
+
 //		@Parameter({1.0})
 //		double vacSpeed;
-		
+
 		@Parameter({0.5})
 		double vacInf;
-		
+
 		@StringParameter({"cur"})
 		String vacCompl;
-		
+
 //		@StringParameter({"yes-0.02-0.9", "yes-0.005-0.9", "yes-0.02-0.97", "yes-0.005-0.97", "yes-0.02-mRNADelta", "yes-0.005-mRNADelta", "no"})
 //		String booster;
-		
+
 		@Parameter({0.0, 0.005, 0.02})
 		double boosterSpeed;
-		
+
 		@Parameter({0.7, 0.9})
 		double boosterEff;
-		
+
 		@StringParameter({"2021-12-01", "2022-01-01", "2022-12-01"})
 		String endBooster;
-		
+
 //		@StringParameter({"2021-04-05", "2021-04-19", "2021-05-03", "2021-05-17" })
 //		String deltaDate;
-		
+
 		@StringParameter({"yes", "no"})
 		String ageDep;
-		
+
 		@Parameter({3.4})
 		double deltaInf;
-		
+
 //		@StringParameter({"cur", "mRNA", "vector"})
 //		@StringParameter({"cur"})
 //		String vaccine;
-		
+
 //		@IntParameter({1})
 //		int recSus;
 
 //		@StringParameter({"no"})
 //		String curfew;
-		
+
 //		@StringParameter({"no", "0.5"})
 //		String leisureUnv;
 
@@ -718,7 +732,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 //		}
 //		else {
 //			transitionRecSus = Transition.logNormalWithMedianAndStd(params.recSus, 10.);
-//		
+//
 //		}
 
 		return builder

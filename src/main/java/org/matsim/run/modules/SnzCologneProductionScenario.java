@@ -185,8 +185,6 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		bind(HouseholdSusceptibility.Config.class).toInstance(
 				HouseholdSusceptibility.newConfig(householdSusc, 5.0)
-						.withShape(INPUT.resolve("CologneDistricts.zip"))
-						.withFeature("STT_NAME", "Altstadt/Nord")
 		);
 
 		Multibinder.newSetBinder(binder(), SimulationStartListener.class)
