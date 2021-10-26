@@ -93,7 +93,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			this.leisureNightlyScale = leisureNightlyScale;
 			return this;
 		}
-		
+
 		public Builder setHouseholdSusc(double householdSusc) {
 			this.householdSusc = householdSusc;
 			return this;
@@ -183,8 +183,12 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			}
 		}
 
-		// TODO: bind desired config
-		bind(HouseholdSusceptibility.Config.class).toInstance(HouseholdSusceptibility.newConfig(householdSusc, 5.0));
+		bind(HouseholdSusceptibility.Config.class).toInstance(
+				HouseholdSusceptibility.newConfig(householdSusc, 5.0)
+						.withShape(INPUT.resolve("CologneDistricts.zip"))
+						.withFeature("STT_NAME", "Altstadt/Nord")
+		);
+
 		Multibinder.newSetBinder(binder(), SimulationStartListener.class)
 				.addBinding().to(HouseholdSusceptibility.class);
 
@@ -198,7 +202,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		if (this.sample != 25 && this.sample != 100)
 			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
-		
+
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -281,7 +285,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		
+
 
 		{
 			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
