@@ -88,7 +88,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Aggregated cumulative vaccinated cases by status and district. Contains only a subset of relevant {@link org.matsim.episim.EpisimPerson.DiseaseStatus}.
 	 */
-	//	private final Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinatedXXX = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
 	private final Map<String, Map<EpisimPerson.DiseaseStatus, Object2IntMap<String>>> cumulativeCasesVaccinated = new HashMap<>();
 	/**
 	 * Number of daily infections per virus strain.
@@ -117,7 +116,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private final ByteArrayOutputStream os;
 
 
-
 	private final Config config;
 	private final EpisimConfigGroup episimConfig;
 	private final VaccinationConfigGroup vaccinationConfig;
@@ -126,7 +124,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	private int iteration;
 	private Writer events;
-	private BufferedWriter infectionReport;
+	private Map<String, BufferedWriter> infectionReports; // default infectionReport saved under "district"; now infections.txt can be written for different infection scopes
 	private BufferedWriter infectionEvents;
 	private BufferedWriter restrictionReport;
 	private BufferedWriter timeUse;
@@ -186,7 +184,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		this.writer = writer;
 		this.manager = manager;
 
-		infectionReport = EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class);
+		infectionReports = new HashMap<>();
+		infectionReports.put("district", EpisimWriter.prepare(base + "infections.txt", InfectionsWriterFields.class));
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt", InfectionEventsWriterFields.class);
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
@@ -202,6 +201,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
 
+		// Adds local district attribute
 		geoAttributes = new HashSet<>();
 		geoAttributes.add("district");
 
@@ -209,6 +209,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			String geoAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
 			if (geoAttribute != null && !geoAttribute.equals("")) {
 				geoAttributes.add(geoAttribute);
+				BufferedWriter localInfectionReport = EpisimWriter.prepare(base + "infections_" + geoAttribute + ".txt", InfectionsWriterFields.class);
+				infectionReports.put(geoAttribute, localInfectionReport);
 			}
 		}
 
@@ -221,7 +223,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			cumulativeCasesForGeo.put(EpisimPerson.DiseaseStatus.critical, new Object2IntOpenHashMap<>());
 			cumulativeCases.put(geoAttribute, cumulativeCasesForGeo);
 
-			EnumMap<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinatedForGeo= new EnumMap<>(EpisimPerson.DiseaseStatus.class);
+			EnumMap<EpisimPerson.DiseaseStatus, Object2IntMap<String>> cumulativeCasesVaccinatedForGeo = new EnumMap<>(EpisimPerson.DiseaseStatus.class);
 			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.contagious, new Object2IntOpenHashMap<>());
 			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.showingSymptoms, new Object2IntOpenHashMap<>());
 			cumulativeCasesVaccinatedForGeo.put(EpisimPerson.DiseaseStatus.seriouslySick, new Object2IntOpenHashMap<>());
@@ -271,7 +273,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				}
 			}
 
-		infectionReport = EpisimWriter.prepare(base + "infections.txt");
+		infectionReports.put("district", EpisimWriter.prepare(base + "infections.txt")); //TODO: how should local scopes be handled?
 		infectionEvents = EpisimWriter.prepare(base + "infectionEvents.txt");
 		restrictionReport = EpisimWriter.prepare(base + "restrictions.txt");
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt");
@@ -532,6 +534,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		strains.clear();
 
 		// Write all reports for each district
+		writeInfections(reports, "district");
+	}
+
+	void writeInfections(Map<String, InfectionReport> reports, String geoAttribute) {
 		for (InfectionReport r : reports.values()) {
 			if (r.name.equals("total")) continue;
 
@@ -580,7 +586,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			array[InfectionsWriterFields.district.ordinal()] = r.name;
 
-			writer.append(infectionReport, array);
+			writer.append(infectionReports.get(geoAttribute), array);
 		}
 	}
 
@@ -624,7 +630,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * @see EpisimContactEvent
 	 */
 	public synchronized void reportContact(double now, EpisimPerson person, EpisimPerson contactPerson, EpisimContainer<?> container,
-	                                       StringBuilder actType, double duration) {
+										   StringBuilder actType, double duration) {
 
 		if (writeEvents == EpisimConfigGroup.WriteEvents.tracing || writeEvents == EpisimConfigGroup.WriteEvents.all) {
 			manager.processEvent(new EpisimContactEvent(now, person.getPersonId(), contactPerson.getPersonId(), container.getContainerId(),
@@ -714,7 +720,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Write container statistic to file.
 	 */
 	public void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
-	                                 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
+									 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
 
 		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "totalUsers", "maxGroupSize");
 
@@ -780,7 +786,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	@Override
 	public void close() {
 
-		writer.close(infectionReport);
+		for (BufferedWriter infectionReport : infectionReports.values()) {
+			writer.close(infectionReport);
+		}
+
 		writer.close(infectionEvents);
 		writer.close(restrictionReport);
 		writer.close(timeUse);

@@ -743,6 +743,11 @@ public final class InfectionEventHandler implements Externalizable {
 			policy.updateRestrictions(report, im);
 		}
 
+		if (episimConfig.getDistrictLevelRestrictions() != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, episimConfig.getDistrictLevelRestrictionsAttribute());
+			reporting.writeInfections(reportsLocal, episimConfig.getDistrictLevelRestrictionsAttribute());
+		}
+
 		if (policy instanceof AdaptivePolicy) {
 			Map<String, Map<String, AdaptivePolicy.RestrictionStatus>> restrictionStatus = ((AdaptivePolicy) policy).getRestrictionStatus();
 			for (String location : restrictionStatus.keySet()) {
