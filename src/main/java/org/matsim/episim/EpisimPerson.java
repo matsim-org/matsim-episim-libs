@@ -591,7 +591,10 @@ public final class EpisimPerson implements Attributable {
 		return vaccinable;
 	}
 
-	void setVaccinable(boolean vaccinable) {
+	/**
+	 * Set vaccinable status.
+	 */
+	public void setVaccinable(boolean vaccinable) {
 		this.vaccinable = vaccinable;
 	}
 

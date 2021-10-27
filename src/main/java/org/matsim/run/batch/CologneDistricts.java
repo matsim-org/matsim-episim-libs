@@ -52,7 +52,9 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 				double pHousehold = 0.0;
 				bind(HouseholdSusceptibility.Config.class).toInstance(
-						HouseholdSusceptibility.newConfig(pHousehold, 5.0)
+						HouseholdSusceptibility.newConfig()
+								.withSusceptibleHouseholds(pHousehold, 5.0)
+								.withNonVaccinableHouseholds(0.5)
 								.withShape(SnzCologneProductionScenario.INPUT.resolve("CologneDistricts.zip"))
 								.withFeature("STT_NAME", "Altstadt/Nord")
 				);

@@ -1,6 +1,8 @@
 package org.matsim.episim.model.listener;
 
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2BooleanMap;
+import it.unimi.dsi.fastutil.objects.Object2BooleanOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.apache.logging.log4j.LogManager;
@@ -28,6 +30,12 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 	 * Susceptibility for each household.
 	 */
 	private final Object2DoubleMap<String> houseHoldSusceptibility = new Object2DoubleOpenHashMap<>();
+
+	/**
+	 * Compliant status of households.
+	 */
+	private final Object2BooleanMap<String> nonCompliant = new Object2BooleanOpenHashMap<>();
+
 	private final Config config;
 
 	@Inject
@@ -71,7 +79,15 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 			}
 
 			String homeId = getHomeId(p);
-			p.setSusceptibility(houseHoldSusceptibility.computeIfAbsent(homeId, (k) -> sample(rnd)));
+
+			if (config.pHouseholds > 0)
+				p.setSusceptibility(houseHoldSusceptibility.computeIfAbsent(homeId, (k) -> sample(rnd)));
+
+			if (config.pNonVaccinable > 0) {
+				if (nonCompliant.computeIfAbsent(homeId, (k) -> rnd.nextDouble() < config.pNonVaccinable)) {
+					p.setVaccinable(false);
+				}
+			}
 		}
 
 		if (index != null)
@@ -100,12 +116,8 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 		return "HouseholdSusceptibility{p=" + config.pHouseholds + ", susp=" + config.susceptibility + "}";
 	}
 
-	/**
-	 * @param pHouseholds    Percentage of households that have a modified susceptibility
-	 * @param susceptibility adjusted susceptibility
-	 */
-	public static Config newConfig(double pHouseholds, double susceptibility) {
-		return new Config(pHouseholds, susceptibility);
+	public static Config newConfig() {
+		return new Config();
 	}
 
 
@@ -114,16 +126,34 @@ public class HouseholdSusceptibility implements SimulationStartListener {
 	 */
 	public static final class Config {
 
-		private final double pHouseholds;
-		private final double susceptibility;
+		private double pHouseholds = 0;
+		private double pNonVaccinable = 0;
+		private double susceptibility = 5;
 
 		private Path shp;
 		private String feature;
 		private Set<String> selection;
 
-		private Config(double pHouseholds, double susceptibility) {
+		private Config() {
+		}
+
+		/**
+		 * Modify the susceptibility of a certain percentage of households.
+		 * @param pHouseholds percentage of households in (0, 1)
+		 * @param susceptibility modified susceptibility
+		 */
+		public Config withSusceptibleHouseholds(double pHouseholds, double susceptibility) {
 			this.pHouseholds = pHouseholds;
 			this.susceptibility = susceptibility;
+			return this;
+		}
+
+		/**
+		 * Set given percentage of households to be non-vaccinable.
+		 */
+		public Config withNonVaccinableHouseholds(double p) {
+			this.pNonVaccinable = p;
+			return this;
 		}
 
 		/**
