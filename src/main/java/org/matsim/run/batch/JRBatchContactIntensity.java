@@ -62,8 +62,8 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 		episimConfig.getOrAddContainerParams("home_65").setContactIntensity(1.0 - 2 * params.ciModifier).setSpacesPerFacility(1);
 		episimConfig.getOrAddContainerParams("home_75").setContactIntensity(1.0 - 3 * params.ciModifier).setSpacesPerFacility(1);
 
-
 		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.).setSpacesPerFacility(1);
+
 		return config;
 	}
 

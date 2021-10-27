@@ -100,12 +100,16 @@ if (FALSE) {
 
 if (FALSE) {
   rm(list = setdiff(ls(), union(ls(pattern = "^gbl_"), lsf.str())))
-  directoryB <- "2021-08-22-ci/"
-  episim_all_runs_raw <- read_combine_episim_output(directoryB, "infectionEvents.txt",FALSE)
-
+  # directoryB <- "2021-08-22-ci/"
+  directoryB <- "2021-10-26-masterB/"
+  # episim_all_runs_raw <- read_combine_episim_output(directoryB, "infectionEvents.txt",FALSE)
+  #
+  # temp_filename_raw <- paste0(directoryB,"episim_all_runs_raw.Rda")
+  # save(episim_all_runs_raw, file = temp_filename_raw)
+  #
   # infections_by_district <- geolocate_infections(episim_all_runs_raw, "FacilityToDistrictMapCOMPLETE.txt") %>%
   #   mutate(infections = infections * 4)
-
+  #
   temp_filename <- paste0(directoryB,"infections_by_district.Rda")
   # save(infections_by_district, file = temp_filename)
   load( file = temp_filename)
@@ -119,7 +123,7 @@ if (FALSE) {
   episim_all_runs <- infections_aggregated %>%
     filter(locationBasedRestrictions == "yesForHomeLocation") %>%
     ungroup() %>%
-    pivot_wider(names_from = c(thetaFactor, ciMultiplier), names_glue = "th{thetaFactor}_mult{ciMultiplier}", values_from = infections) %>%
+    pivot_wider(names_from = c(thetaFactor, ciModifier), names_glue = "th{thetaFactor}_mult{ciModifier}", values_from = infections) %>%
     select(-c("locationBasedRestrictions"))
 
   # merge datasets and make tidy
@@ -132,13 +136,13 @@ if (FALSE) {
 
   to_plot <- rki_and_episim_incidenz %>%
     filter(grepl("rki", scenario) |
-             scenario == "th1_multoff" |
-             scenario == "th0.9_mult3.0")
+             scenario == "th1_mult0.3" |
+             scenario == "th1_mult0")
 
 
   plot_resultsB <- ggplot(to_plot, aes(x = date, y = incidence)) +
     geom_line(aes(color = scenario)) +
-    annotate("rect", xmin = ymd("2020-10-1"), xmax = ymd("2020-10-31"), ymin = 0, ymax = Inf, alpha = 0.4, fill = " light blue") +
+    # annotate("rect", xmin = ymd("2020-10-1"), xmax = ymd("2020-10-31"), ymin = 0, ymax = Inf, alpha = 0.4, fill = " light blue") +
     scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
     labs(title = "7-Day Infections / 100k Pop for Berlin Districts",
          subtitle = "Comparison of Local vs. Global Activity Reductions",
@@ -154,6 +158,9 @@ if (FALSE) {
   ggsave(plot_resultsB, filename = "resultsB.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
   ggsave(plot_resultsB, filename = "resultsB.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
 
+
+  # Results from last run: theta values need to be more fine tuned btwn 0.95 and 1.05
+  # There is signal: the further apart you make the cis:
 }
 
 ######## C - Adaptive Local Restrictions ########

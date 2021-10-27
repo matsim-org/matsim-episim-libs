@@ -25,12 +25,13 @@ import static org.matsim.episim.model.Transition.to;
 
 public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 
-	boolean DEBUG = false;
+	boolean DEBUG = true;
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 				.setSample(DEBUG ? 1 : 25)
+				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setActivityHandling(ActivityHandling.startOfDay)
 				.createSnzBerlinProductionScenario();
@@ -48,7 +49,7 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 
 		if (DEBUG) {
 			if (params.seed != 4711
-					|| params.locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.yesForActivityLocation) {
+					|| params.locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation) {
 				return null;
 			}
 		}
