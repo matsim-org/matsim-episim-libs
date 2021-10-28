@@ -29,20 +29,72 @@ gbl_agent_count_per_district <- read_delim("C:/Users/jakob/projects/matsim-episi
   rename(district = X1, population = X2) %>%
   mutate(population = population * 4)
 
+if (FALSE) {
+  directoryT <- "2021-10-27-bmbf-test2/"
+
+  directory <- directoryT
+  allow_missing_files <- TRUE
+  file_root <- "infections_subdistrict.txt"
+
+  info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
+
+  # gathers column names that should be included in final dataframe
+  col_names <- colnames(info_df)
+  relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
+
+  episim_df_all_runs <- data.frame()
+  for (row in seq_len(nrow(info_df))) {
+
+    runId <- info_df$RunId[row]
+
+    file_name <- paste0(directory, runId, ".", file_root)
+
+    if (!file.exists(file_name) & allow_missing_files) {
+      warning(paste0(file_name, " does not exist"))
+      next
+    }
+
+
+    df_for_run <- read_delim(file = file_name, "\t", escape_double = FALSE, trim_ws = TRUE)
+
+    if (dim(df_for_run)[1] == 0) {
+      warning(paste0(file_name, " is empty"))
+      next
+    }
+
+    # adds important variables concerning run to df, so that individual runs can be filtered in later steps
+    for (var in relevant_cols) {
+      df_for_run[var] <- info_df[row, var]
+    }
+
+    episim_df_all_runs <- rbindlist(list(episim_df_all_runs, df_for_run))
+
+  }
+  filtered <- episim_df_all_runs %>% select(date,nInfectedCumulative,district, relevant_cols) %>% filter(district!="unknown")
+
+
+}
+
 
 ######## A - Restrict Mitte ########
 
 if (FALSE) {
   rm(list = setdiff(ls(), union(ls(pattern = "^gbl_"), lsf.str())))
   directoryA <- "2021-09-08-masterA/"
-  infections_raw <- read_combine_episim_output(directoryA, "infectionEvents.txt",FALSE)
+  infections_raw <- read_combine_episim_output(directoryA, "infectionEvents.txt", FALSE)
 
-  xxx <- infections_raw %>% filter(date == ymd("2020-08-31")) %>% filter(locationBasedRestrictions == "no") %>% filter(seed == 4711)
+  xxx <- infections_raw %>%
+    filter(date == ymd("2020-08-31")) %>%
+    filter(locationBasedRestrictions == "no") %>%
+    filter(seed == 4711)
 
   infections_by_district <- geolocate_infections(infections_raw, "FacilityToDistrictMapCOMPLETE.txt") %>%
-    mutate(infections = infections*4)
+    mutate(infections = infections * 4)
 
-  sum((infections_by_district %>% filter(date == lala) %>% filter(locationBasedRestrictions == "no") %>% filter(seed == 4711))$infections)
+  sum((infections_by_district %>%
+    filter(date == lala) %>%
+    filter(locationBasedRestrictions == "no") %>%
+    filter(seed == 4711))$infections)
 
   # aggregated infection over multiple seeds used to show trend in infections for different parameters
   infections_aggregated <- infections_by_district %>%
@@ -58,12 +110,12 @@ if (FALSE) {
 
 
   bleepbloop <- merged_weekly %>%
-    group_by(across(-c(infections,district))) %>%
+    group_by(across(-c(infections, district))) %>%
     summarise(infections = sum(infections)) %>%
     filter(scenario == "no")
 
   ggplot(bleepbloop) +
-    geom_line(aes(date,infections,color=scenario))
+    geom_line(aes(date, infections, color = scenario))
 
   ######## III - PLOT ##########
   # Facet Plot - all districts - Incidenz
@@ -81,7 +133,7 @@ if (FALSE) {
     labs(
       # title = "7-Day Infections / 100k Pop for Berlin Districts",
       #    subtitle = "Comparison of Local vs. Global Activity Reductions",
-         x = "Date", y = "7-Day Infections / 100k Pop.") +
+      x = "Date", y = "7-Day Infections / 100k Pop.") +
     facet_wrap(~district, ncol = 3) +
     # scale_color_calc() +
     theme_minimal() +
@@ -91,7 +143,7 @@ if (FALSE) {
   plot_resultsA
 
   ggsave(plot_resultsA, filename = "resultsA.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
-  ggsave(plot_resultsA, filename = "resultsA.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
+  ggsave(plot_resultsA, filename = "resultsA.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 
 }
@@ -110,9 +162,9 @@ if (FALSE) {
   # infections_by_district <- geolocate_infections(episim_all_runs_raw, "FacilityToDistrictMapCOMPLETE.txt") %>%
   #   mutate(infections = infections * 4)
   #
-  temp_filename <- paste0(directoryB,"infections_by_district.Rda")
+  temp_filename <- paste0(directoryB, "infections_by_district.Rda")
   # save(infections_by_district, file = temp_filename)
-  load( file = temp_filename)
+  load(file = temp_filename)
 
   # aggregated infection over multiple seeds used to show trend in infections for different parameters
   infections_aggregated <- infections_by_district %>%
@@ -156,7 +208,7 @@ if (FALSE) {
   plot_resultsB
 
   ggsave(plot_resultsB, filename = "resultsB.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
-  ggsave(plot_resultsB, filename = "resultsB.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
+  ggsave(plot_resultsB, filename = "resultsB.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 
   # Results from last run: theta values need to be more fine tuned btwn 0.95 and 1.05
@@ -180,9 +232,9 @@ if (FALSE) {
   #   mutate(infections = infections * 4) %>% # since sample is 25%, we multiply by 4
   #   filter(date >= analysis_begin_date & date <= analysis_end_date)
 
-  temp_filename <- paste0(directoryC,"infections_by_district.Rda")
+  temp_filename <- paste0(directoryC, "infections_by_district.Rda")
   # save(infections_by_district, file = temp_filename)
-  load( file = temp_filename)
+  load(file = temp_filename)
 
   # infection progression for single seed used to demonstrate local adaptive policy
   infections_4711 <- infections_by_district %>% filter(seed == 4711)
@@ -215,15 +267,16 @@ if (FALSE) {
     summarise(infections = sum(infections))
 
 
-  infection_labels <- infection_sums %>% mutate(lab = paste0(adaptivePolicy, " : ", round(infections, 0))) %>%
+  infection_labels <- infection_sums %>%
+    mutate(lab = paste0(adaptivePolicy, " : ", round(infections, 0))) %>%
     group_by(Rf, Trigger) %>%
     summarise(lab = paste(lab, collapse = "\n"))
 
   # yesLocal vs. no: percent reduction of infections
   infection_sums %>%
-    filter(adaptivePolicy!="yesGlobal") %>%
-    pivot_wider(names_from = adaptivePolicy,values_from = infections) %>%
-    mutate(pct_red = (no - yesLocal)*100/no)
+    filter(adaptivePolicy != "yesGlobal") %>%
+    pivot_wider(names_from = adaptivePolicy, values_from = infections) %>%
+    mutate(pct_red = (no - yesLocal) * 100 / no)
 
   plot_infection_facet <- ggplot(infections_aggregated_allBerlin) +
     geom_line(aes(x = date, y = infections, col = adaptivePolicy)) +
@@ -238,7 +291,7 @@ if (FALSE) {
 
   plot_infection_facet
   ggsave(plot_infection_facet, filename = "resultsC_infection_facet.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
-  ggsave(plot_infection_facet, filename = "resultsC_infection_facet.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
+  ggsave(plot_infection_facet, filename = "resultsC_infection_facet.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 }
 
@@ -277,7 +330,7 @@ if (FALSE) {
   # A local adpative restriction does very well when trigger is low and rf is low
   # A local adaptive restriction does well at high Rfs, regardless of Trigger (low trigger still better)
   ggsave(plot_local_versus_global, filename = "resultsC_infection_versus.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
-  ggsave(plot_local_versus_global, filename = "resultsC_infection_versus.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
+  ggsave(plot_local_versus_global, filename = "resultsC_infection_versus.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 
   print("runs where global adaptive restrictions perform better than local")
@@ -286,7 +339,7 @@ if (FALSE) {
   versus[which.min(versus$local_over_global),]
 
 
-  plot_local_versus_global2 <- ggplot(infections_total %>% filter(adaptivePolicy!="no")) +
+  plot_local_versus_global2 <- ggplot(infections_total %>% filter(adaptivePolicy != "no")) +
     geom_line(aes(x = restrictedFraction, y = infections, color = adaptivePolicy)) +
     # scale_color_discrete(limits = trigger_scale) +
     theme_light() +
@@ -295,7 +348,7 @@ if (FALSE) {
     facet_wrap(~trigger, nrow = 1)
   plot_local_versus_global2
   ggsave(plot_local_versus_global2, filename = "resultsC_infection_versus2.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
-  ggsave(plot_local_versus_global2, filename = "resultsC_infection_versus2.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
+  ggsave(plot_local_versus_global2, filename = "resultsC_infection_versus2.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 }
 
@@ -338,8 +391,8 @@ if (FALSE) {
 
   plot_infections_4711_incidence
 
-  ggsave(plot_infections_4711_incidence,filename = "resultsC_infection_4711.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
-  ggsave(plot_infections_4711_incidence,filename = "resultsC_infection_4711.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
+  ggsave(plot_infections_4711_incidence, filename = "resultsC_infection_4711.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
+  ggsave(plot_infections_4711_incidence, filename = "resultsC_infection_4711.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 
   # get initial, restricted, open policies
@@ -376,8 +429,8 @@ if (FALSE) {
     timelines <- plot_grid(plot_data1, lockdown_weeks1, plot_data2, lockdown_weeks2, plot_data3, lockdown_weeks3, plot_data4, lockdown_weeks4, legend, NULL, nrow = 3, rel_heights = c(1, 1, 0.05), rel_widths = c(1, 0.125, 1, 0.125))
     timelines
     scale_factor <- 2.5
-    ggsave(timelines, filename = "resultsC_timelines.png", path = gbl_image_output,  width = 16*scale_factor, height = 12*scale_factor, units = "cm")
-    ggsave(timelines, filename = "resultsC_timelines.pdf", path = gbl_image_output,  width = 16*scale_factor, height = 12*scale_factor, units = "cm")
+    ggsave(timelines, filename = "resultsC_timelines.png", path = gbl_image_output, width = 16 * scale_factor, height = 12 * scale_factor, units = "cm")
+    ggsave(timelines, filename = "resultsC_timelines.pdf", path = gbl_image_output, width = 16 * scale_factor, height = 12 * scale_factor, units = "cm")
 
 
   }
@@ -415,7 +468,8 @@ if (FALSE) {
       summarise(time = sum(time))
 
 
-    time_outside_perDay_weekly_average <- time_outside_perDay %>% filter(restrictedFraction %in% rfs) %>%
+    time_outside_perDay_weekly_average <- time_outside_perDay %>%
+      filter(restrictedFraction %in% rfs) %>%
       filter(trigger %in% triggers) %>%
       ungroup() %>%
       mutate(week = isoweek(date)) %>% # iso 8601 standard: week always begins with Monday; week 1 must contains January 4th
@@ -427,10 +481,10 @@ if (FALSE) {
       rename("Rf" = restrictedFraction, "Trigger" = trigger)
 
 
-
     time_outside_perDay_weekly_average_labels <- time_outside_perDay_weekly_average %>%
       group_by(adaptivePolicy, Rf, Trigger) %>%
-      summarise(time = mean(time)) %>% mutate(lab = paste0(adaptivePolicy, " : ", round(time, 0))) %>%
+      summarise(time = mean(time)) %>%
+      mutate(lab = paste0(adaptivePolicy, " : ", round(time, 0))) %>%
       group_by(Rf, Trigger) %>%
       summarise(lab = paste(lab, collapse = "\n"))
 
@@ -452,12 +506,12 @@ if (FALSE) {
     ggsave(plot_time_outside_perDay_weekly_average, filename = "resultsC_time_outside_perDay_weekly_average.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
 
-
-    time_avg %>% filter(adaptivePolicy!="yesGlobal") %>%
+    time_avg %>%
+      filter(adaptivePolicy != "yesGlobal") %>%
       filter(restrictedFraction %in% rfs) %>%
       filter(Trigger %in% triggers) %>%
       pivot_wider(names_from = adaptivePolicy, values_from = time) %>%
-      mutate(pct_red = (no-yesLocal)*100/no)
+      mutate(pct_red = (no - yesLocal) * 100 / no)
 
 
     plot_average_outHome <- ggplot(time_avg) +
@@ -539,8 +593,8 @@ if (FALSE) {
     plot_time_use_4711
 
 
-    ggsave(plot_time_use_4711, filename = "resultsC_time_facet_4711.png", path = gbl_image_output,  width = 16, height = 12, units = "cm")
-    ggsave(plot_time_use_4711, filename = "resultsC_time_facet_4711.pdf", path = gbl_image_output,  width = 16, height = 12, units = "cm")
+    ggsave(plot_time_use_4711, filename = "resultsC_time_facet_4711.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
+    ggsave(plot_time_use_4711, filename = "resultsC_time_facet_4711.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
     # aggregated
     time_progression_agg <- time_agg %>%
@@ -659,7 +713,7 @@ make_timeline <- function(ar_filtered, axis_position, title) {
 
     end <- policy_filtered$date[row]
 
-    if(start!=end){
+    if (start != end) {
       single <- data.frame(location = loc, policy = policy, start = start, end = end)
       timeline_data_district <- rbind(timeline_data_district, single)
     }
@@ -760,10 +814,10 @@ make_text <- function(ar) {
 }
 
 
-infection_to_incidence <- function (infection){
+infection_to_incidence <- function(infection) {
   return(infection / 3600000 * 100000 * 7)
 }
 
-incidence_to_infection <- function (incidence){
+incidence_to_infection <- function(incidence) {
   return(incidence * 3600000 / 100000 / 7)
 }
