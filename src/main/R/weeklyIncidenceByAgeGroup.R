@@ -50,13 +50,14 @@ Altersgruppen <- mutate(Altersgruppen, A60A79 = Altersgruppen$`60.bis.unter.65.J
 ListOfLandkreisIds <- unique(Rohdaten$IdLandkreis)
 ListOfAgeGroups <- unique(Rohdaten$Altersgruppe)
 
-for(Id in ListOfLandkreisIds){
+# for(Id in ListOfLandkreisIds){
+Id <- 5315
   if (Id == 11001 || Id == 11002 || Id == 11003 || Id == 11004 || Id == 11005 || Id == 11006 || Id == 11007 || Id == 11008 || Id == 11009 || Id == 11010 || Id == 11011 || Id == 11012){
-  subsetData <- filter(Rohdaten, between(IdLandkreis, 11001, 11012)) 
-  stadtname <- "Berlin"
-  Id <- 11000
+    subsetData <- filter(Rohdaten, between(IdLandkreis, 11001, 11012))
+    stadtname <- "Berlin"
+    Id <- 11000
   } else {
-  subsetData <- filter(Rohdaten, IdLandkreis == Id)
+    subsetData <- filter(Rohdaten, IdLandkreis == Id)
   }
   subsetData$Meldedatum <- as.Date(subsetData$Meldedatum)
   listMeldedaten <- sort(unique(subsetData$Meldedatum))
@@ -141,5 +142,12 @@ for(Id in ListOfLandkreisIds){
                           weeklySumA60A79, weeklySumA80plus, weeklySumAunbekannt, weeklyIncidenceA00A04, weeklyIncidenceA05A14,
                           weeklyIncidenceA15A34, weeklyIncidenceA35A59, weeklyIncidenceA60A79)
   TotalNoOfCasesAndWeeklyIncidence <- rbind(TotalNoOfCasesAndWeeklyIncidence, dataframe)
-}
+# }
+
+ggplot() + scale_y_log10(limits = c(30,600)) +
+  geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA05A14),color="red") +
+  geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA15A34),color="orange") +
+  geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA35A59),color="green") +
+  geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA60A79),color="blue") +
+  scale_x_date( date_breaks = "1 month", limits = as.Date(c('2021-08-01','2021-11-15')) )
 
