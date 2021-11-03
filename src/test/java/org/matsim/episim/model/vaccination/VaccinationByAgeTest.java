@@ -1,4 +1,4 @@
-package org.matsim.episim.model;
+package org.matsim.episim.model.vaccination;
 
 import org.junit.Before;
 import org.junit.Test;

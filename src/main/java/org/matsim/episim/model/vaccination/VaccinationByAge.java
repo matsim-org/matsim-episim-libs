@@ -16,11 +16,11 @@ import java.util.*;
  */
 public class VaccinationByAge implements VaccinationModel {
 
-	private final SplittableRandom rnd;
-	private final VaccinationConfigGroup vaccinationConfig;
+	protected final SplittableRandom rnd;
+	protected final VaccinationConfigGroup vaccinationConfig;
 
-	private final static int MAX_AGE = 130;
-	private final static int MINIMUM_AGE_FOR_VACCINATIONS = 0;
+	protected final static int MAX_AGE = 130;
+	protected final static int MINIMUM_AGE_FOR_VACCINATIONS = 0;
 
 	@Inject
 	public VaccinationByAge(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
