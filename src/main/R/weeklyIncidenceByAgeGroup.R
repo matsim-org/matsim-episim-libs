@@ -7,12 +7,16 @@ Rohdaten <- read.csv("https://github.com/robert-koch-institut/SARS-CoV-2_Infekti
 Landkreisnamen <- read.xlsx("https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/04-kreise.xlsx?__blob=publicationFile", sheet=2)
 
 #Preparing output
+# TotalNoOfCasesAndWeeklyIncidence <- data.frame(Datum=as.Date(character()), IdLandkreis = character(),
+#                                                NameLandkreis = character(), A00A04 = integer(), A05A14 = integer(),
+#                                                A15A34 = integer(), A35A59 = integer(), A60A79=integer(), A80plus=integer(),
+#                                                Aunbekannt=integer(), weeklyIncidenceA00A04=integer(), weeklyIncidenceA05A14=integer(),
+#                                                weeklyIncidenceA15A34=integer(), weeklyIncidenceA35A59=integer(),
+#                                                weeklyIncidenceA60A79=integer())
 TotalNoOfCasesAndWeeklyIncidence <- data.frame(Datum=as.Date(character()), IdLandkreis = character(),
-                        NameLandkreis = character(), A00A04 = integer(), A05A14 = integer(),
-                        A15A34 = integer(), A35A59 = integer(), A60A79=integer(), A80plus=integer(),
-                        Aunbekannt=integer(), weeklyIncidenceA00A04=integer(), weeklyIncidenceA05A14=integer(),
-                        weeklyIncidenceA15A34=integer(), weeklyIncidenceA35A59=integer(),
-                        weeklyIncidenceA60A79=integer())
+                                               NameLandkreis = character(), weeklyIncidenceA00A04=integer(), weeklyIncidenceA05A14=integer(),
+                                               weeklyIncidenceA15A34=integer(), weeklyIncidenceA35A59=integer(),
+                                               weeklyIncidenceA60A79=integer())
 
 
 #Preparing population numbers
@@ -51,7 +55,8 @@ ListOfLandkreisIds <- unique(Rohdaten$IdLandkreis)
 ListOfAgeGroups <- unique(Rohdaten$Altersgruppe)
 
 # for(Id in ListOfLandkreisIds){
-Id <- 5315
+Id <- 5315 # Köln
+# Id <- 11001 # Berlin
   if (Id == 11001 || Id == 11002 || Id == 11003 || Id == 11004 || Id == 11005 || Id == 11006 || Id == 11007 || Id == 11008 || Id == 11009 || Id == 11010 || Id == 11011 || Id == 11012){
     subsetData <- filter(Rohdaten, between(IdLandkreis, 11001, 11012))
     stadtname <- "Berlin"
@@ -62,13 +67,13 @@ Id <- 5315
   subsetData$Meldedatum <- as.Date(subsetData$Meldedatum)
   listMeldedaten <- sort(unique(subsetData$Meldedatum))
   
-  weeklySumA00A04 = {}
-  weeklySumA05A14 = {}
-  weeklySumA15A34 = {}
-  weeklySumA35A59 = {}
-  weeklySumA60A79 = {}
-  weeklySumA80plus = {}
-  weeklySumAunbekannt = {}
+  # weeklySumA00A04 = {}
+  # weeklySumA05A14 = {}
+  # weeklySumA15A34 = {}
+  # weeklySumA35A59 = {}
+  # weeklySumA60A79 = {}
+  # weeklySumA80plus = {}
+  # weeklySumAunbekannt = {}
   weeklyIncidenceA00A04 = {}
   weeklyIncidenceA05A14 = {}
   weeklyIncidenceA15A34 = {}
@@ -77,55 +82,59 @@ Id <- 5315
   datum ={}
   stadtname ={}
   rownumber={}
-  date = min(listMeldedaten)+days(7)
-  while(date <= max(listMeldedaten)){
+
+#date = min(listMeldedaten)+days(7)
+date = min(listMeldedaten)+days(11)
+# (what we would want is to start on the last date and go back by 7day steps (= weekly averaged).  kai, nov'21)
+
+while(date <= max(listMeldedaten)){
     datum <- append(datum, date)
     A00A04 <- filter(subsetData, Altersgruppe=="A00-A04") 
     A00A04 <- filter(A00A04, between(Meldedatum, date-days(7), date))
     SumAnzahl <- sum(A00A04$AnzahlFall)
     idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
     weeklyIncidenceA00A04 <- append(weeklyIncidenceA00A04,SumAnzahl/Altersgruppen$A00A04[idAltersgruppen]*100000)
-    weeklySumA00A04 <- append(weeklySumA00A04, SumAnzahl)
+    # weeklySumA00A04 <- append(weeklySumA00A04, SumAnzahl)
     
     
     A05A14 <- filter(subsetData, Altersgruppe=="A05-A14") 
     A05A14 <- filter(A05A14, between(Meldedatum, date-days(7), date))
     SumAnzahl <- sum(A05A14$AnzahlFall)
-    idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
+    # idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
     weeklyIncidenceA05A14 <- append(weeklyIncidenceA05A14,SumAnzahl/Altersgruppen$A05A14[idAltersgruppen]*100000)
-    weeklySumA05A14 <- append(weeklySumA05A14, SumAnzahl)
+    # weeklySumA05A14 <- append(weeklySumA05A14, SumAnzahl)
     
     
     A15A34 <- filter(subsetData, Altersgruppe=="A15-A34") 
     A15A34 <- filter(A15A34, between(Meldedatum, date-days(7), date))
     SumAnzahl <- sum(A15A34$AnzahlFall)
-    idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
+    # idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
     weeklyIncidenceA15A34 <- append(weeklyIncidenceA15A34,SumAnzahl/Altersgruppen$A15A34[idAltersgruppen]*100000)
-    weeklySumA15A34 <- append(weeklySumA15A34, SumAnzahl)
+    # weeklySumA15A34 <- append(weeklySumA15A34, SumAnzahl)
     
     A35A59 <- filter(subsetData, Altersgruppe=="A35-A59") 
     A35A59 <- filter(A35A59, between(Meldedatum, date-days(7), date))
     SumAnzahl <- sum(A35A59$AnzahlFall)
-    idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
+    # idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
     weeklyIncidenceA35A59 <- append(weeklyIncidenceA35A59,SumAnzahl/Altersgruppen$A35A59[idAltersgruppen]*100000)
-    weeklySumA35A59 <- append(weeklySumA35A59, SumAnzahl)
+    # weeklySumA35A59 <- append(weeklySumA35A59, SumAnzahl)
     
     A60A79 <- filter(subsetData, Altersgruppe=="A60-A79") 
     A60A79 <- filter(A60A79, between(Meldedatum, date-days(7), date))
     SumAnzahl <- sum(A60A79$AnzahlFall)
-    idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
+    # idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
     weeklyIncidenceA60A79 <- append(weeklyIncidenceA60A79,SumAnzahl/Altersgruppen$A60A79[idAltersgruppen]*100000)
-    weeklySumA60A79 <- append(weeklySumA60A79, SumAnzahl)
+    # weeklySumA60A79 <- append(weeklySumA60A79, SumAnzahl)
     
-    A80plus <- filter(subsetData, Altersgruppe=="A80+") 
-    A80plus <- filter(A80plus, between(Meldedatum, date-days(7), date))
-    SumAnzahl <- sum(A80plus$AnzahlFall)
-    weeklySumA80plus <- append(weeklySumA80plus, SumAnzahl)
+    # A80plus <- filter(subsetData, Altersgruppe=="A80+")
+    # A80plus <- filter(A80plus, between(Meldedatum, date-days(7), date))
+    # SumAnzahl <- sum(A80plus$AnzahlFall)
+    # weeklySumA80plus <- append(weeklySumA80plus, SumAnzahl)
     
-    Aunbekannt <- filter(subsetData, Altersgruppe=="unbekannt") 
-    Aunbekannt <- filter(Aunbekannt, between(Meldedatum, date-days(7), date))
-    SumAnzahl <- sum(Aunbekannt$AnzahlFall)
-    weeklySumAunbekannt <- append(weeklySumAunbekannt, SumAnzahl)
+    # Aunbekannt <- filter(subsetData, Altersgruppe=="unbekannt")
+    # Aunbekannt <- filter(Aunbekannt, between(Meldedatum, date-days(7), date))
+    # SumAnzahl <- sum(Aunbekannt$AnzahlFall)
+    # weeklySumAunbekannt <- append(weeklySumAunbekannt, SumAnzahl)
     
     date <- date+days(1)
     
@@ -138,16 +147,18 @@ Id <- 5315
     landkreisId <- rep(Id, length(datum))
     nameLandkreis <- rep(stadtname, length(datum))
   }
-  dataframe <- data.frame(datum, landkreisId, nameLandkreis, weeklySumA00A04, weeklySumA05A14, weeklySumA15A34, weeklySumA35A59,
-                          weeklySumA60A79, weeklySumA80plus, weeklySumAunbekannt, weeklyIncidenceA00A04, weeklyIncidenceA05A14,
-                          weeklyIncidenceA15A34, weeklyIncidenceA35A59, weeklyIncidenceA60A79)
-  TotalNoOfCasesAndWeeklyIncidence <- rbind(TotalNoOfCasesAndWeeklyIncidence, dataframe)
+# dataframe <- data.frame(datum, landkreisId, nameLandkreis, weeklySumA00A04, weeklySumA05A14, weeklySumA15A34, weeklySumA35A59,
+#                         weeklySumA60A79, weeklySumA80plus, weeklySumAunbekannt, weeklyIncidenceA00A04, weeklyIncidenceA05A14,
+#                         weeklyIncidenceA15A34, weeklyIncidenceA35A59, weeklyIncidenceA60A79)
+dataframe <- data.frame(datum, landkreisId, nameLandkreis, weeklyIncidenceA00A04, weeklyIncidenceA05A14,
+                        weeklyIncidenceA15A34, weeklyIncidenceA35A59, weeklyIncidenceA60A79)
+TotalNoOfCasesAndWeeklyIncidence <- rbind(TotalNoOfCasesAndWeeklyIncidence, dataframe)
 # }
 
 ggplot() + scale_y_log10(limits = c(30,600)) +
-  geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA05A14),color="red") +
+  geom_point( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA05A14),color="red") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA15A34),color="orange") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA35A59),color="green") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA60A79),color="blue") +
-  scale_x_date( date_breaks = "1 month", limits = as.Date(c('2021-08-01','2021-11-15')) )
+  scale_x_date( date_breaks = "2 weeks", limits = as.Date(c('2021-08-01','2021-11-15')) )
 
