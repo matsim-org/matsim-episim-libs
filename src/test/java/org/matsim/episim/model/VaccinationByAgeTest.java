@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.model.vaccination.VaccinationByAge;
 
 import java.time.LocalDate;
 import java.util.HashMap;

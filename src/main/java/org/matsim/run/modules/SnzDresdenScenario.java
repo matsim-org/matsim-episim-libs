@@ -31,6 +31,8 @@ import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionMo
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.testing.TestType;
+import org.matsim.episim.model.vaccination.VaccinationByAge;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 

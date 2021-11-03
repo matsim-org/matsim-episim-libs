@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 
 import java.time.LocalDate;
 import java.util.EnumMap;
@@ -15,7 +16,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
- * Config option specific to vaccination and measures performed in {@link org.matsim.episim.model.VaccinationModel}.
+ * Config option specific to vaccination and measures performed in {@link VaccinationModel}.
  */
 public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
@@ -26,6 +27,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String CAPACITY = "vaccinationCapacity";
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
+	private static final String FROM_FILE = "vaccinationFile";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -44,6 +46,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Share of vaccination for the different {@link VaccinationType}.
 	 */
 	private final NavigableMap<LocalDate, Map<VaccinationType, Double>> vaccinationShare = new TreeMap<>(Map.of(LocalDate.EPOCH, Map.of(VaccinationType.generic, 1d)));
+
+	/**
+	 * Load vaccinations from file instead.
+	 */
+	private String fromFile;
 
 	/**
 	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
@@ -177,6 +184,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(CAPACITY)
 	String getVaccinationCapacityString() {
 		return JOINER.join(vaccinationCapacity);
+	}
+
+	@StringSetter(FROM_FILE)
+	public void setFromFile(String fromFile) {
+		this.fromFile = fromFile;
+	}
+
+	@StringGetter(FROM_FILE)
+	public String getFromFile() {
+		return fromFile;
 	}
 
 	/**

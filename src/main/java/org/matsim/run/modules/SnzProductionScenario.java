@@ -13,6 +13,8 @@ import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.vaccination.VaccinationByAge;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.vehicles.VehicleType;
 

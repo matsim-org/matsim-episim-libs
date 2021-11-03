@@ -38,6 +38,8 @@ import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.model.vaccination.RandomVaccination;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.reporting.AsyncEpisimWriter;

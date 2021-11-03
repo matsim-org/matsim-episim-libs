@@ -43,6 +43,7 @@ import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -53,7 +54,6 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.lang.invoke.VarHandle;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -512,6 +512,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
 		}
+
+		vaccinationModel.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
 
 		balanceContainersByLoad(estimatedLoad);
 
