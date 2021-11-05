@@ -35,6 +35,7 @@ import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.episim.model.vaccination.VaccinationFromData;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -56,7 +57,7 @@ import java.util.function.BiFunction;
  */
 public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
-	public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario>{
+	public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario> {
 
 		private double leisureOffset = 0.0;
 		private double scale = 1.0;
@@ -64,6 +65,9 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		private double leisureNightlyScale = 1.0;
 		private double householdSusc = 1.0;
 
+		public Builder() {
+			this.vaccinationModel = VaccinationFromData.class;
+		}
 
 		@Override
 		public SnzCologneProductionScenario build() {
@@ -354,6 +358,12 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 			SnzProductionScenario.configureVaccines(vaccinationConfig, 2_352_480);
 
+			if (vaccinationModel.equals(VaccinationFromData.class)) {
+				// Compliance and capacity will come from data
+				vaccinationConfig.setCompliancePerAge(Map.of(0, 1.0));
+				vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(LocalDate.EPOCH, 0));
+				vaccinationConfig.setFromFile(INPUT.resolve("cologneVaccinations.csv").toString());
+			}
 		}
 
 
