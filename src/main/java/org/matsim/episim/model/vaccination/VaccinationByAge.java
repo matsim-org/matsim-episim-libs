@@ -54,7 +54,7 @@ public class VaccinationByAge implements VaccinationModel {
 
 	@Override
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
-		if (availableVaccinations == 0)
+		if (availableVaccinations <= 0)
 			return 0;
 
 		Map<VaccinationType, Double> prob = vaccinationConfig.getVaccinationTypeProb(date);

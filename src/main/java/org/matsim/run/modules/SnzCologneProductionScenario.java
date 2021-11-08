@@ -361,7 +361,9 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			if (vaccinationModel.equals(VaccinationFromData.class)) {
 				// Compliance and capacity will come from data
 				vaccinationConfig.setCompliancePerAge(Map.of(0, 1.0));
-				vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of(LocalDate.EPOCH, 0));
+
+				vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of());
+
 				vaccinationConfig.setFromFile(INPUT.resolve("cologneVaccinations.csv").toString());
 			}
 		}
