@@ -115,7 +115,8 @@ public class VaccinationFromData extends VaccinationByAge {
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
 
 		// If available vaccination is given, data will be ignored and vaccination by age executed
-		if (availableVaccinations >= 0)
+		// TODO: handle revaccination after update
+		if (availableVaccinations >= 0 || reVaccination)
 			return super.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
 
 		DoubleList entry = EpisimUtils.findValidEntry(entries, null, date);
