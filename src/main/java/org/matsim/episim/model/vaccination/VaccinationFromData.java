@@ -68,18 +68,9 @@ public class VaccinationFromData extends VaccinationByAge {
 
 				} else if (header.endsWith("+")) {
 
-					String s = header.substring(0, header.length() - 1);
-
-					ageGroups.add(new AgeGroup(i, Integer.parseInt(s), MAX_AGE - 1));
-				}
-
-				i++;
-			}
-
-			for (CSVRecord record : parser) {
-
-				LocalDate date = LocalDate.parse(record.get("date"));
-				DoubleList values = new DoubleArrayList(ageGroups.size());
+			mergeData(filtered, entries, "12-17", 54587.2, 0);
+			mergeData(filtered, entries, "18-59", 676995, 1);
+			mergeData(filtered, entries, "60+", 250986, 2);
 
 				for (AgeGroup ag : ageGroups) {
 					values.add(Double.parseDouble(record.get(ag.index)));
