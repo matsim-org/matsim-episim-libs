@@ -179,6 +179,54 @@ public class VaccinationFromData extends VaccinationByAge {
 		return totalVaccinations;
 	}
 
+	static Table filterData(Table table, String ageGroup, double population) {
+		LocalDate startDate = LocalDate.of(2020, 12, 27);;
+		LocalDate endDate =  LocalDate.now();
+		List<LocalDate> dates = startDate.datesUntil(endDate).collect(Collectors.toList());
+
+		Selection selection = table.stringColumn("Altersgruppe").isEqualTo(ageGroup);
+		Table data = table.where(selection);
+		for(LocalDate date : dates ){
+			DateColumn thisDate = data.dateColumn("Impfdatum");
+			Selection thisDateSelection = thisDate.isEqualTo(date);
+			Table thisDateTable = data.where(thisDateSelection);
+			if(thisDateTable.rowCount()==0){
+				Table singlerow = data.emptyCopy(1);
+				for (Row row : singlerow) {
+					row.setDate("Impfdatum", date);
+					row.setString("LandkreisId_Impfort", "05315");
+					row.setString("Altersgruppe", ageGroup);
+					row.setInt("Impfschutz", 1);
+					row.setInt("Anzahl", 0);
+				}
+				data.append(singlerow);
+			}
+		}
+		data.sortAscendingOn("Impfdatum");
+		DoubleColumn cumsumAnzahl = data.intColumn("Anzahl").cumSum();
+		DoubleColumn quota = cumsumAnzahl.divide(population);
+		quota.setName(ageGroup);
+		data.addColumns(quota);
+		data.removeColumns("Impfschutz", "LandkreisId_Impfort", "Altersgruppe", "Anzahl");
+		data.column("Impfdatum").setName("date");
+
+		// TODO: fill missing dates with previous values
+		// or with zeros before cum sum
+		// Comment 11/10: Zeros have been added!
+
+
+		return data;
+	}
+
+	static void mergeData(Table filtered, TreeMap<LocalDate, DoubleList> entries, String ageGroup, double population, int i) {
+		for (Row row : filterData(filtered, ageGroup, population)) {
+			LocalDate date = row.getDate(0);
+			DoubleList values = entries.computeIfAbsent(date, (k) -> new DoubleArrayList(new double[]{0, 0, 0}));
+
+			values.set(i, row.getDouble(1));
+		}
+	}
+
 	private static final class AgeGroup {
 
 		private final int index;
