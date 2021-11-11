@@ -202,7 +202,7 @@ public class VaccinationFromData extends VaccinationByAge {
 				data.append(singlerow);
 			}
 		}
-		data.sortAscendingOn("Impfdatum");
+		data = data.sortAscendingOn("Impfdatum");
 		DoubleColumn cumsumAnzahl = data.intColumn("Anzahl").cumSum();
 		DoubleColumn quota = cumsumAnzahl.divide(population);
 		quota.setName(ageGroup);
