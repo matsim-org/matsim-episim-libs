@@ -5,7 +5,6 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.units.qual.A;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
@@ -21,13 +20,11 @@ import tech.tablesaw.selection.Selection;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.URL;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static tech.tablesaw.api.ColumnType.*;
-import static tech.tablesaw.api.ColumnType.INTEGER;
 
 /**
  * Read vaccination from file for each age group.
@@ -102,8 +99,12 @@ public class VaccinationFromData extends VaccinationByAge {
 			throw new UncheckedIOException(e);
 		}
 
-		// TODO: fill age group and entries
-
+		// collect population sizes
+		for (EpisimPerson p : persons.values()) {
+			AgeGroup ag = findAgeGroup(p.getAge());
+			if (ag != null)
+				ag.size++;
+		}
 
 		log.info("Using age-groups: {}", ageGroups);
 	}
@@ -124,7 +125,12 @@ public class VaccinationFromData extends VaccinationByAge {
 		if (availableVaccinations >= 0)
 			return super.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
 
-		DoubleList entry = EpisimUtils.findValidEntry(entries, null, date);
+		DoubleList entry;
+
+		if (reVaccination)
+			entry = EpisimUtils.findValidEntry(booster, null, date);
+		else
+			entry = EpisimUtils.findValidEntry(entries, null, date);
 
 		// No vaccinations today
 		if (entry == null)
@@ -146,13 +152,16 @@ public class VaccinationFromData extends VaccinationByAge {
 
 			if (ag == null) continue;
 
-			if (p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
+			if (p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes && (!reVaccination || p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)) {
 				ag.vaccinated++;
 				continue;
 			}
 
 			if (p.isVaccinable() && p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
-					!p.isRecentlyRecovered(iteration) && p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
+					//!p.isRecentlyRecovered(iteration) &&
+					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &&
+					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)
+			) {
 				perAge[p.getAge()].add(p);
 			}
 		}
@@ -180,7 +189,7 @@ public class VaccinationFromData extends VaccinationByAge {
 
 				for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
 					EpisimPerson person = candidates.get(i);
-					vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd), reVaccination);
+					vaccinate(person, iteration, reVaccination ? null : VaccinationModel.chooseVaccinationType(prob, rnd), reVaccination);
 					vaccinationsLeft--;
 					totalVaccinations++;
 				}
@@ -195,23 +204,24 @@ public class VaccinationFromData extends VaccinationByAge {
 	}
 
 	static Table filterData(Table table, String ageGroup, double population) {
-		LocalDate startDate = LocalDate.of(2020, 12, 27);;
-		LocalDate endDate =  LocalDate.now();
-		List<LocalDate> dates = startDate.datesUntil(endDate).collect(Collectors.toList());
 
 		Selection selection = table.stringColumn("Altersgruppe").isEqualTo(ageGroup);
 		Table data = table.where(selection);
-		for(LocalDate date : dates ){
-			DateColumn thisDate = data.dateColumn("Impfdatum");
-			Selection thisDateSelection = thisDate.isEqualTo(date);
+
+		DateColumn dateColumn = data.dateColumn("Impfdatum");
+
+		LocalDate startDate = dateColumn.min();
+		LocalDate endDate = dateColumn.max();
+		List<LocalDate> dates = startDate.datesUntil(endDate).collect(Collectors.toList());
+
+		for (LocalDate date : dates) {
+			Selection thisDateSelection = dateColumn.isEqualTo(date);
 			Table thisDateTable = data.where(thisDateSelection);
-			if(thisDateTable.rowCount()==0){
+			if (thisDateTable.rowCount() == 0) {
 				Table singlerow = data.emptyCopy(1);
 				for (Row row : singlerow) {
 					row.setDate("Impfdatum", date);
-					row.setString("LandkreisId_Impfort", "05315");
 					row.setString("Altersgruppe", ageGroup);
-					row.setInt("Impfschutz", 1);
 					row.setInt("Anzahl", 0);
 				}
 				data.append(singlerow);

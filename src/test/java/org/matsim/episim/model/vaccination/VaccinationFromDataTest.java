@@ -70,13 +70,23 @@ public class VaccinationFromDataTest {
 
 	@Test
 	public void vaccination() {
-		
+
 		assertThat(persons.values())
 				.allMatch(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no);
-		
-		model.handleVaccination(persons, false, 0, LocalDate.of(2021,6, 1), 1, 0);
+
+		model.handleVaccination(persons, false, -1, LocalDate.of(2021,5, 14), 1, 0);
 
 		long vaccinated = persons.values().stream().filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
+
+		assertThat(vaccinated)
+				.isEqualTo(511);
+
+		model.handleVaccination(persons, true, -1, LocalDate.of(2021,10, 14), 180, 0);
+
+		long reVaccinated = persons.values().stream().filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
+
+		assertThat(reVaccinated)
+				.isEqualTo(24);
 
 
 	}
