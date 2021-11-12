@@ -41,9 +41,16 @@ public class VaccinationFromData extends VaccinationByAge {
 	 */
 	private TreeMap<LocalDate, DoubleList> entries = null;
 
+	/**
+	 * Fallback to random vaccinations.
+	 */
+	private final RandomVaccination random;
+
 	@Inject
 	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
 		super(rnd, vaccinationConfig);
+
+		random = new RandomVaccination(rnd, vaccinationConfig);
 	}
 
 	@Override
@@ -117,7 +124,10 @@ public class VaccinationFromData extends VaccinationByAge {
 		// If available vaccination is given, data will be ignored and vaccination by age executed
 		// TODO: handle revaccination after update
 		if (availableVaccinations >= 0 || reVaccination)
-			return super.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
+			if (reVaccination)
+				return super.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
+			else
+				return random.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
 
 		DoubleList entry = EpisimUtils.findValidEntry(entries, null, date);
 
