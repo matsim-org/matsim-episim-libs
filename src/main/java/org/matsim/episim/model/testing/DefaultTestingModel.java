@@ -32,6 +32,8 @@ public class DefaultTestingModel implements TestingModel {
 	 */
 	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
 
+	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
+
 	/**
 	 * Ids of households that are not compliant.
 	 */
@@ -66,7 +68,7 @@ public class DefaultTestingModel implements TestingModel {
 
 			this.testingCapacity.put(params.getType(), testingCapacity);
 			this.testingRateForActivities.put(params.getType(), params.getDailyTestingRateForActivities(date));
-
+			this.testingRateForActivitiesVaccinated.put(params.getType(), params.getDailyTestingRateForActivitiesVaccinated(date));
 		}
 	}
 
@@ -118,9 +120,10 @@ public class DefaultTestingModel implements TestingModel {
 			return;
 
 		// vaccinated and recovered persons are not tested
-		if (!testAllPersons & (person.isRecentlyRecovered(day) || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
-						person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect()))
-		)
+		boolean fullyVaccinated = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
+				person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
+
+		if (!testAllPersons & (person.isRecentlyRecovered(day) || fullyVaccinated))
 			return;
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
@@ -133,18 +136,21 @@ public class DefaultTestingModel implements TestingModel {
 			// update is run at end of day, the test needs to be for the next day
 			DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
 
+			// Choose testing rate depending on vaccination status
+			Object2DoubleMap<String> useRate = fullyVaccinated ? testingRateForActivitiesVaccinated.get(type) : testingRateForActivities.get(type);
+
 			if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_DAYS && params.getTestDays().contains(dow)) {
 				testAndQuarantine(person, day, params, params.getTestingRate());
 			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.ACTIVITIES) {
 
 				double rate = person.matchActivities(dow, testingConfig.getActivities(),
-						(act, v) -> Math.max(v, testingRateForActivities.get(type).getOrDefault(act, params.getTestingRate())), 0d);
+						(act, v) -> Math.max(v, useRate.getOrDefault(act, params.getTestingRate())), 0d);
 
 				testAndQuarantine(person, day, params, rate);
 			} else if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.FIXED_ACTIVITIES && params.getTestDays().contains(dow)) {
 
 				double rate = person.matchActivities(dow, testingConfig.getActivities(),
-						(act, v) -> Math.max(v, testingRateForActivities.get(type).getOrDefault(act, params.getTestingRate())), 0d);
+						(act, v) -> Math.max(v, useRate.getOrDefault(act, params.getTestingRate())), 0d);
 
 				testAndQuarantine(person, day, params, rate);
 			}
