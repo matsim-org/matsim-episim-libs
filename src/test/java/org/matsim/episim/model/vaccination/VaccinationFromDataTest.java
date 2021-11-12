@@ -65,16 +65,18 @@ public class VaccinationFromDataTest {
 
 		model = new VaccinationFromData(rnd, config);
 
-		// TODO Comment in when ready
-
-		//model.init(rnd, persons, null, null);
+		model.init(rnd, persons, null, null);
 	}
 
 	@Test
 	public void vaccination() {
+		
+		assertThat(persons.values())
+				.allMatch(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no);
+		
+		model.handleVaccination(persons, false, 0, LocalDate.of(2021,6, 1), 1, 0);
 
-		// TODO:
-		//model.handleVaccination(persons, false, 0, LocalDate.now(), 1, 0);
+		long vaccinated = persons.values().stream().filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
 
 
 	}
