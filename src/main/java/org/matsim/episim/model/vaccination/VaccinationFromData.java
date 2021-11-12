@@ -24,6 +24,7 @@ import java.io.UncheckedIOException;
 import java.net.URL;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static tech.tablesaw.api.ColumnType.*;
 import static tech.tablesaw.api.ColumnType.INTEGER;
@@ -194,10 +195,29 @@ public class VaccinationFromData extends VaccinationByAge {
 	}
 
 	static Table filterData(Table table, String ageGroup, double population) {
+		LocalDate startDate = LocalDate.of(2020, 12, 27);;
+		LocalDate endDate =  LocalDate.now();
+		List<LocalDate> dates = startDate.datesUntil(endDate).collect(Collectors.toList());
 
 		Selection selection = table.stringColumn("Altersgruppe").isEqualTo(ageGroup);
 		Table data = table.where(selection);
-		data.sortAscendingOn("Impfdatum");
+		for(LocalDate date : dates ){
+			DateColumn thisDate = data.dateColumn("Impfdatum");
+			Selection thisDateSelection = thisDate.isEqualTo(date);
+			Table thisDateTable = data.where(thisDateSelection);
+			if(thisDateTable.rowCount()==0){
+				Table singlerow = data.emptyCopy(1);
+				for (Row row : singlerow) {
+					row.setDate("Impfdatum", date);
+					row.setString("LandkreisId_Impfort", "05315");
+					row.setString("Altersgruppe", ageGroup);
+					row.setInt("Impfschutz", 1);
+					row.setInt("Anzahl", 0);
+				}
+				data.append(singlerow);
+			}
+		}
+		data = data.sortAscendingOn("Impfdatum");
 		DoubleColumn cumsumAnzahl = data.intColumn("Anzahl").cumSum();
 		DoubleColumn quota = cumsumAnzahl.divide(population);
 		quota.setName(ageGroup);
