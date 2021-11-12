@@ -147,7 +147,8 @@ public class VaccinationFromData extends VaccinationByAge {
 			}
 
 			if (p.isVaccinable() && p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
-					!p.isRecentlyRecovered(iteration) && p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
+//					!p.isRecentlyRecovered(iteration) && 
+					p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
 				perAge[p.getAge()].add(p);
 			}
 		}
