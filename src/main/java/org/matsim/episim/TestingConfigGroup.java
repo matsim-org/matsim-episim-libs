@@ -33,6 +33,7 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	private static final String ACTIVITIES = "activities";
 	private static final String STRATEGY = "strategy";
 	private static final String TEST_ALL_PERSONS_AFTER = "testAllPersonsAfter";
+	private static final String STOP_TEST_BOOSTER_AFTER = "stopTestBoosterAfter";
 	private static final String ACTIVITY_CAPACITIES = "activityCapacities";
 
 	private static final String GROUPNAME = "episimTesting";
@@ -51,6 +52,11 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	 * Test all persons after this date
 	 */
 	private LocalDate testAllPersonsAfter = null;
+
+	/**
+	 * Stop testing persons with booster vaccine after some date.
+	 */
+	private LocalDate stopTestBoosterAfter = null;
 
 	/**
 	 * Activities to test when using {@link Strategy#ACTIVITIES}.
@@ -406,6 +412,20 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(TEST_ALL_PERSONS_AFTER)
 	public LocalDate getTestAllPersonsAfter() {
 		return testAllPersonsAfter;
+	}
+
+	@StringSetter(STOP_TEST_BOOSTER_AFTER)
+	void setStopTestBoosterAfter(String value) {
+		this.stopTestBoosterAfter = LocalDate.parse(value);
+	}
+
+	public void setStopTestBoosterAfter(LocalDate stopTestBoosterAfter) {
+		this.stopTestBoosterAfter = stopTestBoosterAfter;
+	}
+
+	@StringGetter(STOP_TEST_BOOSTER_AFTER)
+	public LocalDate getStopTestBoosterAfter() {
+		return stopTestBoosterAfter;
 	}
 
 	@StringGetter(ACTIVITY_CAPACITIES)

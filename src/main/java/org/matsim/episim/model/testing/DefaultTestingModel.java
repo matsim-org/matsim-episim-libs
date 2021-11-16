@@ -44,6 +44,11 @@ public class DefaultTestingModel implements TestingModel {
 	 */
 	private boolean testAllPersons;
 
+	/**
+	 * Don't test person with booster.
+	 */
+	private boolean withOutBooster;
+
 	@Inject
 	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
 		this.rnd = rnd;
@@ -59,6 +64,7 @@ public class DefaultTestingModel implements TestingModel {
 		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
 
 		testAllPersons = testingConfig.getTestAllPersonsAfter() != null && date.isAfter(testingConfig.getTestAllPersonsAfter());
+		withOutBooster = testingConfig.getStopTestBoosterAfter() != null && date.isAfter(testingConfig.getStopTestBoosterAfter());
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
 
@@ -123,7 +129,10 @@ public class DefaultTestingModel implements TestingModel {
 		boolean fullyVaccinated = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
 				person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
 
-		if (!testAllPersons & (person.isRecentlyRecovered(day) || fullyVaccinated))
+		if (!testAllPersons && (person.isRecentlyRecovered(day) || fullyVaccinated))
+			return;
+
+		if (withOutBooster && person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)
 			return;
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
