@@ -103,28 +103,23 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 	private final String TOTAL = "total";
 
-
-	/**
-	 * Constructor from config.
-	 */
 	@Inject
-	public AdaptivePolicy(@Named("policy") Config policyConfig, Injector injector) {
+	AdaptivePolicy(@Named("policy") Config policyConfig, org.matsim.core.config.Config config) {
 		this(policyConfig);
-		org.matsim.core.config.Config config = injector.getInstance(org.matsim.core.config.Config.class);
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		this.subdistricts = episimConfig.getDistricts();
 	}
 
-	/**
-	 * Constructor from config.
-	 */
 
-	public AdaptivePolicy(Config config, List<String> subdistricts) {
-		this(config);
+	AdaptivePolicy(Config policyConfig, List<String> subdistricts) {
+		this(policyConfig);
 		this.subdistricts = subdistricts;
 	}
 
-	public AdaptivePolicy(Config config) {
+	/**
+	 * Constructor from config.
+	 */
+	AdaptivePolicy(Config config) {
 		super(config);
 		incidenceTriggers = config.getConfig("incidences");
 		restrictedPolicy = config.getConfig("restricted-policy");
@@ -148,6 +143,9 @@ public class AdaptivePolicy extends ShutdownPolicy {
 
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
+
+		//		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(xxxConfig, EpisimConfigGroup.class);
+		//		this.subdistricts = episimConfig.getDistricts();
 
 		// for restriction scope of global and local:
 		restrictionStatus.putIfAbsent(TOTAL, new HashMap<>());

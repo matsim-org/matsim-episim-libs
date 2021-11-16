@@ -16,8 +16,8 @@ library(rgdal)
 #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### #### ####
 #### Living Area per Person
 rm(list = ls())
-LOR_shape <-  #LOR_SHP_2021/lor_plr.shp"
-  bzk <- st_read("D:/Dropbox/Documents/VSP/bezirke/bezirksgrenzen.shp")
+# LOR_shape <-  #LOR_SHP_2021/lor_plr.shp"
+bzk <- st_read("D:/Dropbox/Documents/VSP/bezirke/bezirksgrenzen.shp")
 lor <- st_read("D:/Dropbox/Documents/VSP/LOR_SHP_2015/RBS_OD_LOR_2015_12.shp") %>%
   rename(PLR_ID = PLR)
 
@@ -26,7 +26,7 @@ mss2019 <- read_excel("D:/Dropbox/Documents/VSP/4.1.KontextInd_Anteile_PLR_MSS20
   rename(PLR_ID = Planungsraum,
          PLR_NAME = ...2,
          EW = "EW          31.12.2018") %>%
-  select(- "...4") %>%
+  select(-"...4") %>%
   filter(grepl("^[0-9][0-9]{1,}[0-9]$", PLR_ID))
 
 #K15 : Wohnfläche: Wohnfläche in m² je Einwohnerinnen und Einwohner am 31.12.2018
@@ -36,7 +36,7 @@ k15 <- mss2019 %>%
   select(contains("PLR"), EW, "K 15") %>%
   rename("m2pp" = "K 15")
 
-joined <- lor %>% left_join(k15,by= "PLR_ID")
+joined <- lor %>% left_join(k15, by = "PLR_ID")
 
 joined$m2pp[joined$m2pp == 0] <- NA
 
@@ -45,13 +45,45 @@ joined$m2pp[joined$m2pp == 0] <- NA
 
 # antiiiiii <- lor %>% anti_join(k15, by = "PLR_ID")
 
-tmap_mode("view")
-tm_basemap(leaflet::providers$OpenStreetMap) +
-  tm_shape(joined %>% rename("m2 pro Person" = m2pp))+
-  tm_polygons(col = "m2 pro Person", id = "PLRNAME", palette = viridis(9), alpha = 0.85) +
-  tm_shape(bzk) +
-  tm_borders(col= "blue")+
-  tm_layout(title = "Wohnraum pro Planungsraum, Stand 2018")
+bzk_mod <- bzk %>%
+  mutate(Gemeinde_n = str_replace(Gemeinde_n, "Tempelhof-Schöneberg", "Tempelhof-\nSchöneberg\n\n\n\n")) %>%
+  mutate(Gemeinde_n = str_replace(Gemeinde_n, "Marzahn-Hellersdorf", "Marzahn-\nHellersdorf")) %>%
+  mutate(Gemeinde_n = str_replace(Gemeinde_n, "Charlottenburg-Wilmersdorf", "Charlottenburg-\nWilmersdorf")) %>%
+  mutate(Gemeinde_n = str_replace(Gemeinde_n, "Friedrichshain-Kreuzberg", "Friedrichshain-\nKreuzberg"))
+
+
+tmap_mode("plot")
+plot_m2_lor <- tm_basemap(leaflet::providers$OpenStreetMap) +
+  tm_shape(joined %>% rename("m2 per Person" = m2pp)) +
+  tm_polygons(col = "m2 per Person", id = "PLRNAME", palette = viridis(9), alpha = 0.9) +
+  tm_shape(bzk_mod) +
+  tm_borders(col = "red", lwd = 3) +
+  tm_text("Gemeinde_n", size = 0.65, fontface = "bold")+
+  tm_layout(frame = FALSE)
+# tm_layout(title = "Wohnraum pro Planungsraum, Stand 2018")
+
+plot_m2_lor
+tmap_save(plot_m2_lor, filename = paste0(gbl_image_output, "m2_lor.png"), width = 16, height = 12, units = "cm")
+tmap_save(plot_m2_lor, filename = paste0(gbl_image_output, "m2_lor.pdf"), width = 16, height = 12, units = "cm")
+
+
+regions2 <- joined %>%
+  group_by(BEZNAME) %>%
+  summarize(pop = sum(EW, na.rm = TRUE), totM2 = sum(EW * m2pp, na.rm = TRUE)) %>%
+  mutate(avg = totM2 / pop)
+
+plot_m2_bzk <- tm_basemap(leaflet::providers$OpenStreetMap) +
+  tm_shape(regions2 %>% rename("m2 per Person" = avg)) +
+  tm_polygons(col = "m2 per Person", id = "BEZNAME", palette = viridis(9), alpha = 0.9) +
+  tm_shape(bzk_mod) +
+  tm_borders(col = "red", lwd = 3) +
+  tm_text("Gemeinde_n", size = 0.65, fontface = "bold") +
+  tm_layout(frame = FALSE)
+plot_m2_bzk
+
+tmap_save(plot_m2_bzk, filename = paste0(gbl_image_output, "m2_bzk.png"), width = 16, height = 12, units = "cm")
+tmap_save(plot_m2_bzk, filename = paste0(gbl_image_output, "m2_bzk.pdf"), width = 16, height = 12, units = "cm")
+
 
 #####
 

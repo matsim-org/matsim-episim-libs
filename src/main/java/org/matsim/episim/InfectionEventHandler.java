@@ -736,17 +736,19 @@ public final class InfectionEventHandler implements Externalizable {
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
 
+		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			reporting.writeInfections(reportsLocal, districtLevelAttribute);
+		}
+
 		if (policy instanceof AdaptivePolicy && policy.getConfig().getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
-			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, episimConfig.getDistrictLevelRestrictionsAttribute());
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
 			((AdaptivePolicy) policy).updateRestrictions(reportsLocal, im);
 		} else {
 			policy.updateRestrictions(report, im);
 		}
 
-		if (episimConfig.getDistrictLevelRestrictions() != EpisimConfigGroup.DistrictLevelRestrictions.no) {
-			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, episimConfig.getDistrictLevelRestrictionsAttribute());
-			reporting.writeInfections(reportsLocal, episimConfig.getDistrictLevelRestrictionsAttribute());
-		}
 
 		if (policy instanceof AdaptivePolicy) {
 			Map<String, Map<String, AdaptivePolicy.RestrictionStatus>> restrictionStatus = ((AdaptivePolicy) policy).getRestrictionStatus();

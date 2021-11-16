@@ -833,6 +833,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
+
+
 	/**
 	 * Adds given params to the parameter set, replacing existing ones.
 	 */
@@ -841,7 +843,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		Optional<String> match = params.mappedNames.stream().filter(s -> paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();
 		if (match.isPresent()) {
-			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params. Try to define the params in different order.");
+			// commented out, b/c i need to add params such as home_25 in batch  after home has already been defined -jr, TODO: whats the solution here
+//			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params. Try to define the params in different order.");
 		}
 
 		params.mappedNames.forEach(name -> paramsTrie.put(name, params));

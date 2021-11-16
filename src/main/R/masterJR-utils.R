@@ -69,6 +69,38 @@
 #   return(episim_final)
 # }
 
+convert_infections_into_incidence <- function(directory, infections_raw, aggregate_seeds) {
+  run_params <- get_run_parameters(directory)
+  infections <- infections_raw %>%
+    select(date, nShowingSymptomsCumulative, nSusceptible, district, run_params) %>%
+    filter(district != "unknown") %>%
+    arrange(date) %>%
+    group_by(district, across(run_params)) %>%
+    mutate(infections_1dayAgo = lag(nShowingSymptomsCumulative, default = 0, order_by = date)) %>%
+    mutate(infections_7daysAgo = lag(nShowingSymptomsCumulative, default = 0, n = 7, order_by = date)) %>%
+    mutate(infections = nShowingSymptomsCumulative - infections_1dayAgo) %>%
+    mutate(infections_week = nShowingSymptomsCumulative - infections_7daysAgo) %>%
+    mutate(population = first(nSusceptible)) %>%
+    mutate(incidence = infections_week / population * 100000) %>%
+    ungroup() %>%
+    select(-c(population, infections_1dayAgo, infections_7daysAgo, nSusceptible)) %>%
+    arrange(date)
+
+  if(aggregate_seeds == FALSE){
+    return(infections)
+  }
+
+  infections_aggregated <- infections %>%
+    group_by(across(-c(nShowingSymptomsCumulative, infections, infections_week, incidence, seed))) %>%
+    summarise(infections = mean(infections),
+              nShowingSymptomsCumulative = mean(nShowingSymptomsCumulative),
+              infections_week = mean(infections_week),
+              incidence = mean(incidence))
+  return(infections_aggregated)
+
+}
+
+
 geolocate_infections <- function(infections_raw, facilities_to_district_map) {
 
   # read facilities
@@ -129,6 +161,13 @@ geolocate_infections <- function(infections_raw, facilities_to_district_map) {
 #
 #   }
 # }
+
+get_run_parameters <- function(directory){
+  info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
+  col_names <- colnames(info_df)
+  run_params <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
+  return(run_params)
+}
 
 read_combine_episim_output <- function(directory, file_root, allow_missing_files) {
 
@@ -205,8 +244,7 @@ read_and_process_new_rki_data_incidenz <- function(filename) {
 
 
   rki_berlin <- rki_berlin %>%
-    rename(district = LK) %>%
-    mutate(cases = cases / 7)
+    rename(district = LK, incidence = cases)
 
   return(rki_berlin)
 }
@@ -284,6 +322,29 @@ merge_tidy_average <- function(episim_all_runs, rki_new, rki_old) {
     select(!c(week, year))
 
   return(merged_weekly)
+
+
+  ### Plotting functions
+  build_plot <- function(df, scale_colors) {
+    plot <- ggplot(df) +
+      geom_line(aes(date, incidence, col = Scenario)) +
+      theme_minimal(base_size = 11) +
+      theme(legend.position = "bottom", axis.text.x = element_text(angle = 90)) +
+      labs(x = "Date", y = "7-Day Infections / 100k Pop.") +
+      scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+      facet_wrap(~district, ncol = 3) +
+      scale_color_manual(values = scale_colors)
+
+    print(plot)
+
+    return(plot)
+  }
+
+  save_png_pdf <- function(.data, name) {
+    # print(.data)
+    ggsave(.data, filename = paste0(name, ".png"), path = gbl_image_output, width = 16, height = 12, units = "cm")
+    ggsave(.data, filename = paste0(name, ".pdf"), path = gbl_image_output, width = 16, height = 12, units = "cm")
+  }
 
 }
 

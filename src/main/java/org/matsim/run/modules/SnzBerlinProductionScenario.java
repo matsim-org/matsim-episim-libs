@@ -474,9 +474,8 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 				"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
 				"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
 
+		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 		if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
-			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
-
 			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
 
 				Map<String, Path> subdistrictInputs = new HashMap<>();

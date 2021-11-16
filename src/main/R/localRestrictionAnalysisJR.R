@@ -19,87 +19,219 @@ setwd("D:/Dropbox/Documents/VSP/episim/location_based_restrictions/")
 gbl_image_output <- "C:/Users/jakob/projects/60eeeb14daadd7ca9fc56fea/images/"
 
 # load all functions
-source("C:/Users/jakob/projects/matsim-episim/src/main/R/utilsJR.R", encoding = 'utf-8')
+source("masterJR-utils.R", encoding = 'utf-8')
 
 ######## GLOBAL VARIABLES ########
 # RKI Data
-gbl_rki_new <- read_and_process_new_rki_data("Fallzahlen_Kum_Tab_9Juni.xlsx")
-gbl_rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
-gbl_agent_count_per_district <- read_delim("C:/Users/jakob/projects/matsim-episim/AgentCntPerDistrict_OLD.txt", delim = ";", col_names = FALSE) %>%
-  rename(district = X1, population = X2) %>%
-  mutate(population = population * 4)
+# gbl_rki_new <- read_and_process_new_rki_data("Fallzahlen_Kum_Tab_9Juni.xlsx")
+# gbl_rki_old <- read_and_process_old_rki_data("RKI_COVID19_02112020.csv")
+# gbl_agent_count_per_district <- read_delim("C:/Users/jakob/projects/matsim-episim/AgentCntPerDistrict_OLD.txt", delim = ";", col_names = FALSE) %>%
+#   rename(district = X1, population = X2) %>%
+#   mutate(population = population * 4)
+#
+# gbl_rki <- gbl_rki_old %>%
+#   full_join(gbl_rki_new) %>%
+#   pivot_longer(!c(district, date), names_to = "scenario", values_to = "infections") %>%
+#   left_join(gbl_agent_count_per_district) %>%
+#   arrange(scenario, date) %>%
+#   group_by(scenario) %>%
+#   mutate(infections_week = infections +
+#     lag(infections, n = 1, default = 0, order_by = date) +
+#     lag(infections, n = 2, default = 0, order_by = date) +
+#     lag(infections, n = 3, default = 0, order_by = date) +
+#     lag(infections, n = 4, default = 0, order_by = date) +
+#     lag(infections, n = 5, default = 0, order_by = date) +
+#     lag(infections, n = 6, default = 0, order_by = date)) %>%
+#   ungroup() %>%
+#   mutate(incidence = infections_week / population * 100000) %>%
+#   select(date, district, scenario, incidence)
+#
+# rki_incidence_new <-read_and_process_new_rki_data_incidenz("Fallzahlen_Kum_Tab_9Juni.xlsx") %>% mutate(scenario = "rki")
+
+### Get Berlin incidence!
+# Source: https://www.statistik-berlin-brandenburg.de/bevoelkerung/demografie/einbuergerungen-auslaender
+district <-c("Mitte","Friedrichshain_Kreuzberg","Pankow","Charlottenburg_Wilmersdorf", "Spandau", "Steglitz_Zehlendorf", "Tempelhof_Schoeneberg", "Neukoelln", "Treptow_Koepenick", "Marzahn_Hellersdorf", "Lichtenberg", "Reinickendorf")
+population <-c(374581, 279210, 404187, 316223, 239374, 291915, 341296, 318509, 272992, 274076, 292005, 259720)
+berlin_population <- data.frame(district,population)
+
+
+
+#Source: https://www.berlin.de/lageso/gesundheit/infektionskrankheiten/corona/tabelle-bezirke-gesamtuebersicht/index.php/index/all.xls?q=
+rki_NEW_ALL <- read_delim("RKI_NEW_DATA_BEZIRK.csv", delim = ";")
+gbl_cases_per_district <- rki_NEW_ALL %>%
+  pivot_longer(!c(id, datum), names_to = "district", values_to = "infections") %>%
+  replace(is.na(.), 0) %>% rename(date = datum) %>%
+  group_by(district) %>%
+  mutate(infections_week = infections +
+  lag(infections, n = 1, default = 0, order_by = date) +
+  lag(infections, n = 2, default = 0, order_by = date) +
+  lag(infections, n = 3, default = 0, order_by = date) +
+  lag(infections, n = 4, default = 0, order_by = date) +
+  lag(infections, n = 5, default = 0, order_by = date) +
+  lag(infections, n = 6, default = 0, order_by = date)) %>%
+  left_join(berlin_population) %>%
+  # left_join(gbl_agent_count_per_district) %>%
+  mutate(incidence = infections_week * 100000 / population) %>%
+  select(date, district, incidence) %>%
+  mutate(scenario = "rki")
+
+
+use_infections_subdistrict_file <- function(directoryT) {
+  run_paramsT <- get_run_parameters(directoryT)
+  infections_rawT <- read_combine_episim_output(directoryT, "infections_subdistrict.txt", TRUE)
+  infectionsT <- infections_rawT %>%
+    select(date, nShowingSymptomsCumulative, nSusceptible, district, run_paramsT) %>%
+    filter(district != "unknown") %>%
+    arrange(date) %>%
+    group_by(district, across(run_paramsT)) %>%
+    mutate(infections_1dayAgo = lag(nShowingSymptomsCumulative, default = 0, order_by = date)) %>%
+    mutate(infections_7daysAgo = lag(nShowingSymptomsCumulative, default = 0, n = 7, order_by = date)) %>%
+    mutate(infections = nShowingSymptomsCumulative - infections_1dayAgo) %>%
+    mutate(infections_week = nShowingSymptomsCumulative - infections_7daysAgo) %>%
+    mutate(population = first(nSusceptible)) %>%
+    mutate(incidence = infections_week / population * 100000) %>%
+    ungroup() %>%
+    select(-c(population, infections_1dayAgo, infections_7daysAgo, nSusceptible)) %>%
+    arrange(date)
+
+  infections_aggregatedT <- infectionsT %>%
+    group_by(across(-c(nShowingSymptomsCumulative, infections, infections_week, incidence, seed))) %>%
+    summarise(infections = mean(infections),
+              nShowingSymptomsCumulative = mean(nShowingSymptomsCumulative),
+              infections_week = mean(infections_week),
+              incidence = mean(incidence))
+  return(infections_aggregatedT)
+
+}
+
+
+######## A - Restrict Mitte ######## ((NEW ATTEMPT WITH infection.txt))
+# Purpose: show facet plot, that shows restriction in Mitte
 
 if (FALSE) {
-  directoryT <- "2021-10-27-bmbf-test2/"
-
-  directory <- directoryT
-  allow_missing_files <- TRUE
-  file_root <- "infections_subdistrict.txt"
-
-  info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
-
-  # gathers column names that should be included in final dataframe
-  col_names <- colnames(info_df)
-  relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
-
-  episim_df_all_runs <- data.frame()
-  for (row in seq_len(nrow(info_df))) {
-
-    runId <- info_df$RunId[row]
-
-    file_name <- paste0(directory, runId, ".", file_root)
-
-    if (!file.exists(file_name) & allow_missing_files) {
-      warning(paste0(file_name, " does not exist"))
-      next
-    }
+  rm(list = setdiff(ls(), union(ls(pattern = "^gbl_"), lsf.str())))
+  # directoryT <- "2021-10-27-bmbf-test2/"
+  infections_aggregatedT <- use_infections_subdistrict_file("2021-10-28-masterA-last/")
 
 
-    df_for_run <- read_delim(file = file_name, "\t", escape_double = FALSE, trim_ws = TRUE)
+  plot_resultsA <- ggplot(infections_aggregatedT %>% filter(restrictMitte == "yes"), aes(x = date, y = incidence)) +
+    geom_line(aes(color = locationBasedRestrictions)) +
+    annotate("rect", xmin = ymd("2020-10-1"), xmax = ymd("2020-10-31"), ymin = 0, ymax = Inf, alpha = 0.7, fill = " light blue") +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+    labs(
+      # title = "7-Day Infections / 100k Pop for Berlin Districts",
+      #    subtitle = "Comparison of Local vs. Global Activity Reductions",
+      x = "Date", y = "7-Day Infections / 100k Pop.") +
+    facet_wrap(~district, ncol = 3) +
+    # scale_color_calc() +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    xlim(ymd("2020-09-01"), ymd("2021-02-01"))
 
-    if (dim(df_for_run)[1] == 0) {
-      warning(paste0(file_name, " is empty"))
-      next
-    }
+  plot_resultsA
 
-    # adds important variables concerning run to df, so that individual runs can be filtered in later steps
-    for (var in relevant_cols) {
-      df_for_run[var] <- info_df[row, var]
-    }
+  ggsave(plot_resultsA, filename = "resultsA.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
+  ggsave(plot_resultsA, filename = "resultsA.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
 
-    episim_df_all_runs <- rbindlist(list(episim_df_all_runs, df_for_run))
 
-  }
-  filtered <- episim_df_all_runs %>% select(date,nInfectedCumulative,district, relevant_cols) %>% filter(district!="unknown")
+  # ggplot(infections_aggregatedT %>% filter(restrictMitte == "yes",district=="Mitte" )) +
+  #   geom_line(aes(date,incidence, col = locationBasedRestrictions))
+
+
+}
+######## B - Infection Dynamics of Neighborhoods ######## (contact intensity)
+
+if (FALSE) {
+  rm(list = setdiff(ls(), union(ls(pattern = "^gbl_"), lsf.str())))
+  directoryB <- "2021-10-28-masterB/"
+
+  infections_aggregatedT <- use_infections_subdistrict_file(directoryB)
+
+
+  # 1) global vs. local restrictions
+  to_plot_1 <- infections_aggregatedT %>%
+    filter(thetaFactor == 1 & ciModifier ==0) %>%
+    rename("scenario" = "locationBasedRestrictions") %>%
+    rbind(gbl_cases_per_district) %>%
+    filter(scenario!="yesForActivityLocation")
+
+  plot_resultsB1 <- ggplot(to_plot_1) +
+    geom_line(aes(date,incidence,col=scenario)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+    labs(x = "Date", y = "7-Day Infections / 100k Pop.") +
+    facet_wrap(~district, ncol=3) +
+    theme_minimal() +
+    scale_color_manual(values = c("blue", "black","red")) +
+    theme(legend.position="bottom") +
+    theme(axis.text.x = element_text(angle = 90)) +
+    xlim(ymd("2020-09-01"), ymd("2021-02-01"))
+
+  plot_resultsB1
+
+  ggsave(plot_resultsB1, filename = "resultsB1.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
+  ggsave(plot_resultsB1, filename = "resultsB1.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
+
+
+  # 2) contact intensity
+  infections_aggregated2 <- infections_aggregatedT %>%
+    filter(locationBasedRestrictions == "no") %>%
+    ungroup() %>%
+    select(date, district, thetaFactor, ciModifier, incidence) %>%
+    pivot_wider(names_from = c(thetaFactor, ciModifier), names_glue = "th{thetaFactor}_mult{ciModifier}", values_from = incidence) %>%
+    pivot_longer(!c("date", "district"), names_to = "scenario", values_to = "incidence")
+
+
+  to_plot2 <- infections_aggregated2 %>%
+    filter(scenario == "th1_mult0" | scenario == "th0.95_mult0.3") %>%
+    mutate(scenario = str_replace(scenario, "th1_mult0", "base")) %>%
+    rbind(gbl_cases_per_district)
+  # WE NEED LOWER THETAS
+
+
+  plot_resultsB2 <- ggplot(to_plot2, aes(x = date, y = incidence)) +
+    geom_line(aes(color = scenario)) +
+    scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
+    labs(x = "Date", y = "7-Day Infections / 100k Pop.") +
+    facet_wrap(~district, ncol = 3) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90)) +
+    scale_color_manual(values = c("blue","black","red")) +
+    theme(legend.position="bottom") +
+    xlim(ymd("2020-09-01"), ymd("2021-02-01"))
+
+  plot_resultsB2
+
+  ggsave(plot_resultsB2, filename = "resultsB2.png", path = gbl_image_output, width = 16, height = 12, units = "cm")
+  ggsave(plot_resultsB2, filename = "resultsB2.pdf", path = gbl_image_output, width = 16, height = 12, units = "cm")
+
 
 
 }
 
 
-######## A - Restrict Mitte ########
+#### DEPRECATED ####
+
+
+######## A - Restrict Mitte ######## (NO LONGER USED)
 
 if (FALSE) {
   rm(list = setdiff(ls(), union(ls(pattern = "^gbl_"), lsf.str())))
-  directoryA <- "2021-09-08-masterA/"
+  # directoryA <- "2021-09-08-masterA/"
+  directoryA <- "2021-10-28-masterA-bmbf/"
   infections_raw <- read_combine_episim_output(directoryA, "infectionEvents.txt", FALSE)
-
-  xxx <- infections_raw %>%
-    filter(date == ymd("2020-08-31")) %>%
-    filter(locationBasedRestrictions == "no") %>%
-    filter(seed == 4711)
 
   infections_by_district <- geolocate_infections(infections_raw, "FacilityToDistrictMapCOMPLETE.txt") %>%
     mutate(infections = infections * 4)
-
-  sum((infections_by_district %>%
-    filter(date == lala) %>%
-    filter(locationBasedRestrictions == "no") %>%
-    filter(seed == 4711))$infections)
 
   # aggregated infection over multiple seeds used to show trend in infections for different parameters
   infections_aggregated <- infections_by_district %>%
     group_by(across(-c(infections, seed))) %>%
     summarise(infections = mean(infections))
+
+  ggplot(infections_aggregated %>% filter(locationBasedRestrictions == "yesForActivityLocation" &
+                                            includeBmbfSetup == "all" &
+                                            district == "Mitte")) +
+    geom_line(aes(date, infections))
 
   episim_all_runs <- infections_aggregated %>%
     ungroup() %>%
@@ -683,7 +815,7 @@ if (FALSE) {
 
 }
 
-make_timeline <- function(ar_filtered, axis_position, title) {
+make_timeline <- function(ar_filtered, title) {
   timeline_data <- data.frame()
 
   locations <- unique(ar_filtered$location)
