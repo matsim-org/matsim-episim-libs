@@ -56,7 +56,7 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		LocalDate restrictionDate = LocalDate.parse("2021-11-10");
+		LocalDate restrictionDate = LocalDate.parse("2021-11-29");
 
 		SnzCologneProductionScenario module = getBindings(id, params);
 
@@ -85,7 +85,7 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 //		}
 		
 		//restrictions
-		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy()).setHospitalScale(id);
+		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		//curfew
 		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
@@ -102,32 +102,30 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 //		if (params.masksEdu.equals("no")) builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		//2G
-		if (!params.leisUnv .equals("no")) 
-			builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(Double.parseDouble(params.leisUnv)), "leisure");
+		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leisUnv), "leisure");
 		
-		if (params.edu.equals("unprotected")) {
+		if (params.edu.equals("unprotected") || params.edu.equals("noMasks")) 
 			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-			builder.restrict(restrictionDate, Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-		}
-			
-
 		
+		if (params.edu.equals("unprotected"))
+			builder.restrict(restrictionDate, Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			
+		builder.setHospitalScale(1.3);
 		
 		episimConfig.setPolicy(builder.build());
 		
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 		inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
-		if (params.monday.equals("sunday")) {
-			for (int ii = 0; ii < Integer.MAX_VALUE; ii++) {
-				if (restrictionDate.plusDays(ii).getDayOfWeek() == DayOfWeek.MONDAY) {
-					inputDays.put(restrictionDate.plusDays(ii), DayOfWeek.SUNDAY);
-				}
-				if (restrictionDate.plusDays(ii).isAfter(LocalDate.parse("2023-06-01"))) {
-					break;
-				}
-			}
-		}
+//		if (params.monday.equals("sunday")) {
+//			for (int ii = 0; ii < Integer.MAX_VALUE; ii++) {
+//				if (restrictionDate.plusDays(ii).getDayOfWeek() == DayOfWeek.MONDAY) {
+//					inputDays.put(restrictionDate.plusDays(ii), DayOfWeek.SUNDAY);
+//				}
+//				if (restrictionDate.plusDays(ii).isAfter(LocalDate.parse("2023-06-01"))) {
+//					break;
+//				}
+//			}
+//		}
 		episimConfig.setInputDays(inputDays);
 
 		//disease import 2020
@@ -170,7 +168,7 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 		infPerDayB117.put(LocalDate.parse("2020-12-30"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.7);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.0);
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
@@ -204,14 +202,13 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 //		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
 		
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(3.1);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(3.4);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(2.0);
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
 		for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
-		for (int i = 12; i < 65; i++) vaccinationCompliance.put(i, 0.8);
-		for (int i = 60; i <= 120; i++) vaccinationCompliance.put(i, 0.9);
+		for (int i = 12; i <= 120; i++) vaccinationCompliance.put(i, 1.0);
 		
 
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
@@ -219,7 +216,8 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 
 		double population = 2_352_480;
-		vaccinations.put(LocalDate.parse("2021-11-03"), (int) (0.015 * population / 7));
+		vaccinations.put(LocalDate.parse("2021-11-03"), (int) (0.01 * 0.25 * population / 7));
+		vaccinations.put(restrictionDate , (int) (0.01 * params.vacSp * population / 7));
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		
@@ -235,14 +233,14 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 		
 		adaptVacinationEffectiveness(vaccinationConfig, 0.4);
 		
-		configureBooster(vaccinationConfig, 0.9, params.boosterSpeed, params.boostAfter, 0.4);
+		configureBooster(vaccinationConfig, 0.9, params.boostSp * 0.01, params.boostAfter, 0.4, restrictionDate);
 			
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 		
-		if (params.testVaccinated.equals("yes")) {
+//		if (params.testVaccinated.equals("yes")) {
  			testingConfigGroup.setTestAllPersonsAfter(restrictionDate);
- 		}
+// 		}
 
 		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 		TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
@@ -287,15 +285,13 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
 		workTests.put(LocalDate.parse("2021-06-04"), 0.05);
-		workTests.put(restrictionDate,  0.05);
 
-		workTests.put(restrictionDate, params.wTest);
-
-
+		if (params.wTest.startsWith("0.5")) {
+			workTests.put(restrictionDate, 0.5);
+		}
+			
 		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
-//		leisureTests.put(LocalDate.parse("2021-08-23"),  0.2);
-
-		leisureTests.put(restrictionDate, params.lTest);
+		leisureTests.put(restrictionDate, Double.parseDouble(params.lTestUnVac.split("-")[0]));
 
 		eduTests.put(LocalDate.parse("2021-08-06"), 0.6);
 		eduTests.put(LocalDate.parse("2021-08-30"), 0.4);
@@ -315,6 +311,32 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 				"educ_higher", eduTests,
 				"educ_other", eduTests
 		)));
+		
+		Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> workTestsVaccinated = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> eduTestsVaccinated = new HashMap<LocalDate, Double>();
+		leisureTestsVaccinated.put(restrictionDate, Double.parseDouble(params.lTestVac.split("-")[0]));
+		
+		if (params.wTest.equals("0.5-all")) {
+			workTestsVaccinated.put(restrictionDate, 0.5);
+		} else {
+			workTestsVaccinated.put(restrictionDate, 0.);
+		}
+		
+		eduTestsVaccinated.put(restrictionDate, 0.);
+		
+		rapidTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
+				"leisure", leisureTestsVaccinated,
+				"work", workTestsVaccinated,
+				"business", workTestsVaccinated,
+				"educ_kiga", eduTestsVaccinated,
+				"educ_primary", eduTestsVaccinated,
+				"educ_secondary", eduTestsVaccinated,
+				"educ_tertiary", eduTestsVaccinated,
+				"educ_higher", eduTestsVaccinated,
+				"educ_other", eduTestsVaccinated
+		)));
+		
 
 		Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
@@ -322,13 +344,7 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 		leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-
-//		eduTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestEdu);
-//		workTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestWork);
-//		leisureTestsPCR.put(LocalDate.parse("2021-09-06"),  params.pcrTestLeis);
-
-
-//		eduTestsPCR.put(LocalDate.parse("2021-08-06"), 0.1);
+		leisureTestsPCR.put(restrictionDate, Double.parseDouble(params.lTestUnVac.split("-")[1]));
 
 		pcrTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTestsPCR,
@@ -340,6 +356,25 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 				"educ_tertiary", eduTestsPCR,
 				"educ_higher", eduTestsPCR,
 				"educ_other", eduTestsPCR
+		)));
+		
+		Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> eduTestsPCRVaccinated = new HashMap<LocalDate, Double>();
+		leisureTestsPCRVaccinated.put(restrictionDate, Double.parseDouble(params.lTestVac.split("-")[1]));
+		workTestsPCRVaccinated.put(restrictionDate, 0.);
+		eduTestsPCRVaccinated.put(restrictionDate, 0.);
+		
+		pcrTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
+				"leisure", leisureTestsPCRVaccinated,
+				"work", workTestsPCRVaccinated,
+				"business", workTestsPCRVaccinated,
+				"educ_kiga", eduTestsPCRVaccinated,
+				"educ_primary", eduTestsPCRVaccinated,
+				"educ_secondary", eduTestsPCRVaccinated,
+				"educ_tertiary", eduTestsPCRVaccinated,
+				"educ_higher", eduTestsPCRVaccinated,
+				"educ_other", eduTestsPCRVaccinated
 		)));
 
 		rapidTest.setTestingCapacity_pers_per_day(Map.of(
@@ -593,7 +628,7 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 		
 	}
 	
-	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterEff, String boosterSpeed, int boostAfter, double vacMult) {
+	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterEff, double boosterSpeed, int boostAfter, double vacMult, LocalDate restrictionDate) {
 		
 		Map<LocalDate, Integer> boosterVaccinations = new HashMap<>();
 				
@@ -605,9 +640,13 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 		boosterVaccinations.put(LocalDate.parse("2021-10-20"), (int) (0.004 * 2_352_480. / 7));
 		boosterVaccinations.put(LocalDate.parse("2021-10-26"), (int) (0.005 * 2_352_480. / 7));
 		boosterVaccinations.put(LocalDate.parse("2021-10-29"), (int) (0.006 * 2_352_480. / 7));
-		
-		if (!boosterSpeed.equals("current")) 
-			boosterVaccinations.put(LocalDate.parse("2021-11-15"), (int) (2_352_480 * Double.parseDouble(boosterSpeed)));
+		boosterVaccinations.put(LocalDate.parse("2021-11-03"), (int) (0.007 * 2_352_480. / 7));
+		boosterVaccinations.put(LocalDate.parse("2021-11-05"), (int) (0.008 * 2_352_480. / 7));
+		boosterVaccinations.put(LocalDate.parse("2021-11-08"), (int) (0.01 * 2_352_480. / 7));
+		boosterVaccinations.put(LocalDate.parse("2021-11-09"), (int) (0.012 * 2_352_480. / 7));
+		boosterVaccinations.put(LocalDate.parse("2021-11-10"), (int) (0.013 * 2_352_480. / 7));
+
+		boosterVaccinations.put(restrictionDate, (int) (2_352_480 * boosterSpeed / 7));
 		
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
 		 
@@ -654,8 +693,8 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 //		@Parameter({0.05})
 //		double testRateLeisure;
 		
-		@StringParameter({"no", "yes"})
-		String testVaccinated;
+//		@StringParameter({"no", "yes"})
+//		String testVaccinated;
 		
 //		@Parameter({1.0})
 //		double thetaFactor;
@@ -675,13 +714,16 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 //		@StringParameter({"mRNADelta", "mRNA", "all"})
 //		String vacEffDecrType;
 		
-		@StringParameter({"current", "0.005", "0.02"})
-		String boosterSpeed;
+		@Parameter({1.3, 7.0, 14.0})
+		double boostSp;
+		
+		@Parameter({0.25, 7.0})
+		double vacSp;
 		
 //		@Parameter({0.9})
 //		double boosterEff;
 		
-		@IntParameter({4, 5, 6})
+		@IntParameter({5})
 		int boostAfter;
 //		
 //		@StringParameter({"2021-12-01", "2022-01-01", "2022-12-01"})
@@ -699,19 +741,34 @@ public class BMBF211119Cologne implements BatchRun<BMBF211119Cologne.Params> {
 //		@StringParameter({"2021-06-14"})
 //		String deltaDate;
 		
-		@StringParameter({"no", "0.5", "0.0"})
-		String leisUnv;
+		@Parameter({1.0, 0.5, 0.0})
+		double leisUnv;
 		
-		@Parameter({0.05, 0.5})
-		double lTest;
+//		@Parameter({0.05, 0.5})
+//		double lRTest;
 		
-		@Parameter({0.05, 0.5})
-		double wTest;
+//		@Parameter({0.0, 0.5})
+//		double lRTestVac;
+//		
+//		@Parameter({0.0, 0.5})
+//		double lPCRTestVac;
 		
-		@StringParameter({"current", "sunday"})
-		String monday;
+		@StringParameter({"0.0-0.0", "0.5-0.0", "0.0-0.5"})
+		String lTestVac;
 		
-		@StringParameter({"protected", "unprotected"})
+		@StringParameter({"0.05-0.0", "0.5-0.0", "0.05-0.5"})
+		String lTestUnVac;
+		
+		@StringParameter({"current", "0.5-unvaccinated", "0.5-all"})
+		String wTest;
+		
+//		@Parameter({0.05, 0.5})
+//		double wRTest;
+		
+//		@StringParameter({"current", "sunday"})
+//		String monday;
+		
+		@StringParameter({"protected", "noMasks", "unprotected"})
 		String edu;
 		
 //		@StringParameter({"cur", "mRNA", "vector"})
