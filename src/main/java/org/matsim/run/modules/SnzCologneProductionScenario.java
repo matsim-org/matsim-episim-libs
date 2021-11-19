@@ -192,7 +192,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 				HouseholdSusceptibility.newConfig().withSusceptibleHouseholds(householdSusc, 5.0)
 		);
 
-		Multibinder.newSetBinder(binder(), SimulationStartListener.class)
+		Multibinder.newSetBinder(binder(), SimulationListener.class)
 				.addBinding().to(HouseholdSusceptibility.class);
 
 	}
