@@ -175,6 +175,11 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private EpisimReporting.InfectionReport report;
 
+	/**
+	 * Installed simulation listeners.
+	 */
+	private Set<SimulationListener> listener;
+
 	@Inject
 	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
 		this.injector = injector;
@@ -504,9 +509,9 @@ public final class InfectionEventHandler implements Externalizable {
 			p.setVaccinable(localRnd.nextDouble() < compliance);
 		});
 
-		Set<SimulationStartListener> listener = (Set<SimulationStartListener>) injector.getInstance(Key.get(Types.setOf(SimulationStartListener.class)));
+		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
 
-		for (SimulationStartListener s : listener) {
+		for (SimulationListener s : listener) {
 
 			log.info("Executing simulation start listener {}", s.toString());
 
@@ -769,6 +774,10 @@ public final class InfectionEventHandler implements Externalizable {
 
 		reporting.reportRestrictions(restrictions, iteration, report.date);
 		reporting.reportCpuTime(iteration, "Reporting", "finished", -1);
+
+		for (SimulationListener l : listener) {
+			l.onIterationStart(iteration, date);
+		}
 	}
 
 	public Collection<EpisimPerson> getPersons() {
@@ -895,6 +904,11 @@ public final class InfectionEventHandler implements Externalizable {
 		// report infections in order
 		infections.stream().sorted()
 				.forEach(reporting::reportInfection);
+
+		for (SimulationListener l : listener) {
+			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
+		}
+
 	}
 
 	/**

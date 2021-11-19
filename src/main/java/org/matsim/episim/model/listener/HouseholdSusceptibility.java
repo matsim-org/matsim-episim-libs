@@ -13,7 +13,7 @@ import org.matsim.core.utils.geometry.CoordinateTransformation;
 import org.matsim.core.utils.geometry.transformations.IdentityTransformation;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.InfectionEventHandler;
-import org.matsim.episim.model.SimulationStartListener;
+import org.matsim.episim.model.SimulationListener;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.scenarioCreation.DistrictLookup;
 import org.matsim.vehicles.Vehicle;
@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 
-public class HouseholdSusceptibility implements SimulationStartListener {
+public class HouseholdSusceptibility implements SimulationListener {
 
 	private static final Logger log = LogManager.getLogger(HouseholdSusceptibility.class);
 

@@ -42,7 +42,6 @@ import org.matsim.episim.model.vaccination.RandomVaccination;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
-import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import javax.inject.Named;
@@ -79,7 +78,7 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
 
-		Multibinder.newSetBinder(binder(), SimulationStartListener.class);
+		Multibinder.newSetBinder(binder(), SimulationListener.class);
 	}
 
 	@Provides
