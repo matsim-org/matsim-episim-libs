@@ -3,7 +3,8 @@ library(tidyverse)
 library(lubridate)
 
 #Reading Infection data and how LandkreisIds translate to Landskreis names
-Rohdaten <- read.csv("https://github.com/robert-koch-institut/SARS-CoV-2_Infektionen_in_Deutschland/blob/master/Aktuell_Deutschland_SarsCov2_Infektionen.csv?raw=true")
+#Rohdaten <- read.csv("https://github.com/robert-koch-institut/SARS-CoV-2_Infektionen_in_Deutschland/blob/master/Aktuell_Deutschland_SarsCov2_Infektionen.csv?raw=true")
+Rohdaten <- read.csv("../../../git/robert-koch-insitut/SARS-CoV-2_Infektionen_in_Deutschland/Aktuell_Deutschland_SarsCov2_Infektionen.csv" )
 Landkreisnamen <- read.xlsx("https://www.destatis.de/DE/Themen/Laender-Regionen/Regionales/Gemeindeverzeichnis/Administrativ/04-kreise.xlsx?__blob=publicationFile", sheet=2)
 
 #Preparing output
@@ -55,8 +56,8 @@ ListOfLandkreisIds <- unique(Rohdaten$IdLandkreis)
 ListOfAgeGroups <- unique(Rohdaten$Altersgruppe)
 
 # for(Id in ListOfLandkreisIds){
-Id <- 5315 # Köln
-# Id <- 11001 # Berlin
+# Id <- 5315 # Köln
+Id <- 11001 # Berlin
   if (Id == 11001 || Id == 11002 || Id == 11003 || Id == 11004 || Id == 11005 || Id == 11006 || Id == 11007 || Id == 11008 || Id == 11009 || Id == 11010 || Id == 11011 || Id == 11012){
     subsetData <- filter(Rohdaten, between(IdLandkreis, 11001, 11012))
     stadtname <- "Berlin"
@@ -83,8 +84,7 @@ Id <- 5315 # Köln
   stadtname ={}
   rownumber={}
 
-#date = min(listMeldedaten)+days(7)
-date = min(listMeldedaten)+days(11)
+date = min(listMeldedaten)+days(0)
 # (what we would want is to start on the last date and go back by 7day steps (= weekly averaged).  kai, nov'21)
 
 while(date <= max(listMeldedaten)){
@@ -160,5 +160,5 @@ ggplot() + scale_y_log10(limits = c(30,600)) +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA15A34),color="orange") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA35A59),color="green") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA60A79),color="blue") +
-  scale_x_date( date_breaks = "2 weeks", limits = as.Date(c('2021-08-01','2021-11-15')) )
+  scale_x_date( date_breaks = "2 weeks", limits = as.Date(c('2021-08-01','2021-11-30')) )
 
