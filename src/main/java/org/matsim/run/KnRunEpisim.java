@@ -65,6 +65,7 @@ import java.util.SplittableRandom;
 import static org.matsim.episim.EpisimConfigGroup.WriteEvents;
 import static org.matsim.episim.EpisimUtils.nextLogNormalFromMeanAndSigma;
 
+@Deprecated
 public class KnRunEpisim {
 	public static final String SUSCEPTIBILITY = "susceptibility";
 	public static final String VIRAL_LOAD = "viralLoad";
@@ -363,9 +364,10 @@ public class KnRunEpisim {
 
 			ControlerUtils.checkConfigConsistencyAndWriteToLog( config, "Just before running init" );
 
-			handler.init( replay.getEvents() );
+			throw new IllegalStateException("Unsupported function, which is now private.");
+			//handler.init( replay.getEvents() );
 		}
-		if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
+		//if (logToOutput) OutputDirectoryLogging.closeOutputDirLogging();
 
 	}
 

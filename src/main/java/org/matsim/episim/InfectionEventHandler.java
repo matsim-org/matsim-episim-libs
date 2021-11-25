@@ -227,9 +227,48 @@ public final class InfectionEventHandler implements Externalizable {
 	 *
 	 * @param events All events in the simulation
 	 */
-	public void init(Map<DayOfWeek, List<Event>> events) {
+	void init(Map<DayOfWeek, List<Event>> events) {
 
 		iteration = 0;
+
+		updateEvents(events);
+
+		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
+
+		// Clear time-use after first iteration
+		personMap.values().forEach(p -> p.getSpentTime().clear());
+		personMap.values().forEach(EpisimPerson::initParticipation);
+
+		// init person vaccination compliance sorted by age descending
+		personMap.values().stream()
+				.sorted(Comparator.comparingInt(p -> ((EpisimPerson) p).getAgeOrDefault(-1)).reversed()
+						.thenComparing(p -> ((EpisimPerson) p).getPersonId()))
+				.forEach(p -> {
+			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
+			p.setVaccinable(localRnd.nextDouble() < compliance);
+		});
+
+		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
+
+		for (SimulationListener s : listener) {
+
+			log.info("Executing simulation start listener {}", s.toString());
+
+			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+		}
+
+		vaccinationModel.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+
+		createTrajectoryHandlers();
+
+		init = true;
+	}
+
+	/**
+	 * Update events data and internal person data structure.
+	 * @param events
+	 */
+	public void updateEvents(Map<DayOfWeek, List<Event>> events) {
 
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
@@ -494,37 +533,8 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
-		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
-
-		// Clear time-use after first iteration
-		personMap.values().forEach(p -> p.getSpentTime().clear());
-		personMap.values().forEach(EpisimPerson::initParticipation);
-
-		// init person vaccination compliance sorted by age descending
-		personMap.values().stream()
-				.sorted(Comparator.comparingInt(p -> ((EpisimPerson) p).getAgeOrDefault(-1)).reversed()
-						.thenComparing(p -> ((EpisimPerson) p).getPersonId()))
-				.forEach(p -> {
-			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
-			p.setVaccinable(localRnd.nextDouble() < compliance);
-		});
-
-		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
-
-		for (SimulationListener s : listener) {
-
-			log.info("Executing simulation start listener {}", s.toString());
-
-			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
-		}
-
-		vaccinationModel.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
-
 		balanceContainersByLoad(estimatedLoad);
 
-		createTrajectoryHandlers();
-
-		init = true;
 	}
 
 	/**
