@@ -21,8 +21,14 @@ TotalNoOfCasesAndWeeklyIncidence <- data.frame(Datum=as.Date(character()), IdLan
 
 
 #Preparing population numbers
-Altersgruppen <- read.xlsx("https://www.dropbox.com/scl/fi/wnw2e1ineet0guunkrc37/Altersgruppen.xlsx?dl=1&rlkey=xji6z0yn2oy2dd87xa702iqth") 
+
+# read table:
+Altersgruppen <- read.xlsx("https://www.dropbox.com/scl/fi/wnw2e1ineet0guunkrc37/Altersgruppen.xlsx?dl=1&rlkey=xji6z0yn2oy2dd87xa702iqth")
+
+# for some Landkreise, there are only "-" as entry.  Remove those rows:
 Altersgruppen <- subset(Altersgruppen, Altersgruppen$unter.3.Jahre!="-")
+
+# force column entries to be numbers.  I guess they were read as String, possibly because of the "-" entries removed above.
 Altersgruppen$unter.3.Jahre = as.numeric(Altersgruppen$unter.3.Jahre)
 Altersgruppen$`3.bis.unter.6.Jahre` = as.numeric(Altersgruppen$`3.bis.unter.6.Jahre`)
 Altersgruppen$`6.bis.unter.10.Jahre` = as.numeric(Altersgruppen$`6.bis.unter.10.Jahre`)
@@ -42,7 +48,7 @@ Altersgruppen$`65.bis.unter.75.Jahre` = as.numeric(Altersgruppen$`65.bis.unter.7
 Altersgruppen$`75.Jahre.und.mehr` = as.numeric(Altersgruppen$`75.Jahre.und.mehr`)
 Altersgruppen$Insgesamt = as.numeric(Altersgruppen$Insgesamt)
 
-#Adding the age groups st they match the age groups from the RKI data
+#Creating the age groups st they match the age groups from the RKI data
 #Attention! We assume: uniform distribution of age 3, 4, 5 in the age group 3-5
 #Also! Population data has the age group 60-75, while RKI has 60-79
 Altersgruppen <- mutate(Altersgruppen, A00A04 = Altersgruppen$unter.3.Jahre+2/3*Altersgruppen$`3.bis.unter.6.Jahre`) 
@@ -55,9 +61,12 @@ Altersgruppen <- mutate(Altersgruppen, A60A79 = Altersgruppen$`60.bis.unter.65.J
 ListOfLandkreisIds <- unique(Rohdaten$IdLandkreis)
 ListOfAgeGroups <- unique(Rohdaten$Altersgruppe)
 
+
+# filter the raw data (Rohdaten) by the district ID we are interested in, so that the result (subsetData) becomes a bit smaller:
+
 # for(Id in ListOfLandkreisIds){
-# Id <- 5315 # Köln
-Id <- 11001 # Berlin
+Id <- 5315 # Köln
+# Id <- 11001 # Berlin
   if (Id == 11001 || Id == 11002 || Id == 11003 || Id == 11004 || Id == 11005 || Id == 11006 || Id == 11007 || Id == 11008 || Id == 11009 || Id == 11010 || Id == 11011 || Id == 11012){
     subsetData <- filter(Rohdaten, between(IdLandkreis, 11001, 11012))
     stadtname <- "Berlin"
@@ -65,8 +74,29 @@ Id <- 11001 # Berlin
   } else {
     subsetData <- filter(Rohdaten, IdLandkreis == Id)
   }
+
+# convert Meldedatum column to a true date column:
   subsetData$Meldedatum <- as.Date(subsetData$Meldedatum)
+
+# extract all existing dates:
   listMeldedaten <- sort(unique(subsetData$Meldedatum))
+
+# The data comes in the form of the RKI records.  Each combination of (IdLandkreis, Geschlecht, Altersgruppe, Meldedatum, Refdatum, IstErkrankungsbeginn) forms a group.
+# For each group, they report
+# --> number of infected, number of deceased, number of recovered <--
+# For some unexplained reason, exactly one of these numbers is different from zero, i.e. if necessary they end up splitting the data into
+#    group nInfected 0 0
+#    group 0 nDeceaseed
+#    group 0 0 nRecovered
+# If all three numbers are zero, the group is (presumably) not reported.
+
+# Records can be corrected later.  This then results in columns NeuerFall, NeuerTodesfall, NeuGenesen, where supposedly again exactly one of them will
+# be different from zero.  The for us most important keys are 1 and -1 for NeuerFall.  These only make a statement if the record already existed in
+# the version of the file from the previous day.  We essentially do not care about that, so "1" (= new) and "0" (= pre-existing) have the same
+# meaning.  Unfortunately, "-1" needs to be considered, since it means that the record is removed (i.e. it will not be there on the next day).
+# (One also takes from this that the "1" and "-1" only occur for records of the last couple of days ... which is indeed the case.)  --  I think,
+# however, that the following code simply ignores this "NeuerFall" issue.  kai, nov'21
+
   
   # weeklySumA00A04 = {}
   # weeklySumA05A14 = {}
@@ -88,22 +118,32 @@ date = min(listMeldedaten)+days(0)
 # (what we would want is to start on the last date and go back by 7day steps (= weekly averaged).  kai, nov'21)
 
 while(date <= max(listMeldedaten)){
-    datum <- append(datum, date)
-    A00A04 <- filter(subsetData, Altersgruppe=="A00-A04") 
+  datum <- append(datum, date)
+{
+  # filter the subsetData for age group and 7-day period:
+    A00A04 <- filter(subsetData, Altersgruppe=="A00-A04")
     A00A04 <- filter(A00A04, between(Meldedatum, date-days(7), date))
+
+  # sum the number of cases for the filtered data:
     SumAnzahl <- sum(A00A04$AnzahlFall)
+  # assert_that( is.numeric(SumAnzahl))
+
+  # find index of cell which contains population size:
     idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
+
+  # compute and append weekly incidence:
     weeklyIncidenceA00A04 <- append(weeklyIncidenceA00A04,SumAnzahl/Altersgruppen$A00A04[idAltersgruppen]*100000)
+
     # weeklySumA00A04 <- append(weeklySumA00A04, SumAnzahl)
-    
-    
+}
+{
     A05A14 <- filter(subsetData, Altersgruppe=="A05-A14") 
     A05A14 <- filter(A05A14, between(Meldedatum, date-days(7), date))
     SumAnzahl <- sum(A05A14$AnzahlFall)
     # idAltersgruppen <- which(Altersgruppen$landkreisId == Id)
     weeklyIncidenceA05A14 <- append(weeklyIncidenceA05A14,SumAnzahl/Altersgruppen$A05A14[idAltersgruppen]*100000)
     # weeklySumA05A14 <- append(weeklySumA05A14, SumAnzahl)
-    
+}
     
     A15A34 <- filter(subsetData, Altersgruppe=="A15-A34") 
     A15A34 <- filter(A15A34, between(Meldedatum, date-days(7), date))
@@ -135,9 +175,15 @@ while(date <= max(listMeldedaten)){
     # Aunbekannt <- filter(Aunbekannt, between(Meldedatum, date-days(7), date))
     # SumAnzahl <- sum(Aunbekannt$AnzahlFall)
     # weeklySumAunbekannt <- append(weeklySumAunbekannt, SumAnzahl)
-    
-    date <- date+days(1)
-    
+
+    date <- date+days(7)
+
+
+}
+
+# print lengths of vectors if they have equal length:
+print( paste( length(weeklyIncidenceA00A04), length(weeklyIncidenceA05A14), length(weeklyIncidenceA15A34), length(weeklyIncidenceA35A59), length(weeklyIncidenceA60A79) ) )
+
     for(Idlist in Landkreisnamen$"Kreisfreie.Städte.und.Landkreise.nach.Fläche,.Bevölkerung.und.Bevölkerungsdichte"){
       if(grepl(Id, Idlist)){
         rownumber <- which(Landkreisnamen$"Kreisfreie.Städte.und.Landkreise.nach.Fläche,.Bevölkerung.und.Bevölkerungsdichte" == Idlist)
@@ -146,7 +192,7 @@ while(date <= max(listMeldedaten)){
     }
     landkreisId <- rep(Id, length(datum))
     nameLandkreis <- rep(stadtname, length(datum))
-  }
+
 # dataframe <- data.frame(datum, landkreisId, nameLandkreis, weeklySumA00A04, weeklySumA05A14, weeklySumA15A34, weeklySumA35A59,
 #                         weeklySumA60A79, weeklySumA80plus, weeklySumAunbekannt, weeklyIncidenceA00A04, weeklyIncidenceA05A14,
 #                         weeklyIncidenceA15A34, weeklyIncidenceA35A59, weeklyIncidenceA60A79)
@@ -155,7 +201,8 @@ dataframe <- data.frame(datum, landkreisId, nameLandkreis, weeklyIncidenceA00A04
 TotalNoOfCasesAndWeeklyIncidence <- rbind(TotalNoOfCasesAndWeeklyIncidence, dataframe)
 # }
 
-ggplot() + scale_y_log10(limits = c(30,600)) +
+ggplot() + scale_y_log10(limits = c(30,2000)) +
+  geom_point( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA00A04),color="purple") +
   geom_point( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA05A14),color="red") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA15A34),color="orange") +
   geom_line( data=dataframe, mapping=aes(x=datum,y=weeklyIncidenceA35A59),color="green") +
