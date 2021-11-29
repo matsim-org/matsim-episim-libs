@@ -65,8 +65,8 @@ ListOfAgeGroups <- unique(Rohdaten$Altersgruppe)
 # filter the raw data (Rohdaten) by the district ID we are interested in, so that the result (subsetData) becomes a bit smaller:
 
 # for(Id in ListOfLandkreisIds){
-Id <- 5315 # Köln
-# Id <- 11001 # Berlin
+# Id <- 5315 # Köln
+Id <- 11001 # Berlin
   if (Id == 11001 || Id == 11002 || Id == 11003 || Id == 11004 || Id == 11005 || Id == 11006 || Id == 11007 || Id == 11008 || Id == 11009 || Id == 11010 || Id == 11011 || Id == 11012){
     subsetData <- filter(Rohdaten, between(IdLandkreis, 11001, 11012))
     stadtname <- "Berlin"
