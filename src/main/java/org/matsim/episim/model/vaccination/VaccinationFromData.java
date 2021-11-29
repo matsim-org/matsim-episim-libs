@@ -3,14 +3,12 @@ package org.matsim.episim.model.vaccination;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
+import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.InfectionEventHandler;
@@ -18,23 +16,29 @@ import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
+import tech.tablesaw.api.*;
+import tech.tablesaw.io.csv.CsvReadOptions;
+import tech.tablesaw.selection.Selection;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static tech.tablesaw.api.ColumnType.*;
 
 /**
  * Read vaccination from file for each age group.
  */
 public class VaccinationFromData extends VaccinationByAge {
 
-	private static final Logger log = LogManager.getLogger(VaccinationFromData.class);
+	private static final Logger log = LogManager.getLogger(org.matsim.episim.model.vaccination.VaccinationFromData.class);
 
 	/**
 	 * All known age groups.
 	 */
-	private List<AgeGroup> ageGroups = null;
+	private List<org.matsim.episim.model.vaccination.VaccinationFromData.AgeGroup> ageGroups = null;
 
 	/**
 	 * Entries for each day.
@@ -42,58 +46,68 @@ public class VaccinationFromData extends VaccinationByAge {
 	private TreeMap<LocalDate, DoubleList> entries = null;
 
 	/**
+	 * Entries with booster vaccinations for each day.
+	 */
+	private TreeMap<LocalDate, DoubleList> booster = null;
+
+	/**
+	 * Config for this class.
+	 */
+	private final VaccinationFromData.Config config;
+
+	/**
 	 * Fallback to random vaccinations.
 	 */
 	private final RandomVaccination random;
 
 	@Inject
-	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
+	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, org.matsim.episim.model.vaccination.VaccinationFromData.Config config) {
 		super(rnd, vaccinationConfig);
-
-		random = new RandomVaccination(rnd, vaccinationConfig);
+		this.config = config;
+		this.random = new RandomVaccination(rnd, vaccinationConfig);
 	}
 
 	@Override
 	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
-
 		if (vaccinationConfig.getFromFile() == null)
 			throw new IllegalArgumentException("Vaccination file must be set, but was null");
 
 		ageGroups = new ArrayList<>();
 		entries = new TreeMap<>();
+		booster = new TreeMap<>();
 
-		try (CSVParser parser = new CSVParser(IOUtils.getBufferedReader(vaccinationConfig.getFromFile()), CSVFormat.DEFAULT.withFirstRecordAsHeader())) {
+		ColumnType[] types = {LOCAL_DATE, STRING, STRING, INTEGER, INTEGER};
 
-			int i = 0;
-			for (String header : parser.getHeaderNames()) {
+		ageGroups.add(new VaccinationFromData.AgeGroup(12, 17));
+		ageGroups.add(new VaccinationFromData.AgeGroup(18, 59));
+		ageGroups.add(new VaccinationFromData.AgeGroup(60, MAX_AGE - 1));
 
-				if (header.contains("-")) {
+		try {
+			Table rkiData = Table.read().usingOptions(CsvReadOptions.builder(vaccinationConfig.getFromFile())
+					.tableName("rkidata")
+					.columnTypes(types));
 
-					String[] split = header.split("-");
+			StringColumn locationColumn = rkiData.stringColumn("LandkreisId_Impfort");
+			Selection location = locationColumn.isEqualTo("05315");
+			Table table = rkiData.where(location);
 
-					ageGroups.add(new AgeGroup(i, Integer.parseInt(split[0]), Integer.parseInt(split[1])));
+			IntColumn vaccinationno = table.intColumn("Impfschutz");
 
-				} else if (header.endsWith("+")) {
+			Selection firstVaccinations = vaccinationno.isEqualTo(1);
+			Table filtered = table.where(firstVaccinations);
 
-					String s = header.substring(0, header.length() - 1);
+			mergeData(filtered, entries, "12-17", config.groups.getDouble("12-17"), 0);
+			mergeData(filtered, entries, "18-59", config.groups.getDouble("18-59"), 1);
+			mergeData(filtered, entries, "60+", config.groups.getDouble("60+"), 2);
 
-					ageGroups.add(new AgeGroup(i, Integer.parseInt(s), MAX_AGE - 1));
-				}
 
-				i++;
-			}
+			Selection boosterVaccinations = vaccinationno.isEqualTo(3);
+			filtered = table.where(boosterVaccinations);
 
-			for (CSVRecord record : parser) {
+			mergeData(filtered, booster, "12-17", config.groups.getDouble("12-17"), 0);
+			mergeData(filtered, booster, "18-59", config.groups.getDouble("18-59"), 1);
+			mergeData(filtered, booster, "60+", config.groups.getDouble("60+"), 2);
 
-				LocalDate date = LocalDate.parse(record.get("date"));
-				DoubleList values = new DoubleArrayList(ageGroups.size());
-
-				for (AgeGroup ag : ageGroups) {
-					values.add(Double.parseDouble(record.get(ag.index)));
-				}
-
-				entries.put(date, values);
-			}
 
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
@@ -101,7 +115,7 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		// collect population sizes
 		for (EpisimPerson p : persons.values()) {
-			AgeGroup ag = findAgeGroup(p.getAge());
+			VaccinationFromData.AgeGroup ag = findAgeGroup(p.getAge());
 			if (ag != null)
 				ag.size++;
 		}
@@ -109,8 +123,8 @@ public class VaccinationFromData extends VaccinationByAge {
 		log.info("Using age-groups: {}", ageGroups);
 	}
 
-	private AgeGroup findAgeGroup(int age) {
-		for (AgeGroup ag : ageGroups) {
+	private VaccinationFromData.AgeGroup findAgeGroup(int age) {
+		for (VaccinationFromData.AgeGroup ag : ageGroups) {
 			if (age >= ag.from && age <= ag.to)
 				return ag;
 		}
@@ -122,21 +136,22 @@ public class VaccinationFromData extends VaccinationByAge {
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
 
 		// If available vaccination is given, data will be ignored and vaccination by age executed
-		// TODO: handle revaccination after update
-		if (availableVaccinations >= 0 || reVaccination)
-			if (reVaccination)
-				return super.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
-			else
-				return random.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
+		if (availableVaccinations >= 0)
+			return random.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
 
-		DoubleList entry = EpisimUtils.findValidEntry(entries, null, date);
+		DoubleList entry;
+
+		if (reVaccination)
+			entry = EpisimUtils.findValidEntry(booster, null, date);
+		else
+			entry = EpisimUtils.findValidEntry(entries, null, date);
 
 		// No vaccinations today
 		if (entry == null)
 			return 0;
 
 		// reset count
-		for (AgeGroup ag : ageGroups) {
+		for (VaccinationFromData.AgeGroup ag : ageGroups) {
 			ag.vaccinated = 0;
 		}
 
@@ -147,18 +162,20 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		for (EpisimPerson p : persons.values()) {
 
-			AgeGroup ag = findAgeGroup(p.getAge());
+			VaccinationFromData.AgeGroup ag = findAgeGroup(p.getAge());
 
 			if (ag == null) continue;
 
-			if (p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
+			if (p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes && (!reVaccination || p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)) {
 				ag.vaccinated++;
 				continue;
 			}
 
 			if (p.isVaccinable() && p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
-//					!p.isRecentlyRecovered(iteration) && 
-					p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) {
+					//!p.isRecentlyRecovered(iteration) &&
+					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &&
+					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)
+			) {
 				perAge[p.getAge()].add(p);
 			}
 		}
@@ -169,7 +186,7 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		for (int ii = 0; ii < ageGroups.size(); ii++) {
 
-			AgeGroup ag = ageGroups.get(ii);
+			org.matsim.episim.model.vaccination.VaccinationFromData.AgeGroup ag = ageGroups.get(ii);
 			double share = entry.getDouble(ii);
 
 			int vaccinationsLeft = (int) ((ag.size * share) - ag.vaccinated);
@@ -186,7 +203,7 @@ public class VaccinationFromData extends VaccinationByAge {
 
 				for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
 					EpisimPerson person = candidates.get(i);
-					vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd), reVaccination);
+					vaccinate(person, iteration, reVaccination ? null : VaccinationModel.chooseVaccinationType(prob, rnd), reVaccination);
 					vaccinationsLeft--;
 					totalVaccinations++;
 				}
@@ -200,9 +217,58 @@ public class VaccinationFromData extends VaccinationByAge {
 		return totalVaccinations;
 	}
 
-	private static final class AgeGroup {
+	static Table filterData(Table table, String ageGroup, double population) {
 
-		private final int index;
+		Selection selection = table.stringColumn("Altersgruppe").isEqualTo(ageGroup);
+		Table data = table.where(selection);
+
+		DateColumn dateColumn = data.dateColumn("Impfdatum");
+
+		LocalDate startDate = dateColumn.min();
+		LocalDate endDate = dateColumn.max();
+		List<LocalDate> dates = startDate.datesUntil(endDate).collect(Collectors.toList());
+
+		for (LocalDate date : dates) {
+			Selection thisDateSelection = dateColumn.isEqualTo(date);
+			Table thisDateTable = data.where(thisDateSelection);
+			if (thisDateTable.rowCount() == 0) {
+				Table singlerow = data.emptyCopy(1);
+				for (Row row : singlerow) {
+					row.setDate("Impfdatum", date);
+					row.setString("Altersgruppe", ageGroup);
+					row.setInt("Anzahl", 0);
+				}
+				data.append(singlerow);
+			}
+		}
+		data = data.sortAscendingOn("Impfdatum");
+		DoubleColumn cumsumAnzahl = data.intColumn("Anzahl").cumSum();
+		DoubleColumn quota = cumsumAnzahl.divide(population);
+		quota.setName(ageGroup);
+		data.addColumns(quota);
+		data.removeColumns("Impfschutz", "LandkreisId_Impfort", "Altersgruppe", "Anzahl");
+		data.column("Impfdatum").setName("date");
+
+		return data;
+	}
+
+	static void mergeData(Table filtered, TreeMap<LocalDate, DoubleList> entries, String ageGroup, double population, int i) {
+		for (Row row : filterData(filtered, ageGroup, population)) {
+			LocalDate date = row.getDate(0);
+			DoubleList values = entries.computeIfAbsent(date, (k) -> new DoubleArrayList(new double[]{0, 0, 0}));
+
+			values.set(i, row.getDouble(1));
+		}
+	}
+
+	/**
+	 * Create a new configuration, that needs to be bound with guice.
+	 */
+	public static VaccinationFromData.Config newConfig(String locationId) {
+		return new VaccinationFromData.Config(locationId);
+	}
+
+	private static final class AgeGroup {
 
 		private final int from;
 		private final int to;
@@ -210,8 +276,7 @@ public class VaccinationFromData extends VaccinationByAge {
 		private int size = 0;
 		private int vaccinated = 0;
 
-		private AgeGroup(int index, int from, int to) {
-			this.index = index;
+		private AgeGroup(int from, int to) {
 			this.from = from;
 			this.to = to;
 		}
@@ -223,6 +288,29 @@ public class VaccinationFromData extends VaccinationByAge {
 					", to=" + to +
 					", size=" + size +
 					'}';
+		}
+	}
+
+	/**
+	 * Holds config options for this class.
+	 */
+	public static final class Config {
+
+		final String locationId;
+		final Object2DoubleMap<String> groups = new Object2DoubleLinkedOpenHashMap<>();
+
+		public Config(String locationId) {
+			this.locationId = locationId;
+		}
+
+		/**
+		 * Define an age group and reference size in the population.
+		 * @param ageGroup string that must be exactly like in the data
+		 * @param referenceSize unscaled reference size of this age group.
+		 */
+		public VaccinationFromData.Config withAgeGroup(String ageGroup, double referenceSize) {
+			groups.put(ageGroup, referenceSize);
+			return this;
 		}
 	}
 }

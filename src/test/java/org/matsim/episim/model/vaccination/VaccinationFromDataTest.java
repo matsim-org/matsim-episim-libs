@@ -1,3 +1,4 @@
+
 package org.matsim.episim.model.vaccination;
 
 import org.junit.Before;
@@ -29,6 +30,7 @@ public class VaccinationFromDataTest {
 	private static File input;
 
 	private VaccinationFromData model;
+
 	private Map<Id<Person>, EpisimPerson> persons = new HashMap<>();
 
 
@@ -63,18 +65,35 @@ public class VaccinationFromDataTest {
 			persons.put(p.getPersonId(), p);
 		}
 
-		model = new VaccinationFromData(rnd, config);
+		VaccinationFromData.Config conf = VaccinationFromData.newConfig("05315")
+				.withAgeGroup("12-17", 54587.2)
+				.withAgeGroup("18-59", 676995)
+				.withAgeGroup("60+", 250986);
 
-		// TODO Comment in when ready
+		model = new VaccinationFromData(rnd, config, conf);
 
-		//model.init(rnd, persons, null, null);
+		model.init(rnd, persons, null, null);
 	}
 
 	@Test
 	public void vaccination() {
 
-		// TODO:
-		//model.handleVaccination(persons, false, 0, LocalDate.now(), 1, 0);
+		assertThat(persons.values())
+				.allMatch(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no);
+
+		model.handleVaccination(persons, false, -1, LocalDate.of(2021,5, 14), 1, 0);
+
+		long vaccinated = persons.values().stream().filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
+
+		assertThat(vaccinated)
+				.isEqualTo(511);
+
+		model.handleVaccination(persons, true, -1, LocalDate.of(2021,10, 14), 180, 0);
+
+		long reVaccinated = persons.values().stream().filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
+
+		assertThat(reVaccinated)
+				.isEqualTo(24);
 
 
 	}

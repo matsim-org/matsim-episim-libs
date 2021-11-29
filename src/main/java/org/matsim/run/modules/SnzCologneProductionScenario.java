@@ -192,6 +192,13 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 				HouseholdSusceptibility.newConfig().withSusceptibleHouseholds(householdSusc, 5.0)
 		);
 
+		bind(VaccinationFromData.Config.class).toInstance(
+				VaccinationFromData.newConfig("05315")
+						.withAgeGroup("12-17", 54587.2)
+						.withAgeGroup("18-59", 676995)
+						.withAgeGroup("60+", 250986)
+		);
+
 		Multibinder.newSetBinder(binder(), SimulationListener.class)
 				.addBinding().to(HouseholdSusceptibility.class);
 
@@ -363,8 +370,9 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 				vaccinationConfig.setCompliancePerAge(Map.of(0, 1.0));
 
 				vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of());
+				vaccinationConfig.setReVaccinationCapacity_pers_per_day(Map.of());
 
-				vaccinationConfig.setFromFile(INPUT.resolve("cologneVaccinations.csv").toString());
+				vaccinationConfig.setFromFile(INPUT.resolve("Aktuell_Deutschland_Landkreise_COVID-19-Impfungen.csv").toString());
 			}
 		}
 
