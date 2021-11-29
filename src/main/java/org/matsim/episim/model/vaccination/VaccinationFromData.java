@@ -3,6 +3,8 @@ package org.matsim.episim.model.vaccination;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -48,9 +50,16 @@ public class VaccinationFromData extends VaccinationByAge {
 	 */
 	private TreeMap<LocalDate, DoubleList> booster = null;
 
+
+	/**
+	 * Config for this class.
+	 */
+	private final Config config;
+
 	@Inject
-	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig) {
+	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, Config config) {
 		super(rnd, vaccinationConfig);
+		this.config = config;
 	}
 
 	@Override
@@ -82,17 +91,17 @@ public class VaccinationFromData extends VaccinationByAge {
 			Selection firstVaccinations = vaccinationno.isEqualTo(1);
 			Table filtered = table.where(firstVaccinations);
 
-			mergeData(filtered, entries, "12-17", 54587.2, 0);
-			mergeData(filtered, entries, "18-59", 676995, 1);
-			mergeData(filtered, entries, "60+", 250986, 2);
+			mergeData(filtered, entries, "12-17", config.groups.getDouble("12-17"), 0);
+			mergeData(filtered, entries, "18-59", config.groups.getDouble("18-59"), 1);
+			mergeData(filtered, entries, "60+", config.groups.getDouble("60+"), 2);
 
 
 			Selection boosterVaccinations = vaccinationno.isEqualTo(3);
 			filtered = table.where(boosterVaccinations);
 
-			mergeData(filtered, booster, "12-17", 54587.2, 0);
-			mergeData(filtered, booster, "18-59", 676995, 1);
-			mergeData(filtered, booster, "60+", 250986, 2);
+			mergeData(filtered, booster, "12-17", config.groups.getDouble("12-17"), 0);
+			mergeData(filtered, booster, "18-59", config.groups.getDouble("18-59"), 1);
+			mergeData(filtered, booster, "60+", config.groups.getDouble("60+"), 2);
 
 
 		} catch (IOException e) {
@@ -247,6 +256,13 @@ public class VaccinationFromData extends VaccinationByAge {
 		}
 	}
 
+	/**
+	 * Create a new configuration, that needs to be bound with guice.
+	 */
+	public static Config newConfig(String locationId) {
+		return new Config(locationId);
+	}
+
 	private static final class AgeGroup {
 
 		private final int from;
@@ -267,6 +283,29 @@ public class VaccinationFromData extends VaccinationByAge {
 					", to=" + to +
 					", size=" + size +
 					'}';
+		}
+	}
+
+	/**
+	 * Holds config options for this class.
+	 */
+	public static final class Config {
+
+		final String locationId;
+		final Object2DoubleMap<String> groups = new Object2DoubleLinkedOpenHashMap<>();
+
+		public Config(String locationId) {
+			this.locationId = locationId;
+		}
+
+		/**
+		 * Define an age group and reference size in the population.
+		 * @param ageGroup string that must be exactly like in the data
+		 * @param referenceSize unscaled reference size of this age group.
+		 */
+		public Config withAgeGroup(String ageGroup, double referenceSize) {
+			groups.put(ageGroup, referenceSize);
+			return this;
 		}
 	}
 }

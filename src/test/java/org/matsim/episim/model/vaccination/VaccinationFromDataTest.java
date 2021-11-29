@@ -29,6 +29,7 @@ public class VaccinationFromDataTest {
 	private static File input;
 
 	private VaccinationFromData model;
+
 	private Map<Id<Person>, EpisimPerson> persons = new HashMap<>();
 
 
@@ -63,7 +64,12 @@ public class VaccinationFromDataTest {
 			persons.put(p.getPersonId(), p);
 		}
 
-		model = new VaccinationFromData(rnd, config);
+		VaccinationFromData.Config conf = VaccinationFromData.newConfig("05315")
+				.withAgeGroup("12-17", 54587.2)
+				.withAgeGroup("18-59", 676995)
+				.withAgeGroup("60+", 250986);
+
+		model = new VaccinationFromData(rnd, config, conf);
 
 		model.init(rnd, persons, null, null);
 	}
