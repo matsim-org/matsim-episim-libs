@@ -50,16 +50,21 @@ public class VaccinationFromData extends VaccinationByAge {
 	 */
 	private TreeMap<LocalDate, DoubleList> booster = null;
 
-
 	/**
 	 * Config for this class.
 	 */
 	private final Config config;
 
+	/**
+	 * Fallback to random vaccinations.
+	 */
+	private final RandomVaccination random;
+
 	@Inject
 	public VaccinationFromData(SplittableRandom rnd, VaccinationConfigGroup vaccinationConfig, Config config) {
 		super(rnd, vaccinationConfig);
 		this.config = config;
+		this.random = new RandomVaccination(rnd, vaccinationConfig);
 	}
 
 	@Override
@@ -131,9 +136,8 @@ public class VaccinationFromData extends VaccinationByAge {
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
 
 		// If available vaccination is given, data will be ignored and vaccination by age executed
-		// TODO: handle revaccination after update
-		if (availableVaccinations >= 0 || reVaccination)
-			return super.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
+		if (availableVaccinations >= 0)
+			return random.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
 
 		DoubleList entry;
 
