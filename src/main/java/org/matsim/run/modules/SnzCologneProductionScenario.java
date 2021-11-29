@@ -199,6 +199,13 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 						.withAgeGroup("60+", 250986)
 		);
 
+		/* Dresden:
+			VaccinationFromData.newConfig("14612")
+					.withAgeGroup("12-17", 28255.8)
+					.withAgeGroup("18-59", 319955)
+					.withAgeGroup("60+", 151722)
+		 */
+
 		Multibinder.newSetBinder(binder(), SimulationListener.class)
 				.addBinding().to(HouseholdSusceptibility.class);
 
