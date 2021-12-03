@@ -66,11 +66,6 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setProgressionConfig(progressionConfig(params, Transition.config()).build());
-		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
-		
-		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * 1.4);
-
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20210917/" + params.seed + "-270-2020-11-20.zip");
 //		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
@@ -85,13 +80,6 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		//curfew
-		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
-		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
-		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
-		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
-		episimConfig.setCurfewCompliance(curfewCompliance);
-
 		//2G
 		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leisUnv), "leisure");
 		if (params.liftRestr.equals("yes")) {
@@ -99,53 +87,19 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 			builder.restrict(LocalDate.parse("2022-01-10"), 0.8, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
 		}
 			
-		
 		if (params.schools.equals("unprotected") || params.schools.equals("noMasks")) 
 			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		
 		if (params.schools.equals("unprotected"))
 			builder.restrict(restrictionDate, Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-			
-		builder.setHospitalScale(1.3);
-		
+					
 		episimConfig.setPolicy(builder.build());
 		
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 		inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
-
 		episimConfig.setInputDays(inputDays);
 
-		//disease import 2020
-		Map<LocalDate, Integer> importMap = new HashMap<>();
-		double importFactorBeforeJune = 4.0;
-		double imprtFctMult = 1.0;
-		long importOffset = 0;
-		double cologneFactor = 0.5;
-
-		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
-				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
-				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-		SnzCologneProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
-				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-
-		importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
-		importMap.put(LocalDate.parse("2020-08-09"), 1);
-
-		episimConfig.setInfections_pers_per_day(importMap);
-
-
-		//weather model
-		try {
-			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, 18.5, 5., 1.0);
-			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
-
-		//mutations a
+		//mutations
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
@@ -164,6 +118,7 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		//disease import 2021
 		double impFacSum = 3.0;
 		int imp = 16;
+		double cologneFactor = 0.5;
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacSum, LocalDate.parse("2021-07-03").plusDays(0),
 				LocalDate.parse("2021-07-25").plusDays(0), 1, 48);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacSum, LocalDate.parse("2021-07-26").plusDays(0),
@@ -799,55 +754,6 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		};
 
 		RunParallel.main(args2);
-	}
-
-	/**
-	 * Adds progression config to the given builder.
-	 * @param params
-	 */
-	private static Transition.Builder progressionConfig(Params params, Transition.Builder builder) {
-
-//		Transition transitionRecSus;
-//
-//		if (params.recSus != 180 ) {
-//		transitionRecSus = Transition.fixed(params.recSus);
-//		}
-//		else {
-//			transitionRecSus = Transition.logNormalWithMedianAndStd(params.recSus, 10.);
-//		
-//		}
-
-		return builder
-				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
-				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-						to(EpisimPerson.DiseaseStatus.contagious, Transition.fixed(0)))
-
-// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
-// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
-				.from(EpisimPerson.DiseaseStatus.contagious,
-						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(6., 6.)),    //80%
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))            //20%
-
-// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
-				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
-						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(5., 5.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
-
-// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
-				.from(EpisimPerson.DiseaseStatus.seriouslySick,
-						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
-
-// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
-				.from(EpisimPerson.DiseaseStatus.critical,
-						to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
-
-				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
-						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
-
-				.from(EpisimPerson.DiseaseStatus.recovered,
-						to(EpisimPerson.DiseaseStatus.susceptible, Transition.fixed(1)))
-				;
 	}
 
 

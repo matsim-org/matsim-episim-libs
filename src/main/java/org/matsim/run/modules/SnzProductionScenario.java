@@ -9,6 +9,7 @@ import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.VaccinationConfigGroup;
@@ -16,9 +17,13 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.vaccination.VaccinationByAge;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.run.batch.CologneOmicron.Params;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
+
+import static org.matsim.episim.model.Transition.to;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -182,7 +187,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			double midpoint1 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(weather, avgWeather, 0.5, midpoint1, midpoint2, 5.);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
@@ -502,7 +507,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	public enum ChristmasModel {no, restrictive, permissive}
 
-	public enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
+	public enum WeatherModel {no, midpoints_175_175, midpoints_185_250, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
 
 	public enum AdjustRestrictions {yes, no}
 
@@ -524,7 +529,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		Vaccinations vaccinations = Vaccinations.yes;
 		ChristmasModel christmasModel = ChristmasModel.restrictive;
 		EasterModel easterModel = EasterModel.no;
-		WeatherModel weatherModel = WeatherModel.midpoints_175_250;
+		WeatherModel weatherModel = WeatherModel.midpoints_185_250;
 		EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
 		Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
@@ -632,6 +637,46 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
+	}
+	
+
+	/**
+	 * Adds progression config to the given builder.
+	 * @param params
+	 */
+	static Transition.Builder progressionConfig(Transition.Builder builder) {
+
+		return builder
+				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
+				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
+						to(EpisimPerson.DiseaseStatus.contagious, Transition.fixed(0)))
+
+// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
+// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
+				.from(EpisimPerson.DiseaseStatus.contagious,
+						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(6., 6.)),    //80%
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))            //20%
+
+// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
+				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
+						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(5., 5.)),
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
+
+// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
+				.from(EpisimPerson.DiseaseStatus.seriouslySick,
+						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
+
+// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
+				.from(EpisimPerson.DiseaseStatus.critical,
+						to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
+
+				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+
+				.from(EpisimPerson.DiseaseStatus.recovered,
+						to(EpisimPerson.DiseaseStatus.susceptible, Transition.fixed(1)))
+				;
 	}
 
 }
