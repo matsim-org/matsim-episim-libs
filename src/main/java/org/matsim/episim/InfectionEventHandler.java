@@ -268,8 +268,7 @@ public final class InfectionEventHandler implements Externalizable {
 	 * Update events data and internal person data structure.
 	 * @param events
 	 */
-	public void updateEvents(Map<DayOfWeek, List<Event>> events) {
-
+	void updateEvents(Map<DayOfWeek, List<Event>> events) {
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
@@ -280,6 +279,8 @@ public final class InfectionEventHandler implements Externalizable {
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
 		Map<List<Event>, DayOfWeek> sameDay = new IdentityHashMap<>(7);
+
+		this.personMap.values().forEach(EpisimPerson::resetTrajectory);
 
 		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
 
@@ -409,6 +410,7 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		// Go through each day again to compute max group sizes
 		sameDay.clear();
@@ -432,11 +434,11 @@ public final class InfectionEventHandler implements Externalizable {
 						pseudoFacilityMap.get(last).removePerson(person);
 
 					if (!pseudoFacilityMap.get(first).containsPerson(person))
-						pseudoFacilityMap.get(first).addPerson(person, 0, person.getFirstActivity(day));
+						pseudoFacilityMap.get(first).addPerson(person, now, person.getFirstActivity(day));
 
 				} else {
 					if (!pseudoFacilityMap.get(first).containsPerson(person))
-						pseudoFacilityMap.get(first).addPerson(person, 0, person.getFirstActivity(day));
+						pseudoFacilityMap.get(first).addPerson(person, now, person.getFirstActivity(day));
 				}
 			}
 
@@ -454,7 +456,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					if (event instanceof ActivityStartEvent) {
 						if (!facility.containsPerson(person))
-							facility.addPerson(person, 0.0, person.getActivity(day, event.getTime()));
+							facility.addPerson(person, now, person.getActivity(day, event.getTime()));
 
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
@@ -470,11 +472,11 @@ public final class InfectionEventHandler implements Externalizable {
 		pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
 
 		// Put persons into their correct initial container
-		DayOfWeek startDay = EpisimUtils.getDayOfWeek(episimConfig, 0);
+		DayOfWeek startDay = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 		for (EpisimPerson person : personMap.values()) {
 			if (person.getStaysInContainer(startDay)) {
 				EpisimFacility facility = pseudoFacilityMap.get(person.getLastFacilityId(startDay));
-				facility.addPerson(person, 0, person.getLastActivity(startDay));
+				facility.addPerson(person, now, person.getLastActivity(startDay));
 			}
 		}
 

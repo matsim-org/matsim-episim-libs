@@ -20,7 +20,6 @@
  */
 package org.matsim.episim;
 
-import com.google.common.annotations.Beta;
 import com.google.inject.Inject;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.logging.log4j.LogManager;
@@ -28,28 +27,19 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.ActivityStartEvent;
-import org.matsim.api.core.v01.events.ActivityEndEvent;
-import org.matsim.api.core.v01.events.Event;
-import org.matsim.api.core.v01.events.HasFacilityId;
-import org.matsim.api.core.v01.events.PersonEntersVehicleEvent;
-import org.matsim.api.core.v01.events.PersonLeavesVehicleEvent;
+import org.matsim.api.core.v01.events.*;
 import org.matsim.api.core.v01.network.Link;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.gbl.Gbl;
 import org.matsim.core.router.TripStructureUtils;
-import org.matsim.episim.ReplayEventsTask;
-
 import org.matsim.facilities.ActivityFacility;
 
 import javax.annotation.Nullable;
 import java.time.DayOfWeek;
 import java.util.*;
-import java.util.concurrent.*;
 
 /**
  * Handler that replays events from {@link EpisimConfigGroup#getInputEventsFile()} with corrected time and attributes.
@@ -74,24 +64,7 @@ public final class ReplayHandler {
 		this.scenario = scenario;
 		this.episimConfig = config;
 
-		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
-
-			List<Event> eventsForDay = new ArrayList<>();
-			EventsManager manager = EventsUtils.createEventsManager();
-			manager.addHandler(new EventReader(eventsForDay));
-			EventsUtils.readEvents(manager, input.getPath());
-			manager.finishProcessing();
-
-			log.info("Read in {} events for {}, with time range {} - {}", eventsForDay.size(), input.getDays(), eventsForDay.get(0).getTime(),
-					eventsForDay.get(eventsForDay.size() - 1).getTime());
-
-			for (DayOfWeek day : input.getDays()) {
-				if (events.containsKey(day))
-					throw new IllegalStateException("Events for day " + day + " already defined!");
-
-				events.put(day, eventsForDay);
-			}
-		}
+		this.events.putAll(readEvents(episimConfig));
 
 		if (events.size() != 7) {
 			EnumSet<DayOfWeek> missing = EnumSet.complementOf(EnumSet.copyOf(events.keySet()));
@@ -126,6 +99,45 @@ public final class ReplayHandler {
 	}
 
 	/**
+	 * Read events as defined in config.
+	 */
+	public Map<DayOfWeek, List<Event>> readEvents(EpisimConfigGroup config) {
+
+		EnumMap<DayOfWeek, List<Event>> map = new EnumMap<>(DayOfWeek.class);
+
+		for (EpisimConfigGroup.EventFileParams input : config.getInputEventsFiles()) {
+
+			List<Event> eventsForDay = new ArrayList<>();
+			EventsManager manager = EventsUtils.createEventsManager();
+			manager.addHandler(new EventReader(eventsForDay));
+			EventsUtils.readEvents(manager, input.getPath());
+			manager.finishProcessing();
+
+			log.info("Read in {} events for {}, with time range {} - {}", eventsForDay.size(), input.getDays(), eventsForDay.get(0).getTime(),
+					eventsForDay.get(eventsForDay.size() - 1).getTime());
+
+			for (DayOfWeek day : input.getDays()) {
+				if (map.containsKey(day))
+					throw new IllegalStateException("Events for day " + day + " already defined!");
+
+				map.put(day, eventsForDay);
+			}
+		}
+
+		return map;
+	}
+
+	/**
+	 * Replaces all stored events
+	 *
+	 * @param events new events to store
+	 */
+	void setEvents(Map<DayOfWeek, List<Event>> events) {
+		this.events.clear();
+		this.events.putAll(events);
+	}
+
+	/**
 	 * Helper class to read events one time.
 	 */
 	private final class EventReader implements BasicEventHandler {
@@ -154,8 +166,8 @@ public final class ReplayHandler {
 				}
 
 				event = new ActivityStartEvent(e.getTime(), e.getPersonId(), e.getLinkId(),
-						                       createEpisimFacilityId(e),
-						                       e.getActType().intern(), coord);
+						createEpisimFacilityId(e),
+						e.getActType().intern(), coord);
 			} else if (event instanceof ActivityEndEvent) {
 				ActivityEndEvent e = (ActivityEndEvent) event;
 

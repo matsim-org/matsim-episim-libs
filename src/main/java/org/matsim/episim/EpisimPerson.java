@@ -86,7 +86,7 @@ public final class EpisimPerson implements Attributable {
 	// Fields above are initialized from the sim and not persisted
 
 	/**
-	 * Whether person stays in container at the and of a day.
+	 * Whether person stays in container at the end of a day.
 	 */
 	private final boolean[] staysInContainer = new boolean[7];
 
@@ -670,6 +670,18 @@ public final class EpisimPerson implements Attributable {
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];
 		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];
+	}
+
+	/**
+	 * Reset all trajectory information
+	 */
+	void resetTrajectory() {
+		trajectory.clear();
+		Arrays.fill(startOfDay, 0);
+		Arrays.fill(endOfDay, 0);
+		Arrays.fill(firstFacilityId, null);
+		Arrays.fill(lastFacilityId, null);
+		Arrays.fill(staysInContainer, false);
 	}
 
 	@Override

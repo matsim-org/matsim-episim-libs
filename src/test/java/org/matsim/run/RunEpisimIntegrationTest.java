@@ -185,7 +185,7 @@ public class RunEpisimIntegrationTest {
 		runner.run(it);
 	}
 
-	static class TestScenario extends AbstractModule {
+	public static class TestScenario extends AbstractModule {
 
 		private final MatsimTestUtils utils;
 		private final int it;
@@ -195,7 +195,7 @@ public class RunEpisimIntegrationTest {
 		}
 
 
-		TestScenario(MatsimTestUtils utils, int it) {
+		public TestScenario(MatsimTestUtils utils, int it) {
 			this.utils = utils;
 			this.it = it;
 		}

@@ -26,6 +26,7 @@ import org.apache.commons.compress.archivers.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
@@ -41,6 +42,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -127,6 +130,29 @@ public final class EpisimRunner {
 		handler.finish();
 
 		reporting.close();
+	}
+
+	/**
+	 * Update events data and internal person data structure.
+	 * @param events
+	 */
+	public void updateEvents(Map<DayOfWeek, List<Event>> events) {
+
+		ReplayHandler replay = replayProvider.get();
+
+		replay.setEvents(events);
+
+		InfectionEventHandler handler = handlerProvider.get();
+		handler.updateEvents(events);
+	}
+
+	/**
+	 * Reads and updates events as defined in given config.
+	 */
+	public void updateEvents(EpisimConfigGroup config) {
+		ReplayHandler replay = replayProvider.get();
+		Map<DayOfWeek, List<Event>> events = replay.readEvents(config);
+		updateEvents(events);
 	}
 
 	/**
