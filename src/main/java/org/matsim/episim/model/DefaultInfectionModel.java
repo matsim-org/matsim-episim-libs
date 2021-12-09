@@ -103,9 +103,14 @@ public final class DefaultInfectionModel implements InfectionModel {
 		if (infector.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 			return 1;
 
+		int daysVaccinated = infector.daysSince(EpisimPerson.VaccinationStatus.yes, iteration);
+
 		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());
 
-		return params.getInfectivity(strain.getStrain(), iteration);
+		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
+			return params.getBoostInfectivity(strain.getStrain(), daysVaccinated);
+		} else
+			return params.getInfectivity(strain.getStrain(), daysVaccinated);
 	}
 
 	/**
