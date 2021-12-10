@@ -86,7 +86,7 @@ convert_infections_into_incidence <- function(directory, infections_raw, aggrega
     select(-c(population, infections_1dayAgo, infections_7daysAgo, nSusceptible)) %>%
     arrange(date)
 
-  if(aggregate_seeds == FALSE){
+  if (aggregate_seeds == FALSE) {
     return(infections)
   }
 
@@ -113,7 +113,8 @@ geolocate_infections <- function(infections_raw, facilities_to_district_map) {
   fac_to_district_map[is.na(fac_to_district_map)] <- "not_berlin"
 
   # filter, merge, & find count per district
-  merged <- infections_raw %>% select(-c(time, infector, infected, infectionType,groupSize,virusStrain,probability)) %>%
+  merged <- infections_raw %>%
+    select(-c(time, infector, infected, infectionType, groupSize, virusStrain, probability)) %>%
     filter(!grepl("^tr_", facility)) %>%
     left_join(fac_to_district_map, by = c("facility"), keep = TRUE) %>%
     filter(!is.na(district)) %>%
@@ -162,7 +163,7 @@ geolocate_infections <- function(infections_raw, facilities_to_district_map) {
 #   }
 # }
 
-get_run_parameters <- function(directory){
+get_run_parameters <- function(directory) {
   info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
   col_names <- colnames(info_df)
   run_params <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
@@ -202,7 +203,7 @@ read_combine_episim_output <- function(directory, file_root, allow_missing_files
       df_for_run[var] <- info_df[row, var]
     }
 
-    episim_df_all_runs <- rbindlist(list(episim_df_all_runs,df_for_run))
+    episim_df_all_runs <- rbindlist(list(episim_df_all_runs, df_for_run))
     # episim_df_all_runs <- rbind(episim_df_all_runs, df_for_run) # inefficient
 
   }
@@ -323,28 +324,250 @@ merge_tidy_average <- function(episim_all_runs, rki_new, rki_old) {
 
   return(merged_weekly)
 
+}
 
-  ### Plotting functions
-  build_plot <- function(df, scale_colors) {
-    plot <- ggplot(df) +
-      geom_line(aes(date, incidence, col = Scenario)) +
-      theme_minimal(base_size = 11) +
-      theme(legend.position = "bottom", axis.text.x = element_text(angle = 90)) +
-      labs(x = "Date", y = "7-Day Infections / 100k Pop.") +
-      scale_x_date(date_breaks = "1 month", date_labels = "%b-%y") +
-      facet_wrap(~district, ncol = 3) +
-      scale_color_manual(values = scale_colors)
+### Plotting functions
+build_plot <- function(df, scale_colors) {
+  plot <- ggplot(df) +
+    geom_line(aes(date, incidence, col = Scenario)) +
+    theme_minimal(base_size = 11) +
+    theme(legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust=1)) +
+    labs(x = "Date", y = "7-Day Infections / 100k Pop.") +
+    scale_x_date(date_breaks = "2 month", date_labels = "%b-%y") +
+    facet_wrap(~district, ncol = 3) +
+    scale_color_manual(values = scale_colors)
 
-    print(plot)
+  print(plot)
 
-    return(plot)
+  return(plot)
+}
+
+save_png_pdf <- function(.data, name) {
+  # print(.data)
+  ggsave(.data, filename = paste0(name, ".png"), path = gbl_image_output, width = 16, height = 12, units = "cm")
+  ggsave(.data, filename = paste0(name, ".pdf"), path = gbl_image_output, width = 16, height = 12, units = "cm")
+}
+
+
+### TIMELINE FUNCTIONS FOR ADAPTIVE RESTRICTIONS
+make_timeline <- function(ar_filtered, title) {
+  timeline_data <- data.frame()
+
+  locations <- unique(ar_filtered$location)
+
+  for (loc in locations) {
+
+    policy_filtered <- ar_filtered %>% filter(location == loc)
+
+    timeline_data_district <- data.frame()
+    policy <- policy_filtered$policy[1]
+    start <- policy_filtered$date[1]
+
+    for (row in seq(2, nrow(policy_filtered))) {
+
+      if (policy_filtered$policy[row] == policy) {
+        next
+      }
+
+      end <- policy_filtered$date[row]
+      single <- data.frame(location = loc, policy = policy, start = start, end = end)
+      timeline_data_district <- rbind(timeline_data_district, single)
+
+      start <- end
+      policy <- policy_filtered$policy[row]
+
+    }
+
+    end <- policy_filtered$date[row]
+
+    if (start != end) {
+      single <- data.frame(location = loc, policy = policy, start = start, end = end)
+      timeline_data_district <- rbind(timeline_data_district, single)
+    }
+
+    timeline_data <- rbind(timeline_data, timeline_data_district)
   }
 
-  save_png_pdf <- function(.data, name) {
-    # print(.data)
-    ggsave(.data, filename = paste0(name, ".png"), path = gbl_image_output, width = 16, height = 12, units = "cm")
-    ggsave(.data, filename = paste0(name, ".pdf"), path = gbl_image_output, width = 16, height = 12, units = "cm")
+
+  timeline_data_final <- timeline_data %>%
+    mutate(location = str_replace(location, "_", "-")) %>%
+    mutate(color = policy) %>%
+    mutate(color = str_replace(color, "initial", "gray")) %>%
+    mutate(color = str_replace(color, "restricted", "indianred1")) %>%
+    mutate(color = str_replace(color, "open", "royalblue1"))
+
+
+  # following was adapted from https://github.com/wlhamilton/Patient-ward-movement-timelines/blob/main/R%20script%20for%20formatting%20ward%20movement%20data.R
+
+  plot_data <- gg_vistime(data = timeline_data_final, col.group = "location", col.event = "policy", col.start = "start", col.end = "end", col.color = "color", show_labels = FALSE) +  #theme_bw() +
+    ggplot2::theme(
+      plot.title = element_text(size = 14),
+      axis.text.x = element_text(size = 12, color = "black", angle = 30, vjust = 1, hjust = 1),
+      axis.text.y = element_text(size = 12, color = "black")) +
+    scale_x_datetime(breaks = breaks_width("1 month"), labels = date_format("%b %y")) +
+    labs(title = title)
+
+  return(plot_data)
+
+}
+
+### SETUP TIMELINE DATA
+make_timeline_data <- function(ar_filtered) {
+  timeline_data <- data.frame()
+
+  locations <- unique(ar_filtered$location)
+
+  for (loc in locations) {
+
+    policy_filtered <- ar_filtered %>% filter(location == loc)
+
+    timeline_data_district <- data.frame()
+    policy <- policy_filtered$policy[1]
+    start <- policy_filtered$date[1]
+
+    for (row in seq(2, nrow(policy_filtered))) {
+
+      if (policy_filtered$policy[row] == policy) {
+        next
+      }
+
+      end <- policy_filtered$date[row]
+      single <- data.frame(location = loc, policy = policy, start = start, end = end)
+      timeline_data_district <- rbind(timeline_data_district, single)
+
+      start <- end
+      policy <- policy_filtered$policy[row]
+
+    }
+
+    end <- policy_filtered$date[row]
+
+    if (start != end) {
+      single <- data.frame(location = loc, policy = policy, start = start, end = end)
+      timeline_data_district <- rbind(timeline_data_district, single)
+    }
+
+    timeline_data <- rbind(timeline_data, timeline_data_district)
   }
 
+
+  timeline_data_final <- timeline_data %>%
+    mutate(location = str_replace(location, "_", "-")) %>%
+    mutate(color = policy) %>%
+    mutate(color = str_replace(color, "initial", "gray")) %>%
+    mutate(color = str_replace(color, "restricted", "indianred1")) %>%
+    mutate(color = str_replace(color, "open", "royalblue1"))
+
+  return(timeline_data_final)
+}
+
+make_legend <- function() {
+  data_legend <- data.frame(policy = c("Restriction Policy:", "Initial", "Restricted", "Open"), color = c(rgb(0, 0, 0, 0), "gray", "indianred1", "royalblue1"))
+  data_legend$start <- c(as.Date("2020-01-01"), as.Date("2020-01-07"), as.Date("2020-01-13"), as.Date("2020-01-19"))
+  data_legend$end <- c(as.Date("2020-01-06"), as.Date("2020-01-12"), as.Date("2020-01-18"), as.Date("2020-01-24"))
+  data_legend
+  plot_legend <- gg_vistime(data = data_legend,
+                            col.event = "policy",
+                            col.color = "color",
+                            show_labels = TRUE,
+                            linewidth = 20,
+                            title = "Legend")
+  plot_legend
+
+  # Tweak the legend plot
+  plot_legend <- plot_legend +
+    theme_void() +
+    ggplot2::theme(
+      # plot.title = element_text(size = 11),
+      plot.title = element_blank(),
+      # plot.title.position = "plot",
+      axis.title.x = element_blank(),
+      axis.text.x = element_blank(),
+      axis.ticks.x = element_blank(),
+      axis.title.y = element_blank(),
+      axis.text.y = element_blank(),
+      axis.ticks.y = element_blank())
+
+  return(plot_legend)
+}
+
+make_text <- function(ar) {
+
+
+  lockdown_weeks <- ar %>%
+    group_by(location,policy) %>%
+    count() %>%
+    pivot_wider(names_from = policy, values_from = n, values_fill = 0) %>%
+    mutate(weeks_restricted = paste0(round(restricted / 7, 1), " wks")) %>%
+    arrange(location)
+
+
+  # data = timeline_data_final, col.group = "location",
+  lockdown_weeks$color <- rgb(0, 0, 0, 0)
+  lockdown_weeks$start <- c(as.Date("2020-01-1"))
+  lockdown_weeks$end <- c(as.Date("2020-01-2"))
+  lockdown_weeks
+  plot_text <- gg_vistime(data = lockdown_weeks,
+                          col.group = "location",
+                          col.event = "weeks_restricted",
+                          col.color = "color",
+                          show_labels = TRUE,
+                          linewidth = 20,
+                          title = "Lockdown")
+
+  # Tweak the legend plot
+  plot_text <- plot_text +
+    ggplot2::theme(
+      plot.title = element_text(size = 14),
+      axis.ticks.length = unit(0, "in"),
+      axis.text.x = element_text(size = 12, color = rgb(0, 0, 0, 0), angle = 30, vjust = 1, hjust = 1),
+      axis.text.y = element_blank(),
+      axis.ticks = element_blank(),
+      axis.title.y = element_blank(),
+      axis.line.y = element_blank(),
+    ) +
+    scale_x_datetime(breaks = breaks_width("1 month"), labels = date_format("%b %y"))
+
+  return(plot_text)
+
+
+  make_gt_table <- function(.data) {
+    gt(.data, rowname_col = "Rf") %>%
+      tab_stubhead(label = "Rf") %>%
+      tab_spanner(
+        label = "Trigger",
+        columns = trigs
+      ) %>%
+      fmt_number(
+        columns = trigs,
+        decimals = 1,
+        use_seps = FALSE
+      )
+  }
+
+  localMaxima <- function(x) {
+    # Use -Inf instead if x is numeric (non-integer)
+    y <- diff(c(-.Machine$integer.max, x)) > 0L
+    rle(y)$lengths
+    y <- cumsum(rle(y)$lengths)
+    y <- y[seq.int(1L, length(y), 2L)]
+    if (x[[1]] == x[[2]]) {
+      y <- y[-1]
+    }
+    y
+  }
+
+
+  localMinima <- function(x) {
+    # Use -Inf instead if x is numeric (non-integer)
+    y <- diff(c(.Machine$integer.max, x)) < 0L
+    rle(y)$lengths
+    y <- cumsum(rle(y)$lengths)
+    y <- y[seq.int(1L, length(y), 2L)]
+    if (x[[1]] == x[[2]]) {
+      y <- y[-1]
+    }
+    y
+  }
 }
 

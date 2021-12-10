@@ -29,14 +29,13 @@ import static org.matsim.episim.model.Transition.to;
 public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity.Params> {
 
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
-				//				.setLocationBasedContactIntensity(params != null ? params.locationBasedContactIntensity : SnzBerlinProductionScenario.LocationBasedContactIntensity.yes)
 				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : DistrictLevelRestrictions.yesForHomeLocation)
 				.setActivityHandling(ActivityHandling.startOfDay)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
@@ -454,7 +453,7 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 		String[] args2 = {
 				RunParallel.OPTION_SETUP, JRBatchContactIntensity.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(30),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(100),
 				RunParallel.OPTION_METADATA
 		};
 

@@ -4,7 +4,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.model.Transition;
-import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
@@ -16,15 +15,17 @@ import org.matsim.run.modules.SnzBerlinProductionScenario;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static org.matsim.episim.model.Transition.to;
 import static org.matsim.run.modules.SnzBerlinProductionScenario.*;
 
 
-public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
+public class JRCaseStudyB2 implements BatchRun<JRCaseStudyB2.Params> {
 
-	boolean DEBUG = false;
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
@@ -33,39 +34,28 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 				.setChristmasModel(ChristmasModel.no)
 				.setEasterModel(EasterModel.no)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
+				.setSample(25)
 				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
 				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : AdaptiveRestrictions.no)
-				.setSample(DEBUG ? 1 : 25)
 				.createSnzBerlinProductionScenario();
 
 	}
 
 	@Override
 	public Metadata getMetadata() {
-		return Metadata.of("berlin", "masterC");
+		return Metadata.of("berlin", "b2");
 	}
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		if (DEBUG) {
-			if (params.adaptivePolicy != AdaptiveRestrictions.yesLocal ||
-					params.restrictedFraction != 0.6 || params.trigger != 100. || params.seed != 4711
-				//					|| params.tracingCapacity != 2000 || params.tracingProbability != 1.0
-				//					|| params.tracingDelay != 1
-			) {
-
-				return null;
-
-			}
-		}
-
-
 		SnzBerlinProductionScenario module = getBindings(id, params);
 
+		// global config
 		Config config = module.config();
 		config.global().setRandomSeed(params.seed);
 
+		// episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
@@ -76,6 +66,7 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 		episimConfig.setDistricts(subdistricts);
 		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
 
+		// produces timeUse.txt output
 		episimConfig.setReportTimeUse(EpisimConfigGroup.ReportTimeUse.yes);
 
 		// Set up initial policy - remove all location based restrictions from snz data
@@ -94,7 +85,7 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 		double openFraction = 0.9;
 		double restrictedFraction = params.restrictedFraction;
 
-		String startDate = DEBUG ? "2020-04-05" : "2020-07-18";
+		String startDate = "2020-07-18";
 		// GLOBAL ADAPTIVE POLICY
 		if (params.adaptivePolicy.equals(AdaptiveRestrictions.yesGlobal)) {
 			com.typesafe.config.Config policy = AdaptivePolicy.config()
@@ -188,8 +179,8 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 		}
 
 
-		// the following code block are modifications which follow episim batch from BMBF210903. Changes include: weather model, progression model, vector and mrna vaccines, and B117 VOC
-		// modifications were NOT included that are in effect AFTER the relevant study period (March 25, 2020 to March 25, 2021)
+		// the following code block are modifications which follow episim batch from BMBF210903. Changes include: weather model, progression model, vaccination compliance, and B117 VOC
+		// modifications were NOT included that are in effect AFTER the relevant study period (March 25, 2020 to March 19, 2021)
 		{
 			// CALIBRATION PARAM
 			episimConfig.setCalibrationParameter(1.0e-05);
@@ -201,7 +192,7 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 
 
 			// WEATHER MODEL
-			// (TmidFall = 25.0)!!
+			// (TmidFall = 25.0)
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210905.csv").toFile(),
 						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5., 1.0);
@@ -255,20 +246,19 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 		@EnumParameter(AdaptiveRestrictions.class)
 		AdaptiveRestrictions adaptivePolicy;
 
-		@GenerateSeeds(10)
-		public long seed;
-
 		@Parameter({0.0, 0.2, 0.4, 0.6})
 		double restrictedFraction;
 
 		@Parameter({10, 25, 50, 75, 100, 125, 150})
 		double trigger;
 
+		@GenerateSeeds(10)
+		public long seed;
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, JRBatchMasterC.class.getName(),
+				RunParallel.OPTION_SETUP, JRCaseStudyB2.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(500),

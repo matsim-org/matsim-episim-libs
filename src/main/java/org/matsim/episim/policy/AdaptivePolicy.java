@@ -144,9 +144,6 @@ public class AdaptivePolicy extends ShutdownPolicy {
 	@Override
 	public void init(LocalDate start, ImmutableMap<String, Restriction> restrictions) {
 
-		//		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(xxxConfig, EpisimConfigGroup.class);
-		//		this.subdistricts = episimConfig.getDistricts();
-
 		// for restriction scope of global and local:
 		restrictionStatus.putIfAbsent(TOTAL, new HashMap<>());
 		for (String act : restrictions.keySet()) {
