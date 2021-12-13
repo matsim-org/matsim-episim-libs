@@ -785,7 +785,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		if (iteration == 0) return;
 
 		// Crucial episim events are always written, others only if enabled
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 

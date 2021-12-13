@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * Notifies when a person got infected by another person.
  */
-public class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<EpisimInfectionEvent> {
+public class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
 
 	// TODO: hasLink or hasCoord?
 
@@ -111,12 +111,17 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	}
 
 	@Override
-	public int compareTo(EpisimInfectionEvent o) {
-
+	public int compareTo(Event obj) {
 		// Defines a stable ordering for events
 
-		if (getTime() != o.getTime())
-			return Double.compare(getTime(), o.getTime());
+		if (getTime() != obj.getTime())
+			return Double.compare(getTime(), obj.getTime());
+
+		EpisimInfectionEvent o;
+		if (obj instanceof EpisimInfectionEvent)
+			o = (EpisimInfectionEvent) obj;
+		else
+			return 1;
 
 		if (infectorId != o.infectorId)
 			return infectorId.compareTo(o.infectorId);

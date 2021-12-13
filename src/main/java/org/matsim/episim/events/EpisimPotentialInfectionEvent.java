@@ -53,7 +53,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 
 	@Override
 	public String getEventType() {
-		return EVENT_TYPE;
+		return EpisimPotentialInfectionEvent.EVENT_TYPE;
 	}
 
 	@Override
