@@ -372,6 +372,10 @@ public class VaccinationEffectiveness implements Callable<Integer> {
 		@Override
 		public void handleEvent(EpisimVaccinationEvent event) {
 			String date = startDate.plusDays( (int) (event.getTime() / 86_400)).toString();
+			
+			if (event.getReVaccination())
+				return;
+			
 			population.getPersons().get(event.getPersonId()).getAttributes().putAttribute("vaccinationDate", date);
 			population.getPersons().get(event.getPersonId()).getAttributes().putAttribute("vaccine", event.getVaccinationType().toString());
 
