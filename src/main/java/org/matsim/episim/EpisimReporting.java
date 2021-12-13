@@ -562,9 +562,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report the occurrence of an infection.
 	 *
-	 * @param event occurred infection event
+	 * @param ev occurred infection event
 	 */
-	public void reportInfection(EpisimInfectionEvent event) {
+	public void reportInfection(Event ev) {
+
+		manager.processEvent(ev);
+
+		EpisimInfectionEvent event;
+		// Potential infections are not written to .txt file
+		if (!(ev instanceof EpisimInfectionEvent)) {
+			return;
+		}
+
+		event = (EpisimInfectionEvent) ev;
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -573,12 +583,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			log.warn("Infection of personId={} by person={} at/in {}", event.getPersonId(), event.getInfectorId(), event.getInfectionType());
 			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
-
-		manager.processEvent(event);
-
-		// Potential infections are not written to .txt file
-		if (event instanceof EpisimPotentialInfectionEvent)
-			return;
 
 		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);
 

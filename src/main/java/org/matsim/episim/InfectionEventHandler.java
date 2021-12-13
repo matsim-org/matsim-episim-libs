@@ -905,7 +905,7 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 		// store the infections for a day
-		List<EpisimInfectionEvent> infections = new ArrayList<>();
+		List<Event> infections = new ArrayList<>();
 
 		// "execute" collected infections
 		for (EpisimPerson person : personMap.values()) {
