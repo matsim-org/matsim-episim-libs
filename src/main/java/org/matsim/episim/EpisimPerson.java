@@ -28,6 +28,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
@@ -117,6 +118,11 @@ public final class EpisimPerson implements Attributable {
 	 * infection
 	 */
 	private EpisimInfectionEvent earliestInfection = null;
+
+	/**
+	 * List of all potential infection that happened during the day.
+	 */
+	private List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
 
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
@@ -371,6 +377,13 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Adds a potential infection to the list.
+	 */
+	synchronized public void potentialInfection(EpisimPotentialInfectionEvent event) {
+		potentialInfectionEvents.add(event);
+	}
+
+	/**
 	 * Update state with a stored {@link EpisimInfectionEvent}.
 	 *
 	 * @return the event if an infection has occurred.
@@ -390,6 +403,13 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get all potential infection events.
+	 */
+	List<EpisimPotentialInfectionEvent> getPotentialInfections() {
+		return potentialInfectionEvents;
 	}
 
 	public QuarantineStatus getQuarantineStatus() {

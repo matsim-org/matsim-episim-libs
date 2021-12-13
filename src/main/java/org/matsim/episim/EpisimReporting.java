@@ -574,9 +574,13 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 			specificInfectionsCnt.setOpaque(cnt - 1);
 		}
 
-		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);
 		manager.processEvent(event);
 
+		// Potential infections are not written to .txt file
+		if (event instanceof EpisimPotentialInfectionEvent)
+			return;
+
+		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];
 		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(event.getTime());

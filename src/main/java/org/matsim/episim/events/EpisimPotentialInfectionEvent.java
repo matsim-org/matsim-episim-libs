@@ -24,10 +24,10 @@ public final class EpisimPotentialInfectionEvent extends EpisimInfectionEvent {
 	 * Constructor.
 	 */
 	public EpisimPotentialInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double rng) {
+	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double rnd) {
 		super(time, personId, infectorId, containerId, infectionType, groupSize, strain, probability);
 		this.unVacProbability = unVacProbability;
-		this.rnd = rng;
+		this.rnd = rnd;
 	}
 
 	@Override

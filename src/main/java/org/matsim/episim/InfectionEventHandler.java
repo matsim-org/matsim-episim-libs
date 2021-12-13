@@ -40,6 +40,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
@@ -911,6 +912,12 @@ public final class InfectionEventHandler implements Externalizable {
 			EpisimInfectionEvent e;
 			if ((e = person.checkInfection()) != null)
 				infections.add(e);
+
+			if (!person.getPotentialInfections().isEmpty()) {
+				infections.addAll(person.getPotentialInfections());
+				person.getPotentialInfections().clear();
+			}
+
 		}
 
 		// report infections in order
