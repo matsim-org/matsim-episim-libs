@@ -42,6 +42,10 @@ public class EpisimVaccinationEvent extends Event implements HasPersonId {
 	public VaccinationType getVaccinationType() {
 		return type;
 	}
+	
+	public boolean getReVaccination() {
+		return reVaccination;
+	}
 
 	@Override
 	public Map<String, String> getAttributes() {
