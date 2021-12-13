@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * Notifies when a person got infected by another person.
  */
-public final class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<EpisimInfectionEvent> {
+public class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<EpisimInfectionEvent> {
 
 	// TODO: hasLink or hasCoord?
 

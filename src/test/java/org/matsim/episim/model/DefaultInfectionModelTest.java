@@ -76,10 +76,10 @@ public class DefaultInfectionModelTest {
 
 		p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 
-		// person has full effect from first vaccine
+		// person does not has full effect from first vaccine
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 1)
-		).isCloseTo(0.1, Offset.offset(0.001));
+		).isCloseTo(1, Offset.offset(0.001));
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 1)
@@ -87,7 +87,7 @@ public class DefaultInfectionModelTest {
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 5)
-		).isCloseTo(0.1, Offset.offset(0.001));
+		).isCloseTo(1, Offset.offset(0.001));
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 5)

@@ -78,21 +78,16 @@ public final class DefaultInfectionModel implements InfectionModel {
 
 		double vaccineEffectiveness;
 
-		// minimum effectiveness, independent of time
-		double min;
 		// use re vaccine effectiveness if person received the new vaccine
 		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
 			vaccineEffectiveness = params.getBoostEffectiveness(strain, daysVaccinated);
-			// effectiveness of second vaccine is never below first
-			min = params.getEffectiveness(strain, params.getDaysBeforeFullEffect());
 		} else {
 			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);
-			min = 0;
 		}
 
 		// https://www.medrxiv.org/content/10.1101/2021.03.16.21253686v2.full.pdf
 
-		return 1 - Math.max(min, vaccineEffectiveness);
+		return 1 - vaccineEffectiveness;
 	}
 
 	/**
