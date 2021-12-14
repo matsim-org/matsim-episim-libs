@@ -54,7 +54,7 @@ public final class DefaultInfectionModel implements InfectionModel {
 		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
-				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
+				* getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness()
@@ -91,6 +91,21 @@ public final class DefaultInfectionModel implements InfectionModel {
 	}
 
 	/**
+	 * Calculate the infectivity of an infector based on vaccine or previous infections.
+	 */
+	static double getInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
+
+		double naturalInfectivity = 1;
+
+		if (config.hasParams(VaccinationType.natural) && infector.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)) {
+			VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);
+			naturalInfectivity = params.getInfectivity(strain.getStrain(), infector.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration));
+		}
+
+		return Math.min(getVaccinationInfectivity(infector, strain, config, iteration), naturalInfectivity);
+	}
+
+	/**
 	 * Reduced infectivity of a vaccinated persson.
 	 */
 	static double getVaccinationInfectivity(EpisimPerson infector, VirusStrainConfigGroup.StrainParams strain, VaccinationConfigGroup config, int iteration) {
@@ -112,7 +127,6 @@ public final class DefaultInfectionModel implements InfectionModel {
 	 * Calculate factor for natural immunity after infection.
 	 */
 	static double getImmunityEffectiveness(VirusStrainConfigGroup.StrainParams virusStrain, EpisimPerson target, VaccinationConfigGroup config, int iteration) {
-
 		if (target.getNumInfections() < 1 || !target.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))
 			return 1;
 
@@ -120,6 +134,12 @@ public final class DefaultInfectionModel implements InfectionModel {
 			return 1;
 
 		int daysSince = target.daysSince(EpisimPerson.DiseaseStatus.recovered, iteration);
+
+		// persons can not get infected for 180 days when
+		// they had 2 infections or 1 infection and vaccinations
+		// TODO: only here a quick fix and needs to be remodelled
+		if (daysSince < 180 && (target.getNumInfections() >= 2 || (target.getNumInfections() >= 1 && target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)))
+			return 0;
 
 		VaccinationConfigGroup.VaccinationParams params = config.getParams(VaccinationType.natural);
 
