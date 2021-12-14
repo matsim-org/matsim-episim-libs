@@ -52,7 +52,8 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 			}
 
 			if (context.getVaccinatedRf() != null && context.getVaccinatedRf() != 1d) {
-				if (person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect())
+				if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
+						person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect())
 					r *= context.getVaccinatedRf();
 			}
 
