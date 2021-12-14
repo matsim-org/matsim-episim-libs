@@ -266,7 +266,7 @@ public final class Restriction {
 
 		ClosingHours closed = asClosingHours(List.of(fromHour * 3600, toHour * 3600));
 
-		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>(), null, null, null);
+		return new Restriction(null, null, null, null,null, closed, null, new HashMap<>(), null, null);
 	}
 
 	/**
