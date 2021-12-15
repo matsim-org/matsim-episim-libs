@@ -126,8 +126,8 @@ public class DefaultTestingModel implements TestingModel {
 			return;
 
 		// vaccinated and recovered persons are not tested
-		boolean fullyVaccinated = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
-				person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
+		boolean fullyVaccinated = (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect()) ||
+				(person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes);
 
 		if (!testAllPersons && (person.isRecentlyRecovered(day) || fullyVaccinated))
 			return;
