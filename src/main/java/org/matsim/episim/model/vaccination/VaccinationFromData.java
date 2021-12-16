@@ -88,7 +88,7 @@ public class VaccinationFromData extends VaccinationByAge {
 					.columnTypes(types));
 
 			StringColumn locationColumn = rkiData.stringColumn("LandkreisId_Impfort");
-			Selection location = locationColumn.isEqualTo("05315");
+			Selection location = locationColumn.isEqualTo(config.locationId);
 			Table table = rkiData.where(location);
 
 			IntColumn vaccinationno = table.intColumn("Impfschutz");
