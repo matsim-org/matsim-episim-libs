@@ -50,6 +50,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		this.setValidating(false);
 		delegate.addCustomEventMapper(EpisimInfectionEvent.EVENT_TYPE, getEpisimInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimPotentialInfectionEvent.EVENT_TYPE, getEpisimPotentialInfectionEventMapper());
+		delegate.addCustomEventMapper(EpisimInitialInfectionEvent.EVENT_TYPE, getEpisimInitialInfectionEventMapper());
 		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());
 		delegate.addCustomEventMapper(EpisimContactEvent.EVENT_TYPE, getEpisimContactEventMapper());
 		delegate.addCustomEventMapper(EpisimVaccinationEvent.EVENT_TYPE, getEpisimVaccinationEventMapper());
@@ -109,6 +110,19 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));
 
 			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, rnd);
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimInitialInfectionEventMapper() {
+		return event -> {
+
+			Map<String, String> attributes = event.getAttributes();
+
+			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
+			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
+			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+
+			return new EpisimInitialInfectionEvent(time, person,virusStrain);
 		};
 	}
 

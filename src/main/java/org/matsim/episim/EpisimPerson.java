@@ -27,6 +27,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInitialInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
 import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.model.VaccinationType;
@@ -365,6 +366,18 @@ public final class EpisimPerson implements Attributable {
 			statusChanges.put(status, now);
 
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
+	}
+
+	/**
+	 * Set and report initial infection.
+	 */
+	public void setInitialInfection(double now, VirusStrain strain) {
+
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain));
+
+		setVirusStrain(strain);
+		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+
 	}
 
 	/**

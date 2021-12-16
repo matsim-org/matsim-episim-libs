@@ -226,7 +226,7 @@ public class SyntheticScenario extends AbstractModule {
 				for (int i = 0; i < this.n; i++) {
 					Id<Person> p = it.next();
 					EpisimPerson person = persons.get(p);
-					person.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+					person.setInitialInfection(0, VirusStrain.SARS_CoV_2);
 				}
 			}
 
