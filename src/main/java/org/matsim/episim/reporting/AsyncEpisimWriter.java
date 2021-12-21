@@ -1,9 +1,6 @@
 package org.matsim.episim.reporting;
 
-import com.lmax.disruptor.EventHandler;
-import com.lmax.disruptor.EventTranslatorThreeArg;
-import com.lmax.disruptor.EventTranslatorTwoArg;
-import com.lmax.disruptor.SleepingWaitStrategy;
+import com.lmax.disruptor.*;
 import com.lmax.disruptor.dsl.Disruptor;
 import com.lmax.disruptor.dsl.ProducerType;
 import com.lmax.disruptor.util.DaemonThreadFactory;
@@ -12,7 +9,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.Event;
 
-import java.io.BufferedWriter;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.Writer;
@@ -38,8 +34,7 @@ public final class AsyncEpisimWriter extends EpisimWriter implements EventHandle
 		// Specify the size of the ring buffer, must be power of 2.
 		int bufferSize = Math.max(16384, Util.ceilingNextPowerOfTwo(4096 * numProducer));
 
-		disruptor = new Disruptor<>(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE,
-				numProducer == 1 ? ProducerType.SINGLE : ProducerType.MULTI, new SleepingWaitStrategy());
+		disruptor = new Disruptor<>(LogEvent::new, bufferSize, DaemonThreadFactory.INSTANCE, ProducerType.MULTI, new SleepingWaitStrategy());
 
 		// Connect the handler
 		disruptor.handleEventsWith(this);

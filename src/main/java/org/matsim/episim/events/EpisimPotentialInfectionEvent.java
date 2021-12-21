@@ -6,23 +6,19 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.episim.model.VirusStrain;
 
+import static org.matsim.episim.events.EpisimInfectionEvent.*;
+
 import java.util.Map;
 
 
 /**
  * Notifies when a person got infected by another person.
  */
-public class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
+public class EpisimPotentialInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
 
-	// TODO: hasLink or hasCoord?
-
-	static final String EVENT_TYPE = "episimInfection";
-	static final String INFECTOR = "infector";
-	static final String CONTAINER = "container";
-	static final String INFECTION_TYPE = "infectionType";
-	static final String VIRUS_STRAIN = "virusStrain";
-	static final String PROBABILITY = "probability";
-	static final String GROUP_SIZE = "groupSize";
+	static final String EVENT_TYPE = "episimPotentialInfection";
+	static final String UNVAC_PROBABILITY = "unVacProbability";
+	static final String RND = "rnd";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
@@ -32,12 +28,15 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	private final VirusStrain virusStrain;
 	private final double probability;
 
+	private final double unVacProbability;
+	private final double rnd;
 
 	/**
 	 * Constructor.
 	 */
-	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-								int groupSize, VirusStrain strain, double probability) {
+	public EpisimPotentialInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
+	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double rnd) {
+
 		super(time);
 
 		this.personId = personId;
@@ -47,11 +46,14 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		this.groupSize = groupSize;
 		this.virusStrain = strain;
 		this.probability = probability;
+
+		this.unVacProbability = unVacProbability;
+		this.rnd = rnd;
 	}
 
 	@Override
 	public String getEventType() {
-		return EVENT_TYPE;
+		return EpisimPotentialInfectionEvent.EVENT_TYPE;
 	}
 
 	@Override
@@ -96,6 +98,14 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		return probability;
 	}
 
+	public double getUnVacProbability() {
+		return unVacProbability;
+	}
+
+	public double getRnd() {
+		return rnd;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
@@ -107,21 +117,25 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
 
+		attr.put(UNVAC_PROBABILITY, Double.toString(unVacProbability));
+		attr.put(RND, Double.toString(rnd));
+
 		return attr;
 	}
 
+
 	@Override
 	public int compareTo(Event obj) {
-		// Defines a stable ordering for events
 
+		// Defines a stable ordering for events
 		if (getTime() != obj.getTime())
 			return Double.compare(getTime(), obj.getTime());
 
-		EpisimInfectionEvent o;
-		if (obj instanceof EpisimInfectionEvent)
-			o = (EpisimInfectionEvent) obj;
+		EpisimPotentialInfectionEvent o;
+		if (obj instanceof EpisimPotentialInfectionEvent)
+			o = (EpisimPotentialInfectionEvent) obj;
 		else
-			return 1;
+			return -1;
 
 		if (infectorId != o.infectorId)
 			return infectorId.compareTo(o.infectorId);

@@ -20,10 +20,16 @@ public enum VirusStrain {
 	 * South-african variant also known as auch 501Y.V2.
 	 */
 	B1351,
-	
+
 	/**
 	 * unknown mutation
 	 */
-	MUTB;
-;
+	MUTB,
+
+	/**
+	 * VoC B.1.1.529, first reported to WHO from South Africa on 24 November 2021
+	 */
+	OMICRON
+
+
 }

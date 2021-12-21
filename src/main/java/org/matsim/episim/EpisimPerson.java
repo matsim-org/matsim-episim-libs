@@ -27,7 +27,9 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInitialInfectionEvent;
 import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
@@ -86,7 +88,7 @@ public final class EpisimPerson implements Attributable {
 	// Fields above are initialized from the sim and not persisted
 
 	/**
-	 * Whether person stays in container at the and of a day.
+	 * Whether person stays in container at the end of a day.
 	 */
 	private final boolean[] staysInContainer = new boolean[7];
 
@@ -117,6 +119,11 @@ public final class EpisimPerson implements Attributable {
 	 * infection
 	 */
 	private EpisimInfectionEvent earliestInfection = null;
+
+	/**
+	 * List of all potential infection that happened during the day.
+	 */
+	private List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
 
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
@@ -362,12 +369,31 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Set and report initial infection.
+	 */
+	public void setInitialInfection(double now, VirusStrain strain) {
+
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain));
+
+		setVirusStrain(strain);
+		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+
+	}
+
+	/**
 	 * Adds an infection possibility to this persons. Will be executed in {@link #checkInfection()}
 	 */
 	synchronized public void possibleInfection(EpisimInfectionEvent event) {
 		if (earliestInfection == null || event.compareTo(earliestInfection) < 0) {
 			earliestInfection = event;
 		}
+	}
+
+	/**
+	 * Adds a potential infection to the list.
+	 */
+	synchronized public void potentialInfection(EpisimPotentialInfectionEvent event) {
+		potentialInfectionEvents.add(event);
 	}
 
 	/**
@@ -390,6 +416,13 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get all potential infection events.
+	 */
+	List<EpisimPotentialInfectionEvent> getPotentialInfections() {
+		return potentialInfectionEvents;
 	}
 
 	public QuarantineStatus getQuarantineStatus() {
@@ -591,7 +624,10 @@ public final class EpisimPerson implements Attributable {
 		return vaccinable;
 	}
 
-	void setVaccinable(boolean vaccinable) {
+	/**
+	 * Set vaccinable status.
+	 */
+	public void setVaccinable(boolean vaccinable) {
 		this.vaccinable = vaccinable;
 	}
 
@@ -667,6 +703,18 @@ public final class EpisimPerson implements Attributable {
 		firstFacilityId[target.getValue() - 1] = firstFacilityId[source.getValue() - 1];
 		lastFacilityId[target.getValue() - 1] = lastFacilityId[source.getValue() - 1];
 		staysInContainer[target.getValue() - 1] = staysInContainer[source.getValue() - 1];
+	}
+
+	/**
+	 * Reset all trajectory information
+	 */
+	void resetTrajectory() {
+		trajectory.clear();
+		Arrays.fill(startOfDay, 0);
+		Arrays.fill(endOfDay, 0);
+		Arrays.fill(firstFacilityId, null);
+		Arrays.fill(lastFacilityId, null);
+		Arrays.fill(staysInContainer, false);
 	}
 
 	@Override

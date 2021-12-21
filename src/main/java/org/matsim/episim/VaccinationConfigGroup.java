@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 
 import java.time.LocalDate;
 import java.util.EnumMap;
@@ -15,7 +16,7 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
- * Config option specific to vaccination and measures performed in {@link org.matsim.episim.model.VaccinationModel}.
+ * Config option specific to vaccination and measures performed in {@link VaccinationModel}.
  */
 public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
@@ -26,6 +27,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String CAPACITY = "vaccinationCapacity";
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
+	private static final String FROM_FILE = "vaccinationFile";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -44,6 +46,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Share of vaccination for the different {@link VaccinationType}.
 	 */
 	private final NavigableMap<LocalDate, Map<VaccinationType, Double>> vaccinationShare = new TreeMap<>(Map.of(LocalDate.EPOCH, Map.of(VaccinationType.generic, 1d)));
+
+	/**
+	 * Load vaccinations from file instead.
+	 */
+	private String fromFile;
 
 	/**
 	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
@@ -179,6 +186,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(vaccinationCapacity);
 	}
 
+	@StringSetter(FROM_FILE)
+	public void setFromFile(String fromFile) {
+		this.fromFile = fromFile;
+	}
+
+	@StringGetter(FROM_FILE)
+	public String getFromFile() {
+		return fromFile;
+	}
+
 	/**
 	 * @see #setVaccinationCapacity_pers_per_day(Map)
 	 */
@@ -286,6 +303,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String EFFECTIVENESS = "effectiveness";
 		private static final String INFECTIVITY = "infectivity";
 		private static final String BOOST_EFFECTIVENESS = "boostEffectiveness";
+		private static final String BOOST_INFECTIVITY = "boostInfectivity";
 		private static final String BOOST_WAIT_PERIOD = "boostWaitPeriod";
 		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
@@ -325,6 +343,15 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		 * Effectiveness after booster shot.
 		 */
 		private Map<VirusStrain, Parameter> boostEffectiveness = new EnumMap<>(VirusStrain.class);
+
+		/**
+		 * Infectivity of a vaccinated person towards others.
+		 */
+		private Map<VirusStrain, Parameter> boostInfectivity = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(0, 1)
+						.atFullEffect(1.0)
+		));
 
 		/**
 		 * Factor for probability if person is vaccinated.
@@ -412,6 +439,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return setParamsInternal(boostEffectiveness, parameters);
 		}
 
+		public VaccinationParams setBoostInfectivity(Parameter... parameters) {
+			return setParamsInternal(boostInfectivity, parameters);
+		}
+
 		public VaccinationParams setFactorShowingSymptoms(Parameter... parameters) {
 			return setParamsInternal(factorShowingSymptoms, parameters);
 		}
@@ -426,6 +457,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		public double getInfectivity(VirusStrain strain, int day) {
 			return getParamsInternal(infectivity, strain, day);
+		}
+
+		public double getBoostInfectivity(VirusStrain strain, int day) {
+			return getParamsInternal(boostInfectivity, strain, day);
 		}
 
 		public double getBoostEffectiveness(VirusStrain strain, int day) {
@@ -510,6 +545,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		@StringGetter(INFECTIVITY)
 		public String getInfectivity() {
 			return getParamsInternal(infectivity);
+		}
+
+		@StringSetter(BOOST_INFECTIVITY)
+		void setBoostInfectivity(String value) {
+			setParamsInternal(boostInfectivity, value);
+		}
+
+		@StringGetter(BOOST_INFECTIVITY)
+		public String getBoostInfectivity() {
+			return getParamsInternal(boostInfectivity);
 		}
 
 		/**

@@ -25,6 +25,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.facilities.ActivityFacility;
 
@@ -387,6 +388,21 @@ public abstract class AbstractContactModel implements ContactModel {
 			reporting.reportInfection(personWrapper.checkInfection());
 
 	}
+
+	protected void potentialInfection(EpisimPerson personWrapper, EpisimPerson infector, double now, StringBuilder infectionType,
+	                                  double prob, EpisimContainer<?> container, double probUnVac, double rnd) {
+
+		// for now, only filter vaccinated persons
+		if (personWrapper.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return;
+
+		personWrapper.potentialInfection(
+				new EpisimPotentialInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
+						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob, probUnVac, rnd)
+		);
+
+	}
+
 
 	public Map<String, Restriction> getRestrictions() {
 		return restrictions;

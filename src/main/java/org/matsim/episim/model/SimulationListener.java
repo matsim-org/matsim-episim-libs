@@ -7,13 +7,14 @@ import org.matsim.episim.InfectionEventHandler;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.vehicles.Vehicle;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
  * Listener to interact with the simulation before starting
  */
-public interface SimulationStartListener {
+public interface SimulationListener {
 
 	/**
 	 * Called after init before the simulation starts.
@@ -23,5 +24,19 @@ public interface SimulationStartListener {
 	 * @param facilities all facilities
 	 * @param vehicles   all vehicles
 	 */
-	void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles);
+	default void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	}
+
+	/**
+	 * Called just before iteration is about to start and events for the day will be handled.
+	 */
+	default void onIterationStart(int iteration, LocalDate date) {
+	}
+
+	/**
+	 * Called after an iteration has finished and all trajectories and infection events have been handled.
+	 */
+	default void onIterationEnd(int iteration, LocalDate date) {
+	}
+
 }

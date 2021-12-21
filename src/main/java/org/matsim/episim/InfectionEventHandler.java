@@ -40,9 +40,11 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
@@ -53,7 +55,6 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
-import java.lang.invoke.VarHandle;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -175,6 +176,11 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private EpisimReporting.InfectionReport report;
 
+	/**
+	 * Installed simulation listeners.
+	 */
+	private Set<SimulationListener> listener;
+
 	@Inject
 	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
 		this.injector = injector;
@@ -222,10 +228,48 @@ public final class InfectionEventHandler implements Externalizable {
 	 *
 	 * @param events All events in the simulation
 	 */
-	public void init(Map<DayOfWeek, List<Event>> events) {
+	void init(Map<DayOfWeek, List<Event>> events) {
 
 		iteration = 0;
 
+		updateEvents(events);
+
+		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
+
+		// Clear time-use after first iteration
+		personMap.values().forEach(p -> p.getSpentTime().clear());
+		personMap.values().forEach(EpisimPerson::initParticipation);
+
+		// init person vaccination compliance sorted by age descending
+		personMap.values().stream()
+				.sorted(Comparator.comparingInt(p -> ((EpisimPerson) p).getAgeOrDefault(-1)).reversed()
+						.thenComparing(p -> ((EpisimPerson) p).getPersonId()))
+				.forEach(p -> {
+			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
+			p.setVaccinable(localRnd.nextDouble() < compliance);
+		});
+
+		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
+
+		for (SimulationListener s : listener) {
+
+			log.info("Executing simulation start listener {}", s.toString());
+
+			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+		}
+
+		vaccinationModel.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+
+		createTrajectoryHandlers();
+
+		init = true;
+	}
+
+	/**
+	 * Update events data and internal person data structure.
+	 * @param events
+	 */
+	void updateEvents(Map<DayOfWeek, List<Event>> events) {
 		Object2IntMap<EpisimContainer<?>> groupSize = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> totalUsers = new Object2IntOpenHashMap<>();
 		Object2IntMap<EpisimContainer<?>> maxGroupSize = new Object2IntOpenHashMap<>();
@@ -236,6 +280,8 @@ public final class InfectionEventHandler implements Externalizable {
 		Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage = new HashMap<>();
 
 		Map<List<Event>, DayOfWeek> sameDay = new IdentityHashMap<>(7);
+
+		this.personMap.values().forEach(EpisimPerson::resetTrajectory);
 
 		for (Map.Entry<DayOfWeek, List<Event>> entry : events.entrySet()) {
 
@@ -365,6 +411,7 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
+		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
 		// Go through each day again to compute max group sizes
 		sameDay.clear();
@@ -388,11 +435,11 @@ public final class InfectionEventHandler implements Externalizable {
 						pseudoFacilityMap.get(last).removePerson(person);
 
 					if (!pseudoFacilityMap.get(first).containsPerson(person))
-						pseudoFacilityMap.get(first).addPerson(person, 0, person.getFirstActivity(day));
+						pseudoFacilityMap.get(first).addPerson(person, now, person.getFirstActivity(day));
 
 				} else {
 					if (!pseudoFacilityMap.get(first).containsPerson(person))
-						pseudoFacilityMap.get(first).addPerson(person, 0, person.getFirstActivity(day));
+						pseudoFacilityMap.get(first).addPerson(person, now, person.getFirstActivity(day));
 				}
 			}
 
@@ -410,7 +457,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 					if (event instanceof ActivityStartEvent) {
 						if (!facility.containsPerson(person))
-							facility.addPerson(person, 0.0, person.getActivity(day, event.getTime()));
+							facility.addPerson(person, now, person.getActivity(day, event.getTime()));
 
 						maxGroupSize.mergeInt(facility, facility.getPersons().size(), Integer::max);
 					} else if (event instanceof ActivityEndEvent) {
@@ -426,11 +473,11 @@ public final class InfectionEventHandler implements Externalizable {
 		pseudoFacilityMap.values().forEach(EpisimContainer::clearPersons);
 
 		// Put persons into their correct initial container
-		DayOfWeek startDay = EpisimUtils.getDayOfWeek(episimConfig, 0);
+		DayOfWeek startDay = EpisimUtils.getDayOfWeek(episimConfig, iteration);
 		for (EpisimPerson person : personMap.values()) {
 			if (person.getStaysInContainer(startDay)) {
 				EpisimFacility facility = pseudoFacilityMap.get(person.getLastFacilityId(startDay));
-				facility.addPerson(person, 0, person.getLastActivity(startDay));
+				facility.addPerson(person, now, person.getLastActivity(startDay));
 			}
 		}
 
@@ -489,35 +536,8 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
-		policy.init(episimConfig.getStartDate(), ImmutableMap.copyOf(this.restrictions));
-
-		// Clear time-use after first iteration
-		personMap.values().forEach(p -> p.getSpentTime().clear());
-		personMap.values().forEach(EpisimPerson::initParticipation);
-
-		// init person vaccination compliance sorted by age descending
-		personMap.values().stream()
-				.sorted(Comparator.comparingInt(p -> ((EpisimPerson) p).getAgeOrDefault(-1)).reversed()
-						.thenComparing(p -> ((EpisimPerson) p).getPersonId()))
-				.forEach(p -> {
-			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
-			p.setVaccinable(localRnd.nextDouble() < compliance);
-		});
-
-		Set<SimulationStartListener> listener = (Set<SimulationStartListener>) injector.getInstance(Key.get(Types.setOf(SimulationStartListener.class)));
-
-		for (SimulationStartListener s : listener) {
-
-			log.info("Executing simulation start listener {}", s.toString());
-
-			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
-		}
-
 		balanceContainersByLoad(estimatedLoad);
 
-		createTrajectoryHandlers();
-
-		init = true;
 	}
 
 	/**
@@ -715,11 +735,11 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportCpuTime(iteration, "ProgressionModel", "finished", -1);
 
 		reporting.reportCpuTime(iteration, "VaccinationModel", "start", -1);
-		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), 0, date);
-		vaccinationModel.handleVaccination(personMap, false, (int) (available * episimConfig.getSampleSize()), date, iteration, now);
+		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), -1, date);
+		vaccinationModel.handleVaccination(personMap, false, available > 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);
 
-		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), 0, date);
-		vaccinationModel.handleVaccination(personMap, true, (int) (available * episimConfig.getSampleSize()), date, iteration, now);
+		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), -1, date);
+		vaccinationModel.handleVaccination(personMap, true, available > 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);
 		reporting.reportCpuTime(iteration, "VaccinationModel", "finished", -1);
 
 		this.iteration = iteration;
@@ -767,6 +787,10 @@ public final class InfectionEventHandler implements Externalizable {
 
 		reporting.reportRestrictions(restrictions, iteration, report.date);
 		reporting.reportCpuTime(iteration, "Reporting", "finished", -1);
+
+		for (SimulationListener l : listener) {
+			l.onIterationStart(iteration, date);
+		}
 	}
 
 	public Collection<EpisimPerson> getPersons() {
@@ -881,18 +905,29 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 		// store the infections for a day
-		List<EpisimInfectionEvent> infections = new ArrayList<>();
+		List<Event> infections = new ArrayList<>();
 
 		// "execute" collected infections
 		for (EpisimPerson person : personMap.values()) {
 			EpisimInfectionEvent e;
 			if ((e = person.checkInfection()) != null)
 				infections.add(e);
+
+			if (!person.getPotentialInfections().isEmpty()) {
+				infections.addAll(person.getPotentialInfections());
+				person.getPotentialInfections().clear();
+			}
+
 		}
 
 		// report infections in order
 		infections.stream().sorted()
 				.forEach(reporting::reportInfection);
+
+		for (SimulationListener l : listener) {
+			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
+		}
+
 	}
 
 	/**

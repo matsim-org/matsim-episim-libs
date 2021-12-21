@@ -76,10 +76,10 @@ public class DefaultInfectionModelTest {
 
 		p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
 
-		// person has full effect from first vaccine
+		// person does not has full effect from first vaccine
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 1)
-		).isCloseTo(0.1, Offset.offset(0.001));
+		).isCloseTo(1, Offset.offset(0.001));
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 1)
@@ -87,7 +87,7 @@ public class DefaultInfectionModelTest {
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(cov2, p, vacConfig, 5)
-		).isCloseTo(0.1, Offset.offset(0.001));
+		).isCloseTo(1, Offset.offset(0.001));
 
 		assertThat(
 				DefaultInfectionModel.getVaccinationEffectiveness(escape, p, vacConfig, 5)
@@ -134,6 +134,37 @@ public class DefaultInfectionModelTest {
 
 		assertThat(DefaultInfectionModel.getImmunityEffectiveness(cov2, p, vacConfig, 280))
 				.isCloseTo(0.9, Offset.offset(0.0001));
+
+	}
+
+	@Test
+	public void infectivity() {
+
+		VaccinationConfigGroup vacConfig = new VaccinationConfigGroup();
+		vacConfig.getOrAddParams(VaccinationType.generic)
+				.setDaysBeforeFullEffect(0)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(5, 0.5)
+						.atFullEffect(0.9))
+				.setBoostInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(1, 0.2)
+						.atFullEffect(0.5)
+				);
+
+		VirusStrainConfigGroup strainConfig = new VirusStrainConfigGroup();
+		VirusStrainConfigGroup.StrainParams cov2 = strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2);
+
+		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
+
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
+
+		assertThat(DefaultInfectionModel.getVaccinationInfectivity(p, cov2, vacConfig, 5))
+				.isCloseTo(0.5, Offset.offset(0.001));
+
+		p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 5);
+
+		assertThat(DefaultInfectionModel.getVaccinationInfectivity(p, cov2, vacConfig, 10))
+				.isCloseTo(0.2, Offset.offset(0.001));
 
 	}
 

@@ -35,6 +35,8 @@ import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.episim.model.vaccination.VaccinationFromData;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
@@ -55,14 +57,17 @@ import java.util.function.BiFunction;
  */
 public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
-	public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario>{
+	public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario> {
 
 		private double leisureOffset = 0.0;
-		private double scale = 1.0;
+		private double scale = 1.3;
 		private boolean leisureNightly = false;
 		private double leisureNightlyScale = 1.0;
 		private double householdSusc = 1.0;
 
+		public Builder() {
+			this.vaccinationModel = VaccinationFromData.class;
+		}
 
 		@Override
 		public SnzCologneProductionScenario build() {
@@ -93,7 +98,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			this.leisureNightlyScale = leisureNightlyScale;
 			return this;
 		}
-		
+
 		public Builder setHouseholdSusc(double householdSusc) {
 			this.householdSusc = householdSusc;
 			return this;
@@ -183,9 +188,25 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			}
 		}
 
-		// TODO: bind desired config
-		bind(HouseholdSusceptibility.Config.class).toInstance(HouseholdSusceptibility.newConfig(householdSusc, 5.0));
-		Multibinder.newSetBinder(binder(), SimulationStartListener.class)
+		bind(HouseholdSusceptibility.Config.class).toInstance(
+				HouseholdSusceptibility.newConfig().withSusceptibleHouseholds(householdSusc, 5.0)
+		);
+
+		bind(VaccinationFromData.Config.class).toInstance(
+				VaccinationFromData.newConfig("05315")
+						.withAgeGroup("12-17", 54587.2)
+						.withAgeGroup("18-59", 676995)
+						.withAgeGroup("60+", 250986)
+		);
+
+		/* Dresden:
+			VaccinationFromData.newConfig("14612")
+					.withAgeGroup("12-17", 28255.8)
+					.withAgeGroup("18-59", 319955)
+					.withAgeGroup("60+", 151722)
+		 */
+
+		Multibinder.newSetBinder(binder(), SimulationListener.class)
 				.addBinding().to(HouseholdSusceptibility.class);
 
 	}
@@ -198,7 +219,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		if (this.sample != 25 && this.sample != 100)
 			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
-		
+
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -221,20 +242,41 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		episimConfig.setActivityHandling(activityHandling);
 
 
-		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
+		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * 1.4);
 		episimConfig.setStartDate("2020-02-25");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(0.5);
 		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 		episimConfig.setThreads(8);
+		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
+
+		episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());
+
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		if (this.diseaseImport != DiseaseImport.no) {
 
-			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
-					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
+//			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
+//					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
+			//disease import 2020
+			Map<LocalDate, Integer> importMap = new HashMap<>();
+			double importFactorBeforeJune = 4.0;
+			double imprtFctMult = 1.0;
+			long importOffset = 0;
+
+			interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
+					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+			interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
+					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+			interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
+					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+
+			importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
+			importMap.put(LocalDate.parse("2020-08-09"), 1);
+
+			episimConfig.setInfections_pers_per_day(importMap);
 		}
 
 
@@ -243,7 +285,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		//restrictions and masks
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20211017.csv"));
+		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20211211.csv"));
 
 		activityParticipation.setScale(this.scale);
 		activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -274,14 +316,19 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		builder.restrict(LocalDate.parse("2021-04-10"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-07-05"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-08-17"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 		builder.restrict(LocalDate.parse("2021-10-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-18"), 1.0, "educ_higher");
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		
+		builder.restrict(LocalDate.parse("2022-04-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-04-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-06-27"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-08-09"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
 
 		{
 			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
@@ -297,8 +344,17 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 								FaceMask.SURGICAL, surgicalFraction * ii / 14)),
 						"pt", "shop_daily", "shop_other", "errands");
 			}
-			builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+//			builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+//			builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//			builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		}
+		
+		//curfew
+		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
+		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
+		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
+		curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
+		episimConfig.setCurfewCompliance(curfewCompliance);
 
 
 		//tracing
@@ -351,8 +407,18 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 			SnzProductionScenario.configureVaccines(vaccinationConfig, 2_352_480);
 
+			if (vaccinationModel.equals(VaccinationFromData.class)) {
+				// Compliance and capacity will come from data
+				vaccinationConfig.setCompliancePerAge(Map.of(0, 1.0));
+
+				vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of());
+				vaccinationConfig.setReVaccinationCapacity_pers_per_day(Map.of());
+
+				vaccinationConfig.setFromFile(INPUT.resolve("Aktuell_Deutschland_Landkreise_COVID-19-Impfungen.csv").toString());
+			}
 		}
 
+		builder.setHospitalScale(this.scale);
 
 		episimConfig.setPolicy(builder.build());
 

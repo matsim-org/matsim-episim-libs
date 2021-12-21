@@ -38,9 +38,10 @@ import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.model.vaccination.RandomVaccination;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.ShutdownPolicy;
-import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import javax.inject.Named;
@@ -77,7 +78,7 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
 
-		Multibinder.newSetBinder(binder(), SimulationStartListener.class);
+		Multibinder.newSetBinder(binder(), SimulationListener.class);
 	}
 
 	@Provides
@@ -131,12 +132,13 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
 
+		// TODO: needs to be fixed for single event files, synchronization after each iteration would be needed
 		// Async writer is used for huge event number
-		if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
+		//if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
 			// by default only one episim simulation is running
-			return new AsyncEpisimWriter(1);
-		else
-			return new EpisimWriter();
+		//	return new AsyncEpisimWriter(1);
+
+		return new EpisimWriter();
 	}
 
 	@Provides

@@ -562,9 +562,19 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report the occurrence of an infection.
 	 *
-	 * @param event occurred infection event
+	 * @param ev occurred infection event
 	 */
-	public void reportInfection(EpisimInfectionEvent event) {
+	public void reportInfection(Event ev) {
+
+		manager.processEvent(ev);
+
+		EpisimInfectionEvent event;
+		// Potential infections are not written to .txt file
+		if (!(ev instanceof EpisimInfectionEvent)) {
+			return;
+		}
+
+		event = (EpisimInfectionEvent) ev;
 
 		int cnt = specificInfectionsCnt.getOpaque();
 		// This counter is used by many threads, for better performance we use very weak memory guarantees here
@@ -575,8 +585,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		}
 
 		strains.mergeInt(event.getVirusStrain(), 1, Integer::sum);
-		manager.processEvent(event);
-
 
 		String[] array = new String[InfectionEventsWriterFields.values().length];
 		array[InfectionEventsWriterFields.time.ordinal()] = Double.toString(event.getTime());
@@ -777,7 +785,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		if (iteration == 0) return;
 
 		// Crucial episim events are always written, others only if enabled
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent ||
+				event instanceof EpisimInitialInfectionEvent
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 

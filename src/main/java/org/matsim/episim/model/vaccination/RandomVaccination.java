@@ -1,4 +1,4 @@
-package org.matsim.episim.model;
+package org.matsim.episim.model.vaccination;
 
 import com.google.inject.Inject;
 import org.apache.logging.log4j.LogManager;
@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -34,7 +35,7 @@ public class RandomVaccination implements VaccinationModel {
 	@Override
 	public int handleVaccination(Map<Id<Person>, EpisimPerson> persons, boolean reVaccination, int availableVaccinations, LocalDate date, int iteration, double now) {
 
-		if (availableVaccinations == 0)
+		if (availableVaccinations <= 0)
 			return 0;
 
 		Map<VaccinationType, Double> prob = vaccinationConfig.getVaccinationTypeProb(date);

@@ -219,14 +219,29 @@ public final class SymmetricContactModel extends AbstractContactModel {
 
 				double prob = infectionModel.calcInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
 						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
-				if (rnd.nextDouble() < prob)
+
+				double probUnVac = infectionModel.calcUnVacInfectionProbability(personLeavingContainer, contactPerson, getRestrictions(),
+						leavingParams, contactParams, contactIntensity, jointTimeInContainer);
+
+				double dbl = rnd.nextDouble();
+
+				potentialInfection(personLeavingContainer, contactPerson, now, infectionType, prob, container, probUnVac, dbl);
+
+				if (dbl < prob)
 					infectPerson(personLeavingContainer, contactPerson, now, infectionType, prob, container);
 
 			} else {
 				double prob = infectionModel.calcInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
 						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
 
-				if (rnd.nextDouble() < prob)
+				double probUnVac = infectionModel.calcUnVacInfectionProbability(contactPerson, personLeavingContainer, getRestrictions(),
+						contactParams, leavingParams, contactIntensity, jointTimeInContainer);
+
+				double dbl = rnd.nextDouble();
+
+				potentialInfection(contactPerson, personLeavingContainer, now, infectionType, prob, container, probUnVac, dbl);
+
+				if (dbl < prob)
 					infectPerson(contactPerson, personLeavingContainer, now, infectionType, prob, container);
 			}
 		}

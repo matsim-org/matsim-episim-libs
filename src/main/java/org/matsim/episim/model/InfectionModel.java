@@ -33,4 +33,13 @@ public interface InfectionModel {
 									EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
 									double contactIntensity, double jointTimeInContainer);
 
+	/**
+	 * Calculates the probability that person {@code infector} infects {@code target}, ignoring vaccination status of target.
+	 */
+	default double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
+	                                             EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
+	                                             double contactIntensity, double jointTimeInContainer) {
+		return calcInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer);
+	}
+
 }
