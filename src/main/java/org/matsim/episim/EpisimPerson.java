@@ -512,6 +512,14 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Return days since status, or default value if this status was not attained.
+	 */
+	public int daysSinceOrElse(DiseaseStatus status, int currentDay, int defaultValue) {
+		if (!hadDiseaseStatus(status)) return defaultValue;
+		return  daysSince(status, currentDay);
+	}
+
+	/**
 	 * Return whether a person had (or currently has) a certain disease status.
 	 */
 	public boolean hadDiseaseStatus(DiseaseStatus status) {

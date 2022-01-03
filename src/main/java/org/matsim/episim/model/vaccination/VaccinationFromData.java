@@ -78,6 +78,7 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		ColumnType[] types = {LOCAL_DATE, STRING, STRING, INTEGER, INTEGER};
 
+		ageGroups.add(new VaccinationFromData.AgeGroup(5, 11));
 		ageGroups.add(new VaccinationFromData.AgeGroup(12, 17));
 		ageGroups.add(new VaccinationFromData.AgeGroup(18, 59));
 		ageGroups.add(new VaccinationFromData.AgeGroup(60, MAX_AGE - 1));
@@ -86,6 +87,8 @@ public class VaccinationFromData extends VaccinationByAge {
 			Table rkiData = Table.read().usingOptions(CsvReadOptions.builder(vaccinationConfig.getFromFile())
 					.tableName("rkidata")
 					.columnTypes(types));
+
+			LocalDate endDate = rkiData.dateColumn("Impfdatum").max();
 
 			StringColumn locationColumn = rkiData.stringColumn("LandkreisId_Impfort");
 			Selection location = locationColumn.isEqualTo(config.locationId);
@@ -96,17 +99,19 @@ public class VaccinationFromData extends VaccinationByAge {
 			Selection firstVaccinations = vaccinationno.isEqualTo(1);
 			Table filtered = table.where(firstVaccinations);
 
-			mergeData(filtered, entries, "12-17", config.groups.getDouble("12-17"), 0);
-			mergeData(filtered, entries, "18-59", config.groups.getDouble("18-59"), 1);
-			mergeData(filtered, entries, "60+", config.groups.getDouble("60+"), 2);
+			mergeData(filtered, entries, endDate, "05-11", config.groups.getDouble("05-11"), 0);
+			mergeData(filtered, entries, endDate,"12-17", config.groups.getDouble("12-17"), 1);
+			mergeData(filtered, entries, endDate,"18-59", config.groups.getDouble("18-59"), 2);
+			mergeData(filtered, entries, endDate,"60+", config.groups.getDouble("60+"), 3);
 
 
 			Selection boosterVaccinations = vaccinationno.isEqualTo(3);
 			filtered = table.where(boosterVaccinations);
 
-			mergeData(filtered, booster, "12-17", config.groups.getDouble("12-17"), 0);
-			mergeData(filtered, booster, "18-59", config.groups.getDouble("18-59"), 1);
-			mergeData(filtered, booster, "60+", config.groups.getDouble("60+"), 2);
+			mergeData(filtered, booster, endDate,"05-11", config.groups.getDouble("05-11"), 0);
+			mergeData(filtered, booster, endDate,"12-17", config.groups.getDouble("12-17"), 1);
+			mergeData(filtered, booster, endDate,"18-59", config.groups.getDouble("18-59"), 2);
+			mergeData(filtered, booster, endDate,"60+", config.groups.getDouble("60+"), 3);
 
 
 		} catch (IOException e) {
@@ -217,7 +222,7 @@ public class VaccinationFromData extends VaccinationByAge {
 		return totalVaccinations;
 	}
 
-	static Table filterData(Table table, String ageGroup, double population) {
+	static Table filterData(Table table, LocalDate endDate, String ageGroup, double population) {
 
 		Selection selection = table.stringColumn("Altersgruppe").isEqualTo(ageGroup);
 		Table data = table.where(selection);
@@ -225,8 +230,7 @@ public class VaccinationFromData extends VaccinationByAge {
 		DateColumn dateColumn = data.dateColumn("Impfdatum");
 
 		LocalDate startDate = dateColumn.min();
-		LocalDate endDate = dateColumn.max();
-		List<LocalDate> dates = startDate.datesUntil(endDate).collect(Collectors.toList());
+		List<LocalDate> dates = startDate.datesUntil(endDate.plusDays(1)).collect(Collectors.toList());
 
 		for (LocalDate date : dates) {
 			Selection thisDateSelection = dateColumn.isEqualTo(date);
@@ -252,10 +256,10 @@ public class VaccinationFromData extends VaccinationByAge {
 		return data;
 	}
 
-	static void mergeData(Table filtered, TreeMap<LocalDate, DoubleList> entries, String ageGroup, double population, int i) {
-		for (Row row : filterData(filtered, ageGroup, population)) {
+	static void mergeData(Table filtered, TreeMap<LocalDate, DoubleList> entries, LocalDate endDate, String ageGroup, double population, int i) {
+		for (Row row : filterData(filtered, endDate, ageGroup, population)) {
 			LocalDate date = row.getDate(0);
-			DoubleList values = entries.computeIfAbsent(date, (k) -> new DoubleArrayList(new double[]{0, 0, 0}));
+			DoubleList values = entries.computeIfAbsent(date, (k) -> new DoubleArrayList(new double[]{0, 0, 0, 0}));
 
 			values.set(i, row.getDouble(1));
 		}

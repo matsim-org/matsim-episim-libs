@@ -66,6 +66,7 @@ public class VaccinationFromDataTest {
 		}
 
 		VaccinationFromData.Config conf = VaccinationFromData.newConfig("05315")
+				.withAgeGroup("05-11", 67158.47)
 				.withAgeGroup("12-17", 54587.2)
 				.withAgeGroup("18-59", 676995)
 				.withAgeGroup("60+", 250986);
