@@ -28,6 +28,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
+	private static final String DAYS_VALID = "daysValid";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -51,6 +52,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Load vaccinations from file instead.
 	 */
 	private String fromFile;
+
+	/**
+	 * Validity of vaccination in days.
+	 */
+	private int daysValid = 180;
 
 	/**
 	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
@@ -194,6 +200,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(FROM_FILE)
 	public String getFromFile() {
 		return fromFile;
+	}
+
+	@StringSetter(DAYS_VALID)
+	public void setDaysValid(int daysValid) {
+		this.daysValid = daysValid;
+	}
+
+	@StringGetter(DAYS_VALID)
+	public int getDaysValid() {
+		return daysValid;
 	}
 
 	/**
