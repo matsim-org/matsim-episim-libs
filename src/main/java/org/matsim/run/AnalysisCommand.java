@@ -29,10 +29,7 @@ import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.events.EventsUtils;
 import org.matsim.core.events.handler.EventHandler;
 import org.matsim.core.utils.io.UncheckedIOException;
-import org.matsim.episim.analysis.CreateContactGraph;
-import org.matsim.episim.analysis.ExtractInfectionGraph;
-import org.matsim.episim.analysis.ExtractInfectionsByAge;
-import org.matsim.episim.analysis.RValuesFromEvents;
+import org.matsim.episim.analysis.*;
 import org.matsim.episim.events.EpisimEventsReader;
 import picocli.AutoComplete;
 import picocli.CommandLine;
@@ -59,7 +56,7 @@ import java.util.zip.GZIPInputStream;
 		subcommands = {
 				CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
 				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class,
-				ExtractInfectionGraph.class
+				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class
 		},
 		subcommandsRepeatable = true
 )

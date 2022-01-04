@@ -37,6 +37,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 	private double outdoorFactor;
 	private int iteration;
+	private double lastUnVac;
 
 	@Inject
 	AgeAndProgressionDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ProgressionModel progression,
@@ -68,6 +69,11 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	}
 
 	@Override
+	public double getLastUnVacInfectionProbability() {
+		return lastUnVac;
+	}
+
+	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
 										   double contactIntensity, double jointTimeInContainer) {
@@ -83,20 +89,24 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
+		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
+		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
+
+		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
-				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
-				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
+				* shedding
+				* intake
 				* indoorOutdoorFactor
 		);
 	}
 
-	@Override
-	public double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer) {
+	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
+	                                            double indoorOutdoorFactor, double shedding, double intake) {
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
@@ -108,15 +118,13 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		// vac is reduced from this term
 		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
 
-		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
-
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
-				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
-				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
+				* shedding
+				* intake
 				* indoorOutdoorFactor
 		);
 	}
