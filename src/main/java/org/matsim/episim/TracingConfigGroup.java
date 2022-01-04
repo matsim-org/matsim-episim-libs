@@ -21,6 +21,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
+	private static final String QUARANTINE_VACCINATED = "quarantineVaccinated";
 	private static final String QUARANTINE_DURATION = "quarantineDuration";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
@@ -46,6 +47,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Delay between showing symptoms and tracing of contact person.
 	 */
 	private final Map<LocalDate, Integer> tracingDelay = new TreeMap<>();
+
+	/**
+	 * Whether vaccinated persons should be put into quarantine.
+	 */
+	private final Map<LocalDate, Boolean> quarantineVaccinated = new TreeMap<>();
 
 	/**
 	 * Day after which tracing starts and puts persons into quarantine.
@@ -224,6 +230,28 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(CAPACITY)
 	String getTracingCapacityString() {
 		return JOINER.join(tracingCapacity);
+	}
+
+	public void setQuarantineVaccinated(Map<LocalDate, Boolean> value) {
+		quarantineVaccinated.clear();
+		quarantineVaccinated.putAll(value);
+	}
+
+	public Map<LocalDate, Boolean> getQuarantineVaccinated() {
+		return quarantineVaccinated;
+	}
+
+	@StringSetter(QUARANTINE_VACCINATED)
+	void setQuarantineVaccinated(String value) {
+		Map<String, String> map = SPLITTER.split(value);
+		setQuarantineVaccinated(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Boolean.parseBoolean(e.getValue())
+		)));
+	}
+
+	@StringGetter(QUARANTINE_VACCINATED)
+	String getQuarantineVaccinatedString() {
+		return JOINER.join(quarantineVaccinated);
 	}
 
 	@StringGetter(EQUIPMENT_RATE)

@@ -6,6 +6,7 @@ import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.core.config.Config;
 import org.matsim.episim.*;
+import org.matsim.episim.model.VirusStrain;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -194,7 +195,13 @@ public class DefaultTestingModel implements TestingModel {
 
 		} else if (params.getType().canDetectPositive(person, day)) {
 
-			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= params.getFalseNegativeRate() ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
+			double rate = params.getFalseNegativeRate();
+
+			// TODO: configurable
+			if (person.getVirusStrain() == VirusStrain.OMICRON)
+				rate = 0.5;
+
+			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= rate ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
 			person.setTestStatus(testStatus, day);
 		}
 

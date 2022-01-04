@@ -66,7 +66,7 @@ public class ConfigurableProgressionModelTest {
 		episimConfig.setProgressionConfig(TEST_CONFIG);
 
 		SplittableRandom rnd = new SplittableRandom(1);
-		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
+		model = new ConfigurableProgressionModel(rnd, episimConfig, tracingConfig, vaccinationConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
 		model.setIteration(1);
 	}
 
@@ -319,7 +319,7 @@ public class ConfigurableProgressionModelTest {
 				.build());
 
 		SplittableRandom rnd = new SplittableRandom(1);
-		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
+		model = new ConfigurableProgressionModel(rnd, config, tracingConfig, vaccinationConfig, new DefaultDiseaseStatusTransitionModel(rnd, vaccinationConfig, strainConfig));
 
 		List<Double> recoveredDays = new ArrayList<>();
 

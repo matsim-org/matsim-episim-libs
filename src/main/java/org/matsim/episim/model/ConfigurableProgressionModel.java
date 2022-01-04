@@ -82,6 +82,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 */
 	private final Transition[] tMatrix;
 	private final TracingConfigGroup tracingConfig;
+	private final VaccinationConfigGroup vaccinationConfig;
 
 	/**
 	 * Counts how many infections occurred at each location.
@@ -114,15 +115,26 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private int tracingDelay = 0;
 
 	/**
+	 * Quarantine vaccinated persons.
+	 */
+	private boolean quarantineVaccinated = true;
+
+	/**
+	 * Current date.
+	 */
+	private LocalDate date;
+
+	/**
 	 * Used to track how many new people started showing symptoms.
 	 */
 	private long prevShowingSymptoms;
 
 	@Inject
 	public ConfigurableProgressionModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, TracingConfigGroup tracingConfig,
-	                                    DiseaseStatusTransitionModel statusTransitionModel) {
+	                                    VaccinationConfigGroup vaccinationConfig, DiseaseStatusTransitionModel statusTransitionModel) {
 		super(rnd, episimConfig, statusTransitionModel);
 		this.tracingConfig = tracingConfig;
+		this.vaccinationConfig = vaccinationConfig;
 
 		Config config = episimConfig.getProgressionConfig();
 
@@ -139,7 +151,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	@Override
 	public void setIteration(int day) {
 
-		LocalDate date = episimConfig.getStartDate().plusDays(day - 1);
+		date = episimConfig.getStartDate().plusDays(day - 1);
 
 		// Default capacity if none is set
 		tracingCapacity = EpisimUtils.findValidEntry(tracingConfig.getTracingCapacity(), Integer.MAX_VALUE, date);
@@ -150,6 +162,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
 		tracingDelay = EpisimUtils.findValidEntry(tracingConfig.getTracingDelay(), 0, date);
+		quarantineVaccinated = EpisimUtils.findValidEntry(tracingConfig.getQuarantineVaccinated(), true, date);
 	}
 
 	@Override
@@ -382,8 +395,10 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
-			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) {
+
+			if (quarantineVaccinated || !(p.isRecentlyRecovered(day) || vaccinationConfig.hasValidVaccination(p, day, date)))
+				p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)
 				tracingQueue.add(p.getPersonId());
