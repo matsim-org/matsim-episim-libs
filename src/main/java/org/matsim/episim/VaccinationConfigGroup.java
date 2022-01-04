@@ -29,6 +29,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
 	private static final String DAYS_VALID = "daysValid";
+	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -57,6 +58,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Validity of vaccination in days.
 	 */
 	private int daysValid = 180;
+
+	/**
+	 * Deadline after which days valid is in effect.
+	 */
+	private LocalDate validDeadline = LocalDate.of(2022, 2, 1);
 
 	/**
 	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
@@ -210,6 +216,40 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(DAYS_VALID)
 	public int getDaysValid() {
 		return daysValid;
+	}
+
+	@StringSetter(VALID_DEADLINE)
+	public void setValidDeadline(String validDeadline) {
+		this.validDeadline = LocalDate.parse(validDeadline);
+	}
+
+	public void setValidDeadline(LocalDate validDeadline) {
+		this.validDeadline = validDeadline;
+	}
+
+	@StringGetter(VALID_DEADLINE)
+	public LocalDate getValidDeadline() {
+		return validDeadline;
+	}
+
+	/**
+	 * Check if person has a valid vaccination card.
+	 * @param person person to check
+	 * @param day current simulation day
+	 * @param date simulation date
+	 */
+	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date) {
+
+		if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return false;
+
+		boolean fullyVaccinated = person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
+		boolean booster = person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes;
+
+		if (date.isBefore(validDeadline))
+			return fullyVaccinated || booster;
+
+		return (fullyVaccinated || booster) && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) <= getDaysValid();
 	}
 
 	/**

@@ -7,6 +7,7 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.policy.Restriction;
 
+import java.time.LocalDate;
 import java.util.BitSet;
 import java.util.List;
 import java.util.SplittableRandom;
@@ -21,6 +22,7 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 	private final VaccinationConfigGroup vaccinationConfig;
 	private ImmutableMap<String, Restriction> im;
 	private int iteration;
+	private LocalDate date;
 
 	@Inject
 	public DefaultParticipationModel(SplittableRandom rnd, EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig) {
@@ -36,6 +38,7 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 	public void setRestrictionsForIteration(int iteration, ImmutableMap<String, Restriction> im) {
 		this.im = im;
 		this.iteration = iteration;
+		this.date = episimConfig.getStartDate().plusDays(iteration - 1);
 	}
 
 	@Override
@@ -46,18 +49,12 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 
 			// reduce fraction for persons that are not vaccinated
 			if (context.getSusceptibleRf() != null && context.getSusceptibleRf() != 1d) {
-				if (!(person.isRecentlyRecovered(iteration) || (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
-						person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect() &&
-						person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) <= vaccinationConfig.getDaysValid())
-				))
+				if (!(person.isRecentlyRecovered(iteration) || vaccinationConfig.hasValidVaccination(person, iteration, date)))
 					r *= context.getSusceptibleRf();
 			}
 
 			if (context.getVaccinatedRf() != null && context.getVaccinatedRf() != 1d) {
-				if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes &&
-						person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) > vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect() &&
-						person.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) <= vaccinationConfig.getDaysValid()
-				)
+				if (person.isRecentlyRecovered(iteration) || vaccinationConfig.hasValidVaccination(person, iteration, date))
 					r *= context.getVaccinatedRf();
 			}
 
