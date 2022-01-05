@@ -123,7 +123,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * List of all potential infection that happened during the day.
 	 */
-	private List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
+	private final List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
 
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.

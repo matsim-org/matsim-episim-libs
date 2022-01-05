@@ -345,6 +345,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
 
+		share.put(LocalDate.parse("2020-12-01"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2020-12-28"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2021-01-04"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2021-01-11"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
@@ -638,7 +639,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			return this;
 		}
 	}
-	
+
 
 	/**
 	 * Adds progression config to the given builder.

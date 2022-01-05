@@ -395,7 +395,8 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no) {
+		// recovered persons are not quarantined, but they loose this status very quickly depending on config
+		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 
 			if (quarantineVaccinated || !(p.isRecentlyRecovered(day) || vaccinationConfig.hasValidVaccination(p, day, date)))
 				p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
