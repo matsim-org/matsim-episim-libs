@@ -461,6 +461,9 @@ public final class EpisimPerson implements Attributable {
 		return vaccinations.size() > 0 ? VaccinationStatus.yes : VaccinationStatus.no;
 	}
 
+	/**
+	 * Use {@link #getVaccinationType(int)}
+	 */
 	@Deprecated
 	public VaccinationType getVaccinationType() {
 		return vaccinations.get(0);
@@ -470,6 +473,9 @@ public final class EpisimPerson implements Attributable {
 		return vaccinations.get(idx);
 	}
 
+	/**
+	 * Use {@link #getNumVaccinations()}
+	 */
 	@Deprecated
 	public VaccinationStatus getReVaccinationStatus() {
 		return vaccinations.size() > 1 ? VaccinationStatus.yes : VaccinationStatus.no;
