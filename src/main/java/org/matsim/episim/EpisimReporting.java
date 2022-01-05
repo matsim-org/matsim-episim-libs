@@ -687,8 +687,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report the vaccination of a person.
 	 */
-	void reportVaccination(Id<Person> personId, int iteration, VaccinationType type, boolean reVaccination) {
-		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, reVaccination));
+	void reportVaccination(Id<Person> personId, int iteration, VaccinationType type, int n) {
+		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, n));
 	}
 
 

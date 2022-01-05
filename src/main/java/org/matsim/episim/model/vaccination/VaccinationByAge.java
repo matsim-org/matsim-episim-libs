@@ -74,7 +74,7 @@ public class VaccinationByAge implements VaccinationModel {
 
 			for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
 				EpisimPerson person = candidates.get(i);
-				vaccinate(person, iteration, reVaccination ? null : VaccinationModel.chooseVaccinationType(prob, rnd), reVaccination);
+				vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
 				vaccinationsLeft--;
 			}
 

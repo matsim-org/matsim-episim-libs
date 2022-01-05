@@ -39,11 +39,8 @@ public interface VaccinationModel extends SimulationListener {
 	/**
 	 * Set vaccination status of a person.
 	 */
-	default void vaccinate(EpisimPerson p, int iteration, VaccinationType type, boolean reVaccination) {
-		if (reVaccination)
-			p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, iteration);
-		else
-			p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, type, iteration);
+	default void vaccinate(EpisimPerson p, int iteration, VaccinationType type) {
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, type, iteration);
 	}
 
 	/**

@@ -59,7 +59,7 @@ public class RandomVaccination implements VaccinationModel {
 			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
 			if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
 				VaccinationType type = VaccinationModel.chooseVaccinationType(prob, rnd);
-				vaccinate(randomPerson, iteration, reVaccination ? null : type, reVaccination);
+				vaccinate(randomPerson, iteration, type);
 				vaccinationsLeft--;
 			}
 		}

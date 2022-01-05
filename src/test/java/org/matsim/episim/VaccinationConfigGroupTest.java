@@ -167,7 +167,7 @@ public class VaccinationConfigGroupTest {
 				.isEqualTo(true);
 
 
-		p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 50);
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 50);
 
 		assertThat(group.hasValidVaccination(p, 55, date.plusDays(55)))
 				.isEqualTo(true);
