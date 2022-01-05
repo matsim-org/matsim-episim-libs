@@ -150,16 +150,6 @@ public final class EpisimPerson implements Attributable {
 	private VirusStrain virusStrain = VirusStrain.SARS_CoV_2;
 
 	/**
-	 * Current {@link VaccinationStatus}.
-	 */
-	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
-
-	/**
-	 * Current status for re-vaccination.
-	 */
-	private VaccinationStatus reVaccinationStatus = VaccinationStatus.no;
-
-	/**
 	 * Current {@link TestStatus}.
 	 */
 	private TestStatus testStatus = TestStatus.untested;
@@ -200,14 +190,14 @@ public final class EpisimPerson implements Attributable {
 	private boolean vaccinable = true;
 
 	/**
-	 * Received vaccination type.
-	 */
-	private VaccinationType vaccinationType = VaccinationType.generic;
-
-	/**
 	 * Individual susceptibility of a person.
 	 */
 	private double susceptibility = 1;
+
+	/**
+	 * Types of received vaccination. Index 0 is the first received.
+	 */
+	private List<VaccinationType> vaccinations = new ArrayList<>();
 
 	/**
 	 * Lookup age from attributes.
@@ -277,12 +267,15 @@ public final class EpisimPerson implements Attributable {
 			spentTime.put(act, in.readDouble());
 		}
 
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			vaccinations.add(VaccinationType.values()[in.readInt()]);
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
 		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
-		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
-		reVaccinationStatus = VaccinationStatus.values()[in.readInt()];
 		vaccinationDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
@@ -292,7 +285,6 @@ public final class EpisimPerson implements Attributable {
 		// vaccinable, which is not restored from snapshot
 		in.readBoolean();
 
-		vaccinationType = VaccinationType.values()[in.readInt()];
 		susceptibility = in.readDouble();
 	}
 
@@ -324,25 +316,26 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(spentTime.size());
-
 		for (Object2DoubleMap.Entry<String> kv : spentTime.object2DoubleEntrySet()) {
 			writeChars(out, kv.getKey());
 			out.writeDouble(kv.getDoubleValue());
+		}
+
+		out.writeInt(vaccinations.size());
+		for (VaccinationType vac : vaccinations) {
+			out.writeInt(vac.ordinal());
 		}
 
 		out.writeInt(status.ordinal());
 		out.writeInt(virusStrain.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
-		out.writeInt(vaccinationStatus.ordinal());
-		out.writeInt(reVaccinationStatus.ordinal());
 		out.writeInt(vaccinationDate);
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
 		out.writeBoolean(traceable);
 		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
-		out.writeInt(vaccinationType.ordinal());
 		out.writeDouble(susceptibility);
 	}
 
@@ -450,10 +443,12 @@ public final class EpisimPerson implements Attributable {
 		return vaccinationStatus;
 	}
 
+	@Deprecated
 	public VaccinationType getVaccinationType() {
 		return vaccinationType;
 	}
 
+	@Deprecated
 	public VaccinationStatus getReVaccinationStatus() {
 		return reVaccinationStatus;
 	}
