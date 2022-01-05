@@ -21,6 +21,8 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
@@ -167,11 +169,6 @@ public final class EpisimPerson implements Attributable {
 	private int testDate = -1;
 
 	/**
-	 * How many times a person did go through the infected -> recovered cycle.
-	 */
-	private int numInfections = 0;
-
-	/**
 	 * Age of the person in years.
 	 */
 	private final int age;
@@ -200,6 +197,11 @@ public final class EpisimPerson implements Attributable {
 	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
 	 */
 	private final IntList vaccinationDates = new IntArrayList();
+
+	/**
+	 * Iterations when a person was infected.
+	 */
+	private final DoubleList infectionDates = new DoubleArrayList();
 
 	/**
 	 * Lookup age from attributes.
@@ -275,6 +277,11 @@ public final class EpisimPerson implements Attributable {
 			vaccinationDates.add(in.readInt());
 		}
 
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			infectionDates.add(in.readDouble());
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
 		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
@@ -282,7 +289,6 @@ public final class EpisimPerson implements Attributable {
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
 		traceable = in.readBoolean();
-		numInfections = in.readInt();
 
 		// vaccinable, which is not restored from snapshot
 		in.readBoolean();
@@ -329,6 +335,10 @@ public final class EpisimPerson implements Attributable {
 			out.writeInt(vaccinationDates.getInt(i));
 		}
 
+		out.writeInt(infectionDates.size());
+		for (double d : infectionDates) {
+			out.writeDouble(d);
+		}
 
 		out.writeInt(status.ordinal());
 		out.writeInt(virusStrain.ordinal());
@@ -337,7 +347,6 @@ public final class EpisimPerson implements Attributable {
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
 		out.writeBoolean(traceable);
-		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
 		out.writeDouble(susceptibility);
 	}
@@ -371,13 +380,14 @@ public final class EpisimPerson implements Attributable {
 
 		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain));
 
-		setVirusStrain(strain);
+		virusStrain = strain;
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		infectionDates.add(now);
 
 	}
 
 	/**
-	 * Adds an infection possibility to this persons. Will be executed in {@link #checkInfection()}
+	 * Adds an infection possibility to this person. Will be executed in {@link #checkInfection()}
 	 */
 	synchronized public void possibleInfection(EpisimInfectionEvent event) {
 		if (earliestInfection == null || event.compareTo(earliestInfection) < 0) {
@@ -402,10 +412,12 @@ public final class EpisimPerson implements Attributable {
 
 			EpisimInfectionEvent event = this.earliestInfection;
 			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);
-			setVirusStrain(event.getVirusStrain());
+
+			virusStrain = event.getVirusStrain();
 			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
-			setInfectionType(event.getInfectionType());
-			numInfections++;
+
+			infectionType = event.getInfectionType();
+			infectionDates.add(event.getTime());
 
 			this.earliestInfection = null;
 			return event;
@@ -434,10 +446,6 @@ public final class EpisimPerson implements Attributable {
 		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
 	}
 
-	public void setVirusStrain(VirusStrain virusStrain) {
-		this.virusStrain = virusStrain;
-	}
-
 	public VirusStrain getVirusStrain() {
 		return virusStrain;
 	}
@@ -456,6 +464,10 @@ public final class EpisimPerson implements Attributable {
 	@Deprecated
 	public VaccinationType getVaccinationType() {
 		return vaccinations.get(0);
+	}
+
+	public VaccinationType getVaccinationType(int idx) {
+		return vaccinations.get(idx);
 	}
 
 	@Deprecated
@@ -506,6 +518,18 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Days elapsed since nth infection occurred.
+	 *
+	 * @param idx index starting at 0
+	 */
+	public int daysSinceInfection(int idx, int currentDay) {
+		if (infectionDates.size() <= idx) throw new IllegalStateException("Person did not had infection with index " + idx);
+
+		double day = Math.floor(infectionDates.getDouble(idx) / EpisimUtils.DAY);
+		return currentDay - (int) day;
+
+	}
+	/**
 	 * Return days since status, or default value if this status was not attained.
 	 */
 	public int daysSinceOrElse(DiseaseStatus status, int currentDay, int defaultValue) {
@@ -549,6 +573,15 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Days since the nth vaccination (starting at 0)
+	 */
+	public int daysSinceVaccination(int idx, int currentDay) {
+		if (vaccinations.size() <= idx) throw new IllegalStateException("Person did not receive vaccination with index " + idx);
+
+		return currentDay - vaccinationDates.getInt(idx);
+	}
+
+	/**
 	 * Days elapsed since person got its first vaccination.
 	 *
 	 * @param currentDay current day (iteration)
@@ -564,14 +597,14 @@ public final class EpisimPerson implements Attributable {
 	 * Number of times person was infected.
 	 */
 	public int getNumInfections() {
-		return numInfections;
+		return infectionDates.size();
 	}
 
 	/**
 	 * Whether this person is handled as a recovered person.
 	 */
 	public boolean isRecentlyRecovered(int currentDay) {
-		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && numInfections >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= 180);
+		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && infectionDates.size() >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= 180);
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
@@ -765,10 +798,6 @@ public final class EpisimPerson implements Attributable {
 
 	public Id<ActivityFacility> getInfectionContainer() {
 		return infectionContainer;
-	}
-
-	public void setInfectionType(String infectionType) {
-		this.infectionType = infectionType;
 	}
 
 	public String getInfectionType() {
