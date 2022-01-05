@@ -101,7 +101,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 		// Entries with rarely used vaccines are filtered
 		List<String> collect = new ArrayList<>(handler.vac.keySet());
 
-		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(scenario.resolve(id + "vaccineEff.tsv")), CSVFormat.TDF)) {
+		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(scenario.resolve(id + "post.vaccineEff.tsv")), CSVFormat.TDF)) {
 
 			csv.print("day");
 			for (String s1 : collect) {
