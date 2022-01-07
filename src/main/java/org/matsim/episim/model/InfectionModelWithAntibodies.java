@@ -96,7 +96,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 //		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
-		double antibodyLevel = getAntibotyLevel(target, iteration);
+		double antibodyLevel = getAntibotyLevel(target, iteration, target.getNumVaccinations());
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
@@ -115,7 +115,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		);
 	}
 
-	public double getAntibotyLevel(EpisimPerson target, int iteration) {
+	private double getAntibotyLevel(EpisimPerson target, int iteration, int numVaccinations) {
 		final Map<VaccinationType, Double> initalAntibodies = Map.of(
 				VaccinationType.natural, 1.0,
 				VaccinationType.mRNA, 2.0,
@@ -133,7 +133,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VaccinationType initialVaccinationType = null;
 		
 		int numInfections = target.getNumInfections();
-		int numVaccinations = target.getNumVaccinations();
 		
 		//no antibodies
 		if (numInfections == 0 && numVaccinations == 0) {
@@ -184,7 +183,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		// vac is reduced from this term
-		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
+//		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
+		double antibodyLevel = getAntibotyLevel(target, iteration, 0);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
@@ -194,6 +194,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				* shedding
 				* intake
 				* indoorOutdoorFactor
+				/ (1.0 + Math.pow(antibodyLevel / (vaccinationConfig.getAk50Factor() * AK50_PERSTRAIN.get(infector.getVirusStrain())), vaccinationConfig.getBetaPerStrain().get(infector.getVirusStrain())))
+
 		);
 	}
 
