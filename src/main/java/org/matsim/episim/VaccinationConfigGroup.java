@@ -207,9 +207,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(vaccinationCapacity);
 	}
 	
-	public void setBetaPerStrain(Map<VirusStrain, Double> betaPerStrain) {
+	public void setBetaPerStrain(Map<VirusStrain, Double> beta) {
 		betaPerStrain.clear();
-		betaPerStrain.putAll(betaPerStrain);
+		betaPerStrain.putAll(beta);
 	}
 
 	public NavigableMap<VirusStrain, Double> getBetaPerStrain() {
@@ -217,12 +217,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringSetter(BETA)
-	void setBetaPerStrain(String betaPerStrain) {
+	void setBetaPerStrain(String beta) {
 
-		if (betaPerStrain.isBlank())
+		if (beta.isBlank())
 			return;
 
-		Map<String, String> map = SPLITTER.split(betaPerStrain);
+		Map<String, String> map = SPLITTER.split(beta);
 		setBetaPerStrain(map.entrySet().stream().collect(Collectors.toMap(
 				e -> VirusStrain.valueOf(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
