@@ -447,6 +447,10 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public VirusStrain getVirusStrain() {
+		// Backwards compatibility
+		if (virusStrains.isEmpty())
+			return VirusStrain.SARS_CoV_2;
+
 		return virusStrains.get(virusStrains.size() - 1);
 	}
 
