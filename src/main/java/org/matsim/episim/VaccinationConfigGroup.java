@@ -25,10 +25,12 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String COMPLIANCE = "compliance";
 	private static final String CAPACITY = "vaccinationCapacity";
+	private static final String BETA = "betaPerStrain";
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
 	private static final String DAYS_VALID = "daysValid";
+	private static final String AK50_FACTOR = "ak50Factor";
 	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
@@ -38,7 +40,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of vaccinations available per day.
 	 */
 	private final NavigableMap<LocalDate, Integer> vaccinationCapacity = new TreeMap<>();
-
+	/**
+	 * Beta for strain. Needed for translation of antibody level into effectiveness.
+	 */
+	private final NavigableMap<VirusStrain, Double> betaPerStrain = new TreeMap<>();
 	/**
 	 * Amount of re-vaccinations available per day.
 	 */
@@ -58,6 +63,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Validity of vaccination in days.
 	 */
 	private int daysValid = 180;
+	/**
+	 * Factor which is multiplied with ak50. Needed for antibody model. 
+	 */
+	private double ak50Factor = 1.0;
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -197,7 +206,33 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	String getVaccinationCapacityString() {
 		return JOINER.join(vaccinationCapacity);
 	}
+	
+	public void setBetaPerStrain(Map<VirusStrain, Double> betaPerStrain) {
+		betaPerStrain.clear();
+		betaPerStrain.putAll(betaPerStrain);
+	}
 
+	public NavigableMap<VirusStrain, Double> getBetaPerStrain() {
+		return betaPerStrain;
+	}
+
+	@StringSetter(BETA)
+	void setBetaPerStrain(String betaPerStrain) {
+
+		if (betaPerStrain.isBlank())
+			return;
+
+		Map<String, String> map = SPLITTER.split(betaPerStrain);
+		setBetaPerStrain(map.entrySet().stream().collect(Collectors.toMap(
+				e -> VirusStrain.valueOf(e.getKey()), e -> Double.parseDouble(e.getValue())
+		)));
+	}
+
+	@StringGetter(BETA)
+	String getBetaPerStrainString() {
+		return JOINER.join(betaPerStrain);
+	}
+	
 	@StringSetter(FROM_FILE)
 	public void setFromFile(String fromFile) {
 		this.fromFile = fromFile;
@@ -216,6 +251,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(DAYS_VALID)
 	public int getDaysValid() {
 		return daysValid;
+	}
+	
+	@StringSetter(AK50_FACTOR)
+	public void setAk50Factor(double ak50Factor) {
+		this.ak50Factor = ak50Factor;
+	}
+
+	@StringGetter(AK50_FACTOR)
+	public double getAk50Factor() {
+		return ak50Factor;
 	}
 
 	@StringSetter(VALID_DEADLINE)
