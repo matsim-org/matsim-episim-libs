@@ -149,11 +149,6 @@ public final class EpisimPerson implements Attributable {
 	private QuarantineStatus quarantineStatus = QuarantineStatus.no;
 
 	/**
-	 * Strain of the virus the person was infected with.
-	 */
-	private VirusStrain virusStrain = VirusStrain.SARS_CoV_2;
-
-	/**
 	 * Current {@link TestStatus}.
 	 */
 	private TestStatus testStatus = TestStatus.untested;
@@ -202,6 +197,11 @@ public final class EpisimPerson implements Attributable {
 	 * Iterations when a person was infected.
 	 */
 	private final DoubleList infectionDates = new DoubleArrayList();
+
+	/**
+	 * Strain of the virus the person was infected with.
+	 */
+	private final List<VirusStrain> virusStrains = new ArrayList<>();
 
 	/**
 	 * Lookup age from attributes.
@@ -280,10 +280,10 @@ public final class EpisimPerson implements Attributable {
 		n = in.readInt();
 		for (int i = 0; i < n; i++) {
 			infectionDates.add(in.readDouble());
+			virusStrains.add(VirusStrain.values()[in.readInt()]);
 		}
 
 		status = DiseaseStatus.values()[in.readInt()];
-		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
@@ -336,12 +336,12 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(infectionDates.size());
-		for (double d : infectionDates) {
-			out.writeDouble(d);
+		for (int i = 0; i < infectionDates.size(); i++) {
+			out.writeDouble(infectionDates.getDouble(i));
+			out.writeInt(virusStrains.get(i).ordinal());
 		}
 
 		out.writeInt(status.ordinal());
-		out.writeInt(virusStrain.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
 		out.writeInt(testStatus.ordinal());
@@ -380,7 +380,7 @@ public final class EpisimPerson implements Attributable {
 
 		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain));
 
-		virusStrain = strain;
+		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 		infectionDates.add(now);
 
@@ -413,7 +413,7 @@ public final class EpisimPerson implements Attributable {
 			EpisimInfectionEvent event = this.earliestInfection;
 			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);
 
-			virusStrain = event.getVirusStrain();
+			virusStrains.add(event.getVirusStrain());
 			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
 
 			infectionType = event.getInfectionType();
@@ -447,7 +447,15 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	public VirusStrain getVirusStrain() {
-		return virusStrain;
+		return virusStrains.get(virusStrains.size() - 1);
+	}
+
+	/**
+	 * Virus strain of infection.
+	 * @param idx index of infection starting at 0
+	 */
+	public VirusStrain getVirusStrain(int idx) {
+		return virusStrains.get(idx);
 	}
 
 	/**
@@ -483,6 +491,9 @@ public final class EpisimPerson implements Attributable {
 
 	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
+
+
+
 
 		vaccinations.add(type);
 		vaccinationDates.add(iteration);
