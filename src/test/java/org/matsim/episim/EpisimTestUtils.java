@@ -3,7 +3,9 @@ package org.matsim.episim;
 import org.matsim.api.core.v01.Id;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.mockito.Mockito;
@@ -184,6 +186,14 @@ public class EpisimTestUtils {
 		return p;
 	}
 
+	/**
+	 * Helper method to infect a person.
+	 */
+	public static EpisimPerson infectPerson(EpisimPerson p, VirusStrain strain, double now) {
+		p.possibleInfection(new EpisimInfectionEvent(now, p.getPersonId(), p.getPersonId(), null, "undefined", 1, strain, 1.0));
+		p.checkInfection();
+		return p;
+	}
 
 	/**
 	 * Add persons to a facility.
