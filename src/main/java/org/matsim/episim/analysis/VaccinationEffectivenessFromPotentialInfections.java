@@ -33,20 +33,14 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
-import org.matsim.episim.events.EpisimPotentialInfectionEvent;
-import org.matsim.episim.events.EpisimPotentialInfectionEventHandler;
-import org.matsim.episim.events.EpisimVaccinationEvent;
-import org.matsim.episim.events.EpisimVaccinationEventHandler;
+import org.matsim.episim.events.*;
 import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Callable;
 
 
@@ -60,6 +54,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
+
+	@CommandLine.Option(names = "--remove-infected", defaultValue = "false", description = "Remove infected persons from effectiveness calculation")
+	private boolean removeInfected;
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new VaccinationEffectivenessFromPotentialInfections()).execute(args));
@@ -131,13 +128,21 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 		log.info("Calculated results for scenario {}", scenario);
 	}
 
-	private static final class Handler implements EpisimPotentialInfectionEventHandler, EpisimVaccinationEventHandler {
+	private final class Handler implements EpisimInfectionEventHandler, EpisimPotentialInfectionEventHandler, EpisimVaccinationEventHandler {
 
 		private final Object2IntMap<Id<Person>> vaccinationDay = new Object2IntOpenHashMap<>();
 		private final Map<Id<Person>, String> vaccine = new HashMap<>();
+		private final Set<Id<Person>> infected = new HashSet<>();
 
 		private final Map<String, Int2DoubleMap> vac = new HashMap<>();
 		private final Map<String, Int2DoubleMap> unVac = new HashMap<>();
+
+		@Override
+		public void handleEvent(EpisimInfectionEvent event) {
+
+			if (removeInfected)
+				infected.add(event.getPersonId());
+		}
 
 		@Override
 		public void handleEvent(EpisimVaccinationEvent event) {
@@ -162,6 +167,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 			int daysSinceVaccination = day - vaccinationDay.getInt(event.getPersonId());
 
 			if (!vaccine.containsKey(event.getPersonId()))
+				return;
+
+			if (infected.contains(event.getPersonId()))
 				return;
 
 			String s = vaccine.get(event.getPersonId());

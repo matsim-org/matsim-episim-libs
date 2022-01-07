@@ -278,6 +278,14 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Check whether person has the recovered status.
+	 */
+	public boolean hasRecoveredStatus(EpisimPerson person, int day, LocalDate date) {
+		// Initial the threshold was 180 days, this setting is adjusted to the threshold after the deadline
+		return date.isBefore(validDeadline) ? person.isRecentlyRecovered(day, 180)  : person.isRecentlyRecovered(day, getDaysValid());
+	}
+
+	/**
 	 * Check if person has a valid vaccination card.
 	 * @param person person to check
 	 * @param day current simulation day

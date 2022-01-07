@@ -623,9 +623,11 @@ public final class EpisimPerson implements Attributable {
 
 	/**
 	 * Whether this person is handled as a recovered person.
+	 *
+	 * @param threshold after how many days the status will expire
 	 */
-	public boolean isRecentlyRecovered(int currentDay) {
-		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && infectionDates.size() >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= 180);
+	public boolean isRecentlyRecovered(int currentDay, int threshold) {
+		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && infectionDates.size() >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= threshold);
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
