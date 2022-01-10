@@ -750,6 +750,8 @@ public final class InfectionEventHandler implements Externalizable {
 
 		reporting.reportCpuTime(iteration, "Reporting", "start", -1);
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
+		
+		reporting.reportAntibodyLevel(reporting.calculateAntibodyLevelPerPerson(personMap.values(), iteration), iteration);
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration, report.date);

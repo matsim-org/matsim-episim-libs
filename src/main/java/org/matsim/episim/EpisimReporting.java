@@ -39,6 +39,7 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimPerson.VaccinationStatus;
 import org.matsim.episim.events.*;
+import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.Restriction;
@@ -131,6 +132,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter outdoorFraction;
 	private BufferedWriter virusStrains;
 	private BufferedWriter cpuTime;
+	private BufferedWriter antibodiesPerPerson;
 
 	private String memorizedDate = null;
 
@@ -190,6 +192,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
+		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", "antibodies");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -257,6 +260,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
+		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv");
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
@@ -279,6 +283,20 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
 
 		return person.getReVaccinationStatus() == VaccinationStatus.yes || person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect;
+	}
+	
+	/**
+	 * Calculates average antibodyLevel of population.
+	 * @return 
+	 */
+	double calculateAntibodyLevelPerPerson(Collection<EpisimPerson> persons, int iteration) {
+		double avgAntibodyLevel = 0.0;
+		for (EpisimPerson p : persons) {
+			double antibodyLevel = InfectionModelWithAntibodies.getAntibotyLevel(p, iteration, p.getNumVaccinations());
+			avgAntibodyLevel = avgAntibodyLevel + antibodyLevel;
+		}
+		avgAntibodyLevel = avgAntibodyLevel / persons.size();
+		return avgAntibodyLevel;
 	}
 
 	/**
@@ -721,6 +739,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public void reportDiseaseImport(int infected, int iteration, String date) {
 		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
 	}
+	
+	/**
+	 * Write average antibody level.
+	 */
+	public void reportAntibodyLevel(double antibodyLevel, int iteration) {
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+		writer.append(antibodiesPerPerson, new String[]{String.valueOf(iteration), date, String.valueOf(antibodyLevel)});
+	}
 
 	/**
 	 * Write outdoor fraction for each day.
@@ -763,6 +789,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(diseaseImport);
 		writer.close(outdoorFraction);
 		writer.close(virusStrains);
+		writer.close(antibodiesPerPerson);
 		writer.close(cpuTime);
 
 		if (singleEvents) {

@@ -115,7 +115,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		);
 	}
 
-	private double getAntibotyLevel(EpisimPerson target, int iteration, int numVaccinations) {
+	public static double getAntibotyLevel(EpisimPerson target, int iteration, int numVaccinations) {
 		final Map<VaccinationType, Double> initalAntibodies = Map.of(
 				VaccinationType.natural, 1.0,
 				VaccinationType.mRNA, 2.0,
