@@ -54,6 +54,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private final Map<LocalDate, Boolean> quarantineVaccinated = new TreeMap<>();
 
 	/**
+	 * Duration of quarantine in days.
+	 */
+	private final Map<LocalDate, Integer> quarantineDuration = new TreeMap<>();
+
+	/**
 	 * Day after which tracing starts and puts persons into quarantine.
 	 */
 	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;
@@ -61,10 +66,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * How many days the tracing works back.
 	 */
 	private int tracingDayDistance = 4;
-	/**
-	 * Duration of quarantine in days.
-	 */
-	private int quarantineDuration = 14;
+
 	/**
 	 * Probability that a person is equipped with a tracing device.
 	 */
@@ -254,6 +256,30 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(quarantineVaccinated);
 	}
 
+
+
+	public void setQuarantineDuration(Map<LocalDate, Integer> value) {
+		quarantineDuration.clear();
+		quarantineDuration.putAll(value);
+	}
+
+	public Map<LocalDate, Integer> getQuarantineDuration() {
+		return quarantineDuration;
+	}
+
+	@StringSetter(QUARANTINE_DURATION)
+	void setQuarantineDuration(String value) {
+		Map<String, String> map = SPLITTER.split(value);
+		setQuarantineDuration(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+		)));
+	}
+
+	@StringGetter(QUARANTINE_DURATION)
+	String getQuarantineDurationString() {
+		return JOINER.join(quarantineDuration);
+	}
+
 	@StringGetter(EQUIPMENT_RATE)
 	public double getEquipmentRate() {
 		return equipmentRate;
@@ -262,16 +288,6 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(EQUIPMENT_RATE)
 	public void setEquipmentRate(double equipmentRate) {
 		this.equipmentRate = equipmentRate;
-	}
-
-	@StringSetter(QUARANTINE_DURATION)
-	public void setQuarantineDuration(int quarantineDuration) {
-		this.quarantineDuration = quarantineDuration;
-	}
-
-	@StringGetter(QUARANTINE_DURATION)
-	public int getQuarantineDuration() {
-		return quarantineDuration;
 	}
 
 	@StringGetter(QUARANTINE_RELEASE)
