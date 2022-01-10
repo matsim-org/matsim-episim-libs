@@ -120,6 +120,11 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	private boolean quarantineVaccinated = true;
 
 	/**
+	 * Quarantine duration for current date.
+	 */
+	private int quarantineDuration;
+
+	/**
 	 * Current date.
 	 */
 	private LocalDate date;
@@ -163,6 +168,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		tracingProb = EpisimUtils.findValidEntry(tracingConfig.getTracingProbability(), 1.0, date);
 		tracingDelay = EpisimUtils.findValidEntry(tracingConfig.getTracingDelay(), 0, date);
 		quarantineVaccinated = EpisimUtils.findValidEntry(tracingConfig.getQuarantineVaccinated(), true, date);
+		quarantineDuration = EpisimUtils.findValidEntry(tracingConfig.getQuarantineDuration(), 14, date);
 	}
 
 	@Override
@@ -170,7 +176,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		super.updateState(person, day);
 
 		// A healthy quarantined person is dismissed from quarantine after some time
-		if (releasePerson(person) && person.daysSinceQuarantine(day) > tracingConfig.getQuarantineDuration()) {
+		if (releasePerson(person) && person.daysSinceQuarantine(day) > quarantineDuration) {
 			person.setQuarantineStatus(EpisimPerson.QuarantineStatus.no, day);
 			person.setTestStatus(TestStatus.untested, day - 1);
 		}
