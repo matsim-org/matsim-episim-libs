@@ -246,7 +246,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-					"outdoorFraction.tsv", "strains.tsv", "events.tar")) {
+					"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv", "events.tar")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -284,15 +284,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		return person.getReVaccinationStatus() == VaccinationStatus.yes || person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect;
 	}
-	
+
 	/**
 	 * Calculates average antibodyLevel of population.
-	 * @return 
+	 * @return
 	 */
 	double calculateAntibodyLevelPerPerson(Collection<EpisimPerson> persons, int iteration) {
 		double avgAntibodyLevel = 0.0;
 		for (EpisimPerson p : persons) {
-			double antibodyLevel = InfectionModelWithAntibodies.getAntibotyLevel(p, iteration, p.getNumVaccinations());
+			double antibodyLevel = InfectionModelWithAntibodies.getAntibodyLevel(p, iteration, p.getNumVaccinations());
 			avgAntibodyLevel = avgAntibodyLevel + antibodyLevel;
 		}
 		avgAntibodyLevel = avgAntibodyLevel / persons.size();
@@ -739,7 +739,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public void reportDiseaseImport(int infected, int iteration, String date) {
 		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
 	}
-	
+
 	/**
 	 * Write average antibody level.
 	 */

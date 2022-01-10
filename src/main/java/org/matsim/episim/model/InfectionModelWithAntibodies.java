@@ -8,7 +8,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.time.LocalDate;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -39,7 +38,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private double outdoorFactor;
 	private int iteration;
 	private double lastUnVac;
-	
+
 	private static final Map<VirusStrain, Double> AK50_PERSTRAIN = Map.of(
 			VirusStrain.SARS_CoV_2, 0.2,
 			VirusStrain.B117, 0.3,
@@ -96,7 +95,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 //		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
-		double antibodyLevel = getAntibotyLevel(target, iteration, target.getNumVaccinations());
+		double antibodyLevel = getAntibodyLevel(target, iteration, target.getNumVaccinations());
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
@@ -115,30 +114,30 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		);
 	}
 
-	public static double getAntibotyLevel(EpisimPerson target, int iteration, int numVaccinations) {
+	public static double getAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations) {
 		final Map<VaccinationType, Double> initalAntibodies = Map.of(
 				VaccinationType.natural, 1.0,
 				VaccinationType.mRNA, 2.0,
 				VaccinationType.vector, 0.5
 		);
-		
+
 		final Map<VaccinationType, Double> antibodyFactor = Map.of(
 				VaccinationType.natural, 10.0,
 				VaccinationType.mRNA, 20.0,
 				VaccinationType.vector, 5.0
 		);
-		
+
 		final int halfLife_days = 108;
-		
+
 		VaccinationType initialVaccinationType = null;
-		
+
 		int numInfections = target.getNumInfections();
-		
+
 		//no antibodies
 		if (numInfections == 0 && numVaccinations == 0) {
 			return 0.0;
 		}
-		
+
 		int daysSinceAntibodies = 0;
 		if (numInfections != 0) {
 			daysSinceAntibodies = Math.max(target.daysSinceInfection(0, iteration), daysSinceAntibodies);
@@ -147,9 +146,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			daysSinceAntibodies = Math.max(target.daysSinceVaccination(0, iteration), daysSinceAntibodies);
 			initialVaccinationType = target.getVaccinationType(0);
 		}
-		
+
 		double antibodyLevel = 0.0;
-		
+
 		//person was previously infected
 		if (numInfections != 0) {
 			antibodyLevel = initalAntibodies.get(VaccinationType.natural) * Math.pow(antibodyFactor.get(VaccinationType.natural), numInfections - 1);
@@ -161,14 +160,14 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		else {
 			antibodyLevel = initalAntibodies.get(initialVaccinationType);
 		}
-		
+
 		//person is boostered
 		if (numVaccinations > 1) {
 			antibodyLevel = antibodyLevel * Math.pow(antibodyFactor.get(VaccinationType.mRNA), numVaccinations - 1);
 		}
-		
+
 		antibodyLevel = antibodyLevel * Math.exp( -0.5 * ((double) daysSinceAntibodies / halfLife_days));
-		
+
 		return antibodyLevel;
 	}
 
@@ -184,7 +183,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		// vac is reduced from this term
 //		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
-		double antibodyLevel = getAntibotyLevel(target, iteration, 0);
+		double antibodyLevel = getAntibodyLevel(target, iteration, 0);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
