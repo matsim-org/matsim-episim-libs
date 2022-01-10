@@ -6,13 +6,12 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
-import java.util.SplittableRandom;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -48,22 +47,20 @@ public class RandomVaccination implements VaccinationModel {
 				.filter(p -> reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)
 				.collect(Collectors.toList());
 
-		if (candidates.size() < availableVaccinations) {
+		if (candidates.isEmpty()) {
 			log.warn("Not enough people to vaccinate left ({})", availableVaccinations);
 			return 0;
 		}
 
+		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
+
 		int vaccinationsLeft = availableVaccinations;
-		int vaccinated = 0;
-		while (vaccinationsLeft > 0) {
-			EpisimPerson randomPerson = candidates.get(rnd.nextInt(candidates.size()));
-			if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
-				VaccinationType type = VaccinationModel.chooseVaccinationType(prob, rnd);
-				vaccinate(randomPerson, iteration, type);
-				vaccinationsLeft--;
-			}
+		for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
+			EpisimPerson person = candidates.get(i);
+			vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
+			vaccinationsLeft--;
 		}
 
-		return vaccinated;
+		return availableVaccinations - vaccinationsLeft;
 	}
 }
