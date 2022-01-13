@@ -116,12 +116,14 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 	public static double getAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations) {
 		final Map<VaccinationType, Double> initalAntibodies = Map.of(
+				VaccinationType.generic, 1.0,
 				VaccinationType.natural, 1.0,
 				VaccinationType.mRNA, 2.0,
 				VaccinationType.vector, 0.5
 		);
 
 		final Map<VaccinationType, Double> antibodyFactor = Map.of(
+				VaccinationType.generic,10.0,
 				VaccinationType.natural, 10.0,
 				VaccinationType.mRNA, 20.0,
 				VaccinationType.vector, 5.0
