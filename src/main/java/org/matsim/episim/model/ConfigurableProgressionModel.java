@@ -128,6 +128,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 	 * Current date.
 	 */
 	private LocalDate date;
+	private EpisimPerson.QuarantineStatus status;
 
 	/**
 	 * Used to track how many new people started showing symptoms.
@@ -169,6 +170,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		tracingDelay = EpisimUtils.findValidEntry(tracingConfig.getTracingDelay(), 0, date);
 		quarantineVaccinated = EpisimUtils.findValidEntry(tracingConfig.getQuarantineVaccinated(), true, date);
 		quarantineDuration = EpisimUtils.findValidEntry(tracingConfig.getQuarantineDuration(), 14, date);
+		status = EpisimUtils.findValidEntry(tracingConfig.getQuarantineStatus(), EpisimPerson.QuarantineStatus.atHome, date);
 	}
 
 	@Override
@@ -405,7 +407,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 
 			if (quarantineVaccinated || !(vaccinationConfig.hasRecoveredStatus(p, day, date) || vaccinationConfig.hasValidVaccination(p, day, date)))
-				p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
+				p.setQuarantineStatus(status, day);
 
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)
 				tracingQueue.add(p.getPersonId());

@@ -23,6 +23,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_DELAY = "tracingDelay";
 	private static final String QUARANTINE_VACCINATED = "quarantineVaccinated";
 	private static final String QUARANTINE_DURATION = "quarantineDuration";
+	private static final String QUARANTINE_STATUS = "quarantineStatus";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
 	private static final String QUARANTINE_RELEASE = "quarantineRelease";
@@ -57,6 +58,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Duration of quarantine in days.
 	 */
 	private final Map<LocalDate, Integer> quarantineDuration = new TreeMap<>();
+
+	/**
+	 * Quarantine to use after certain dates.
+	 */
+	private final Map<LocalDate, EpisimPerson.QuarantineStatus> quarantineStatus = new TreeMap<>();
 
 	/**
 	 * Day after which tracing starts and puts persons into quarantine.
@@ -257,7 +263,6 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	}
 
 
-
 	public void setQuarantineDuration(Map<LocalDate, Integer> value) {
 		quarantineDuration.clear();
 		quarantineDuration.putAll(value);
@@ -278,6 +283,29 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(QUARANTINE_DURATION)
 	String getQuarantineDurationString() {
 		return JOINER.join(quarantineDuration);
+	}
+
+
+	public Map<LocalDate, EpisimPerson.QuarantineStatus> getQuarantineStatus() {
+		return quarantineStatus;
+	}
+
+	public void setQuarantineStatus(Map<LocalDate, EpisimPerson.QuarantineStatus> value) {
+		quarantineStatus.clear();
+		quarantineStatus.putAll(value);
+	}
+
+	@StringSetter(QUARANTINE_STATUS)
+	void setQuarantineStatus(String value) {
+		Map<String, String> map = SPLITTER.split(value);
+		setQuarantineStatus(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> EpisimPerson.QuarantineStatus.valueOf(e.getValue())
+		)));
+	}
+
+	@StringGetter(QUARANTINE_STATUS)
+	String getQuarantineStatusString() {
+		return JOINER.join(quarantineStatus);
 	}
 
 	@StringGetter(EQUIPMENT_RATE)
