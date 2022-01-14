@@ -214,7 +214,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	@StringGetter(DAYS_VALID)
-	public int getDaysValid() {
+	int getDaysValid() {
 		return daysValid;
 	}
 
@@ -233,21 +233,39 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Check if person is recently recovered or vaccinated.
+	 */
+	public boolean hasGreenPass(EpisimPerson person, int day, LocalDate date) {
+		return hasGreenPass(person, day, date, daysValid);
+	}
+
+	/**
+	 * Check 2G plus status, but use given {@code daysValid}.
+	 */
+	public boolean hasGreenPass(EpisimPerson person, int day, LocalDate date, int daysValid) {
+		return hasRecoveredStatus(person, day, date, daysValid > -1 ? daysValid : this.daysValid) || hasValidVaccination(person, day, date, daysValid > -1 ? daysValid : this.daysValid);
+	}
+
+	/**
 	 * Check whether person has the recovered status.
 	 */
-	public boolean hasRecoveredStatus(EpisimPerson person, int day, LocalDate date) {
+	private boolean hasRecoveredStatus(EpisimPerson person, int day, LocalDate date, int daysValid) {
 		// Initial the threshold was 180 days, this setting is adjusted to the threshold after the deadline
-		return date.isBefore(validDeadline) ? person.isRecentlyRecovered(day, 180)  : person.isRecentlyRecovered(day, getDaysValid());
+		return date.isBefore(validDeadline) ? person.isRecentlyRecovered(day, 180) : person.isRecentlyRecovered(day, daysValid);
 	}
 
 	/**
 	 * Check if person has a valid vaccination card.
+	 *
 	 * @param person person to check
-	 * @param day current simulation day
-	 * @param date simulation date
+	 * @param day    current simulation day
+	 * @param date   simulation date
 	 */
 	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date) {
+		return hasValidVaccination(person, day, date, getDaysValid());
+	}
 
+	private boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
 		if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 			return false;
 
@@ -257,7 +275,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		if (date.isBefore(validDeadline))
 			return fullyVaccinated || booster;
 
-		return (fullyVaccinated || booster) && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) <= getDaysValid();
+		return (fullyVaccinated || booster) && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) <= daysValid;
+
 	}
 
 	/**
@@ -382,7 +401,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Wait period before boost can be applied.
 		 */
-		private int boostWaitPeriod = 5* 30;
+		private int boostWaitPeriod = 5 * 30;
 
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
@@ -538,6 +557,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		public double getFactorSeriouslySick(VirusStrain strain, int day) {
 			return getParamsInternal(factorSeriouslySick, strain, day);
 		}
+
 		/**
 		 * Load serialized parameters
 		 */

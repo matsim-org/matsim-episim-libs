@@ -33,6 +33,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String CAPACITY_TYPE = "capacityType";
 	private static final String STRATEGY = "strategy";
 	private static final String LOCATION_THRESHOLD = "locationThreshold";
+	private static final String GREEN_PASS_DAYS = "greenPassValidDays";
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
@@ -112,6 +113,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * How many infections are required for location based tracing to trigger.
 	 */
 	private int locationThreshold = 4;
+
+	/**
+	 * Overwrite green pass valid days, -1 means default value.
+	 */
+	private int greenPassValidDays = -1;
 
 	/**
 	 * Default constructor.
@@ -386,6 +392,16 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(LOCATION_THRESHOLD)
 	public void setLocationThreshold(int locationThreshold) {
 		this.locationThreshold = locationThreshold;
+	}
+
+	@StringGetter(GREEN_PASS_DAYS)
+	public int getGreenPassValidDays() {
+		return greenPassValidDays;
+	}
+
+	@StringSetter(GREEN_PASS_DAYS)
+	public void setGreenPassValidDays(int greenPassValidDays) {
+		this.greenPassValidDays = greenPassValidDays;
 	}
 
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}
