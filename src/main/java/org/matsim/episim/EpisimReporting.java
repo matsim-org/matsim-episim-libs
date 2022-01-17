@@ -411,6 +411,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 					report.nInQuarantineFull++;
 					district.nInQuarantineFull++;
 					break;
+				case testing:
 				case no:
 					break;
 				default:
