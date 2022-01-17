@@ -286,7 +286,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		//restrictions and masks
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20211211.csv"));
+		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20220114.csv"));
 
 		activityParticipation.setScale(this.scale);
 		activityParticipation.setLeisureAsNightly(this.leisureNightly);
