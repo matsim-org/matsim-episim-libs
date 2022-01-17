@@ -259,7 +259,7 @@ public abstract class AbstractContactModel implements ContactModel {
 
 	private boolean tripRelevantForInfectionDynamics(double time, EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
-		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.testing)
 			return false;
 
 		EpisimPerson.PerformedActivity lastAct = person.getActivity(day, time % 86400);

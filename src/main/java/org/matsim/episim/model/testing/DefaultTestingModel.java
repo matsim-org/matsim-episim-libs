@@ -123,18 +123,23 @@ public class DefaultTestingModel implements TestingModel {
 	 */
 	public void performTesting(EpisimPerson person, int day) {
 
-		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
-			return;
-
 		// person with positive test is not tested twice
 		// test status will be set when released from quarantine
 		if (person.getTestStatus() == EpisimPerson.TestStatus.positive)
 			return;
 
+		if (person.getQuarantineStatus() == EpisimPerson.QuarantineStatus.testing) {
+			testAndQuarantine(person, day, testingConfig.getParams(TestType.RAPID_TEST), 1.0);
+			return;
+		}
+
+		if (testingConfig.getStrategy() == TestingConfigGroup.Strategy.NONE)
+			return;
+
 		// vaccinated and recovered persons are not tested
 		boolean fullyVaccinated = vaccinationConfig.hasValidVaccination(person, day, date);
 
-		if (!testAllPersons && (vaccinationConfig.hasRecoveredStatus(person, day, date) || fullyVaccinated))
+		if (!testAllPersons && (vaccinationConfig.hasGreenPass(person, day, date)))
 			return;
 
 		if (withOutBooster && person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)
@@ -216,7 +221,8 @@ public class DefaultTestingModel implements TestingModel {
 
 	private void quarantinePerson(EpisimPerson p, int day) {
 
-		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
+		// recovered state will be reset quickly
+		if (p.getQuarantineStatus() != EpisimPerson.QuarantineStatus.full && p.getDiseaseStatus() != EpisimPerson.DiseaseStatus.recovered) {
 			p.setQuarantineStatus(EpisimPerson.QuarantineStatus.atHome, day);
 		}
 	}

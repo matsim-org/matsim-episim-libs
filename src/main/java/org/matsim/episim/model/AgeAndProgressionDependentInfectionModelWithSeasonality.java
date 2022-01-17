@@ -119,7 +119,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
-				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
+				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()

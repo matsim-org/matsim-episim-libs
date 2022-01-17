@@ -944,7 +944,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Quarantine status of a person.
 	 */
-	public enum QuarantineStatus {full, atHome, no}
+	public enum QuarantineStatus {full, atHome, testing, no}
 
 	/**
 	 * Latest test result of this person.

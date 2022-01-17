@@ -49,12 +49,12 @@ public class DefaultParticipationModel implements ActivityParticipationModel {
 
 			// reduce fraction for persons that are not vaccinated
 			if (context.getSusceptibleRf() != null && context.getSusceptibleRf() != 1d) {
-				if (!(vaccinationConfig.hasRecoveredStatus(person, iteration, date) || vaccinationConfig.hasValidVaccination(person, iteration, date)))
+				if (!vaccinationConfig.hasGreenPass(person, iteration, date))
 					r *= context.getSusceptibleRf();
 			}
 
 			if (context.getVaccinatedRf() != null && context.getVaccinatedRf() != 1d) {
-				if (vaccinationConfig.hasRecoveredStatus(person, iteration, date) || vaccinationConfig.hasValidVaccination(person, iteration, date))
+				if (vaccinationConfig.hasGreenPass(person, iteration, date))
 					r *= context.getVaccinatedRf();
 			}
 
