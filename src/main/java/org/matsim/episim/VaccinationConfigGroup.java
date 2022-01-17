@@ -25,7 +25,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String COMPLIANCE = "compliance";
 	private static final String CAPACITY = "vaccinationCapacity";
-	private static final String BETA = "betaPerStrain";
+	private static final String AK50 = "ak50PerStrain";
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
@@ -41,9 +41,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private final NavigableMap<LocalDate, Integer> vaccinationCapacity = new TreeMap<>();
 	/**
-	 * Beta for strain. Needed for translation of antibody level into effectiveness.
+	 * ak50 for strain. Needed for translation of antibody level into effectiveness.
 	 */
-	private final NavigableMap<VirusStrain, Double> betaPerStrain = new TreeMap<>();
+	private final NavigableMap<VirusStrain, Double> ak50PerStrain = new TreeMap<>();
 	/**
 	 * Amount of re-vaccinations available per day.
 	 */
@@ -207,30 +207,30 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(vaccinationCapacity);
 	}
 	
-	public void setBetaPerStrain(Map<VirusStrain, Double> beta) {
-		betaPerStrain.clear();
-		betaPerStrain.putAll(beta);
+	public void setAk50PerStrain(Map<VirusStrain, Double> ak50) {
+		ak50PerStrain.clear();
+		ak50PerStrain.putAll(ak50);
 	}
 
-	public NavigableMap<VirusStrain, Double> getBetaPerStrain() {
-		return betaPerStrain;
+	public NavigableMap<VirusStrain, Double> getAk50PerStrain() {
+		return ak50PerStrain;
 	}
 
-	@StringSetter(BETA)
-	void setBetaPerStrain(String beta) {
+	@StringSetter(AK50)
+	void setAk50PerStrain(String ak50) {
 
-		if (beta.isBlank())
+		if (ak50.isBlank())
 			return;
 
-		Map<String, String> map = SPLITTER.split(beta);
-		setBetaPerStrain(map.entrySet().stream().collect(Collectors.toMap(
+		Map<String, String> map = SPLITTER.split(ak50);
+		setAk50PerStrain(map.entrySet().stream().collect(Collectors.toMap(
 				e -> VirusStrain.valueOf(e.getKey()), e -> Double.parseDouble(e.getValue())
 		)));
 	}
 
-	@StringGetter(BETA)
-	String getBetaPerStrainString() {
-		return JOINER.join(betaPerStrain);
+	@StringGetter(AK50)
+	String getAk50PerStrainString() {
+		return JOINER.join(ak50PerStrain);
 	}
 	
 	@StringSetter(FROM_FILE)

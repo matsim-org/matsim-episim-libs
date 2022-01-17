@@ -6,6 +6,7 @@ import org.apache.commons.math3.distribution.RealDistribution;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.policy.Restriction;
 
 import java.util.Map;
@@ -39,12 +40,12 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private int iteration;
 	private double lastUnVac;
 
-	private static final Map<VirusStrain, Double> AK50_PERSTRAIN = Map.of(
-			VirusStrain.SARS_CoV_2, 0.2,
-			VirusStrain.B117, 0.3,
-			VirusStrain.MUTB, 0.8,
-			VirusStrain.OMICRON, 24.0 //???
-	);
+//	private static final Map<VirusStrain, Double> AK50_PERSTRAIN = Map.of(
+//			VirusStrain.SARS_CoV_2, 0.2,
+//			VirusStrain.B117, 0.3,
+//			VirusStrain.MUTB, 0.8,
+//			VirusStrain.OMICRON, 20.0 //???
+//	);
 
 	@Inject
 	InfectionModelWithAntibodies(FaceMaskModel faceMaskModel, ProgressionModel progression,
@@ -84,6 +85,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
 										   double contactIntensity, double jointTimeInContainer) {
+		
+		final Map<VirusStrain, Double> AK50_PERSTRAIN = vaccinationConfig.getAk50PerStrain();
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
@@ -95,26 +98,40 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 //		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
-		double antibodyLevel = getAntibodyLevel(target, iteration, target.getNumVaccinations());
+		double antibodyLevelTarget = getAntibodyLevel(target, iteration, target.getNumVaccinations(), target.getNumInfections());
+		double antibodyLevelInfector = getAntibodyLevel(infector, iteration, infector.getNumVaccinations(), infector.getNumInfections() - 1);
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
+		
+		//reduced infectivity if infector has antibodies
+		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + antibodyLevelInfector / (AK50_PERSTRAIN.get(infector.getVirusStrain())))));
 
-		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake);
+		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity);
+		
+		//quick fix!
+		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
+			if (target.getVirusStrain(infection-1) == VirusStrain.OMICRON && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
+				susceptibility = 0.0;
+				break;
+			}
+		}
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
-				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				/ (1.0 + Math.pow(antibodyLevel / (vaccinationConfig.getAk50Factor() * AK50_PERSTRAIN.get(infector.getVirusStrain())), vaccinationConfig.getBetaPerStrain().get(infector.getVirusStrain())))
+				/ (1.0 + antibodyLevelTarget / AK50_PERSTRAIN.get(infector.getVirusStrain()))
 		);
 	}
 
-	public static double getAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations) {
+	public static double getAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations, int numInfections) {
+		
+		double halfLife_days = 80.;
+		
 		final Map<VaccinationType, Double> initalAntibodies = Map.of(
 				VaccinationType.generic, 1.0,
 				VaccinationType.natural, 1.0,
@@ -129,11 +146,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				VaccinationType.vector, 5.0
 		);
 
-		final int halfLife_days = 108;
-
 		VaccinationType initialVaccinationType = null;
-
-		int numInfections = target.getNumInfections();
 
 		//no antibodies
 		if (numInfections == 0 && numVaccinations == 0) {
@@ -168,34 +181,44 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			antibodyLevel = antibodyLevel * Math.pow(antibodyFactor.get(VaccinationType.mRNA), numVaccinations - 1);
 		}
 
-		antibodyLevel = antibodyLevel * Math.exp( -0.5 * ((double) daysSinceAntibodies / halfLife_days));
-
+		antibodyLevel = antibodyLevel * Math.pow(0.5, (double) daysSinceAntibodies / halfLife_days);
+		
 		return antibodyLevel;
 	}
 
 	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
-	                                            double indoorOutdoorFactor, double shedding, double intake) {
+	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity) {
+		
+		final Map<VirusStrain, Double> AK50_PERSTRAIN = vaccinationConfig.getAk50PerStrain();
+
+		
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
 		double susceptibility = this.susceptibility[target.getAge()];
-		double infectivity = this.infectivity[infector.getAge()];
 
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 		// vac is reduced from this term
 //		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
-		double antibodyLevel = getAntibodyLevel(target, iteration, 0);
+		double antibodyLevel = getAntibodyLevel(target, iteration, 0, target.getNumInfections());
+		
+		//quick fix!
+		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
+			if (target.getVirusStrain(infection-1) == VirusStrain.OMICRON && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
+				susceptibility = 0.0;
+				break;
+			}
+		}
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
-				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
 				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				/ (1.0 + Math.pow(antibodyLevel / (vaccinationConfig.getAk50Factor() * AK50_PERSTRAIN.get(infector.getVirusStrain())), vaccinationConfig.getBetaPerStrain().get(infector.getVirusStrain())))
+				/ (1.0 + antibodyLevel / AK50_PERSTRAIN.get(infector.getVirusStrain()))
 
 		);
 	}
