@@ -247,6 +247,19 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	}
 
 	/**
+	 * Special type of green pass with separate setting for boostered or equivalent status.
+	 */
+	public boolean hasGreenPassForBooster(EpisimPerson p, int day, LocalDate date, int greenPassValidDays, int greenPassBoosterValidDays) {
+		int valid = greenPassValidDays;
+
+		// infected and vaccinated count as booster
+		if (p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || (p.getNumInfections() >= 1 && p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes))
+			valid = greenPassBoosterValidDays;
+
+		return hasGreenPass(p, day, date, valid);
+	}
+
+	/**
 	 * Check whether person has the recovered status.
 	 */
 	private boolean hasRecoveredStatus(EpisimPerson person, int day, LocalDate date, int daysValid) {
