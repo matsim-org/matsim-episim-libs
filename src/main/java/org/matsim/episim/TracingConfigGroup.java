@@ -34,6 +34,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String STRATEGY = "strategy";
 	private static final String LOCATION_THRESHOLD = "locationThreshold";
 	private static final String GREEN_PASS_DAYS = "greenPassValidDays";
+	private static final String GREEN_PASS_BOOSTER_DAYS = "greenPassBoosterValidDays";
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
@@ -118,6 +119,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Overwrite green pass valid days, -1 means default value.
 	 */
 	private int greenPassValidDays = -1;
+
+	/**
+	 * Valid days for persons with booster.
+	 */
+	private int greenPassBoosterValidDays = -1;
 
 	/**
 	 * Default constructor.
@@ -402,6 +408,16 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(GREEN_PASS_DAYS)
 	public void setGreenPassValidDays(int greenPassValidDays) {
 		this.greenPassValidDays = greenPassValidDays;
+	}
+
+	@StringSetter(GREEN_PASS_BOOSTER_DAYS)
+	public void setGreenPassBoosterValidDays(int greenPassBoosterValidDays) {
+		this.greenPassBoosterValidDays = greenPassBoosterValidDays;
+	}
+
+	@StringGetter(GREEN_PASS_BOOSTER_DAYS)
+	public int getGreenPassBoosterValidDays() {
+		return greenPassBoosterValidDays;
 	}
 
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}

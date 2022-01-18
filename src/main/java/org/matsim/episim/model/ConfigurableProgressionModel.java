@@ -406,7 +406,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 		// recovered persons are not quarantined, but they loose this status very quickly depending on config
 		if (p.getQuarantineStatus() == EpisimPerson.QuarantineStatus.no && p.getDiseaseStatus() != DiseaseStatus.recovered) {
 
-			if (quarantineVaccinated || !(vaccinationConfig.hasGreenPass(p, day, date, tracingConfig.getGreenPassValidDays())))
+			if (quarantineVaccinated || !(vaccinationConfig.hasGreenPassForBooster(p, day, date, tracingConfig.getGreenPassValidDays(), tracingConfig.getGreenPassBoosterValidDays())))
 				p.setQuarantineStatus(status, day);
 
 			if (tracingConfig.getStrategy() == TracingConfigGroup.Strategy.IDENTIFY_SOURCE)
