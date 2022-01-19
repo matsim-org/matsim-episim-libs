@@ -53,4 +53,21 @@ public interface DiseaseStatusTransitionModel {
 		return Math.min(a, b);
 	}
 
+	/**
+	 * Factor for showing symptoms depending on vaccination or immunity.
+	 */
+	default double getCriticalFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
+
+		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
+				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorCritical(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
+				: 1d;
+
+		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
+				? vaccinationConfig.getParams(VaccinationType.natural).getFactorCritical(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
+				: 1d;
+
+		return Math.min(a, b);
+	}
+
+
 }
