@@ -48,6 +48,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 	protected final EpisimReporting reporting;
+	protected final TracingConfigGroup tracingConfig;
 
 	/**
 	 * Infections parameter instances for re-use. These are params that are always needed independent of the scenario.
@@ -85,6 +86,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting, Scenario scenario) {
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.infectionModel = infectionModel;
 		this.reporting = reporting;
 		this.trParams = episimConfig.selectInfectionParams("tr");
@@ -187,6 +189,11 @@ public abstract class AbstractContactModel implements ContactModel {
 		// Don't track certain activities
 		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
 			return;
+		}
+
+		for (String act : tracingConfig.getIgnoredActivities()) {
+			if (infectionType.indexOf(act) >= 0)
+				return;
 		}
 
 		// don't track below threshold
