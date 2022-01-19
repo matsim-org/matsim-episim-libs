@@ -5,8 +5,7 @@ import com.google.common.base.Splitter;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -35,6 +34,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String LOCATION_THRESHOLD = "locationThreshold";
 	private static final String GREEN_PASS_DAYS = "greenPassValidDays";
 	private static final String GREEN_PASS_BOOSTER_DAYS = "greenPassBoosterValidDays";
+	private static final String IGNORED_ACTIVITIES = "ignoredActivities";
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
@@ -65,6 +65,11 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * Quarantine to use after certain dates.
 	 */
 	private final Map<LocalDate, EpisimPerson.QuarantineStatus> quarantineStatus = new TreeMap<>();
+
+	/**
+	 * Activities that will not be traced.
+	 */
+	private final Set<String> ignoredActivities = new HashSet<>();
 
 	/**
 	 * Day after which tracing starts and puts persons into quarantine.
@@ -418,6 +423,25 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(GREEN_PASS_BOOSTER_DAYS)
 	public int getGreenPassBoosterValidDays() {
 		return greenPassBoosterValidDays;
+	}
+
+	public Set<String> getIgnoredActivities() {
+		return ignoredActivities;
+	}
+
+	public void setIgnoredActivities(Collection<String> value) {
+		ignoredActivities.clear();
+		ignoredActivities.addAll(value);
+	}
+
+	@StringSetter(IGNORED_ACTIVITIES)
+	public void setIgnoredActivities(String value) {
+		setIgnoredActivities(Splitter.on(";").splitToList(value));
+	}
+
+	@StringGetter(IGNORED_ACTIVITIES)
+	String getIgnoredActivitiesString() {
+		return Joiner.on(";").join(ignoredActivities);
 	}
 
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}
