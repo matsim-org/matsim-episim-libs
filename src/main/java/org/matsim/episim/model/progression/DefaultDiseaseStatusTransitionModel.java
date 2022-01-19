@@ -48,7 +48,8 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 
 			case seriouslySick:
 				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)
-						&& rnd.nextDouble() < getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical())
+						&& (rnd.nextDouble() < getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()
+							* getCriticalFactor(person, vaccinationConfig, day)))
 					return EpisimPerson.DiseaseStatus.critical;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;

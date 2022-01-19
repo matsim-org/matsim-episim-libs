@@ -448,6 +448,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String BOOST_WAIT_PERIOD = "boostWaitPeriod";
 		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
+		private static final String FACTOR_CRITICAL = "factorCritical";
 
 		private VaccinationType type;
 
@@ -508,6 +509,14 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private Map<VirusStrain, Parameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(5, 0.5)
+		));
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+		private Map<VirusStrain, Parameter> factorCritical = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(0, 1)
 		));
 
 		VaccinationParams() {
@@ -592,6 +601,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return setParamsInternal(factorSeriouslySick, parameters);
 		}
 
+		public VaccinationParams setFactorCritical(Parameter... parameters) {
+			return setParamsInternal(factorCritical, parameters);
+		}
+
 		public double getEffectiveness(VirusStrain strain, int day) {
 			return getParamsInternal(effectiveness, strain, day);
 		}
@@ -614,6 +627,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		public double getFactorSeriouslySick(VirusStrain strain, int day) {
 			return getParamsInternal(factorSeriouslySick, strain, day);
+		}
+
+		public double getFactorCritical(VirusStrain strain, int day) {
+			return getParamsInternal(factorCritical, strain, day);
 		}
 
 		/**
@@ -677,6 +694,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
 		String getFactorSeriouslySick() {
 			return getParamsInternal(factorSeriouslySick);
+		}
+
+		@StringSetter(FACTOR_CRITICAL)
+		void setFactorCritical(String value) {
+			setParamsInternal(factorCritical, value);
+		}
+
+		@StringGetter(FACTOR_CRITICAL)
+		public String getFactorCritical() {
+			return getParamsInternal(factorCritical);
 		}
 
 		@StringSetter(INFECTIVITY)
