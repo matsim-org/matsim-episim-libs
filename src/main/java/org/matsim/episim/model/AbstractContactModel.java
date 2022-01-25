@@ -126,6 +126,7 @@ public abstract class AbstractContactModel implements ContactModel {
 			case seriouslySick: // assume is in hospital
 			case critical:
 			case seriouslySickAfterCritical:
+			case deceased:
 				return false;
 
 			default:
