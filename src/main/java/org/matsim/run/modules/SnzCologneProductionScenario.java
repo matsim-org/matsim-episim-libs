@@ -199,6 +199,16 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 						.withAgeGroup("18-59", 676995)
 						.withAgeGroup("60+", 250986)
 		);
+		
+		/* Bremen:
+		bind(VaccinationFromData.Config.class).toInstance(
+				VaccinationFromData.newConfig("04011")
+						.withAgeGroup("05-11", 34643)
+						.withAgeGroup("12-17", 29269)
+						.withAgeGroup("18-59", 319916)
+						.withAgeGroup("60+", 154654)
+		);
+		*/
 
 		/* Dresden:
 			VaccinationFromData.newConfig("14612")
