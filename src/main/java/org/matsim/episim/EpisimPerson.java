@@ -358,7 +358,7 @@ public final class EpisimPerson implements Attributable {
 		this.status = status;
 
 		// when person goes back to susceptible, old states are removed
-		if (status == DiseaseStatus.susceptible) {
+		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {
 			statusChanges.keySet().removeIf(p -> p != DiseaseStatus.recovered);
 		}
 
