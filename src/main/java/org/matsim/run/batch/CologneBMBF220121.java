@@ -55,7 +55,7 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		LocalDate restrictionDate = LocalDate.parse("2022-01-28");
+		LocalDate restrictionDate = LocalDate.parse("2022-01-24");
 
 		SnzCologneProductionScenario module = getBindings(id, params);
 
@@ -95,10 +95,10 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 		builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		
-//		if (params.school.equals("protected")) {
-//			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-//			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-//		}
+		if (params.school.equals("protected")) {
+			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		}
 				
 		episimConfig.setPolicy(builder.build());
 		
@@ -171,6 +171,7 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON).setInfectiousness(deltaInf * params.oInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON).setFactorSeriouslySick(0.5 * 1.25);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON).setFactorCritical(0.5);
 
 		
 		//vaccinations
@@ -355,9 +356,9 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 		//tracing
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		boolean qv = false;
-		if (params.qV.equals("yes")) {
-			qv = true;
-		}
+//		if (params.qV.equals("yes")) {
+//			qv = true;
+//		}
 		tracingConfig.setQuarantineVaccinated((Map.of(
 				episimConfig.getStartDate(), false,
 				restrictionDate, qv
@@ -390,7 +391,16 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 				restrictionDate, params.q
 			));
 		
-		tracingConfig.setGreenPassValidDays(params.daysImmuneQ);
+		int greenPassValid = 90;
+		int greenPassValidBoostered = Integer.MAX_VALUE;
+		
+		if (!params.daysImmuneQ.equals("current")) {
+			greenPassValid = Integer.parseInt(params.daysImmuneQ.split("-")[0]);
+			greenPassValidBoostered = Integer.parseInt(params.daysImmuneQ.split("-")[1]);
+		}
+		
+		tracingConfig.setGreenPassValidDays(greenPassValid);
+		tracingConfig.setGreenPassBoosterValidDays(greenPassValidBoostered);
 		
 		QuarantineStatus qs = QuarantineStatus.atHome;
 		
@@ -541,14 +551,14 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 		@IntParameter({90, 270})
 		int daysImmune;
 		
-		@IntParameter({90, 270})
-		int daysImmuneQ;
+		@StringParameter({"0-0", "current", "45-90"})
+		String daysImmuneQ;
 		
-		@IntParameter({10, 14})
+		@IntParameter({10})
 		int q;
 		
-		@StringParameter({"yes", "no"})
-		String qV;
+//		@StringParameter({"yes", "no"})
+//		String qV;
 		
 		@StringParameter({"home", "testing"})
 		String qs;
@@ -559,8 +569,11 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 		@Parameter({0.5, 0.75})
 		double leisUnv;
 		
-		@Parameter({0.75, 1.0})
+		@Parameter({0.5, 0.75, 1.0})
 		double leis;
+		
+		@StringParameter({"current", "protected"})
+		String school;
 
 	}
 
