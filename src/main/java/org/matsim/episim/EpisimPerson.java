@@ -894,7 +894,7 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public enum DiseaseStatus {
 		susceptible, infectedButNotContagious, contagious, showingSymptoms,
-		seriouslySick, critical, seriouslySickAfterCritical, recovered
+		seriouslySick, critical, seriouslySickAfterCritical, recovered, deceased
 	}
 
 	/**

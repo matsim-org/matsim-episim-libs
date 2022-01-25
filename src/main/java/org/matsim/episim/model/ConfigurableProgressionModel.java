@@ -57,6 +57,7 @@ public class ConfigurableProgressionModel extends AbstractProgressionModel {
 
 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
 			.from(DiseaseStatus.critical,
+					to(DiseaseStatus.deceased, Transition.logNormalWithMedianAndStd(21, 21)),
 					to(DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
 
 			.from(DiseaseStatus.seriouslySickAfterCritical,

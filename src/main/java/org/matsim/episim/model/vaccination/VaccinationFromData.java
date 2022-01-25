@@ -230,6 +230,12 @@ public class VaccinationFromData extends VaccinationByAge {
 		DateColumn dateColumn = data.dateColumn("Impfdatum");
 
 		LocalDate startDate = dateColumn.min();
+
+		// This column is empty
+		if (startDate == null) {
+			return Table.create();
+		}
+
 		List<LocalDate> dates = startDate.datesUntil(endDate.plusDays(1)).collect(Collectors.toList());
 
 		for (LocalDate date : dates) {
