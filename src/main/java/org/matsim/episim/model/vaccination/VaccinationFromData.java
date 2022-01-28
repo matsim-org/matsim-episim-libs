@@ -38,7 +38,7 @@ public class VaccinationFromData extends VaccinationByAge {
 	/**
 	 * All known age groups.
 	 */
-	private List<org.matsim.episim.model.vaccination.VaccinationFromData.AgeGroup> ageGroups = null;
+	private List<VaccinationFromData.AgeGroup> ageGroups = null;
 
 	/**
 	 * Entries for each day.
@@ -100,18 +100,18 @@ public class VaccinationFromData extends VaccinationByAge {
 			Table filtered = table.where(firstVaccinations);
 
 			mergeData(filtered, entries, endDate, "05-11", config.groups.getDouble("05-11"), 0);
-			mergeData(filtered, entries, endDate,"12-17", config.groups.getDouble("12-17"), 1);
-			mergeData(filtered, entries, endDate,"18-59", config.groups.getDouble("18-59"), 2);
-			mergeData(filtered, entries, endDate,"60+", config.groups.getDouble("60+"), 3);
+			mergeData(filtered, entries, endDate, "12-17", config.groups.getDouble("12-17"), 1);
+			mergeData(filtered, entries, endDate, "18-59", config.groups.getDouble("18-59"), 2);
+			mergeData(filtered, entries, endDate, "60+", config.groups.getDouble("60+"), 3);
 
 
 			Selection boosterVaccinations = vaccinationno.isEqualTo(3);
 			filtered = table.where(boosterVaccinations);
 
-			mergeData(filtered, booster, endDate,"05-11", config.groups.getDouble("05-11"), 0);
-			mergeData(filtered, booster, endDate,"12-17", config.groups.getDouble("12-17"), 1);
-			mergeData(filtered, booster, endDate,"18-59", config.groups.getDouble("18-59"), 2);
-			mergeData(filtered, booster, endDate,"60+", config.groups.getDouble("60+"), 3);
+			mergeData(filtered, booster, endDate, "05-11", config.groups.getDouble("05-11"), 0);
+			mergeData(filtered, booster, endDate, "12-17", config.groups.getDouble("12-17"), 1);
+			mergeData(filtered, booster, endDate, "18-59", config.groups.getDouble("18-59"), 2);
+			mergeData(filtered, booster, endDate, "60+", config.groups.getDouble("60+"), 3);
 
 
 		} catch (IOException e) {
@@ -120,7 +120,7 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		// collect population sizes
 		for (EpisimPerson p : persons.values()) {
-			VaccinationFromData.AgeGroup ag = findAgeGroup(p.getAge());
+			VaccinationFromData.AgeGroup ag = ageGroups.get(findAgeGroup(p.getAge()));
 			if (ag != null)
 				ag.size++;
 		}
@@ -128,13 +128,15 @@ public class VaccinationFromData extends VaccinationByAge {
 		log.info("Using age-groups: {}", ageGroups);
 	}
 
-	private VaccinationFromData.AgeGroup findAgeGroup(int age) {
-		for (VaccinationFromData.AgeGroup ag : ageGroups) {
+	private int findAgeGroup(int age) {
+
+		for (int i = 0; i < ageGroups.size(); i++) {
+			AgeGroup ag = ageGroups.get(i);
 			if (age >= ag.from && age <= ag.to)
-				return ag;
+				return i;
 		}
 
-		return null;
+		return -1;
 	}
 
 	@Override
@@ -160,14 +162,15 @@ public class VaccinationFromData extends VaccinationByAge {
 			ag.vaccinated = 0;
 		}
 
-		final List<EpisimPerson>[] perAge = new List[MAX_AGE];
+		final List<EpisimPerson>[] perAge = new List[ageGroups.size()];
 
-		for (int i = 0; i < MAX_AGE; i++)
+		for (int i = 0; i < ageGroups.size(); i++)
 			perAge[i] = new ArrayList<>();
 
 		for (EpisimPerson p : persons.values()) {
 
-			VaccinationFromData.AgeGroup ag = findAgeGroup(p.getAge());
+			int idx = findAgeGroup(p.getAge());
+			VaccinationFromData.AgeGroup ag = ageGroups.get(idx);
 
 			if (ag == null) continue;
 
@@ -181,7 +184,7 @@ public class VaccinationFromData extends VaccinationByAge {
 					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &&
 					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)
 			) {
-				perAge[p.getAge()].add(p);
+				perAge[idx].add(p);
 			}
 		}
 
@@ -191,31 +194,24 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		for (int ii = 0; ii < ageGroups.size(); ii++) {
 
-			org.matsim.episim.model.vaccination.VaccinationFromData.AgeGroup ag = ageGroups.get(ii);
+			VaccinationFromData.AgeGroup ag = ageGroups.get(ii);
 			double share = entry.getDouble(ii);
 
 			int vaccinationsLeft = (int) ((ag.size * share) - ag.vaccinated);
 
-			int age = ag.to;
+			List<EpisimPerson> candidates = perAge[ii];
 
-			while (vaccinationsLeft > 0 && age >= ag.from) {
+			// list is shuffled to avoid eventual bias
+			if (candidates.size() != 0)
+				Collections.shuffle(perAge[ii], new Random(EpisimUtils.getSeed(rnd)));
 
-				List<EpisimPerson> candidates = perAge[age];
-
-				// list is shuffled to avoid eventual bias
-				if (candidates.size() > vaccinationsLeft)
-					Collections.shuffle(perAge[age], new Random(EpisimUtils.getSeed(rnd)));
-
-				for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
-					EpisimPerson person = candidates.get(i);
-					vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
-					vaccinationsLeft--;
-					totalVaccinations++;
-				}
-
-				age--;
+			int n = Math.min(candidates.size(), vaccinationsLeft);
+			for (int i = 0; i < n; i++) {
+				EpisimPerson person = candidates.get(i);
+				vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
+				vaccinationsLeft--;
+				totalVaccinations++;
 			}
-
 		}
 
 
@@ -315,7 +311,8 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		/**
 		 * Define an age group and reference size in the population.
-		 * @param ageGroup string that must be exactly like in the data
+		 *
+		 * @param ageGroup      string that must be exactly like in the data
 		 * @param referenceSize unscaled reference size of this age group.
 		 */
 		public VaccinationFromData.Config withAgeGroup(String ageGroup, double referenceSize) {

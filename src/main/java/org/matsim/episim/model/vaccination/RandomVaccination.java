@@ -55,7 +55,9 @@ public class RandomVaccination implements VaccinationModel {
 		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
 
 		int vaccinationsLeft = availableVaccinations;
-		for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
+		int n = Math.min(candidates.size(), vaccinationsLeft);
+
+		for (int i = 0; i < n; i++) {
 			EpisimPerson person = candidates.get(i);
 			vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
 			vaccinationsLeft--;
