@@ -20,6 +20,7 @@ import tech.tablesaw.api.*;
 import tech.tablesaw.io.csv.CsvReadOptions;
 import tech.tablesaw.selection.Selection;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.time.LocalDate;
@@ -120,15 +121,16 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		// collect population sizes
 		for (EpisimPerson p : persons.values()) {
-			VaccinationFromData.AgeGroup ag = ageGroups.get(findAgeGroup(p.getAge()));
+			Integer ag = findAgeGroup(p.getAge());
 			if (ag != null)
-				ag.size++;
+				ageGroups.get(ag).size++;
 		}
 
 		log.info("Using age-groups: {}", ageGroups);
 	}
 
-	private int findAgeGroup(int age) {
+	@Nullable
+	private Integer findAgeGroup(int age) {
 
 		for (int i = 0; i < ageGroups.size(); i++) {
 			AgeGroup ag = ageGroups.get(i);
@@ -136,7 +138,7 @@ public class VaccinationFromData extends VaccinationByAge {
 				return i;
 		}
 
-		return -1;
+		return null;
 	}
 
 	@Override
@@ -169,10 +171,10 @@ public class VaccinationFromData extends VaccinationByAge {
 
 		for (EpisimPerson p : persons.values()) {
 
-			int idx = findAgeGroup(p.getAge());
-			VaccinationFromData.AgeGroup ag = ageGroups.get(idx);
+			Integer idx = findAgeGroup(p.getAge());
+			if (idx == null) continue;
 
-			if (ag == null) continue;
+			VaccinationFromData.AgeGroup ag = ageGroups.get(idx);
 
 			if (p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes && (!reVaccination || p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)) {
 				ag.vaccinated++;
