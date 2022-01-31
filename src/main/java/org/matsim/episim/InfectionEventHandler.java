@@ -181,6 +181,11 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private Set<SimulationListener> listener;
 
+	/**
+	 * Set of additional vaccination strategies.
+	 */
+	private Set<VaccinationModel> vaccinations;
+
 	@Inject
 	public InfectionEventHandler(Injector injector, SplittableRandom rnd) {
 		this.injector = injector;
@@ -250,15 +255,22 @@ public final class InfectionEventHandler implements Externalizable {
 		});
 
 		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
+		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
 
 		for (SimulationListener s : listener) {
 
-			log.info("Executing simulation start listener {}", s.toString());
+			log.info("Executing simulation init listener {}", s.toString());
 
 			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
 		}
 
 		vaccinationModel.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+
+		for (SimulationListener s : vaccinations) {
+			log.info("Executing vaccination init listener {}", s.toString());
+
+			s.init(localRnd, personMap, pseudoFacilityMap, vehicleMap);
+		}
 
 		createTrajectoryHandlers();
 
@@ -729,6 +741,7 @@ public final class InfectionEventHandler implements Externalizable {
 		for (EpisimPerson person : personMap.values()) {
 			progressionModel.updateState(person, iteration);
 		}
+
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "finished", -2);
@@ -740,6 +753,11 @@ public final class InfectionEventHandler implements Externalizable {
 
 		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), -1, date);
 		vaccinationModel.handleVaccination(personMap, true, available > 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);
+
+		for (VaccinationModel vaccination : vaccinations) {
+			vaccination.handleVaccination(personMap,  date, iteration, now);
+		}
+
 		reporting.reportCpuTime(iteration, "VaccinationModel", "finished", -1);
 
 		this.iteration = iteration;
@@ -750,7 +768,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		reporting.reportCpuTime(iteration, "Reporting", "start", -1);
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
-		
+
 		reporting.reportAntibodyLevel(reporting.calculateAntibodyLevelPerPerson(personMap.values(), iteration), iteration);
 		this.report = reports.get("total");
 

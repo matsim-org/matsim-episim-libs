@@ -79,6 +79,7 @@ public class EpisimModule extends AbstractModule {
 		bind(EpisimReporting.class).in(Singleton.class);
 
 		Multibinder.newSetBinder(binder(), SimulationListener.class);
+		Multibinder.newSetBinder(binder(), VaccinationModel.class);
 	}
 
 	@Provides
