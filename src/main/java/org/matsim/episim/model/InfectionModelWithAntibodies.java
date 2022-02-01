@@ -105,13 +105,13 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
 		
 		//reduced infectivity if infector has antibodies
-		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + antibodyLevelInfector / (AK50_PERSTRAIN.get(infector.getVirusStrain())))));
+		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + Math.pow(antibodyLevelInfector / AK50_PERSTRAIN.get(infector.getVirusStrain()), vaccinationConfig.getBeta()))));
 
 		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity);
 		
 		//quick fix!
 		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
-			if (target.getVirusStrain(infection-1) == VirusStrain.OMICRON && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
+			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON || target.getVirusStrain(infection-1) == VirusStrain.BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
 				susceptibility = 0.0;
 				break;
 			}
@@ -124,7 +124,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				/ (1.0 + antibodyLevelTarget / AK50_PERSTRAIN.get(infector.getVirusStrain()))
+				/ (1.0 + Math.pow(antibodyLevelTarget / AK50_PERSTRAIN.get(infector.getVirusStrain()), vaccinationConfig.getBeta()))
 		);
 	}
 
@@ -205,12 +205,11 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		
 		//quick fix!
 		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
-			if (target.getVirusStrain(infection-1) == VirusStrain.OMICRON && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
+			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON || target.getVirusStrain(infection-1) == VirusStrain.BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
 				susceptibility = 0.0;
 				break;
 			}
 		}
-
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()
 				* getInfectivity(infector)
@@ -218,7 +217,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				/ (1.0 + antibodyLevel / AK50_PERSTRAIN.get(infector.getVirusStrain()))
+				/ (1.0 + Math.pow(antibodyLevel / AK50_PERSTRAIN.get(infector.getVirusStrain()), vaccinationConfig.getBeta()))
 
 		);
 	}

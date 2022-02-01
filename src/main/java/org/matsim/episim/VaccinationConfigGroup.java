@@ -30,7 +30,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
 	private static final String DAYS_VALID = "daysValid";
-	private static final String AK50_FACTOR = "ak50Factor";
+	private static final String BETA = "beta";
 	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
@@ -64,9 +64,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private int daysValid = 180;
 	/**
-	 * Factor which is multiplied with ak50. Needed for antibody model. 
+	 * Needed for antibody model. 
 	 */
-	private double ak50Factor = 1.0;
+	private double beta = 1.0;
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -253,14 +253,14 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return daysValid;
 	}
 	
-	@StringSetter(AK50_FACTOR)
-	public void setAk50Factor(double ak50Factor) {
-		this.ak50Factor = ak50Factor;
+	@StringSetter(BETA)
+	public void setBeta(double beta) {
+		this.beta = beta;
 	}
 
-	@StringGetter(AK50_FACTOR)
-	public double getAk50Factor() {
-		return ak50Factor;
+	@StringGetter(BETA)
+	public double getBeta() {
+		return beta;
 	}
 
 	@StringSetter(VALID_DEADLINE)
