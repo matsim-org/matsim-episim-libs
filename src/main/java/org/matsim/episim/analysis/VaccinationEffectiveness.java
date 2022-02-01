@@ -191,7 +191,7 @@ public class VaccinationEffectiveness implements Callable<Integer> {
 				
 				//ignore alpha and wildtype
 				List<String> strains = (List<String>) attributes.getAttribute("strains");
-				if (strains.contains(VirusStrain.B117.toString()) || strains.contains(VirusStrain.SARS_CoV_2.toString())) {
+				if (strains.contains(VirusStrain.ALPHA.toString()) || strains.contains(VirusStrain.SARS_CoV_2.toString())) {
 					continue;
 				}
 				
