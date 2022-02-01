@@ -184,7 +184,7 @@ public class VaccinationFromData extends VaccinationByAge {
 			if (p.isVaccinable() && p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
 					//!p.isRecentlyRecovered(iteration) &&
 					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &&
-					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)
+					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)
 			) {
 				perAge[idx].add(p);
 			}
@@ -210,7 +210,7 @@ public class VaccinationFromData extends VaccinationByAge {
 			int n = Math.min(candidates.size(), vaccinationsLeft);
 			for (int i = 0; i < n; i++) {
 				EpisimPerson person = candidates.get(i);
-				vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
+				vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));
 				vaccinationsLeft--;
 				totalVaccinations++;
 			}

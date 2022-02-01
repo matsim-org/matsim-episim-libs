@@ -59,7 +59,7 @@ public class RandomVaccination implements VaccinationModel {
 
 		for (int i = 0; i < n; i++) {
 			EpisimPerson person = candidates.get(i);
-			vaccinate(person, iteration, VaccinationModel.chooseVaccinationType(prob, rnd));
+			vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));
 			vaccinationsLeft--;
 		}
 

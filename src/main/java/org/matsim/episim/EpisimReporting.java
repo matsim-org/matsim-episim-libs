@@ -282,9 +282,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		if (person.getVaccinationStatus() != VaccinationStatus.yes)
 			return false;
 
-		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
-
-		return person.getReVaccinationStatus() == VaccinationStatus.yes || person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect;
+		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType(0)).getDaysBeforeFullEffect();
+		return person.getNumVaccinations() > 1 || person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect;
 	}
 
 	/**

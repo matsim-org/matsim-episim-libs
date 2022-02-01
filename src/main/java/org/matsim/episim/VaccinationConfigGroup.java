@@ -64,7 +64,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private int daysValid = 180;
 	/**
-	 * Needed for antibody model. 
+	 * Needed for antibody model.
 	 */
 	private double beta = 1.0;
 
@@ -206,7 +206,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	String getVaccinationCapacityString() {
 		return JOINER.join(vaccinationCapacity);
 	}
-	
+
 	public void setAk50PerStrain(Map<VirusStrain, Double> ak50) {
 		ak50PerStrain.clear();
 		ak50PerStrain.putAll(ak50);
@@ -232,7 +232,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	String getAk50PerStrainString() {
 		return JOINER.join(ak50PerStrain);
 	}
-	
+
 	@StringSetter(FROM_FILE)
 	public void setFromFile(String fromFile) {
 		this.fromFile = fromFile;
@@ -252,7 +252,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	int getDaysValid() {
 		return daysValid;
 	}
-	
+
 	@StringSetter(BETA)
 	public void setBeta(double beta) {
 		this.beta = beta;
@@ -335,6 +335,29 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		return (fullyVaccinated || booster) && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) <= daysValid;
 
+	}
+
+	/**
+	 * Computes the minimum factor over all vaccinations.
+	 * @param person person
+	 * @param day current iteration
+	 * @param f function of VaccinationParams to retrieve the desired factor
+	 * @return minimum factor or 1 if not vaccinated
+	 */
+	public double getMinFactor(EpisimPerson person, int day, VaccinationFactorFunction f) {
+
+		if (person.getNumVaccinations() == 0)
+			return 1;
+
+		double factor = 1d;
+		for (int i = 0; i < person.getNumVaccinations(); i++) {
+
+			VaccinationType type = person.getVaccinationType(i);
+
+			factor = Math.min(factor, f.getFactor(getParams(type), person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)));
+		}
+
+		return factor;
 	}
 
 	/**
