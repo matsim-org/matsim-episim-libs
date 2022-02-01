@@ -75,7 +75,7 @@ public class SMCalibration implements BatchRun<SMCalibration.Params> {
 			e.printStackTrace();
 		}
 
-//		VirusStrain.B117.infectiousness = 1.35;
+//		VirusStrain.ALPHA.infectiousness = 1.35;
 
 		return config;
 	}

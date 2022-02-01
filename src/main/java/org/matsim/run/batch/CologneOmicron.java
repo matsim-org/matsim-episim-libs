@@ -37,10 +37,10 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
 
 		double pHousehold = 0.0;
-		
-//		if (params != null) 
+
+//		if (params != null)
 //			pHousehold = params.pHousehold;
-		
+
 		return new SnzCologneProductionScenario.Builder()
 				.setScale(1.3)
 				.setHouseholdSusc(pHousehold)
@@ -72,11 +72,11 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		// age susceptibility increases by 28% every 10 years
 //		if (params.ageDep.equals("yes")) {
 //			episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() / 3.5);
-//			Map<Integer, Double> map = new HashMap<>();	
+//			Map<Integer, Double> map = new HashMap<>();
 //			for (int i = 0; i<120; i++) map.put(i, Math.pow(1.02499323, i));
 //			episimConfig.setAgeSusceptibility(map);
 //		}
-		
+
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
@@ -86,15 +86,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 			builder.restrict(LocalDate.parse("2022-01-10"), Restriction.ofSusceptibleRf(1.0), "leisure");
 			builder.restrict(LocalDate.parse("2022-01-10"), 0.8, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
 		}
-			
-		if (params.schools.equals("unprotected") || params.schools.equals("noMasks")) 
+
+		if (params.schools.equals("unprotected") || params.schools.equals("noMasks"))
 			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		
+
 		if (params.schools.equals("unprotected"))
 			builder.restrict(restrictionDate, Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-					
+
 		episimConfig.setPolicy(builder.build());
-		
+
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 		inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
 		episimConfig.setInputDays(inputDays);
@@ -106,15 +106,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 
 		infPerDayB117.put(LocalDate.parse("2020-12-30"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.8);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse("2021-06-14"), 1);
-		
+
 		//disease import 2021
 		double impFacSum = 3.0;
 		int imp = 16;
@@ -123,9 +123,9 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 				LocalDate.parse("2021-07-25").plusDays(0), 1, 48);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacSum, LocalDate.parse("2021-07-26").plusDays(0),
 				LocalDate.parse("2021-08-17").plusDays(0), 48, imp);
-		
+
 		infPerDayMUTB.put(LocalDate.parse("2021-08-18"), imp);
-		
+
 		double impFacOct = 2.0;
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacOct, LocalDate.parse("2021-10-09").plusDays(0),
 				LocalDate.parse("2021-10-16").plusDays(0), imp, 16);
@@ -133,20 +133,20 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 				LocalDate.parse("2021-10-24").plusDays(0), 16, 1);
 		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1);
 		;
-		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
-		
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(3.8);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(2.0);
-		
+		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
+
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(3.8);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(2.0);
+
 		//omicron
 		Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
 		infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayOmicron.put(LocalDate.parse("2021-11-22"), 10);
 		infPerDayOmicron.put(LocalDate.parse("2021-11-29"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON, infPerDayOmicron);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON).setInfectiousness(3.8 * Double.parseDouble(params.omicron.split("-")[0]));
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON).setFactorSeriouslySick(1.0);
-		
+		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(3.8 * Double.parseDouble(params.omicron.split("-")[0]));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(1.0);
+
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 
@@ -154,12 +154,12 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		for (int i = 0; i < 12; i++) vaccinationCompliance.put(i, 0.0);
 		for (int i = 12; i <= 120; i++) vaccinationCompliance.put(i, 1.0);
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
-		
+
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 		double population = 2_352_480;
 		vaccinations.put(restrictionDate , (int) (0.01 * params.vacSp * population / 7));
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
-		
+
 //		if (!params.vaccine.equals("cur")) {
 //			Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
 //			if(params.vaccine.equals("mRNA"))
@@ -168,17 +168,17 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 //				share.put(LocalDate.parse("2020-01-01"), Map.of(VaccinationType.mRNA, 0d, VaccinationType.vector, 1d));
 //			vaccinationConfig.setVaccinationShare(share);
 //		}
-		
-		if(params.vacRate.equals("DRS")) 
+
+		if(params.vacRate.equals("DRS"))
 				vaccinationConfig.setFromFile(SnzCologneProductionScenario.INPUT.resolve("dresdemVaccinations.csv").toString());
-		
+
 		adaptVacinationEffectiveness(vaccinationConfig, 0.4, Double.parseDouble(params.omicron.split("-")[1]));
-		
+
 		configureBooster(vaccinationConfig, 0.9, params.boostSp * 0.01, params.boostAfter, 0.4, restrictionDate);
-			
+
 		//testing
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-		
+
  		testingConfigGroup.setTestAllPersonsAfter(restrictionDate);
 
 		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
@@ -236,10 +236,10 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		if (params.liftRestr.equals("yes")) {
 			workTests.put(LocalDate.parse("2022-01-10"), 0.05);
 		}
-			
+
 		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
 		leisureTests.put(restrictionDate, params.lTestUnVac);
-		
+
 		if (params.liftRestr.equals("yes")) {
 			leisureTests.put(LocalDate.parse("2022-01-10"), 0.05);
 		}
@@ -251,7 +251,7 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		if (params.schools.equals("unprotected")) {
 			eduTests.put(restrictionDate,  0.0);
 		}
-		
+
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
 				"work", workTests,
@@ -263,7 +263,7 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 				"educ_higher", uniTests,
 				"educ_other", eduTests
 		)));
-		
+
 		Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTestsVaccinated = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> eduTestsVaccinated = new HashMap<LocalDate, Double>();
@@ -272,7 +272,7 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 			leisureTestsVaccinated.put(LocalDate.parse("2022-01-10"), 0.);
 		}
 
-		
+
 		if (params.wTest.equals("0.5-all")) {
 			workTestsVaccinated.put(restrictionDate, 0.5);
 		} else {
@@ -281,9 +281,9 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		if (params.liftRestr.equals("yes")) {
 			workTestsVaccinated.put(LocalDate.parse("2022-01-10"), 0.);
 		}
-		
+
 		eduTestsVaccinated.put(restrictionDate, 0.);
-		
+
 		rapidTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
 				"leisure", leisureTestsVaccinated,
 				"work", workTestsVaccinated,
@@ -295,7 +295,7 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 				"educ_higher", eduTestsVaccinated,
 				"educ_other", eduTestsVaccinated
 		)));
-		
+
 
 		Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
@@ -316,14 +316,14 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 				"educ_higher", eduTestsPCR,
 				"educ_other", eduTestsPCR
 		)));
-		
+
 		Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> eduTestsPCRVaccinated = new HashMap<LocalDate, Double>();
 		leisureTestsPCRVaccinated.put(restrictionDate, 0.);
 		workTestsPCRVaccinated.put(restrictionDate, 0.);
 		eduTestsPCRVaccinated.put(restrictionDate, 0.);
-		
+
 		pcrTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
 				"leisure", leisureTestsPCRVaccinated,
 				"work", workTestsPCRVaccinated,
@@ -349,18 +349,18 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 	}
 
 	private void adaptVacinationEffectiveness(VaccinationConfigGroup vaccinationConfig, double vacMult, double omicronVac) {
-		
+
 		double effectivnessAlphaMRNA =  0.85;
 		double factorShowingSymptomsAlphaMRNA = 0.06 / (1 - effectivnessAlphaMRNA);
 		double factorSeriouslySickAlphaMRNA = 0.02 / ((1 - effectivnessAlphaMRNA) * factorShowingSymptomsAlphaMRNA);
-		
+
 		double effectivnessDeltaMRNA = 0.8;
 		double factorShowingSymptomsDeltaMRNA = 0.15 / (1 - effectivnessDeltaMRNA);
 		double factorSeriouslySickDeltaMRNA = 0.09 / ((1 - effectivnessDeltaMRNA) * factorShowingSymptomsDeltaMRNA);
-		
+
 		double infectivityAlphaMRNA = 0.32;
 		double infectivityDeltaMRNA = 0.5;
-		
+
 		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 				.setDaysBeforeFullEffect(fullEffectMRNA)
@@ -371,21 +371,21 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(fullEffectMRNA + 98, 1.0 - ((1.0 - 0.64) * vacMult))
 //						.atDay(fullEffectMRNA + 482, 0.0)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessAlphaMRNA) * vacMult))
 						.atDay(fullEffectMRNA + 14, 1.0 - ((1.0 - 0.78) * vacMult))
 						.atDay(fullEffectMRNA + 98, 1.0 - ((1.0 - 0.64) * vacMult))
 //						.atDay(fullEffectMRNA + 482, 0.0)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessDeltaMRNA) * vacMult))
 						.atDay(fullEffectMRNA + 14, 1.0 - ((1.0 - 0.72) * vacMult))
 						.atDay(fullEffectMRNA + 98, 1.0 - ((1.0 - 0.55) * vacMult))
 //						.atDay(fullEffectMRNA + 370, 0.0)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessDeltaMRNA) * vacMult * omicronVac))
 						.atDay(fullEffectMRNA + 14, 1.0 - ((1.0 - 0.72) * vacMult * omicronVac))
@@ -396,15 +396,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsAlphaMRNA)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsAlphaMRNA)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsDeltaMRNA)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsDeltaMRNA)
 				)
@@ -412,15 +412,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickAlphaMRNA)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickAlphaMRNA)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickDeltaMRNA)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickDeltaMRNA)
 				)
@@ -431,21 +431,21 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(fullEffectMRNA + 98, 0.5)
 //						.atDay(fullEffectMRNA + 448, 1.0)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityAlphaMRNA)
 						.atDay(fullEffectMRNA + 14, 0.38)
 						.atDay(fullEffectMRNA + 98, 0.5)
 //						.atDay(fullEffectMRNA + 448, 1.0)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityDeltaMRNA)
 						.atDay(fullEffectMRNA + 14, 0.6)
 						.atDay(fullEffectMRNA + 98, 0.78)
 //						.atDay(fullEffectMRNA + 201, 1.0)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityDeltaMRNA)
 						.atDay(fullEffectMRNA + 14, Math.min(1.0, 0.6 * omicronVac))
@@ -453,19 +453,19 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 //						.atDay(fullEffectMRNA + 201, 1.0)
 				)
 		;
-		
-		
+
+
 		double effectivnessAlphaVector = 0.6;
 		double factorShowingSymptomsAlphaVector = 0.25 / (1 - effectivnessAlphaVector);
 		double factorSeriouslySickAlphaVector = 0.02 / ((1 - effectivnessAlphaVector) * factorShowingSymptomsAlphaVector);
-		
+
 		double effectivnessDeltaVector = 0.58;
 		double factorShowingSymptomsDeltaVector = 0.35 / (1 - effectivnessDeltaVector);
 		double factorSeriouslySickDeltaVector = 0.09 / ((1 - effectivnessDeltaVector) * factorShowingSymptomsDeltaVector);
-		
+
 		double infectivityAlphaVector = 0.48;
 		double infectivityDeltaVector = 0.78;
-	
+
 		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
 				.setDaysBeforeFullEffect(fullEffectVector)
@@ -476,21 +476,21 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(fullEffectVector + 98, 1.0 - ((1.0 - 0.38) * vacMult))
 //						.atDay(fullEffectVector + 326, 0.0)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessAlphaVector) * vacMult))
 						.atDay(fullEffectVector + 14, 1.0 - ((1.0 - 0.52) * vacMult))
 						.atDay(fullEffectVector + 98, 1.0 - ((1.0 - 0.38) * vacMult))
 //						.atDay(fullEffectVector + 326, 0.0)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessDeltaVector) * vacMult))
 						.atDay(fullEffectVector + 14, 1.0 - ((1.0 - 0.5) * vacMult))
 						.atDay(fullEffectVector + 98, 1.0 - ((1.0 - 0.35) * vacMult))
 //						.atDay(fullEffectVector + 294, 0.0)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessDeltaVector) * vacMult * omicronVac))
 						.atDay(fullEffectVector + 14, 1.0 - ((1.0 - 0.5) * vacMult * omicronVac))
@@ -501,15 +501,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsAlphaVector)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsAlphaVector)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsDeltaVector)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsDeltaVector)
 				)
@@ -517,15 +517,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickAlphaVector)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickAlphaVector)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickDeltaVector)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickDeltaVector)
 				)
@@ -536,7 +536,7 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(fullEffectMRNA + 98, 0.64)
 //						.atDay(fullEffectMRNA + 400, 1.0)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityAlphaVector)
 						.atDay(fullEffectMRNA + 14, 0.54)
@@ -544,27 +544,27 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 //						.atDay(fullEffectMRNA + 400, 1.0)
 
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityDeltaVector)
 						.atDay(fullEffectMRNA + 14, 0.85)
 						.atDay(fullEffectMRNA + 98, 1.0)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityDeltaVector)
 						.atDay(fullEffectMRNA + 14, Math.min(1.0, 0.85 * omicronVac))
 						.atDay(fullEffectMRNA + 98, Math.min(1.0, 1.0 * omicronVac))
 				)
 		;
-		
+
 		double effectivnessAlphaNatural = 0.95;
 		double effectivnessDeltaNatural = 0.9;
 
 		double factorShowingSymptomsNatural = 0.5;
 		double factorSeriouslySickNatural = 0.5;
 		double infectivityNatural = 0.5;
-		
+
 		int fullEffectNatural = 2;
 		vaccinationConfig.getOrAddParams(VaccinationType.natural)
 				.setDaysBeforeFullEffect(fullEffectNatural)
@@ -575,21 +575,21 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(400, 1.0 - ((1.0 - (effectivnessAlphaNatural - 0.07)) * vacMult))
 						.atDay(700, 1.0 - ((1.0 - (effectivnessAlphaNatural - 0.12)) * vacMult))
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessAlphaNatural) * vacMult))
 						.atDay(100, 1.0 - ((1.0 - (effectivnessAlphaNatural - 0.02)) * vacMult))
 						.atDay(400, 1.0 - ((1.0 - (effectivnessAlphaNatural - 0.07)) * vacMult))
 						.atDay(700, 1.0 - ((1.0 - (effectivnessAlphaNatural - 0.12)) * vacMult))
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessDeltaNatural) * vacMult))
 						.atDay(100, 1.0 - ((1.0 - (effectivnessDeltaNatural - 0.06)) * vacMult))
 						.atDay(400, 1.0 - ((1.0 - (effectivnessDeltaNatural - 0.14)) * vacMult))
 						.atDay(700, 1.0 - ((1.0 - (effectivnessDeltaNatural - 0.22)) * vacMult))
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 0.0)
 						.atFullEffect(1.0 - ((1.0 - effectivnessDeltaNatural) * vacMult * omicronVac))
 						.atDay(100, 1.0 - ((1.0 - (effectivnessDeltaNatural - 0.06)) * vacMult * omicronVac))
@@ -600,15 +600,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsNatural)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsNatural)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsNatural)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(factorShowingSymptomsNatural)
 				)
@@ -616,15 +616,15 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickNatural)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickNatural)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickNatural)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(factorSeriouslySickNatural)
 				)
@@ -632,69 +632,69 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityNatural)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityNatural)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atFullEffect(infectivityNatural)
 				)
-				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setInfectivity(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 1.0)
 						.atFullEffect(Math.min(1.0, infectivityNatural * omicronVac))
 				)
 		;
-		
-		
+
+
 	}
-	
+
 	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterEff, double boosterSpeed, int boostAfter, double vacMult, LocalDate restrictionDate) {
-		
+
 		Map<LocalDate, Integer> boosterVaccinations = new HashMap<>();
-				
+
 		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
 
 		boosterVaccinations.put(restrictionDate, (int) (2_352_480 * boosterSpeed / 7));
-		
+
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
-		 
+
 		double boostEffectiveness = 1.0 - ((1.0 - boosterEff) * vacMult);
-						
+
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
-				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
-				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
-				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
 				.setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 		;
-				
+
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
 				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
-				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
-				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
-				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON)
+				.setBoostEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.OMICRON_BA1)
 						.atDay(1, 0.0)
 						.atDay(7, boostEffectiveness)
 				)
@@ -707,38 +707,38 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		
+
 		@Parameter({7.0, 14.0})
 		double boostSp;
-		
+
 		@Parameter({0.5, 7.0})
 		double vacSp;
-		
+
 		@IntParameter({5})
 		int boostAfter;
-		
+
 		@Parameter({1.0, 0.5, 0.0})
 		double leisUnv;
-		
+
 		@Parameter({0.0, 0.5})
 		double lTestVac;
-		
+
 //		@Parameter({0.05, 0.5})
 		@Parameter({0.05})
 		double lTestUnVac;
-		
+
 		@StringParameter({"0.5-unvaccinated", "0.5-all"})
 		String wTest;
-		
+
 		@StringParameter({"protected", "noMasks"})
 		String schools;
-		
+
 		@StringParameter({"no"})
 		String liftRestr;
-		
+
 		@StringParameter({"CGN"})
 		String vacRate;
-		
+
 		@StringParameter({"1.0-1.0", "3.0-1.0", "1.0-3.0"})
 		String omicron;
 

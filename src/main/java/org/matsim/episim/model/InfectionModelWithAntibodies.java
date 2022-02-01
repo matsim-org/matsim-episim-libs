@@ -111,7 +111,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		
 		//quick fix!
 		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
-			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON || target.getVirusStrain(infection-1) == VirusStrain.BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
+			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA1 || target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
 				susceptibility = 0.0;
 				break;
 			}
@@ -205,7 +205,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		
 		//quick fix!
 		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
-			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON || target.getVirusStrain(infection-1) == VirusStrain.BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
+			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA1 || target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
 				susceptibility = 0.0;
 				break;
 			}

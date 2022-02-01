@@ -14,7 +14,8 @@ public enum VirusStrain {
 	 * More "infectious" variant B.1.1.7 that has been prevalent in the UK, starting during end of 2020.
 	 * Also known as VOC-202012/01.
 	 */
-	B117,
+//	B117,
+	ALPHA,
 
 	/**
 	 * South-african variant also known as auch 501Y.V2.
@@ -24,14 +25,18 @@ public enum VirusStrain {
 	/**
 	 * unknown mutation
 	 */
-	MUTB,
+//	MUTB,
+	DELTA,
 
 	/**
 	 * VoC B.1.1.529, first reported to WHO from South Africa on 24 November 2021
 	 */
-	OMICRON, 
+//	OMICRON,
+	OMICRON_BA1,
 	
-	BA2
+	OMICRON_BA2
+	
+//	BA2
 
 
 }

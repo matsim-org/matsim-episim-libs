@@ -194,10 +194,10 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 
 		infPerDayB117.put(LocalDate.parse(params.alphaDate), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.7);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.7);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
@@ -224,9 +224,9 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-08-15"), 1);
 
 
-		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.2);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySick(2.0);
+		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(2.2);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(2.0);
 
 
 		double effectivnessMRNA = 0.7;
@@ -235,19 +235,19 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 				.setDaysBeforeFullEffect(fullEffectMRNA)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atDay(fullEffectMRNA-7, effectivnessMRNA/2.)
 						.atFullEffect(effectivnessMRNA)
 						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
 						.atFullEffect(factorShowingSymptomsMRNA)
 						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
 						.atFullEffect(factorSeriouslySickMRNA)
@@ -262,19 +262,19 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
 			.setDaysBeforeFullEffect(fullEffectVector)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 					.atDay(1, 0.0)
 					.atDay(fullEffectVector-7, effectivnessVector/2.)
 					.atFullEffect(effectivnessVector)
 					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 					.atDay(1, 1.0)
 					.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
 					.atFullEffect(factorShowingSymptomsVector)
 					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 					.atDay(1, 1.0)
 					.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
 					.atFullEffect(factorSeriouslySickVector)

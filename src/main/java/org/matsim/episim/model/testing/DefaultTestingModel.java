@@ -203,7 +203,7 @@ public class DefaultTestingModel implements TestingModel {
 			double rate = params.getFalseNegativeRate();
 
 			// TODO: configurable
-			if (person.getVirusStrain() == VirusStrain.OMICRON)
+			if (person.getVirusStrain() == VirusStrain.OMICRON_BA1 || person.getVirusStrain() == VirusStrain.OMICRON_BA2)
 				rate = 0.5;
 
 			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= rate ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
