@@ -496,9 +496,6 @@ public final class EpisimPerson implements Attributable {
 	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
-
-
-
 		vaccinations.add(type);
 		vaccinationDates.add(iteration);
 

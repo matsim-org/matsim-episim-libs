@@ -44,7 +44,7 @@ public class RandomVaccination implements VaccinationModel {
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration, 180))
 				.filter(p -> p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no))
 				.filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
-				.filter(p -> reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)
+				.filter(p -> reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)
 				.collect(Collectors.toList());
 
 		if (candidates.isEmpty()) {

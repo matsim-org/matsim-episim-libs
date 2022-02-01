@@ -26,6 +26,8 @@ public interface DiseaseStatusTransitionModel {
 	 */
 	default double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
 
+		// TODO: chose minimum for all factors
+
 		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
 				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
 				: 1d;
