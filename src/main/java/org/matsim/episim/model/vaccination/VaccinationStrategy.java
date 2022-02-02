@@ -19,7 +19,6 @@ public class VaccinationStrategy implements VaccinationModel {
 	private final SplittableRandom rnd;
 	private final Config config;
 
-
 	@Inject
 	public VaccinationStrategy(SplittableRandom rnd, Config config) {
 		this.rnd = rnd;
@@ -29,25 +28,23 @@ public class VaccinationStrategy implements VaccinationModel {
 	@Override
 	public void handleVaccination(Map<Id<Person>, EpisimPerson> persons, LocalDate date, int iteration, double now) {
 
-		if (date.isBefore(config.start))
-			return;
-
-		List<EpisimPerson> candidates = persons.values().stream()
-				.filter(EpisimPerson::isVaccinable)
-				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration, 180))
-				.filter(p -> p.getNumVaccinations() == 2) // TODO: should persons get 4th shot before booster?
-				.collect(Collectors.toList());
+		if (date.isAfter(config.start) && date.isBefore(config.start.plusDays(50))) {
+			List<EpisimPerson> candidates = persons.values().stream()
+					.filter(EpisimPerson::isVaccinable)
+					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration, 90))
+					.collect(Collectors.toList());
 
 
-		Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
+			Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
 
-		int vaccinationsLeft = 0; // TODO: number of vaccinations
-		int n = Math.min(candidates.size(), vaccinationsLeft);
+			int vaccinationsLeft = (int) 0.01 * persons.size();
+			int n = Math.min(candidates.size(), vaccinationsLeft);
 
-		for (int i = 0; i < n; i++) {
-			EpisimPerson person = candidates.get(i);
-			vaccinate(person, iteration, VaccinationType.generic);
-			vaccinationsLeft--;
+			for (int i = 0; i < n; i++) {
+				EpisimPerson person = candidates.get(i);
+				vaccinate(person, iteration, VaccinationType.omicronUpdate);
+				vaccinationsLeft--;
+			}
 		}
 
 	}
@@ -60,7 +57,7 @@ public class VaccinationStrategy implements VaccinationModel {
 		 */
 		private final LocalDate start;
 
-		public Config(LocalDate start) {
+		public Config(LocalDate start, int population) {
 			this.start = start;
 		}
 	}
