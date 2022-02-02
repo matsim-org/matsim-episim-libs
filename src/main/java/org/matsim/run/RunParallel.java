@@ -349,7 +349,7 @@ public class RunParallel<T> implements Callable<Integer> {
 			}
 
 			for (OutputAnalysis analysis : post) {
-				log.info("Running analysis {} on {}", analysis, output);
+				log.info("Running analysis {} on {}", analysis.getClass().getSimpleName(), output);
 
 				injector.injectMembers(analysis);
 
