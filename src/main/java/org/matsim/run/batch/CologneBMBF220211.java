@@ -72,7 +72,11 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
-		return List.of(new VaccinationEffectiveness().withArgs(), new RValuesFromEvents().withArgs(), new VaccinationEffectivenessFromPotentialInfections().withArgs());
+		return List.of(
+				new VaccinationEffectiveness().withArgs(),
+				new RValuesFromEvents().withArgs(),
+				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected")
+		);
 	}
 
 	@Override
