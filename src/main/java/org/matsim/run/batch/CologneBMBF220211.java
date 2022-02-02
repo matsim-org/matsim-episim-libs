@@ -49,9 +49,11 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
 
 				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
-
-				// TODO
-				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(LocalDate.EPOCH));
+				LocalDate oVacStartDate = null;
+				if (params != null)
+					oVacStartDate = LocalDate.parse(params.oVac);
+				
+				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate));
 			}
 		});
 	}
@@ -109,11 +111,13 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
-		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(params.leis), "leisure");
+		builder.restrict(LocalDate.parse("2022-12-20"), Restriction.ofVaccinatedRf(0.75), "leisure");
+		builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofVaccinatedRf(params.leis), "leisure");
+
 
 		//2G
 		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
-		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leisUnv), "leisure");
+		builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofSusceptibleRf(params.leis), "leisure");
 
 		double schoolFac = 0.5;
 		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -241,7 +245,7 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
 		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
-		vaccinationConfig.setBeta(params.beta);
+		vaccinationConfig.setBeta(3.0);
 
 		configureBooster(vaccinationConfig, 1.0, 3);
 
@@ -643,17 +647,17 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 		@StringParameter({"current"})
 		String tr;
 
-		@Parameter({0.75})
-		double leisUnv;
-
-		@Parameter({0.75})
+//		@Parameter({0.75})
+//		double leisUnv;
+//
+		@Parameter({0.75, 1.0})
 		double leis;
-
-		@Parameter({1.0, 3.0})
-		double beta;
 
 		@StringParameter({"current"})
 		String school;
+		
+		@StringParameter({"2022-03-01", "2099-01-01"})
+		String oVac;
 
 	}
 
