@@ -56,7 +56,8 @@ import java.util.zip.GZIPInputStream;
 		subcommands = {
 				CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
 				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class,
-				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class
+				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class,
+				VaccinationEffectiveness.class
 		},
 		subcommandsRepeatable = true
 )
