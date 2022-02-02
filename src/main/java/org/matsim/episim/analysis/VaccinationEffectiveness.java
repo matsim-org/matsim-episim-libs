@@ -94,7 +94,7 @@
 			 return 2;
 		 }
 
-		 population = PopulationUtils.readPopulation(populationFile);
+		 population = PopulationUtils.readPopulation(input + populationFile);
 
 		 AnalysisCommand.forEachScenario(output, scenario -> {
 			 try {
@@ -226,7 +226,7 @@
 			 for (Person p : vaccinated.values()) {
 				 Person twin = findTwin(p, potentialTwins, date);
 				 if (twin != null) {
-					 vaccinatedWithTwins.put(p.getId(), p);
+					 vaccinatedWithTwins.put(p.getId(), twin);
 					 foundTwins++;
 				 }
 			 }
@@ -242,8 +242,8 @@
 
 				 for (Map.Entry<Id<Person>, Person> e : vaccinatedWithTwins.entrySet()) {
 
-					 Person p = e.getValue();
-					 Person twin = population.getPersons().get(e.getKey());
+					 Person p = population.getPersons().get(e.getKey());
+					 Person twin = e.getValue();
 
 					 boolean infected = false;
 					 String strain = "";
@@ -268,44 +268,24 @@
 
 					 if (infected) {
 						 if (VirusStrain.valueOf(strain) == VirusStrain.SARS_CoV_2) {
-							 if (vacWildtypePerPeriod.containsKey(period)) {
-								 int value = vacWildtypePerPeriod.get(period) + 1;
-								 vacWildtypePerPeriod.replace(period, value);
-							 } else
-								 vacWildtypePerPeriod.put(period, 1);
+							 vacWildtypePerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 						 if (VirusStrain.valueOf(strain) == VirusStrain.ALPHA) {
-							 if (vacAlphaPerPeriod.containsKey(period)) {
-								 int value = vacAlphaPerPeriod.get(period) + 1;
-								 vacAlphaPerPeriod.replace(period, value);
-							 } else
-								 vacAlphaPerPeriod.put(period, 1);
+							 vacAlphaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 						 if (VirusStrain.valueOf(strain) == VirusStrain.DELTA) {
-							 if (vacDeltaPerPeriod.containsKey(period)) {
-								 int value = vacDeltaPerPeriod.get(period) + 1;
-								 vacDeltaPerPeriod.replace(period, value);
-							 } else
-								 vacDeltaPerPeriod.put(period, 1);
+							 vacDeltaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 						 if (VirusStrain.valueOf(strain) == VirusStrain.OMICRON_BA1) {
-							 if (vacOmicronPerPeriod.containsKey(period)) {
-								 int value = vacOmicronPerPeriod.get(period) + 1;
-								 vacOmicronPerPeriod.replace(period, value);
-							 } else
-								 vacOmicronPerPeriod.put(period, 1);
-
+							 vacOmicronPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 					 } else {
-						 if (vacNotInfectedPerPeriod.containsKey(period)) {
-							 int value = vacNotInfectedPerPeriod.get(period) + 1;
-							 vacNotInfectedPerPeriod.replace(period, value);
-						 } else
-							 vacNotInfectedPerPeriod.put(period, 1);
+						 vacNotInfectedPerPeriod.merge(period, 1, Integer::sum);
+
 					 }
 
 					 Holder twinAttributes = data.get(twin.getId());
@@ -322,42 +302,22 @@
 					 if (twinInfected) {
 
 						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.SARS_CoV_2) {
-							 if (cgWildtypePerPeriod.containsKey(period)) {
-								 int value = cgWildtypePerPeriod.get(period) + 1;
-								 cgWildtypePerPeriod.replace(period, value);
-							 } else
-								 cgWildtypePerPeriod.put(period, 1);
+							 cgWildtypePerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.ALPHA) {
-							 if (cgAlphaPerPeriod.containsKey(period)) {
-								 int value = cgAlphaPerPeriod.get(period) + 1;
-								 cgAlphaPerPeriod.replace(period, value);
-							 } else
-								 cgAlphaPerPeriod.put(period, 1);
+							 cgAlphaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.DELTA) {
-							 if (cgDeltaPerPeriod.containsKey(period)) {
-								 int value = cgDeltaPerPeriod.get(period) + 1;
-								 cgDeltaPerPeriod.replace(period, value);
-							 } else
-								 cgDeltaPerPeriod.put(period, 1);
+							 cgDeltaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
 						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.OMICRON_BA1) {
-							 if (cgOmicronPerPeriod.containsKey(period)) {
-								 int value = cgOmicronPerPeriod.get(period) + 1;
-								 cgOmicronPerPeriod.replace(period, value);
-							 } else
-								 cgOmicronPerPeriod.put(period, 1);
+							 cgOmicronPerPeriod.merge(period, 1, Integer::sum);
 						 }
 					 } else {
-						 if (cgNotInfectedPerPeriod.containsKey(period)) {
-							 int value = cgNotInfectedPerPeriod.get(period) + 1;
-							 cgNotInfectedPerPeriod.replace(period, value);
-						 } else
-							 cgNotInfectedPerPeriod.put(period, 1);
+						 cgNotInfectedPerPeriod.merge(period, 1, Integer::sum);
 					 }
 
 					 LocalDate vaccinationDate = null;
@@ -453,7 +413,6 @@
 			 double alphaVe = (double) (cgAlphaInfected - alphaInfected) / cgAlphaInfected;
 			 double deltaVe = (double) (cgDeltaInfected - deltaInfected) / cgDeltaInfected;
 			 double omicronVe = (double) (cgOmicronInfected - omicronInfected) / cgOmicronInfected;
-
 			 bw.write(String.valueOf(wildtypeVe));
 			 bw.write("\t");
 			 bw.write(String.valueOf(alphaVe));
