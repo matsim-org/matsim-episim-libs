@@ -89,10 +89,11 @@ class AnalyzeSnzRange implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
-		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.onlyWeekdays;
+		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.onlyWeekends;
 		String anyArea = "Berlin";
 		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD
-		boolean ignoreDates = true;
+		boolean ignoreDates = true; // true for mobilityDashboard
+
 		Set<String> datesToIgnore = Resources
 				.readLines(Resources.getResource("mobilityDatesToIgnore.txt"), StandardCharsets.UTF_8).stream()
 				.map(String::toString).collect(Collectors.toSet());
@@ -117,13 +118,13 @@ class AnalyzeSnzRange implements Callable<Integer> {
 			break;
 		case Bundeslaender:
 			zipCodes = findZIPCodesForBundeslaender();
-			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
+			outputFolder = Path.of("output/bundeslaender");
 			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, outputFolder, startDateStillUsingBaseDays,
 					datesToIgnore);
 			break;
 		case Landkreise:
 			zipCodes = findZIPCodesForLandkreise();
-			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
+			outputFolder = Path.of("output/landkreise");
 			analyzeDataForCertainAreas(zipCodes, selectedOptionForAnalyse, outputFolder, startDateStillUsingBaseDays,
 					datesToIgnore);
 			break;
@@ -292,27 +293,51 @@ class AnalyzeSnzRange implements Callable<Integer> {
 		log.info("Amount of found files: " + filesWithData.size());
 
 		Path outputFile = null;
-		if (selectedOutputFolder != null)
-			if (selectedOutputFolder.toString().contains("bundeslaender"))
-				outputFile = selectedOutputFolder.resolve("range_OverviewBL_new.csv");
-			else if (selectedOutputFolder.toString().contains("landkreise"))
-				outputFile = selectedOutputFolder.resolve("LK_Range_new.csv");
-			else
-				outputFile = selectedOutputFolder.resolve("Range_until.csv");
-		else if (zipCodes.size() == 1)
-			outputFile = outputFolder.resolve(zipCodes.keySet().iterator().next() + "Range_until.csv");
-		else
-			outputFile = outputFolder.resolve("Range_until.csv");
+		Path finalPath = null;
 
+		if (selectedOutputFolder != null && selectedOutputFolder.endsWith("mobilityData/bundeslaender/")) {
+			if (selectedOptionForAnalyse.toString().contains("weekly"))
+				finalPath = selectedOutputFolder.resolve("range_OverviewBL_weekly.csv");
+			else if (selectedOptionForAnalyse.toString().contains("Weekdays"))
+				finalPath = selectedOutputFolder.resolve("range_OverviewBL_weekdays.csv");
+			else if (selectedOptionForAnalyse.toString().contains("Weekends"))
+				finalPath = selectedOutputFolder.resolve("range_OverviewBL_weekends.csv");
+		} else if (selectedOutputFolder != null && selectedOutputFolder.endsWith("mobilityData/landkreise/")) {
+			if (selectedOptionForAnalyse.toString().contains("weekly"))
+				finalPath = selectedOutputFolder.resolve("LK_Range_weekly.csv");
+			else if (selectedOptionForAnalyse.toString().contains("Weekdays"))
+				finalPath = selectedOutputFolder.resolve("LK_range_weekdays.csv");
+			else if (selectedOptionForAnalyse.toString().contains("Weekends"))
+				finalPath = selectedOutputFolder.resolve("LK_range_weekends.csv");
+		} else {
+			if (selectedOutputFolder != null)
+				if (selectedOutputFolder.toString().contains("bundeslaender"))
+					outputFile = Path
+							.of(selectedOutputFolder.toString().replace("bundeslaender", "range_OverviewBL_new.csv"));
+				else if (selectedOutputFolder.toString().contains("landkreise"))
+					outputFile = Path.of(selectedOutputFolder.toString().replace("landkreise", "LK_Range_new.csv"));
+				else
+					outputFile = selectedOutputFolder.resolve("Range_until.csv");
+			else if (zipCodes.size() == 1)
+				outputFile = outputFolder.resolve(zipCodes.keySet().iterator().next() + "Range_until.csv");
+			else
+				outputFile = outputFolder.resolve("Range_until.csv");
+		}
 		HashMap<String, Set<LocalDate>> allHolidays = readBankHolidays();
 		HashMap<String, Set<String>> lkAssignemt = createLKAssignmentToBL();
 
-		BufferedWriter writer = IOUtils.getBufferedWriter(outputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
+		startDateStillUsingBaseDays = findNextDateToContinueFile(startDateStillUsingBaseDays, filesWithData, finalPath);
+
+		BufferedWriter writer = null;
+		if (finalPath == null)
+			writer = IOUtils.getBufferedWriter(outputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
+		else
+			writer = IOUtils.getBufferedWriter(finalPath.toUri().toURL(), StandardCharsets.UTF_8, true);
 		try {
-
-			JOIN.appendTo(writer, Types.values());
-			writer.write("\n");
-
+			if (finalPath == null) {
+				JOIN.appendTo(writer, Types.values());
+				writer.write("\n");
+			}
 			Map<String, Object2DoubleMap<String>> sums = new HashMap<>();
 			for (String certainArea : zipCodes.keySet())
 				sums.put(certainArea, new Object2DoubleOpenHashMap<>());
@@ -331,10 +356,10 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				LocalDate date = LocalDate.parse(dateString, FMT);
 				DayOfWeek day = date.getDayOfWeek();
 
-				if (dateString.equals(startDateStillUsingBaseDays))
+				if (startDateStillUsingBaseDays.equals("") || dateString.equals(startDateStillUsingBaseDays))
 					reachedStartDate = true;
 
-				if (startDateStillUsingBaseDays.equals("") || reachedStartDate) {
+				if (reachedStartDate) {
 
 					switch (selectedOptionForAnalyse) {
 					case weeklyResultsOfAllDays:
@@ -428,69 +453,95 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				countingDays++;
 			}
 			writer.close();
+			if (finalPath == null) {
+				if (outputFile.toString().contains("until")) {
+					switch (selectedOptionForAnalyse) {
+					case weeklyResultsOfAllDays:
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekly"));
+						break;
+					case onlyWeekdays:
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekdays"));
+						break;
+					case onlySaturdays:
+						finalPath = Path
+								.of(outputFile.toString().replace("until", "until" + dateString + "_saturdays"));
+						break;
+					case onlySundays:
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_sundays"));
+						break;
+					case onlyWeekends:
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekends"));
+						break;
+					case dailyResults:
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_daily"));
+						break;
+					case Mo_Do:
+						finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
+						break;
+					default:
+						break;
 
-			Path finalPath = null;
-
-			if (outputFile.toString().contains("until")) {
-				switch (selectedOptionForAnalyse) {
-				case weeklyResultsOfAllDays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekly"));
-					break;
-				case onlyWeekdays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekdays"));
-					break;
-				case onlySaturdays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_saturdays"));
-					break;
-				case onlySundays:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_sundays"));
-					break;
-				case onlyWeekends:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_weekends"));
-					break;
-				case dailyResults:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_daily"));
-					break;
-				case Mo_Do:
-					finalPath = Path.of(outputFile.toString().replace("until", "until" + dateString + "_Mo-Do"));
-					break;
-				default:
-					break;
-
+					}
+				} else {
+					switch (selectedOptionForAnalyse) {
+					case weeklyResultsOfAllDays:
+						finalPath = Path.of(outputFile.toString().replace("new", "weekly"));
+						break;
+					case onlyWeekdays:
+						finalPath = Path.of(outputFile.toString().replace("new", "weekdays"));
+						break;
+					case onlySaturdays:
+						finalPath = Path.of(outputFile.toString().replace("new", "saturdays"));
+						break;
+					case onlySundays:
+						finalPath = Path.of(outputFile.toString().replace("new", "sundays"));
+						break;
+					case onlyWeekends:
+						finalPath = Path.of(outputFile.toString().replace("new", "weekends"));
+						break;
+					case dailyResults:
+						finalPath = Path.of(outputFile.toString().replace("new", "daily"));
+						break;
+					case Mo_Do:
+						finalPath = Path.of(outputFile.toString().replace("new", "Mo-Do"));
+						break;
+					default:
+						break;
+					}
 				}
-			} else {
-				switch (selectedOptionForAnalyse) {
-				case weeklyResultsOfAllDays:
-					finalPath = Path.of(outputFile.toString().replace("new", "weekly"));
-					break;
-				case onlyWeekdays:
-					finalPath = Path.of(outputFile.toString().replace("new", "weekdays"));
-					break;
-				case onlySaturdays:
-					finalPath = Path.of(outputFile.toString().replace("new", "saturdays"));
-					break;
-				case onlySundays:
-					finalPath = Path.of(outputFile.toString().replace("new", "sundays"));
-					break;
-				case onlyWeekends:
-					finalPath = Path.of(outputFile.toString().replace("new", "weekends"));
-					break;
-				case dailyResults:
-					finalPath = Path.of(outputFile.toString().replace("new", "daily"));
-					break;
-				case Mo_Do:
-					finalPath = Path.of(outputFile.toString().replace("new", "Mo-Do"));
-					break;
-				default:
-					break;
-				}
+				Files.move(outputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 			}
-			Files.move(outputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
 			log.info("Write analyze of " + countingDays + " is writen to " + finalPath);
 
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	/** Finds the date after the last day in the given output file.
+	 * @param startDateStillUsingBaseDays
+	 * @param filesWithData
+	 * @param finalPath
+	 * @return
+	 * @throws IOException
+	 */
+	private String findNextDateToContinueFile(String startDateStillUsingBaseDays, List<File> filesWithData,
+			Path finalPath) throws IOException {
+		if (finalPath != null) {
+			List<String> existingData = Files.readAllLines(finalPath);
+			startDateStillUsingBaseDays = existingData.get(existingData.size() - 1).split(";")[0];
+		}
+		boolean nextDateIsStartDate = false;
+		for (File file : filesWithData) {
+			String test = file.getName().split("_")[0];
+			if (nextDateIsStartDate) {
+				startDateStillUsingBaseDays = test;
+				break;
+			}
+			if (startDateStillUsingBaseDays.equals(test))
+				nextDateIsStartDate = true;
+		}
+		return startDateStillUsingBaseDays;
 	}
 
 	/**

@@ -79,15 +79,15 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.AnyArea;
+		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
 		AnalyseOptions selectedOutputOptions = AnalyseOptions.onlyWeekends;
-		String startDateStillUsingBaseDays = "20210610"; //set in this format YYYYMMDD, only for Bundesländer and Landkreise
-		String anyArea = "Berlin";
+		String startDateStillUsingBaseDays = ""; //set in this format YYYYMMDD, only for Bundesländer and Landkreise
+		String anyArea = "Köln";
 
 		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
-		boolean getPercentageResults = true;
-		boolean ignoreDates = false;
+		boolean getPercentageResults = false;
+		boolean ignoreDates = true; //true for mobilityDashboard
 
 		Set<String> datesToIgnore = Resources
 				.readLines(Resources.getResource("mobilityDatesToIgnore.txt"), StandardCharsets.UTF_8).stream()
@@ -236,7 +236,6 @@ class AnalyzeSnzData implements Callable<Integer> {
 					getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case Bundeslaender:
-			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/bundeslaender/");
 			switch (selectedOutputOptions) {
 			case weeklyResultsOfAllDays:
 				outputOption = "weekly";
@@ -256,8 +255,6 @@ class AnalyzeSnzData implements Callable<Integer> {
 			snz.writeBundeslandDataForPublic(outputFolder, outputOption, startDateStillUsingBaseDays, datesToIgnore);
 			break;
 		case Landkreise:
-			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
-
 			switch (selectedOutputOptions) {
 			case weeklyResultsOfAllDays:
 				outputOption = "weekly";
