@@ -57,7 +57,7 @@ public class VaccinationStrategy implements VaccinationModel {
 		 */
 		private final LocalDate start;
 
-		public Config(LocalDate start, int population) {
+		public Config(LocalDate start) {
 			this.start = start;
 		}
 	}
