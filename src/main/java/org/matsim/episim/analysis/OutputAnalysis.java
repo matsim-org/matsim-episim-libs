@@ -16,6 +16,11 @@ public interface OutputAnalysis extends Callable<Integer> {
 	 */
 	default OutputAnalysis withArgs(String... args) {
 		CommandLine cli = new CommandLine(this);
+		CommandLine.ParseResult parseResult = cli.parseArgs(args);
+
+		if (!parseResult.errors().isEmpty())
+			throw new IllegalStateException("Error parsing arguments", parseResult.errors().get(0));
+
 		return cli.getCommand();
 	}
 

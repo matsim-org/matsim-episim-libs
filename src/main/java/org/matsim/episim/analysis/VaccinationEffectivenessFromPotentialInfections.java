@@ -48,7 +48,7 @@ import java.util.concurrent.Callable;
 		name = "vaccinationEffectiveness",
 		description = "Calculate vaccination effectiveness"
 )
-public class VaccinationEffectivenessFromPotentialInfections implements Callable<Integer> {
+public class VaccinationEffectivenessFromPotentialInfections implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(VaccinationEffectivenessFromPotentialInfections.class);
 
@@ -76,7 +76,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 
 		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
-				calcValues(scenario);
+				analyzeOutput(scenario);
 			} catch (IOException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
@@ -87,18 +87,19 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 		return 0;
 	}
 
-	private void calcValues(Path scenario) throws IOException {
+	@Override
+	public void analyzeOutput(Path output) throws IOException {
 
-		String id = AnalysisCommand.getScenarioPrefix(scenario);
+		String id = AnalysisCommand.getScenarioPrefix(output);
 
 		Handler handler = new Handler();
 
-		AnalysisCommand.forEachEvent(scenario, s -> {}, handler);
+		AnalysisCommand.forEachEvent(output, s -> {}, handler);
 
 		// Entries with rarely used vaccines are filtered
 		List<String> collect = new ArrayList<>(handler.vac.keySet());
 
-		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(scenario.resolve(id + "post.vaccineEff.tsv")), CSVFormat.TDF)) {
+		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(output.resolve(id + "post.vaccineEff.tsv")), CSVFormat.TDF)) {
 
 			csv.print("day");
 			for (String s1 : collect) {
@@ -125,7 +126,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 			}
 		}
 
-		log.info("Calculated results for scenario {}", scenario);
+		log.info("Calculated results for scenario {}", output);
 	}
 
 	private final class Handler implements EpisimInfectionEventHandler, EpisimPotentialInfectionEventHandler, EpisimVaccinationEventHandler {

@@ -10,7 +10,9 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
 import org.matsim.episim.analysis.OutputAnalysis;
+import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.analysis.VaccinationEffectiveness;
+import org.matsim.episim.analysis.VaccinationEffectivenessFromPotentialInfections;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.VaccinationType;
@@ -70,7 +72,7 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
-		return List.of(new VaccinationEffectiveness().withArgs());
+		return List.of(new VaccinationEffectiveness().withArgs(), new RValuesFromEvents().withArgs(), new VaccinationEffectivenessFromPotentialInfections().withArgs());
 	}
 
 	@Override

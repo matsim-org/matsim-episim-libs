@@ -30,6 +30,7 @@ import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.analysis.OutputAnalysis;
+import org.matsim.episim.analysis.RValuesFromEvents;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -301,7 +302,7 @@ public interface BatchRun<T> {
 	 * Return classes of {@link OutputAnalysis} that should be executed on each individual run.
 	 */
 	default Collection<OutputAnalysis> postProcessing() {
-		return List.of();
+		return List.of(new RValuesFromEvents().withArgs());
 	}
 
 	/**
