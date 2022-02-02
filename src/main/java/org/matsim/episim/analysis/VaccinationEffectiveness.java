@@ -145,21 +145,22 @@
 
 		 Handler handler = new Handler(data, startDate);
 
-		 AnalysisCommand.forEachEvent(scenario, s -> {}, handler);
+		 AnalysisCommand.forEachEvent(scenario, s -> {
+		 }, handler);
 
 		 int days4aggregation = 14;
 
 		 LocalDate date = LocalDate.parse("2021-01-01");
+		 LocalDate endDate = startDate.plusDays(handler.endDay);
 
-		 while (date.isBefore(startDate.plusDays(850))) {
+		 while (date.isBefore(endDate)) {
 
 			 log.debug("+++ date: {} +++", date);
 
-			 int year = date.getYear();
-			 int day = date.getDayOfYear();
-
 			 Map<Id<Person>, Person> vaccinated = new IdMap<>(Person.class, population.getPersons().size());
 			 Map<Id<Person>, Person> potentialTwins = new IdMap<>(Person.class, population.getPersons().size());
+
+			 LocalDate until = date.plusDays(days4aggregation);
 
 			 for (Person p : population.getPersons().values()) {
 
@@ -202,20 +203,19 @@
 //				}
 
 				 //ignore vector vaccines
-				 if (attributes.vaccine.equals(VaccinationType.vector.toString())) {
+				 if (attributes.vaccine == VaccinationType.vector) {
 					 continue;
 				 }
 
-				 if (!attributes.vaccinationDate.equals("")) {
+				 if (attributes.vaccinationDate != null) {
 
-					 LocalDate vaccinationDate = LocalDate.parse(attributes.vaccinationDate);
+					 LocalDate vaccinationDate = attributes.vaccinationDate;
 
-					 if (vaccinationDate.getYear() == year && vaccinationDate.getDayOfYear() / days4aggregation == day / days4aggregation) {
+					 if ((vaccinationDate.isEqual(date) || vaccinationDate.isAfter(date)) && vaccinationDate.isBefore(until)) {
 						 vaccinated.put(p.getId(), p);
 					 } else if (vaccinationDate.isAfter(date)) {
 						 potentialTwins.put(p.getId(), p);
 					 }
-
 
 				 } else potentialTwins.put(p.getId(), p);
 			 }
@@ -236,7 +236,7 @@
 
 			 LocalDate date2 = date;
 			 int period = 0;
-			 while (date2.isBefore(startDate.plusDays(700))) {
+			 while (date2.isBefore(endDate)) {
 
 				 Map<Id<Person>, Person> newVaccinated = new HashMap<>();
 
@@ -246,12 +246,12 @@
 					 Person twin = e.getValue();
 
 					 boolean infected = false;
-					 String strain = "";
+					 VirusStrain strain = null;
 
 					 boolean boostered = false;
 
 					 boolean twinInfected = false;
-					 String strainTwin = "";
+					 VirusStrain strainTwin = null;
 
 					 boolean twinVaccinated = false;
 
@@ -267,19 +267,19 @@
 					 }
 
 					 if (infected) {
-						 if (VirusStrain.valueOf(strain) == VirusStrain.SARS_CoV_2) {
+						 if (strain == VirusStrain.SARS_CoV_2) {
 							 vacWildtypePerPeriod.merge(period, 1, Integer::sum);
 						 }
 
-						 if (VirusStrain.valueOf(strain) == VirusStrain.ALPHA) {
+						 if (strain == VirusStrain.ALPHA) {
 							 vacAlphaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
-						 if (VirusStrain.valueOf(strain) == VirusStrain.DELTA) {
+						 if (strain == VirusStrain.DELTA) {
 							 vacDeltaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
-						 if (VirusStrain.valueOf(strain) == VirusStrain.OMICRON_BA1) {
+						 if (strain == VirusStrain.OMICRON_BA1) {
 							 vacOmicronPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
@@ -301,45 +301,42 @@
 
 					 if (twinInfected) {
 
-						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.SARS_CoV_2) {
+						 if (strainTwin == VirusStrain.SARS_CoV_2) {
 							 cgWildtypePerPeriod.merge(period, 1, Integer::sum);
 						 }
 
-						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.ALPHA) {
+						 if (strainTwin == VirusStrain.ALPHA) {
 							 cgAlphaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
-						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.DELTA) {
+						 if (strainTwin == VirusStrain.DELTA) {
 							 cgDeltaPerPeriod.merge(period, 1, Integer::sum);
 						 }
 
-						 if (VirusStrain.valueOf(strainTwin) == VirusStrain.OMICRON_BA1) {
+						 if (strainTwin == VirusStrain.OMICRON_BA1) {
 							 cgOmicronPerPeriod.merge(period, 1, Integer::sum);
 						 }
 					 } else {
 						 cgNotInfectedPerPeriod.merge(period, 1, Integer::sum);
 					 }
 
-					 LocalDate vaccinationDate = null;
-					 if (!twinAttributes.vaccinationDate.equals("")) {
-						 vaccinationDate = LocalDate.parse(twinAttributes.vaccinationDate);
-						 if (vaccinationDate.isBefore(date2)) {
+					 if (twinAttributes.vaccinationDate != null) {
+						 if (twinAttributes.vaccinationDate.isBefore(date2)) {
 							 twinVaccinated = true;
 						 }
 					 }
 
-					 LocalDate boosterDate = null;
-					 if (!attributes.boosterDate.equals("")) {
-						 boosterDate = LocalDate.parse(attributes.boosterDate);
-						 if (boosterDate.isBefore(date2)) {
+					 if (attributes.boosterDate != null) {
+						 if (attributes.boosterDate.isBefore(date2)) {
 							 boostered = true;
 						 }
 					 }
 
 
 					 if (!infected && !twinInfected && !twinVaccinated && !boostered)
-						 newVaccinated.put(p.getId(), p);
+						 newVaccinated.put(p.getId(), twin);
 				 }
+
 				 vaccinatedWithTwins = newVaccinated;
 
 				 period = period + 1;
@@ -464,6 +461,11 @@
 		 private final Map<Id<Person>, Holder> data;
 		 private final LocalDate startDate;
 
+		 /**
+		  * Approximate end date. Last occurred date in events.
+		  */
+		 private int endDay;
+
 		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate) {
 			 this.data = data;
 			 this.startDate = startDate;
@@ -474,9 +476,13 @@
 
 			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
 
-			 attr.infections.add((int) (event.getTime() / 86_400));
-			 attr.strains.add(event.getVirusStrain().toString());
+			 int day = (int) (event.getTime() / 86_400);
 
+			 if (day > endDay)
+				 endDay = day;
+
+			 attr.infections.add(day);
+			 attr.strains.add(event.getVirusStrain());
 		 }
 
 		 @Override
@@ -485,11 +491,15 @@
 			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
 			 DiseaseStatus status = event.getDiseaseStatus();
 
+			 int day = (int) (event.getTime() / 86_400);
+			 if (day > endDay)
+				 endDay = day;
+
 			 if (status.equals(DiseaseStatus.susceptible)) {
-				 attr.recoveredDates.add(startDate.plusDays((int) (event.getTime() / 86_400)));
+				 attr.recoveredDates.add(startDate.plusDays(day));
 			 }
 			 if (status.equals(DiseaseStatus.contagious)) {
-				 attr.contagiousDates.add(startDate.plusDays((int) (event.getTime() / 86_400)));
+				 attr.contagiousDates.add(startDate.plusDays(day));
 			 }
 //
 //			attributes.putAttribute(status.toString(), startDate.plusDays((int) (event.getTime() / 86_400)));
@@ -497,17 +507,16 @@
 
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
-			 String date = startDate.plusDays((int) (event.getTime() / 86_400)).toString();
+			 int day = (int) (event.getTime() / 86_400);
+			 LocalDate date = startDate.plusDays(day);
 			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
 
 			 if (event.getN() > 1) {
 				 attr.boosterDate = date;
 			 } else {
 				 attr.vaccinationDate = date;
-				 attr.vaccine = event.getVaccinationType().toString();
+				 attr.vaccine = event.getVaccinationType();
 			 }
-
-
 		 }
 	 }
 
@@ -517,16 +526,13 @@
 	  */
 	 private static final class Holder {
 
-		 private String vaccine = "";
-		 private String vaccinationDate = "";
-		 private String boosterDate = "";
-		 private final List<String> strains = new ArrayList<>();
+		 private VaccinationType vaccine = null;
+		 private LocalDate vaccinationDate = null;
+		 private LocalDate boosterDate = null;
+		 private final List<VirusStrain> strains = new ArrayList<>();
 		 private final IntList infections = new IntArrayList();
 		 private final List<LocalDate> contagiousDates = new ArrayList<>();
 		 private final List<LocalDate> recoveredDates = new ArrayList<>();
-
-		 private boolean imported = true;
-
 
 		 private Holder(Id<Person> personId) {
 			 // Id is not stored at the moment
