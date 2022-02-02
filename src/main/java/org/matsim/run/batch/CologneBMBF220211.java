@@ -1,14 +1,23 @@
 package org.matsim.run.batch;
 
+import com.google.inject.AbstractModule;
+import com.google.inject.Module;
+import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
+import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
+import org.matsim.episim.analysis.OutputAnalysis;
+import org.matsim.episim.analysis.VaccinationEffectiveness;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.testing.TestType;
+import org.matsim.episim.model.vaccination.VaccinationModel;
+import org.matsim.episim.model.vaccination.VaccinationStrategy;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
@@ -19,11 +28,7 @@ import javax.annotation.Nullable;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+import java.util.*;
 
 
 /**
@@ -31,14 +36,25 @@ import java.util.Map;
  */
 public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
+
+	@Nullable
 	@Override
-	public SnzCologneProductionScenario getBindings(int id, @Nullable Params params) {
+	public Module getBindings(int id, @Nullable Params params) {
+		return Modules.override(getBindings(0.0)).with(new AbstractModule() {
+			@Override
+			protected void configure() {
 
-		double pHousehold = 0.0;
+				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
 
-//		if (params != null)
-//			pHousehold = params.pHousehold;
+				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
 
+				// TODO
+				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(LocalDate.EPOCH));
+			}
+		});
+	}
+
+	private SnzCologneProductionScenario getBindings(double pHousehold) {
 		return new SnzCologneProductionScenario.Builder()
 				.setScale(1.3)
 				.setHouseholdSusc(pHousehold)
@@ -53,11 +69,16 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 	}
 
 	@Override
+	public Collection<OutputAnalysis> postProcessing() {
+		return List.of(new VaccinationEffectiveness().withArgs());
+	}
+
+	@Override
 	public Config prepareConfig(int id, Params params) {
 
 		LocalDate restrictionDate = LocalDate.parse("2022-01-24");
 
-		SnzCologneProductionScenario module = getBindings(id, params);
+		SnzCologneProductionScenario module = getBindings(0.0);
 
 		Config config = module.config();
 
@@ -579,19 +600,19 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
 		@Parameter({2.0})
 		double oInf;
-		
+
 		@Parameter({0.3, 0.5})
 		double aAk50;
-		
+
 		@Parameter({0.4, 0.6})
 		double dAk50;
-		
+
 		@Parameter({2.4, 3.0})
 		double oAk50;
 
 //		@Parameter({1.0, 4.0})
 //		double ba2Inf;
-//		
+//
 //		@Parameter({3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0})
 //		double ak50ba2;
 //

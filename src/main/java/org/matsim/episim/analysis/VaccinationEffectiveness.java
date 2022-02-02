@@ -19,6 +19,7 @@
  package org.matsim.episim.analysis;
 
 
+ import com.google.inject.Inject;
  import it.unimi.dsi.fastutil.ints.Int2IntMap;
  import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
  import it.unimi.dsi.fastutil.ints.IntArrayList;
@@ -29,6 +30,7 @@
  import org.apache.logging.log4j.core.config.Configurator;
  import org.matsim.api.core.v01.Id;
  import org.matsim.api.core.v01.IdMap;
+ import org.matsim.api.core.v01.Scenario;
  import org.matsim.api.core.v01.population.Person;
  import org.matsim.api.core.v01.population.Population;
  import org.matsim.core.population.PopulationUtils;
@@ -56,7 +58,7 @@
 		 name = "vacEff",
 		 description = "Calculate vaccination effectiveness from events"
  )
- public class VaccinationEffectiveness implements Callable<Integer> {
+ public class VaccinationEffectiveness implements OutputAnalysis {
 
 	 private static final Logger log = LogManager.getLogger(VaccinationEffectiveness.class);
 
@@ -76,6 +78,10 @@
 	 private String district;
 
 	 private Population population;
+
+	 @Inject
+	 private Scenario scenario;
+
 	 private final Random rnd = new Random(1234);
 
 	 public static void main(String[] args) {
@@ -98,7 +104,7 @@
 
 		 AnalysisCommand.forEachScenario(output, scenario -> {
 			 try {
-				 calcValues(scenario);
+				 analyzeOutput(scenario);
 			 } catch (IOException e) {
 				 log.error("Failed processing {}", scenario, e);
 			 }
@@ -109,10 +115,13 @@
 		 return 0;
 	 }
 
+	 @Override
+	 public void analyzeOutput(Path output) throws IOException {
 
-	 private void calcValues(Path scenario) throws IOException {
+		 if (scenario != null)
+			 population = scenario.getPopulation();
 
-		 String id = AnalysisCommand.getScenarioPrefix(scenario);
+		 String id = AnalysisCommand.getScenarioPrefix(output);
 
 		 Int2IntMap vacWildtypePerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap vacAlphaPerPeriod = new Int2IntOpenHashMap();
@@ -128,7 +137,7 @@
 		 Int2IntMap cgNotInfectedPerPeriod = new Int2IntOpenHashMap();
 
 
-		 BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "post.ve.tsv"));
+		 BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "post.ve.tsv"));
 
 		 bw.write("day");
 		 bw.write("\t");
@@ -145,7 +154,7 @@
 
 		 Handler handler = new Handler(data, startDate);
 
-		 AnalysisCommand.forEachEvent(scenario, s -> {
+		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
 
 		 int days4aggregation = 14;
@@ -424,7 +433,7 @@
 
 		 bw.close();
 
-		 log.info("Calculated results for scenario {}", scenario);
+		 log.info("Calculated results for output {}", output);
 
 	 }
 

@@ -29,6 +29,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
+import org.matsim.episim.analysis.OutputAnalysis;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -41,10 +42,7 @@ import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
@@ -298,6 +296,13 @@ public interface BatchRun<T> {
 	 */
 	@Nullable
 	Config prepareConfig(int id, T params);
+
+	/**
+	 * Return classes of {@link OutputAnalysis} that should be executed on each individual run.
+	 */
+	default Collection<OutputAnalysis> postProcessing() {
+		return List.of();
+	}
 
 	/**
 	 * Write additionally needed files to {@code directory}, if any are needed.
