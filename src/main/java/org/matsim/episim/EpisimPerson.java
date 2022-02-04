@@ -568,6 +568,13 @@ public final class EpisimPerson implements Attributable {
 	public boolean hadVaccinationType(VaccinationType type) {
 		return vaccinations.contains(type);
 	}
+	
+	/**
+	 * Return whether a person was infected with certain virus strain.
+	 */
+	public boolean hadStrain(VirusStrain strain) {
+		return virusStrains.contains(strain);
+	}
 
 	/**
 	 * Days elapsed since person was put into quarantine.
