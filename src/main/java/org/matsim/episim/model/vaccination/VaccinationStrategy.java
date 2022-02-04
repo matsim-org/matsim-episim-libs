@@ -32,12 +32,13 @@ public class VaccinationStrategy implements VaccinationModel {
 			List<EpisimPerson> candidates = persons.values().stream()
 					.filter(EpisimPerson::isVaccinable)
 					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration, 90))
+					.filter(p -> !p.hadVaccinationType(VaccinationType.omicronUpdate))
 					.collect(Collectors.toList());
 
 
 			Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
 
-			int vaccinationsLeft = (int) 0.01 * persons.size();
+			int vaccinationsLeft = (int) (0.01 * persons.size());
 			int n = Math.min(candidates.size(), vaccinationsLeft);
 
 			for (int i = 0; i < n; i++) {
