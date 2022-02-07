@@ -334,11 +334,16 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-04-01"), 1.0, "educ_higher");
 
 		builder.restrict(LocalDate.parse("2022-04-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-04-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-08-09"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 
 		{
@@ -409,6 +414,15 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
 			builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
 			builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
+			
+			builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
+			builder.restrict(LocalDate.parse("2022-06-27"), 0.78 * 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2022-08-09"), 0.78, "work", "business");
+			builder.restrict(LocalDate.parse("2022-10-04"), 0.78 * 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2022-10-15"), 0.78, "work", "business");
+			builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
 
 
 		}
