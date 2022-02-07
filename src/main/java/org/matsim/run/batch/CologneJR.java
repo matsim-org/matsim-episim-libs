@@ -36,7 +36,7 @@ import java.util.*;
  */
 public class CologneJR implements BatchRun<CologneJR.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 	int runCount = 0;
 
 
@@ -395,19 +395,19 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
 		}
 
-		//STRAIN_A
+//		STRAIN_A - aka BA.5
 //		double mutAInf = 1.0;
-//		if (mutAInf > 0) {
-//			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
-//			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
-//			infPerDayStrainA.put(LocalDate.parse(params.mutDate), 4);
-//			infPerDayStrainA.put(LocalDate.parse(params.mutDate).plusDays(7), 1);
-//			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * ba1Inf * ba2Inf * mutAInf);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.3);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.3);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.35);
-//		}
+		if (params.mutAInf > 0) {
+			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
+			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayStrainA.put(LocalDate.parse(params.mutDate), 4);
+			infPerDayStrainA.put(LocalDate.parse(params.mutDate).plusDays(7), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * ba1Inf * ba2Inf * params.mutAInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.3);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.3);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.35);
+		}
 
 
 		//vaccinations
@@ -683,20 +683,23 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //		@Parameter({1., 6.})
 //		public double mutEscOm;
 //
-//		@StringParameter({"2022-07-01","2022-10-01"})
-//		public String mutDate;
+		@StringParameter({"2022-04-10","2022-04-20","2022-05-01","2022-05-10","2022-05-20"})
+		public String mutDate;
+
+		@Parameter({1.0, 1.2, 1.4, 1.6})
+		double mutAInf;
 
 		// vaccination campaign
-		@StringParameter({"2022-09-01","2022-10-01"})
+		@StringParameter({"2022-09-01"})
 		public String vacDate;
 
-		@StringParameter({"mRNA", "omicronUpdate"})
+		@StringParameter({"mRNA"})
 		public String vacType;
 
-		@Parameter({0.0, 0.5, 1.0})
+		@Parameter({0.0})
 		double compl;
 
-		@IntParameter({5, 18, 50, 70})
+		@IntParameter({5})
 		int minAge;
 
 		@Parameter({3.0})
