@@ -34,9 +34,10 @@ public enum VirusStrain {
 //	OMICRON,
 	OMICRON_BA1,
 	
-	OMICRON_BA2
+	OMICRON_BA2,
 	
-//	BA2
-
+	STRAIN_A,
+	
+	STRAIN_B	
 
 }
