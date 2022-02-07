@@ -226,6 +226,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 					antibodyLevel = initalAntibodies.get(vaccinationType);
 				else {
 					antibodyLevel *= antibodyFactor.get(vaccinationType);
+					antibodyLevel = Math.max(initalAntibodies.get(vaccinationType), antibodyLevel);
 				}
 				antibodyLevel = Math.min(20.0, antibodyLevel);
 			}
