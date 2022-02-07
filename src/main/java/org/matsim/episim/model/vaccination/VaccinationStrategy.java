@@ -28,7 +28,7 @@ public class VaccinationStrategy implements VaccinationModel {
 	@Override
 	public void handleVaccination(Map<Id<Person>, EpisimPerson> persons, LocalDate date, int iteration, double now) {
 
-		if (date.isAfter(config.start) && date.isBefore(config.start.plusDays(50))) {
+		if (date.isAfter(config.start) && date.isBefore(config.start.plusDays(config.campaignDuration))) {
 			List<EpisimPerson> candidates = persons.values().stream()
 					.filter(EpisimPerson::isVaccinable)
 					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration, 90))
@@ -57,9 +57,14 @@ public class VaccinationStrategy implements VaccinationModel {
 		 * Start of vaccination campaign.
 		 */
 		private final LocalDate start;
+		/**
+		 * Duration of vaccination campaign.
+		 */
+		private final int campaignDuration;
 
-		public Config(LocalDate start) {
+		public Config(LocalDate start, int campaignDuration) {
 			this.start = start;
+			this.campaignDuration = campaignDuration;
 		}
 	}
 
