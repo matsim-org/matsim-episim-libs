@@ -46,17 +46,17 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 			@Override
 			protected void configure() {
 
-				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
-
-				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
-				LocalDate oVacStartDate = null;
-				int campaignDuration = 0;
-				if (params != null) {
-					oVacStartDate = LocalDate.parse(params.oVac);
-					campaignDuration = params.dur;
-				}
-
-				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration));
+//				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
+//
+//				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
+//				LocalDate oVacStartDate = null;
+//				int campaignDuration = 0;
+//				if (params != null) {
+//					oVacStartDate = LocalDate.parse(params.oVac);
+//					campaignDuration = params.dur;
+//				}
+//
+//				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration));
 			}
 		});
 	}
@@ -80,7 +80,9 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),//TODO: check hard coded cologne
+				new VaccinationEffectiveness().withArgs("--input ../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input",
+						"--population-file /be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz",
+						"--district Berlin"),//TODO: clean up & check this functions properly
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected")
 		);
@@ -99,9 +101,9 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-//		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor; // TODO: 0.96, 0.98,1.0,1.2,1.4 )//* 0.96);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
-		// ~1000 runs is max
+
 
 
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20210917/" + params.seed + "-270-2020-11-20.zip");
@@ -119,28 +121,33 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
-		builder.restrict(LocalDate.parse("2021-12-20"), Restriction.ofVaccinatedRf(0.75), "leisure"); //
+		builder.restrict(LocalDate.parse("2021-12-20"), Restriction.ofVaccinatedRf(0.75), "leisure"); //TODO: does this make sense?
 //		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(params.leis), "leisure");
 
-		//2G
-		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure"); // TODO: when did 2G start in Berlin
+		//2G: https://www.berlin.de/en/news/coronavirus/7115029-6098215-2g-rule-for-retail-from-saturday.en.html
+		builder.restrict(LocalDate.parse("2021-11-27"), Restriction.ofSusceptibleRf(0.75), "leisure");
 //		builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofSusceptibleRf(params.leis), "leisure");
 
 
 		// schools TODO: check end of vacation Berlin, & mask restrictions
 		double schoolFac = 0.5;
-		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
+		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other"); //TODO: is this accurate?
+
+		//Maskenpflicht für Schule im Schuljahr 2021/2022
 		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		//Maskenpflicht für Grundschule entfaellt (bis einschliesslich 6. Klasse): https://www.berlin.de/sen/bjf/service/presse/pressearchiv-2021/pressemitteilung.1130780.php
+		builder.restrict(LocalDate.parse("2021-09-28"), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary");
+		//Maskenpflicht für Grundschule wieder eingefuert: https://www.berlin.de/sen/bjf/service/presse/pressearchiv-2021/pressemitteilung.1143667.php
+		builder.restrict(LocalDate.parse("2021-11-08"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary");
+
 
 //		if (params.school.equals("protected")) {
 //			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 //			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 //		}
 
-		// TODO: local remaining fraction removed Restriction 539
+		// TODO: weird warning: local remaining fraction removed (Restriction, line 539)
 //		builder.restrict(restrictionDate, 0.78, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
 
 		episimConfig.setPolicy(builder.build());
@@ -159,7 +166,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		inputDays.put(LocalDate.parse("2022-01-01"), DayOfWeek.SUNDAY);
 		episimConfig.setInputDays(inputDays);
 
-		//mutations // TODO: leave for now,
+		//mutations // TODO: leave for now, but update in future
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
@@ -180,24 +187,28 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(1), 1);
 
 
-		//disease import 2021
+		//disease import of MUTB (Delta) in 2021
 		double impFacSum = 5.0;
 		int imp = 16;
-//		double cologneFactor = 0.5; // TODO: remove factor
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacSum, LocalDate.parse("2021-07-03").plusDays(0),
-				LocalDate.parse("2021-07-25").plusDays(0), 1, 48); // summer vacation: beginning -> middle
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacSum, LocalDate.parse("2021-07-26").plusDays(0),
-				LocalDate.parse("2021-08-17").plusDays(0), 48, imp); // summer vacation: middle -> end TODO
 
-		infPerDayMUTB.put(LocalDate.parse("2021-08-18"), imp); //TODO: date in last row  before + 1
+		//Sommerferien
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, impFacSum, LocalDate.parse("2021-06-24").plusDays(0),
+				LocalDate.parse("2021-07-17").plusDays(0), 1, 48); // summer vacation: beginning -> middle
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, impFacSum, LocalDate.parse("2021-07-18").plusDays(0),
+				LocalDate.parse("2021-08-09").plusDays(0), 48, imp); // summer vacation: middle -> end TODO:check
 
+		infPerDayMUTB.put(LocalDate.parse("2021-08-10"), imp);
+
+		//Herbstferien
 		double impFacOct = 2.0;
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacOct, LocalDate.parse("2021-10-09").plusDays(0),
-				LocalDate.parse("2021-10-16").plusDays(0), imp, imp); //TODO check fall vacation
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * impFacOct, LocalDate.parse("2021-10-17").plusDays(0),
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, impFacOct, LocalDate.parse("2021-10-09").plusDays(0),
+				LocalDate.parse("2021-10-16").plusDays(0), imp, imp);
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, impFacOct, LocalDate.parse("2021-10-17").plusDays(0),
 				LocalDate.parse("2021-10-24").plusDays(0), imp, 1);
-		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1); //TODO: date in last row  before + 1
-		;
+		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1);
+
+		//TODO: why don't we include other vacations like xmas?
+
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
 		double deltaInf = 2.0;
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
@@ -265,7 +276,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
-		double population = 2_352_480; // TODO
+		double population = 4_800_000; // pop of Belrin
 		vaccinations.put(LocalDate.parse("2022-01-17"), (int) (0.0035 * population / 7)); // TODO: maybe change? // 0.0035 = 0.3% of pop vaxxed per week
 		vaccinations.put(LocalDate.parse("2022-06-30"), 0);
 
@@ -287,7 +298,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
-		vaccinationConfig.setBeta(params.beta); // TODO: set to 1.0
+		vaccinationConfig.setBeta(params.beta);
 
 		configureBooster(vaccinationConfig, 1.0, 3); // TODO go into here
 
@@ -301,7 +312,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 
-		List<String> actsList = new ArrayList<String>();
+		List<String> actsList = new ArrayList<>();
 		actsList.add("leisure");
 		actsList.add("work");
 		actsList.add("business");
@@ -659,7 +670,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
 
-		boosterVaccinations.put(LocalDate.parse("2022-01-17"), (int) (2_352_480 * 0.04 * boosterSpeed / 7)); // TODO Population, maybe change date to 7.2
+		boosterVaccinations.put(LocalDate.parse("2022-01-17"), (int) (4_800_000 * 0.04 * boosterSpeed / 7)); // TODO maybe use new booster data: change date to today
 		boosterVaccinations.put(LocalDate.parse("2022-06-30"), 0);
 
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
@@ -679,9 +690,13 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 	}
 
 	public static final class Params {
+		// ~1000 runs is max
 
 		@GenerateSeeds(5)
 		public long seed;
+
+		@Parameter({0.96, 0.98, 1.0, 1.2, 1.4})
+		double thetaFactor;
 
 //		@Parameter({2.0})
 //		double oInf;
@@ -714,26 +729,26 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 //		@Parameter({0.75})
 //		double leisUnv;
 //
-		@Parameter({0.75, 1.0})
-		double leis;
+//		@Parameter({0.75, 1.0})
+//		double leis;
 
-		@StringParameter({"current", "protected"})
-		String school;
+//		@StringParameter({"current", "protected"})
+//		String school;
+//
+//		@StringParameter({"yes", "no"})
+//		String strainA;
+//
+//		@StringParameter({"yes", "no"})
+//		String strainB;
+//
+//		@StringParameter({"2022-04-01", "2022-07-01", "2022-10-01"})
+//		String date;
 
-		@StringParameter({"yes", "no"})
-		String strainA;
-
-		@StringParameter({"yes", "no"})
-		String strainB;
-
-		@StringParameter({"2022-04-01", "2022-07-01", "2022-10-01"})
-		String date;
-
-		@StringParameter({"2022-03-01", "2099-01-01"})
-		String oVac;
-
-		@IntParameter({50, 80})
-		int dur;
+//		@StringParameter({"2022-03-01", "2099-01-01"})
+//		String oVac;
+//
+//		@IntParameter({50, 80})
+//		int dur;
 
 	}
 
