@@ -221,32 +221,32 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.5 * 1.25);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(0.5);
 
-		//STRAIN_A
-		if (params.strainA.equals("yes")) {
-			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
-			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayStrainA.put(LocalDate.parse(params.date), 4);
-			infPerDayStrainA.put(LocalDate.parse(params.date).plusDays(6), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * oInf * params.ba2Inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.5 * 1.25);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.5 * 1.25);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.5);
-		}
-
-		
-		//STRAIN_B
-		if (params.strainB.equals("yes")) {
-			Map<LocalDate, Integer> infPerDayStrainB = new HashMap<>();
-			infPerDayStrainB.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayStrainB.put(LocalDate.parse(params.date), 4);
-			infPerDayStrainB.put(LocalDate.parse(params.date).plusDays(6), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_B, infPerDayStrainB);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setInfectiousness(deltaInf * oInf * params.ba2Inf * 2);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(0.5 * 1.25);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(0.5);
-		}
+//		//STRAIN_A
+//		if (params.strainA.equals("yes")) {
+//			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
+//			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
+//			infPerDayStrainA.put(LocalDate.parse(params.date), 4);
+//			infPerDayStrainA.put(LocalDate.parse(params.date).plusDays(6), 1);
+//			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * oInf * params.ba2Inf);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.5 * 1.25);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.5);
+//		}
+//
+//		
+//		//STRAIN_B
+//		if (params.strainB.equals("yes")) {
+//			Map<LocalDate, Integer> infPerDayStrainB = new HashMap<>();
+//			infPerDayStrainB.put(LocalDate.parse("2020-01-01"), 0);
+//			infPerDayStrainB.put(LocalDate.parse(params.date), 4);
+//			infPerDayStrainB.put(LocalDate.parse(params.date).plusDays(6), 1);
+//			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_B, infPerDayStrainB);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setInfectiousness(deltaInf * oInf * params.ba2Inf * 2);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(0.5 * 1.25);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(0.5);
+//		}
 
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -712,11 +712,11 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 		@StringParameter({"current", "protected"})
 		String school;
 		
-		@StringParameter({"yes", "no"})
-		String strainA;
-		
-		@StringParameter({"yes", "no"})
-		String strainB;
+//		@StringParameter({"yes", "no"})
+//		String strainA;
+//		
+//		@StringParameter({"yes", "no"})
+//		String strainB;
 		
 		@StringParameter({"2022-04-01", "2022-07-01", "2022-10-01"})
 		String date;
