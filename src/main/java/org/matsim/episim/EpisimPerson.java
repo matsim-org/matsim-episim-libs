@@ -202,6 +202,11 @@ public final class EpisimPerson implements Attributable {
 	 * Strain of the virus the person was infected with.
 	 */
 	private final List<VirusStrain> virusStrains = new ArrayList<>();
+	
+	/**
+	 * From antibody model. 
+	 */
+	private double immunityFactor = 1.0;
 
 	/**
 	 * Lookup age from attributes.
@@ -294,6 +299,7 @@ public final class EpisimPerson implements Attributable {
 		in.readBoolean();
 
 		susceptibility = in.readDouble();
+		immunityFactor = in.readDouble();
 	}
 
 	/**
@@ -349,6 +355,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeBoolean(traceable);
 		out.writeBoolean(vaccinable);
 		out.writeDouble(susceptibility);
+		out.writeDouble(immunityFactor);
 	}
 
 	public Id<Person> getPersonId() {
@@ -517,6 +524,14 @@ public final class EpisimPerson implements Attributable {
 
 	public double getSusceptibility() {
 		return susceptibility;
+	}
+	
+	public void setImmunityFactor(double immunityFactor) {
+		this.immunityFactor = immunityFactor;
+	}
+
+	public double getImmunityFactor() {
+		return immunityFactor;
 	}
 
 	/**
