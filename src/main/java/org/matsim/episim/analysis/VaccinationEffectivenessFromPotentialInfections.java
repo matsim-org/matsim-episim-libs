@@ -134,6 +134,8 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 		private final Object2IntMap<Id<Person>> vaccinationDay = new Object2IntOpenHashMap<>();
 		private final Map<Id<Person>, String> vaccine = new HashMap<>();
 		private final Set<Id<Person>> infected = new HashSet<>();
+		private final Set<Id<Person>> threeTimesVaccinated = new HashSet<>();
+
 
 		private final Map<String, Int2DoubleMap> vac = new HashMap<>();
 		private final Map<String, Int2DoubleMap> unVac = new HashMap<>();
@@ -151,8 +153,12 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 
 
 			String s = event.getVaccinationType().toString();
-			if (event.getReVaccination())
+			if (event.getN() == 2)
 				s += "_Booster";
+			if (event.getN() > 2) {
+				threeTimesVaccinated.add(event.getPersonId());
+				return;
+			}
 
 
 			vaccinationDay.put(event.getPersonId(), day);
@@ -171,6 +177,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 				return;
 
 			if (infected.contains(event.getPersonId()))
+				return;
+			
+			if (threeTimesVaccinated.contains(event.getPersonId()))
 				return;
 
 			String s = vaccine.get(event.getPersonId());
