@@ -180,8 +180,8 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	@Singleton
 	public Config config() {
 
-		if (this.sample != 25 && this.sample != 100)
-			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		//		if (this.sample != 25 && this.sample != 100)
+		//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		//general config
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -224,11 +224,11 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(0.5);
 		episimConfig.setThreads(8);
-		//		episimConfig.setDaysInfectious(Integer.MAX_VALUE); // TODO: from cologne, should this be included?
+		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
 		//progression model
 		//		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
-		episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build()); // TODO: why does this immediately override?
+		episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());
 
 
 		//snapshot
@@ -274,8 +274,8 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210802";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210822.csv")); // TODO: update
+		String untilDate = "20220204";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 
 		//location based restrictions
 		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
@@ -346,7 +346,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		if (this.weatherModel != WeatherModel.no) {
 
 			SnzProductionScenario.configureWeather(episimConfig, weatherModel,
-					INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(), // TODO: need new weather file DownloadWeatherData
+					INPUT.resolve("tempelhofWeatherUntil20220208.csv").toFile(),
 					INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile())
 			;
 

@@ -137,8 +137,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 
 		if (restrictUniversities ) {
 			restrictions.restrict("2020-03-14", 0., "educ_higher")
-			.restrict("2020-05-11", 0.2, "educ_higher")
-			;
+			.restrict("2020-05-11", 0.2, "educ_higher");
 			//TODO: what happened to higher education in 2021/2022
 		}
 
@@ -314,7 +313,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210709.csv"));
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 		}
 
 		public void setIntroductionPeriod(long introductionPeriod) {
