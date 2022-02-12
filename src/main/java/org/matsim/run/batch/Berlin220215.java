@@ -46,17 +46,17 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 			@Override
 			protected void configure() {
 
-//				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
-//
-//				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
-//				LocalDate oVacStartDate = null;
-//				int campaignDuration = 0;
-//				if (params != null) {
-//					oVacStartDate = LocalDate.parse(params.oVac);
-//					campaignDuration = params.dur;
-//				}
-//
-//				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration));
+				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
+
+				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
+				LocalDate oVacStartDate = null;
+				int campaignDuration = 0;
+				if (params != null) {
+					oVacStartDate = LocalDate.parse(params.oVac);
+					campaignDuration = params.dur;
+				}
+
+				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration));
 			}
 		});
 	}
@@ -69,6 +69,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
+//				.setSample(1)
 				.build();
 	}
 
@@ -80,16 +81,20 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs("--input ../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input",
-						"--population-file /be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz",
-						"--district Berlin"),//TODO: clean up & check this functions properly
+				new VaccinationEffectiveness().withArgs("--district", "Berlin"),//"--input","../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input",
+//				"--population-file", "/be_2020_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz",
+//				"--district", "Berlin"),//TODO: clean up & check this functions properly
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected")
 		);
 	}
 
+//	boolean oneRun = true;
 	@Override
 	public Config prepareConfig(int id, Params params) {
+
+//		if(!oneRun) return null;
+//		else oneRun = false;
 
 		LocalDate restrictionDate = LocalDate.parse("2022-03-01");
 
@@ -101,7 +106,14 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+		episimConfig.setCalibrationParameter(1.0e-05);
+
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.baseTheta * params.thetaFactor); // 0.83 important b/c days infectious was turned up
+
+
+		episimConfig.setDaysInfectious(params.daysInfectious); //TODO CHANGE BACK
+
+
 
 
 
@@ -119,6 +131,9 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+
+		//leisure factor:
+		builder.applyToRf("2020-10-15", "2020-12-14", (d, e) -> 1 - params.leisureFactor * (1 - e), "leisure");
 
 
 		builder.restrict(LocalDate.parse("2021-12-20"), Restriction.ofVaccinatedRf(0.75), "leisure"); //TODO: does this make sense?
@@ -141,6 +156,10 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		//Maskenpflicht für Grundschule wieder eingefuert: https://www.berlin.de/sen/bjf/service/presse/pressearchiv-2021/pressemitteilung.1143667.php
 		builder.restrict(LocalDate.parse("2021-11-08"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary");
 
+		//university
+		builder.restrict("2021-10-18", 1.0, "educ_higher");
+		builder.restrict("2021-12-20", 0.2, "educ_higher");
+		builder.restrict("2022-01-02", 1.0, "educ_higher");
 
 //		if (params.school.equals("protected")) {
 //			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
@@ -169,22 +188,32 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		//mutations // TODO: leave for now, but update in future
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
+		//alpha (b117)
+//		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
+//		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
+
+//		infPerDayB117.put(LocalDate.parse("2021-01-16"), 20); // first day of mut
+//		infPerDayB117.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
+//		infPerDayB117.put(LocalDate.parse("2020-12-31"), 1);
+
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
-
-		infPerDayB117.put(LocalDate.parse("2021-01-16"), 20); // first day of mut
-		infPerDayB117.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
-		infPerDayB117.put(LocalDate.parse("2020-12-31"), 1);
+		infPerDayB117.put(LocalDate.parse("2020-12-05"), 1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.55);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
-		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>(); // delta
+		//delta
+//		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>(); // delta
+//		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
+//		infPerDayMUTB.put(LocalDate.parse("2021-06-21"), 10); // maybe change
+//		infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(1), 1);
+		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse("2021-06-21"), 10); // maybe change
-		infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(1), 1);
+		infPerDayMUTB.put(LocalDate.parse("2021-05-01"), 1);
 
 
 		//disease import of MUTB (Delta) in 2021
@@ -275,7 +304,10 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		for (int i = 12; i <= 120; i++) vaccinationCompliance.put(i, 1.0);
 		vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
 
-		Map<LocalDate, Integer> vaccinations = new HashMap<>();
+//		Map<LocalDate, Integer> vaccinations = new HashMap<>();
+		Map<LocalDate, Integer> vaccinations = new HashMap<>(vaccinationConfig.getVaccinationCapacity());
+
+
 		double population = 4_800_000; // pop of Belrin
 		vaccinations.put(LocalDate.parse("2022-01-17"), (int) (0.0035 * population / 7)); // TODO: maybe change? // 0.0035 = 0.3% of pop vaxxed per week
 		vaccinations.put(LocalDate.parse("2022-06-30"), 0);
@@ -695,8 +727,17 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
+		@Parameter({4,Integer.MAX_VALUE})
+		int daysInfectious;
+
+		@Parameter({0.83,1.})
+		double baseTheta;
+
 		@Parameter({0.96, 0.98, 1.0, 1.2, 1.4})
 		double thetaFactor;
+
+		@Parameter({1.0,1.3,1.6})
+		double leisureFactor;
 
 //		@Parameter({2.0})
 //		double oInf;
@@ -744,11 +785,11 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 //		@StringParameter({"2022-04-01", "2022-07-01", "2022-10-01"})
 //		String date;
 
-//		@StringParameter({"2022-03-01", "2099-01-01"})
-//		String oVac;
-//
-//		@IntParameter({50, 80})
-//		int dur;
+		@StringParameter({"2099-01-01"})//"2022-03-01", "2099-01-01"})
+		String oVac;
+
+		@IntParameter({50})//, 80})
+		int dur;
 
 	}
 
@@ -757,7 +798,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 				RunParallel.OPTION_SETUP, Berlin220215.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(500),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(30),
 				RunParallel.OPTION_METADATA
 		};
 
