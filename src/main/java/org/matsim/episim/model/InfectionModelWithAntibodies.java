@@ -113,7 +113,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		);
 	}
 
-	private static double getAk50(EpisimPerson target, VirusStrain strain, final Map<VirusStrain, Double> AK50_PERSTRAIN, int numInfections) {
+	static double getAk50(EpisimPerson target, VirusStrain strain, final Map<VirusStrain, Double> AK50_PERSTRAIN, int numInfections) {
 		double ak50 = AK50_PERSTRAIN.get(strain);
 		
 		if (strain == VirusStrain.SARS_CoV_2 || strain == VirusStrain.ALPHA || strain == VirusStrain.DELTA) 
