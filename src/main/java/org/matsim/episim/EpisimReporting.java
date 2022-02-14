@@ -300,8 +300,14 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 */
 	double calculateAntibodyLevelPerPerson(Collection<EpisimPerson> persons, int iteration) {
 		double avgAntibodyLevel = 0.0;
+		NavigableMap<VirusStrain, Double> ak50PerStrain = vaccinationConfig.getAk50PerStrain();
+		
+		//antibody model not configured
+		if (ak50PerStrain.size() == 0)
+			return 0.0;
+		
 		for (EpisimPerson p : persons) {
-			double antibodyLevel = InfectionModelWithAntibodies.getRelativeAntibodyLevel(p, iteration, p.getNumVaccinations(), p.getNumInfections(), VirusStrain.OMICRON_BA1, vaccinationConfig.getAk50PerStrain());
+			double antibodyLevel = InfectionModelWithAntibodies.getRelativeAntibodyLevel(p, iteration, p.getNumVaccinations(), p.getNumInfections(), VirusStrain.OMICRON_BA1, ak50PerStrain);
 			avgAntibodyLevel = avgAntibodyLevel + antibodyLevel;
 		}
 		avgAntibodyLevel = avgAntibodyLevel / persons.size();
