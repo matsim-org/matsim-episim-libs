@@ -24,6 +24,7 @@ public class InfectionModelWithAntibodiesTest{
 
 	@Test
 	public void roesslerEtAl(){
+		// http://dx.doi.org/10.1101/2022.02.01.22270263 Fig.1
 
 		EpisimPerson infector = EpisimTestUtils.createPerson();
 
@@ -44,9 +45,7 @@ public class InfectionModelWithAntibodiesTest{
 		recoveredPerson.checkInfection();
 
 		{
-			// http://dx.doi.org/10.1101/2022.02.01.22270263 Fig.1
-
-			// I use the top left (vaccinated; against wild variant) as base:
+			// Fig.1: I use the top left (vaccinated; against wild variant) as base:
 			double nAbBase;
 			{
 				EpisimPerson basePerson = EpisimTestUtils.createPerson();
@@ -58,6 +57,7 @@ public class InfectionModelWithAntibodiesTest{
 						VirusStrain.SARS_CoV_2 )
 								 / InfectionModelWithAntibodies.getAk50( basePerson, VirusStrain.SARS_CoV_2, ak50PerStrain, basePerson.getNumInfections() );
 			}
+			
 			// Fig.1 A (vaccinated + omicron):
 			EpisimPerson person = EpisimTestUtils.createPerson();
 			person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
