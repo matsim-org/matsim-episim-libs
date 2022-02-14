@@ -225,8 +225,9 @@ public class InfectionModelWithAntibodiesTest{
 
 	}
 	private double relativeAbLevel( Map<VirusStrain, Double> ak50PerStrain, EpisimPerson basePerson, VirusStrain sars_coV_2, int iteration ){
-		return InfectionModelWithAntibodies.getAntibodyLevel( basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(),
-				sars_coV_2 )
-				       / InfectionModelWithAntibodies.getAk50( basePerson, sars_coV_2, ak50PerStrain, basePerson.getNumInfections() );
+//		return InfectionModelWithAntibodies.getAntibodyLevel( basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(),
+//				sars_coV_2 )
+//				       / InfectionModelWithAntibodies.getAk50( basePerson, sars_coV_2, ak50PerStrain, basePerson.getNumInfections() );
+		return InfectionModelWithAntibodies.getRelativeAntibodyLevel(basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(), sars_coV_2, ak50PerStrain);
 	}
 }
