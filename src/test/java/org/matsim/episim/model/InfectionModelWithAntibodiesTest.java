@@ -34,10 +34,7 @@ public class InfectionModelWithAntibodiesTest{
 		ak50PerStrain.put( VirusStrain.STRAIN_B, 3.0 );
 
 		EpisimPerson recoveredPerson = EpisimTestUtils.createPerson();
-		recoveredPerson.possibleInfection( new EpisimInfectionEvent( 0, recoveredPerson.getPersonId(), infector.getPersonId(),
-				null, "dummyInfectionType", 2, VirusStrain.DELTA, 1. ) );
-		recoveredPerson.checkInfection();
-
+		EpisimTestUtils.infectPerson( recoveredPerson, VirusStrain.DELTA, 0 );
 		{
 			// I use the 658 against the wild variant as base:
 			double nAbBase;
@@ -69,6 +66,28 @@ public class InfectionModelWithAntibodiesTest{
 
 			// yyyy more to be added here ...
 
+			{
+				// the following are to print out antobody levels, but they do not test anything as of now.
+				person = EpisimTestUtils.createPerson();
+				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
+
+				VirusStrain strain = VirusStrain.SARS_CoV_2;
+				log.warn( "double vaccination against " + strain.name() + "=" + relativeAbLevel( ak50PerStrain, person, strain, 100 ) );
+
+				strain = VirusStrain.DELTA;
+				log.warn( "double vaccination against " + strain.name() + "=" + relativeAbLevel( ak50PerStrain, person, strain, 100 ) );
+
+				strain = VirusStrain.OMICRON_BA1;
+				log.warn( "double vaccination against " + strain.name() + "=" + relativeAbLevel( ak50PerStrain, person, strain, 100 ) );
+
+				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 200 );
+				strain = VirusStrain.DELTA;
+				log.warn( "triple vaccination against " + strain.name() + "=" + relativeAbLevel( ak50PerStrain, person, strain, 300 ) );
+				strain = VirusStrain.OMICRON_BA1;
+				log.warn( "triple vaccination against " + strain.name() + "=" + relativeAbLevel( ak50PerStrain, person, strain, 300 ) );
+			}
+
+
 		}
 	}
 
@@ -90,28 +109,21 @@ public class InfectionModelWithAntibodiesTest{
 		ak50PerStrain.put(VirusStrain.STRAIN_B, 3.0 );
 
 		EpisimPerson recoveredPerson = EpisimTestUtils.createPerson();
-		recoveredPerson.possibleInfection( new EpisimInfectionEvent( 0, recoveredPerson.getPersonId(), infector.getPersonId(),
-				null, "dummyInfectionType", 2, VirusStrain.DELTA, 1. ) );
-		recoveredPerson.checkInfection();
-
+		EpisimTestUtils.infectPerson( recoveredPerson, VirusStrain.DELTA, 0 );
 		{
 			// Fig.1: I use the top left (vaccinated; against wild variant) as base:
 			double nAbBase;
 			{
 				EpisimPerson basePerson = EpisimTestUtils.createPerson();
 				basePerson.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
-				basePerson.possibleInfection(
-						new EpisimInfectionEvent( 50 * 3600 * 24., basePerson.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
-				basePerson.checkInfection();
+				EpisimTestUtils.infectPerson( basePerson, VirusStrain.OMICRON_BA1, 50 * 3600 * 24. );
 				nAbBase = relativeAbLevel( ak50PerStrain, basePerson, VirusStrain.SARS_CoV_2, 100 );
 			}
 			
 			// Fig.1 A (vaccinated + omicron):
 			EpisimPerson person = EpisimTestUtils.createPerson();
 			person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
-			person.possibleInfection(
-					new EpisimInfectionEvent( 50 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
-			person.checkInfection();
+			EpisimTestUtils.infectPerson( person, VirusStrain.OMICRON_BA1, 50 * 3600 * 24. );
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = relativeAbLevel( ak50PerStrain, person, strain, 100 );
@@ -135,8 +147,7 @@ public class InfectionModelWithAntibodiesTest{
 
 			// Fig1 B (only omicron):
 			person = EpisimTestUtils.createPerson();
-			person.possibleInfection( new EpisimInfectionEvent( 50 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
-			person.checkInfection();
+			EpisimTestUtils.infectPerson( person, VirusStrain.OMICRON_BA1, 50. * 24 * 3600. );
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = relativeAbLevel( ak50PerStrain, person, strain, 100 );
@@ -195,10 +206,8 @@ public class InfectionModelWithAntibodiesTest{
 
 			// Fig1 D (delta + omicron):
 			person = EpisimTestUtils.createPerson();
-			person.possibleInfection( new EpisimInfectionEvent( 0 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.DELTA, 1. ) );
-			person.checkInfection();
-			person.possibleInfection( new EpisimInfectionEvent( 50 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
-			person.checkInfection();
+			EpisimTestUtils.infectPerson( person, VirusStrain.DELTA, 0 * 24 * 3600. );
+			EpisimTestUtils.infectPerson( person, VirusStrain.OMICRON_BA1, 50 * 24 * 3600. );
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = relativeAbLevel( ak50PerStrain, person, strain, 100 );
