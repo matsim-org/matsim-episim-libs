@@ -1,8 +1,6 @@
 package org.matsim.episim.model;
 
 import com.google.inject.Inject;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.matsim.core.config.Config;
@@ -78,7 +76,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
 										   double contactIntensity, double jointTimeInContainer) {
-
+		
 		final Map<VirusStrain, Double> AK50_PERSTRAIN = vaccinationConfig.getAk50PerStrain();
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
@@ -89,26 +87,18 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
-		double antibodyLevelTarget = getAntibodyLevel(target, iteration, target.getNumVaccinations(), target.getNumInfections(), infector.getVirusStrain());
-		double antibodyLevelInfector = getAntibodyLevel(infector, iteration, infector.getNumVaccinations(), infector.getNumInfections() - 1, infector.getVirusStrain());
+		double relativeAntibodyLevelTarget = getRelativeAntibodyLevel(target, iteration, target.getNumVaccinations(), target.getNumInfections(), infector.getVirusStrain(), AK50_PERSTRAIN);
+		double relativeAntibodyLevelInfector = getRelativeAntibodyLevel(infector, iteration, infector.getNumVaccinations(), infector.getNumInfections() - 1, infector.getVirusStrain(), AK50_PERSTRAIN);
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
-		double ak50 = getAk50(target, infector.getVirusStrain(), AK50_PERSTRAIN, target.getNumInfections());
-		double ak50Infector = getAk50(infector, infector.getVirusStrain(), AK50_PERSTRAIN, infector.getNumInfections() - 1);
-
+		
 		//reduced infectivity if infector has antibodies
-		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + Math.pow(antibodyLevelInfector / ak50Infector, vaccinationConfig.getBeta()))));
+		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + Math.pow(relativeAntibodyLevelInfector, vaccinationConfig.getBeta()))));
 
-		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, ak50);
-
-		//quick fix!
-//		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
-//			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA1 || target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
-//				susceptibility = 0.0;
-//				break;
-//			}
-//		}
+		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, AK50_PERSTRAIN);
+		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
+		target.setImmunityFactor(immunityFactor);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()
@@ -117,19 +107,19 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				/ (1.0 + Math.pow(antibodyLevelTarget / ak50, vaccinationConfig.getBeta()))
+				* immunityFactor
 		);
 	}
 
 	private static double getAk50(EpisimPerson target, VirusStrain strain, final Map<VirusStrain, Double> AK50_PERSTRAIN, int numInfections) {
 		double ak50 = AK50_PERSTRAIN.get(strain);
-
-		if (strain == VirusStrain.SARS_CoV_2 || strain == VirusStrain.ALPHA || strain == VirusStrain.DELTA)
+		
+		if (strain == VirusStrain.SARS_CoV_2 || strain == VirusStrain.ALPHA || strain == VirusStrain.DELTA) 
 			return ak50;
-
-		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2))
+		
+		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)) 
 			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
-
+		
 		boolean hadStrain = false;
 		for (int idx = 0; idx<numInfections; idx++) {
 			VirusStrain infection = target.getVirusStrain(idx);
@@ -138,49 +128,32 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				break;
 			}
 		}
-
+		
 		if (hadStrain)
 			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
-
+		
 		return ak50;
 	}
 
-	static final Map<VaccinationType, Double> initalAntibodies = Map.of(
-			VaccinationType.generic, 1.0,
-			VaccinationType.natural, 1.0,
-			VaccinationType.mRNA, 2.0,
-			VaccinationType.omicronUpdate, 2.0,
-			VaccinationType.vector, 0.5
-	);
-
-	static final Map<VaccinationType, Double> antibodyFactor = Map.of(
-			VaccinationType.generic,10.0,
-			VaccinationType.natural, 10.0,
-			VaccinationType.mRNA, 20.0,
-			VaccinationType.omicronUpdate, 20.0,
-			VaccinationType.vector, 5.0
-	);
-
-
-	public static double getAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations, int numInfections, VirusStrain strain) {
-
+	public static double getRelativeAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations, int numInfections, VirusStrain strain, Map<VirusStrain, Double> AK50_PERSTRAIN) {
+		
 		//no antibodies
 		if (numInfections == 0 && numVaccinations == 0) {
 			return 0.0;
 		}
-
+		
 		//an omicron infection alone does not protect against other strains
 		if (numVaccinations == 0 && strain != VirusStrain.OMICRON_BA1 && strain != VirusStrain.OMICRON_BA2) {
 			boolean hadNonOmicronInfection = false;
 			for (int idx = 0; idx<numInfections; idx++) {
 				VirusStrain infection = target.getVirusStrain(idx);
-				if (infection != VirusStrain.OMICRON_BA1 && infection != VirusStrain.OMICRON_BA2)
+				if (infection != VirusStrain.OMICRON_BA1 && infection != VirusStrain.OMICRON_BA2) 
 					hadNonOmicronInfection = true;
 			}
 			if (!hadNonOmicronInfection)
 				return 0.0;
 		}
-
+		
 		//a ba.1 infection alone does not protect agains ba.2 and vice versa
 		if (numVaccinations == 0 && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)) {
 			boolean hadNonOmicronInfection = false;
@@ -189,9 +162,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 			for (int idx = 0; idx<numInfections; idx++) {
 				VirusStrain infection = target.getVirusStrain(idx);
-				if (infection == VirusStrain.OMICRON_BA1)
+				if (infection == VirusStrain.OMICRON_BA1) 
 					hadBa1Infection = true;
-				else if (infection == VirusStrain.OMICRON_BA2)
+				else if (infection == VirusStrain.OMICRON_BA2) 
 					hadBa2Infection = true;
 				else
 					hadNonOmicronInfection = true;
@@ -203,15 +176,30 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				if (strain == VirusStrain.OMICRON_BA2 && !hadBa2Infection) {
 					return 0.0;
 				}
-			}
+			}	
 		}
-
+		
 		double halfLife_days = 80.;
+		
+		final Map<VaccinationType, Double> initalAntibodies = Map.of(
+				VaccinationType.generic, 1.0,
+				VaccinationType.natural, 1.0,
+				VaccinationType.mRNA, 2.0,
+				VaccinationType.omicronUpdate, 2.0,
+				VaccinationType.vector, 0.5
+		);
 
+		final Map<VaccinationType, Double> antibodyFactor = Map.of(
+				VaccinationType.generic,10.0,
+				VaccinationType.natural, 10.0,
+				VaccinationType.mRNA, 20.0,
+				VaccinationType.omicronUpdate, 20.0,
+				VaccinationType.vector, 5.0
+		);
 
 		double antibodyLevel = 0.0;
-
-		Int2ObjectMap<VaccinationType> immunityEvents = new Int2ObjectOpenHashMap<>();
+		
+		Map<Integer, VaccinationType> immunityEvents = new HashMap<Integer, VaccinationType>();
 
 		for (int idx = 0; idx<numInfections; idx++) {
 			int daysSinceInfection = target.daysSinceInfection(idx, iteration);
@@ -226,7 +214,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		for (int day = 0; day<=iteration; day++) {
 			if (immunityEvents.containsKey(day)) {
 				VaccinationType vaccinationType = immunityEvents.get(day);
-				if (antibodyLevel == 0.0)
+				if (antibodyLevel == 0.0) 
 					antibodyLevel = initalAntibodies.get(vaccinationType);
 				else {
 					antibodyLevel *= antibodyFactor.get(vaccinationType);
@@ -234,19 +222,18 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				}
 				antibodyLevel = Math.min(20.0, antibodyLevel);
 			}
-			else
+			else 
 				antibodyLevel *= Math.pow(0.5, 1 / halfLife_days);
 		}
+		
+		double ak50 = getAk50(target, strain, AK50_PERSTRAIN, numInfections);
 
-		return antibodyLevel;
+		return antibodyLevel / ak50;
 	}
 
 	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
-	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, double ak50) {
-
-		final Map<VirusStrain, Double> AK50_PERSTRAIN = vaccinationConfig.getAk50PerStrain();
-
-
+	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, Map<VirusStrain, Double> AK50_PERSTRAIN) {
+		
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
@@ -254,15 +241,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
-		double antibodyLevel = getAntibodyLevel(target, iteration, 0, target.getNumInfections(), infector.getVirusStrain());
-
-		//quick fix!
-//		for (int infection = 1; infection <= target.getNumInfections(); infection++) {
-//			if ((target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA1 || target.getVirusStrain(infection-1) == VirusStrain.OMICRON_BA2) && target.daysSince(DiseaseStatus.recovered, iteration) <= 90) {
-//				susceptibility = 0.0;
-//				break;
-//			}
-//		}
+		double relativeAntibodyLevel = getRelativeAntibodyLevel(target, iteration, 0, target.getNumInfections(), infector.getVirusStrain(), AK50_PERSTRAIN);
+		
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()
 				* getInfectivity(infector)
@@ -270,7 +250,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				/ (1.0 + Math.pow(antibodyLevel / ak50, vaccinationConfig.getBeta()))
+				/ (1.0 + Math.pow(relativeAntibodyLevel, vaccinationConfig.getBeta()))
 
 		);
 	}

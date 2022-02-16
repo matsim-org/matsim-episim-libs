@@ -65,7 +65,8 @@
 	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
 	 private Path output;
 
-	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
+	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+//	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	 private String input;
 
 	 @CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
@@ -127,13 +128,14 @@
 		 Int2IntMap vacAlphaPerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap vacDeltaPerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap vacOmicronPerPeriod = new Int2IntOpenHashMap();
+		 Int2IntMap vacOmicronBA2PerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap vacNotInfectedPerPeriod = new Int2IntOpenHashMap();
-
 
 		 Int2IntMap cgWildtypePerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap cgAlphaPerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap cgDeltaPerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap cgOmicronPerPeriod = new Int2IntOpenHashMap();
+		 Int2IntMap cgOmicronBA2PerPeriod = new Int2IntOpenHashMap();
 		 Int2IntMap cgNotInfectedPerPeriod = new Int2IntOpenHashMap();
 
 
@@ -147,7 +149,9 @@
 		 bw.write("\t");
 		 bw.write("deltaVe");
 		 bw.write("\t");
-		 bw.write("omicronVe");
+		 bw.write("omicronBA1Ve");
+		 bw.write("\t");
+		 bw.write("omicronBA2Ve");
 		 bw.flush();
 
 		 Map<Id<Person>, Holder> data = new IdMap<>(Person.class, population.getPersons().size());
@@ -291,6 +295,9 @@
 						 if (strain == VirusStrain.OMICRON_BA1) {
 							 vacOmicronPerPeriod.merge(period, 1, Integer::sum);
 						 }
+						 if (strain == VirusStrain.OMICRON_BA2) {
+							 vacOmicronBA2PerPeriod.merge(period, 1, Integer::sum);
+						 }
 
 					 } else {
 						 vacNotInfectedPerPeriod.merge(period, 1, Integer::sum);
@@ -324,6 +331,9 @@
 
 						 if (strainTwin == VirusStrain.OMICRON_BA1) {
 							 cgOmicronPerPeriod.merge(period, 1, Integer::sum);
+						 }
+						 if (strainTwin == VirusStrain.OMICRON_BA2) {
+							 cgOmicronBA2PerPeriod.merge(period, 1, Integer::sum);
 						 }
 					 } else {
 						 cgNotInfectedPerPeriod.merge(period, 1, Integer::sum);
@@ -389,6 +399,11 @@
 
 			 if (vacOmicronPerPeriod.containsKey(i))
 				 omicronInfected = vacOmicronPerPeriod.get(i);
+			 
+			 int omicronBA2Infected = 0;
+
+			 if (vacOmicronBA2PerPeriod.containsKey(i))
+				 omicronBA2Infected = vacOmicronBA2PerPeriod.get(i);
 
 			 int cgNotInfected = 0;
 
@@ -414,11 +429,17 @@
 
 			 if (cgOmicronPerPeriod.containsKey(i))
 				 cgOmicronInfected = cgOmicronPerPeriod.get(i);
+			 
+			 int cgOmicronBA2Infected = 0;
+
+			 if (cgOmicronBA2PerPeriod.containsKey(i))
+				 cgOmicronBA2Infected = cgOmicronBA2PerPeriod.get(i);
 
 			 double wildtypeVe = (double) (cgWildtypeInfected - wildtypeInfected) / cgWildtypeInfected;
 			 double alphaVe = (double) (cgAlphaInfected - alphaInfected) / cgAlphaInfected;
 			 double deltaVe = (double) (cgDeltaInfected - deltaInfected) / cgDeltaInfected;
 			 double omicronVe = (double) (cgOmicronInfected - omicronInfected) / cgOmicronInfected;
+			 double omicronBA2Ve = (double) (cgOmicronBA2Infected - omicronBA2Infected) / cgOmicronBA2Infected;
 			 bw.write(String.valueOf(wildtypeVe));
 			 bw.write("\t");
 			 bw.write(String.valueOf(alphaVe));
@@ -426,6 +447,8 @@
 			 bw.write(String.valueOf(deltaVe));
 			 bw.write("\t");
 			 bw.write(String.valueOf(omicronVe));
+			 bw.write("\t");
+			 bw.write(String.valueOf(omicronBA2Ve));
 
 			 bw.flush();
 
@@ -520,11 +543,14 @@
 			 LocalDate date = startDate.plusDays(day);
 			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
 
-			 if (event.getN() > 1) {
+			 if (event.getN() == 2) {
 				 attr.boosterDate = date;
-			 } else {
+			 } else if (event.getN() == 1){
 				 attr.vaccinationDate = date;
 				 attr.vaccine = event.getVaccinationType();
+			 }
+			 else {
+				 //todo
 			 }
 		 }
 	 }
