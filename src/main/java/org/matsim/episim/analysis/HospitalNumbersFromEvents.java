@@ -20,6 +20,8 @@
 
 
  import com.google.inject.Inject;
+ import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
+ import it.unimi.dsi.fastutil.ints.Int2IntMap;
  import it.unimi.dsi.fastutil.ints.IntArrayList;
  import it.unimi.dsi.fastutil.ints.IntList;
  import org.apache.logging.log4j.Level;
@@ -31,12 +33,18 @@
  import org.matsim.api.core.v01.Scenario;
  import org.matsim.api.core.v01.population.Person;
  import org.matsim.api.core.v01.population.Population;
+ import org.matsim.core.config.Config;
+ import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
+ import org.matsim.episim.EpisimConfigGroup;
+ import org.matsim.episim.EpisimPerson;
  import org.matsim.episim.EpisimPerson.DiseaseStatus;
+ import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
+ import org.matsim.utils.objectattributes.attributable.Attributes;
  import picocli.CommandLine;
 
  import java.io.BufferedWriter;
@@ -58,11 +66,12 @@
 
 	 private static final Logger log = LogManager.getLogger(HospitalNumbersFromEvents.class);
 
-	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
+	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
+	 @CommandLine.Option(names = "--output", defaultValue = "C:/Users/jakob/Desktop/output")
 	 private Path output;
 
-	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
-//	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
+	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	 private String input;
 
 	 @CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
@@ -80,6 +89,7 @@
 	 private Scenario scenario;
 
 	 private final Random rnd = new Random(1234);
+	 private double hospitalFactor = 0.5; //TODO: what should this be
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -118,7 +128,12 @@
 		 if (scenario != null)
 			 population = scenario.getPopulation();
 
+
+		 Config config = ConfigUtils.createConfig();
+
 		 String id = AnalysisCommand.getScenarioPrefix(output);
+
+		 ConfigUtils.loadConfig(config, output.resolve(id + "config.xml").toString());
 
 		 BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "post.hospital.tsv"));
 
@@ -130,15 +145,41 @@
 		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
 
-		 
-		 		 
+
+		 // define desired outputs
+		 Int2IntMap iteration2HospitalizationCnt = new Int2IntArrayMap();
+
+
+		 Map<Id<Person>, Holder> infectedPeople = new HashMap<>();
+
+		 for (Map.Entry<Id<Person>, Holder> person : handler.data.entrySet()) {
+			 if (person.getValue().infections.size() > 0) {
+				 //				 System.out.println(person.getValue().infections.getInt(0)); //TODO: loop through all infections
+
+
+				 Id<Person> personId = person.getKey();
+				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+
+				 double probaOfTransitioningToSeriouslySick = getProbaOfTransitioningToSeriouslySick(age);
+				 System.out.println(probaOfTransitioningToSeriouslySick);
+
+//				 if (rnd.nextDouble() < probaOfTransitioningToSeriouslySick
+//						 * (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
+//						 strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
+//						 strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
+//						 * getSeriouslySickFactor(person, vaccinationConfig, day))
+//					 iteration2HospitalizationCnt.put(day+4,)
+
+					 infectedPeople.put(personId, person.getValue());
+			 }
+		 }
+
 
 		 bw.close();
 
 		 log.info("Calculated results for output {}", output);
 
 	 }
-
 
 
 	 private static class Handler implements EpisimPersonStatusEventHandler, EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
@@ -188,11 +229,10 @@
 
 			 if (event.getN() == 2) {
 				 attr.boosterDate = date;
-			 } else if (event.getN() == 1){
+			 } else if (event.getN() == 1) {
 				 attr.vaccinationDate = date;
 				 attr.vaccine = event.getVaccinationType();
-			 }
-			 else {
+			 } else {
 				 //todo
 			 }
 		 }
@@ -215,6 +255,55 @@
 		 private Holder(Id<Person> personId) {
 			 // Id is not stored at the moment
 		 }
+	 }
+
+	 protected double getProbaOfTransitioningToSeriouslySick(int age) {
+
+		 double proba = -1;
+
+		 if (age < 10) {
+			 proba = 0.1 / 100;
+		 } else if (age < 20) {
+			 proba = 0.3 / 100;
+		 } else if (age < 30) {
+			 proba = 1.2 / 100;
+		 } else if (age < 40) {
+			 proba = 3.2 / 100;
+		 } else if (age < 50) {
+			 proba = 4.9 / 100;
+		 } else if (age < 60) {
+			 proba = 10.2 / 100;
+		 } else if (age < 70) {
+			 proba = 16.6 / 100;
+		 } else if (age < 80) {
+			 proba = 24.3 / 100;
+		 } else {
+			 proba = 27.3 / 100;
+		 }
+
+		 return proba * hospitalFactor;
+	 }
+
+	 protected double getProbaOfTransitioningToCritical(int age) { // changed from EpiSimPerson
+		 double proba = -1;
+
+		 //		 int age = person.getAge();
+
+		 if (age < 40) {
+			 proba = 5. / 100;
+		 } else if (age < 50) {
+			 proba = 6.3 / 100;
+		 } else if (age < 60) {
+			 proba = 12.2 / 100;
+		 } else if (age < 70) {
+			 proba = 27.4 / 100;
+		 } else if (age < 80) {
+			 proba = 43.2 / 100;
+		 } else {
+			 proba = 70.9 / 100;
+		 }
+
+		 return proba;
 	 }
 
  }
