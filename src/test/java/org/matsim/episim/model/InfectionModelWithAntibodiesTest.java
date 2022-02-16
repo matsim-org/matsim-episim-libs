@@ -14,13 +14,16 @@ import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
 import tech.tablesaw.columns.Column;
 import tech.tablesaw.plotly.api.LinePlot;
-import tech.tablesaw.plotly.api.TimeSeriesPlot;
+import tech.tablesaw.plotly.components.Figure;
+import tech.tablesaw.plotly.components.Layout;
 import tech.tablesaw.plotly.components.Page;
+import tech.tablesaw.plotly.traces.ScatterTrace;
+import tech.tablesaw.table.TableSliceGroup;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.sql.Time;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class InfectionModelWithAntibodiesTest{
@@ -44,8 +47,7 @@ public class InfectionModelWithAntibodiesTest{
 	@Test
 	public void nordstroemEtAl() {
 		var person = EpisimTestUtils.createPerson();
-		person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
-//		person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 300 );
+//		person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
 		var strain = VirusStrain.DELTA;
 
 		final String days = "day";
@@ -57,10 +59,37 @@ public class InfectionModelWithAntibodiesTest{
 		var groupings = StringColumn.create( grouping );
 
 		final String nordstrom = "Nordström";
+		final String eyreBNTDelta = "EyreBNTDelta";
 
 		var fact = 0.001;
 
-		for ( int ii=1; ii<600; ii++ ){
+		for ( int ii=0; ii<600; ii++ ){
+			if ( ii==0 ){
+				EpisimTestUtils.infectPerson( person, VirusStrain.SARS_CoV_2, ii * 24. * 3600. );
+			}
+			if ( ii==50 ){
+				EpisimTestUtils.infectPerson( person, VirusStrain.DELTA, ii * 24. * 3600. );
+			}
+			if ( ii==300 ) {
+				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, ii );
+			}
+			{
+				records.append( ii );
+				groupings.append( eyreBNTDelta );
+				if ( ii < 14 ){
+					values.appendMissing();
+				} else if ( ii<28) {
+					values.append( interpolate(ii,14,28,1.-0.2,1.-0.28) );
+				} else if ( ii<42 ) {
+					values.append( interpolate( ii, 28, 42, 1.-0.28, 1.-0.33 ) );
+				} else if ( ii < 8*7 ) {
+					values.append( interpolate( ii, 42, 8*7, 1.-0.33, 1.-0.38 ) );
+				} else if ( ii<14*7 ) {
+					values.append( interpolate( ii, 8*7, 14*7, 1.-0.38, 1.-0.47 ) );
+				} else {
+					values.appendMissing();
+				}
+			}
 			{
 				records.append( ii );
 				groupings.append( nordstrom );
@@ -110,9 +139,9 @@ public class InfectionModelWithAntibodiesTest{
 		table.addColumns( values );
 		table.addColumns( groupings );
 		var figure = LinePlot.create("aa", table, days, vaccineEfficacies, grouping ) ;
+
 		var divName = "target";
 		var outputFile = "output.html";
-
 		Page page = Page.pageBuilder(figure, divName ).build();
 		String output = page.asJavascript();
 
@@ -123,6 +152,9 @@ public class InfectionModelWithAntibodiesTest{
 		}
 
 
+	}
+	private double interpolate( int ii, int startDay, int endDay, double startVal, double endVal ){
+		return startVal + (endVal-startVal)/(endDay-startDay)*(ii-startDay);
 	}
 
 	@Test
