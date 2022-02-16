@@ -28,6 +28,9 @@ import org.matsim.run.modules.SnzBerlinProductionScenario;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
 import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -125,6 +128,20 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 //			episimConfig.setAgeSusceptibility(map);
 //		}
 
+		//WEATHER
+//		Path INPUT = EpisimUtils.resolveInputPath("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input");
+//
+//		File weather = INPUT.resolve("tempelhofWeatherUntil20220208.csv").toFile();
+//		File avgWeather = INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile();
+//		Map<LocalDate, Double> outdoorFractions = null;
+//		try {
+//			outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, 18.5, 25., 18.5, params.TmidFall, 5., 1.0);
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//		episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+
+
 		// RESTRICTIONS
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
@@ -214,7 +231,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 
 		//disease import of MUTB (Delta) in 2021
-		double impFacSum = 5.0;
+		double impFacSum = params.impFacSum;//5.0;
 		int imp = 16;
 
 		//Sommerferien
@@ -226,14 +243,13 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-08-10"), imp);
 
 		//Herbstferien
-		double impFacOct = 2.0;
+		double impFacOct = params.impFacOct;// 2.0;
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, impFacOct, LocalDate.parse("2021-10-09").plusDays(0),
 				LocalDate.parse("2021-10-16").plusDays(0), imp, imp);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, impFacOct, LocalDate.parse("2021-10-17").plusDays(0),
 				LocalDate.parse("2021-10-24").plusDays(0), imp, 1);
 		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1);
 
-		//TODO: why don't we include other vacations like xmas?
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
 		double deltaInf = 2.0;
@@ -336,6 +352,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 
 		LocalDate testingStartDate = LocalDate.parse("2021-03-19");
 
+		//rapid tests
 		Map<LocalDate, Double> leisureTests = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTests = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> eduTests = new HashMap<LocalDate, Double>();
@@ -363,9 +380,9 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		workTests.put(LocalDate.parse("2021-11-24"), 0.5);
 
 		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
-		leisureTests.put(LocalDate.parse("2021-08-23"), 0.2);
+		leisureTests.put(LocalDate.parse("2021-08-23"), 0.2 * params.leisureTestCorrection); //TODO: revert
 
-		eduTests.put(LocalDate.parse("2021-09-20"), 0.6); // 3x per week TODO: same for berlin?
+		eduTests.put(LocalDate.parse("2021-09-20"), 0.6 * params.eduTestCorrection); // 3x per week TODO: same for berlin?
 
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -379,6 +396,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 				"educ_other", eduTests
 		)));
 
+		// tests for vaccinated agents
 		Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> workTestsVaccinated = new HashMap<LocalDate, Double>();
 		Map<LocalDate, Double> eduTestsVaccinated = new HashMap<LocalDate, Double>();
@@ -691,10 +709,26 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 	public static final class Params {
 		// ~1000 runs is max
 
+
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.96, 0.98, 1.0, 1.2, 1.4})
+		@Parameter({0.5,1.0})
+		public double leisureTestCorrection;
+
+		@Parameter({0.5,1.0})
+		public double eduTestCorrection;
+
+		@Parameter({2.0,3.0,4.0,5.0})
+		public double impFacSum;
+
+		@Parameter({2.0,3.,4.,5.})
+		public double impFacOct;
+
+//		@Parameter({20.0,22.5,25.0,27.5,30})
+//		double TmidFall;
+
+		@Parameter({1.})//{0.96, 0.98, 1.0, 1.2, 1.4})
 		double thetaFactor;
 
 		@StringParameter({"2099-01-01"})//"2022-03-01", "2099-01-01"})
