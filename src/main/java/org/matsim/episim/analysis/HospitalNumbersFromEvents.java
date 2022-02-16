@@ -39,6 +39,7 @@
  import org.matsim.episim.EpisimConfigGroup;
  import org.matsim.episim.EpisimPerson;
  import org.matsim.episim.EpisimPerson.DiseaseStatus;
+ import org.matsim.episim.VaccinationConfigGroup;
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VaccinationType;
@@ -89,7 +90,8 @@
 	 private Scenario scenario;
 
 	 private final Random rnd = new Random(1234);
-	 private double hospitalFactor = 0.5; //TODO: what should this be
+	 private double hospitalFactor = 0.5; //TODO: what should this be?
+	 private double immunityFactor = 1.0; //TODO: what should this be?
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -129,14 +131,9 @@
 			 population = scenario.getPopulation();
 
 
-		 Config config = ConfigUtils.createConfig();
-
 		 String id = AnalysisCommand.getScenarioPrefix(output);
 
-		 ConfigUtils.loadConfig(config, output.resolve(id + "config.xml").toString());
-
 		 BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "post.hospital.tsv"));
-
 
 		 Map<Id<Person>, Holder> data = new IdMap<>(Person.class, population.getPersons().size());
 
@@ -145,32 +142,39 @@
 		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
 
-
-		 // define desired outputs
 		 Int2IntMap iteration2HospitalizationCnt = new Int2IntArrayMap();
 
+		 for (Map.Entry<Id<Person>, Holder> personEntry : handler.data.entrySet()) {
 
-		 Map<Id<Person>, Holder> infectedPeople = new HashMap<>();
+			 Id<Person> personId = personEntry.getKey();
+			 Holder person = personEntry.getValue();
+			 if (person.infections.size() > 0) {
 
-		 for (Map.Entry<Id<Person>, Holder> person : handler.data.entrySet()) {
-			 if (person.getValue().infections.size() > 0) {
-				 //				 System.out.println(person.getValue().infections.getInt(0)); //TODO: loop through all infections
-
-
-				 Id<Person> personId = person.getKey();
 				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
 
-				 double probaOfTransitioningToSeriouslySick = getProbaOfTransitioningToSeriouslySick(age);
-				 System.out.println(probaOfTransitioningToSeriouslySick);
+				 // loop through infections
+				 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
 
-//				 if (rnd.nextDouble() < probaOfTransitioningToSeriouslySick
-//						 * (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
-//						 strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
-//						 strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-//						 * getSeriouslySickFactor(person, vaccinationConfig, day))
-//					 iteration2HospitalizationCnt.put(day+4,)
+					 VirusStrain strain = person.strains.get(iInfection);
+					 int infectionIteration = person.infections.getInt(iInfection);
 
-					 infectedPeople.put(personId, person.getValue());
+					 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
+
+					 //TODO: I haven't gotten the strainConfig into here yet.
+//					 double vaccinationFactor = person.vaccine != null ?
+//							 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
+//							 strainConfig.getParams(strain).getFactorSeriouslySick();
+
+					 if (rnd.nextDouble() < ageFactor
+//							 * vaccinationFactor //TODO
+							 * getSeriouslySickFactor(person, strain))
+					 {
+					 	int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
+					 	int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
+					 	iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
+					 }
+				 }
+
 			 }
 		 }
 
@@ -304,6 +308,58 @@
 		 }
 
 		 return proba;
+	 }
+
+	 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
+
+
+		 int numVaccinations = 0;
+
+		 if (person.boosterDate != null) {
+			 numVaccinations = 3; //TODO: should this be 2?
+		 } else if (person.vaccinationDate != null) {
+			 numVaccinations = 2; //TODO: should this be 1?
+		 }
+
+		 int numInfections = person.infections.size() - 1; //TODO: why -1?
+
+		 if (numVaccinations == 0 && numInfections == 0)
+			 return 1.0;
+
+		 double veSeriouslySick = 0.0;
+
+		 //vaccinated persons that are boostered either by infection or by 3rd shot
+		 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
+			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+				 veSeriouslySick = 0.9;
+			 else
+				 veSeriouslySick = 0.95;
+		 }
+
+		 //vaccinated persons or persons who have had a severe course of disease in the past
+		 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
+		 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA))
+
+			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+				 veSeriouslySick = 0.55;
+			 else
+				 veSeriouslySick = 0.9;
+
+		 else {
+			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+				 veSeriouslySick = 0.55;
+			 else
+				 veSeriouslySick = 0.6;
+		 }
+
+		 double factorInf = immunityFactor;
+
+		 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
+
+		 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
+		 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
+
+		 return factorSeriouslySick;
 	 }
 
  }
