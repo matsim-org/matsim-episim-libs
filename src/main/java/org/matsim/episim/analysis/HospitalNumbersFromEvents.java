@@ -358,20 +358,16 @@
 			 for (Map.Entry entry : ppBeds.entrySet()) {
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
-				 //				 int weeklyHospitalizations = getWeeklyHospitalizations(postProcessHospitalizations, today);
-				 //				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
 
-				 values.append(ppBeds.get(today));
+				 values.append(ppBeds.get(today) * 100_000. / populationCnt);
 				 groupings.append("generalBeds");
 			 }
 
 			 for (Map.Entry entry : ppBedsICU.entrySet()) {
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
-				 //				 int weeklyHospitalizations = getWeeklyHospitalizations(postProcessHospitalizations, today);
-				 //				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
 
-				 values.append(ppBedsICU.get(today));
+				 values.append(ppBedsICU.get(today) * 100_000. / populationCnt);
 				 groupings.append("ICUBeds");
 			 }
 
