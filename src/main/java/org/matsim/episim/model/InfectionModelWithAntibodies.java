@@ -88,6 +88,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
 		double relativeAntibodyLevelTarget = getRelativeAntibodyLevel(target, iteration, target.getNumVaccinations(), target.getNumInfections(), infector.getVirusStrain(), AK50_PERSTRAIN);
+		// the current infection is subtracted because it does not yet provide protection.
 		double relativeAntibodyLevelInfector = getRelativeAntibodyLevel(infector, iteration, infector.getNumVaccinations(), infector.getNumInfections() - 1, infector.getVirusStrain(), AK50_PERSTRAIN);
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
@@ -95,6 +96,14 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		
 		//reduced infectivity if infector has antibodies
 		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + Math.pow(relativeAntibodyLevelInfector, vaccinationConfig.getBeta()))));
+		
+		// An infection always protects against further infections with the same variant for 3 months. 
+		for (int infection = 0; infection < target.getNumInfections(); infection++) {
+ 			if (target.getVirusStrain(infection) == infector.getVirusStrain() && target.daysSinceInfection(infection, iteration) <= 90) {
+ 				susceptibility = 0.0;
+ 				break;
+ 			}
+ 		} 
 
 		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, AK50_PERSTRAIN);
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
@@ -155,29 +164,29 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		}
 		
 		//a ba.1 infection alone does not protect agains ba.2 and vice versa
-		if (numVaccinations == 0 && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)) {
-			boolean hadNonOmicronInfection = false;
-			boolean hadBa1Infection = false;
-			boolean hadBa2Infection = false;
-
-			for (int idx = 0; idx<numInfections; idx++) {
-				VirusStrain infection = target.getVirusStrain(idx);
-				if (infection == VirusStrain.OMICRON_BA1) 
-					hadBa1Infection = true;
-				else if (infection == VirusStrain.OMICRON_BA2) 
-					hadBa2Infection = true;
-				else
-					hadNonOmicronInfection = true;
-			}
-			if (!hadNonOmicronInfection) {
-				if (strain == VirusStrain.OMICRON_BA1 && !hadBa1Infection) {
-					return 0.0;
-				}
-				if (strain == VirusStrain.OMICRON_BA2 && !hadBa2Infection) {
-					return 0.0;
-				}
-			}	
-		}
+//		if (numVaccinations == 0 && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)) {
+//			boolean hadNonOmicronInfection = false;
+//			boolean hadBa1Infection = false;
+//			boolean hadBa2Infection = false;
+//
+//			for (int idx = 0; idx<numInfections; idx++) {
+//				VirusStrain infection = target.getVirusStrain(idx);
+//				if (infection == VirusStrain.OMICRON_BA1) 
+//					hadBa1Infection = true;
+//				else if (infection == VirusStrain.OMICRON_BA2) 
+//					hadBa2Infection = true;
+//				else
+//					hadNonOmicronInfection = true;
+//			}
+//			if (!hadNonOmicronInfection) {
+//				if (strain == VirusStrain.OMICRON_BA1 && !hadBa1Infection) {
+//					return 0.0;
+//				}
+//				if (strain == VirusStrain.OMICRON_BA2 && !hadBa2Infection) {
+//					return 0.0;
+//				}
+//			}	
+//		}
 		
 		double halfLife_days = 80.;
 		
@@ -242,6 +251,14 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
 		double relativeAntibodyLevel = getRelativeAntibodyLevel(target, iteration, 0, target.getNumInfections(), infector.getVirusStrain(), AK50_PERSTRAIN);
+		
+		// An infection always protects against further infections with the same variant for 3 months. 
+		for (int infection = 0; infection < target.getNumInfections(); infection++) {
+ 			if (target.getVirusStrain(infection) == infector.getVirusStrain() && target.daysSinceInfection(infection, iteration) <= 90) {
+ 				susceptibility = 0.0;
+ 				break;
+ 			}
+ 		}
 		
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()

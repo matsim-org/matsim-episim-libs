@@ -1,5 +1,4 @@
-/* *********************************************************************** *
- * project: org.matsim.*
+ /* project: org.matsim.*
  * EditRoutesTest.java
  *                                                                         *
  * *********************************************************************** *
@@ -193,7 +192,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		);
 
 		bind(VaccinationFromData.Config.class).toInstance(
-				VaccinationFromData.newConfig("05315") // TODO: location id (webex)
+				VaccinationFromData.newConfig("05315")
 						.withAgeGroup("05-11", 67158.47)
 						.withAgeGroup("12-17", 54587.2)
 						.withAgeGroup("18-59", 676995)
@@ -255,7 +254,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		episimConfig.setActivityHandling(activityHandling);
 
-		// TODO: check if there are any differences... if so, ask sebastian
+
 		episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * 1.4);
 		episimConfig.setStartDate("2020-02-25");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
@@ -302,7 +301,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		//restrictions and masks
 		CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20220114.csv")); // TODO: actualize (get csv from ricardo -> cluster)
+		activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20220211.csv"));
 
 		activityParticipation.setScale(this.scale);
 		activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -314,6 +313,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		} catch (IOException e1) {
 			throw new UncheckedIOException(e1);
 		}
+
 		builder.restrict(LocalDate.parse("2020-03-16"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-04-27"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		//Sommerferien (source: https://www.nrw-ferien.de/nrw-ferien-2022.html)
@@ -416,7 +416,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			//			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
 			BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
-			// todo: update vacations
+
 			builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
 			builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
 			builder.applyToRf("2020-10-09", "2020-10-23", workVacFactor, "work", "business");
@@ -426,7 +426,6 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
 			builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
 
-			// future TODO: replace 0.78 w/ 1 in Berlin
 			builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
 			builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
 			builder.restrict(LocalDate.parse("2022-06-27"), 0.78 * 0.92, "work", "business");
@@ -442,7 +441,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		if (this.vaccinations.equals(Vaccinations.yes)) {
 
 			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-			SnzProductionScenario.configureVaccines(vaccinationConfig, 2_352_480); // todo: pop
+			SnzProductionScenario.configureVaccines(vaccinationConfig, 2_352_480);
 
 			if (vaccinationModel.equals(VaccinationFromData.class)) {
 				// Compliance and capacity will come from data
@@ -451,7 +450,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 				vaccinationConfig.setVaccinationCapacity_pers_per_day(Map.of());
 				vaccinationConfig.setReVaccinationCapacity_pers_per_day(Map.of());
 
-				vaccinationConfig.setFromFile(INPUT.resolve("Aktuell_Deutschland_Landkreise_COVID-19-Impfungen.csv").toString()); // todo: berlin
+				vaccinationConfig.setFromFile(INPUT.resolve("Aktuell_Deutschland_Landkreise_COVID-19-Impfungen.csv").toString());
 			}
 		}
 
