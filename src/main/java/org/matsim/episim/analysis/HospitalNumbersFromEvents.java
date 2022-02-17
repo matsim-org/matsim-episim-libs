@@ -152,18 +152,32 @@
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
 
 
-		 population = PopulationUtils.readPopulation(input + populationFile);
 
 
-		 AnalysisCommand.forEachScenario(output, scenario -> {
-			 try {
-				 analyzeOutput(scenario);
-			 } catch (IOException e) {
-				 log.error("Failed processing {}", scenario, e);
-			 }
-		 });
+		 // Part 1: calculate hospitalizations and save as csv
+		 // can be run once and then commented out!
 
-		 log.info("done");
+//		 population = PopulationUtils.readPopulation(input + populationFile);
+//		 AnalysisCommand.forEachScenario(output, scenario -> {
+//			 try {
+//				 analyzeOutput(scenario);
+//
+//			 } catch (IOException e) {
+//				 log.error("Failed processing {}", scenario, e);
+//			 }
+//		 });
+//
+//		 log.info("done");
+
+		 // ===
+
+		 // Part 2: aggregate over multiple seeds and plot data
+		 List<Path> pathList = new ArrayList<>();
+		 AnalysisCommand.forEachScenario(output, scenario -> { pathList.add(scenario);});
+
+		 plotData(pathList);
+
+
 
 		 return 0;
 	 }
@@ -179,14 +193,7 @@
 
 		 final Path tsvPath = output.resolve(id + "post.hospital.tsv");
 
-		 // Part 1: calculate hospitalizations and save as csv
 		 calculateHospitalizationsAndWriteOutput(output, tsvPath);
-
-		 // ===
-
-		 // Part 2: plot data
-		 plotData(tsvPath);
-
 
 		 log.info("Calculated results for output {}", output);
 
@@ -225,17 +232,23 @@
 		 bw.close();
 	 }
 
-	 private void plotData(Path tsvPath) throws IOException {
+	 private void plotData(List<Path> pathList) throws IOException {
 
 
-		 // read hospitalization tsv & reconstruct maps
+		 // read hospitalization tsv for all seeds and aggregate them!
+		 // todo: NOTE: all other parameters should be the same, otherwise the results will be useless!
 		 Int2IntMap standardHospitalizations = new Int2IntAVLTreeMap();
 		 Int2IntMap postProcessHospitalizations = new Int2IntAVLTreeMap();
 		 Int2IntMap ppBeds = new Int2IntAVLTreeMap();
 		 Int2IntMap ppBedsICU = new Int2IntAVLTreeMap();
 
 
-		 {
+		 for (Path path : pathList) {
+
+			 String id = AnalysisCommand.getScenarioPrefix(path);
+
+			 final Path tsvPath = path.resolve(id + "post.hospital.tsv");
+
 			 BufferedReader br = Files.newBufferedReader(tsvPath);
 			 CSVParser parser = new CSVParser(br,
 					 CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader());
@@ -244,10 +257,10 @@
 			 for (CSVRecord record : parser) {
 
 				 int day = Integer.parseInt(record.get("day"));
-				 int stdHosp = Integer.parseInt(record.get("standardHospitalizations"));
-				 int ppHosp = Integer.parseInt(record.get("postProcessHospitalizations"));
-				 int ppBed = Integer.parseInt(record.get("ppBeds"));
-				 int ppICU = Integer.parseInt(record.get("ppBedsICU"));
+				 int stdHosp = standardHospitalizations.getOrDefault(day, 0) / pathList.size() + Integer.parseInt(record.get("standardHospitalizations"));
+				 int ppHosp = postProcessHospitalizations.getOrDefault(day,0) / pathList.size() + Integer.parseInt(record.get("postProcessHospitalizations"));
+				 int ppBed = ppBeds.getOrDefault(day,0) / pathList.size() + Integer.parseInt(record.get("ppBeds"));
+				 int ppICU = ppBedsICU.getOrDefault(day,0) / pathList.size() + Integer.parseInt(record.get("ppBedsICU"));
 
 
 				 standardHospitalizations.put(day, stdHosp);
@@ -405,29 +418,30 @@
 			 }
 			 //green plot from covid-sim (Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.)
 			 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
-			 {
-				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
-						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
-
-				 for (CSVRecord record : parser) {
-					 String dateStr = record.get("date").split("T")[0];
-					 LocalDate date = LocalDate.parse(dateStr);
-					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-					 double incidence = 0.;
-					 try {
-						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell"));
-//						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));
-					 } catch (NumberFormatException e) {
-
-					 }
-
-					 records.append(day);
-					 values.append(incidence * 100_000. / populationCnt);
-					 groupings.append("Reported: ICU Beds");
-
-				 }
-			 }
+			 // TODO: commented out because I can't be sure if this is the right data
+//			 {
+//				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
+//						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+//
+//				 for (CSVRecord record : parser) {
+//					 String dateStr = record.get("date").split("T")[0];
+//					 LocalDate date = LocalDate.parse(dateStr);
+//					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
+//
+//					 double incidence = 0.;
+//					 try {
+//						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell"));
+////						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));
+//					 } catch (NumberFormatException e) {
+//
+//					 }
+//
+//					 records.append(day);
+//					 values.append(incidence * 100_000. / populationCnt);
+//					 groupings.append("Reported: ICU Beds");
+//
+//				 }
+//			 }
 
 
 			 // Make plot
