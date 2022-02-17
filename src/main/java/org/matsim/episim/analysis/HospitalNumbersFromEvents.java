@@ -37,19 +37,22 @@
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
  import org.matsim.episim.EpisimConfigGroup;
- import org.matsim.episim.EpisimPerson;
  import org.matsim.episim.EpisimPerson.DiseaseStatus;
- import org.matsim.episim.VaccinationConfigGroup;
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
- import org.matsim.utils.objectattributes.attributable.Attributes;
  import picocli.CommandLine;
+ import tech.tablesaw.api.IntColumn;
+ import tech.tablesaw.api.StringColumn;
+ import tech.tablesaw.api.Table;
+ import tech.tablesaw.plotly.api.LinePlot;
+ import tech.tablesaw.plotly.api.ScatterPlot;
+ import tech.tablesaw.plotly.components.Page;
 
- import java.io.BufferedWriter;
- import java.io.IOException;
+ import java.io.*;
+ import java.nio.charset.StandardCharsets;
  import java.nio.file.Files;
  import java.nio.file.Path;
  import java.time.LocalDate;
@@ -90,8 +93,14 @@
 	 private Scenario scenario;
 
 	 private final Random rnd = new Random(1234);
+
+	 private Config config;
+	 private EpisimConfigGroup episimConfig;
+	 VirusStrainConfigGroup strainConfig;
+
 	 private double hospitalFactor = 0.5; //TODO: what should this be?
 	 private double immunityFactor = 1.0; //TODO: what should this be?
+
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -109,7 +118,22 @@
 			 return 2;
 		 }
 
+		 config = ConfigUtils.createConfig(new EpisimConfigGroup());
+
+		 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
+		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(1.25);
+		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(1.25);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+
+
 		 population = PopulationUtils.readPopulation(input + populationFile);
+
+
+
 
 		 AnalysisCommand.forEachScenario(output, scenario -> {
 			 try {
@@ -160,13 +184,12 @@
 
 					 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
 
-					 //TODO: I haven't gotten the strainConfig into here yet.
-//					 double vaccinationFactor = person.vaccine != null ?
-//							 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
-//							 strainConfig.getParams(strain).getFactorSeriouslySick();
+					 double vaccinationFactor = person.vaccine != null ?
+							 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
+							 strainConfig.getParams(strain).getFactorSeriouslySick();
 
 					 if (rnd.nextDouble() < ageFactor
-//							 * vaccinationFactor //TODO
+							 * vaccinationFactor
 							 * getSeriouslySickFactor(person, strain))
 					 {
 					 	int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
@@ -175,6 +198,43 @@
 					 }
 				 }
 
+			 }
+		 }
+
+		 // create comparison plot
+		 {
+
+			 IntColumn records = IntColumn.create("day");
+			 IntColumn values = IntColumn.create("hospitalizations");
+			 StringColumn groupings = StringColumn.create("scenario");
+
+			 for (Map.Entry entry : handler.baseCase.entrySet()) {
+				 records.append((Integer) entry.getKey());
+				 values.append((Integer) entry.getValue());
+				 groupings.append("baseCase");
+			 }
+
+			 for (Map.Entry entry : iteration2HospitalizationCnt.entrySet()) {
+				 records.append((Integer) entry.getKey());
+				 values.append((Integer) entry.getValue());
+				 groupings.append("postProcess");
+			 }
+
+			 Table table = Table.create("Daily Hospitalizations");
+			 table.addColumns( records );
+			 table.addColumns( values );
+			 table.addColumns( groupings );
+			 var figure = ScatterPlot.create("Daily Hospitalizations", table, "day", "hospitalizations", "scenario" ) ;
+
+			 var divName = "target";
+			 var outputFile = "HospitalizationComparison.html";
+			 Page page = Page.pageBuilder(figure, divName ).build();
+			 String outputFig = page.asJavascript();
+
+			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
+				 writer.write(outputFig);
+			 } catch (IOException e) {
+				 throw new UncheckedIOException(e);
 			 }
 		 }
 
@@ -190,11 +250,14 @@
 
 		 private final Map<Id<Person>, Holder> data;
 		 private final LocalDate startDate;
+		 Int2IntMap baseCase;
+
 
 
 		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate) {
 			 this.data = data;
 			 this.startDate = startDate;
+			 this.baseCase = new Int2IntArrayMap();
 		 }
 
 		 @Override
@@ -221,6 +284,11 @@
 			 }
 			 if (status.equals(DiseaseStatus.contagious)) {
 				 attr.contagiousDates.add(startDate.plusDays(day));
+			 }
+
+			 if (status.equals(DiseaseStatus.seriouslySick)) {
+				 int hospitalizationCnt = this.baseCase.getOrDefault(day, 0);
+				 this.baseCase.put(day, ++hospitalizationCnt);
 			 }
 
 		 }
