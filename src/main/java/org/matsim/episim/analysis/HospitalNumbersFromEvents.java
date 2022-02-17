@@ -41,6 +41,7 @@
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
+ import tech.tablesaw.api.DoubleColumn;
  import tech.tablesaw.api.IntColumn;
  import tech.tablesaw.api.StringColumn;
  import tech.tablesaw.api.Table;
@@ -195,7 +196,7 @@
 			 for (Map.Entry entry : handler.iteration2HospitalizationCnt.entrySet()) {
 				 records.append((Integer) entry.getKey());
 				 values.append((Integer) entry.getValue());
-				 groupings.append("postProcessNEW");
+				 groupings.append("postProcess");
 			 }
 
 
@@ -207,6 +208,69 @@
 
 			 var divName = "target";
 			 var outputFile = "HospitalizationComparison3.html";
+			 Page page = Page.pageBuilder(figure, divName ).build();
+			 String outputFig = page.asJavascript();
+
+			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
+				 writer.write(outputFig);
+			 } catch (IOException e) {
+				 throw new UncheckedIOException(e);
+			 }
+		 }
+
+		 // create comparison plot (incidence)
+		 {
+
+			 IntColumn records = IntColumn.create("day");
+			 DoubleColumn values = DoubleColumn.create("hospitalizations");
+			 StringColumn groupings = StringColumn.create("scenario");
+
+
+			 for (Map.Entry entry : handler.baseCase.entrySet()) {
+				 Integer today = (Integer) entry.getKey();
+				 records.append(today);
+				 int weeklyHospitalizations = 0;
+				 for (int i = 0; i < 7; i++) {
+					 try {
+						 weeklyHospitalizations += handler.baseCase.getOrDefault(today - i, 0);
+					 } catch (Exception e) {
+
+					 }
+				 }
+				 double incidence = weeklyHospitalizations * 100_000. / 4_800_000.;
+
+				 values.append(incidence);
+				 groupings.append("baseCase");
+			 }
+
+			 for (Map.Entry entry : handler.iteration2HospitalizationCnt.entrySet()) {
+				 Integer today = (Integer) entry.getKey();
+				 records.append(today);
+				 int weeklyHospitalizations = 0;
+				 for (int i = 0; i < 7; i++) {
+					 try {
+						 weeklyHospitalizations += handler.iteration2HospitalizationCnt.getOrDefault(today - i, 0);
+					 } catch (Exception e) {
+
+					 }
+				 }
+				 double incidence = weeklyHospitalizations * 100_000. / 4_800_000.;
+
+				 values.append(incidence);
+
+
+				 groupings.append("postProcess");
+			 }
+
+
+			 Table table = Table.create("Hospitalization Incidence");
+			 table.addColumns( records );
+			 table.addColumns( values );
+			 table.addColumns( groupings );
+			 var figure = LinePlot.create("Hospitalization Incidence", table, "day", "hospitalizations", "scenario" ) ;
+
+			 var divName = "target";
+			 var outputFile = "HospitalizationComparisonIncidence.html";
 			 Page page = Page.pageBuilder(figure, divName ).build();
 			 String outputFig = page.asJavascript();
 
