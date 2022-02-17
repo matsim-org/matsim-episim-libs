@@ -146,6 +146,10 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(0.5 * 1.25);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.5 * 1.25);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
 
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
@@ -214,7 +218,7 @@
 			 int ppBed = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0);
 			 int ppBedICU = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0);
 			 bw.newLine();
-			 bw.write(AnalysisCommand.TSV.join(day, date, stdHosp, ppHosp, ppBed, ppBedICU));
+			 bw.write(AnalysisCommand.TSV.join(day, date, stdHosp*4, ppHosp*4, ppBed*4, ppBedICU*4));
 
 		 }
 
