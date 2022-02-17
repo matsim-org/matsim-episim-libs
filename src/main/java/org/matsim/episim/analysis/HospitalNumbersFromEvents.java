@@ -20,10 +20,7 @@
 
 
  import com.google.inject.Inject;
- import it.unimi.dsi.fastutil.ints.Int2IntArrayMap;
- import it.unimi.dsi.fastutil.ints.Int2IntMap;
- import it.unimi.dsi.fastutil.ints.IntArrayList;
- import it.unimi.dsi.fastutil.ints.IntList;
+ import it.unimi.dsi.fastutil.ints.*;
  import org.apache.logging.log4j.Level;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
@@ -161,44 +158,18 @@
 
 		 Map<Id<Person>, Holder> data = new IdMap<>(Person.class, population.getPersons().size());
 
-		 Handler handler = new Handler(data, startDate);
+		 Handler handler = new Handler(data, startDate,population,strainConfig);
 
 		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
 
-		 Int2IntMap iteration2HospitalizationCnt = new Int2IntArrayMap();
+		 Int2IntMap iteration2HospitalizationCnt = new Int2IntAVLTreeMap();
 
 		 for (Map.Entry<Id<Person>, Holder> personEntry : handler.data.entrySet()) {
 
 			 Id<Person> personId = personEntry.getKey();
 			 Holder person = personEntry.getValue();
-			 if (person.infections.size() > 0) {
-
-				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
-
-				 // loop through infections
-				 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
-
-					 VirusStrain strain = person.strains.get(iInfection);
-					 int infectionIteration = person.infections.getInt(iInfection);
-
-					 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-
-					 double vaccinationFactor = person.vaccine != null ?
-							 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
-							 strainConfig.getParams(strain).getFactorSeriouslySick();
-
-					 if (rnd.nextDouble() < ageFactor
-							 * vaccinationFactor
-							 * getSeriouslySickFactor(person, strain))
-					 {
-					 	int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
-					 	int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
-					 	iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
-					 }
-				 }
-
-			 }
+			 updateHospitalizations(iteration2HospitalizationCnt, personId, person);
 		 }
 
 		 // create comparison plot
@@ -208,26 +179,34 @@
 			 IntColumn values = IntColumn.create("hospitalizations");
 			 StringColumn groupings = StringColumn.create("scenario");
 
+
 			 for (Map.Entry entry : handler.baseCase.entrySet()) {
 				 records.append((Integer) entry.getKey());
 				 values.append((Integer) entry.getValue());
 				 groupings.append("baseCase");
 			 }
 
-			 for (Map.Entry entry : iteration2HospitalizationCnt.entrySet()) {
+//			 for (Map.Entry entry : iteration2HospitalizationCnt.entrySet()) {
+//				 records.append((Integer) entry.getKey());
+//				 values.append((Integer) entry.getValue());
+//				 groupings.append("postProcess");
+//			 }
+
+			 for (Map.Entry entry : handler.iteration2HospitalizationCnt.entrySet()) {
 				 records.append((Integer) entry.getKey());
 				 values.append((Integer) entry.getValue());
-				 groupings.append("postProcess");
+				 groupings.append("postProcessNEW");
 			 }
+
 
 			 Table table = Table.create("Daily Hospitalizations");
 			 table.addColumns( records );
 			 table.addColumns( values );
 			 table.addColumns( groupings );
-			 var figure = ScatterPlot.create("Daily Hospitalizations", table, "day", "hospitalizations", "scenario" ) ;
+			 var figure = LinePlot.create("Daily Hospitalizations", table, "day", "hospitalizations", "scenario" ) ;
 
 			 var divName = "target";
-			 var outputFile = "HospitalizationComparison.html";
+			 var outputFile = "HospitalizationComparison3.html";
 			 Page page = Page.pageBuilder(figure, divName ).build();
 			 String outputFig = page.asJavascript();
 
@@ -245,30 +224,73 @@
 
 	 }
 
+	 private void updateHospitalizations(Int2IntMap iteration2HospitalizationCnt, Id<Person> personId, Holder person) {
+		 if (person.infections.size() > 0) {
+
+			 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+
+			 // loop through infections
+			 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
+
+				 VirusStrain strain = person.strains.get(iInfection);
+				 int infectionIteration = person.infections.getInt(iInfection);
+
+				 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
+
+				 double vaccinationFactor = person.vaccine != null ?
+						 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
+						 strainConfig.getParams(strain).getFactorSeriouslySick();
+
+				 if (rnd.nextDouble() < ageFactor
+						 * vaccinationFactor
+						 * getSeriouslySickFactor(person, strain))
+				 {
+					 int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
+					 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
+					 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
+				 }
+			 }
+
+		 }
+	 }
+
 
 	 private static class Handler implements EpisimPersonStatusEventHandler, EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
 
 		 private final Map<Id<Person>, Holder> data;
 		 private final LocalDate startDate;
-		 Int2IntMap baseCase;
+		 private final Population population;
+		 private final Random rnd;
+		 private final VirusStrainConfigGroup strainConfig;
+
+		 private Int2IntMap baseCase;
+		 private Int2IntMap iteration2HospitalizationCnt;
 
 
-
-		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate) {
+		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population,VirusStrainConfigGroup strainConfig) {
 			 this.data = data;
 			 this.startDate = startDate;
-			 this.baseCase = new Int2IntArrayMap();
+			 this.population = population;
+			 this.rnd = new Random(1234);
+			 this.strainConfig = strainConfig;
+
+			 this.baseCase = new Int2IntAVLTreeMap();
+			 this.iteration2HospitalizationCnt = new Int2IntAVLTreeMap();
+
 		 }
 
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
-			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
+			 Id<Person> personId = event.getPersonId();
+			 Holder person = data.computeIfAbsent(personId, Holder::new);
 
 			 int day = (int) (event.getTime() / 86_400);
 
-			 attr.infections.add(day);
-			 attr.strains.add(event.getVirusStrain());
+			 person.infections.add(day);
+			 person.strains.add(event.getVirusStrain());
+
+			 updateHospitalizations(personId, person);
 		 }
 
 		 @Override
@@ -307,6 +329,116 @@
 			 } else {
 				 //todo
 			 }
+		 }
+
+		 private void updateHospitalizations(Id<Person> personId, Holder person) {
+			 if (person.infections.size() > 0) {
+
+				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+
+				 // loop through infections
+				 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
+
+					 VirusStrain strain = person.strains.get(iInfection);
+					 int infectionIteration = person.infections.getInt(iInfection);
+
+					 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
+
+					 double vaccinationFactor = person.vaccine != null ?
+							 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
+							 strainConfig.getParams(strain).getFactorSeriouslySick();
+
+					 if (rnd.nextDouble() < ageFactor
+							 * vaccinationFactor
+							 * getSeriouslySickFactor(person, strain))
+					 {
+						 int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
+						 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
+						 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
+					 }
+				 }
+
+			 }
+		 }
+
+		 protected double getProbaOfTransitioningToSeriouslySick(int age) {
+
+			 double proba = -1;
+
+			 if (age < 10) {
+				 proba = 0.1 / 100;
+			 } else if (age < 20) {
+				 proba = 0.3 / 100;
+			 } else if (age < 30) {
+				 proba = 1.2 / 100;
+			 } else if (age < 40) {
+				 proba = 3.2 / 100;
+			 } else if (age < 50) {
+				 proba = 4.9 / 100;
+			 } else if (age < 60) {
+				 proba = 10.2 / 100;
+			 } else if (age < 70) {
+				 proba = 16.6 / 100;
+			 } else if (age < 80) {
+				 proba = 24.3 / 100;
+			 } else {
+				 proba = 27.3 / 100;
+			 }
+
+			 return proba * 0.5; //TODO: hospitalFactor;
+		 }
+
+
+		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
+
+
+			 int numVaccinations = 0;
+
+			 if (person.boosterDate != null) {
+				 numVaccinations = 3; //TODO: should this be 2?
+			 } else if (person.vaccinationDate != null) {
+				 numVaccinations = 2; //TODO: should this be 1?
+			 }
+
+			 int numInfections = person.infections.size() - 1; //TODO: why -1?
+
+			 if (numVaccinations == 0 && numInfections == 0)
+				 return 1.0;
+
+			 double veSeriouslySick = 0.0;
+
+			 //vaccinated persons that are boostered either by infection or by 3rd shot
+			 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
+				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+					 veSeriouslySick = 0.9;
+				 else
+					 veSeriouslySick = 0.95;
+			 }
+
+			 //vaccinated persons or persons who have had a severe course of disease in the past
+			 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
+			 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA))
+
+				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+					 veSeriouslySick = 0.55;
+				 else
+					 veSeriouslySick = 0.9;
+
+			 else {
+				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+					 veSeriouslySick = 0.55;
+				 else
+					 veSeriouslySick = 0.6;
+			 }
+
+			 double factorInf = 1.0; //TODO: immunityFactor;
+
+			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
+
+			 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
+			 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
+
+			 return factorSeriouslySick;
 		 }
 	 }
 
