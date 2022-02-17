@@ -45,9 +45,12 @@
  import tech.tablesaw.api.IntColumn;
  import tech.tablesaw.api.StringColumn;
  import tech.tablesaw.api.Table;
- import tech.tablesaw.plotly.api.LinePlot;
- import tech.tablesaw.plotly.api.ScatterPlot;
+ import tech.tablesaw.plotly.components.Axis;
+ import tech.tablesaw.plotly.components.Figure;
+ import tech.tablesaw.plotly.components.Layout;
  import tech.tablesaw.plotly.components.Page;
+ import tech.tablesaw.plotly.traces.ScatterTrace;
+ import tech.tablesaw.table.TableSliceGroup;
 
  import java.io.*;
  import java.nio.charset.StandardCharsets;
@@ -129,6 +132,8 @@
 		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(1.25);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(0.5 * 1.25);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.5 * 1.25);
 
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
@@ -205,15 +210,26 @@
 			 table.addColumns(records);
 			 table.addColumns(values);
 			 table.addColumns(groupings);
-			 var figure = LinePlot.create("Daily Hospitalizations", table, "day", "hospitalizations", "scenario");
 
-			 var divName = "target";
-			 var outputFile = "HospitalizationComparison3.html";
-			 Page page = Page.pageBuilder(figure, divName).build();
-			 String outputFig = page.asJavascript();
+			 TableSliceGroup tables = table.splitOn( table.categoricalColumn( "scenario" ) );
 
-			 try (Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
-				 writer.write(outputFig);
+			 Axis yAxis = Axis.builder().type( Axis.Type.LOG ).build();
+
+			 Layout layout = Layout.builder( "Daily Hospitalizations", "day", "hospitalizations" ).yAxis( yAxis ).showLegend(true ).build();
+
+			 ScatterTrace[] traces = new ScatterTrace[tables.size()];
+			 for (int i = 0; i < tables.size(); i++) {
+			   List<Table> tableList = tables.asTableList();
+			   traces[i] = ScatterTrace.builder( tableList.get(i).numberColumn( "day" ), tableList.get(i ).numberColumn( "hospitalizations" ) )
+				   .showLegend(true)
+				   .name(tableList.get(i).name())
+				   .mode(ScatterTrace.Mode.LINE)
+				   .build();
+			 }
+			 var figure = new Figure( layout, traces );
+
+			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "HospitalizationComparison3.html" ), StandardCharsets.UTF_8)) {
+				 writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
 			 } catch (IOException e) {
 				 throw new UncheckedIOException(e);
 			 }
@@ -268,15 +284,26 @@
 			 table.addColumns(records);
 			 table.addColumns(values);
 			 table.addColumns(groupings);
-			 var figure = LinePlot.create("Hospitalization Incidence", table, "day", "hospitalizations", "scenario");
 
-			 var divName = "target";
-			 var outputFile = "HospitalizationComparisonIncidence.html";
-			 Page page = Page.pageBuilder(figure, divName).build();
-			 String outputFig = page.asJavascript();
+			 TableSliceGroup tables = table.splitOn( table.categoricalColumn( "scenario" ) );
 
-			 try (Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
-				 writer.write(outputFig);
+			 Axis yAxis = Axis.builder().type( Axis.Type.LOG ).build();
+
+			 Layout layout = Layout.builder( "Hospitalization Incidence", "day", "hospitalizations" ).yAxis( yAxis ).showLegend(true ).build();
+
+			 ScatterTrace[] traces = new ScatterTrace[tables.size()];
+			 for (int i = 0; i < tables.size(); i++) {
+			   List<Table> tableList = tables.asTableList();
+				 traces[i] = ScatterTrace.builder( tableList.get(i ).numberColumn( "day" ), tableList.get(i ).numberColumn( "hospitalizations" ) )
+							 .showLegend(true)
+							 .name(tableList.get(i).name())
+							 .mode(ScatterTrace.Mode.LINE)
+							 .build();
+			 }
+			 var figure = new Figure( layout, traces );
+
+			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "HospitalizationComparisonIncidence.html" ), StandardCharsets.UTF_8)) {
+				 writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
 			 } catch (IOException e) {
 				 throw new UncheckedIOException(e);
 			 }
