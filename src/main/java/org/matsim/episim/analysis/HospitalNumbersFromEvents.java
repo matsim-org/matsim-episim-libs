@@ -68,6 +68,7 @@
 
 	 private static final Logger log = LogManager.getLogger(HospitalNumbersFromEvents.class);
 
+
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
 	 @CommandLine.Option(names = "--output", defaultValue = "C:/Users/jakob/Desktop/output")
 	 private Path output;
@@ -99,6 +100,7 @@
 	 private double hospitalFactor = 0.5; //TODO: what should this be?
 	 private double immunityFactor = 1.0; //TODO: what should this be?
 	 private int populationCnt = 919_936;
+	 private static int lagBetweenInfectionAndHospitalisation = 4;
 
 
 	 public static void main(String[] args) {
@@ -132,8 +134,6 @@
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
 
-
-
 		 AnalysisCommand.forEachScenario(output, scenario -> {
 			 try {
 				 analyzeOutput(scenario);
@@ -160,19 +160,19 @@
 
 		 Map<Id<Person>, Holder> data = new IdMap<>(Person.class, population.getPersons().size());
 
-		 Handler handler = new Handler(data, startDate,population,strainConfig);
+		 Handler handler = new Handler(data, startDate, population, strainConfig);
 
 		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
 
-		 Int2IntMap iteration2HospitalizationCnt = new Int2IntAVLTreeMap();
-
-		 for (Map.Entry<Id<Person>, Holder> personEntry : handler.data.entrySet()) {
-
-			 Id<Person> personId = personEntry.getKey();
-			 Holder person = personEntry.getValue();
-			 updateHospitalizations(iteration2HospitalizationCnt, personId, person);
-		 }
+		 //		 Int2IntMap iteration2HospitalizationCnt = new Int2IntAVLTreeMap();
+		 //
+		 //		 for (Map.Entry<Id<Person>, Holder> personEntry : handler.data.entrySet()) {
+		 //
+		 //			 Id<Person> personId = personEntry.getKey();
+		 //			 Holder person = personEntry.getValue();
+		 //			 updateHospitalizations(iteration2HospitalizationCnt, personId, person);
+		 //		 }
 
 		 // create comparison plot
 		 {
@@ -188,11 +188,11 @@
 				 groupings.append("baseCase");
 			 }
 
-//			 for (Map.Entry entry : iteration2HospitalizationCnt.entrySet()) {
-//				 records.append((Integer) entry.getKey());
-//				 values.append((Integer) entry.getValue());
-//				 groupings.append("postProcess");
-//			 }
+			 //			 for (Map.Entry entry : iteration2HospitalizationCnt.entrySet()) {
+			 //				 records.append((Integer) entry.getKey());
+			 //				 values.append((Integer) entry.getValue());
+			 //				 groupings.append("postProcess");
+			 //			 }
 
 			 for (Map.Entry entry : handler.iteration2HospitalizationCnt.entrySet()) {
 				 records.append((Integer) entry.getKey());
@@ -202,17 +202,17 @@
 
 
 			 Table table = Table.create("Daily Hospitalizations");
-			 table.addColumns( records );
-			 table.addColumns( values );
-			 table.addColumns( groupings );
-			 var figure = LinePlot.create("Daily Hospitalizations", table, "day", "hospitalizations", "scenario" ) ;
+			 table.addColumns(records);
+			 table.addColumns(values);
+			 table.addColumns(groupings);
+			 var figure = LinePlot.create("Daily Hospitalizations", table, "day", "hospitalizations", "scenario");
 
 			 var divName = "target";
 			 var outputFile = "HospitalizationComparison3.html";
-			 Page page = Page.pageBuilder(figure, divName ).build();
+			 Page page = Page.pageBuilder(figure, divName).build();
 			 String outputFig = page.asJavascript();
 
-			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
+			 try (Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
 				 writer.write(outputFig);
 			 } catch (IOException e) {
 				 throw new UncheckedIOException(e);
@@ -265,17 +265,17 @@
 
 
 			 Table table = Table.create("Hospitalization Incidence");
-			 table.addColumns( records );
-			 table.addColumns( values );
-			 table.addColumns( groupings );
-			 var figure = LinePlot.create("Hospitalization Incidence", table, "day", "hospitalizations", "scenario" ) ;
+			 table.addColumns(records);
+			 table.addColumns(values);
+			 table.addColumns(groupings);
+			 var figure = LinePlot.create("Hospitalization Incidence", table, "day", "hospitalizations", "scenario");
 
 			 var divName = "target";
 			 var outputFile = "HospitalizationComparisonIncidence.html";
-			 Page page = Page.pageBuilder(figure, divName ).build();
+			 Page page = Page.pageBuilder(figure, divName).build();
 			 String outputFig = page.asJavascript();
 
-			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
+			 try (Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
 				 writer.write(outputFig);
 			 } catch (IOException e) {
 				 throw new UncheckedIOException(e);
@@ -287,36 +287,6 @@
 
 		 log.info("Calculated results for output {}", output);
 
-	 }
-
-	 private void updateHospitalizations(Int2IntMap iteration2HospitalizationCnt, Id<Person> personId, Holder person) {
-		 if (person.infections.size() > 0) {
-
-			 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
-
-			 // loop through infections
-			 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
-
-				 VirusStrain strain = person.strains.get(iInfection);
-				 int infectionIteration = person.infections.getInt(iInfection);
-
-				 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-
-				 double vaccinationFactor = person.vaccine != null ?
-						 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
-						 strainConfig.getParams(strain).getFactorSeriouslySick();
-
-				 if (rnd.nextDouble() < ageFactor
-						 * vaccinationFactor
-						 * getSeriouslySickFactor(person, strain))
-				 {
-					 int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
-					 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
-					 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
-				 }
-			 }
-
-		 }
 	 }
 
 
@@ -332,7 +302,7 @@
 		 private Int2IntMap iteration2HospitalizationCnt;
 
 
-		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population,VirusStrainConfigGroup strainConfig) {
+		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig) {
 			 this.data = data;
 			 this.startDate = startDate;
 			 this.population = population;
@@ -355,7 +325,7 @@
 			 person.infections.add(day);
 			 person.strains.add(event.getVirusStrain());
 
-			 updateHospitalizations(personId, person);
+			 updateHospitalizations(personId, person, event.getStrain(), day);
 		 }
 
 		 @Override
@@ -374,8 +344,12 @@
 			 }
 
 			 if (status.equals(DiseaseStatus.seriouslySick)) {
-				 int hospitalizationCnt = this.baseCase.getOrDefault(day, 0);
-				 this.baseCase.put(day, ++hospitalizationCnt);
+
+				 if (population.getPersons().get(event.getPersonId()).getAttributes().getAttribute("district").equals("Köln")) {
+					 int hospitalizationCnt = this.baseCase.getOrDefault(day, 0);
+					 this.baseCase.put(day, ++hospitalizationCnt);
+				 }
+
 			 }
 
 		 }
@@ -396,34 +370,32 @@
 			 }
 		 }
 
-		 private void updateHospitalizations(Id<Person> personId, Holder person) {
+		 private void updateHospitalizations(Id<Person> personId, Holder person, VirusStrain strain, int infectionIteration) {
 			 if (person.infections.size() > 0) {
 
 				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
 
-				 // loop through infections
-				 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
+				 String district = (String) population.getPersons().get(personId).getAttributes().getAttribute("district");
 
-					 VirusStrain strain = person.strains.get(iInfection);
-					 int infectionIteration = person.infections.getInt(iInfection);
-
-					 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-
-					 double vaccinationFactor = person.vaccine != null ?
-							 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
-							 strainConfig.getParams(strain).getFactorSeriouslySick();
-
-					 if (rnd.nextDouble() < ageFactor
-							 * vaccinationFactor
-							 * getSeriouslySickFactor(person, strain))
-					 {
-						 int hospitalizationIteration = infectionIteration + 4; // TODO: this shouldn't be hardcoded
-						 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
-						 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
-					 }
+				 if (!district.equals("Köln")) {
+					 return;
 				 }
 
+				 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
+
+				 double vaccinationFactor = person.vaccine != null ?
+						 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
+						 strainConfig.getParams(strain).getFactorSeriouslySick();
+
+				 if (rnd.nextDouble() < ageFactor
+						 * vaccinationFactor
+						 * getSeriouslySickFactor(person, strain)) {
+					 int hospitalizationIteration = infectionIteration + lagBetweenInfectionAndHospitalisation;
+					 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
+					 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
+				 }
 			 }
+
 		 }
 
 		 protected double getProbaOfTransitioningToSeriouslySick(int age) {
@@ -460,9 +432,9 @@
 			 int numVaccinations = 0;
 
 			 if (person.boosterDate != null) {
-				 numVaccinations = 3; //TODO: should this be 2?
+				 numVaccinations = 2; //TODO: should this be 3?
 			 } else if (person.vaccinationDate != null) {
-				 numVaccinations = 2; //TODO: should this be 1?
+				 numVaccinations = 1; //TODO: should this be 2?
 			 }
 
 			 int numInfections = person.infections.size() - 1; //TODO: why -1?
@@ -526,106 +498,136 @@
 		 }
 	 }
 
-	 protected double getProbaOfTransitioningToSeriouslySick(int age) {
 
-		 double proba = -1;
+	 //	 private void updateHospitalizations(Int2IntMap iteration2HospitalizationCnt, Id<Person> personId, Holder person) {
+	 //		 if (person.infections.size() > 0) {
+	 //
+	 //			 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+	 //
+	 //			 // loop through infections
+	 //			 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
+	 //
+	 //				 VirusStrain strain = person.strains.get(iInfection);
+	 //				 int infectionIteration = person.infections.getInt(iInfection);
+	 //
+	 //				 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
+	 //
+	 //				 double vaccinationFactor = person.vaccine != null ?
+	 //						 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
+	 //						 strainConfig.getParams(strain).getFactorSeriouslySick();
+	 //
+	 //				 if (rnd.nextDouble() < ageFactor
+	 //						 * vaccinationFactor
+	 //						 * getSeriouslySickFactor(person, strain)) {
+	 //					 int hospitalizationIteration = infectionIteration + 4;
+	 //					 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
+	 //					 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
+	 //				 }
+	 //			 }
+	 //
+	 //		 }
+	 //	 }
 
-		 if (age < 10) {
-			 proba = 0.1 / 100;
-		 } else if (age < 20) {
-			 proba = 0.3 / 100;
-		 } else if (age < 30) {
-			 proba = 1.2 / 100;
-		 } else if (age < 40) {
-			 proba = 3.2 / 100;
-		 } else if (age < 50) {
-			 proba = 4.9 / 100;
-		 } else if (age < 60) {
-			 proba = 10.2 / 100;
-		 } else if (age < 70) {
-			 proba = 16.6 / 100;
-		 } else if (age < 80) {
-			 proba = 24.3 / 100;
-		 } else {
-			 proba = 27.3 / 100;
-		 }
+//	 protected double getProbaOfTransitioningToSeriouslySick(int age) {
+//
+//		 double proba = -1;
+//
+//		 if (age < 10) {
+//			 proba = 0.1 / 100;
+//		 } else if (age < 20) {
+//			 proba = 0.3 / 100;
+//		 } else if (age < 30) {
+//			 proba = 1.2 / 100;
+//		 } else if (age < 40) {
+//			 proba = 3.2 / 100;
+//		 } else if (age < 50) {
+//			 proba = 4.9 / 100;
+//		 } else if (age < 60) {
+//			 proba = 10.2 / 100;
+//		 } else if (age < 70) {
+//			 proba = 16.6 / 100;
+//		 } else if (age < 80) {
+//			 proba = 24.3 / 100;
+//		 } else {
+//			 proba = 27.3 / 100;
+//		 }
+//
+//		 return proba * hospitalFactor;
+//	 }
+//
+//	 protected double getProbaOfTransitioningToCritical(int age) { // changed from EpiSimPerson
+//		 double proba = -1;
+//
+//		 //		 int age = person.getAge();
+//
+//		 if (age < 40) {
+//			 proba = 5. / 100;
+//		 } else if (age < 50) {
+//			 proba = 6.3 / 100;
+//		 } else if (age < 60) {
+//			 proba = 12.2 / 100;
+//		 } else if (age < 70) {
+//			 proba = 27.4 / 100;
+//		 } else if (age < 80) {
+//			 proba = 43.2 / 100;
+//		 } else {
+//			 proba = 70.9 / 100;
+//		 }
+//
+//		 return proba;
+//	 }
 
-		 return proba * hospitalFactor;
-	 }
-
-	 protected double getProbaOfTransitioningToCritical(int age) { // changed from EpiSimPerson
-		 double proba = -1;
-
-		 //		 int age = person.getAge();
-
-		 if (age < 40) {
-			 proba = 5. / 100;
-		 } else if (age < 50) {
-			 proba = 6.3 / 100;
-		 } else if (age < 60) {
-			 proba = 12.2 / 100;
-		 } else if (age < 70) {
-			 proba = 27.4 / 100;
-		 } else if (age < 80) {
-			 proba = 43.2 / 100;
-		 } else {
-			 proba = 70.9 / 100;
-		 }
-
-		 return proba;
-	 }
-
-	 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
-
-
-		 int numVaccinations = 0;
-
-		 if (person.boosterDate != null) {
-			 numVaccinations = 3; //TODO: should this be 2?
-		 } else if (person.vaccinationDate != null) {
-			 numVaccinations = 2; //TODO: should this be 1?
-		 }
-
-		 int numInfections = person.infections.size() - 1; //TODO: why -1?
-
-		 if (numVaccinations == 0 && numInfections == 0)
-			 return 1.0;
-
-		 double veSeriouslySick = 0.0;
-
-		 //vaccinated persons that are boostered either by infection or by 3rd shot
-		 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
-			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
-				 veSeriouslySick = 0.9;
-			 else
-				 veSeriouslySick = 0.95;
-		 }
-
-		 //vaccinated persons or persons who have had a severe course of disease in the past
-		 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
-		 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA))
-
-			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
-				 veSeriouslySick = 0.55;
-			 else
-				 veSeriouslySick = 0.9;
-
-		 else {
-			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
-				 veSeriouslySick = 0.55;
-			 else
-				 veSeriouslySick = 0.6;
-		 }
-
-		 double factorInf = immunityFactor;
-
-		 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
-
-		 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
-		 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
-
-		 return factorSeriouslySick;
-	 }
+//	 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
+//
+//
+//		 int numVaccinations = 0;
+//
+//		 if (person.boosterDate != null) {
+//			 numVaccinations = 3; //TODO: should this be 2?
+//		 } else if (person.vaccinationDate != null) {
+//			 numVaccinations = 2; //TODO: should this be 1?
+//		 }
+//
+//		 int numInfections = person.infections.size() - 1; //TODO: why -1?
+//
+//		 if (numVaccinations == 0 && numInfections == 0)
+//			 return 1.0;
+//
+//		 double veSeriouslySick = 0.0;
+//
+//		 //vaccinated persons that are boostered either by infection or by 3rd shot
+//		 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
+//			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+//				 veSeriouslySick = 0.9;
+//			 else
+//				 veSeriouslySick = 0.95;
+//		 }
+//
+//		 //vaccinated persons or persons who have had a severe course of disease in the past
+//		 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
+//		 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA))
+//
+//			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+//				 veSeriouslySick = 0.55;
+//			 else
+//				 veSeriouslySick = 0.9;
+//
+//		 else {
+//			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+//				 veSeriouslySick = 0.55;
+//			 else
+//				 veSeriouslySick = 0.6;
+//		 }
+//
+//		 double factorInf = immunityFactor;
+//
+//		 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
+//
+//		 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
+//		 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
+//
+//		 return factorSeriouslySick;
+//	 }
 
  }
 
