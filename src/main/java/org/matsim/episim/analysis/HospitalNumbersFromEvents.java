@@ -82,7 +82,7 @@
 
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "C:/Users/jakob/Desktop/output")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output") //"C:/Users/jakob/Desktop/output")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -111,8 +111,8 @@
 	 private EpisimConfigGroup episimConfig;
 	 VirusStrainConfigGroup strainConfig;
 
-	 private double hospitalFactor = 0.5; //TODO: what should this be?
-	 private double immunityFactor = 1.0; //TODO: what should this be?
+	 private static double hospitalFactor = 0.5; //TODO: what should this be?
+	 private static double immunityFactor = 1.0; //TODO: what should this be?
 	 private int populationCnt = 919_936;
 	 private static int lagBetweenInfectionAndHospitalisation = 5;
 	 private static SplittableRandom splittableRandom = new SplittableRandom(1234);
@@ -416,7 +416,8 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 
 					 double incidence = 0.;
 					 try {
-						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));//""faelle_covid_aktuell"));
+						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell"));
+//						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));
 					 } catch (NumberFormatException e) {
 
 					 }
@@ -461,91 +462,6 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 
 
 	 }
-
-
-	 // read hospital data
-	 //		 Table hospitalData = Table.read().usingOptions( options );
-
-	 //		 System.out.println("test");
-	 //		 CsvReadOptions.Builder builder =
-	 //				 CsvReadOptions.builder(tsvPath.toString())
-	 //						 .separator('\t')                                                                                // table is tab-delimited
-	 //						 .header(true);                                                                                      // no header
-	 //		 //						       .dateFormat( "yyyy.MM.dd" );                                // the date format to use.
-	 //
-	 //		 CsvReadOptions options = builder.build();
-	 //
-	 //		 Table hospitalData = Table.read().usingOptions(options);
-
-
-	 //		 CsvReadOptions.Builder builder =
-	 //				 CsvReadOptions.builder("../shared-svmyFile.csv")
-	 //					       .separator('\t')										// table is tab-delimited
-	 //					       .header(false)											// no header
-	 //					       .dateFormat("yyyy.MM.dd");  				// the date format to use.
-	 //
-	 //		 CsvReadOptions options = builder.build();
-	 //
-	 //		 Table t1 = Table.read().usingOptions(options);
-
-	 // create comparison plot
-	 //		 {
-	 //
-	 //			 IntColumn records = IntColumn.create("day");
-	 //			 IntColumn values = IntColumn.create("hospitalizations");
-	 //			 StringColumn groupings = StringColumn.create("scenario");
-	 //
-	 //
-	 //			 for (Map.Entry entry : handler.standardHospitalizations.entrySet()) {
-	 //				 records.append((Integer) entry.getKey());
-	 //				 values.append((Integer) entry.getValue());
-	 //				 groupings.append("baseCase");
-	 //			 }
-	 //
-	 //			 //			 for (Map.Entry entry : iteration2HospitalizationCnt.entrySet()) {
-	 //			 //				 records.append((Integer) entry.getKey());
-	 //			 //				 values.append((Integer) entry.getValue());
-	 //			 //				 groupings.append("postProcess");
-	 //			 //			 }
-	 //
-	 //			 for (Map.Entry entry : handler.postProcessHospitalizations.entrySet()) {
-	 //				 records.append((Integer) entry.getKey());
-	 //				 values.append((Integer) entry.getValue());
-	 //				 groupings.append("postProcess");
-	 //			 }
-	 //
-	 //
-	 //			 Table table = Table.create("Daily Hospitalizations");
-	 //			 table.addColumns(records);
-	 //			 table.addColumns(values);
-	 //			 table.addColumns(groupings);
-	 //
-	 //			 TableSliceGroup tables = table.splitOn( table.categoricalColumn( "scenario" ) );
-	 //
-	 //			 Axis yAxis = Axis.builder().type( Axis.Type.LOG ).build();
-	 //
-	 //			 Layout layout = Layout.builder( "Daily Hospitalizations", "day", "hospitalizations" ).yAxis( yAxis ).showLegend(true ).build();
-	 //
-	 //			 ScatterTrace[] traces = new ScatterTrace[tables.size()];
-	 //			 for (int i = 0; i < tables.size(); i++) {
-	 //			   List<Table> tableList = tables.asTableList();
-	 //			   traces[i] = ScatterTrace.builder( tableList.get(i).numberColumn( "day" ), tableList.get(i ).numberColumn( "hospitalizations" ) )
-	 //				   .showLegend(true)
-	 //				   .name(tableList.get(i).name())
-	 //				   .mode(ScatterTrace.Mode.LINE)
-	 //				   .build();
-	 //			 }
-	 //			 var figure = new Figure( layout, traces );
-	 //
-	 //			 try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "HospitalizationComparison3.html" ), StandardCharsets.UTF_8)) {
-	 //				 writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
-	 //			 } catch (IOException e) {
-	 //				 throw new UncheckedIOException(e);
-	 //			 }
-	 //		 }
-
-
-	 //	 }
 
 	 private int getWeeklyHospitalizations(Int2IntMap standardHospitalizations, Integer today) {
 		 int weeklyHospitalizations = 0;
@@ -692,10 +608,7 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 							 postProcessHospitalFilledBeds.put(day, ++bedCnt);
 						 }
 					 }
-
-
 				 }
-
 
 			 }
 
@@ -743,7 +656,7 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 				 proba = 27.3 / 100;
 			 }
 
-			 return proba * 0.5; //TODO: hospitalFactor;
+			 return proba * hospitalFactor;
 		 }
 
 		 protected double getProbaOfTransitioningToCritical(int age) { // changed from EpiSimPerson
@@ -780,7 +693,7 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 				 numVaccinations = 1; //TODO: should this be 2?
 			 }
 
-			 int numInfections = person.infections.size() - 1; //TODO: why -1?
+			 int numInfections = person.infections.size() - 1;
 
 			 if (numVaccinations == 0 && numInfections == 0)
 				 return 1.0;
@@ -811,7 +724,7 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 					 veSeriouslySick = 0.6;
 			 }
 
-			 double factorInf = 1.0; //TODO: immunityFactor;
+			 double factorInf = immunityFactor;
 
 			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
 
@@ -845,188 +758,6 @@ https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/epis
 		 }
 
 	 }
-
-	 /**
-	  * Adds progression config to the given builder.
-	  */
-	 private static Transition.Builder progressionConfig(Transition.Builder builder) {
-
-		 Transition transitionRecSus;
-
-		 transitionRecSus = Transition.logNormalWithMedianAndStd(180., 10.);
-
-		 return builder
-				 // Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
-				 .from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
-						 to(EpisimPerson.DiseaseStatus.contagious, Transition.fixed(0)))
-
-				 // Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
-				 // Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
-				 .from(EpisimPerson.DiseaseStatus.contagious,
-						 to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(6., 6.)),    //80%
-						 to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))            //20%
-
-				 // Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
-				 .from(EpisimPerson.DiseaseStatus.showingSymptoms,
-						 to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(5., 5.)),
-						 to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
-
-				 // Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
-				 .from(EpisimPerson.DiseaseStatus.seriouslySick,
-						 to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
-						 to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
-
-				 // Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
-				 .from(EpisimPerson.DiseaseStatus.critical,
-						 to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
-
-				 .from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
-						 to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
-
-				 .from(EpisimPerson.DiseaseStatus.recovered,
-						 to(EpisimPerson.DiseaseStatus.susceptible, transitionRecSus))
-				 ;
-	 }
-
-	 protected static final int decideTransitionDay(DiseaseStatus from, DiseaseStatus to) {
-		 Transition t = tMatrix[from.ordinal() * DiseaseStatus.values().length + to.ordinal()];
-		 if (t == null) throw new IllegalStateException(String.format("No transition from %s to %s defined", from, to));
-
-
-		 return t.getTransitionDay(splittableRandom);
-	 }
-
-
-	 //	 private void updateHospitalizations(Int2IntMap iteration2HospitalizationCnt, Id<Person> personId, Holder person) {
-	 //		 if (person.infections.size() > 0) {
-	 //
-	 //			 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
-	 //
-	 //			 // loop through infections
-	 //			 for (int iInfection = 0; iInfection < person.infections.size(); iInfection++) {
-	 //
-	 //				 VirusStrain strain = person.strains.get(iInfection);
-	 //				 int infectionIteration = person.infections.getInt(iInfection);
-	 //
-	 //				 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-	 //
-	 //				 double vaccinationFactor = person.vaccine != null ?
-	 //						 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
-	 //						 strainConfig.getParams(strain).getFactorSeriouslySick();
-	 //
-	 //				 if (rnd.nextDouble() < ageFactor
-	 //						 * vaccinationFactor
-	 //						 * getSeriouslySickFactor(person, strain)) {
-	 //					 int hospitalizationIteration = infectionIteration + 4;
-	 //					 int hospitalizationCnt = iteration2HospitalizationCnt.getOrDefault(hospitalizationIteration, 0);
-	 //					 iteration2HospitalizationCnt.put(hospitalizationIteration, ++hospitalizationCnt);
-	 //				 }
-	 //			 }
-	 //
-	 //		 }
-	 //	 }
-
-	 //	 protected double getProbaOfTransitioningToSeriouslySick(int age) {
-	 //
-	 //		 double proba = -1;
-	 //
-	 //		 if (age < 10) {
-	 //			 proba = 0.1 / 100;
-	 //		 } else if (age < 20) {
-	 //			 proba = 0.3 / 100;
-	 //		 } else if (age < 30) {
-	 //			 proba = 1.2 / 100;
-	 //		 } else if (age < 40) {
-	 //			 proba = 3.2 / 100;
-	 //		 } else if (age < 50) {
-	 //			 proba = 4.9 / 100;
-	 //		 } else if (age < 60) {
-	 //			 proba = 10.2 / 100;
-	 //		 } else if (age < 70) {
-	 //			 proba = 16.6 / 100;
-	 //		 } else if (age < 80) {
-	 //			 proba = 24.3 / 100;
-	 //		 } else {
-	 //			 proba = 27.3 / 100;
-	 //		 }
-	 //
-	 //		 return proba * hospitalFactor;
-	 //	 }
-	 //
-	 //	 protected double getProbaOfTransitioningToCritical(int age) { // changed from EpiSimPerson
-	 //		 double proba = -1;
-	 //
-	 //		 //		 int age = person.getAge();
-	 //
-	 //		 if (age < 40) {
-	 //			 proba = 5. / 100;
-	 //		 } else if (age < 50) {
-	 //			 proba = 6.3 / 100;
-	 //		 } else if (age < 60) {
-	 //			 proba = 12.2 / 100;
-	 //		 } else if (age < 70) {
-	 //			 proba = 27.4 / 100;
-	 //		 } else if (age < 80) {
-	 //			 proba = 43.2 / 100;
-	 //		 } else {
-	 //			 proba = 70.9 / 100;
-	 //		 }
-	 //
-	 //		 return proba;
-	 //	 }
-
-	 //	 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
-	 //
-	 //
-	 //		 int numVaccinations = 0;
-	 //
-	 //		 if (person.boosterDate != null) {
-	 //			 numVaccinations = 3; //TODO: should this be 2?
-	 //		 } else if (person.vaccinationDate != null) {
-	 //			 numVaccinations = 2; //TODO: should this be 1?
-	 //		 }
-	 //
-	 //		 int numInfections = person.infections.size() - 1; //TODO: why -1?
-	 //
-	 //		 if (numVaccinations == 0 && numInfections == 0)
-	 //			 return 1.0;
-	 //
-	 //		 double veSeriouslySick = 0.0;
-	 //
-	 //		 //vaccinated persons that are boostered either by infection or by 3rd shot
-	 //		 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
-	 //			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
-	 //				 veSeriouslySick = 0.9;
-	 //			 else
-	 //				 veSeriouslySick = 0.95;
-	 //		 }
-	 //
-	 //		 //vaccinated persons or persons who have had a severe course of disease in the past
-	 //		 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
-	 //		 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA))
-	 //
-	 //			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
-	 //				 veSeriouslySick = 0.55;
-	 //			 else
-	 //				 veSeriouslySick = 0.9;
-	 //
-	 //		 else {
-	 //			 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
-	 //				 veSeriouslySick = 0.55;
-	 //			 else
-	 //				 veSeriouslySick = 0.6;
-	 //		 }
-	 //
-	 //		 double factorInf = immunityFactor;
-	 //
-	 //		 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
-	 //
-	 //		 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
-	 //		 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
-	 //
-	 //		 return factorSeriouslySick;
-	 //	 }
-
 
  }
 
