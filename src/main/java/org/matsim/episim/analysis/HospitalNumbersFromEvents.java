@@ -270,7 +270,7 @@
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
 				 int weeklyHospitalizations = getWeeklyHospitalizations(standardHospitalizations, today);
-				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
+				 double incidence = weeklyHospitalizations * 100_000. / populationCnt * 4;
 
 				 values.append(incidence);
 				 groupings.append("baseCase");
@@ -281,7 +281,7 @@
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
 				 int weeklyHospitalizations = getWeeklyHospitalizations(postProcessHospitalizations, today);
-				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
+				 double incidence = weeklyHospitalizations * 100_000. / populationCnt * 4;
 
 				 values.append(incidence);
 				 groupings.append("postProcess");
@@ -359,7 +359,7 @@
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
 
-				 values.append(ppBeds.get(today) * 100_000. / populationCnt);
+				 values.append(ppBeds.get(today) * 100_000. / populationCnt * 4);
 				 groupings.append("generalBeds");
 			 }
 
@@ -367,8 +367,65 @@
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
 
-				 values.append(ppBedsICU.get(today) * 100_000. / populationCnt);
+				 values.append(ppBedsICU.get(today) * 100_000. / populationCnt * 4);
 				 groupings.append("ICUBeds");
+			 }
+
+			 // read rki data and add to columns
+			 /*
+			 https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv (pinke Linie)
+https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie). Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.
+			  */
+			 // pink plot from covid-sim: general beds
+			 //  https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv (pinke Linie)
+			 {
+
+				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv")),
+						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+
+				 for (CSVRecord record : parser) {
+					 String dateStr = record.get("date").split("T")[0];
+					 LocalDate date = LocalDate.parse(dateStr);
+					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
+
+					 double incidence = 0.;
+					 try {
+						 incidence = Double.parseDouble(record.get("allgemeinpatienten"));
+					 } catch (NumberFormatException e) {
+
+					 }
+
+					 records.append(day);
+					 values.append(incidence * 100_000. / populationCnt);
+					 groupings.append("Reported: General Beds");
+
+				 }
+
+
+			 }
+			 //green plot from covid-sim
+			 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
+			 {
+				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
+						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+
+				 for (CSVRecord record : parser) {
+					 String dateStr = record.get("date").split("T")[0];
+					 LocalDate date = LocalDate.parse(dateStr);
+					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
+
+					 double incidence = 0.;
+					 try {
+						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));//""faelle_covid_aktuell"));
+					 } catch (NumberFormatException e) {
+
+					 }
+
+					 records.append(day);
+					 values.append(incidence * 100_000. / populationCnt);
+					 groupings.append("Reported: ICU Beds");
+
+				 }
 			 }
 
 
