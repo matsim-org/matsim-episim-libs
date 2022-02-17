@@ -98,6 +98,7 @@
 
 	 private double hospitalFactor = 0.5; //TODO: what should this be?
 	 private double immunityFactor = 1.0; //TODO: what should this be?
+	 private int populationCnt = 919_936;
 
 
 	 public static void main(String[] args) {
@@ -237,7 +238,7 @@
 
 					 }
 				 }
-				 double incidence = weeklyHospitalizations * 100_000. / 4_800_000.;
+				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
 
 				 values.append(incidence);
 				 groupings.append("baseCase");
@@ -254,7 +255,7 @@
 
 					 }
 				 }
-				 double incidence = weeklyHospitalizations * 100_000. / 4_800_000.;
+				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
 
 				 values.append(incidence);
 
