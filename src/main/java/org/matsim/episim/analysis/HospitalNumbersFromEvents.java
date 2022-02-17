@@ -45,6 +45,7 @@
  import tech.tablesaw.api.IntColumn;
  import tech.tablesaw.api.StringColumn;
  import tech.tablesaw.api.Table;
+ import tech.tablesaw.io.csv.CsvReadOptions;
  import tech.tablesaw.plotly.components.Axis;
  import tech.tablesaw.plotly.components.Figure;
  import tech.tablesaw.plotly.components.Layout;
@@ -161,7 +162,10 @@
 
 		 String id = AnalysisCommand.getScenarioPrefix(output);
 
-		 BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "post.hospital.tsv"));
+		 final Path tsvPath = output.resolve( id + "post.hospital.tsv" );
+		 BufferedWriter bw = Files.newBufferedWriter( tsvPath );
+
+		 bw.write("day\tdate\tpost\tbaseCase");
 
 		 Map<Id<Person>, Holder> data = new IdMap<>(Person.class, population.getPersons().size());
 
@@ -178,6 +182,41 @@
 		 //			 Holder person = personEntry.getValue();
 		 //			 updateHospitalizations(iteration2HospitalizationCnt, personId, person);
 		 //		 }
+
+		 bw.close();
+
+		 // ===
+
+		 plotData( tsvPath, handler );
+		 // todo: (1) revise plotData such that "handler" is not needed an all info is in the tsv file.
+
+
+		 log.info("Calculated results for output {}", output);
+
+	 }
+	 private void plotData( Path tsvPath, Handler handler ) throws IOException{
+		 Table hospitalData ;
+		 {
+			 CsvReadOptions.Builder builder =
+					 CsvReadOptions.builder( tsvPath.toString() )
+						       .separator( '\t' )                                                                                // table is tab-delimited
+						       .header( false )                                                                                        // no header
+						       .dateFormat( "yyyy.MM.dd" );                                // the date format to use.
+
+			 CsvReadOptions options = builder.build();
+
+			 hospitalData = Table.read().usingOptions( options );
+		 }
+
+		 CsvReadOptions.Builder builder =
+				 CsvReadOptions.builder("../shared-svmyFile.csv")
+					       .separator('\t')										// table is tab-delimited
+					       .header(false)											// no header
+					       .dateFormat("yyyy.MM.dd");  				// the date format to use.
+
+		 CsvReadOptions options = builder.build();
+
+		 Table t1 = Table.read().usingOptions(options);
 
 		 // create comparison plot
 		 {
@@ -249,7 +288,7 @@
 				 int weeklyHospitalizations = 0;
 				 for (int i = 0; i < 7; i++) {
 					 try {
-						 weeklyHospitalizations += handler.baseCase.getOrDefault(today - i, 0);
+						 weeklyHospitalizations += handler.baseCase.getOrDefault(today - i, 0 );
 					 } catch (Exception e) {
 
 					 }
@@ -266,7 +305,7 @@
 				 int weeklyHospitalizations = 0;
 				 for (int i = 0; i < 7; i++) {
 					 try {
-						 weeklyHospitalizations += handler.iteration2HospitalizationCnt.getOrDefault(today - i, 0);
+						 weeklyHospitalizations += handler.iteration2HospitalizationCnt.getOrDefault(today - i, 0 );
 					 } catch (Exception e) {
 
 					 }
@@ -308,12 +347,6 @@
 				 throw new UncheckedIOException(e);
 			 }
 		 }
-
-
-		 bw.close();
-
-		 log.info("Calculated results for output {}", output);
-
 	 }
 
 
