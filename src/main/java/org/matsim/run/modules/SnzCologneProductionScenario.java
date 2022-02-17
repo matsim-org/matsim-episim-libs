@@ -192,7 +192,6 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 				HouseholdSusceptibility.newConfig().withSusceptibleHouseholds(householdSusc, 5.0)
 		);
 
-		// TODO: move & change values (webex)
 		bind(VaccinationFromData.Config.class).toInstance(
 				VaccinationFromData.newConfig("05315") // TODO: location id (webex)
 						.withAgeGroup("05-11", 67158.47)
@@ -229,18 +228,21 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 
 		double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model, -> 2_352_480
 
-		if (this.sample != 25 && this.sample != 100)
-			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+//		if (this.sample != 25 && this.sample != 100)
+//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
+		//general config
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		config.global().setRandomSeed(7564655870752979346L);
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		config.plans().setInputFile(inputForSample("cologne_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+
+		//episim config
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -259,19 +261,21 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(0.5);
-		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 		episimConfig.setThreads(8);
 		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
-		episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());
+
+		//progression model
+		//episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
+		episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());// TODO: why does this immediately override?
 
 
 		//inital infections and import
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		if (this.diseaseImport != DiseaseImport.no) {
 
-//			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
-//					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
+			//			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
+			//					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
 			//disease import 2020
 			Map<LocalDate, Integer> importMap = new HashMap<>();
 			double importFactorBeforeJune = 4.0;
@@ -292,6 +296,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		}
 
 
+		//contact intensities
 		SnzProductionScenario.configureContactIntensities(episimConfig);
 
 		//restrictions and masks
@@ -309,46 +314,50 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		} catch (IOException e1) {
 			throw new UncheckedIOException(e1);
 		}
-		// TODO: add vacations for Berlin, 0.2 = vacation
 		builder.restrict(LocalDate.parse("2020-03-16"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-04-27"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Sommerferien (source: https://www.nrw-ferien.de/nrw-ferien-2022.html)
 		builder.restrict(LocalDate.parse("2020-06-29"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-08-11"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		//Lueften nach den Sommerferien
 		builder.restrict(LocalDate.parse("2020-08-11"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-12-31"), Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
+		//Herbstferien
 		builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2020-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-
+		//Weihnachtsferien TODO: check end date; shouldn't it be 2021-01-06
 		builder.restrict(LocalDate.parse("2020-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-01-11"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Osterferien
 		builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-04-10"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Sommerferien
 		builder.restrict(LocalDate.parse("2021-07-05"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-08-17"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-//		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
+		//		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Herbstferien (different end dates for school + university)
 		builder.restrict(LocalDate.parse("2021-10-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-10-18"), 1.0, "educ_higher");
 		builder.restrict(LocalDate.parse("2021-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Weihnachtsferien
 		builder.restrict(LocalDate.parse("2021-12-24"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-01-08"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-04-01"), 1.0, "educ_higher");
-
+		//Osterferien
 		builder.restrict(LocalDate.parse("2022-04-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-04-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Sommerferien
 		builder.restrict(LocalDate.parse("2022-06-27"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-08-09"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Herbstferien
 		builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		//Weihnachtsferien
 		builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 
 		{
-			//TODO: check if berlin needs to be updated
 			LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			for (int ii = 0; ii <= 14; ii++) {
 				LocalDate date = masksCenterDate.plusDays(-14 / 2 + ii);
@@ -357,18 +366,17 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 				double surgicalFraction = 1. / 3. * 0.9;
 
 				builder.restrict(date, Restriction.ofMask(Map.of(
-								FaceMask.CLOTH, clothFraction * ii / 14,
-								FaceMask.N95, ffpFraction * ii / 14,
-								FaceMask.SURGICAL, surgicalFraction * ii / 14)),
+						FaceMask.CLOTH, clothFraction * ii / 14,
+						FaceMask.N95, ffpFraction * ii / 14,
+						FaceMask.SURGICAL, surgicalFraction * ii / 14)),
 						"pt", "shop_daily", "shop_other", "errands");
 			}
-//			builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-//			builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-//			builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//			builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+			//			builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+			//			builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		}
 
 		//curfew
-		//TODO: add ausgangssperre to berlin
 		builder.restrict("2021-04-17", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
 		curfewCompliance.put(LocalDate.parse("2021-04-17"), 1.0);
@@ -388,7 +396,6 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		episimConfig.setInputDays(inputDays);
 
 		//outdoorFractions
-		// TODO: need new weather file DownloadWeatherData
 		if (this.weatherModel != WeatherModel.no) {
 
 			SnzProductionScenario.configureWeather(episimConfig, weatherModel,
@@ -404,10 +411,9 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		}
 
 		//leisure & work factor
-		// TODO
 		if (this.restrictions != Restrictions.no) {
 			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
-//			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
+			//			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
 			BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
 			// todo: update vacations
