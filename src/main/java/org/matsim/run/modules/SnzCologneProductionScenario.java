@@ -425,6 +425,8 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
 			builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
 			builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
+			builder.applyToRf("2021-12-22", "2022-01-05", workVacFactor, "work", "business");
+
 
 			builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
 			builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
