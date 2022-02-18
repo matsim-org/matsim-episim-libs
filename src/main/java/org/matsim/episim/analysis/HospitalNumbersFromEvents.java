@@ -37,12 +37,9 @@
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
  import org.matsim.episim.EpisimConfigGroup;
- import org.matsim.episim.EpisimPerson;
  import org.matsim.episim.EpisimPerson.DiseaseStatus;
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
- import org.matsim.episim.model.ConfigurableProgressionModel;
- import org.matsim.episim.model.Transition;
  import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
@@ -66,8 +63,6 @@
  import java.time.temporal.ChronoUnit;
  import java.util.*;
 
- import static org.matsim.episim.model.Transition.to;
-
 
  /**
   * Calcualte hospital numbers from events
@@ -82,7 +77,7 @@
 
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output") //"C:/Users/jakob/Desktop/output")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -103,9 +98,6 @@
 	 @Inject
 	 private Scenario scenario;
 
-	 private final Random rnd = new Random(1234);
-
-	 private static Transition[] tMatrix;
 
 	 private Config config;
 	 private EpisimConfigGroup episimConfig;
@@ -115,7 +107,6 @@
 	 private static double immunityFactor = 1.0; //TODO: what should this be?
 	 private int populationCnt = 919_936;
 	 private static int lagBetweenInfectionAndHospitalisation = 5;
-	 private static SplittableRandom splittableRandom = new SplittableRandom(1234);
 
 
 	 public static void main(String[] args) {
@@ -138,6 +129,8 @@
 
 		 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+
+		 //todo:
 		 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(1.25);
@@ -152,31 +145,32 @@
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
 
 
-
-
 		 // Part 1: calculate hospitalizations and save as csv
 		 // can be run once and then commented out!
 
-//		 population = PopulationUtils.readPopulation(input + populationFile);
-//		 AnalysisCommand.forEachScenario(output, scenario -> {
-//			 try {
-//				 analyzeOutput(scenario);
-//
-//			 } catch (IOException e) {
-//				 log.error("Failed processing {}", scenario, e);
-//			 }
-//		 });
-//
-//		 log.info("done");
+		 //		 population = PopulationUtils.readPopulation(input + populationFile);
+		 //		 AnalysisCommand.forEachScenario(output, scenario -> {
+		 //			 try {
+		 //				 analyzeOutput(scenario);
+		 //
+		 //			 } catch (IOException e) {
+		 //				 log.error("Failed processing {}", scenario, e);
+		 //			 }
+		 //		 });
+		 //
+		 //		 log.info("done");
 
 		 // ===
 
-		 // Part 2: aggregate over multiple seeds and plot data
+		 // Part 2: aggregate over multiple seeds & produce tsv output
 		 List<Path> pathList = new ArrayList<>();
-		 AnalysisCommand.forEachScenario(output, scenario -> { pathList.add(scenario);});
+		 AnalysisCommand.forEachScenario(output, scenario -> {
+			 pathList.add(scenario);
+		 });
 
-		 plotData(pathList);
 
+		 // Part 3: plot
+		 aggregateDataAndProduceTSV(output, pathList);
 
 
 		 return 0;
@@ -217,30 +211,35 @@
 				 Math.max(((Int2IntAVLTreeMap) handler.postProcessHospitalFilledBeds).keySet().lastInt(),
 						 ((Int2IntAVLTreeMap) handler.postProcessHospitalFilledBedsICU).keySet().lastInt()));
 
-		 //todo: so far this is 25%, should it scaled up to 100%?
+
 		 for (int day = 0; day <= maxIteration; day++) {
 			 LocalDate date = startDate.plusDays(day);
-			 int stdHosp = handler.standardHospitalAdmissions.getOrDefault(day, 0);
-			 int ppHosp = handler.postProcessHospitalAdmissions.getOrDefault(day, 0);
-			 int ppBed = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0);
-			 int ppBedICU = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0);
+
+			 // calculates Incidence - 7day hospitalizations per 100,000 residents
+			 double stdHosp = getWeeklyHospitalizations(handler.standardHospitalAdmissions, day) * 4 * 100_000. / populationCnt;
+			 double ppHosp = getWeeklyHospitalizations(handler.postProcessHospitalAdmissions, day) * 4 * 100_000. / populationCnt;
+
+			 // calculates daily hospital occupancy, per 100,000 residents
+			 double ppBed = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0) * 4 * 100_000. / populationCnt;
+			 double ppBedICU = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 4 * 100_000. / populationCnt;
+
 			 bw.newLine();
-			 bw.write(AnalysisCommand.TSV.join(day, date, stdHosp*4, ppHosp*4, ppBed*4, ppBedICU*4));
+			 bw.write(AnalysisCommand.TSV.join(day, date, stdHosp, ppHosp, ppBed, ppBedICU));
 
 		 }
 
 		 bw.close();
 	 }
 
-	 private void plotData(List<Path> pathList) throws IOException {
+	 private void aggregateDataAndProduceTSV(Path output, List<Path> pathList) throws IOException {
 
 
 		 // read hospitalization tsv for all seeds and aggregate them!
 		 // todo: NOTE: all other parameters should be the same, otherwise the results will be useless!
-		 Int2IntMap standardHospitalizations = new Int2IntAVLTreeMap();
-		 Int2IntMap postProcessHospitalizations = new Int2IntAVLTreeMap();
-		 Int2IntMap ppBeds = new Int2IntAVLTreeMap();
-		 Int2IntMap ppBedsICU = new Int2IntAVLTreeMap();
+		 Int2DoubleMap standardHospitalizations = new Int2DoubleAVLTreeMap();
+		 Int2DoubleMap postProcessHospitalizations = new Int2DoubleAVLTreeMap();
+		 Int2DoubleMap ppBeds = new Int2DoubleAVLTreeMap();
+		 Int2DoubleMap ppBedsICU = new Int2DoubleAVLTreeMap();
 
 
 		 for (Path path : pathList) {
@@ -257,10 +256,10 @@
 			 for (CSVRecord record : parser) {
 
 				 int day = Integer.parseInt(record.get("day"));
-				 int stdHosp = standardHospitalizations.getOrDefault(day, 0) / pathList.size() + Integer.parseInt(record.get("standardHospitalizations"));
-				 int ppHosp = postProcessHospitalizations.getOrDefault(day,0) / pathList.size() + Integer.parseInt(record.get("postProcessHospitalizations"));
-				 int ppBed = ppBeds.getOrDefault(day,0) / pathList.size() + Integer.parseInt(record.get("ppBeds"));
-				 int ppICU = ppBedsICU.getOrDefault(day,0) / pathList.size() + Integer.parseInt(record.get("ppBedsICU"));
+				 double stdHosp = standardHospitalizations.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("standardHospitalizations"));
+				 double ppHosp = postProcessHospitalizations.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("postProcessHospitalizations"));
+				 double ppBed = ppBeds.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("ppBeds"));
+				 double ppICU = ppBedsICU.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("ppBedsICU"));
 
 
 				 standardHospitalizations.put(day, stdHosp);
@@ -274,6 +273,115 @@
 			 parser.close();
 		 }
 
+		 // read rki data and add to tsv
+		 Int2DoubleMap rkiHospIncidence = new Int2DoubleAVLTreeMap();
+		 {
+
+			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/src/assets/rki-deutschland-hospitalization.csv")),
+					 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+
+			 for (CSVRecord record : parser) {
+				 if (!record.get("Bundesland").equals("Nordrhein-Westfalen")) {
+					 continue;
+				 }
+				 LocalDate date = LocalDate.parse((record.get("Datum")));
+				 int day = (int) startDate.until(date, ChronoUnit.DAYS);
+
+				 double incidence;
+				 try {
+					 incidence = Double.parseDouble(record.get("PS_adjustierte_7T_Hospitalisierung_Inzidenz"));
+				 } catch (NumberFormatException e) {
+					 incidence = 0.;
+				 }
+
+				 rkiHospIncidence.put(day, incidence);
+			 }
+		 }
+
+		 // read rki data and add to columns
+		 // pink plot from covid-sim: general beds
+		 //  https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv (pinke Linie)
+		 Int2DoubleMap reportedBeds = new Int2DoubleAVLTreeMap();
+		 {
+
+			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv")),
+					 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+
+			 for (CSVRecord record : parser) {
+				 String dateStr = record.get("date").split("T")[0];
+				 LocalDate date = LocalDate.parse(dateStr);
+				 int day = (int) startDate.until(date, ChronoUnit.DAYS);
+
+				 double incidence;
+				 try {
+					 incidence = Double.parseDouble(record.get("allgemeinpatienten")) * 100_000. / populationCnt;
+				 } catch (NumberFormatException e) {
+					 incidence = 0.;
+				 }
+
+				 reportedBeds.put(day, incidence);
+			 }
+		 }
+
+
+		 //green plot from covid-sim (Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.)
+		 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
+		 // TODO: commented out because I can't be sure if this is the right data
+		 Int2DoubleMap reportedBedsICU = new Int2DoubleAVLTreeMap();
+		 {
+			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
+					 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+
+			 for (CSVRecord record : parser) {
+				 String dateStr = record.get("date").split("T")[0];
+				 LocalDate date = LocalDate.parse(dateStr);
+				 int day = (int) startDate.until(date, ChronoUnit.DAYS);
+
+				 double incidence = 0.;
+				 try {
+					 incidence = Double.parseDouble(record.get("faelle_covid_aktuell")) * 100_000. / populationCnt;
+					 //						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));
+				 } catch (NumberFormatException e) {
+
+				 }
+
+				 reportedBedsICU.put(day, incidence);
+			 }
+		 }
+
+
+		 // Produce TSV
+
+		 {
+			 BufferedWriter bw = Files.newBufferedWriter(output.resolve("post.hospital.agg.tsv"));//todo
+
+			 bw.write("day\tdate\tmodelIncidenceBase\tmodelIncidencePost\tmodelHospRate\tmodelCriticalRate\trkiIncidence\trkiHospRate\trkiCriticalRate");
+
+			 double maxIteration = standardHospitalizations.size(); //todo
+
+			 for (int day = 0; day <= maxIteration; day++) {
+				 LocalDate date = startDate.plusDays(day);
+
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(
+						 day,
+						 date,
+						 standardHospitalizations.getOrDefault(day, 0.),
+						 postProcessHospitalizations.getOrDefault(day, 0.),
+						 ppBeds.getOrDefault(day, 0.),
+						 ppBedsICU.getOrDefault(day, 0.),
+						 rkiHospIncidence.getOrDefault(day, 0.),
+						 reportedBeds.getOrDefault(day, 0.),
+						 reportedBedsICU.getOrDefault(day, 0.))
+				 );
+
+			 }
+
+			 bw.close();
+
+
+		 }
+
 
 		 // PLOT 1: People admitted to hospital
 		 {
@@ -284,84 +392,30 @@
 
 			 // standard hospitalizations from episim
 			 for (Map.Entry entry : standardHospitalizations.entrySet()) {
-				 Integer today = (Integer) entry.getKey();
+				 int today = (int) entry.getKey();
 				 records.append(today);
-				 int weeklyHospitalizations = getWeeklyHospitalizations(standardHospitalizations, today);
-				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
-
-				 values.append(incidence);
+				 values.append(standardHospitalizations.getOrDefault(today, 0.));
 				 groupings.append("baseCase");
 			 }
 
 			 // post-processed hospitalizations from episim
 			 for (Map.Entry entry : postProcessHospitalizations.entrySet()) {
-				 Integer today = (Integer) entry.getKey();
+				 int today = (int) entry.getKey();
 				 records.append(today);
-				 int weeklyHospitalizations = getWeeklyHospitalizations(postProcessHospitalizations, today);
-				 double incidence = weeklyHospitalizations * 100_000. / populationCnt;
-
-				 values.append(incidence);
+				 values.append(postProcessHospitalizations.getOrDefault(today, 0.));
 				 groupings.append("postProcess");
 			 }
 
-			 // read rki data and add to columns
-			 {
 
-
-				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/src/assets/rki-deutschland-hospitalization.csv")),
-						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
-
-				 for (CSVRecord record : parser) {
-					 if (!record.get("Bundesland").equals("Nordrhein-Westfalen")) {
-						 continue;
-					 }
-					 LocalDate date = LocalDate.parse((record.get("Datum")));
-					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-					 double incidence = 0.;
-					 try {
-						 incidence = Double.parseDouble(record.get("PS_adjustierte_7T_Hospitalisierung_Inzidenz"));
-					 } catch (NumberFormatException e) {
-
-					 }
-
-					 records.append(day);
-					 values.append(incidence);
-					 groupings.append("RKI NRW Adjusted");
-
-
-				 }
+			 for (Map.Entry entry : rkiHospIncidence.entrySet()) {
+				 int today = (int) entry.getKey();
+				 records.append(today);
+				 values.append(rkiHospIncidence.getOrDefault(today, 0.));
+				 groupings.append("RKI NRW Adjusted");
 			 }
 
 
-			 // Make plot
-			 Table table = Table.create("Hospitalization Incidence");
-			 table.addColumns(records);
-			 table.addColumns(values);
-			 table.addColumns(groupings);
-
-			 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
-
-			 Axis yAxis = Axis.builder().type(Axis.Type.LOG).build();
-
-			 Layout layout = Layout.builder("7-Day Hospital Admissions / 100k Population", "Day", "Incidence").yAxis(yAxis).showLegend(true).build();
-
-			 ScatterTrace[] traces = new ScatterTrace[tables.size()];
-			 for (int i = 0; i < tables.size(); i++) {
-				 List<Table> tableList = tables.asTableList();
-				 traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn("day"), tableList.get(i).numberColumn("hospitalizations"))
-						 .showLegend(true)
-						 .name(tableList.get(i).name())
-						 .mode(ScatterTrace.Mode.LINE)
-						 .build();
-			 }
-			 var figure = new Figure(layout, traces);
-
-			 try (Writer writer = new OutputStreamWriter(new FileOutputStream("HospitalizationComparisonIncidence.html"), StandardCharsets.UTF_8)) {
-				 writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
-			 } catch (IOException e) {
-				 throw new UncheckedIOException(e);
-			 }
+			 producePlot(records, values, groupings, "Hospitalization Incidence", "7-Day Hospital Admissions / 100k Population", "HospitalizationComparisonIncidence.html");
 		 }
 
 
@@ -376,7 +430,7 @@
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
 
-				 values.append(ppBeds.get(today) * 100_000. / populationCnt);
+				 values.append(ppBeds.get(today));
 				 groupings.append("generalBeds");
 			 }
 
@@ -384,104 +438,68 @@
 				 Integer today = (Integer) entry.getKey();
 				 records.append(today);
 
-				 values.append(ppBedsICU.get(today) * 100_000. / populationCnt);
+				 values.append(ppBedsICU.get(today));
 				 groupings.append("ICUBeds");
 			 }
 
-			 // read rki data and add to columns
-			 // pink plot from covid-sim: general beds
-			 //  https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv (pinke Linie)
-			 {
 
-				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv")),
-						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
-
-				 for (CSVRecord record : parser) {
-					 String dateStr = record.get("date").split("T")[0];
-					 LocalDate date = LocalDate.parse(dateStr);
-					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-					 double incidence = 0.;
-					 try {
-						 incidence = Double.parseDouble(record.get("allgemeinpatienten"));
-					 } catch (NumberFormatException e) {
-
-					 }
-
-					 records.append(day);
-					 values.append(incidence * 100_000. / populationCnt);
-					 groupings.append("Reported: General Beds");
-
-				 }
-
-
+			 for (Map.Entry entry : reportedBeds.entrySet()) {
+				 records.append((Integer) entry.getKey());
+				 values.append((Double) entry.getValue());
+				 groupings.append("Reported: General Beds");
 			 }
-			 //green plot from covid-sim (Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.)
-			 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
-			 // TODO: commented out because I can't be sure if this is the right data
-//			 {
-//				 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
-//						 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
-//
-//				 for (CSVRecord record : parser) {
-//					 String dateStr = record.get("date").split("T")[0];
-//					 LocalDate date = LocalDate.parse(dateStr);
-//					 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-//
-//					 double incidence = 0.;
-//					 try {
-//						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell"));
-////						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));
-//					 } catch (NumberFormatException e) {
-//
-//					 }
-//
-//					 records.append(day);
-//					 values.append(incidence * 100_000. / populationCnt);
-//					 groupings.append("Reported: ICU Beds");
-//
-//				 }
-//			 }
+
+
+			 for (Map.Entry entry : reportedBedsICU.entrySet()) {
+				 records.append((Integer) entry.getKey());
+				 values.append((Double) entry.getValue());
+				 groupings.append("Reported: ICU Beds");
+			 }
 
 
 			 // Make plot
-			 Table table = Table.create("Filled Beds");
-			 table.addColumns(records);
-			 table.addColumns(values);
-			 table.addColumns(groupings);
-
-			 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
-
-			 Axis yAxis = Axis.builder().type(Axis.Type.LOG).build();
-
-			 Layout layout = Layout.builder("Filled Beds", "Day", "Incidence").yAxis(yAxis).showLegend(true).build();
-
-			 ScatterTrace[] traces = new ScatterTrace[tables.size()];
-			 for (int i = 0; i < tables.size(); i++) {
-				 List<Table> tableList = tables.asTableList();
-				 traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn("day"), tableList.get(i).numberColumn("hospitalizations"))
-						 .showLegend(true)
-						 .name(tableList.get(i).name())
-						 .mode(ScatterTrace.Mode.LINE)
-						 .build();
-			 }
-			 var figure = new Figure(layout, traces);
-
-			 try (Writer writer = new OutputStreamWriter(new FileOutputStream("FilledBeds.html"), StandardCharsets.UTF_8)) {
-				 writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
-			 } catch (IOException e) {
-				 throw new UncheckedIOException(e);
-			 }
+			 producePlot(records, values, groupings, "Filled Beds", "Filled Beds", "FilledBeds.html");
 		 }
 
 
 	 }
 
-	 private int getWeeklyHospitalizations(Int2IntMap standardHospitalizations, Integer today) {
+	 private void producePlot(IntColumn records, DoubleColumn values, StringColumn groupings, String s, String s2, String s3) {
+		 // Make plot
+		 Table table = Table.create(s);
+		 table.addColumns(records);
+		 table.addColumns(values);
+		 table.addColumns(groupings);
+
+		 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
+
+		 Axis yAxis = Axis.builder().type(Axis.Type.LOG).build();
+
+		 Layout layout = Layout.builder(s2, "Day", "Incidence").yAxis(yAxis).showLegend(true).build();
+
+		 ScatterTrace[] traces = new ScatterTrace[tables.size()];
+		 for (int i = 0; i < tables.size(); i++) {
+			 List<Table> tableList = tables.asTableList();
+			 traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn("day"), tableList.get(i).numberColumn("hospitalizations"))
+					 .showLegend(true)
+					 .name(tableList.get(i).name())
+					 .mode(ScatterTrace.Mode.LINE)
+					 .build();
+		 }
+		 var figure = new Figure(layout, traces);
+
+		 try (Writer writer = new OutputStreamWriter(new FileOutputStream(output.resolve(s3).toString()), StandardCharsets.UTF_8)) {
+			 writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
+		 } catch (IOException e) {
+			 throw new UncheckedIOException(e);
+		 }
+	 }
+
+	 private int getWeeklyHospitalizations(Int2IntMap hospMap, Integer today) {
 		 int weeklyHospitalizations = 0;
 		 for (int i = 0; i < 7; i++) {
 			 try {
-				 weeklyHospitalizations += standardHospitalizations.getOrDefault(today - i, 0);
+				 weeklyHospitalizations += hospMap.getOrDefault(today - i, 0);
 			 } catch (Exception e) {
 
 			 }
