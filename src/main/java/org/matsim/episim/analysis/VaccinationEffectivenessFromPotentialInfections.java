@@ -23,6 +23,8 @@ package org.matsim.episim.analysis;
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.csv.CSVFormat;
@@ -57,6 +59,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 
 	@CommandLine.Option(names = "--remove-infected", defaultValue = "false", description = "Remove infected persons from effectiveness calculation")
 	private boolean removeInfected;
+
+	@CommandLine.Option(names = "--min-sample", defaultValue = "100", description = "Filter entries with sample size below threshold")
+	private int minSample;
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new VaccinationEffectivenessFromPotentialInfections()).execute(args));
@@ -119,7 +124,10 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 					double a = handler.vac.get(k).get(i);
 					double b = handler.unVac.get(k).get(i);
 
-					csv.print((b - a) / b);
+					if (handler.n.get(k).get(i) >= minSample)
+						csv.print((b - a) / b);
+					else
+						csv.print(Double.NaN);
 				}
 
 				csv.println();
@@ -139,6 +147,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 
 		private final Map<String, Int2DoubleMap> vac = new HashMap<>();
 		private final Map<String, Int2DoubleMap> unVac = new HashMap<>();
+		private final Map<String, Int2IntMap> n = new HashMap<>();
 
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
@@ -178,7 +187,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 
 			if (infected.contains(event.getPersonId()))
 				return;
-			
+
 			if (threeTimesVaccinated.contains(event.getPersonId()))
 				return;
 
@@ -192,6 +201,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements OutputAn
 
 			unVac.computeIfAbsent(strainVaccine, (k) -> new Int2DoubleOpenHashMap())
 					.mergeDouble(daysSinceVaccination, event.getUnVacProbability(), Double::sum);
+
+			n.computeIfAbsent(strainVaccine, (k) -> new Int2IntOpenHashMap())
+					.mergeInt(daysSinceVaccination, 1, Integer::sum);
 
 		}
 	}
