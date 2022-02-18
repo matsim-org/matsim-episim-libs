@@ -141,6 +141,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		if (hadStrain)
 			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
 		
+		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.STRAIN_A)) 
+			return AK50_PERSTRAIN.get(VirusStrain.OMICRON_BA2);
+		
 		return ak50;
 	}
 

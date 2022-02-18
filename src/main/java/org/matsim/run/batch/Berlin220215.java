@@ -61,7 +61,7 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 					campaignDuration = params.dur;
 				}
 
-				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration));
+				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration, VaccinationType.mRNA, 0.0, 0.0));
 			}
 		});
 	}
