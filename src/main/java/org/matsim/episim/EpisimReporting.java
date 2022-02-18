@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.logging.log4j.LogManager;
@@ -99,6 +100,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public final Object2IntMap<VaccinationType> vaccinations = new Object2IntOpenHashMap<>();
 
 	/**
+	 *  Map of (VaccinationType, nth Vaccination) -> Number per day
+	 */
+	public final Object2IntMap<ObjectIntPair<VaccinationType>> vaccinationStats = new Object2IntOpenHashMap<>();
+
+	/**
 	 * Number format for logging output. Not static because not thread-safe.
 	 */
 	private final NumberFormat decimalFormat = DecimalFormat.getInstance(Locale.GERMAN);
@@ -139,6 +145,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter cpuTime;
 	private BufferedWriter antibodiesPerPerson;
 	private BufferedWriter vaccinationsPerType;
+	private BufferedWriter vaccinationsPerTypeAndNumber;
 
 	private String memorizedDate = null;
 
@@ -200,6 +207,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", "antibodies");
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
+		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -255,7 +263,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-					"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv",  "vaccinations.tsv", "events.tar")) {
+					"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv",  "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -271,6 +279,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv");
 		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv");
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv");
+		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv");
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
@@ -301,11 +310,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	double calculateAntibodyLevelPerPerson(Collection<EpisimPerson> persons, int iteration) {
 		double avgAntibodyLevel = 0.0;
 		NavigableMap<VirusStrain, Double> ak50PerStrain = vaccinationConfig.getAk50PerStrain();
-		
+
 		//antibody model not configured
 		if (ak50PerStrain.size() == 0)
 			return 0.0;
-		
+
 		for (EpisimPerson p : persons) {
 			double antibodyLevel = InfectionModelWithAntibodies.getRelativeAntibodyLevel(p, iteration, p.getNumVaccinations(), p.getNumInfections(), VirusStrain.OMICRON_BA1, ak50PerStrain);
 			avgAntibodyLevel = avgAntibodyLevel + antibodyLevel;
@@ -555,6 +564,20 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.append(vaccinationsPerType, vacOut);
 		vaccinations.clear();
 
+		vacOut = new String[5];
+		vacOut[0] = String.valueOf(iteration);
+		vacOut[1] = date;
+		for (Object2IntMap.Entry<ObjectIntPair<VaccinationType>> e : vaccinationStats.object2IntEntrySet()) {
+
+			vacOut[2] = e.getKey().key().toString();
+			vacOut[3] = Integer.toString(e.getKey().valueInt());
+			vacOut[4] = Integer.toString(e.getIntValue());
+
+			writer.append(vaccinationsPerTypeAndNumber, vacOut);
+		}
+
+		vaccinationStats.clear();
+
 		// Write all reports for each district
 		for (InfectionReport r : reports.values()) {
 			if (r.name.equals("total")) continue;
@@ -741,6 +764,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	void reportVaccination(Id<Person> personId, int iteration, VaccinationType type, int n) {
 
 		vaccinations.merge(type, 1, Integer::sum);
+		vaccinationStats.merge(ObjectIntPair.of(type, n), 1, Integer::sum);
+
 		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, n));
 	}
 
@@ -827,6 +852,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(antibodiesPerPerson);
 		writer.close(cpuTime);
 		writer.close(vaccinationsPerType);
+		writer.close(vaccinationsPerTypeAndNumber);
 
 		if (singleEvents) {
 			try {
