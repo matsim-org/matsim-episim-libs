@@ -12,26 +12,26 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Update vaccination campaign for people aged 18-59 and 60+. 
+ * Vaccinate agents that have not received booster yet. 
  */
-public class VaccinationStrategy implements VaccinationModel {
+public class VaccinationStrategy2 implements VaccinationModel {
 
 	private final SplittableRandom rnd;
 	private final Config config;
 
 	@Inject
-	public VaccinationStrategy(SplittableRandom rnd, Config config) {
+	public VaccinationStrategy2(SplittableRandom rnd, Config config) {
 		this.rnd = rnd;
 		this.config = config;
 	}
 
 	@Override
 	public void handleVaccination(Map<Id<Person>, EpisimPerson> persons, LocalDate date, int iteration, double now) {
+		
 
-		if (date.isAfter(config.start) && date.isBefore(config.start.plusDays(config.campaignDuration))) {
+		if (date.isAfter(config.start)) {
 			//handle young persons
-			if (config.complianceYoung > 0.0) 
-			{
+			if (config.vaccinateYoung) {
 				List<EpisimPerson> youngPersons = persons.values().stream()
 						.filter(p -> p.getAge() < 60 && p.getAge() > 17)
 						.collect(Collectors.toList());
@@ -39,26 +39,26 @@ public class VaccinationStrategy implements VaccinationModel {
 				List<EpisimPerson> youngCandidates = youngPersons.stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-						.filter(p -> p.getNumVaccinations() < 4)
+						.filter(p -> p.getNumVaccinations() < 2)
 						.filter(p -> p.getNumVaccinations() > 0 ? p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90 : true)
+						.filter(config.vaccinateRecovered ? p -> true : p -> p.getNumInfections() == 0)
 						.collect(Collectors.toList());
 		
 				Collections.shuffle(youngCandidates, new Random(EpisimUtils.getSeed(rnd)));
 				
-				int vaccinationsLeft = (int) (config.complianceYoung * youngPersons.size() / config.campaignDuration);
-
+				int vaccinationsLeft = (int) (0.01 * youngPersons.size());
+				
 				int n = Math.min(youngCandidates.size(), vaccinationsLeft);
 
 				for (int i = 0; i < n; i++) {
 					EpisimPerson person = youngCandidates.get(i);
-					vaccinate(person, iteration, config.vaccinationType);
+					vaccinate(person, iteration, VaccinationType.mRNA);
 					vaccinationsLeft--;
 				}	
 			}
 			
 			//handle old persons
-			if (config.complianceOld > 0.0) 
-			{
+			if (config.vaccinateOld) {
 				List<EpisimPerson> oldPersons = persons.values().stream()
 						.filter(p -> p.getAge() > 59)
 						.collect(Collectors.toList());
@@ -66,18 +66,20 @@ public class VaccinationStrategy implements VaccinationModel {
 				List<EpisimPerson> oldCanidates = oldPersons.stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-						.filter(p -> p.getNumVaccinations() < 3)
+						.filter(p -> p.getNumVaccinations() < 2)
 						.filter(p -> p.getNumVaccinations() > 0 ? p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90 : true)
+						.filter(config.vaccinateRecovered ? p -> true : p -> p.getNumInfections() == 0)
 						.collect(Collectors.toList());
 		
 				Collections.shuffle(oldCanidates, new Random(EpisimUtils.getSeed(rnd)));
 				
-				int vaccinationsLeft = (int) (config.complianceOld * oldPersons.size() / config.campaignDuration);
+				int vaccinationsLeft = (int) (0.01 * oldPersons.size());
+				
 				int n = Math.min(oldCanidates.size(), vaccinationsLeft);
 
 				for (int i = 0; i < n; i++) {
 					EpisimPerson person = oldCanidates.get(i);
-					vaccinate(person, iteration, config.vaccinationType);
+					vaccinate(person, iteration, VaccinationType.mRNA);
 					vaccinationsLeft--;
 				}	
 			}
@@ -93,24 +95,18 @@ public class VaccinationStrategy implements VaccinationModel {
 		 * Start of vaccination campaign.
 		 */
 		private final LocalDate start;
-		/**
-		 * Duration of vaccination campaign.
-		 */
-		private final int campaignDuration;
-
-		private final VaccinationType vaccinationType;
 		
-		private final double complianceYoung;
+		private final boolean vaccinateRecovered;
+		
+		private final boolean vaccinateYoung;
+		
+		private final boolean vaccinateOld;
 
-		private final double complianceOld;
-
-
-		public Config(LocalDate start, int campaignDuration, VaccinationType vaccinationType, double complianceYoung, double complianceOld) {
+		public Config(LocalDate start, boolean vaccinateRecovered, boolean vaccinateYoung, boolean vaccinateOld) {
 			this.start = start;
-			this.campaignDuration = campaignDuration;
-			this.vaccinationType = vaccinationType;
-			this.complianceYoung = complianceYoung;
-			this.complianceOld = complianceOld;
+			this.vaccinateRecovered = vaccinateRecovered;
+			this.vaccinateYoung = vaccinateYoung;
+			this.vaccinateOld = vaccinateOld;
 
 		}
 	}
