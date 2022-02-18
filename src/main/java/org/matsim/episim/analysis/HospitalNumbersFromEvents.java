@@ -103,7 +103,7 @@
 	 private EpisimConfigGroup episimConfig;
 	 VirusStrainConfigGroup strainConfig;
 
-	 private static double hospitalFactor = 0.5; //TODO: what should this be?
+	 private static double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
 	 private static double immunityFactor = 1.0; //TODO: what should this be?
 	 private int populationCnt = 919_936;
 	 private static int lagBetweenInfectionAndHospitalisation = 5;
@@ -348,7 +348,7 @@
 		 }
 
 
-		 // Produce TSV
+		 // Produce TSV w/ aggregated data as well as all rki numbers
 
 		 {
 			 BufferedWriter bw = Files.newBufferedWriter(output.resolve("post.hospital.agg.tsv"));//todo
@@ -514,10 +514,10 @@
 		 private final Random rnd;
 		 private final VirusStrainConfigGroup strainConfig;
 
-		 private Int2IntMap standardHospitalAdmissions;
-		 private Int2IntMap postProcessHospitalAdmissions;
-		 private Int2IntMap postProcessHospitalFilledBeds;
-		 private Int2IntMap postProcessHospitalFilledBedsICU;
+		 private final Int2IntMap standardHospitalAdmissions;
+		 private final Int2IntMap postProcessHospitalAdmissions;
+		 private final Int2IntMap postProcessHospitalFilledBeds;
+		 private final Int2IntMap postProcessHospitalFilledBedsICU;
 
 
 		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig) {
@@ -649,6 +649,9 @@
 					 * getCriticalFactor();
 		 }
 
+		 /**
+		  *calculates the probability that agent goes to hospital given an infection.
+		 */
 		 private boolean goToHospital(Holder person, VirusStrain strain, int age) {
 
 			 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
@@ -662,6 +665,9 @@
 					 * getSeriouslySickFactor(person, strain);
 		 }
 
+		 /**
+		  * Adapted from AgeDependentDiseaseStatusTransitionModel, signature changed.
+		  */
 		 protected double getProbaOfTransitioningToSeriouslySick(int age) {
 
 			 double proba = -1;
@@ -689,7 +695,10 @@
 			 return proba * hospitalFactor;
 		 }
 
-		 protected double getProbaOfTransitioningToCritical(int age) { // changed from EpiSimPerson
+		 /**
+		  * Adapted from AgeDependentDiseaseStatusTransitionModel
+		  */
+		 protected double getProbaOfTransitioningToCritical(int age) {
 			 double proba = -1;
 
 			 //		 int age = person.getAge();
@@ -711,6 +720,11 @@
 			 return proba;
 		 }
 
+
+		 /**
+		  * Adapted from AntibodyDependentTransitionModel.
+		  * changed inputs & immunity factor
+		  */
 
 		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
 
@@ -754,6 +768,9 @@
 					 veSeriouslySick = 0.6;
 			 }
 
+			 // In InfectionModelWithAntibodies, immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
+			 // I don't know how easy it will be to get the relativeAntibody level in post-processing -jr 2022-02-18
+			 // todo: implement immunity factor
 			 double factorInf = immunityFactor;
 
 			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
