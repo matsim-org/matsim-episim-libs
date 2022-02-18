@@ -129,47 +129,46 @@
 
 		 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-
-		 //todo:
+		 double factorAlpha = 1.0;
+		 double factorDelta = 1.5;
+		 double factorOmicron = 0.35;
 		 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
-		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(1.25);
-		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(1.25);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(0.5 * 1.25);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
+		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
+		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
+		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(factorDelta);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(factorOmicron);
 
 
 		 // Part 1: calculate hospitalizations and save as csv
 		 // can be run once and then commented out!
 
-		 //		 population = PopulationUtils.readPopulation(input + populationFile);
-		 //		 AnalysisCommand.forEachScenario(output, scenario -> {
-		 //			 try {
-		 //				 analyzeOutput(scenario);
-		 //
-		 //			 } catch (IOException e) {
-		 //				 log.error("Failed processing {}", scenario, e);
-		 //			 }
-		 //		 });
-		 //
-		 //		 log.info("done");
+		 		 population = PopulationUtils.readPopulation(input + populationFile);
+		 		 AnalysisCommand.forEachScenario(output, scenario -> {
+		 			 try {
+		 				 analyzeOutput(scenario);
+
+		 			 } catch (IOException e) {
+		 				 log.error("Failed processing {}", scenario, e);
+		 			 }
+		 		 });
+
+		 		 log.info("done");
 
 		 // ===
 
-		 // Part 2: aggregate over multiple seeds & produce tsv output
+		 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 		 List<Path> pathList = new ArrayList<>();
 		 AnalysisCommand.forEachScenario(output, scenario -> {
 			 pathList.add(scenario);
 		 });
 
-
-		 // Part 3: plot
 		 aggregateDataAndProduceTSV(output, pathList);
 
 
@@ -340,7 +339,6 @@
 				 double incidence = 0.;
 				 try {
 					 incidence = Double.parseDouble(record.get("faelle_covid_aktuell")) * 100_000. / populationCnt;
-					 //						 incidence = Double.parseDouble(record.get("faelle_covid_aktuell_invasiv_beatmet"));
 				 } catch (NumberFormatException e) {
 
 				 }
