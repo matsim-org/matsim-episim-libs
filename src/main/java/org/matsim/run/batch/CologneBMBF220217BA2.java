@@ -511,7 +511,8 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		@Parameter({0.0, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2})
 		double ba1Inf;
 		
-		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
+//		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
+		@StringParameter({"2021-11-21", "2021-11-22", "2021-11-23", "2021-11-24", "2021-11-25", "2021-11-26", "2021-11-28", "2021-11-29", "2021-11-30", "2021-12-01", "2021-12-02", "2021-12-03"})
 		String ba1Date;
 		
 		@Parameter({0.0})
