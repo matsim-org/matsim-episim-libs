@@ -66,7 +66,7 @@ public class VaccinationStrategy implements VaccinationModel {
 				List<EpisimPerson> oldCanidates = oldPersons.stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-						.filter(p -> p.getNumVaccinations() < 3)
+						.filter(p -> p.getNumVaccinations() < 3) // yyyyyy why is this "3" and above it is "4"?  kai, feb'22
 						.filter(p -> p.getNumVaccinations() > 0 ? p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90 : true)
 						.collect(Collectors.toList());
 		

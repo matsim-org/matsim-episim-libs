@@ -2,7 +2,8 @@ library(tidyverse)
 library(lubridate)
 library(cowplot)
 
-rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
+# rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases.csv")
+rkiCasesReferenceDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/cologne-cases.csv")
 # cc %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> cc2
 cc2 <- rkiCasesReferenceDate %>%
   mutate( date=make_date(year,month,day)) %>%
@@ -10,7 +11,8 @@ cc2 <- rkiCasesReferenceDate %>%
   group_by(year,week) %>%
   summarise(mean=mean(cases),date=mean(date))
 
-rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
+#rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/berlin-cases-meldedatum.csv")
+rkiCasesReportingDate <- read_csv("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/cologne-cases-meldedatum.csv")
 # dd %>% mutate( date = make_date(year,month,day)) %>% mutate( av = zoo::rollmean(cases, k=7, fill=NA)) -> dd2
 dd2 <- rkiCasesReportingDate %>%
   mutate( date=make_date(year,month,day)) %>%
@@ -32,7 +34,8 @@ reducedActParticip2
 rkiSurveillance <- read_delim("~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/RKI/SARS-CoV2_surveillance.csv",";")
 rkiSurveillance2 <- rkiSurveillance %>% mutate(date = dmy(`Beginn Meldewoche`) )
 
-hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv')
+# hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Berlin/berlin-hospital.csv')
+hospital <- read_csv('~/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/Cologne/cologne-hospital.csv')
 hospital2 <- hospital %>%
   mutate(date = dmy(Datum)) %>%
   mutate( year = year(date), week = isoweek(date) ) %>%
@@ -285,6 +288,9 @@ base <- "output/theta_1.0-imprtFctMult_7.0-newVariantDate_2020-12-01-seed_4711/"
 #base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_7564655870752979346/"
 #base <- "output/theta_1.0-imprtFctMult_3.0-newVariantDate_2020-12-01-seed_4711/"
 
+# 2022-02-19:
+base <- "output/seed_4711-leis_0.75-xMasModel_no-ba1Date_2021-11-25-ba1Inf_2.8-ba2Date_2021-12-25-ba2Inf_1.3-oHos_0.3-testing_current/"
+
 # ---
 
 infectionsFilename <- Sys.glob(file.path(base, "*infections.txt" ) )
@@ -292,7 +298,7 @@ assertthat::assert_that( !is_empty(infectionsFilename) )
 
 infections <- read_tsv(infectionsFilename)
 infections2 <- infections %>%
-  filter(district=="Berlin") %>%
+  filter(district=="Köln") %>%
   mutate( newShowingSymptoms=nShowingSymptomsCumulative-lag(nShowingSymptomsCumulative)) %>%
   mutate( week = isoweek(date),year=year(date) ) %>%
   group_by( year,week ) %>%
@@ -328,7 +334,7 @@ restrictions2 <- separate(restrictions,"leisure", into = c("leisure", NA, NA), s
 
 # ---
 
-p1 <- ggplot() + scale_y_log10() +
+p1 <- ggplot() + scale_y_log10(limits = c(100,10000)) +
   geom_point(data=cc2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=dd2,mapping=aes(x=date,y=mean),size=2,color="blue",show.legend = TRUE) +
   geom_point(data=rkiSurveillance2,mapping=aes(x=date,y=170*`Anteil Positiv Berlin Meldewoche`), color="red", size=2, show.legend = TRUE) +
@@ -337,7 +343,7 @@ p1 <- ggplot() + scale_y_log10() +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,newShowingSymptoms-6*sqrt(newShowingSymptoms)), ymax=newShowingSymptoms+6*sqrt(newShowingSymptoms)), size=1., color="orange") +
   geom_line(data=outdoors2, mapping = aes(x=date,y=10^mean),size=0.5,color="green4") +
   labs( title = str_remove( base, "output/") %>% str_remove("/") ) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-05-01')), expand = expansion() ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2021-02-15','2022-05-01')), expand = expansion() ) +
   geom_line(data=restrictions2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_point(data=reducedActParticip2,mapping=aes(x=date,y=10^(1-(1-mean)*3)),color="black",size=0.5) +
   geom_line(data=diseaseImport2,mapping = aes(x=date,y=mean),color="cyan",size=0.5)
@@ -350,7 +356,7 @@ p1 <- ggplot() + scale_y_log10() +
 
 p2 <- ggplot() + scale_y_log10() +
   geom_point( data=hospital2, mapping=aes(x=date,y=mean),size=3) +
-  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2020-02-15','2021-05-01')), expand = expansion() ) +
+  scale_x_date( date_breaks = '1 month', limits = as.Date(c('2021-02-15','2022-05-01')), expand = expansion() ) +
   geom_point( data=infections2, mapping = aes(x=date, y=nSeriouslySick), color="orange", size=2) +
   geom_errorbar(data=infections2, mapping = aes(x=date, ymin=pmax(0.5,nSeriouslySick-6*sqrt(nSeriouslySick)), ymax=nSeriouslySick+6*sqrt(nSeriouslySick)), size=1., color="orange")
 
