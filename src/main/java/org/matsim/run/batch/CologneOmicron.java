@@ -3,9 +3,7 @@ package org.matsim.run.batch;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.model.FaceMask;
-import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.testing.TestType;
@@ -17,15 +15,12 @@ import org.matsim.run.modules.SnzCologneProductionScenario;
 
 import javax.annotation.Nullable;
 
-import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static org.matsim.episim.model.Transition.to;
 
 
 /**
@@ -42,8 +37,8 @@ public class CologneOmicron implements BatchRun<CologneOmicron.Params> {
 //			pHousehold = params.pHousehold;
 
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.build();
 	}

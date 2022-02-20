@@ -3,7 +3,6 @@ package org.matsim.run.batch;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
@@ -41,8 +40,8 @@ public class Bmbf211022Cologne implements BatchRun<Bmbf211022Cologne.Params> {
 //			pHousehold = params.pHousehold;
 
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.build();
 	}

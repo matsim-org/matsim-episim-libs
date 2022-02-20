@@ -8,7 +8,6 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.analysis.RValuesFromEvents;
@@ -20,7 +19,6 @@ import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
-import org.matsim.episim.model.vaccination.VaccinationStrategy;
 import org.matsim.episim.model.vaccination.VaccinationStrategy2;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -76,8 +74,8 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold) {
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
@@ -504,28 +502,31 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 
 
-	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterSpeed, int boostAfter) {
+	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterSpeed, int boostAfter_months) {
 
 		Map<LocalDate, Integer> boosterVaccinations = new HashMap<>();
 
 		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
 
 		boosterVaccinations.put(LocalDate.parse("2022-02-15"), (int) (2_352_480 * 0.04 * boosterSpeed / 7));
+		// yyyyyy I do not understand the units of this.  "2_352_480" presumably is the population size of the Cologne scenario.  "/7"
+		// presumably means that a weekly value is converted to a daily value.  But why "*0.04"??
+
 		boosterVaccinations.put(LocalDate.parse("2022-06-30"), 0);
 
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
 
 
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-				.setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
+				.setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
 		;
 		
 		vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
-		.setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
+		.setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
 ;
 
 		vaccinationConfig.getOrAddParams(VaccinationType.vector)
-				.setBoostWaitPeriod(boostAfter * 30 + 9 * 7);
+				.setBoostWaitPeriod(boostAfter_months * 30 + 9 * 7);
 		;
 	}
 

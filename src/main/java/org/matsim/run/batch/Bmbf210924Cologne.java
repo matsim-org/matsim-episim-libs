@@ -49,7 +49,7 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		return new SnzCologneProductionScenario.Builder()
 //				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
 //				.setLeisureNightly(leisureNightly)
-				.setScale(1.3)
+				.setScaleForActivityLevels(1.3 )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureNightlyScale(leisureNightlyScale)
 				.build();

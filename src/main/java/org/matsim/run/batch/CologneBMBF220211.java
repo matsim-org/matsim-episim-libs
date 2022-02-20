@@ -8,7 +8,6 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.analysis.RValuesFromEvents;
@@ -70,8 +69,8 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold) {
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();

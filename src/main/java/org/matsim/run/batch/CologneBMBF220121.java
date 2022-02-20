@@ -40,8 +40,8 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 //			pHousehold = params.pHousehold;
 
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
