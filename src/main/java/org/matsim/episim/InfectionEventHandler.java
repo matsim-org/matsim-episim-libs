@@ -748,12 +748,16 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportCpuTime(iteration, "ProgressionModel", "finished", -1);
 
 		reporting.reportCpuTime(iteration, "VaccinationModel", "start", -1);
+
+		// vaccination:
 		int available = EpisimUtils.findValidEntry(vaccinationConfig.getVaccinationCapacity(), -1, date);
 		vaccinationModel.handleVaccination(personMap, false, available > 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);
 
+		// re-vaccination:
 		available = EpisimUtils.findValidEntry(vaccinationConfig.getReVaccinationCapacity(), -1, date);
 		vaccinationModel.handleVaccination(personMap, true, available > 0 ? (int) (available * episimConfig.getSampleSize()) : -1, date, iteration, now);
 
+		// additional vaccinations:
 		for (VaccinationModel vaccination : vaccinations) {
 			vaccination.handleVaccination(personMap,  date, iteration, now);
 		}
