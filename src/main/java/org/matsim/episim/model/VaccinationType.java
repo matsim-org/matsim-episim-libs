@@ -13,6 +13,7 @@ public enum VaccinationType {
 	/**
 	 * Not a real vaccination, but used to describe the profile for persons that have been infected and gained a natural immunity.
 	 */
-	natural
+	natural,
+	naturalWithOmicron;
 
 }
