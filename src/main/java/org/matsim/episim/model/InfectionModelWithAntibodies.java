@@ -211,7 +211,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		double antibodyLevel = 0.0;
 		
-		Map<Integer, VaccinationType> immunityEvents = new HashMap<Integer, VaccinationType>();
+		Map<Integer, VaccinationType> immunityEvents = new HashMap<>();
 
 		for (int idx = 0; idx<numInfections; idx++) {
 			int daysSinceInfection = target.daysSinceInfection(idx, iteration);
