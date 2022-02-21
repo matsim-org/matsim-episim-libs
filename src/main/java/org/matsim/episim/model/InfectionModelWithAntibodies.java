@@ -226,15 +226,20 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		for (int day = 0; day<=iteration; day++) {
 			if (immunityEvents.containsKey(day)) {
 				VaccinationType vaccinationType = immunityEvents.get(day);
-				if (antibodyLevel == 0.0) 
-					antibodyLevel = initalAntibodies.get(vaccinationType);
-				else {
+				if (antibodyLevel == 0.0){
+					antibodyLevel = initalAntibodies.get( vaccinationType );
+				} else {
 					antibodyLevel *= antibodyFactor.get(vaccinationType);
+
+					// we get at least as much as if this was the 1st immunization:
 					antibodyLevel = Math.max(initalAntibodies.get(vaccinationType), antibodyLevel);
 				}
+
+				// saturates at 20 (6000/300):
 				antibodyLevel = Math.min(20.0, antibodyLevel);
 			}
-			else 
+			else
+				// exponential decay, day by day:
 				antibodyLevel *= Math.pow(0.5, 1 / halfLife_days);
 		}
 		

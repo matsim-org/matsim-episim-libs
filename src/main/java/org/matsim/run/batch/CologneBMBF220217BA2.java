@@ -253,16 +253,16 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		vaccinationConfig.setDaysValid(270);
 		vaccinationConfig.setValidDeadline(LocalDate.parse("2022-01-01"));
 
-		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
-
-		double ba2Ak50 = 2.5 * 1.4;
-		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
-		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
-		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA2, ba2Ak50);
-		
-		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
+//		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
+//
+//		double ba2Ak50 = 2.5 * 1.4;
+//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
+//		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
+//		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA2, ba2Ak50);
+//
+//		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
 		vaccinationConfig.setBeta(3.0);
 

@@ -305,15 +305,15 @@ public class Berlin220215 implements BatchRun<Berlin220215.Params> {
 		//vaccination effectiveness against different VOCs
 		adaptVacinationEffectiveness(vaccinationConfig);
 
-		//antibodies per strain
-		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
-		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.3); // TODO: move from param to here
-		ak50PerStrain.put(VirusStrain.ALPHA, 0.3);
-		ak50PerStrain.put(VirusStrain.DELTA, 0.4);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.4);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 3.0);
-
-		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
+//		//antibodies per strain
+//		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
+//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.3); // TODO: move from param to here
+//		ak50PerStrain.put(VirusStrain.ALPHA, 0.3);
+//		ak50PerStrain.put(VirusStrain.DELTA, 0.4);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.4);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 3.0);
+//
+//		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
 		//booster configuration
 		vaccinationConfig.setBeta(1.0);
