@@ -285,7 +285,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 //		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
 //
-//		double ba2Ak50 = 2.5 * 1.4;
+		double ba2Ak50 = 2.5 * 1.4;
 //		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
 //		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
 //		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
@@ -294,6 +294,8 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 //		ak50PerStrain.put(VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50);
 //
 //		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
+
+		vaccinationConfig.getAk50PerStrain().put( VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50 );
 
 		vaccinationConfig.setBeta(3.0);
 
@@ -514,24 +516,15 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
 
 		boosterVaccinations.put(LocalDate.parse("2022-02-15"), (int) (2_352_480 * 0.04 * boosterSpeed / 7));
-		// yyyyyy I do not understand the units of this.  "2_352_480" presumably is the population size of the Cologne scenario.  "/7"
-		// presumably means that a weekly value is converted to a daily value.  But why "*0.04"??
+		// (I think that this means 4pct of population per week.)
 
 		boosterVaccinations.put(LocalDate.parse("2022-06-30"), 0);
 
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
 
-
-		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-				.setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
-		;
-		
-		vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
-		.setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
-;
-
-		vaccinationConfig.getOrAddParams(VaccinationType.vector)
-				.setBoostWaitPeriod(boostAfter_months * 30 + 9 * 7);
+		vaccinationConfig.getOrAddParams(VaccinationType.mRNA).setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
+		vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate).setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
+		vaccinationConfig.getOrAddParams(VaccinationType.vector).setBoostWaitPeriod(boostAfter_months * 30 + 9 * 7);
 		;
 	}
 
