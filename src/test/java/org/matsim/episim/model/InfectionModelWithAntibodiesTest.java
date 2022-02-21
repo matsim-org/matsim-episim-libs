@@ -34,11 +34,12 @@ public class InfectionModelWithAntibodiesTest{
 	@Rule public MatsimTestUtils utils = new MatsimTestUtils();
 
 	private Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
+	private VaccinationConfigGroup vaccinationConfig;
 
 	@Before
 	public void setup() {
 		var config = ConfigUtils.createConfig();
-		var vaccinationConfig = ConfigUtils.addOrGetModule( config, VaccinationConfigGroup.class );
+		this.vaccinationConfig = ConfigUtils.addOrGetModule( config, VaccinationConfigGroup.class );
 		ak50PerStrain = vaccinationConfig.getAk50PerStrain();
 	}
 
@@ -461,6 +462,6 @@ public class InfectionModelWithAntibodiesTest{
 
 	}
 	private double relativeAbLevel( EpisimPerson basePerson, VirusStrain strain, int iteration ){
-		return InfectionModelWithAntibodies.getRelativeAntibodyLevel(basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(), strain, ak50PerStrain);
+		return InfectionModelWithAntibodies.getRelativeAntibodyLevel(basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(), strain, vaccinationConfig);
 	}
 }
