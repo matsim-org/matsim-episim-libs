@@ -45,10 +45,87 @@ public class InfectionModelWithAntibodiesTest{
 	}
 
 	@Test
+	public void playground() {
+		var person = EpisimTestUtils.createPerson();
+//		person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
+
+		final String days = "day";
+		Column<Integer> records = IntColumn.create( days );
+
+		final String vaccineEfficacies = "VE";
+		Column<Double> values = DoubleColumn.create( vaccineEfficacies );
+		final String grouping = "grouping";
+		var groupings = StringColumn.create( grouping );
+
+		final String nordstrom = "Nordström";
+		final String eyreBNTDelta = "EyreBNTDelta";
+		final String eyreBNTAlpha = "EyreBNTAlpha";
+
+		var fact = 0.001;
+
+		for ( int ii=0; ii<600; ii++ ){
+			if ( ii==0 ){
+				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, ii );
+			}
+			if ( ii==50 ){
+//				EpisimTestUtils.infectPerson( person, VirusStrain.DELTA, ii * 24. * 3600. );
+			}
+			if ( ii==300 ) {
+//				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, ii );
+			}
+//			{
+//				records.append( ii );
+//				groupings.append( eyreBNTDelta );
+//				if ( ii < 14 ){
+//					values.appendMissing();
+//				} else if ( ii<28) {
+//					values.append( interpolate(ii,14,28,1.-0.2,1.-0.28) );
+//				} else if ( ii<42 ) {
+//					values.append( interpolate( ii, 28, 42, 1.-0.28, 1.-0.33 ) );
+//				} else if ( ii < 8*7 ) {
+//					values.append( interpolate( ii, 42, 8*7, 1.-0.33, 1.-0.38 ) );
+//				} else if ( ii<14*7 ) {
+//					values.append( interpolate( ii, 8*7, 14*7, 1.-0.38, 1.-0.47 ) );
+//				} else {
+//					values.appendMissing();
+//				}
+//			}
+
+			var nAb = relativeAbLevel( person, VirusStrain.DELTA, ii );
+			{
+				var beta = 3.;
+				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+				final double probaWoVacc = 1 - Math.exp( -fact );
+				final double ve = 1. - probaWVacc / probaWoVacc;
+				log.info( ve );
+				records.append( ii );
+				values.append( ve );
+				groupings.append( "Delta; beta=3" );
+			}
+
+		}
+
+		Table table = Table.create("aa");
+		table.addColumns( records );
+		table.addColumns( values );
+		table.addColumns( groupings );
+		var figure = LinePlot.create("aa", table, days, vaccineEfficacies, grouping ) ;
+
+		try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "output.html" ), StandardCharsets.UTF_8)) {
+			writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+
+	}
+
+
+	@Test
 	public void nordstroemEtAl() {
 		var person = EpisimTestUtils.createPerson();
 //		person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
-		var strain = VirusStrain.DELTA;
 
 		final String days = "day";
 		Column<Integer> records = IntColumn.create( days );
@@ -65,13 +142,13 @@ public class InfectionModelWithAntibodiesTest{
 
 		for ( int ii=0; ii<600; ii++ ){
 			if ( ii==0 ){
-				EpisimTestUtils.infectPerson( person, VirusStrain.SARS_CoV_2, ii * 24. * 3600. );
+				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, ii );
 			}
 			if ( ii==50 ){
-				EpisimTestUtils.infectPerson( person, VirusStrain.DELTA, ii * 24. * 3600. );
+//				EpisimTestUtils.infectPerson( person, VirusStrain.DELTA, ii * 24. * 3600. );
 			}
 			if ( ii==300 ) {
-				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, ii );
+//				person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, ii );
 			}
 			{
 				records.append( ii );
@@ -107,30 +184,57 @@ public class InfectionModelWithAntibodiesTest{
 					values.append( 0.23 );
 				}
 			}
-
-			var nAb = relativeAbLevel( person, strain, ii );
-
 			{
-				var beta = 1.;
-				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
-				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
-				final double probaWoVacc = 1 - Math.exp( -fact );
-				final double ve = 1. - probaWVacc / probaWoVacc;
-				log.info( ve );
-				records.append( ii );
-				values.append( ve );
-				groupings.append( "beta=1" );
+				var nAb = relativeAbLevel( person, VirusStrain.DELTA, ii );
+
+				{
+					var beta = 1.;
+					double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+					final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+					final double probaWoVacc = 1 - Math.exp( -fact );
+					final double ve = 1. - probaWVacc / probaWoVacc;
+					log.info( ve );
+					records.append( ii );
+					values.append( ve );
+					groupings.append( "Delta; beta=1" );
+				}
+				{
+					var beta = 3.;
+					double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+					final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+					final double probaWoVacc = 1 - Math.exp( -fact );
+					final double ve = 1. - probaWVacc / probaWoVacc;
+					log.info( ve );
+					records.append( ii );
+					values.append( ve );
+					groupings.append( "Delta; beta=3" );
+				}
 			}
 			{
-				var beta = 3.;
-				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
-				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
-				final double probaWoVacc = 1 - Math.exp( -fact );
-				final double ve = 1. - probaWVacc / probaWoVacc;
-				log.info( ve );
-				records.append( ii );
-				values.append( ve );
-				groupings.append("beta=3");
+				var nAb = relativeAbLevel( person, VirusStrain.ALPHA, ii );
+
+				{
+					var beta = 1.;
+					double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+					final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+					final double probaWoVacc = 1 - Math.exp( -fact );
+					final double ve = 1. - probaWVacc / probaWoVacc;
+					log.info( ve );
+					records.append( ii );
+					values.append( ve );
+					groupings.append( "Alpha; beta=1" );
+				}
+				{
+					var beta = 3.;
+					double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+					final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+					final double probaWoVacc = 1 - Math.exp( -fact );
+					final double ve = 1. - probaWVacc / probaWoVacc;
+					log.info( ve );
+					records.append( ii );
+					values.append( ve );
+					groupings.append( "Alpha; beta=3" );
+				}
 			}
 		}
 
@@ -140,13 +244,8 @@ public class InfectionModelWithAntibodiesTest{
 		table.addColumns( groupings );
 		var figure = LinePlot.create("aa", table, days, vaccineEfficacies, grouping ) ;
 
-		var divName = "target";
-		var outputFile = "output.html";
-		Page page = Page.pageBuilder(figure, divName ).build();
-		String output = page.asJavascript();
-
-		try ( Writer writer = new OutputStreamWriter(new FileOutputStream(outputFile), StandardCharsets.UTF_8)) {
-			writer.write(output);
+		try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "output.html" ), StandardCharsets.UTF_8)) {
+			writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
