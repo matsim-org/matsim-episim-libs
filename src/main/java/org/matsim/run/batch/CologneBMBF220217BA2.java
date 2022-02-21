@@ -8,6 +8,7 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
 import org.matsim.episim.analysis.OutputAnalysis;
@@ -104,7 +105,7 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 //		episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220218/" + params.seed + "-540-2021-08-17.zip");
 
 		//cluster
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220218/" + params.seed + "-540-2021-08-17.zip");
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220218/" + params.seed + "-600-2021-10-16.zip");
 		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
 		//restrictions
@@ -221,17 +222,17 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		
 
 		//BA.2
-//		if (params.ba2Inf > 0) {
-//			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
-//			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
-//			infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
-//			infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(6), 1);
-//			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * params.ba2Inf);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.35 * deltaHos);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.35 * deltaHos);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(0.35);
-//		}
+		if (params.ba2Inf > 0) {
+			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
+			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
+			infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(6), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * params.ba2Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.35 * deltaHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.35 * deltaHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(0.35);
+		}
 
 
 		//vaccinations
@@ -507,23 +508,27 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.0, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2})
+		@Parameter({2.8})
 		double ba1Inf;
 		
 //		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
-		@StringParameter({"2021-11-21", "2021-11-22", "2021-11-23", "2021-11-24", "2021-11-25", "2021-11-26", "2021-11-28", "2021-11-29", "2021-11-30", "2021-12-01", "2021-12-02", "2021-12-03"})
+		@StringParameter({"2021-11-22", "2021-11-25"})
 		String ba1Date;
 		
-		@Parameter({0.0})
+//		@StringParameter({"2021-12-30", "2022-01-01", "2022-01-03", "2022-01-05", "2022-01-07", "2022-01-09"})
+		@StringParameter({"2021-12-24", "2021-12-25", "2021-12-26", "2021-12-27" ,"2021-12-28", "2021-12-29", "2021-12-30"})
+		String ba2Date;
+		
+		@Parameter({0.0, 1.2, 1.3, 1.4, 1.5})
 		double ba2Inf;
 		
-		@Parameter({0.1, 0.2, 0.3, 0.4})
+		@Parameter({0.3})
 		double oHos;
 		
 		@StringParameter({"yes", "no"})
 		String xMasModel;
 		
-		@Parameter({0.75, 1.0})
+		@Parameter({0.75})
 		double leis;
 		
 		@StringParameter({"current"})
