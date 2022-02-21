@@ -137,6 +137,7 @@ public class InfectionModelWithAntibodiesTest{
 
 		final String nordstrom = "Nordström";
 		final String eyreBNTDelta = "EyreBNTDelta";
+		final String eyreBNTAlpha = "EyreBNTAlpha";
 
 		var fact = 0.001;
 
@@ -163,6 +164,23 @@ public class InfectionModelWithAntibodiesTest{
 					values.append( interpolate( ii, 42, 8*7, 1.-0.33, 1.-0.38 ) );
 				} else if ( ii<14*7 ) {
 					values.append( interpolate( ii, 8*7, 14*7, 1.-0.38, 1.-0.47 ) );
+				} else {
+					values.appendMissing();
+				}
+			}
+			{
+				records.append( ii );
+				groupings.append( eyreBNTAlpha );
+				if ( ii < 14 ){
+					values.appendMissing();
+				} else if ( ii<28) {
+					values.append( interpolate(ii,14,28,1.-0.15,1.-0.22) );
+				} else if ( ii<42 ) {
+					values.append( interpolate( ii, 28, 42, 1.-0.22, 1.-0.26 ) );
+				} else if ( ii < 8*7 ) {
+					values.append( interpolate( ii, 42, 8*7, 1.-0.26, 1.-0.3 ) );
+				} else if ( ii<14*7 ) {
+					values.append( interpolate( ii, 8*7, 14*7, 1.-0.3, 1.-0.36 ) );
 				} else {
 					values.appendMissing();
 				}
