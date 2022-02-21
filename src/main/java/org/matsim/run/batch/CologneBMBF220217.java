@@ -61,16 +61,16 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 						vaccinateYoung = true;
 						vaccinateOld = true;
 					}
-					
+
 					if (params.vac.contains("over60"))
 						vaccinateOld = true;
-					
+
 					if (params.vac.contains("Plus"))
 						vaccinateRecovered = true;
 
 				}
-				
-				bind(VaccinationStrategy2.Config.class).toInstance(new VaccinationStrategy2.Config(LocalDate.parse("2022-03-01"), vaccinateRecovered, vaccinateYoung, vaccinateOld));
+
+				bind(VaccinationStrategy2.Config.class).toInstance(new VaccinationStrategy2.Config(LocalDate.parse("2022-05-01"), vaccinateRecovered, vaccinateYoung, vaccinateOld));
 			}
 		});
 	}
@@ -100,29 +100,29 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 	@Override
 	public Config prepareConfig(int id, Params params) {
-		
+
 		LocalDate restrictionDate = LocalDate.parse("2022-03-01");
 
 		SnzCologneProductionScenario module = getBindings(0.0);
 
 		Config config = module.config();
-				
+
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06);
-		
+
 		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220218/" + params.seed + "-600-2021-10-16.zip");
 		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
-		
+
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
 		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
 		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(params.leis), "leisure");
-		
+
 		//2G
 		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
 		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leis), "leisure");
@@ -142,12 +142,12 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 //				, "shop_daily", "shop_other", "errands");
 //		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofSusceptibleRf(params.oRF), "shop_daily", "shop_other", "errands");
 
-		
+
 //		if (params.school.equals("protected")) {
 //			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 //			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 //		}
-		
+
 		builder.restrict(restrictionDate, 0.78, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
 
 		episimConfig.setPolicy(builder.build());
@@ -222,7 +222,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(0.3);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(0.3);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(0.3);
-		
+
 
 		//BA.2
 		double ba2Inf = 1.2;
@@ -231,11 +231,11 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
 		infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(6), 1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * ba2Inf);			
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * ba2Inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.3);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.3);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(0.3);
-		
+
 
 
 		//STRAIN_A
@@ -251,7 +251,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.35);
 		}
 //
-//		
+//
 //		//STRAIN_B
 //		if (params.strainB.equals("yes")) {
 //			Map<LocalDate, Integer> infPerDayStrainB = new HashMap<>();
@@ -363,7 +363,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		leisureTests.put(LocalDate.parse("2021-08-23"), 0.2);
 
 		eduTests.put(LocalDate.parse("2021-09-20"), 0.6);
-		
+
 		if (params.testing.equals("no")) {
 			kigaPrimaryTests.put(restrictionDate, 0.0);
 			workTests.put(restrictionDate, 0.0);
@@ -393,7 +393,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		eduTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 
 		leisureTestsVaccinated.put(LocalDate.parse("2021-08-23"), 0.2);
-		
+
 		if (params.testing.equals("no")) {
 			leisureTestsVaccinated.put(restrictionDate, 0.0);
 			workTestsVaccinated.put(restrictionDate, 0.0);
@@ -425,7 +425,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 
 		kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
-		
+
 		if (params.testing.equals("no")) {
 			leisureTestsPCR.put(restrictionDate, 0.0);
 			workTestsPCR.put(restrictionDate, 0.0);
@@ -535,10 +535,10 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 //		@Parameter({2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7})
 //		double ba1Inf;
-		
+
 //		@Parameter({1.3})
 //		double ba2Inf;
-		
+
 //		@Parameter({3.0})
 //		double beta;
 //
@@ -547,16 +547,16 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 //
 //		@Parameter({0.4, 0.5, 0.6})
 //		double dAk50;
-		
+
 //		@Parameter({1.6, 1.65, 1.7})
 //		double aInf;
-		
+
 //		@Parameter({2.1, 2.2, 2.3})
 //		double dInf;
 
 //		@Parameter({1.5})
 //		double ba2Inf;
-		
+
 //		@Parameter({2.5, 4.0})
 //		double ba1Ak50;
 //
@@ -571,46 +571,46 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 //
 		@Parameter({1.0, 0.75})
 		double leis;
-		
+
 //		@Parameter({1.06, 1.09})
 //		double tf;
-		
+
 //		@Parameter({1.5})
 //		double dHos;
-		
+
 //		@Parameter({0.6})
 //		double impFac;
-		
+
 		@StringParameter({"2021-12-25"})
 		String ba2Date;
-		
+
 		@StringParameter({"current"})
 		String testing;
 
 //		@StringParameter({"current", "protected"})
 //		String school;
-		
+
 		@Parameter({0.0, 1.0, 1.5, 2.0})
 		double mutationInf;
-		
+
 		@Parameter({1.0, 1.5, 2.0})
 		double mutationAk50;
-		
+
 		@StringParameter({"no", "over18Plus", "over18", "over60Plus", "over60"})
 		String vac;
-//		
+//
 //		@StringParameter({"yes", "no"})
 //		String strainB;
-//		
+//
 //		@StringParameter({"2022-04-01", "2022-07-01", "2022-10-01"})
 //		String date;
-		
+
 //		@StringParameter({"2099-01-01"})
 //		String oVac;
-		
+
 //		@StringParameter({"yes", "no"})
 //		String ageFac;
-		
+
 //		@IntParameter({50, 80})
 //		int dur;
 
