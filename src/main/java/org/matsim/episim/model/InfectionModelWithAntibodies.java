@@ -149,7 +149,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		// Sounds plausible.  Let's see.  We are here only if strain == omicron.
 
-		// if the agent had an omicron update vaccination, we return a relatively god ak50, so that we have good protection against transmission:
+		// if the agent had an omicron update vaccination, we return a relatively good ak50, so that we have good protection against transmission:
 		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2))
 			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
 
@@ -169,6 +169,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		
 		
 		if (ba1ba2LongTermCrossImmunity) {
+			// here we check if the person had an infection with the other omicron strain.  If so, we also return the (relatively good) Delta ak50.  (Which might now be too optimistic ...)
 			boolean hadOmicronInfection = false;
 
 			if (strain == VirusStrain.OMICRON_BA1) {
