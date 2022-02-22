@@ -364,7 +364,7 @@ public class InfectionModelWithAntibodiesTest{
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = relativeAbLevel( person, strain, 100 );
-				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.5 );
+				Assert.assertEquals( 3000./4000., nAb/nAbBase, 0.5 );
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
