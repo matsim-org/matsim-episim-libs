@@ -31,6 +31,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String FROM_FILE = "vaccinationFile";
 	private static final String DAYS_VALID = "daysValid";
 	private static final String BETA = "beta";
+	private static final String BA1BA2SHORTTERMCROSSIMMUNITY = "ba1ba2ShortTermCrossImmunity";
+	private static final String BA1BA2LONGTERMCROSSIMMUNITY = "ba1ba2LongTermCrossImmunity";
 	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
@@ -67,6 +69,15 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Needed for antibody model.
 	 */
 	private double beta = 1.0;
+	
+	/**
+	 * Needed for antibody model.
+	 */
+	private boolean ba1ba2ShortTermCrossImmunity = false;
+	/**
+	 * Needed for antibody model.
+	 */
+	private boolean ba1ba2LongTermCrossImmunity = false;
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -273,6 +284,26 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(BETA)
 	public double getBeta() {
 		return beta;
+	}
+	
+	@StringSetter(BA1BA2SHORTTERMCROSSIMMUNITY)
+	public void setBa1ba2ShortTermCrossImmunity(boolean ba1ba2ShortTermCrossImmunity) {
+		this.ba1ba2ShortTermCrossImmunity = ba1ba2ShortTermCrossImmunity;
+	}
+
+	@StringGetter(BA1BA2SHORTTERMCROSSIMMUNITY)
+	public boolean getBa1ba2ShortTermCrossImmunity() {
+		return ba1ba2ShortTermCrossImmunity;
+	}
+	
+	@StringSetter(BA1BA2LONGTERMCROSSIMMUNITY)
+	public void setBa1ba2LongTermCrossImmunity(boolean ba1ba2LongTermCrossImmunity) {
+		this.ba1ba2LongTermCrossImmunity = ba1ba2LongTermCrossImmunity;
+	}
+
+	@StringGetter(BA1BA2LONGTERMCROSSIMMUNITY)
+	public boolean getBa1ba2LongTermCrossImmunity() {
+		return ba1ba2LongTermCrossImmunity;
 	}
 
 	@StringSetter(VALID_DEADLINE)

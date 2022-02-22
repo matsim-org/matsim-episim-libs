@@ -461,6 +461,6 @@ public class InfectionModelWithAntibodiesTest{
 
 	}
 	private double relativeAbLevel( EpisimPerson basePerson, VirusStrain strain, int iteration ){
-		return InfectionModelWithAntibodies.getRelativeAntibodyLevel(basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(), strain, ak50PerStrain);
+		return InfectionModelWithAntibodies.getRelativeAntibodyLevel(basePerson, iteration, basePerson.getNumVaccinations(), basePerson.getNumInfections(), strain, ak50PerStrain, false);
 	}
 }
