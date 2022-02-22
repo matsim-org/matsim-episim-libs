@@ -229,14 +229,17 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 			infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(6), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * params.ba2Inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.35 * deltaHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.35 * deltaHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(0.35);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(params.oHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(params.oHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(params.oHos);
 		}
 
 
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		
+		vaccinationConfig.setBa1ba2ShortTermCrossImmunity(Boolean.valueOf(params.ba1ba2Short));
+		vaccinationConfig.setBa1ba2ShortTermCrossImmunity(Boolean.valueOf(params.ba1ba2Long));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		for (int i = 0; i < 5; i++) vaccinationCompliance.put(i, 0.0);
@@ -469,7 +472,7 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 //					restrictionDate, qs
 			));
 
-
+		
 
 
 
@@ -515,17 +518,23 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		@StringParameter({"2021-11-22", "2021-11-25"})
 		String ba1Date;
 		
+		@StringParameter({"true", "false"})
+		String ba1ba2Short;
+		
+		@StringParameter({"true", "false"})
+		String ba1ba2Long;
+		
 //		@StringParameter({"2021-12-30", "2022-01-01", "2022-01-03", "2022-01-05", "2022-01-07", "2022-01-09"})
-		@StringParameter({"2021-12-24", "2021-12-25", "2021-12-26", "2021-12-27" ,"2021-12-28", "2021-12-29", "2021-12-30"})
+		@StringParameter({"2021-12-24", "2021-12-25", "2021-12-26", "2021-12-27" ,"2021-12-28"})
 		String ba2Date;
 		
-		@Parameter({0.0, 1.2, 1.3, 1.4, 1.5})
+		@Parameter({0.0, 1.2, 1.3, 1.5, 1.7, 1.9, 2.1})
 		double ba2Inf;
 		
 		@Parameter({0.3})
 		double oHos;
 		
-		@StringParameter({"yes", "no"})
+		@StringParameter({"yes"})
 		String xMasModel;
 		
 		@Parameter({0.75})
