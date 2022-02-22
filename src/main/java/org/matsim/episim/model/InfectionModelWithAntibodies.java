@@ -121,29 +121,50 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	}
 
 	private static double getAk50(EpisimPerson target, VirusStrain strain, final Map<VirusStrain, Double> AK50_PERSTRAIN, int numInfections) {
+
+//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
+//		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
+//		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 2.5 * 1.4 );
+
 		double ak50 = AK50_PERSTRAIN.get(strain);
 
-		// If strain == sth apart from omicron, we simply return, but if strain == omicron, then a differentiation is necessary? Is this because we assume omicron to be the only immune escape and group the other variants? Sydney
 		if (strain == VirusStrain.SARS_CoV_2 || strain == VirusStrain.ALPHA || strain == VirusStrain.DELTA)
 			return ak50;
 
+		// If strain == sth apart from omicron, we simply return the above numbers, but if strain == omicron, then a differentiation is necessary? Is this
+		// because we assume omicron to be the only immune escape and group the other variants? Sydney
+
+		// Sounds plausible.  Let's see.  We are here only if strain == omicron.
+
+		// if the agent had an omicron update vaccination, we return a relatively god ak50, so that we have good protection against transmission:
 		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2))
 			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
 
-		boolean hadStrain = false;
-		for (int idx = 0; idx<numInfections; idx++) {
-			VirusStrain infection = target.getVirusStrain(idx);
-			if (infection == strain) {
-				hadStrain = true;
-				break;
+		// otherwise we check if the person had an infection with the same strain, if so, we return the (relatively good) Delta ak50.
+		{
+			boolean hadStrain = false;
+			for( int idx = 0 ; idx < numInfections ; idx++ ){
+				VirusStrain infection = target.getVirusStrain( idx );
+				if( infection == strain ){
+					hadStrain = true;
+					break;
+				}
 			}
+			if( hadStrain )
+				return AK50_PERSTRAIN.get( VirusStrain.DELTA );
 		}
 
-		if (hadStrain)
-			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
-
+		// we treat VE against strainA with omicron update vaccination in the same way as VE against omicron with 1st generation vaccine:
 		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.STRAIN_A))
 			return AK50_PERSTRAIN.get(VirusStrain.OMICRON_BA2);
+
+		// otherwise, we return the ak50 against BA1/BA2 from the "list".  I.e. a fairly bad value.  I.e. we assume that there is essentially no cross-immunity.  This feels too pessimistic.
+
+		// We might be able to improve on this one element without having to move to the other design.  However, I don't think that it makes a
+		// difference for the ba.2 wave since we calibrate the slope of the new variant given current conditions.  So if there is more
+		// immunity, we simply get a smaller ba2inf.
 
 		return ak50;
 	}
@@ -155,7 +176,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			return 0.0;
 		}
 
-		// an omicron infection alone does not protect against other strains
+		// an omicron infection alone does not protect against other strains -- this here is for omicron-only immunity and a non-omicron infection
 		if (numVaccinations == 0 && strain != VirusStrain.OMICRON_BA1 && strain != VirusStrain.OMICRON_BA2) {
 			boolean hadNonOmicronInfection = false;
 			for (int idx = 0; idx<numInfections; idx++) {
@@ -195,12 +216,14 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double halfLife_days = 80.;
 
 		final Map<VaccinationType, Double> initalAntibodies = Map.of(
-				VaccinationType.generic, 1.0, // Here, I don't quite understand where these factors come from? Sydney
+				VaccinationType.generic, 1.0,
 				VaccinationType.natural, 1.0,
 				VaccinationType.mRNA, 2.0,
 				VaccinationType.omicronUpdate, 2.0,
 				VaccinationType.vector, 0.5
 		);
+		// Here, I don't quite understand where these factors come from? Sydney
+		// I think that this is mostly Cromer et al, https://doi.org/10.1016/ S2666-5247(21)00267-6, in particular Fig.3.  Kai
 
 		final Map<VaccinationType, Double> antibodyFactor = Map.of(
 				VaccinationType.generic,10.0,
@@ -224,6 +247,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			int vaccinationDay = iteration - daysSinceVaccination;
 			immunityEvents.put(vaccinationDay, target.getVaccinationType(idx));
 		}
+
 		for (int day = 0; day<=iteration; day++) {
 			if (immunityEvents.containsKey(day)) {
 				VaccinationType vaccinationType = immunityEvents.get(day);
@@ -243,6 +267,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				// exponential decay, day by day:
 				antibodyLevel *= Math.pow(0.5, 1 / halfLife_days);
 		}
+
+		// up to here we have not thought about omicron.  So what we have at this point is a serotype 1 antibody level, which does not say anything about serotype 2 immunity.
 
 		double ak50 = getAk50(target, strain, AK50_PERSTRAIN, numInfections);
 

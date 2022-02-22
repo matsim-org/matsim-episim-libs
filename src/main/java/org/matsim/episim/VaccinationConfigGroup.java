@@ -93,12 +93,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		// add default params
 		getOrAddParams(VaccinationType.generic);
 
-		double ba2Ak50 = 2.5 * 1.4;
 		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
 		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
 		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
 		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA2, ba2Ak50);
+		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 2.5 * 1.4 );
 
 	}
 
