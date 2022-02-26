@@ -112,12 +112,12 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
-		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(params.leis), "leisure");
-//		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(params.leis), "leisure");
+		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
+		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(params.leis), "leisure");
 		
 		//2G
 		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
-//		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leis), "leisure");
+		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leis), "leisure");
 
 		double schoolFac = 0.5;
 		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -239,7 +239,7 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		
 		vaccinationConfig.setBa1ba2ShortTermCrossImmunity(Boolean.valueOf(params.ba1ba2Short));
-		vaccinationConfig.setBa1ba2ShortTermCrossImmunity(Boolean.valueOf(params.ba1ba2Long));
+		vaccinationConfig.setBa1ba2LongTermCrossImmunity(Boolean.valueOf(params.ba1ba2Long));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		for (int i = 0; i < 5; i++) vaccinationCompliance.put(i, 0.0);
@@ -515,7 +515,7 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		double ba1Inf;
 		
 //		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
-		@StringParameter({"2021-11-22", "2021-11-25"})
+		@StringParameter({"2021-11-22"})
 		String ba1Date;
 		
 		@StringParameter({"true", "false"})
@@ -525,7 +525,7 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		String ba1ba2Long;
 		
 //		@StringParameter({"2021-12-30", "2022-01-01", "2022-01-03", "2022-01-05", "2022-01-07", "2022-01-09"})
-		@StringParameter({"2021-12-24", "2021-12-25", "2021-12-26", "2021-12-27" ,"2021-12-28"})
+		@StringParameter({"2021-12-24", "2021-12-25", "2021-12-26", "2021-12-27"})
 		String ba2Date;
 		
 		@Parameter({0.0, 1.2, 1.3, 1.5, 1.7, 1.9, 2.1})
@@ -534,10 +534,10 @@ public class CologneBMBF220217BA2 implements BatchRun<CologneBMBF220217BA2.Param
 		@Parameter({0.3})
 		double oHos;
 		
-		@StringParameter({"yes"})
+		@StringParameter({"no"})
 		String xMasModel;
 		
-		@Parameter({0.75})
+		@Parameter({0.75, 1.0})
 		double leis;
 		
 		@StringParameter({"current"})

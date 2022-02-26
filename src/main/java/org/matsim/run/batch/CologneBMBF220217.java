@@ -267,6 +267,9 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		
+		vaccinationConfig.setBa1ba2ShortTermCrossImmunity(true);
+		vaccinationConfig.setBa1ba2LongTermCrossImmunity(true);
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		for (int i = 0; i < 5; i++) vaccinationCompliance.put(i, 0.0);
