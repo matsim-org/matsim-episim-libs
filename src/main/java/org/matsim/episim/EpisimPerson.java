@@ -554,6 +554,10 @@ public final class EpisimPerson implements Attributable {
 	public double getAntibodies(VirusStrain strain) {
 		return antibodies.getDouble(strain);
 	}
+	
+	public Object2DoubleMap<VirusStrain> getAntibodies() {
+		return antibodies;
+	}
 
 	public double setAntibodies(VirusStrain strain, double value) {
 		return antibodies.put(strain, value);
