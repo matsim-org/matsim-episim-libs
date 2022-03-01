@@ -39,7 +39,6 @@ public class VaccinationStrategy implements VaccinationModel {
 				List<EpisimPerson> youngCandidates = youngPersons.stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-						.filter(p -> p.getNumVaccinations() < 4)
 						.filter(p -> p.getNumVaccinations() > 0 ? p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90 : true)
 						.collect(Collectors.toList());
 		
@@ -66,7 +65,6 @@ public class VaccinationStrategy implements VaccinationModel {
 				List<EpisimPerson> oldCanidates = oldPersons.stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-						.filter(p -> p.getNumVaccinations() < 3)
 						.filter(p -> p.getNumVaccinations() > 0 ? p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90 : true)
 						.collect(Collectors.toList());
 		

@@ -31,6 +31,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String FROM_FILE = "vaccinationFile";
 	private static final String DAYS_VALID = "daysValid";
 	private static final String BETA = "beta";
+	private static final String BA1BA2SHORTTERMCROSSIMMUNITY = "ba1ba2ShortTermCrossImmunity";
+	private static final String BA1BA2LONGTERMCROSSIMMUNITY = "ba1ba2LongTermCrossImmunity";
 	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
@@ -67,6 +69,15 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Needed for antibody model.
 	 */
 	private double beta = 1.0;
+	
+	/**
+	 * Needed for antibody model.
+	 */
+	private boolean ba1ba2ShortTermCrossImmunity = false;
+	/**
+	 * Needed for antibody model.
+	 */
+	private boolean ba1ba2LongTermCrossImmunity = false;
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -92,6 +103,13 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		// add default params
 		getOrAddParams(VaccinationType.generic);
+
+		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
+		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
+		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
+		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
+		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 2.5 * 1.4 );
+
 	}
 
 	/**
@@ -207,31 +225,36 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(vaccinationCapacity);
 	}
 
-	public void setAk50PerStrain(Map<VirusStrain, Double> ak50) {
-		ak50PerStrain.clear();
-		ak50PerStrain.putAll(ak50);
-	}
+	// I am not sure if we should keep what comes below.  For the time being only exposing the getter. kai, feb'22
 
+//	public void setAk50PerStrain(Map<VirusStrain, Double> ak50) {
+//		ak50PerStrain.clear();
+//		ak50PerStrain.putAll(ak50);
+//	}
+
+	/**
+	 * This is implicitly the Ak50 level against serotype one (before omicron)!
+	 */
 	public NavigableMap<VirusStrain, Double> getAk50PerStrain() {
 		return ak50PerStrain;
 	}
 
-	@StringSetter(AK50)
-	void setAk50PerStrain(String ak50) {
-
-		if (ak50.isBlank())
-			return;
-
-		Map<String, String> map = SPLITTER.split(ak50);
-		setAk50PerStrain(map.entrySet().stream().collect(Collectors.toMap(
-				e -> VirusStrain.valueOf(e.getKey()), e -> Double.parseDouble(e.getValue())
-		)));
-	}
-
-	@StringGetter(AK50)
-	String getAk50PerStrainString() {
-		return JOINER.join(ak50PerStrain);
-	}
+//	@StringSetter(AK50)
+//	void setAk50PerStrain(String ak50) {
+//
+//		if (ak50.isBlank())
+//			return;
+//
+//		Map<String, String> map = SPLITTER.split(ak50);
+//		setAk50PerStrain(map.entrySet().stream().collect(Collectors.toMap(
+//				e -> VirusStrain.valueOf(e.getKey()), e -> Double.parseDouble(e.getValue())
+//		)));
+//	}
+//
+//	@StringGetter(AK50)
+//	String getAk50PerStrainString() {
+//		return JOINER.join(ak50PerStrain);
+//	}
 
 	@StringSetter(FROM_FILE)
 	public void setFromFile(String fromFile) {
@@ -261,6 +284,26 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	@StringGetter(BETA)
 	public double getBeta() {
 		return beta;
+	}
+	
+	@StringSetter(BA1BA2SHORTTERMCROSSIMMUNITY)
+	public void setBa1ba2ShortTermCrossImmunity(boolean ba1ba2ShortTermCrossImmunity) {
+		this.ba1ba2ShortTermCrossImmunity = ba1ba2ShortTermCrossImmunity;
+	}
+
+	@StringGetter(BA1BA2SHORTTERMCROSSIMMUNITY)
+	public boolean getBa1ba2ShortTermCrossImmunity() {
+		return ba1ba2ShortTermCrossImmunity;
+	}
+	
+	@StringSetter(BA1BA2LONGTERMCROSSIMMUNITY)
+	public void setBa1ba2LongTermCrossImmunity(boolean ba1ba2LongTermCrossImmunity) {
+		this.ba1ba2LongTermCrossImmunity = ba1ba2LongTermCrossImmunity;
+	}
+
+	@StringGetter(BA1BA2LONGTERMCROSSIMMUNITY)
+	public boolean getBa1ba2LongTermCrossImmunity() {
+		return ba1ba2LongTermCrossImmunity;
 	}
 
 	@StringSetter(VALID_DEADLINE)

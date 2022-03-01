@@ -3,7 +3,7 @@ package org.matsim.episim.model;
 /**
  * Definition of virus strains with different characteristics.
  */
-public enum VirusStrain {
+public enum VirusStrain implements ImmunityEvent {
 
 	/**
 	 * This describes the base virus strain.
@@ -33,11 +33,11 @@ public enum VirusStrain {
 	 */
 //	OMICRON,
 	OMICRON_BA1,
-	
+
 	OMICRON_BA2,
-	
+
 	STRAIN_A,
-	
-	STRAIN_B	
+
+	STRAIN_B
 
 }

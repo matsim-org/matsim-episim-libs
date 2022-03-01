@@ -202,9 +202,14 @@ public final class EpisimPerson implements Attributable {
 	 * Strain of the virus the person was infected with.
 	 */
 	private final List<VirusStrain> virusStrains = new ArrayList<>();
-	
+
 	/**
-	 * From antibody model. 
+	 * Antibody level for each virus strain.
+	 */
+	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
+
+	/**
+	 * From antibody model.
 	 */
 	private double immunityFactor = 1.0;
 
@@ -288,6 +293,12 @@ public final class EpisimPerson implements Attributable {
 			virusStrains.add(VirusStrain.values()[in.readInt()]);
 		}
 
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			VirusStrain strain = VirusStrain.values()[in.readInt()];
+			antibodies.put(strain, in.readDouble());
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
@@ -345,6 +356,12 @@ public final class EpisimPerson implements Attributable {
 		for (int i = 0; i < infectionDates.size(); i++) {
 			out.writeDouble(infectionDates.getDouble(i));
 			out.writeInt(virusStrains.get(i).ordinal());
+		}
+
+		out.writeInt(antibodies.size());
+		for (Object2DoubleMap.Entry<VirusStrain> kv : antibodies.object2DoubleEntrySet()) {
+			out.writeInt(kv.getKey().ordinal());
+			out.writeDouble(kv.getDoubleValue());
 		}
 
 		out.writeInt(status.ordinal());
@@ -525,13 +542,25 @@ public final class EpisimPerson implements Attributable {
 	public double getSusceptibility() {
 		return susceptibility;
 	}
-	
+
 	public void setImmunityFactor(double immunityFactor) {
 		this.immunityFactor = immunityFactor;
 	}
 
 	public double getImmunityFactor() {
 		return immunityFactor;
+	}
+
+	public double getAntibodies(VirusStrain strain) {
+		return antibodies.getDouble(strain);
+	}
+	
+	public Object2DoubleMap<VirusStrain> getAntibodies() {
+		return antibodies;
+	}
+
+	public double setAntibodies(VirusStrain strain, double value) {
+		return antibodies.put(strain, value);
 	}
 
 	/**
@@ -576,14 +605,14 @@ public final class EpisimPerson implements Attributable {
 	public boolean hadDiseaseStatus(DiseaseStatus status) {
 		return statusChanges.containsKey(status);
 	}
-	
+
 	/**
 	 * Return whether a person received certain vaccination type.
 	 */
 	public boolean hadVaccinationType(VaccinationType type) {
 		return vaccinations.contains(type);
 	}
-	
+
 	/**
 	 * Return whether a person was infected with certain virus strain.
 	 */

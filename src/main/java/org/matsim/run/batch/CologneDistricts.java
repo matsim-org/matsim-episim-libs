@@ -6,8 +6,6 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
-import org.matsim.episim.model.FaceMask;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
@@ -18,7 +16,6 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
-import org.matsim.run.modules.SnzProductionScenario;
 
 import javax.annotation.Nullable;
 
@@ -39,7 +36,7 @@ public class CologneDistricts implements BatchRun<CologneDistricts.Params> {
 
 	public static SnzCologneProductionScenario getModule(Params params) {
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
+				.setScaleForActivityLevels(1.3 )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.build();
 	}

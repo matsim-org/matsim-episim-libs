@@ -32,10 +32,12 @@ public class VaccinationStrategy2 implements VaccinationModel {
 		if (date.isAfter(config.start)) {
 			//handle young persons
 			if (config.vaccinateYoung) {
+				// collect persons of right age:
 				List<EpisimPerson> youngPersons = persons.values().stream()
 						.filter(p -> p.getAge() < 60 && p.getAge() > 17)
 						.collect(Collectors.toList());
-			
+
+				// out of these, collect persons of right status:
 				List<EpisimPerson> youngCandidates = youngPersons.stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
@@ -43,9 +45,10 @@ public class VaccinationStrategy2 implements VaccinationModel {
 						.filter(p -> p.getNumVaccinations() > 0 ? p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90 : true)
 						.filter(config.vaccinateRecovered ? p -> true : p -> p.getNumInfections() == 0)
 						.collect(Collectors.toList());
-		
+
+				// shuffle them (can't say if this uses the same seed in every iteration or not)
 				Collections.shuffle(youngCandidates, new Random(EpisimUtils.getSeed(rnd)));
-				
+
 				int vaccinationsLeft = (int) (0.01 * youngPersons.size());
 				
 				int n = Math.min(youngCandidates.size(), vaccinationsLeft);
@@ -54,7 +57,9 @@ public class VaccinationStrategy2 implements VaccinationModel {
 					EpisimPerson person = youngCandidates.get(i);
 					vaccinate(person, iteration, VaccinationType.mRNA);
 					vaccinationsLeft--;
-				}	
+				}
+				// (the above implies that this should take about 100 days. In the simulation, it is done after less than a month.)
+
 			}
 			
 			//handle old persons

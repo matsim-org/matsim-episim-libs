@@ -40,8 +40,8 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 //			pHousehold = params.pHousehold;
 
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
@@ -192,14 +192,14 @@ public class CologneBMBF220121 implements BatchRun<CologneBMBF220121.Params> {
 
 		adaptVacinationEffectiveness(vaccinationConfig);
 
-		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
-
-		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.3);
-		ak50PerStrain.put(VirusStrain.ALPHA, 0.3);
-		ak50PerStrain.put(VirusStrain.DELTA, 0.4);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 3.0);
-
-		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
+//		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
+//
+//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.3);
+//		ak50PerStrain.put(VirusStrain.ALPHA, 0.3);
+//		ak50PerStrain.put(VirusStrain.DELTA, 0.4);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 3.0);
+//
+//		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
 
 		configureBooster(vaccinationConfig, 1.0, 3);

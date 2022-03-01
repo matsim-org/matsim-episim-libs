@@ -8,7 +8,6 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.analysis.RValuesFromEvents;
@@ -70,8 +69,8 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold) {
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(1.3)
-				.setHouseholdSusc(pHousehold)
+				.setScaleForActivityLevels(1.3 )
+				.setSuscHouseholds_pct(pHousehold )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
@@ -274,18 +273,18 @@ public class CologneBMBF220211 implements BatchRun<CologneBMBF220211.Params> {
 		vaccinationConfig.setDaysValid(270);
 		vaccinationConfig.setValidDeadline(LocalDate.parse("2022-01-01"));
 
-		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
-
-		double ba2Ak50 = 2.5 * 1.4;
-		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
-		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
-		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA2, ba2Ak50);
-		ak50PerStrain.put(VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50);
-		ak50PerStrain.put(VirusStrain.STRAIN_B, ba2Ak50);
-		
-		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
+//		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
+//
+//		double ba2Ak50 = 2.5 * 1.4;
+//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
+//		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
+//		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
+//		ak50PerStrain.put(VirusStrain.OMICRON_BA2, ba2Ak50);
+//		ak50PerStrain.put(VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50);
+//		ak50PerStrain.put(VirusStrain.STRAIN_B, ba2Ak50);
+//
+//		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
 		vaccinationConfig.setBeta(3.0);
 

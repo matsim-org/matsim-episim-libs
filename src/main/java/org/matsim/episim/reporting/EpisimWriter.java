@@ -66,7 +66,7 @@ public class EpisimWriter {
 	/**
 	 * Writes an event as xml representation to {@code out}.
 	 */
-	protected static void writeEvent(final Appendable out, final Event event, final double correctedTime) throws IOException {
+	public static void writeEvent(final Appendable out, final Event event, final double correctedTime) throws IOException {
 		out.append("\t<event ");
 		Map<String, String> attr = event.getAttributes();
 

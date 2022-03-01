@@ -142,7 +142,7 @@ public final class RunEpisim implements Callable<Integer> {
 
 		for (Map.Entry<Key<?>, Binding<?>> e : injector.getBindings().entrySet()) {
 			BindingImpl<?> binding = (BindingImpl<?>) e.getValue();
-			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" with { ");
+			bindings.append("\n\t\t").append(e.getKey().getTypeLiteral()).append(" <---- { ");
 
 			// Guice toString methods are very inconsistent
 			// we only re-use some of them

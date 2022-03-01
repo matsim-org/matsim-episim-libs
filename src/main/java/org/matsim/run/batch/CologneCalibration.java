@@ -45,7 +45,7 @@ public class CologneCalibration implements BatchRun<CologneCalibration.Params> {
 
 
 		return new SnzCologneProductionScenario.Builder()
-				.setScale(params == null ? 1.0 : params.scale)
+				.setScaleForActivityLevels(params == null ? 1.0 : params.scale )
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setLeisureOffset( params == null ? 0d : params.leisureOffset)
 //				.setLeisureNightly(leisureNightly)

@@ -83,7 +83,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			return this;
 		}
 
-		public Builder setScale(double scale) {
+		public Builder setScaleForActivityLevels( double scale ) {
 			this.scale = scale;
 			return this;
 		}
@@ -98,7 +98,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 			return this;
 		}
 
-		public Builder setHouseholdSusc(double householdSusc) {
+		public Builder setSuscHouseholds_pct( double householdSusc ) {
 			this.householdSusc = householdSusc;
 			return this;
 		}

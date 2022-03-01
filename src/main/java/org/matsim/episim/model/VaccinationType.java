@@ -3,7 +3,7 @@ package org.matsim.episim.model;
 /**
  * Enum for different types of vaccinations.
  */
-public enum VaccinationType {
+public enum VaccinationType implements ImmunityEvent {
 
 	generic,
 	mRNA,
