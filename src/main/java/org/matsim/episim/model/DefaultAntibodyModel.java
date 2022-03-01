@@ -31,9 +31,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		if (person.getNumVaccinations() == 0 && !person.hadDiseaseStatus(DiseaseStatus.recovered)) {
 			return;
 		}
-		
-		
-		if (person.daysSince(VaccinationStatus.yes, day) == 1) {
+
+
+		if (person.getVaccinationStatus().equals(VaccinationStatus.yes) && person.daysSince(VaccinationStatus.yes, day) == 1) {
 			handleVaccination(person);
 			return;
 		}
