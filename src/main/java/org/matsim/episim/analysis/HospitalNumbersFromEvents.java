@@ -506,7 +506,7 @@
 	 }
 
 
-	 private static class Handler implements EpisimPersonStatusEventHandler, EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
+	 private class Handler implements EpisimPersonStatusEventHandler, EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
 
 		 private final Map<Id<Person>, Holder> data;
 		 private final LocalDate startDate;
@@ -567,7 +567,7 @@
 
 			 if (status.equals(DiseaseStatus.seriouslySick)) {
 
-				 if (population.getPersons().get(event.getPersonId()).getAttributes().getAttribute("district").equals("Köln")) {
+				 if (population.getPersons().get(event.getPersonId()).getAttributes().getAttribute("district").equals(district)) {
 					 int hospitalizationCnt = this.standardHospitalAdmissions.getOrDefault(day, 0);
 					 this.standardHospitalAdmissions.put(day, ++hospitalizationCnt);
 				 }
