@@ -391,7 +391,7 @@ public final class EpisimPerson implements Attributable {
 			statusChanges.keySet().removeIf(p -> p != DiseaseStatus.recovered);
 		}
 
-		if (!statusChanges.containsKey(status))
+		if (!statusChanges.containsKey(status) || status == DiseaseStatus.recovered)
 			statusChanges.put(status, now);
 
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
@@ -554,7 +554,7 @@ public final class EpisimPerson implements Attributable {
 	public double getAntibodies(VirusStrain strain) {
 		return antibodies.getDouble(strain);
 	}
-	
+
 	public Object2DoubleMap<VirusStrain> getAntibodies() {
 		return antibodies;
 	}
