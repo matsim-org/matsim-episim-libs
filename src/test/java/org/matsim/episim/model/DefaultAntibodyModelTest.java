@@ -1,10 +1,7 @@
 package org.matsim.episim.model;
 
 
-import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.junit.Before;
@@ -262,44 +259,82 @@ public class DefaultAntibodyModelTest {
 
 	}
 
+	/**
+	 * Things to discuss:
+	 * 1) Strains: B1351 doesn't work
+	 * 2)
+	 * <p>
+	 * Add day of immunity event list
+	 */
 
 	@Test
-	public void xxx() {
+	public void testMixOfVaccinesAndInfections() {
 
-		List<ImmunityEvent> immunityEventsPass = List.of(VaccinationType.omicronUpdate, VaccinationType.generic, VaccinationType.vector, VaccinationType.mRNA);
+		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
+		IntList immunityEventDays = IntList.of(50, 200, 600);
 
-		List<ImmunityEvent> immunityEventsFail = List.of(VaccinationType.omicronUpdate,VaccinationType.generic,VaccinationType.mRNA,VaccinationType.vector);
+		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays);
 
-		List<ImmunityEvent> immunityEventsInfections = List.of(VirusStrain.SARS_CoV_2, VirusStrain.DELTA, VirusStrain.OMICRON_BA1);
+		// Plot 1: nAb
+		{
+			IntColumn records = IntColumn.create("day");
+			DoubleColumn values = DoubleColumn.create("antibodies");
+			StringColumn groupings = StringColumn.create("scenario");
 
-		List<ImmunityEvent> immunityEvents = immunityEventsInfections;
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
 
+				for (Object strain : strainToAntibodyMap.keySet()) {
+					records.append(day);
 
-		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents);
+					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
 
-		IntColumn records = IntColumn.create("day");
-		DoubleColumn values = DoubleColumn.create("antibodies");
-		StringColumn groupings = StringColumn.create("scenario");
+					values.append(nAb);
+					groupings.append(strain.toString());
 
-		// standard hospitalizations from episim
-		for (int day : antibodyLevels.keySet()) {
-			Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
-
-			for (Object strain : strainToAntibodyMap.keySet()) {
-				records.append(day);
-
-				values.append(strainToAntibodyMap.getOrDefault(strain, 0.));
-				groupings.append(strain.toString());
-
+				}
 			}
+			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents.toString(), "nAb.html");
+
 		}
 
-		producePlot(records, values, groupings, "xxx", immunityEvents.toString(), "Antibodies.html");
+		// Plot 2: ve
+		{
+			IntColumn records = IntColumn.create("day");
+			DoubleColumn values = DoubleColumn.create("antibodies");
+			StringColumn groupings = StringColumn.create("scenario");
+
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+
+				for (Object strain : strainToAntibodyMap.keySet()) {
+					records.append(day);
+
+					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
+
+					var beta = 1.;
+					var fact = 0.001;
+					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append(strain.toString());
+
+				}
+			}
+			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents.toString(), "ve.html");
+		}
 
 
 	}
 
-	private Int2ObjectMap simulateAntibodyLevels(List<ImmunityEvent> immunityEvents) {
+	private Int2ObjectMap simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays) {
+
+		if (immunityEventDays.size() != immunityEvents.size()) {
+			throw new RuntimeException("inputs must have same size");
+		}
 
 		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodiesPerDayAndStrain = new Int2ObjectAVLTreeMap<>();
 
@@ -310,16 +345,32 @@ public class DefaultAntibodyModelTest {
 		int day = 0;
 		model.updateAntibodies(person, day);
 
-		antibodiesPerDayAndStrain.put(day, person.getAntibodies());
-
-
 		Object2DoubleMap<VirusStrain> antibodiesOld = new Object2DoubleOpenHashMap<>(person.getAntibodies());
+		antibodiesPerDayAndStrain.put(day, antibodiesOld);
 
-		for (ImmunityEvent immunityEvent : immunityEvents) {
 
-			// day x1: immunity event occurs, antibodies will not increase
+		for (int i = 0; i < immunityEvents.size(); i++) {
+			ImmunityEvent immunityEvent = immunityEvents.get(i);
+			int immunityEventDay = immunityEventDays.getInt(i);
+
+			if (day > immunityEventDay) {
+				throw new RuntimeException("invalid immunity event day");
+			}
+
+			// antibodies constantly decreasing until immunity event
+			while (day < immunityEventDay - 1) {
+				day++;
+				model.updateAntibodies(person, day);
+				for (VirusStrain strain : strainsToCheck) {
+					assertThat(person.getAntibodies(strain)).isLessThanOrEqualTo(antibodiesOld.get(strain));
+				}
+
+				antibodiesOld = new Object2DoubleOpenHashMap<>(person.getAntibodies());
+				antibodiesPerDayAndStrain.put(day, antibodiesOld);
+			}
+
+			// immunity event occurs, antibodies will not increase on same day
 			day++;
-
 			if (immunityEvent instanceof VaccinationType) {
 				person.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, (VaccinationType) immunityEvent, day);
 
@@ -341,9 +392,9 @@ public class DefaultAntibodyModelTest {
 			}
 
 			antibodiesOld = new Object2DoubleOpenHashMap<>(person.getAntibodies());
-			antibodiesPerDayAndStrain.put(day,antibodiesOld);
+			antibodiesPerDayAndStrain.put(day, antibodiesOld);
 
-			// day x2
+			// day after immunity event: antibodies should increase
 			day++;
 
 			model.updateAntibodies(person, day);
@@ -354,24 +405,24 @@ public class DefaultAntibodyModelTest {
 			}
 
 			antibodiesOld = new Object2DoubleOpenHashMap<>(person.getAntibodies());
-			antibodiesPerDayAndStrain.put(day,antibodiesOld);
+			antibodiesPerDayAndStrain.put(day, antibodiesOld);
 
 
-			// day x3 - x100; antibodies constantly decreasing
-			day++;
-
-			int uppperLimit = day + 97;
-
-			for (; day <= uppperLimit; day++) {
-				model.updateAntibodies(person, day);
-				for (VirusStrain strain : strainsToCheck) {
-					assertThat(person.getAntibodies(strain)).isLessThan(antibodiesOld.get(strain));
-				}
-
-				antibodiesOld = new Object2DoubleOpenHashMap<>(person.getAntibodies());
-				antibodiesPerDayAndStrain.put(day,antibodiesOld);
-			}
 		}
+
+		// continue the plot 100 days after final immunization event
+		int upperLim = day + 100;
+		while (day < upperLim) {
+			day++;
+			model.updateAntibodies(person, day);
+			for (VirusStrain strain : strainsToCheck) {
+				assertThat(person.getAntibodies(strain)).isLessThanOrEqualTo(antibodiesOld.get(strain));
+			}
+
+			antibodiesOld = new Object2DoubleOpenHashMap<>(person.getAntibodies());
+			antibodiesPerDayAndStrain.put(day, antibodiesOld);
+		}
+
 		return antibodiesPerDayAndStrain;
 	}
 

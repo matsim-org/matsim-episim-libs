@@ -11,9 +11,9 @@ import org.matsim.episim.EpisimPerson.VaccinationStatus;
 import com.google.inject.Inject;
 
 public class DefaultAntibodyModel implements AntibodyModel {
-	
+
 	private final VaccinationConfigGroup vaccinationConfig;
-	
+
 	@Inject
 	DefaultAntibodyModel(Config config) {
 		this.vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -21,13 +21,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
-		
+
 		if (day == 0) {
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
 			}
 		}
-		
+
 		if (person.getNumVaccinations() == 0 && !person.hadDiseaseStatus(DiseaseStatus.recovered)) {
 			return;
 		}
@@ -37,32 +37,32 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			handleVaccination(person);
 			return;
 		}
-		
-		// at the moment infections are only handled if there is no vaccination on the same day. Maybe we should change this. 
+
+		// at the moment infections are only handled if there is no vaccination on the same day. Maybe we should change this.
 		if (person.hadDiseaseStatus(DiseaseStatus.recovered)) {
 			if (person.daysSince(DiseaseStatus.recovered, day) == 1) {
 				handleInfection(person);
 				return;
 			}
 		}
-		
+
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
 			double halfLife_days = 80.;
 			double oldAntibodyLevel = person.getAntibodies(strain);
 			person.setAntibodies(strain, oldAntibodyLevel * Math.pow( 0.5, 1 / halfLife_days ));
 		}
-		
-	
-		
+
+
+
 
 	}
 
 	private void handleInfection(EpisimPerson person) {
 		VirusStrain strain = person.getVirusStrain(person.getNumInfections() - 1);
-		
+
 		boolean firstImmunization = checkFirstImmunization(person);
-		
+
 		// 1st immunization:
 		if (firstImmunization) {
 			switch( strain ) {
@@ -107,9 +107,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	private void handleVaccination(EpisimPerson person) {
 		VaccinationType vaccinationType = person.getVaccinationType(person.getNumVaccinations() - 1);
-		
+
 		boolean firstImmunization = checkFirstImmunization(person);
-		
+
 		// 1st immunization:
 		if (firstImmunization) {
 			switch( vaccinationType ) {
@@ -162,25 +162,25 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		}
 		return firstImmunization;
 	}
-	
+
 	private static void refresh( EpisimPerson person, int vaccineTypeFactor, VaccinationConfigGroup vaccinationConfig ){
 		var ak50PerStrain = vaccinationConfig.getAk50PerStrain();
 		for( VirusStrain strain : VirusStrain.values() ){
 			switch( strain ) {
 				case SARS_CoV_2:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain) * ak50PerStrain.get(strain))  * vaccineTypeFactor / ak50PerStrain.get(strain) ) ;
+					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case ALPHA:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain) * ak50PerStrain.get(strain))  * vaccineTypeFactor / ak50PerStrain.get(strain) ) ;
+					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case DELTA:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain) * ak50PerStrain.get(strain))  * vaccineTypeFactor / ak50PerStrain.get(strain) ) ;
+					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case OMICRON_BA1:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain) * ak50PerStrain.get(strain))  * vaccineTypeFactor / ak50PerStrain.get(strain) ) ;
+					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case OMICRON_BA2:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain) * ak50PerStrain.get(strain))  * vaccineTypeFactor / ak50PerStrain.get(strain) ) ;
+					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				default:
 					person.setAntibodies(strain, Double.NaN);
