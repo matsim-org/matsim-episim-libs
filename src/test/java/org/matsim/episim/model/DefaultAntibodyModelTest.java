@@ -15,6 +15,8 @@ import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
+import tech.tablesaw.columns.Column;
+import tech.tablesaw.plotly.api.LinePlot;
 import tech.tablesaw.plotly.components.Axis;
 import tech.tablesaw.plotly.components.Figure;
 import tech.tablesaw.plotly.components.Layout;
@@ -81,7 +83,7 @@ public class DefaultAntibodyModelTest {
 	 * Tests that relative antibody levels (nAb) spike when an immunity events occur (infection or vaccination) and
 	 * decrease on all other days. In this example, the agent is infected w/ the wild type on day 50, gets vaccinated
 	 * w/ mRNA on day 200 and gets infected w/ Delta on day 600.
-	 *
+	 * <p>
 	 * Plots are produced showing the nAb and vaccine effectiveness (ve) against every variant of concern. The plots can
 	 * be found in the matsim-episim folder, in html format.
 	 */
@@ -92,7 +94,7 @@ public class DefaultAntibodyModelTest {
 		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
 		IntList immunityEventDays = IntList.of(50, 200, 600);
 
-		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays);
+		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600);
 
 		// Plot 1: nAb
 		{
@@ -149,7 +151,153 @@ public class DefaultAntibodyModelTest {
 
 	}
 
-	private Int2ObjectMap simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays) {
+	@Test
+	public void testNordstroemEtAl() {
+
+
+		final String days = "day";
+		IntColumn records = IntColumn.create(days);
+
+		final String vaccineEfficacies = "VE";
+		DoubleColumn values = DoubleColumn.create(vaccineEfficacies);
+		final String grouping = "grouping";
+		var groupings = StringColumn.create(grouping);
+
+		final String nordstrom = "Nordström";
+		final String eyreBNTDelta = "EyreBNTDelta";
+		final String eyreBNTAlpha = "EyreBNTAlpha";
+
+		var fact = 0.001;
+
+		// gather results from antibody model
+		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
+
+		IntList immunityEventDays = IntList.of(1);
+		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600);
+
+
+		// antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3)
+		{
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+
+				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.DELTA, 0.);
+
+				// beta = 1
+				{
+					var beta = 1.;
+					records.append(day);
+					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append("Delta; beta=1");
+				}
+
+				// beta = 3
+				{
+					var beta = 3.;
+					records.append(day);
+					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append("Delta; beta=3");
+				}
+
+			}
+		}
+
+
+		// add ve progression from literature
+		for (int ii = 0; ii < 600; ii++) {
+
+			//eyreBNTDelta
+			{
+				records.append(ii);
+				groupings.append(eyreBNTDelta);
+				if (ii < 14) {
+					values.appendMissing();
+				} else if (ii < 28) {
+					values.append(interpolate(ii, 14, 28, 1. - 0.2, 1. - 0.28));
+				} else if (ii < 42) {
+					values.append(interpolate(ii, 28, 42, 1. - 0.28, 1. - 0.33));
+				} else if (ii < 8 * 7) {
+					values.append(interpolate(ii, 42, 8 * 7, 1. - 0.33, 1. - 0.38));
+				} else if (ii < 14 * 7) {
+					values.append(interpolate(ii, 8 * 7, 14 * 7, 1. - 0.38, 1. - 0.47));
+				} else {
+					values.appendMissing();
+				}
+			}
+			//eyreBNTAlpha
+			{
+				records.append(ii);
+				groupings.append(eyreBNTAlpha);
+				if (ii < 14) {
+					values.appendMissing();
+				} else if (ii < 28) {
+					values.append(interpolate(ii, 14, 28, 1. - 0.15, 1. - 0.22));
+				} else if (ii < 42) {
+					values.append(interpolate(ii, 28, 42, 1. - 0.22, 1. - 0.26));
+				} else if (ii < 8 * 7) {
+					values.append(interpolate(ii, 42, 8 * 7, 1. - 0.26, 1. - 0.3));
+				} else if (ii < 14 * 7) {
+					values.append(interpolate(ii, 8 * 7, 14 * 7, 1. - 0.3, 1. - 0.36));
+				} else {
+					values.appendMissing();
+				}
+			}
+			//nordström
+			{
+				records.append(ii);
+				groupings.append(nordstrom);
+				if (ii <= 30) {
+					values.append(0.92);
+				} else if (ii <= 60) {
+					values.append(0.89);
+				} else if (ii <= 120) {
+					values.append(0.85);
+				} else if (ii <= 180) {
+					values.append(0.47);
+				} else if (ii <= 210) {
+					values.append(0.29);
+				} else {
+					values.append(0.23);
+				}
+			}
+		}
+
+		Table table = Table.create("Vaccine Efficacy, DefaultAntibodyModel vs. NordstromEtAl.");
+		table.addColumns(records);
+		table.addColumns(values);
+		table.addColumns(groupings);
+		var figure = LinePlot.create("Vaccine Efficacy, DefaultAntibodyModel vs. NordstromEtAl.", table, days, vaccineEfficacies, grouping);
+
+		try (Writer writer = new OutputStreamWriter(new FileOutputStream("nordstrom.html"), StandardCharsets.UTF_8)) {
+			writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+
+	}
+
+	private double interpolate(int ii, int startDay, int endDay, double startVal, double endVal) {
+		return startVal + (endVal - startVal) / (endDay - startDay) * (ii - startDay);
+	}
+
+	/**
+	 * @param immunityEvents    List of ImmunityEvent (either VaccinationType or VirusStrain) chronological order
+	 * @param immunityEventDays List of days that the ImmunityEvent occurs
+	 * @param maxDay            final day for which antibody levels are calculated
+	 * @return
+	 */
+	private Int2ObjectMap simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays, int maxDay) {
 
 		if (immunityEventDays.size() != immunityEvents.size()) {
 			throw new RuntimeException("inputs must have same size");
@@ -229,9 +377,8 @@ public class DefaultAntibodyModelTest {
 
 		}
 
-		// continue the plot 100 days after final immunization event
-		int upperLim = day + 100;
-		while (day < upperLim) {
+		// continue the plot after final immunization event until maxDay
+		while (day < maxDay) {
 			day++;
 			model.updateAntibodies(person, day);
 			for (VirusStrain strain : strainsToCheck) {
