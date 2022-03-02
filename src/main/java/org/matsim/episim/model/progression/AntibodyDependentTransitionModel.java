@@ -128,13 +128,16 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		}
 		
 		//vaccinated persons or persons who have had a severe course of disease in the past
-		else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
+		// I think this does not work, because old states are removed when changing from recovered to susceptible. SM
+		else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick)) {
 //		else if (numVaccinations == 1 || person.hadStrain(VirusStrain.SARS_CoV_2) || person.hadStrain(VirusStrain.ALPHA) || person.hadStrain(VirusStrain.DELTA))
 
 			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
 				veSeriouslySick = 0.55;
 			else 
 				veSeriouslySick = 0.9;
+		}
+	
 		
 		else {
 			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
