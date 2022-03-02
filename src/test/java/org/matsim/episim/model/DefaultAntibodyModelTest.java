@@ -15,7 +15,6 @@ import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
-import tech.tablesaw.columns.Column;
 import tech.tablesaw.plotly.api.LinePlot;
 import tech.tablesaw.plotly.components.Axis;
 import tech.tablesaw.plotly.components.Figure;
@@ -37,15 +36,14 @@ public class DefaultAntibodyModelTest {
 	@Rule
 	public MatsimTestUtils utils = new MatsimTestUtils();
 
-	private List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
-	private Config config;
+	private final List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
 	private DefaultAntibodyModel model;
 
 
 	@Before
 	public void setup() {
 
-		config = EpisimTestUtils.createTestConfig();
+		Config config = EpisimTestUtils.createTestConfig();
 		model = new DefaultAntibodyModel(config);
 
 	}
@@ -94,7 +92,7 @@ public class DefaultAntibodyModelTest {
 		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
 		IntList immunityEventDays = IntList.of(50, 200, 600);
 
-		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600);
+		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750);
 
 		// Plot 1: nAb
 		{
@@ -295,9 +293,9 @@ public class DefaultAntibodyModelTest {
 	 * @param immunityEvents    List of ImmunityEvent (either VaccinationType or VirusStrain) chronological order
 	 * @param immunityEventDays List of days that the ImmunityEvent occurs
 	 * @param maxDay            final day for which antibody levels are calculated
-	 * @return
+	 * @return map where keys are days and values are a second map. This nested map contains virus strain as key and antibody level as value
 	 */
-	private Int2ObjectMap simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays, int maxDay) {
+	private Int2ObjectMap<Object2DoubleMap<VirusStrain>> simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays, int maxDay) {
 
 		if (immunityEventDays.size() != immunityEvents.size()) {
 			throw new RuntimeException("inputs must have same size");
