@@ -138,7 +138,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 					refresh(person, 10, vaccinationConfig);
 					break;
 				case mRNA:
-					refresh(person, 20, vaccinationConfig);
+					refresh(person, 15, vaccinationConfig); //Previously: 20
 					break;
 				case vector:
 					refresh(person, 5, vaccinationConfig);

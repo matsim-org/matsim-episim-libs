@@ -69,7 +69,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Needed for antibody model.
 	 */
 	private double beta = 1.0;
-	
+
 	/**
 	 * Needed for antibody model.
 	 */
@@ -107,7 +107,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
 		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
 		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
+		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 1.65);  // Before: 2.5
 		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 2.5 * 1.4 );
 
 	}
@@ -285,7 +285,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	public double getBeta() {
 		return beta;
 	}
-	
+
 	@StringSetter(BA1BA2SHORTTERMCROSSIMMUNITY)
 	public void setBa1ba2ShortTermCrossImmunity(boolean ba1ba2ShortTermCrossImmunity) {
 		this.ba1ba2ShortTermCrossImmunity = ba1ba2ShortTermCrossImmunity;
@@ -295,7 +295,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	public boolean getBa1ba2ShortTermCrossImmunity() {
 		return ba1ba2ShortTermCrossImmunity;
 	}
-	
+
 	@StringSetter(BA1BA2LONGTERMCROSSIMMUNITY)
 	public void setBa1ba2LongTermCrossImmunity(boolean ba1ba2LongTermCrossImmunity) {
 		this.ba1ba2LongTermCrossImmunity = ba1ba2LongTermCrossImmunity;

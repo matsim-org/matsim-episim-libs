@@ -161,7 +161,8 @@ public class DefaultAntibodyModelTest {
 		final String grouping = "grouping";
 		var groupings = StringColumn.create(grouping);
 
-		final String nordstrom = "Nordström";
+		final String nordstrom = "Nordström (Delta)";
+		final String ukhsa = "UKHSA (Omicron)";
 		final String eyreBNTDelta = "EyreBNTDelta";
 		final String eyreBNTAlpha = "EyreBNTAlpha";
 
@@ -205,6 +206,42 @@ public class DefaultAntibodyModelTest {
 
 					values.append(ve);
 					groupings.append("Delta; beta=3");
+				}
+
+			}
+		}
+
+		// once more antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3), this time plotting VE against omicron
+		{
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+
+				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.OMICRON_BA1, 0.);
+
+				// beta = 1
+				{
+					var beta = 1.;
+					records.append(day);
+					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append("Omicron; beta=1");
+				}
+
+				// beta = 3
+				{
+					var beta = 3.;
+					records.append(day);
+					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append("Omicron; beta=3");
 				}
 
 			}
@@ -266,6 +303,25 @@ public class DefaultAntibodyModelTest {
 					values.append(0.29);
 				} else {
 					values.append(0.23);
+				}
+			}
+
+			//UKHSA
+			{
+				records.append( ii );
+				groupings.append( ukhsa );
+				if ( ii <= 28 ) {
+					values.append(0.63);
+				} else if ( ii <= 63 ) {
+					values.append(0.50);
+				} else if ( ii <= 98 ){
+					values.append( 0.30 );
+				} else if ( ii <= 133 ){
+					values.append( 0.19 );
+				} else if ( ii <= 168 ){
+					values.append( 0.15 );
+				} else {
+					values.append( 0.1 );
 				}
 			}
 		}
