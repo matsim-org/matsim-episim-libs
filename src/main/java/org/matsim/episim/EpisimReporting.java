@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
@@ -205,7 +206,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
-		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", "antibodies");
+		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date",  (Object[]) VirusStrain.values());
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 
@@ -301,26 +302,6 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		int fullEffect = vaccinationConfig.getParams(person.getVaccinationType(0)).getDaysBeforeFullEffect();
 		return person.getNumVaccinations() > 1 || person.daysSince(VaccinationStatus.yes, iteration) >= fullEffect;
-	}
-
-	/**
-	 * Calculates average antibodyLevel of population.
-	 * @return
-	 */
-	double calculateAntibodyLevelPerPerson(Collection<EpisimPerson> persons, int iteration) {
-		double avgAntibodyLevel = 0.0;
-		NavigableMap<VirusStrain, Double> ak50PerStrain = vaccinationConfig.getAk50PerStrain();
-
-		//antibody model not configured
-		if (ak50PerStrain.size() == 0)
-			return 0.0;
-
-		for (EpisimPerson p : persons) {
-			double antibodyLevel = InfectionModelWithAntibodies.getRelativeAntibodyLevel(p, iteration, p.getNumVaccinations(), p.getNumInfections(), VirusStrain.OMICRON_BA1, ak50PerStrain, vaccinationConfig.getBa1ba2LongTermCrossImmunity());
-			avgAntibodyLevel = avgAntibodyLevel + antibodyLevel;
-		}
-		avgAntibodyLevel = avgAntibodyLevel / persons.size();
-		return avgAntibodyLevel;
 	}
 
 	/**
@@ -741,7 +722,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report that a person status has changed and publish corresponding event.
 	 */
-	public void reportPersonStatus(EpisimPerson person, EpisimPersonStatusEvent event) {
+	void reportPersonStatus(EpisimPerson person, EpisimPersonStatusEvent event) {
 
 		EpisimPerson.DiseaseStatus newStatus = event.getDiseaseStatus();
 
@@ -773,7 +754,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Write container statistic to file.
 	 */
-	public void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
+	void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
 	                                 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
 
 		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "totalUsers", "maxGroupSize");
@@ -796,16 +777,25 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Write number of initially infected persons.
 	 */
-	public void reportDiseaseImport(int infected, int iteration, String date) {
+	void reportDiseaseImport(int infected, int iteration, String date) {
 		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
 	}
 
 	/**
 	 * Write average antibody level.
 	 */
-	public void reportAntibodyLevel(double antibodyLevel, int iteration) {
+	void reportAntibodyLevel(Object2DoubleMap<VirusStrain> antibodies, int n, int iteration) {
 		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
-		writer.append(antibodiesPerPerson, new String[]{String.valueOf(iteration), date, String.valueOf(antibodyLevel)});
+
+		String[] out = new String[VirusStrain.values().length + 2];
+		out[0] = String.valueOf(iteration);
+		out[1] = date;
+
+		for (int i = 0; i < VirusStrain.values().length; i++) {
+			out[i+2] = String.valueOf(antibodies.getDouble(VirusStrain.values()[i]) / n);
+		}
+
+		writer.append(antibodiesPerPerson, out);
 	}
 
 	/**
