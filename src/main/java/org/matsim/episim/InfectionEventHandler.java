@@ -25,9 +25,7 @@ import com.google.inject.*;
 import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
-import it.unimi.dsi.fastutil.objects.AbstractObject2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -130,6 +128,11 @@ public final class InfectionEventHandler implements Externalizable {
 	private final ProgressionModel progressionModel;
 
 	/**
+	 * Progress of antibodies.
+	 */
+	private final AntibodyModel antibodyModel;
+
+	/**
 	 * Handle initial infections.
 	 */
 	private final InitialInfectionHandler initialInfections;
@@ -201,6 +204,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.reporting = injector.getInstance(EpisimReporting.class);
 		this.localRnd = new SplittableRandom( 65536); // fixed seed, because it should not change between snapshots
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
+		this.antibodyModel = injector.getInstance(AntibodyModel.class);
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
 		this.initialInfections.setInfectionsLeft(episimConfig.getInitialInfections());
 		this.vaccinationModel = injector.getInstance(VaccinationModel.class);
@@ -738,8 +742,16 @@ public final class InfectionEventHandler implements Externalizable {
 		progressionModel.setIteration(iteration);
 		progressionModel.beforeStateUpdates(personMap, iteration, this.report);
 
+		// Sum of antibodies
+		Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
+
 		for (EpisimPerson person : personMap.values()) {
 			progressionModel.updateState(person, iteration);
+			antibodyModel.updateAntibodies(person, iteration);
+
+			for (Object2DoubleMap.Entry<VirusStrain> kv : person.getAntibodies().object2DoubleEntrySet()) {
+				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);
+			}
 		}
 
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
@@ -773,7 +785,7 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportCpuTime(iteration, "Reporting", "start", -1);
 		Map<String, EpisimReporting.InfectionReport> reports = reporting.createReports(personMap.values(), iteration);
 
-		reporting.reportAntibodyLevel(reporting.calculateAntibodyLevelPerPerson(personMap.values(), iteration), iteration);
+		reporting.reportAntibodyLevel(antibodies, personMap.size(), iteration);
 		this.report = reports.get("total");
 
 		reporting.reporting(reports, iteration, report.date);
