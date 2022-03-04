@@ -411,6 +411,137 @@ public class DefaultAntibodyModelTest {
 	}
 	
 	
+	@Test
+	public void roesslerEtAl(){
+		// http://dx.doi.org/10.1101/2022.02.01.22270263 Fig.1
+
+		{
+			// Fig.1: I use the top left (vaccinated; against wild variant) as base:
+			double nAbBase;
+			{
+				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VirusStrain.OMICRON_BA1);
+				IntList immunityEventDays = IntList.of(0, 50);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.SARS_CoV_2);
+			}
+			
+			// Fig.1 A (vaccinated + omicron):
+			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VirusStrain.OMICRON_BA1);
+			IntList immunityEventDays = IntList.of(0, 50);
+			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			
+			{
+				VirusStrain strain = VirusStrain.SARS_CoV_2;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1);
+			}
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1 );
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 3000./4000., nAb/nAbBase, 0.4 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 1000./4000., nAb/nAbBase, 0.4 );
+			}
+
+			// Fig1 B (only omicron):
+			immunityEvents = List.of(VirusStrain.OMICRON_BA1);
+			immunityEventDays = IntList.of(50);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+			{
+				VirusStrain strain = VirusStrain.SARS_CoV_2;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 0./4000., nAb/nAbBase, 0.1);
+			}
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 0./4000., nAb/nAbBase, 0.1 );
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 10./4000., nAb/nAbBase, 0.1 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 60./4000., nAb/nAbBase, 0.1 );
+			}
+
+			// Fig1 C (vaccinated + delta + omicron):
+			// (not plausible that these come out lower than without the delta infection in between)
+//			person = EpisimTestUtils.createPerson();
+//			person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
+//			person.possibleInfection(
+//					new EpisimInfectionEvent( 33 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.DELTA, 1. ) );
+//			person.checkInfection();
+//			person.possibleInfection(
+//					new EpisimInfectionEvent( 66 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
+//			person.checkInfection();
+//			{
+//				VirusStrain strain = VirusStrain.SARS_CoV_2;
+//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+//				Assert.assertEquals( 2000./4000., nAb/nAbBase, 0.5);
+//			}
+//			{
+//				VirusStrain strain = VirusStrain.ALPHA;
+//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+//				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1 );
+//			}
+//			{
+//				VirusStrain strain = VirusStrain.DELTA;
+//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+//				Assert.assertEquals( 3000./4000., nAb/nAbBase, 0.1 );
+//			}
+//			{
+//				VirusStrain strain = VirusStrain.OMICRON_BA1;
+//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+//				Assert.assertEquals( 300./4000., nAb/nAbBase, 0.1 );
+//			}
+
+			// Fig1 D (delta + omicron):
+			immunityEvents = List.of(VirusStrain.DELTA, VirusStrain.OMICRON_BA1);
+			immunityEventDays = IntList.of(0, 50);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			{
+				VirusStrain strain = VirusStrain.SARS_CoV_2;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 1000./4000., nAb/nAbBase, 0.5);
+			}
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 1000./4000., nAb/nAbBase, 0.5 );
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 2000./4000., nAb/nAbBase, 0.5 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 500./4000., nAb/nAbBase, 0.5 );
+			}
+
+
+		}
+
+	}
+	
+	
 
 	private double interpolate(int ii, int startDay, int endDay, double startVal, double endVal) {
 		return startVal + (endVal - startVal) / (endDay - startDay) * (ii - startDay);
