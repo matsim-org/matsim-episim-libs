@@ -4,6 +4,9 @@ package org.matsim.episim.model;
 import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
+
+import org.apache.log4j.Logger;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -31,6 +34,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class DefaultAntibodyModelTest {
+	
+	private static final Logger log = Logger.getLogger( DefaultAntibodyModel.class);
 
 
 	@Rule
@@ -340,6 +345,72 @@ public class DefaultAntibodyModelTest {
 
 
 	}
+	
+	
+	@Test
+	public void yuEtAl(){
+		// https://doi.org/10.1101/2022.02.06.22270533
+
+		{
+			// I use the 658 against the wild variant as base:
+			double nAbBase;
+			{
+				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
+				IntList immunityEventDays = IntList.of(0);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.SARS_CoV_2);
+			}
+
+			// only vaccinated:
+			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
+			IntList immunityEventDays = IntList.of(0);
+			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+			{
+				VirusStrain strain = VirusStrain.SARS_CoV_2;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 658./658., nAb/nAbBase, 0.0);
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 29./658., nAb/nAbBase, 0.1 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA2;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 24./658., nAb/nAbBase, 0.1 );
+			}
+
+			// yyyy more to be added here ...
+
+			{
+				// the following are to print out antobody levels, but they do not test anything as of now.
+
+
+				VirusStrain strain = VirusStrain.SARS_CoV_2;
+				log.warn( "double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain) );
+
+				strain = VirusStrain.DELTA;
+				log.warn( "double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain) );
+
+				strain = VirusStrain.OMICRON_BA1;
+				log.warn( "double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain) );
+				
+				immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
+				immunityEventDays = IntList.of(0, 200);
+				abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 300);
+				
+				strain = VirusStrain.DELTA;
+				log.warn( "triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain) );
+				strain = VirusStrain.OMICRON_BA1;
+				log.warn( "triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain) );
+			}
+
+
+		}
+	}
+	
+	
 
 	private double interpolate(int ii, int startDay, int endDay, double startVal, double endVal) {
 		return startVal + (endVal - startVal) / (endDay - startDay) * (ii - startDay);
