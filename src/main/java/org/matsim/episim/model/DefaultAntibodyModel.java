@@ -70,16 +70,23 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				case ALPHA:
 				case DELTA:
 					initializeFor1stGenVaccines( person, 1.0, vaccinationConfig );
+					person.setAntibodies(VirusStrain.DELTA, 1.0/ vaccinationConfig.getAk50PerStrain().get(VirusStrain.SARS_CoV_2)); //???
 					break;
 				case OMICRON_BA1:
-					initializeFor1stGenVaccines( person, 0.0, vaccinationConfig );
-					person.setAntibodies(VirusStrain.OMICRON_BA1, 1.0/0.2); //???
-					person.setAntibodies(VirusStrain.OMICRON_BA2, 1.0/0.2); //???
+					person.setAntibodies(VirusStrain.SARS_CoV_2, 0.01); //???
+					person.setAntibodies(VirusStrain.ALPHA, 0.01); //???
+					person.setAntibodies(VirusStrain.DELTA, 0.2 / 6.4); //???
+					
+					person.setAntibodies(VirusStrain.OMICRON_BA1, 0.2); //???
+					person.setAntibodies(VirusStrain.OMICRON_BA2, 0.2 / 1.4); //???
 					break;
 				case OMICRON_BA2:
-					initializeFor1stGenVaccines( person, 0.0, vaccinationConfig );
-					person.setAntibodies(VirusStrain.OMICRON_BA1, 1.0/0.2); //???
-					person.setAntibodies(VirusStrain.OMICRON_BA2, 1.0/0.2); //???
+					person.setAntibodies(VirusStrain.SARS_CoV_2, 0.01); //???
+					person.setAntibodies(VirusStrain.ALPHA, 0.01); //???
+					person.setAntibodies(VirusStrain.DELTA, 0.2 / 6.4); //???
+
+					person.setAntibodies(VirusStrain.OMICRON_BA1, 0.2 / 1.4); //???
+					person.setAntibodies(VirusStrain.OMICRON_BA2, 0.2); //???
 					break;
 				default:
 					throw new IllegalStateException( "Unexpected value: " + strain );
@@ -124,8 +131,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 					break;
 				case omicronUpdate:
 					initializeFor1stGenVaccines( person, 2.0, vaccinationConfig );
-					person.setAntibodies(VirusStrain.OMICRON_BA1, 2.0/0.2);
-					person.setAntibodies(VirusStrain.OMICRON_BA2, 2.0/0.2);
+					person.setAntibodies(VirusStrain.OMICRON_BA1, 2.0/ vaccinationConfig.getAk50PerStrain().get(VirusStrain.SARS_CoV_2));
+					person.setAntibodies(VirusStrain.OMICRON_BA2, 2.0/ vaccinationConfig.getAk50PerStrain().get(VirusStrain.SARS_CoV_2));
 					break;
 				default:
 					throw new IllegalStateException( "Unexpected value: " + vaccinationType );
@@ -168,19 +175,19 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		for( VirusStrain strain : VirusStrain.values() ){
 			switch( strain ) {
 				case SARS_CoV_2:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case ALPHA:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case DELTA:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case OMICRON_BA1:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				case OMICRON_BA2:
-					person.setAntibodies(strain, Math.min( 20., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
 					break;
 				default:
 					person.setAntibodies(strain, Double.NaN);
