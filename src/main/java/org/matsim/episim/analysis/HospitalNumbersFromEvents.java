@@ -77,7 +77,7 @@
 
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output-filtered")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -205,7 +205,7 @@
 		 }, handler);
 
 		 int maxIteration = Math.max(Math.max(
-				 ((Int2IntAVLTreeMap) handler.standardHospitalAdmissions).keySet().lastInt(),
+				 0, //(Int2IntAVLTreeMap) handler.standardHospitalAdmissions).keySet().lastInt(), //TODO: !!!! remove standardHospitalAdmissions from this class
 				 ((Int2IntAVLTreeMap) handler.postProcessHospitalAdmissions).keySet().lastInt()),
 				 Math.max(((Int2IntAVLTreeMap) handler.postProcessHospitalFilledBeds).keySet().lastInt(),
 						 ((Int2IntAVLTreeMap) handler.postProcessHospitalFilledBedsICU).keySet().lastInt()));
@@ -325,7 +325,6 @@
 
 		 //green plot from covid-sim (Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.)
 		 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
-		 // TODO: commented out because I can't be sure if this is the right data
 		 Int2DoubleMap reportedBedsICU = new Int2DoubleAVLTreeMap();
 		 {
 			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
@@ -388,13 +387,13 @@
 			 DoubleColumn values = DoubleColumn.create("hospitalizations");
 			 StringColumn groupings = StringColumn.create("scenario");
 
-			 // standard hospitalizations from episim
-			 for (Map.Entry entry : standardHospitalizations.entrySet()) {
-				 int today = (int) entry.getKey();
-				 records.append(today);
-				 values.append(standardHospitalizations.getOrDefault(today, 0.));
-				 groupings.append("baseCase");
-			 }
+//			 // standard hospitalizations from episim
+//			 for (Map.Entry entry : standardHospitalizations.entrySet()) {
+//				 int today = (int) entry.getKey();
+//				 records.append(today);
+//				 values.append(standardHospitalizations.getOrDefault(today, 0.));
+//				 groupings.append("baseCase");
+//			 }
 
 			 // post-processed hospitalizations from episim
 			 for (Map.Entry entry : postProcessHospitalizations.entrySet()) {
