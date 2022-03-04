@@ -98,13 +98,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				case SARS_CoV_2:
 				case ALPHA:
 				case DELTA:
-					refresh(person, 10, vaccinationConfig);
+					refresh(person, 10, 1.0, vaccinationConfig);
 					break;
 				case OMICRON_BA1:
-					refresh(person, 10, vaccinationConfig); //???
+					refresh(person, 10, 0.01, vaccinationConfig); //???
 					break;
 				case OMICRON_BA2:
-					refresh(person, 10, vaccinationConfig); //???
+					refresh(person, 10, 0.01, vaccinationConfig); //???
 					break;
 				default:
 					throw new IllegalStateException( "Unexpected value: " + strain );
@@ -142,16 +142,16 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		else {
 			switch( vaccinationType ) {
 				case generic:
-					refresh(person, 10, vaccinationConfig);
+					refresh(person, 10, 1.0, vaccinationConfig);
 					break;
 				case mRNA:
-					refresh(person, 15, vaccinationConfig); //Previously: 20
+					refresh(person, 15, 2.0, vaccinationConfig); //Previously: 20
 					break;
 				case vector:
-					refresh(person, 5, vaccinationConfig);
+					refresh(person, 5, 0.5, vaccinationConfig);
 					break;
 				case omicronUpdate:
-					refresh(person, 20, vaccinationConfig);
+					refresh(person, 15, 2.0, vaccinationConfig);
 					break;
 				default:
 					throw new IllegalStateException( "Unexpected value: " + vaccinationType );
@@ -170,46 +170,63 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		return firstImmunization;
 	}
 
-	private static void refresh( EpisimPerson person, int vaccineTypeFactor, VaccinationConfigGroup vaccinationConfig ){
+	private static void refresh( EpisimPerson person, int vaccineTypeFactor, double initialAntibodies, VaccinationConfigGroup vaccinationConfig ){
 		var ak50PerStrain = vaccinationConfig.getAk50PerStrain();
+		double refreshed;
+		double initial;
 		for( VirusStrain strain : VirusStrain.values() ){
 			switch( strain ) {
 				case SARS_CoV_2:
-					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					refreshed = Math.min( 150., person.getAntibodies(strain) * vaccineTypeFactor);
+					initial = initialAntibodies / ak50PerStrain.get(strain);
+					//ab level always reaches at least the initial protection
+					person.setAntibodies(strain, Math.max(initial, refreshed));
 					break;
 				case ALPHA:
-					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					refreshed = Math.min( 150., person.getAntibodies(strain) * vaccineTypeFactor);
+					initial = initialAntibodies / ak50PerStrain.get(strain);
+					//ab level always reaches at least the initial protection
+					person.setAntibodies(strain, Math.max(initial, refreshed));
 					break;
 				case DELTA:
-					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					refreshed = Math.min( 150., person.getAntibodies(strain) * vaccineTypeFactor);
+					initial = initialAntibodies / ak50PerStrain.get(strain);
+					//ab level always reaches at least the initial protection
+					person.setAntibodies(strain, Math.max(initial, refreshed));
 					break;
 				case OMICRON_BA1:
-					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					refreshed = Math.min( 150., person.getAntibodies(strain) * vaccineTypeFactor);
+					initial = initialAntibodies / ak50PerStrain.get(strain);
+					//ab level always reaches at least the initial protection
+					person.setAntibodies(strain, Math.max(initial, refreshed));
 					break;
 				case OMICRON_BA2:
-					person.setAntibodies(strain, Math.min( 150., person.getAntibodies(strain)* vaccineTypeFactor)  ) ;
+					refreshed = Math.min( 150., person.getAntibodies(strain) * vaccineTypeFactor);
+					initial = initialAntibodies / ak50PerStrain.get(strain);
+					//ab level always reaches at least the initial protection
+					person.setAntibodies(strain, Math.max(initial, refreshed));
 					break;
 				default:
 					person.setAntibodies(strain, Double.NaN);
 			}
 		}
 	}
-	private static void initializeFor1stGenVaccines( EpisimPerson person, double vaccineTypeFactor, VaccinationConfigGroup vaccinationConfig ){
+	private static void initializeFor1stGenVaccines( EpisimPerson person, double initialAntibodies, VaccinationConfigGroup vaccinationConfig ){
 		var ak50PerStrain = vaccinationConfig.getAk50PerStrain();
 		for( VirusStrain strain1 : VirusStrain.values() ){
 			switch ( strain1 ){
 				case SARS_CoV_2:
 				case ALPHA:
-					person.setAntibodies(strain1, vaccineTypeFactor / ak50PerStrain.get(strain1 )); // those two lead to same result according to what Sebastian had before
+					person.setAntibodies(strain1, initialAntibodies / ak50PerStrain.get(strain1 )); // those two lead to same result according to what Sebastian had before
 					break;
 				case DELTA:
-					person.setAntibodies(strain1, vaccineTypeFactor / ak50PerStrain.get(strain1 ));
+					person.setAntibodies(strain1, initialAntibodies / ak50PerStrain.get(strain1 ));
 					break;
 				case OMICRON_BA1:
-					person.setAntibodies(strain1, vaccineTypeFactor / ak50PerStrain.get(strain1 ));
+					person.setAntibodies(strain1, initialAntibodies / ak50PerStrain.get(strain1 ));
 					break;
 				case OMICRON_BA2:
-					person.setAntibodies(strain1, vaccineTypeFactor / ak50PerStrain.get(strain1 ));
+					person.setAntibodies(strain1, initialAntibodies / ak50PerStrain.get(strain1 ));
 					break;
 				default:
 					person.setAntibodies(strain1, Double.NaN );
