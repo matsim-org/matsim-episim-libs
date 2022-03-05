@@ -97,7 +97,7 @@ public class DefaultAntibodyModelTest {
 		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
 		IntList immunityEventDays = IntList.of(50, 200, 600);
 
-		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750);
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750 );
 
 		// Plot 1: nAb
 		{
@@ -106,7 +106,7 @@ public class DefaultAntibodyModelTest {
 			StringColumn groupings = StringColumn.create("scenario");
 
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
 
 				for (Object strain : strainToAntibodyMap.keySet()) {
 					records.append(day);
@@ -118,7 +118,7 @@ public class DefaultAntibodyModelTest {
 
 				}
 			}
-			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents.toString(), "nAb.html");
+			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents, "nAb.html" );
 
 		}
 
@@ -129,7 +129,7 @@ public class DefaultAntibodyModelTest {
 			StringColumn groupings = StringColumn.create("scenario");
 
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
 
 				for (Object strain : strainToAntibodyMap.keySet()) {
 					records.append(day);
@@ -148,7 +148,7 @@ public class DefaultAntibodyModelTest {
 
 				}
 			}
-			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents.toString(), "ve.html");
+			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents, "ve.html" );
 		}
 
 
@@ -175,24 +175,25 @@ public class DefaultAntibodyModelTest {
 		final String eyreBNTAlpha = "EyreBNTAlpha";
 
 		var fact = 0.001;
+		var beta = 1.;
 
 		// gather results from antibody model
 		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
 
 		IntList immunityEventDays = IntList.of(1, 168);
-		Int2ObjectMap antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600);
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600 );
 
 
 		// antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3)
 		{
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
 
 				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.DELTA, 0.);
 
 				// beta = 1
 				{
-					var beta = 1.;
+//					var beta = 1.;
 					records.append(day);
 					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
 					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
@@ -200,21 +201,21 @@ public class DefaultAntibodyModelTest {
 					final double ve = 1. - probaWVacc / probaWoVacc;
 
 					values.append(ve);
-					groupings.append("Delta; beta=1");
+					groupings.append("Delta; beta=" + beta);
 				}
 
-				// beta = 3
-				{
-					var beta = 3.;
-					records.append(day);
-					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
-					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
-					final double probaWoVacc = 1 - Math.exp(-fact);
-					final double ve = 1. - probaWVacc / probaWoVacc;
-
-					values.append(ve);
-					groupings.append("Delta; beta=3");
-				}
+//				// beta = 3
+//				{
+//					var beta = 3.;
+//					records.append(day);
+//					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+//					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+//					final double probaWoVacc = 1 - Math.exp(-fact);
+//					final double ve = 1. - probaWVacc / probaWoVacc;
+//
+//					values.append(ve);
+//					groupings.append("Delta; beta=3");
+//				}
 
 			}
 		}
@@ -222,13 +223,13 @@ public class DefaultAntibodyModelTest {
 		// once more antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3), this time plotting VE against omicron
 		{
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap strainToAntibodyMap = (Object2DoubleMap) antibodyLevels.get(day);
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
 
 				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.OMICRON_BA1, 0.);
 
 				// beta = 1
 				{
-					var beta = 1.;
+//					var beta = 1.;
 					records.append(day);
 					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
 					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
@@ -236,21 +237,21 @@ public class DefaultAntibodyModelTest {
 					final double ve = 1. - probaWVacc / probaWoVacc;
 
 					values.append(ve);
-					groupings.append("Omicron; beta=1");
+					groupings.append("Omicron; beta=" + beta);
 				}
 
 				// beta = 3
-				{
-					var beta = 3.;
-					records.append(day);
-					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
-					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
-					final double probaWoVacc = 1 - Math.exp(-fact);
-					final double ve = 1. - probaWVacc / probaWoVacc;
-
-					values.append(ve);
-					groupings.append("Omicron; beta=3");
-				}
+//				{
+//					var beta = 3.;
+//					records.append(day);
+//					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+//					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+//					final double probaWoVacc = 1 - Math.exp(-fact);
+//					final double ve = 1. - probaWVacc / probaWoVacc;
+//
+//					values.append(ve);
+//					groupings.append("Omicron; beta=3");
+//				}
 
 			}
 		}
@@ -377,11 +378,13 @@ public class DefaultAntibodyModelTest {
 			}
 		}
 
-		Table table = Table.create("Vaccine Efficacy, DefaultAntibodyModel vs. NordstromEtAl.");
+		final String title = "Vaccine Efficacy, DefaultAntibodyModel vs. NordstromEtAl.; beta=" + beta;
+		Table table = Table.create( title );
 		table.addColumns(records);
 		table.addColumns(values);
 		table.addColumns(groupings);
-		var figure = LinePlot.create("Vaccine Efficacy, DefaultAntibodyModel vs. NordstromEtAl.", table, days, vaccineEfficacies, grouping);
+		var figure = LinePlot.create( title, table, days, vaccineEfficacies, grouping );
+		figure.setLayout( Layout.builder().title( title ).width( 1400 ).height( 800 ).build() );
 
 		try (Writer writer = new OutputStreamWriter(new FileOutputStream("nordstrom.html"), StandardCharsets.UTF_8)) {
 			writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
@@ -985,7 +988,7 @@ public class DefaultAntibodyModelTest {
 				throw new RuntimeException("unknown immunity event type");
 			}
 
-			System.out.println(immunityEvent.toString() + " on day " + day);
+			System.out.println( immunityEvent + " on day " + day );
 
 
 			model.updateAntibodies(person, day);
