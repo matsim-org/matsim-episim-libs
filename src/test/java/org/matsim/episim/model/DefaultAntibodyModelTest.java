@@ -19,7 +19,6 @@ import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
-import tech.tablesaw.plotly.api.LinePlot;
 import tech.tablesaw.plotly.components.Axis;
 import tech.tablesaw.plotly.components.Figure;
 import tech.tablesaw.plotly.components.Layout;
@@ -192,9 +191,7 @@ public class DefaultAntibodyModelTest {
 
 				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.DELTA, 0.);
 
-				// beta = 1
 				{
-//					var beta = 1.;
 					records.append(day);
 					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
 					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
@@ -204,20 +201,6 @@ public class DefaultAntibodyModelTest {
 					values.append(ve);
 					groupings.append("Delta; beta=" + beta);
 				}
-
-//				// beta = 3
-//				{
-//					var beta = 3.;
-//					records.append(day);
-//					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
-//					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
-//					final double probaWoVacc = 1 - Math.exp(-fact);
-//					final double ve = 1. - probaWVacc / probaWoVacc;
-//
-//					values.append(ve);
-//					groupings.append("Delta; beta=3");
-//				}
-
 			}
 		}
 
@@ -225,12 +208,8 @@ public class DefaultAntibodyModelTest {
 		{
 			for (int day : antibodyLevels.keySet()) {
 				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
-
 				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.OMICRON_BA1, 0.);
-
-				// beta = 1
 				{
-//					var beta = 1.;
 					records.append(day);
 					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
 					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
@@ -240,20 +219,6 @@ public class DefaultAntibodyModelTest {
 					values.append(ve);
 					groupings.append("Omicron; beta=" + beta);
 				}
-
-				// beta = 3
-//				{
-//					var beta = 3.;
-//					records.append(day);
-//					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
-//					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
-//					final double probaWoVacc = 1 - Math.exp(-fact);
-//					final double ve = 1. - probaWVacc / probaWoVacc;
-//
-//					values.append(ve);
-//					groupings.append("Omicron; beta=3");
-//				}
-
 			}
 		}
 
@@ -301,19 +266,26 @@ public class DefaultAntibodyModelTest {
 			{
 				records.append(ii);
 				groupings.append(nordstrom);
-				if (ii <= 30) {
+//				if (ii <= 30) {
+				if ( ii==15 ) {
 					values.append(0.92);
-				} else if (ii <= 60) {
+//				} else if (ii <= 60) {
+				} else if (ii ==45) {
 					values.append(0.89);
-				} else if (ii <= 120) {
+//				} else if (ii <= 120) {
+				} else if (ii == 90) {
 					values.append(0.85);
-				} else if (ii <= 180) {
+//				} else if (ii <= 180) {
+				} else if (ii == 90+45) {
 					values.append(0.47);
-				} else if (ii <= 210) {
+//				} else if (ii <= 210) {
+				} else if (ii == 180+15) {
 					values.append(0.29);
-				} else {
+				} else if ( ii==210+30){
 					values.append(0.23);
-				}
+				} else {
+					values.appendMissing();
+			}
 			}
 
 			//UKHSA, VE against Omicron
@@ -384,8 +356,31 @@ public class DefaultAntibodyModelTest {
 		table.addColumns(records);
 		table.addColumns(values);
 		table.addColumns(groupings);
-		var figure = LinePlot.create( title, table, days, vaccineEfficacies, grouping );
-		figure.setLayout( Layout.builder().title( title ).width( 1400 ).height( 800 ).build() );
+
+		TableSliceGroup tables = table.splitOn( table.categoricalColumn( grouping ) );
+
+		Layout layout = Layout.builder( title, days, vaccineEfficacies ).showLegend(true ).build();
+
+		ScatterTrace[] traces = new ScatterTrace[tables.size()];
+		for (int i = 0; i < tables.size(); i++) {
+		  List<Table> tableList = tables.asTableList();
+			final ScatterTrace.Mode mode;
+			if ( tableList.get(i).name().contains( "beta=" )){
+				traces[i] = ScatterTrace.builder( tableList.get(i).numberColumn( days ), tableList.get(i ).numberColumn( vaccineEfficacies ) )
+							.showLegend(true)
+							.name(tableList.get(i).name())
+							.mode( ScatterTrace.Mode.LINE )
+							.build();
+			} else {
+				traces[i] = ScatterTrace.builder( tableList.get(i).numberColumn( days ), tableList.get(i ).numberColumn( vaccineEfficacies ) )
+							.showLegend(true)
+							.name(tableList.get(i).name())
+							.mode( ScatterTrace.Mode.MARKERS )
+							.build();
+			}
+		}
+		var figure = new Figure( layout, traces );
+		figure.setLayout( Layout.builder().width( 1400 ).height( 800 ).build() );
 
 		try (Writer writer = new OutputStreamWriter(new FileOutputStream("nordstrom.html"), StandardCharsets.UTF_8)) {
 			writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
