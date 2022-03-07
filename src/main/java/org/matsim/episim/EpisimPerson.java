@@ -209,9 +209,9 @@ public final class EpisimPerson implements Attributable {
 	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
 	/**
-	 * From antibody model.
+	 * Antibody level at last infection.
 	 */
-	private double immunityFactor = 1.0;
+	private double antibodyLevelAtInfection = 0;
 
 	/**
 	 * Lookup age from attributes.
@@ -310,7 +310,7 @@ public final class EpisimPerson implements Attributable {
 		in.readBoolean();
 
 		susceptibility = in.readDouble();
-		immunityFactor = in.readDouble();
+		antibodyLevelAtInfection = in.readDouble();
 	}
 
 	/**
@@ -372,7 +372,7 @@ public final class EpisimPerson implements Attributable {
 		out.writeBoolean(traceable);
 		out.writeBoolean(vaccinable);
 		out.writeDouble(susceptibility);
-		out.writeDouble(immunityFactor);
+		out.writeDouble(antibodyLevelAtInfection);
 	}
 
 	public Id<Person> getPersonId() {
@@ -443,7 +443,8 @@ public final class EpisimPerson implements Attributable {
 			infectionType = event.getInfectionType();
 			infectionDates.add(event.getTime());
 
-			this.earliestInfection = null;
+			earliestInfection = null;
+			antibodyLevelAtInfection = antibodies.getDouble(event.getVirusStrain());
 			return event;
 		}
 
@@ -543,12 +544,11 @@ public final class EpisimPerson implements Attributable {
 		return susceptibility;
 	}
 
-	public void setImmunityFactor(double immunityFactor) {
-		this.immunityFactor = immunityFactor;
-	}
-
-	public double getImmunityFactor() {
-		return immunityFactor;
+	/**
+	 * Immunity factor based on antibody level at infection.
+	 */
+	public double getImmunityFactor(double beta) {
+		return 1.0 / (1.0 + Math.pow(antibodyLevelAtInfection, beta));
 	}
 
 	public double getAntibodies(VirusStrain strain) {

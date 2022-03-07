@@ -88,7 +88,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
 		double relativeAntibodyLevelTarget = target.getAntibodies(infector.getVirusStrain());
-		
+
 		double relativeAntibodyLevelInfector = infector.getAntibodies(infector.getVirusStrain());
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
@@ -118,7 +118,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility, AK50_PERSTRAIN);
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
-		target.setImmunityFactor(immunityFactor);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()

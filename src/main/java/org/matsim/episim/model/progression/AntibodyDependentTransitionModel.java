@@ -105,28 +105,28 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
 		return 0.0;
 	}
-	
+
 	@Override
 	public double getSeriouslySickFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
-				
+
 		int numVaccinations = person.getNumVaccinations();
 		int numInfections = person.getNumInfections() - 1;
-		
+
 		if (numVaccinations == 0 && numInfections == 0)
 			return 1.0;
-		
+
 		VirusStrain strain = person.getVirusStrain();
-		
+
 		double veSeriouslySick = 0.0;
-		
+
 		//vaccinated persons that are boostered either by infection or by 3rd shot
 		if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
 			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
 				veSeriouslySick = 0.9;
-			else 
+			else
 				veSeriouslySick = 0.95;
 		}
-		
+
 		//vaccinated persons or persons who have had a severe course of disease in the past
 		// I think this does not work, because old states are removed when changing from recovered to susceptible. SM
 		else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick)) {
@@ -134,25 +134,25 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
 				veSeriouslySick = 0.55;
-			else 
+			else
 				veSeriouslySick = 0.9;
 		}
-	
-		
+
+
 		else {
 			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
 				veSeriouslySick = 0.55;
-			else 
+			else
 				veSeriouslySick = 0.6;
 		}
-							
-		double factorInf = person.getImmunityFactor();
+
+		double factorInf = person.getImmunityFactor(vaccinationConfig.getBeta());
 
 		double factorSeriouslySick =  (1.0 - veSeriouslySick) / factorInf;
 
 		factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
 		factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
-				
+
 		return factorSeriouslySick;
 	}
 	@Override
@@ -164,6 +164,6 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		return 1.0;
 	}
 
-		
+
 
 }
