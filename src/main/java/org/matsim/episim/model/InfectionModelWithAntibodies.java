@@ -87,9 +87,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
-		double relativeAntibodyLevelTarget = getRelativeAntibodyLevel(target, iteration, target.getNumVaccinations(), target.getNumInfections(), infector.getVirusStrain(), AK50_PERSTRAIN, vaccinationConfig.getBa1ba2LongTermCrossImmunity());
-		// the current infection is subtracted because it does not yet provide protection.
-		double relativeAntibodyLevelInfector = getRelativeAntibodyLevel(infector, iteration, infector.getNumVaccinations(), infector.getNumInfections() - 1, infector.getVirusStrain(), AK50_PERSTRAIN, vaccinationConfig.getBa1ba2LongTermCrossImmunity());
+		double relativeAntibodyLevelTarget = target.getAntibodies(infector.getVirusStrain());
+		
+		double relativeAntibodyLevelInfector = infector.getAntibodies(infector.getVirusStrain());
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
@@ -131,188 +131,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		);
 	}
 
-	private static double getAk50(EpisimPerson target, VirusStrain strain, final Map<VirusStrain, Double> AK50_PERSTRAIN, int numInfections, boolean ba1ba2LongTermCrossImmunity) {
-
-//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
-//		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
-//		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
-//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
-//		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 2.5 * 1.4 );
-
-		double ak50 = AK50_PERSTRAIN.get(strain);
-
-		if (strain == VirusStrain.SARS_CoV_2 || strain == VirusStrain.ALPHA || strain == VirusStrain.DELTA)
-			return ak50;
-
-		// If strain == sth apart from omicron, we simply return the above numbers, but if strain == omicron, then a differentiation is necessary? Is this
-		// because we assume omicron to be the only immune escape and group the other variants? Sydney
-
-		// Sounds plausible.  Let's see.  We are here only if strain == omicron.
-
-		// if the agent had an omicron update vaccination, we return a relatively good ak50, so that we have good protection against transmission:
-		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2))
-			return AK50_PERSTRAIN.get(VirusStrain.DELTA);
-
-		// otherwise we check if the person had an infection with the same strain, if so, we return the (relatively good) Delta ak50.
-		{
-			boolean hadStrain = false;
-			for( int idx = 0 ; idx < numInfections ; idx++ ){
-				VirusStrain infection = target.getVirusStrain( idx );
-				if( infection == strain ){
-					hadStrain = true;
-					break;
-				}
-			}
-			if( hadStrain )
-				return AK50_PERSTRAIN.get( VirusStrain.DELTA );
-		}
-		
-		
-		if (ba1ba2LongTermCrossImmunity) {
-			// here we check if the person had an infection with the other omicron strain.  If so, we also return the (relatively good) Delta ak50.  (Which might now be too optimistic ...)
-			boolean hadOmicronInfection = false;
-
-			if (strain == VirusStrain.OMICRON_BA1) {
-				for( int idx = 0 ; idx < numInfections ; idx++ ){
-					VirusStrain infection = target.getVirusStrain( idx );
-					if( infection == VirusStrain.OMICRON_BA2 ){
-						hadOmicronInfection = true;
-						break;
-					}
-				}
-			}
-			if (strain == VirusStrain.OMICRON_BA2) {
-				for( int idx = 0 ; idx < numInfections ; idx++ ){
-					VirusStrain infection = target.getVirusStrain( idx );
-					if( infection == VirusStrain.OMICRON_BA1 ){
-						hadOmicronInfection = true;
-						break;
-					}
-				}
-			}
-			if( hadOmicronInfection )
-				return AK50_PERSTRAIN.get( VirusStrain.DELTA );
-		}
-
-		// we treat VE against strainA with omicron update vaccination in the same way as VE against omicron with 1st generation vaccine:
-		if (target.hadVaccinationType(VaccinationType.omicronUpdate) && (strain == VirusStrain.STRAIN_A))
-			return AK50_PERSTRAIN.get(VirusStrain.OMICRON_BA2);
-
-		// otherwise, we return the ak50 against BA1/BA2 from the "list".  I.e. a fairly bad value.  I.e. we assume that there is essentially no cross-immunity.  This feels too pessimistic.
-
-		// We might be able to improve on this one element without having to move to the other design.  However, I don't think that it makes a
-		// difference for the ba.2 wave since we calibrate the slope of the new variant given current conditions.  So if there is more
-		// immunity, we simply get a smaller ba2inf.
-
-		return ak50;
-	}
-
-	public static double getRelativeAntibodyLevel(EpisimPerson target, int iteration, int numVaccinations, int numInfections, VirusStrain strain, Map<VirusStrain, Double> AK50_PERSTRAIN, boolean ba1ba2LongTermCrossImmunity) {
-
-		//no antibodies
-		if (numInfections == 0 && numVaccinations == 0) {
-			return 0.0;
-		}
-
-		// an omicron infection alone does not protect against other strains -- this here is for omicron-only immunity and a non-omicron infection
-		if (numVaccinations == 0 && strain != VirusStrain.OMICRON_BA1 && strain != VirusStrain.OMICRON_BA2) {
-			boolean hadNonOmicronInfection = false;
-			for (int idx = 0; idx<numInfections; idx++) {
-				VirusStrain infection = target.getVirusStrain(idx);
-				if (infection != VirusStrain.OMICRON_BA1 && infection != VirusStrain.OMICRON_BA2)
-					hadNonOmicronInfection = true;
-			}
-			if (!hadNonOmicronInfection)
-				return 0.0;
-		}
-
-		//a ba.1 infection alone does not protect agains ba.2 and vice versa
-//		if (numVaccinations == 0 && (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)) {
-//			boolean hadNonOmicronInfection = false;
-//			boolean hadBa1Infection = false;
-//			boolean hadBa2Infection = false;
-//
-//			for (int idx = 0; idx<numInfections; idx++) {
-//				VirusStrain infection = target.getVirusStrain(idx);
-//				if (infection == VirusStrain.OMICRON_BA1)
-//					hadBa1Infection = true;
-//				else if (infection == VirusStrain.OMICRON_BA2)
-//					hadBa2Infection = true;
-//				else
-//					hadNonOmicronInfection = true;
-//			}
-//			if (!hadNonOmicronInfection) {
-//				if (strain == VirusStrain.OMICRON_BA1 && !hadBa1Infection) {
-//					return 0.0;
-//				}
-//				if (strain == VirusStrain.OMICRON_BA2 && !hadBa2Infection) {
-//					return 0.0;
-//				}
-//			}
-//		}
-
-		double halfLife_days = 80.;
-
-		final Map<VaccinationType, Double> initalAntibodies = Map.of(
-				VaccinationType.generic, 1.0,
-				VaccinationType.natural, 1.0,
-				VaccinationType.mRNA, 2.0,
-				VaccinationType.omicronUpdate, 2.0,
-				VaccinationType.vector, 0.5
-		);
-		// Here, I don't quite understand where these factors come from? Sydney
-		// I think that this is mostly Cromer et al, https://doi.org/10.1016/ S2666-5247(21)00267-6, in particular Fig.3.  Kai
-
-		final Map<VaccinationType, Double> antibodyFactor = Map.of(
-				VaccinationType.generic,10.0,
-				VaccinationType.natural, 10.0,
-				VaccinationType.mRNA, 20.0,
-				VaccinationType.omicronUpdate, 20.0,
-				VaccinationType.vector, 5.0
-		);
-
-		double antibodyLevel = 0.0;
-
-		Map<Integer, VaccinationType> immunityEvents = new HashMap<>();
-
-		for (int idx = 0; idx<numInfections; idx++) {
-			int daysSinceInfection = target.daysSinceInfection(idx, iteration);
-			int infectionDay = iteration - daysSinceInfection;
-			immunityEvents.put(infectionDay, VaccinationType.natural);
-		}
-		for (int idx = 0; idx<numVaccinations; idx++) {
-			int daysSinceVaccination = target.daysSinceVaccination(idx, iteration);
-			int vaccinationDay = iteration - daysSinceVaccination;
-			immunityEvents.put(vaccinationDay, target.getVaccinationType(idx));
-		}
-
-		for (int day = 0; day<=iteration; day++) {
-			if (immunityEvents.containsKey(day)) {
-				VaccinationType vaccinationType = immunityEvents.get(day);
-				if (antibodyLevel == 0.0){
-					antibodyLevel = initalAntibodies.get( vaccinationType );
-				} else {
-					antibodyLevel *= antibodyFactor.get(vaccinationType);
-
-					// we get at least as much as if this was the 1st immunization:
-					antibodyLevel = Math.max(initalAntibodies.get(vaccinationType), antibodyLevel);
-				}
-
-				// saturates at 20 (6000/300):
-				antibodyLevel = Math.min(20.0, antibodyLevel);
-			}
-			else
-				// exponential decay, day by day:
-				antibodyLevel *= Math.pow(0.5, 1 / halfLife_days);
-		}
-
-		// up to here we have not thought about omicron.  So what we have at this point is a serotype 1 antibody level, which does not say anything about serotype 2 immunity.
-
-		double ak50 = getAk50(target, strain, AK50_PERSTRAIN, numInfections, ba1ba2LongTermCrossImmunity);
-
-		return antibodyLevel / ak50;
-	}
-
 	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
 	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility, Map<VirusStrain, Double> AK50_PERSTRAIN) {
 
@@ -321,7 +139,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
-		double relativeAntibodyLevel = getRelativeAntibodyLevel(target, iteration, 0, target.getNumInfections(), infector.getVirusStrain(), AK50_PERSTRAIN, vaccinationConfig.getBa1ba2LongTermCrossImmunity());
+		double relativeAntibodyLevel = target.getAntibodies(infector.getVirusStrain());
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()
