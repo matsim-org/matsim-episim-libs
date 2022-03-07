@@ -18,6 +18,8 @@ import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
+import tech.tablesaw.columns.Column;
+import tech.tablesaw.plotly.api.LinePlot;
 import tech.tablesaw.plotly.components.Axis;
 import tech.tablesaw.plotly.components.Figure;
 import tech.tablesaw.plotly.components.Layout;
@@ -147,6 +149,79 @@ public class DefaultAntibodyModelTest {
 				}
 			}
 			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents, "ve.html" );
+		}
+
+
+	}
+	
+	@Test
+	public void immunizationByBa1() {
+
+		final String days = "day";
+		Column<Integer> records = IntColumn.create( days );
+
+		final String vaccineEfficacies = "VE";
+		Column<Double> values = DoubleColumn.create( vaccineEfficacies );
+		final String grouping = "grouping";
+		var groupings = StringColumn.create( grouping );
+
+		var fact = 0.001;
+		var beta = 3.;
+		
+		// gather results from antibody model
+		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.OMICRON_BA1);
+		IntList immunityEventDays = IntList.of(0);
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600 );
+
+		for ( int ii=0; ii<600; ii++ ){
+			Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(ii);
+
+			{
+				var nAb = strainToAntibodyMap.get(VirusStrain.OMICRON_BA1);
+				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+				final double probaWoVacc = 1 - Math.exp( -fact );
+				final double ve = 1. - probaWVacc / probaWoVacc;
+				log.info( ve );
+				records.append( ii );
+				values.append( ve );
+				groupings.append( "... against ba1" );
+			}
+			{
+				var nAb = strainToAntibodyMap.get(VirusStrain.OMICRON_BA2);
+				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+				final double probaWoVacc = 1 - Math.exp( -fact );
+				final double ve = 1. - probaWVacc / probaWoVacc;
+				log.info( ve );
+				records.append( ii );
+				values.append( ve );
+				groupings.append( "... against ba2" );
+			}
+			{
+				var nAb = strainToAntibodyMap.get(VirusStrain.DELTA);
+				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
+				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
+				final double probaWoVacc = 1 - Math.exp( -fact );
+				final double ve = 1. - probaWVacc / probaWoVacc;
+				log.info( ve );
+				records.append( ii );
+				values.append( ve );
+				groupings.append( "... against delta" );
+			}
+
+		}
+
+		Table table = Table.create("Infection history: BA.1 infection");
+		table.addColumns( records );
+		table.addColumns( values );
+		table.addColumns( groupings );
+		var figure = LinePlot.create(table.name(), table, days, vaccineEfficacies, grouping ) ;
+
+		try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "output.html" ), StandardCharsets.UTF_8)) {
+			writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
 		}
 
 
