@@ -92,7 +92,7 @@ public class EpisimModule extends AbstractModule {
 		if (config.getModules().size() == 0)
 			throw new IllegalArgumentException("Please provide a config module or binding.");
 
-		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
+		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore);
 
 		// save some time for not needed inputs
 //		config.facilities().setInputFile(null); // facilities are needed for location-based-restrictions
