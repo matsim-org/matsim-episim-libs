@@ -118,14 +118,20 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		return firstImmunization;
 	}
 	
-	private static double getIgA(EpisimPerson person, int day) {
+	private static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
 		
-		if (!person.hadDiseaseStatus(DiseaseStatus.recovered)) {
+		if (!person.hadStrain(strain)) {
 			System.out.println("IGA: " + 0.0);
 			return 0.0;
 		}
 		else {
-			System.out.println("IGA: " + 1.0 * Math.pow( 0.5, person.daysSince(DiseaseStatus.recovered, day) / 40.0 ));
+			int lastInfectionWithStrain = 0; 
+			for (int ii = 0; ii < person.getNumInfections();  ii++) {
+				if (person.getVirusStrain(ii) == strain) {
+					lastInfectionWithStrain = ii;
+				}
+			}
+			System.out.println("IGA: " + 1.0 * Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 40.0 ));
 			return  1.0 * Math.pow( 0.5, person.daysSince(DiseaseStatus.recovered, day) / 40.0 );
 		}
 				
