@@ -13,7 +13,6 @@ import org.junit.Test;
 import org.matsim.core.config.Config;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
-import org.matsim.episim.model.DefaultAntibodyModel.AntibodyConfig;
 import org.matsim.testcases.MatsimTestUtils;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
@@ -48,8 +47,7 @@ public class DefaultAntibodyModelTest {
 	@Before
 	public void setup() {
 
-		Config config = EpisimTestUtils.createTestConfig();
-		model = new DefaultAntibodyModel(config, new AntibodyConfig());
+		model = new DefaultAntibodyModel(AntibodyModel.newConfig());
 
 	}
 
