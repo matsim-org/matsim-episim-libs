@@ -1,6 +1,7 @@
 package org.matsim.episim.model;
 
 
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -132,10 +133,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		public AntibodyConfig() {
 			
 			//initial antibodies
-			Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntobodies = new HashMap<ImmunityEvent, Map<VirusStrain, Double>>();
+			Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntobodies = new HashMap<>();
 
 			for (VaccinationType immunityType : VaccinationType.values()) {
-				initialAntobodies.put(immunityType, new HashMap<VirusStrain, Double>());
+				initialAntobodies.put(immunityType, new EnumMap<>( VirusStrain.class ) );
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 					
 					if (immunityType == VaccinationType.mRNA) {
@@ -151,7 +152,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 			
 			for (VirusStrain immunityType : VirusStrain.values()) {
-				initialAntobodies.put(immunityType, new HashMap<VirusStrain, Double>());
+				initialAntobodies.put(immunityType, new EnumMap<>( VirusStrain.class ) );
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 					initialAntobodies.get(immunityType).put(virusStrain, 5.0);
 				}
@@ -164,7 +165,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			initialAntobodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, 2.0);
 			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, 2.0);
 			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 2.0);
-			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 2.0);
+			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 2.0); // yyyyyy BA2, oder?
 
 			//BA.1
 			initialAntobodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, 0.8);
@@ -173,7 +174,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			initialAntobodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, 0.01);
 			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, 0.2 / 6.4);
 			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 0.2);
-			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 0.2 / 1.4);
+			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 0.2 / 1.4); // yyyyyy BA2, oder?
 			
 			//BA.2
 			initialAntobodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, 0.8 / 1.4);
@@ -182,14 +183,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			initialAntobodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA2, 0.01);
 			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA2, 0.2 / 6.4);
 			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 0.2 / 1.4);
-			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 0.2);
+			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 0.2); // yyyyyy BA2, oder?
 			
 						
 			//refresh factors
-			Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<ImmunityEvent, Map<VirusStrain, Double>>();
+			Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 			
 			for (VaccinationType immunityType : VaccinationType.values()) {
-				antibodyRefreshFactors.put(immunityType, new HashMap<VirusStrain, Double>());
+				antibodyRefreshFactors.put(immunityType, new EnumMap<>( VirusStrain.class ) );
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 					
 					if (immunityType == VaccinationType.mRNA) {
@@ -206,7 +207,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 			
 			for (VirusStrain immunityType : VirusStrain.values()) {
-				antibodyRefreshFactors.put(immunityType, new HashMap<VirusStrain, Double>());
+				antibodyRefreshFactors.put(immunityType, new EnumMap<>( VirusStrain.class ) );
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 					antibodyRefreshFactors.get(immunityType).put(virusStrain, 10.0);
 				}
