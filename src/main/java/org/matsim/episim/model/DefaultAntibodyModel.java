@@ -132,7 +132,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				}
 			}
 			System.out.println("IGA: " + 1.0 * Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 40.0 ));
-			return  1.0 * Math.pow( 0.5, Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 40.0 ) );
+			return  1.0 * Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 40.0 );
 		}
 				
 	}
