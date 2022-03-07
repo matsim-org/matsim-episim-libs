@@ -163,9 +163,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			initialAntobodies.get(VaccinationType.vector).put(VirusStrain.DELTA, 1.0);
 			initialAntobodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, 2.0);
 			initialAntobodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, 2.0);
-			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, 2.0);
+			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, 5.0);
 			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 2.0);
-			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 2.0); // yyyyyy BA2, oder?
+			initialAntobodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 2.0);
 
 			//BA.1
 			initialAntobodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, 0.8);
@@ -174,7 +174,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			initialAntobodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, 0.01);
 			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, 0.2 / 6.4);
 			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 0.2);
-			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 0.2 / 1.4); // yyyyyy BA2, oder?
+			initialAntobodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 0.2 / 1.4);
 			
 			//BA.2
 			initialAntobodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, 0.8 / 1.4);
@@ -183,7 +183,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			initialAntobodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA2, 0.01);
 			initialAntobodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA2, 0.2 / 6.4);
 			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 0.2 / 1.4);
-			initialAntobodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 0.2); // yyyyyy BA2, oder?
+			initialAntobodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 0.2);
 			
 						
 			//refresh factors
