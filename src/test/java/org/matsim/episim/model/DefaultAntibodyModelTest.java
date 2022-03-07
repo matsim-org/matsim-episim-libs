@@ -817,7 +817,7 @@ public class DefaultAntibodyModelTest {
 			{
 				List<ImmunityEvent> immunityEvents = List.of(VirusStrain.OMICRON_BA1);
 				IntList immunityEventDays = IntList.of(0);
-				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.SARS_CoV_2);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.OMICRON_BA1);
 			}
 
 			List<ImmunityEvent> immunityEvents = List.of(VirusStrain.OMICRON_BA1);
