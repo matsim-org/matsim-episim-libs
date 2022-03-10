@@ -20,6 +20,7 @@
 
 
  import com.google.inject.Inject;
+ import com.google.protobuf.Internal;
  import it.unimi.dsi.fastutil.ints.*;
  import org.apache.commons.csv.CSVFormat;
  import org.apache.commons.csv.CSVParser;
@@ -65,7 +66,7 @@
 
 
  /**
-  * Calcualte hospital numbers from events
+  * Calculate hospital numbers from events
   */
  @CommandLine.Command(
 		 name = "hospitalNumbers",
@@ -77,7 +78,7 @@
 
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output-filtered")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputNewVOC")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -108,6 +109,12 @@
 	 private int populationCnt = 919_936;
 	 private static int lagBetweenInfectionAndHospitalisation = 5;
 
+	 static double factorAlpha = 1.0;
+	 static double factorDelta = 1.5;
+	 static double factorOmicron = 0.35;
+
+	 private static String outputAppendix = "";
+
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -125,51 +132,63 @@
 			 return 2;
 		 }
 
-		 config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
-		 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		 population = PopulationUtils.readPopulation(input + populationFile);
 
-		 double factorAlpha = 1.0;
-		 double factorDelta = 1.5;
-		 double factorOmicron = 0.35;
-		 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
-		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
-		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(factorDelta);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(factorOmicron);
+		 List<Double> strainFactors = List.of(factorAlpha, factorDelta, factorOmicron);
+
+		 Double factorStrainA;
+		 //		 Double factorStrainB;
+		 for (Double facA : strainFactors) {
+			 factorStrainA = facA;
+
+			 outputAppendix = "_A" + factorStrainA;
+
+			 config = ConfigUtils.createConfig(new EpisimConfigGroup());
+
+			 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 
-		 // Part 1: calculate hospitalizations and save as csv
-		 // can be run once and then commented out!
+			 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
+			 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
+			 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(factorDelta);
+			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
+			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(factorOmicron);
+			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
+			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(factorOmicron);
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(factorStrainA);
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(factorStrainA);
+			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorStrainB);
+			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(factorStrainB);
 
-		 		 population = PopulationUtils.readPopulation(input + populationFile);
-		 		 AnalysisCommand.forEachScenario(output, scenario -> {
-		 			 try {
-		 				 analyzeOutput(scenario);
 
-		 			 } catch (IOException e) {
-		 				 log.error("Failed processing {}", scenario, e);
-		 			 }
-		 		 });
+			 // Part 1: calculate hospitalizations and save as csv
+			 // can be run once and then commented out!
 
-		 		 log.info("done");
 
-		 // ===
+			 AnalysisCommand.forEachScenario(output, scenario -> {
+				 try {
+					 analyzeOutput(scenario);
 
-		 // Part 2: aggregate over multiple seeds & produce tsv output & plot
-		 List<Path> pathList = new ArrayList<>();
-		 AnalysisCommand.forEachScenario(output, scenario -> {
-			 pathList.add(scenario);
-		 });
+				 } catch (IOException e) {
+					 log.error("Failed processing {}", scenario, e);
+				 }
+			 });
 
-		 aggregateDataAndProduceTSV(output, pathList);
+			 log.info("done");
+
+			 // ===
+
+			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
+			 List<Path> pathList = new ArrayList<>();
+			 AnalysisCommand.forEachScenario(output, scenario -> {
+				 pathList.add(scenario);
+			 });
+
+			 aggregateDataAndProduceTSV(output, pathList);
+
+		 }
 
 
 		 return 0;
@@ -184,7 +203,7 @@
 
 		 String id = AnalysisCommand.getScenarioPrefix(output);
 
-		 final Path tsvPath = output.resolve(id + "post.hospital.tsv");
+		 final Path tsvPath = output.resolve(id + "post.hospital" + outputAppendix + ".tsv");
 
 		 calculateHospitalizationsAndWriteOutput(output, tsvPath);
 
@@ -245,7 +264,7 @@
 
 			 String id = AnalysisCommand.getScenarioPrefix(path);
 
-			 final Path tsvPath = path.resolve(id + "post.hospital.tsv");
+			 final Path tsvPath = path.resolve(id + "post.hospital" + outputAppendix + ".tsv");
 
 			 BufferedReader br = Files.newBufferedReader(tsvPath);
 			 CSVParser parser = new CSVParser(br,
@@ -350,7 +369,7 @@
 		 // Produce TSV w/ aggregated data as well as all rki numbers
 
 		 {
-			 BufferedWriter bw = Files.newBufferedWriter(output.resolve("post.hospital.agg.tsv"));//todo
+			 BufferedWriter bw = Files.newBufferedWriter(output.resolve("post.hospital.agg" + outputAppendix + ".tsv"));//todo
 
 			 bw.write("day\tdate\tmodelIncidenceBase\tmodelIncidencePost\tmodelHospRate\tmodelCriticalRate\trkiIncidence\trkiHospRate\trkiCriticalRate");
 
@@ -382,18 +401,17 @@
 
 		 // PLOT 1: People admitted to hospital
 		 {
-
 			 IntColumn records = IntColumn.create("day");
 			 DoubleColumn values = DoubleColumn.create("hospitalizations");
 			 StringColumn groupings = StringColumn.create("scenario");
 
-//			 // standard hospitalizations from episim
-//			 for (Map.Entry entry : standardHospitalizations.entrySet()) {
-//				 int today = (int) entry.getKey();
-//				 records.append(today);
-//				 values.append(standardHospitalizations.getOrDefault(today, 0.));
-//				 groupings.append("baseCase");
-//			 }
+			 //			 // standard hospitalizations from episim
+			 //			 for (Map.Entry entry : standardHospitalizations.entrySet()) {
+			 //				 int today = (int) entry.getKey();
+			 //				 records.append(today);
+			 //				 values.append(standardHospitalizations.getOrDefault(today, 0.));
+			 //				 groupings.append("baseCase");
+			 //			 }
 
 			 // post-processed hospitalizations from episim
 			 for (Map.Entry entry : postProcessHospitalizations.entrySet()) {
@@ -412,7 +430,7 @@
 			 }
 
 
-			 producePlot(records, values, groupings, "Hospitalization Incidence", "7-Day Hospital Admissions / 100k Population", "HospitalizationComparisonIncidence.html");
+			 producePlot(records, values, groupings, "Hospitalization Incidence", "7-Day Hospital Admissions / 100k Population", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
 		 }
 
 
@@ -455,7 +473,7 @@
 
 
 			 // Make plot
-			 producePlot(records, values, groupings, "Filled Beds", "Filled Beds", "FilledBeds.html");
+			 producePlot(records, values, groupings, "Filled Beds", "Filled Beds", "FilledBeds" + outputAppendix + ".html");
 		 }
 
 
@@ -649,8 +667,8 @@
 		 }
 
 		 /**
-		  *calculates the probability that agent goes to hospital given an infection.
-		 */
+		  * calculates the probability that agent goes to hospital given an infection.
+		  */
 		 private boolean goToHospital(Holder person, VirusStrain strain, int age) {
 
 			 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
