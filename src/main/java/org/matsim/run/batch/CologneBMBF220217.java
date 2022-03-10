@@ -298,7 +298,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 //
 //		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
 
-		vaccinationConfig.getAk50PerStrain().put( VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50 );
+//		vaccinationConfig.getAk50PerStrain().put( VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50 );
 
 		vaccinationConfig.setBeta(3.0);
 

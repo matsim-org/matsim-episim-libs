@@ -77,8 +77,6 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
 										   double contactIntensity, double jointTimeInContainer) {
 
-		final Map<VirusStrain, Double> AK50_PERSTRAIN = vaccinationConfig.getAk50PerStrain();
-
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
@@ -116,7 +114,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
  		}
 
-		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility, AK50_PERSTRAIN);
+		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
@@ -131,7 +129,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	}
 
 	private double calcInfectionProbabilityWoImmunity(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
-	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility, Map<VirusStrain, Double> AK50_PERSTRAIN) {
+	                                            double indoorOutdoorFactor, double shedding, double intake, double infectivity, double susceptibility) {
 
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
