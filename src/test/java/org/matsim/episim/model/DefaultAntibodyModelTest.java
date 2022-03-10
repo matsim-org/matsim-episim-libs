@@ -248,7 +248,7 @@ public class DefaultAntibodyModelTest {
 		final String eyreBNTAlpha = "EyreBNTAlpha";
 
 		var fact = 0.001;
-		var beta = 1.;
+		var beta = 1.5;
 
 		// gather results from antibody model
 		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
