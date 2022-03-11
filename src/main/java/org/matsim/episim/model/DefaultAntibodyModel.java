@@ -118,11 +118,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		return firstImmunization;
 	}
 	
-	private static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
+	public static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
 		
 		if (!person.hadStrain(strain)) {
-			System.out.println("IGA: " + 0.0);
-			return 0.0;
+			return 1.0;
 		}
 		else {
 			int lastInfectionWithStrain = 0; 
@@ -131,8 +130,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 					lastInfectionWithStrain = ii;
 				}
 			}
-			System.out.println("IGA: " + 1.0 * Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 40.0 ));
-			return  1.0 * Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 40.0 );
+			return 1.0 - Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 30.0 );
 		}
 				
 	}
