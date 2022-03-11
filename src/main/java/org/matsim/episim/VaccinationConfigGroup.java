@@ -25,7 +25,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String COMPLIANCE = "compliance";
 	private static final String CAPACITY = "vaccinationCapacity";
-	private static final String AK50 = "ak50PerStrain";
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
@@ -42,10 +41,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Amount of vaccinations available per day.
 	 */
 	private final NavigableMap<LocalDate, Integer> vaccinationCapacity = new TreeMap<>();
-	/**
-	 * ak50 for strain. Needed for translation of antibody level into effectiveness.
-	 */
-	private final NavigableMap<VirusStrain, Double> ak50PerStrain = new TreeMap<>();
+
 	/**
 	 * Amount of re-vaccinations available per day.
 	 */
@@ -103,13 +99,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		// add default params
 		getOrAddParams(VaccinationType.generic);
-
-		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
-		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
-		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
-		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 1.65);  // Before: 2.5
-		ak50PerStrain.put(VirusStrain.OMICRON_BA2, 2.5 * 1.4 );
-
 	}
 
 	/**
@@ -224,37 +213,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	String getVaccinationCapacityString() {
 		return JOINER.join(vaccinationCapacity);
 	}
-
-	// I am not sure if we should keep what comes below.  For the time being only exposing the getter. kai, feb'22
-
-//	public void setAk50PerStrain(Map<VirusStrain, Double> ak50) {
-//		ak50PerStrain.clear();
-//		ak50PerStrain.putAll(ak50);
-//	}
-
-	/**
-	 * This is implicitly the Ak50 level against serotype one (before omicron)!
-	 */
-	public NavigableMap<VirusStrain, Double> getAk50PerStrain() {
-		return ak50PerStrain;
-	}
-
-//	@StringSetter(AK50)
-//	void setAk50PerStrain(String ak50) {
-//
-//		if (ak50.isBlank())
-//			return;
-//
-//		Map<String, String> map = SPLITTER.split(ak50);
-//		setAk50PerStrain(map.entrySet().stream().collect(Collectors.toMap(
-//				e -> VirusStrain.valueOf(e.getKey()), e -> Double.parseDouble(e.getValue())
-//		)));
-//	}
-//
-//	@StringGetter(AK50)
-//	String getAk50PerStrainString() {
-//		return JOINER.join(ak50PerStrain);
-//	}
 
 	@StringSetter(FROM_FILE)
 	public void setFromFile(String fromFile) {

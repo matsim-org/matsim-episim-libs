@@ -57,7 +57,7 @@ import java.util.zip.GZIPInputStream;
 				CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
 				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class,
 				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class,
-				VaccinationEffectiveness.class
+				VaccinationEffectiveness.class, FilterEvents.class
 		},
 		subcommandsRepeatable = true
 )

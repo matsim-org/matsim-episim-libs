@@ -45,7 +45,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
-			double halfLife_days = 80.;
+			double halfLife_days = 60.;
 			double oldAntibodyLevel = person.getAntibodies(strain);
 			person.setAntibodies(strain, oldAntibodyLevel * Math.pow( 0.5, 1 / halfLife_days ));
 		}
