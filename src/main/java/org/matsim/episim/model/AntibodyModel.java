@@ -50,10 +50,10 @@ public interface AntibodyModel {
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 
 					if (immunityType == VaccinationType.mRNA) {
-						initialAntibodies.get(immunityType).put(virusStrain, 14.0); //10.0
+						initialAntibodies.get(immunityType).put(virusStrain, 29.2); //10.0
 					}
 					else if (immunityType == VaccinationType.vector) {
-						initialAntibodies.get(immunityType).put(virusStrain, 4.4);  //2.5
+						initialAntibodies.get(immunityType).put(virusStrain, 6.8);  //2.5
 					}
 					else {
 						initialAntibodies.get(immunityType).put(virusStrain, 5.0);
@@ -69,8 +69,8 @@ public interface AntibodyModel {
 			}
 
 			//DELTA
-			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, 6.5); //4.0
-			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, 4.1); //1.0
+			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, 10.9); //4.0
+			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, 6.8); //1.0
 			initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, 2.0);
 			initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, 2.0);
 			initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, 5.0);
@@ -78,8 +78,8 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 2.0);
 
 			//BA.1
-			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, 1.6); //0.8
-			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, 1.2); //0.2
+			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, 1.9); //0.8
+			initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, 1.5); //0.2
 			initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA1, 0.01);
 			initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, 0.01);
 			initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, 0.2 / 6.4);
@@ -104,7 +104,7 @@ public interface AntibodyModel {
 				for (VirusStrain virusStrain : VirusStrain.values()) {
 
 					if (immunityType == VaccinationType.mRNA) {
-						antibodyRefreshFactors.get(immunityType).put(virusStrain, 16.0);
+						antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 					}
 					else if (immunityType == VaccinationType.vector) {
 						antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
