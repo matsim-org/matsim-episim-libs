@@ -96,23 +96,27 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + Math.pow(relativeAntibodyLevelInfector, vaccinationConfig.getBeta()))));
 
 		// An infection always protects against further infections with the same variant for 3 months.
-		for (int infection = 0; infection < target.getNumInfections(); infection++) {
- 			if (target.getVirusStrain(infection) == infector.getVirusStrain() && target.daysSinceInfection(infection, iteration) <= 90) {
- 				susceptibility = 0.0;
- 				break;
- 			}
- 			if (vaccinationConfig.getBa1ba2ShortTermCrossImmunity()) {
- 	 			if (target.getVirusStrain(infection) == VirusStrain.OMICRON_BA1 && infector.getVirusStrain() == VirusStrain.OMICRON_BA2 && target.daysSinceInfection(infection, iteration) <= 90) {
- 	 				susceptibility = 0.0;
- 	 				break;
- 	 			}
- 	 			if (target.getVirusStrain(infection) == VirusStrain.OMICRON_BA2 && infector.getVirusStrain() == VirusStrain.OMICRON_BA1 && target.daysSinceInfection(infection, iteration) <= 90) {
- 	 				susceptibility = 0.0;
- 	 				break;
- 	 			}
- 			}
-
- 		}
+//		for (int infection = 0; infection < target.getNumInfections(); infection++) {
+// 			if (target.getVirusStrain(infection) == infector.getVirusStrain() && target.daysSinceInfection(infection, iteration) <= 90) {
+// 				susceptibility = 0.0;
+// 				break;
+// 			}
+// 			if (vaccinationConfig.getBa1ba2ShortTermCrossImmunity()) {
+// 	 			if (target.getVirusStrain(infection) == VirusStrain.OMICRON_BA1 && infector.getVirusStrain() == VirusStrain.OMICRON_BA2 && target.daysSinceInfection(infection, iteration) <= 90) {
+// 	 				susceptibility = 0.0;
+// 	 				break;
+// 	 			}
+// 	 			if (target.getVirusStrain(infection) == VirusStrain.OMICRON_BA2 && infector.getVirusStrain() == VirusStrain.OMICRON_BA1 && target.daysSinceInfection(infection, iteration) <= 90) {
+// 	 				susceptibility = 0.0;
+// 	 				break;
+// 	 			}
+// 			}
+//
+// 		}
+		
+		if (vaccinationConfig.getUseIgA()) {
+			susceptibility = susceptibility * DefaultAntibodyModel.getIgA(target, iteration, infector.getVirusStrain());
+		}
 
 		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
