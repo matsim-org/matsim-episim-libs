@@ -24,6 +24,7 @@
  import it.unimi.dsi.fastutil.objects.*;
  import org.apache.commons.csv.CSVFormat;
  import org.apache.commons.csv.CSVParser;
+ import org.apache.commons.csv.CSVPrinter;
  import org.apache.commons.csv.CSVRecord;
  import org.apache.logging.log4j.Level;
  import org.apache.logging.log4j.LogManager;
@@ -97,7 +98,7 @@
 	 private Scenario scenario;
 
 
-	 VirusStrainConfigGroup strainConfig;
+	 private VirusStrainConfigGroup strainConfig;
 
 	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
 	 private static final double immunityFactor = 1.0; //TODO: change InfectionEvents to provide immunityFactor
@@ -145,12 +146,11 @@
 					 VirusStrain.OMICRON_BA2, 21
 			 ));
 
-	 static double factorAlpha = 0.5;
-	 static double factorDelta = 0.3;
-	 static double factorOmicron = 0.05;
+	 private static final double factorAlpha = 0.5;
+	 private static final double factorDelta = 0.3;
+	 private static final double factorOmicron = 0.05;
 
 	 private String outputAppendix = "";
-
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -254,9 +254,9 @@
 
 		 int maxIteration = Math.max(Math.max(
 				 0, //(Int2IntAVLTreeMap) handler.standardHospitalAdmissions).keySet().lastInt(), //TODO: !!!! remove standardHospitalAdmissions from this class
-				 ((Int2IntAVLTreeMap) handler.postProcessHospitalAdmissions).keySet().lastInt()),
-				 Math.max(((Int2IntAVLTreeMap) handler.postProcessHospitalFilledBeds).keySet().lastInt(),
-						 ((Int2IntAVLTreeMap) handler.postProcessHospitalFilledBedsICU).keySet().lastInt()));
+				 handler.postProcessHospitalAdmissions.keySet().lastInt()),
+				 Math.max(handler.postProcessHospitalFilledBeds.keySet().lastInt(),
+						 handler.postProcessHospitalFilledBedsICU.keySet().lastInt()));
 
 
 		 for (int day = 0; day <= maxIteration; day++) {
@@ -283,10 +283,10 @@
 
 		 // read hospitalization tsv for all seeds and aggregate them!
 		 // todo: NOTE: all other parameters should be the same, otherwise the results will be useless!
-		 Int2DoubleMap standardHospitalizations = new Int2DoubleAVLTreeMap();
-		 Int2DoubleMap postProcessHospitalizations = new Int2DoubleAVLTreeMap();
-		 Int2DoubleMap ppBeds = new Int2DoubleAVLTreeMap();
-		 Int2DoubleMap ppBedsICU = new Int2DoubleAVLTreeMap();
+		 Int2DoubleSortedMap standardHospitalizations = new Int2DoubleAVLTreeMap();
+		 Int2DoubleSortedMap postProcessHospitalizations = new Int2DoubleAVLTreeMap();
+		 Int2DoubleSortedMap ppBeds = new Int2DoubleAVLTreeMap();
+		 Int2DoubleSortedMap ppBedsICU = new Int2DoubleAVLTreeMap();
 
 
 		 for (Path path : pathList) {
@@ -295,37 +295,24 @@
 
 			 final Path tsvPath = path.resolve(id + "post.hospital" + outputAppendix + ".tsv");
 
-			 BufferedReader br = Files.newBufferedReader(tsvPath);
-			 CSVParser parser = new CSVParser(br,
-					 CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader());
+			 try (CSVParser parser = new CSVParser(Files.newBufferedReader(tsvPath), CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader())) {
 
+				 for (CSVRecord record : parser) {
 
-			 for (CSVRecord record : parser) {
+					 int day = Integer.parseInt(record.get("day"));
 
-				 int day = Integer.parseInt(record.get("day"));
-				 double stdHosp = standardHospitalizations.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("standardHospitalizations"));
-				 double ppHosp = postProcessHospitalizations.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("postProcessHospitalizations"));
-				 double ppBed = ppBeds.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("ppBeds"));
-				 double ppICU = ppBedsICU.getOrDefault(day, 0) / pathList.size() + Double.parseDouble(record.get("ppBedsICU"));
-
-
-				 standardHospitalizations.put(day, stdHosp);
-				 postProcessHospitalizations.put(day, ppHosp);
-				 ppBeds.put(day, ppBed);
-				 ppBedsICU.put(day, ppICU);
-
+					 standardHospitalizations.mergeDouble(day, Double.parseDouble(record.get("standardHospitalizations")) / pathList.size(), Double::sum);
+					 postProcessHospitalizations.mergeDouble(day, Double.parseDouble(record.get("postProcessHospitalizations")) / pathList.size(), Double::sum);
+					 ppBeds.mergeDouble(day, Double.parseDouble(record.get("ppBeds")) / pathList.size(), Double::sum);
+					 ppBedsICU.mergeDouble(day, Double.parseDouble(record.get("ppBedsICU")) / pathList.size(), Double::sum);
+				 }
 			 }
-
-			 br.close();
-			 parser.close();
 		 }
 
 		 // read rki data and add to tsv
 		 Int2DoubleMap rkiHospIncidence = new Int2DoubleAVLTreeMap();
-		 {
-
-			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/src/assets/rki-deutschland-hospitalization.csv")),
-					 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+		 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/src/assets/rki-deutschland-hospitalization.csv")),
+				 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 
 			 for (CSVRecord record : parser) {
 				 if (!record.get("Bundesland").equals("Nordrhein-Westfalen")) {
@@ -350,10 +337,8 @@
 		 // pink plot from covid-sim: general beds
 		 //  https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv (pinke Linie)
 		 Int2DoubleMap reportedBeds = new Int2DoubleAVLTreeMap();
-		 {
-
-			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv")),
-					 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+		 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv")),
+				 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 
 			 for (CSVRecord record : parser) {
 				 String dateStr = record.get("date").split("T")[0];
@@ -375,9 +360,8 @@
 		 //green plot from covid-sim (Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.)
 		 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
 		 Int2DoubleMap reportedBedsICU = new Int2DoubleAVLTreeMap();
-		 {
-			 CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
-					 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader());
+		 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
+				 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
 
 			 for (CSVRecord record : parser) {
 				 String dateStr = record.get("date").split("T")[0];
@@ -395,39 +379,28 @@
 			 }
 		 }
 
-
 		 // Produce TSV w/ aggregated data as well as all rki numbers
+		 try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.resolve("post.hospital.agg" + outputAppendix + ".tsv")), CSVFormat.DEFAULT.withDelimiter('\t'))) {
 
-		 {
-			 BufferedWriter bw = Files.newBufferedWriter(output.resolve("post.hospital.agg" + outputAppendix + ".tsv"));//todo
-
-			 bw.write("day\tdate\tmodelIncidenceBase\tmodelIncidencePost\tmodelHospRate\tmodelCriticalRate\trkiIncidence\trkiHospRate\trkiCriticalRate");
+			 printer.printRecord("day", "date", "modelIncidenceBase", "modelIncidencePost", "modelHospRate", "modelCriticalRate", "rkiIncidence", "rkiHospRate", "rkiCriticalRate");
 
 			 double maxIteration = standardHospitalizations.size(); //todo
 
 			 for (int day = 0; day <= maxIteration; day++) {
 				 LocalDate date = startDate.plusDays(day);
-
-				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(
+				 printer.printRecord(
 						 day,
 						 date,
-						 standardHospitalizations.getOrDefault(day, 0.),
-						 postProcessHospitalizations.getOrDefault(day, 0.),
-						 ppBeds.getOrDefault(day, 0.),
-						 ppBedsICU.getOrDefault(day, 0.),
-						 rkiHospIncidence.getOrDefault(day, 0.),
-						 reportedBeds.getOrDefault(day, 0.),
-						 reportedBedsICU.getOrDefault(day, 0.))
+						 standardHospitalizations.get(day),
+						 postProcessHospitalizations.get(day),
+						 ppBeds.get(day),
+						 ppBedsICU.get(day),
+						 rkiHospIncidence.get(day),
+						 reportedBeds.get(day),
+						 reportedBedsICU.get(day)
 				 );
-
 			 }
-
-			 bw.close();
-
-
 		 }
-
 
 		 // PLOT 1: People admitted to hospital
 		 {
@@ -579,10 +552,10 @@
 		 private final Random rnd;
 		 private final VirusStrainConfigGroup strainConfig;
 
-		 private final Int2IntMap standardHospitalAdmissions;
-		 private final Int2IntMap postProcessHospitalAdmissions;
-		 private final Int2IntMap postProcessHospitalFilledBeds;
-		 private final Int2IntMap postProcessHospitalFilledBedsICU;
+		 private final Int2IntSortedMap standardHospitalAdmissions;
+		 private final Int2IntSortedMap postProcessHospitalAdmissions;
+		 private final Int2IntSortedMap postProcessHospitalFilledBeds;
+		 private final Int2IntSortedMap postProcessHospitalFilledBedsICU;
 
 
 		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig) {
