@@ -107,13 +107,13 @@
 	 private static double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
 	 private static double immunityFactor = 1.0; //TODO: what should this be?
 	 private int populationCnt = 919_936;
-	 private static int lagBetweenInfectionAndHospitalisation = 5;
+	 private static int lagBetweenInfectionAndHospitalisation = 10;
 
-	 static double factorAlpha = 1.0;
-	 static double factorDelta = 1.5;
-	 static double factorOmicron = 0.35;
+	 static double factorAlpha = 0.5;
+	 static double factorDelta = 0.3;
+	 static double factorOmicron = 0.05;
 
-	 private static String outputAppendix = "";
+	 private String outputAppendix = "";
 
 
 	 public static void main(String[] args) {
@@ -137,12 +137,9 @@
 
 		 List<Double> strainFactors = List.of(factorAlpha, factorDelta, factorOmicron);
 
-		 Double factorStrainA;
-		 //		 Double factorStrainB;
 		 for (Double facA : strainFactors) {
-			 factorStrainA = facA;
 
-			 outputAppendix = "_A" + factorStrainA;
+			 outputAppendix = "_A" + facA;
 
 			 config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -157,8 +154,8 @@
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(factorOmicron);
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(factorStrainA);
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(factorStrainA);
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick( facA );
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated( facA );
 			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorStrainB);
 			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(factorStrainB);
 
@@ -414,7 +411,7 @@
 			 //			 }
 
 			 // post-processed hospitalizations from episim
-			 for (Map.Entry entry : postProcessHospitalizations.entrySet()) {
+			 for (Int2DoubleMap.Entry entry : postProcessHospitalizations.int2DoubleEntrySet() ) {
 				 int today = (int) entry.getKey();
 				 records.append(today);
 				 values.append(postProcessHospitalizations.getOrDefault(today, 0.));
@@ -422,10 +419,15 @@
 			 }
 
 
-			 for (Map.Entry entry : rkiHospIncidence.entrySet()) {
+			 for (Int2DoubleMap.Entry entry : rkiHospIncidence.int2DoubleEntrySet()) {
 				 int today = (int) entry.getKey();
 				 records.append(today);
-				 values.append(rkiHospIncidence.getOrDefault(today, 0.));
+				 final double value = rkiHospIncidence.getOrDefault( today, Double.NaN );
+				 if ( Double.isNaN( value ) ) {
+					 values.appendMissing() ;
+				 } else{
+					 values.append( value );
+				 }
 				 groupings.append("RKI NRW Adjusted");
 			 }
 
