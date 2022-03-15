@@ -749,9 +749,9 @@
 			 int numVaccinations = 0;
 
 			 if (person.boosterDate != null) {
-				 numVaccinations = 2; //TODO: should this be 3?
+				 numVaccinations = 2;
 			 } else if (person.vaccinationDate != null) {
-				 numVaccinations = 1; //TODO: should this be 2?
+				 numVaccinations = 1;
 			 }
 
 			 int numInfections = person.infections.size() - 1;
@@ -786,9 +786,15 @@
 			 }
 
 			 // In InfectionModelWithAntibodies, immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
+			 // To fix, we could save immunity factor in infection events.
 			 // I don't know how easy it will be to get the relativeAntibody level in post-processing -jr 2022-02-18
 			 // todo: implement immunity factor
 			 double factorInf = immunityFactor;
+
+			 // immunity factor = chance of infection w/ respect to non-immunized person.
+			 // 1- veSeriouslySick = remaining risk of hospitalization w/ repect to non-immunized person
+			 // factorSeriouslySick = risk of hospitalization given infection w/ respect to non-imm...
+
 
 			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
 
