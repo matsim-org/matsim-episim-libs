@@ -20,7 +20,6 @@
 
 
  import com.google.inject.Inject;
- import com.google.protobuf.Internal;
  import it.unimi.dsi.fastutil.ints.*;
  import org.apache.commons.csv.CSVFormat;
  import org.apache.commons.csv.CSVParser;
@@ -100,14 +99,12 @@
 	 private Scenario scenario;
 
 
-	 private Config config;
-	 private EpisimConfigGroup episimConfig;
 	 VirusStrainConfigGroup strainConfig;
 
-	 private static double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
-	 private static double immunityFactor = 1.0; //TODO: what should this be?
-	 private int populationCnt = 919_936;
-	 private static int lagBetweenInfectionAndHospitalisation = 10;
+	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
+	 private static final double immunityFactor = 1.0; //TODO: what should this be?
+	 private final int populationCnt = 919_936;
+	 private static final int lagBetweenInfectionAndHospitalisation = 10;
 
 	 static double factorAlpha = 0.5;
 	 static double factorDelta = 0.3;
@@ -141,10 +138,7 @@
 
 			 outputAppendix = "_A" + facA;
 
-			 config = ConfigUtils.createConfig(new EpisimConfigGroup());
-
-			 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-
+			 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 			 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
@@ -179,9 +173,7 @@
 
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 			 List<Path> pathList = new ArrayList<>();
-			 AnalysisCommand.forEachScenario(output, scenario -> {
-				 pathList.add(scenario);
-			 });
+			 AnalysisCommand.forEachScenario(output, pathList::add);
 
 			 aggregateDataAndProduceTSV(output, pathList);
 
@@ -354,7 +346,7 @@
 				 double incidence = 0.;
 				 try {
 					 incidence = Double.parseDouble(record.get("faelle_covid_aktuell")) * 100_000. / populationCnt;
-				 } catch (NumberFormatException e) {
+				 } catch (NumberFormatException ignored) {
 
 				 }
 
@@ -412,7 +404,7 @@
 
 			 // post-processed hospitalizations from episim
 			 for (Int2DoubleMap.Entry entry : postProcessHospitalizations.int2DoubleEntrySet() ) {
-				 int today = (int) entry.getKey();
+				 int today = entry.getIntKey();
 				 records.append(today);
 				 values.append(postProcessHospitalizations.getOrDefault(today, 0.));
 				 groupings.append("postProcess");
@@ -420,7 +412,7 @@
 
 
 			 for (Int2DoubleMap.Entry entry : rkiHospIncidence.int2DoubleEntrySet()) {
-				 int today = (int) entry.getKey();
+				 int today = entry.getIntKey();
 				 records.append(today);
 				 final double value = rkiHospIncidence.getOrDefault( today, Double.NaN );
 				 if ( Double.isNaN( value ) ) {
@@ -443,16 +435,16 @@
 			 StringColumn groupings = StringColumn.create("scenario");
 
 
-			 for (Map.Entry entry : ppBeds.entrySet()) {
-				 Integer today = (Integer) entry.getKey();
+			 for (Int2DoubleMap.Entry entry : ppBeds.int2DoubleEntrySet()) {
+				 int today = entry.getIntKey();
 				 records.append(today);
 
 				 values.append(ppBeds.get(today));
 				 groupings.append("generalBeds");
 			 }
 
-			 for (Map.Entry entry : ppBedsICU.entrySet()) {
-				 Integer today = (Integer) entry.getKey();
+			 for (Int2DoubleMap.Entry entry : ppBedsICU.int2DoubleEntrySet()) {
+				 int today = entry.getIntKey();
 				 records.append(today);
 
 				 values.append(ppBedsICU.get(today));
@@ -460,16 +452,16 @@
 			 }
 
 
-			 for (Map.Entry entry : reportedBeds.entrySet()) {
-				 records.append((Integer) entry.getKey());
-				 values.append((Double) entry.getValue());
+			 for (Int2DoubleMap.Entry entry : reportedBeds.int2DoubleEntrySet()) {
+				 records.append(entry.getIntKey());
+				 values.append(entry.getDoubleValue());
 				 groupings.append("Reported: General Beds");
 			 }
 
 
-			 for (Map.Entry entry : reportedBedsICU.entrySet()) {
-				 records.append((Integer) entry.getKey());
-				 values.append((Double) entry.getValue());
+			 for (Int2DoubleMap.Entry entry : reportedBedsICU.int2DoubleEntrySet()) {
+				 records.append(entry.getIntKey());
+				 values.append(entry.getDoubleValue());
 				 groupings.append("Reported: ICU Beds");
 			 }
 
@@ -517,7 +509,7 @@
 		 for (int i = 0; i < 7; i++) {
 			 try {
 				 weeklyHospitalizations += hospMap.getOrDefault(today - i, 0);
-			 } catch (Exception e) {
+			 } catch (Exception ignored) {
 
 			 }
 		 }
