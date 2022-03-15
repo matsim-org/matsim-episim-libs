@@ -21,6 +21,7 @@
 
  import com.google.inject.Inject;
  import it.unimi.dsi.fastutil.ints.*;
+ import it.unimi.dsi.fastutil.objects.*;
  import org.apache.commons.csv.CSVFormat;
  import org.apache.commons.csv.CSVParser;
  import org.apache.commons.csv.CSVRecord;
@@ -44,10 +45,7 @@
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
- import tech.tablesaw.api.DoubleColumn;
- import tech.tablesaw.api.IntColumn;
- import tech.tablesaw.api.StringColumn;
- import tech.tablesaw.api.Table;
+ import tech.tablesaw.api.*;
  import tech.tablesaw.plotly.components.Axis;
  import tech.tablesaw.plotly.components.Figure;
  import tech.tablesaw.plotly.components.Layout;
@@ -102,9 +100,50 @@
 	 VirusStrainConfigGroup strainConfig;
 
 	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
-	 private static final double immunityFactor = 1.0; //TODO: what should this be?
+	 private static final double immunityFactor = 1.0; //TODO: change InfectionEvents to provide immunityFactor
 	 private final int populationCnt = 919_936;
-	 private static final int lagBetweenInfectionAndHospitalisation = 10;
+
+
+	 //	 private static final int lagBetweenInfectionAndHospitalisation = 10;
+	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 10,
+					 VirusStrain.ALPHA, 10,
+					 VirusStrain.DELTA, 10,
+					 VirusStrain.OMICRON_BA1, 10,
+					 VirusStrain.OMICRON_BA2, 10
+			 ));
+
+	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 1,
+					 VirusStrain.ALPHA, 1,
+					 VirusStrain.DELTA, 1,
+					 VirusStrain.OMICRON_BA1, 1,
+					 VirusStrain.OMICRON_BA2, 1
+			 ));
+
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 14,
+					 VirusStrain.ALPHA, 14,
+					 VirusStrain.DELTA, 14,
+					 VirusStrain.OMICRON_BA1, 14,
+					 VirusStrain.OMICRON_BA2, 14
+			 ));
+
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 29,
+					 VirusStrain.ALPHA, 29,
+					 VirusStrain.DELTA, 29,
+					 VirusStrain.OMICRON_BA1, 29,
+					 VirusStrain.OMICRON_BA2, 29
+			 ));
+
+	 private static final Object2IntMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 21,
+					 VirusStrain.ALPHA, 21,
+					 VirusStrain.DELTA, 21,
+					 VirusStrain.OMICRON_BA1, 21,
+					 VirusStrain.OMICRON_BA2, 21
+			 ));
 
 	 static double factorAlpha = 0.5;
 	 static double factorDelta = 0.3;
@@ -132,11 +171,12 @@
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
-		 List<Double> strainFactors = List.of(factorAlpha, factorDelta, factorOmicron);
+		 //		 List<Double> strainFactors = List.of(factorAlpha, factorDelta, factorOmicron);
+		 List<Double> strainFactors = List.of(factorAlpha); //todo: revert
 
 		 for (Double facA : strainFactors) {
 
-			 outputAppendix = "_A" + facA;
+			 //			 outputAppendix = "_A" + facA;
 
 			 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -148,8 +188,8 @@
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(factorOmicron);
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick( facA );
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated( facA );
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(facA);
 			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorStrainB);
 			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(factorStrainB);
 
@@ -298,7 +338,8 @@
 				 try {
 					 incidence = Double.parseDouble(record.get("PS_adjustierte_7T_Hospitalisierung_Inzidenz"));
 				 } catch (NumberFormatException e) {
-					 incidence = 0.;
+					 incidence = Double.NaN;
+
 				 }
 
 				 rkiHospIncidence.put(day, incidence);
@@ -391,6 +432,7 @@
 		 // PLOT 1: People admitted to hospital
 		 {
 			 IntColumn records = IntColumn.create("day");
+			 DateColumn recordsDate = DateColumn.create("date");
 			 DoubleColumn values = DoubleColumn.create("hospitalizations");
 			 StringColumn groupings = StringColumn.create("scenario");
 
@@ -403,93 +445,105 @@
 			 //			 }
 
 			 // post-processed hospitalizations from episim
-			 for (Int2DoubleMap.Entry entry : postProcessHospitalizations.int2DoubleEntrySet() ) {
-				 int today = entry.getIntKey();
-				 records.append(today);
-				 values.append(postProcessHospitalizations.getOrDefault(today, 0.));
+			 for (Int2DoubleMap.Entry entry : postProcessHospitalizations.int2DoubleEntrySet()) {
+				 int day = entry.getIntKey();
+				 records.append(day);
+				 recordsDate.append(startDate.plusDays(day));
+				 values.append(postProcessHospitalizations.getOrDefault(day, Double.NaN));
 				 groupings.append("postProcess");
 			 }
 
 
 			 for (Int2DoubleMap.Entry entry : rkiHospIncidence.int2DoubleEntrySet()) {
-				 int today = entry.getIntKey();
-				 records.append(today);
-				 final double value = rkiHospIncidence.getOrDefault( today, Double.NaN );
-				 if ( Double.isNaN( value ) ) {
-					 values.appendMissing() ;
-				 } else{
-					 values.append( value );
+				 int day = entry.getIntKey();
+				 records.append(day);
+				 recordsDate.append(startDate.plusDays(day));
+				 final double value = rkiHospIncidence.getOrDefault(day, Double.NaN);
+				 if (Double.isNaN(value)) {
+					 values.appendMissing();
+				 } else {
+					 values.append(value);
 				 }
 				 groupings.append("RKI NRW Adjusted");
 			 }
 
 
-			 producePlot(records, values, groupings, "Hospitalization Incidence", "7-Day Hospital Admissions / 100k Population", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
+			 producePlot(recordsDate, values, groupings, "Hospitalization Incidence", "Incidence", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
 		 }
 
 
 		 // PLOT 2: People taking up beds in hospital (regular and ICU)
 		 {
 			 IntColumn records = IntColumn.create("day");
+			 DateColumn recordsDate = DateColumn.create("date");
 			 DoubleColumn values = DoubleColumn.create("hospitalizations");
 			 StringColumn groupings = StringColumn.create("scenario");
 
 
 			 for (Int2DoubleMap.Entry entry : ppBeds.int2DoubleEntrySet()) {
-				 int today = entry.getIntKey();
-				 records.append(today);
+				 int day = entry.getIntKey();
+				 records.append(day);
+				 recordsDate.append(startDate.plusDays(day));
 
-				 values.append(ppBeds.get(today));
+				 values.append(ppBeds.get(day));
 				 groupings.append("generalBeds");
 			 }
 
 			 for (Int2DoubleMap.Entry entry : ppBedsICU.int2DoubleEntrySet()) {
-				 int today = entry.getIntKey();
-				 records.append(today);
+				 int day = entry.getIntKey();
+				 records.append(day);
+				 recordsDate.append(startDate.plusDays(day));
 
-				 values.append(ppBedsICU.get(today));
+				 values.append(ppBedsICU.get(day));
 				 groupings.append("ICUBeds");
 			 }
 
 
 			 for (Int2DoubleMap.Entry entry : reportedBeds.int2DoubleEntrySet()) {
-				 records.append(entry.getIntKey());
+				 int day = entry.getIntKey();
+				 records.append(day);
+				 recordsDate.append(startDate.plusDays(day));
+
 				 values.append(entry.getDoubleValue());
 				 groupings.append("Reported: General Beds");
 			 }
 
 
 			 for (Int2DoubleMap.Entry entry : reportedBedsICU.int2DoubleEntrySet()) {
-				 records.append(entry.getIntKey());
+				 int day = entry.getIntKey();
+				 records.append(day);
+				 recordsDate.append(startDate.plusDays(day));
+
 				 values.append(entry.getDoubleValue());
 				 groupings.append("Reported: ICU Beds");
 			 }
 
 
 			 // Make plot
-			 producePlot(records, values, groupings, "Filled Beds", "Filled Beds", "FilledBeds" + outputAppendix + ".html");
+			 producePlot(recordsDate, values, groupings, "Filled Beds", "Beds Filled / 100k Population", "FilledBeds" + outputAppendix + ".html");
 		 }
 
 
 	 }
 
-	 private void producePlot(IntColumn records, DoubleColumn values, StringColumn groupings, String s, String s2, String s3) {
+	 private void producePlot(DateColumn records, DoubleColumn values, StringColumn groupings, String title, String yAxisTitle, String filename) {
 		 // Make plot
-		 Table table = Table.create(s);
+		 Table table = Table.create(title);
 		 table.addColumns(records);
 		 table.addColumns(values);
 		 table.addColumns(groupings);
 
 		 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
 
-		 Axis yAxis = Axis.builder().type(Axis.Type.LOG).build();
+		 Axis xAxis = Axis.builder().title("Date").build();
+		 Axis yAxis = Axis.builder().type(Axis.Type.LOG).title(yAxisTitle).build();
 
-		 Layout layout = Layout.builder(s2, "Day", "Incidence").yAxis(yAxis).showLegend(true).build();
+		 Layout layout = Layout.builder(title).xAxis(xAxis).yAxis(yAxis).showLegend(true).build();
 
 		 ScatterTrace[] traces = new ScatterTrace[tables.size()];
 		 for (int i = 0; i < tables.size(); i++) {
 			 List<Table> tableList = tables.asTableList();
-			 traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn("day"), tableList.get(i).numberColumn("hospitalizations"))
+			 traces[i] = ScatterTrace.builder(tableList.get(i).dateColumn("date"), tableList.get(i).numberColumn("hospitalizations"))
 					 .showLegend(true)
 					 .name(tableList.get(i).name())
 					 .mode(ScatterTrace.Mode.LINE)
@@ -497,7 +551,7 @@
 		 }
 		 var figure = new Figure(layout, traces);
 
-		 try (Writer writer = new OutputStreamWriter(new FileOutputStream(output.resolve(s3).toString()), StandardCharsets.UTF_8)) {
+		 try (Writer writer = new OutputStreamWriter(new FileOutputStream(output.resolve(filename).toString()), StandardCharsets.UTF_8)) {
 			 writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
 		 } catch (IOException e) {
 			 throw new UncheckedIOException(e);
@@ -617,9 +671,9 @@
 
 				 if (goToHospital(person, strain, age)) {
 
-					 int hospitalizationIteration = infectionIteration + lagBetweenInfectionAndHospitalisation;
+					 int hospitalizationIteration = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 
-					 // newly addmited to hospital
+					 // newly admitted to hospital
 					 int hospitalizationCnt = postProcessHospitalAdmissions.getOrDefault(hospitalizationIteration, 0);
 					 postProcessHospitalAdmissions.put(hospitalizationIteration, ++hospitalizationCnt);
 
@@ -633,7 +687,7 @@
 							 postProcessHospitalFilledBeds.put(day, ++bedCnt);
 						 }
 
-						 //21 days in ICU (critical) starting with the day after admitten into hospital
+						 //21 days in ICU (critical) starting with the day after admitted into hospital
 						 for (int i = 1; i < 22; i++) {
 							 int day = hospitalizationIteration + i;
 							 int bedCnt = postProcessHospitalFilledBedsICU.getOrDefault(day, 0);
