@@ -9,6 +9,7 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.api.core.v01.events.Event;
 import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimVaccinationEvent;
 import org.matsim.episim.reporting.EpisimWriter;
 import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
@@ -34,7 +35,7 @@ public class FilterEvents implements OutputAnalysis {
 	private Path output;
 
 	@CommandLine.Parameters(paramLabel = "TYPE", arity = "0..*", description = "Names of event types to keep")
-	private Set<String> filter = Set.of(EpisimInfectionEvent.EVENT_TYPE);
+	private Set<String> filter = Set.of(EpisimInfectionEvent.EVENT_TYPE, EpisimVaccinationEvent.EVENT_TYPE);
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new FilterEvents()).execute(args));
