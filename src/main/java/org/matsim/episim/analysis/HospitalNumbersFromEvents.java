@@ -116,8 +116,8 @@
 			 ));
 
 	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 1,
-					 VirusStrain.ALPHA, 1,
+			 Map.of(VirusStrain.SARS_CoV_2, 3,
+					 VirusStrain.ALPHA, 3,
 					 VirusStrain.DELTA, 1,
 					 VirusStrain.OMICRON_BA1, 1,
 					 VirusStrain.OMICRON_BA2, 1,
@@ -125,8 +125,8 @@
 			 ));
 
 	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 14,
-					 VirusStrain.ALPHA, 14,
+			 Map.of(VirusStrain.SARS_CoV_2, 22,
+					 VirusStrain.ALPHA, 22,
 					 VirusStrain.DELTA, 14,
 					 VirusStrain.OMICRON_BA1, 14,
 					 VirusStrain.OMICRON_BA2, 14,
@@ -134,20 +134,20 @@
 			 ));
 
 	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 29,
-					 VirusStrain.ALPHA, 29,
-					 VirusStrain.DELTA, 29,
-					 VirusStrain.OMICRON_BA1, 29,
-					 VirusStrain.OMICRON_BA2, 29,
+			 Map.of(VirusStrain.SARS_CoV_2, 38,
+					 VirusStrain.ALPHA, 38,
+					 VirusStrain.DELTA, 20,
+					 VirusStrain.OMICRON_BA1, 20,
+					 VirusStrain.OMICRON_BA2, 20,
 					 VirusStrain.STRAIN_A, 29
 			 ));
 
 	 private static final Object2IntMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 21,
-					 VirusStrain.ALPHA, 21,
-					 VirusStrain.DELTA, 21,
-					 VirusStrain.OMICRON_BA1, 21,
-					 VirusStrain.OMICRON_BA2, 21,
+			 Map.of(VirusStrain.SARS_CoV_2, 28,
+					 VirusStrain.ALPHA, 28,
+					 VirusStrain.DELTA, 17,
+					 VirusStrain.OMICRON_BA1, 8,
+					 VirusStrain.OMICRON_BA2, 8,
 					 VirusStrain.STRAIN_A, 21
 			 ));
 
