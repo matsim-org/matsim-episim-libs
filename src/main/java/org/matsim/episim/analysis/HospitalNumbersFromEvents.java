@@ -77,6 +77,8 @@
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
 	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
+//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputNewVoc")
+//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputNewVocVaccOver18Plus")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -176,12 +178,22 @@
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
-		 //		 List<Double> strainFactors = List.of(factorAlpha, factorDelta, factorOmicron);
-		 List<Double> strainFactors = List.of(factorWildAndAlpha); //todo: revert
+		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
+//		 List<Double> strainFactors = List.of(factorWildAndAlpha); //todo: revert
 
 		 for (Double facA : strainFactors) {
 
 			 //			 outputAppendix = "_A" + facA;
+			 if ( facA == factorWildAndAlpha ) {
+				 outputAppendix = "_Alpha";
+			 } else if ( facA == factorDelta ) {
+				 outputAppendix = "_Delta";
+			 } else if ( facA == factorOmicron ) {
+				 outputAppendix = "_Omicron";
+			 } else {
+				 throw new RuntimeException( "not clear what to do" );
+			 }
+
 
 			 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
@@ -504,9 +516,11 @@
 		 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
 
 		 Axis xAxis = Axis.builder().title("Date").build();
-		 Axis yAxis = Axis.builder().type(Axis.Type.LOG).title(yAxisTitle).build();
+		 Axis yAxis = Axis.builder().range( 0., 150. )
+//				  .type(Axis.Type.LOG)
+				  .title(yAxisTitle).build();
 
-		 Layout layout = Layout.builder(title).xAxis(xAxis).yAxis(yAxis).showLegend(true).build();
+		 Layout layout = Layout.builder(title).xAxis(xAxis).yAxis(yAxis).showLegend(true).height( 500 ).width( 1000 ).build();
 
 		 ScatterTrace[] traces = new ScatterTrace[tables.size()];
 		 for (int i = 0; i < tables.size(); i++) {
