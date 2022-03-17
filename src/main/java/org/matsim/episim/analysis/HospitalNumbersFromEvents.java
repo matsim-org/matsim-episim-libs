@@ -39,7 +39,6 @@
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
  import org.matsim.episim.EpisimConfigGroup;
- import org.matsim.episim.EpisimPerson.DiseaseStatus;
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VaccinationType;
@@ -76,7 +75,8 @@
 
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-03-16/2/outputPolicy")
+//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -101,8 +101,11 @@
 	 private VirusStrainConfigGroup strainConfig;
 
 	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
-	 private static final double immunityFactor = 1.0; //TODO: change InfectionEvents to provide immunityFactor
+	 private static final double immunityFactorDefault = 1.0;
+	 private static final double beta = 1.2;
 	 private final int populationCnt = 919_936;
+	 private static final boolean useAntibodiesFromInfectionEvent = false;
+
 
 
 	 //	 private static final int lagBetweenInfectionAndHospitalisation = 10;
@@ -152,8 +155,8 @@
 			 ));
 
 	 private static final double factorWildAndAlpha = 0.6;
-	 private static final double factorDelta = 1.3;
-	 private static final double factorOmicron = 0.3;
+	 private static final double factorDelta = 0.6;
+	 private static final double factorOmicron = 0.1;
 
 	 private String outputAppendix = "";
 
@@ -576,27 +579,11 @@
 			 person.infections.add(day);
 			 person.strains.add(event.getVirusStrain());
 
+			 person.antibodies = event.getAntibodies();
+
 			 updateHospitalizationsPost(personId, person, event.getStrain(), day);
 
-
 		 }
-
-//		 @Override
-//		 public void handleEvent(EpisimPersonStatusEvent event) {
-//
-//			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
-//			 DiseaseStatus status = event.getDiseaseStatus();
-//
-//			 int day = (int) (event.getTime() / 86_400);
-//
-//			 if (status.equals(DiseaseStatus.susceptible)) {
-//				 attr.recoveredDates.add(startDate.plusDays(day));
-//			 }
-//			 if (status.equals(DiseaseStatus.contagious)) {
-//				 attr.contagiousDates.add(startDate.plusDays(day));
-//			 }
-
-//		 }
 
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
@@ -799,7 +786,15 @@
 			 // To fix, we could save immunity factor in infection events.
 			 // I don't know how easy it will be to get the relativeAntibody level in post-processing -jr 2022-02-18
 			 // todo: implement immunity factor
-			 double factorInf = immunityFactor;
+
+			 double factorInf;
+			 if (person.antibodies == null || person.antibodies.equals(-1.) || !useAntibodiesFromInfectionEvent) {
+				 factorInf = immunityFactorDefault;
+			 } else {
+			 	factorInf = 1.0 / (1.0 + Math.pow(person.antibodies, beta));
+			 }
+
+
 
 			 // immunity factor = chance of infection w/ respect to non-immunized person.
 			 // 1- veSeriouslySick = remaining risk of hospitalization w/ repect to non-immunized person
@@ -825,6 +820,7 @@
 	  */
 	 private static final class Holder {
 
+		 private Double antibodies = null;
 		 private VaccinationType vaccine = null;
 		 private LocalDate vaccinationDate = null;
 		 private LocalDate boosterDate = null;
