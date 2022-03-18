@@ -75,7 +75,7 @@
 
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-03-16/2/outputPolicy")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-03-18/1/unguenstigerFall_2_impfpflicht")
 //	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
 //	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
 //	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputNewVoc")
@@ -157,9 +157,9 @@
 					 VirusStrain.STRAIN_A, 21
 			 ));
 
-	 private static final double factorWildAndAlpha = 0.6;
-	 private static final double factorDelta = 0.6;
-	 private static final double factorOmicron = 0.1;
+	 private static final double factorWildAndAlpha = 0.5;
+	 private static final double factorDelta = 0.85;
+	 private static final double factorOmicron = 0.22;
 
 	 private String outputAppendix = "";
 
@@ -182,8 +182,8 @@
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
-		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
-//		 List<Double> strainFactors = List.of(factorWildAndAlpha); //todo: revert
+//		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
+		 List<Double> strainFactors = List.of(factorDelta, factorOmicron); //todo: revert
 
 		 for (Double facA : strainFactors) {
 
@@ -452,7 +452,7 @@
 			 }
 
 
-			 producePlot(recordsDate, values, groupings, "Hospitalization Incidence", "Incidence", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
+			 producePlot(recordsDate, values, groupings, "", "7-Tage Hospitalisierungsinzidenz", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
 		 }
 
 
@@ -519,7 +519,7 @@
 
 		 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
 
-		 Axis xAxis = Axis.builder().title("Date").build();
+		 Axis xAxis = Axis.builder().title("Datum").build();
 		 Axis yAxis = Axis.builder().range( 0., 150. )
 //				  .type(Axis.Type.LOG)
 				  .title(yAxisTitle).build();
@@ -796,11 +796,6 @@
 				 else
 					 veSeriouslySick = 0.6;
 			 }
-
-			 // In InfectionModelWithAntibodies, immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
-			 // To fix, we could save immunity factor in infection events.
-			 // I don't know how easy it will be to get the relativeAntibody level in post-processing -jr 2022-02-18
-			 // todo: implement immunity factor
 
 			 double factorInf;
 			 if (person.antibodies == null || person.antibodies.equals(-1.) || !useAntibodiesFromInfectionEvent) {
