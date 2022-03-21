@@ -118,7 +118,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		return firstImmunization;
 	}
 	
-	public static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
+	private static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
 		
 		if (!person.hadStrain(strain)) {
 			return 1.0;
