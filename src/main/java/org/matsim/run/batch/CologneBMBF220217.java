@@ -8,20 +8,20 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.BatchRun.StringParameter;
 import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
 import org.matsim.episim.EpisimPerson.QuarantineStatus;
 import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.analysis.VaccinationEffectiveness;
 import org.matsim.episim.analysis.VaccinationEffectivenessFromPotentialInfections;
+import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.FaceMask;
+import org.matsim.episim.model.ImmunityEvent;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
-import org.matsim.episim.model.vaccination.VaccinationStrategy;
 import org.matsim.episim.model.vaccination.VaccinationStrategy2;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
@@ -55,6 +55,8 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 				boolean vaccinateRecovered = false;
 				boolean vaccinateYoung = false;
 				boolean vaccinateOld = false;
+				double mutEsc = 0;
+				String vacStart = "2020-01-01";
 
 				if (params != null) {
 					if (params.vac.contains("over18")) {
@@ -62,15 +64,143 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 						vaccinateOld = true;
 					}
 
-					if (params.vac.contains("over60"))
+					if (params.vac.contains("over50"))
 						vaccinateOld = true;
 
 					if (params.vac.contains("Plus"))
 						vaccinateRecovered = true;
-
+					mutEsc = params.mutEsc;
+					vacStart = params.vacStart;
 				}
 
-				bind(VaccinationStrategy2.Config.class).toInstance(new VaccinationStrategy2.Config(LocalDate.parse("2022-05-01"), vaccinateRecovered, vaccinateYoung, vaccinateOld));
+				bind(VaccinationStrategy2.Config.class).toInstance(new VaccinationStrategy2.Config(LocalDate.parse(vacStart), vaccinateRecovered, vaccinateYoung, vaccinateOld));
+				
+				//initial antibodies
+				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
+				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
+
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEsc);
+				
+				bind(AntibodyModel.Config.class).toInstance(new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors));
+				
+			}
+
+			private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
+					Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors, double mutEsc) {
+				for (VaccinationType immunityType : VaccinationType.values()) {
+					initialAntibodies.put(immunityType, new EnumMap<>( VirusStrain.class ) );
+					for (VirusStrain virusStrain : VirusStrain.values()) {
+
+						if (immunityType == VaccinationType.mRNA) {
+							initialAntibodies.get(immunityType).put(virusStrain, 29.2); //10.0
+						}
+						else if (immunityType == VaccinationType.vector) {
+							initialAntibodies.get(immunityType).put(virusStrain, 6.8);  //2.5
+						}
+						else {
+							initialAntibodies.get(immunityType).put(virusStrain, 5.0);
+						}
+					}
+				}
+
+				for (VirusStrain immunityType : VirusStrain.values()) {
+					initialAntibodies.put(immunityType, new EnumMap<>( VirusStrain.class ) );
+					for (VirusStrain virusStrain : VirusStrain.values()) {
+						initialAntibodies.get(immunityType).put(virusStrain, 5.0);
+					}
+				}
+				
+				//mRNAAlpha, mRNADelta, mRNABA1 comes from Sydney's calibration. 
+				//The other values come from Rössler et al. 
+				
+				//Wildtype
+				double mRNAAlpha = 29.2;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.SARS_CoV_2, mRNAAlpha);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.SARS_CoV_2, 0.01);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.SARS_CoV_2, 0.01);
+				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.SARS_CoV_2, 0.01);
+
+				//Alpha
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.ALPHA, mRNAAlpha);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.ALPHA, 0.01);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.ALPHA, 0.01);
+				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.ALPHA, 0.01);
+
+				//DELTA
+				double mRNADelta = 10.9;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, mRNADelta);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, mRNADelta * 150./300.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, mRNADelta * 64./300.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, mRNADelta * 64./300.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, mRNADelta * 450./300.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 0.2 / 6.4);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 0.2 / 6.4);
+				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.DELTA, 0.2 / 6.4);
+
+				//BA.1
+				double mRNABA1 = 1.9;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, mRNABA1);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, mRNABA1 * 4./20.); //???
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 64.0 / 300.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
+				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
+
+				//BA.2
+				double mRNABA2 = mRNABA1 / 1.4;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, mRNABA2);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA2, mRNABA2 * 4./20.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
+				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
+
+				//BA.2
+				double mRNAStrainA = mRNABA2 * mutEsc;
+				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.STRAIN_A, mRNAStrainA);
+				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.STRAIN_A, mRNAStrainA * 4./20.);
+				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.STRAIN_A, mRNAStrainA * 6./20.);
+				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.STRAIN_A, mRNAStrainA * 6./20.);
+				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.STRAIN_A, mRNAStrainA * 8./20.);
+				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.STRAIN_A, mutEsc * 64.0 / 300. / 1.4);
+				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.STRAIN_A, mutEsc * 64.0 / 300.);
+				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.STRAIN_A, 64.0 / 300.);
+				
+				for (VaccinationType immunityType : VaccinationType.values()) {
+					antibodyRefreshFactors.put(immunityType, new EnumMap<>( VirusStrain.class ) );
+					for (VirusStrain virusStrain : VirusStrain.values()) {
+
+						if (immunityType == VaccinationType.mRNA) {
+							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+						}
+						else if (immunityType == VaccinationType.vector) {
+							antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
+						}
+						else {
+							antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);
+						}
+
+					}
+				}
+
+				for (VirusStrain immunityType : VirusStrain.values()) {
+					antibodyRefreshFactors.put(immunityType, new EnumMap<>( VirusStrain.class ) );
+					for (VirusStrain virusStrain : VirusStrain.values()) {
+						antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+					}
+				}
 			}
 		});
 	}
@@ -101,31 +231,35 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		LocalDate restrictionDate = LocalDate.parse("2022-03-01");
+		LocalDate restrictionDate = LocalDate.parse("2022-03-20");
 
 		SnzCologneProductionScenario module = getBindings(0.0);
 
 		Config config = module.config();
-
+				
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06);
 
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220218/" + params.seed + "-600-2021-10-16.zip");
-		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
+		//local (see svn for more snapshots with different dates)
+//		episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220218/" + params.seed + "-540-2021-08-17.zip");
+
+		//cluster
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
+//		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
 		//restrictions
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
 		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
-		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(params.leis), "leisure");
-
+		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(1.0), "leisure");
+		
 		//2G
 		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
-		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(params.leis), "leisure");
+		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(1.0), "leisure");
 
 		double schoolFac = 0.5;
 		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -133,37 +267,14 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-
-		//Einzelhandel
-//		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofMask(Map.of(
-//				FaceMask.CLOTH, 0.0,
-//				FaceMask.N95, params.oMC,
-//				FaceMask.SURGICAL, 0.0))
-//				, "shop_daily", "shop_other", "errands");
-//		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofSusceptibleRf(params.oRF), "shop_daily", "shop_other", "errands");
-
-
-//		if (params.school.equals("protected")) {
-//			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-//			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-//		}
-
-		builder.restrict(restrictionDate, 0.78, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
+		
+//		builder.restrict(restrictionDate, 0.78, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
 
 		episimConfig.setPolicy(builder.build());
 
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 		inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
-		//christmas
-//		inputDays.put(LocalDate.parse("2021-12-24"), DayOfWeek.SATURDAY);
-//		inputDays.put(LocalDate.parse("2021-12-25"), DayOfWeek.SUNDAY);
-//		inputDays.put(LocalDate.parse("2021-12-26"), DayOfWeek.SUNDAY);
-//		inputDays.put(LocalDate.parse("2021-12-27"), DayOfWeek.SATURDAY);
-//		inputDays.put(LocalDate.parse("2021-12-28"), DayOfWeek.SATURDAY);
-//		inputDays.put(LocalDate.parse("2021-12-29"), DayOfWeek.SATURDAY);
-//		inputDays.put(LocalDate.parse("2021-12-30"), DayOfWeek.SATURDAY);
-//		inputDays.put(LocalDate.parse("2021-12-31"), DayOfWeek.SATURDAY);
-//		inputDays.put(LocalDate.parse("2022-01-01"), DayOfWeek.SUNDAY);
+
 		episimConfig.setInputDays(inputDays);
 
 		//mutations
@@ -178,7 +289,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.65);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.7);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
@@ -189,22 +300,23 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 		//disease import 2021
 		double cologneFactor = 0.5;
+		int imp1 = 10;
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-07-03").plusDays(0),
 				LocalDate.parse("2021-07-25").plusDays(0), 1, 48);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-07-26").plusDays(0),
-				LocalDate.parse("2021-08-17").plusDays(0), 48, 5);
+				LocalDate.parse("2021-08-17").plusDays(0), 48, imp1);
 
-		int imp =(int) (48 * 0.2);
-		imp = Math.max(imp, 5);
+		int imp =(int) (48 * 0.5);
+		imp = Math.max(imp, imp1);
 
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-10-09").plusDays(0),
-				LocalDate.parse("2021-10-16").plusDays(0), 5, imp);
+				LocalDate.parse("2021-10-16").plusDays(0), imp1, imp);
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-10-17").plusDays(0),
-				LocalDate.parse("2021-10-24").plusDays(0), imp, 5);
+				LocalDate.parse("2021-10-24").plusDays(0), imp, imp1);
 		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1);
 		;
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
-		double deltaInf = 2.2;
+		double deltaInf = 2.7;
 		double deltaHos = 1.5;
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
@@ -212,65 +324,52 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 
 
 		//omicron
-		double oInf = 2.8;
-		Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
-		infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayOmicron.put(LocalDate.parse("2021-11-22"), 4);
-		infPerDayOmicron.put(LocalDate.parse("2021-11-22").plusDays(6), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * oInf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(0.3);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(0.3);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(0.3);
-
+		double ba1Inf = 2.1;
+		double oHos = 0.3;
+		if (ba1Inf > 0) {
+			Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
+			infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayOmicron.put(LocalDate.parse("2021-11-19"), 4);
+			infPerDayOmicron.put(LocalDate.parse("2021-11-19").plusDays(6), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
+		}
+		
 
 		//BA.2
-		double ba2Inf = 1.2;
-		Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
-		infPerDayBA2.put(LocalDate.parse("2020-01-09"), 0);
-		infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
-		infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(6), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * ba2Inf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(0.3);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(0.3);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(0.3);
-
-
-
+		double ba2Inf = 1.5;
+		if (ba2Inf > 0) {
+			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
+			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayBA2.put(LocalDate.parse("2021-12-25"), 4);
+			infPerDayBA2.put(LocalDate.parse("2021-12-25").plusDays(6), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * ba1Inf * ba2Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
+		}
+		
 		//STRAIN_A
-		if (params.mutationInf > 0) {
+		if (params.mutInf > 0) {
 			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
 			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayStrainA.put(LocalDate.parse("2022-10-01"), 4);
-			infPerDayStrainA.put(LocalDate.parse("2022-10-01").plusDays(6), 1);
+			infPerDayStrainA.put(LocalDate.parse(params.mutDate), 4);
+			infPerDayStrainA.put(LocalDate.parse(params.mutDate).plusDays(6), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * oInf * ba2Inf * params.mutationInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * ba1Inf * ba2Inf * params.mutInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.3);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.3);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.35);
 		}
-//
-//
-//		//STRAIN_B
-//		if (params.strainB.equals("yes")) {
-//			Map<LocalDate, Integer> infPerDayStrainB = new HashMap<>();
-//			infPerDayStrainB.put(LocalDate.parse("2020-01-01"), 0);
-//			infPerDayStrainB.put(LocalDate.parse(params.date), 4);
-//			infPerDayStrainB.put(LocalDate.parse(params.date).plusDays(6), 1);
-//			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_B, infPerDayStrainB);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setInfectiousness(deltaInf * oInf * params.ba2Inf * 2);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(0.5 * 1.25);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(0.5 * 1.25);
-//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(0.5);
-//		}
+
 
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		
-//		vaccinationConfig.setBa1ba2ShortTermCrossImmunity(true);
-//		vaccinationConfig.setBa1ba2LongTermCrossImmunity(true);
-
+		vaccinationConfig.setUseIgA(Boolean.valueOf(params.ba1ba2x));
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		for (int i = 0; i < 5; i++) vaccinationCompliance.put(i, 0.0);
 		for (int i = 5; i <= 11; i++) vaccinationCompliance.put(i, 0.4);
@@ -286,21 +385,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		vaccinationConfig.setDaysValid(270);
 		vaccinationConfig.setValidDeadline(LocalDate.parse("2022-01-01"));
 
-//		Map<VirusStrain, Double> ak50PerStrain = new HashMap<>();
-//
-		double ba2Ak50 = 2.5 * 1.4;
-//		ak50PerStrain.put(VirusStrain.SARS_CoV_2, 0.2);
-//		ak50PerStrain.put(VirusStrain.ALPHA, 0.2);
-//		ak50PerStrain.put(VirusStrain.DELTA, 0.5);
-//		ak50PerStrain.put(VirusStrain.OMICRON_BA1, 2.5);
-//		ak50PerStrain.put(VirusStrain.OMICRON_BA2, ba2Ak50);
-//		ak50PerStrain.put(VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50);
-//
-//		vaccinationConfig.setAk50PerStrain(ak50PerStrain);
-
-//		vaccinationConfig.getAk50PerStrain().put( VirusStrain.STRAIN_A, ba2Ak50 * params.mutationAk50 );
-
-		vaccinationConfig.setBeta(3.0);
+		vaccinationConfig.setBeta(1.2);
 
 		configureBooster(vaccinationConfig, 1.0, 3);
 
@@ -366,7 +451,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		leisureTests.put(LocalDate.parse("2021-08-23"), 0.2);
 
 		eduTests.put(LocalDate.parse("2021-09-20"), 0.6);
-
+		
 		if (params.testing.equals("no")) {
 			kigaPrimaryTests.put(restrictionDate, 0.0);
 			workTests.put(restrictionDate, 0.0);
@@ -396,7 +481,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		eduTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 
 		leisureTestsVaccinated.put(LocalDate.parse("2021-08-23"), 0.2);
-
+		
 		if (params.testing.equals("no")) {
 			leisureTestsVaccinated.put(restrictionDate, 0.0);
 			workTestsVaccinated.put(restrictionDate, 0.0);
@@ -428,7 +513,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 
 		kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
-
+		
 		if (params.testing.equals("no")) {
 			leisureTestsPCR.put(restrictionDate, 0.0);
 			workTestsPCR.put(restrictionDate, 0.0);
@@ -505,6 +590,8 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 //					restrictionDate, qs
 			));
 
+		
+
 
 
 		return config;
@@ -536,86 +623,26 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@Parameter({2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7})
-//		double ba1Inf;
-
-//		@Parameter({1.3})
-//		double ba2Inf;
-
-//		@Parameter({3.0})
-//		double beta;
-//
-//		@Parameter({0.2})
-//		double aAk50;
-//
-//		@Parameter({0.4, 0.5, 0.6})
-//		double dAk50;
-
-//		@Parameter({1.6, 1.65, 1.7})
-//		double aInf;
-
-//		@Parameter({2.1, 2.2, 2.3})
-//		double dInf;
-
-//		@Parameter({1.5})
-//		double ba2Inf;
-
-//		@Parameter({2.5, 4.0})
-//		double ba1Ak50;
-//
-//		@Parameter({3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0})
-//		double ak50ba2;
-
-//		@StringParameter({"yes", "no"})
-//		String ba.1;
-
-//		@Parameter({0.75})
-//		double leisUnv;
-//
-		@Parameter({1.0, 0.75})
-		double leis;
-
-//		@Parameter({1.06, 1.09})
-//		double tf;
-
-//		@Parameter({1.5})
-//		double dHos;
-
-//		@Parameter({0.6})
-//		double impFac;
-
-		@StringParameter({"2021-12-25"})
-		String ba2Date;
-
 		@StringParameter({"current"})
 		String testing;
 
-//		@StringParameter({"current", "protected"})
-//		String school;
+		@Parameter({0.0, 0.5, 1.0, 1.5, 2.0})
+		double mutInf;
+		
+		@Parameter({0.2, 0.4, 0.7, 1.0})
+		double mutEsc;
+		
+		@StringParameter({"2022-07-01", "2022-10-01"})
+		String mutDate;
+		
+		@StringParameter({"false", "true"})
+		String ba1ba2x;
 
-		@Parameter({0.0, 1.0, 1.5, 2.0})
-		double mutationInf;
-
-		@Parameter({1.0, 1.5, 2.0})
-		double mutationAk50;
-
-		@StringParameter({"no", "over18Plus", "over18", "over60Plus", "over60"})
+		@StringParameter({"no", "over18Plus", "over18", "over50Plus", "over50"})
 		String vac;
-//
-//		@StringParameter({"yes", "no"})
-//		String strainB;
-//
-//		@StringParameter({"2022-04-01", "2022-07-01", "2022-10-01"})
-//		String date;
-
-//		@StringParameter({"2099-01-01"})
-//		String oVac;
-
-//		@StringParameter({"yes", "no"})
-//		String ageFac;
-
-//		@IntParameter({50, 80})
-//		int dur;
+		
+		@StringParameter({"2022-05-01"})
+		String vacStart;
 
 	}
 

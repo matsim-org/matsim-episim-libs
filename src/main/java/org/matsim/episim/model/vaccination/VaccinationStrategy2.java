@@ -34,7 +34,7 @@ public class VaccinationStrategy2 implements VaccinationModel {
 			if (config.vaccinateYoung) {
 				// collect persons of right age:
 				List<EpisimPerson> youngPersons = persons.values().stream()
-						.filter(p -> p.getAge() < 60 && p.getAge() > 17)
+						.filter(p -> p.getAge() < 50 && p.getAge() > 17)
 						.collect(Collectors.toList());
 
 				// out of these, collect persons of right status:
@@ -49,7 +49,7 @@ public class VaccinationStrategy2 implements VaccinationModel {
 				// shuffle them (can't say if this uses the same seed in every iteration or not)
 				Collections.shuffle(youngCandidates, new Random(EpisimUtils.getSeed(rnd)));
 
-				int vaccinationsLeft = (int) (0.01 * youngPersons.size());
+				int vaccinationsLeft = (int) (0.005 * youngPersons.size());
 				
 				int n = Math.min(youngCandidates.size(), vaccinationsLeft);
 
@@ -65,7 +65,7 @@ public class VaccinationStrategy2 implements VaccinationModel {
 			//handle old persons
 			if (config.vaccinateOld) {
 				List<EpisimPerson> oldPersons = persons.values().stream()
-						.filter(p -> p.getAge() > 59)
+						.filter(p -> p.getAge() > 49)
 						.collect(Collectors.toList());
 			
 				List<EpisimPerson> oldCanidates = oldPersons.stream()
@@ -78,7 +78,7 @@ public class VaccinationStrategy2 implements VaccinationModel {
 		
 				Collections.shuffle(oldCanidates, new Random(EpisimUtils.getSeed(rnd)));
 				
-				int vaccinationsLeft = (int) (0.01 * oldPersons.size());
+				int vaccinationsLeft = (int) (0.005 * oldPersons.size());
 				
 				int n = Math.min(oldCanidates.size(), vaccinationsLeft);
 
