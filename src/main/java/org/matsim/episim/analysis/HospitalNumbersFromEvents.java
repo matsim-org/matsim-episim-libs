@@ -76,10 +76,6 @@
 
 	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
 	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-03-18/1/unguenstigerFall_2_impfpflicht")
-//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
-//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputBase")
-//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputNewVoc")
-//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-22/2/outputNewVocVaccOver18Plus")
 	 private Path output;
 
 	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -107,7 +103,7 @@
 	 private static final double immunityFactorDefault = 1.0;
 	 private static final double beta = 1.2;
 	 private final int populationCnt = 919_936;
-	 private static final boolean useAntibodiesFromInfectionEvent = false;
+	 private static final boolean useAntibodiesFromInfectionEvent = true;
 
 
 
@@ -182,8 +178,7 @@
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
-//		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
-		 List<Double> strainFactors = List.of(factorDelta, factorOmicron); //todo: revert
+		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
 
 		 for (Double facA : strainFactors) {
 
@@ -203,19 +198,12 @@
 
 			 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 			 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWildAndAlpha);
-			 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(factorWildAndAlpha);
 			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorWildAndAlpha);
-			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(factorWildAndAlpha);
 			 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
-			 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(factorDelta);
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
-			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
-			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(facA);
 			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorStrainB);
-			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(factorStrainB);
 
 
 			 // Part 1: calculate hospitalizations and save as csv
@@ -304,7 +292,7 @@
 
 
 		 // read hospitalization tsv for all seeds and aggregate them!
-		 // todo: NOTE: all other parameters should be the same, otherwise the results will be useless!
+		 // NOTE: all other parameters should be the same, otherwise the results will be useless!
 		 Int2DoubleSortedMap postProcessHospitalizations = new Int2DoubleAVLTreeMap();
 		 Int2DoubleSortedMap ppBeds = new Int2DoubleAVLTreeMap();
 		 Int2DoubleSortedMap ppBedsICU = new Int2DoubleAVLTreeMap();
@@ -630,11 +618,9 @@
 
 				 if (goToHospital(person, strain, age)) {
 
-					 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
-
 					 // newly admitted to hospital
-					 int hospitalizationCnt = postProcessHospitalAdmissions.getOrDefault(inHospital, 0);
-					 postProcessHospitalAdmissions.put(inHospital, ++hospitalizationCnt);
+					 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
+					 postProcessHospitalAdmissions.mergeInt(inHospital,1, Integer::sum);
 
 
 					 if (goToICU(strain, age)) {
@@ -682,9 +668,7 @@
 		 private boolean goToHospital(Holder person, VirusStrain strain, int age) {
 
 			 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-			 double vaccinationFactor = person.vaccine != null ?
-					 strainConfig.getParams(strain).getFactorSeriouslySickVaccinated() :
-					 strainConfig.getParams(strain).getFactorSeriouslySick();
+			 double vaccinationFactor = strainConfig.getParams(strain).getFactorSeriouslySick();
 
 			 // checks whether agents goes to hospital
 			 return rnd.nextDouble() < ageFactor
@@ -773,7 +757,7 @@
 
 			 //vaccinated persons that are boostered either by infection or by 3rd shot
 			 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
-				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
 					 veSeriouslySick = 0.9;
 				 else
 					 veSeriouslySick = 0.95;
@@ -783,7 +767,7 @@
 			 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
 			 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA)) {
 
-				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
 					 veSeriouslySick = 0.55;
 				 else
 					 veSeriouslySick = 0.9;
@@ -791,7 +775,7 @@
 			 }
 
 			 else {
-				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
 					 veSeriouslySick = 0.55;
 				 else
 					 veSeriouslySick = 0.6;
@@ -801,7 +785,7 @@
 			 if (person.antibodies == null || person.antibodies.equals(-1.) || !useAntibodiesFromInfectionEvent) {
 				 factorInf = immunityFactorDefault;
 			 } else {
-			 	factorInf = 1.0 / (1.0 + Math.pow(person.antibodies, beta));
+			 	factorInf = 1.0 / (1.0 + Math.pow(person.antibodies, beta)); // goes up over time
 			 }
 
 
@@ -811,7 +795,7 @@
 			 // factorSeriouslySick = risk of hospitalization given infection w/ respect to non-imm...
 
 
-			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf;
+			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf; // goes down over time
 
 			 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
 			 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
