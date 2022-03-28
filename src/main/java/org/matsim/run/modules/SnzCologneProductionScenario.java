@@ -61,6 +61,7 @@ public class SnzCologneProductionScenario extends SnzProductionScenario {
 		private double leisureOffset = 0.0;
 		private double scale = 1.3;
 		private boolean leisureNightly = false;
+		public boolean leisureCorrection = true;
 		private double leisureNightlyScale = 1.0;
 		private double householdSusc = 1.0;
 
@@ -93,6 +94,11 @@ public class SnzCologneProductionScenario extends SnzProductionScenario {
 			return this;
 		}
 
+		public Builder setLeisureCorrection(boolean leisureCorrection) {
+			this.leisureCorrection = leisureCorrection;
+			return this;
+		}
+
 		public Builder setLeisureNightlyScale(double leisureNightlyScale) {
 			this.leisureNightlyScale = leisureNightlyScale;
 			return this;
@@ -121,6 +127,7 @@ public class SnzCologneProductionScenario extends SnzProductionScenario {
 	private final double leisureOffset;
 	private final double scale;
 	private final boolean leisureNightly;
+	private final boolean leisureCorrection;
 	private final double leisureNightlyScale;
 	private final double householdSusc;
 	private final LocationBasedRestrictions locationBasedRestrictions;
@@ -153,6 +160,7 @@ public class SnzCologneProductionScenario extends SnzProductionScenario {
 		this.leisureOffset = builder.leisureOffset;
 		this.scale = builder.scale;
 		this.leisureNightly = builder.leisureNightly;
+		this.leisureCorrection = builder.leisureCorrection;
 		this.leisureNightlyScale = builder.leisureNightlyScale;
 		this.householdSusc = builder.householdSusc;
 
@@ -411,7 +419,7 @@ public class SnzCologneProductionScenario extends SnzProductionScenario {
 		}
 
 		//leisure & work factor
-		if (this.restrictions != Restrictions.no) {
+		if (this.restrictions != Restrictions.no && leisureCorrection) {
 			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
 			//			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 

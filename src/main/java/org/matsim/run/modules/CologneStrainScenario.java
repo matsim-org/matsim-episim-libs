@@ -1,10 +1,8 @@
 package org.matsim.run.modules;
 
-import com.google.inject.Provides;
-import org.matsim.core.config.Config;
-import org.matsim.run.modules.SnzCologneProductionScenario;
-
-import javax.inject.Singleton;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.InfectionModelWithAntibodies;
+import org.matsim.episim.model.vaccination.NoVaccination;
 
 /**
  * Cologne scenario for calibration of different strains.
@@ -13,23 +11,16 @@ public class CologneStrainScenario extends SnzCologneProductionScenario {
 
 
 	public CologneStrainScenario() {
-		super(new SnzCologneProductionScenario.Builder()
-				// TODO: set all required optios
-				.setScaleForActivityLevels(1.0)
+		super((Builder) new Builder()
+				.setScaleForActivityLevels(1.3)
+				.setSuscHouseholds_pct(0.0)
+				.setLeisureCorrection(false)
+				.setVaccinations(Vaccinations.no)
+				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
+				.setVaccinationModel(NoVaccination.class)
+				.setInfectionModel(InfectionModelWithAntibodies.class)
 		);
 
-	}
-
-	@Provides
-	@Singleton
-	public Config config() {
-
-		Config config = super.config();
-
-		// TODO: adapt config
-
-
-		return config;
 	}
 
 }
