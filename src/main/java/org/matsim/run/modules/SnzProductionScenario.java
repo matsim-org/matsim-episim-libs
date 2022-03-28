@@ -8,11 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.vaccination.VaccinationByAge;
 import org.matsim.episim.model.vaccination.VaccinationModel;
@@ -425,6 +421,20 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
+
+	}
+
+	public static void configureStrains(EpisimConfigGroup episimConfig, VirusStrainConfigGroup virusStrainConfig) {
+
+
+		Map<LocalDate, Integer> infPerDayALPHA = new HashMap<>();
+		infPerDayALPHA.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayALPHA.put(LocalDate.parse("2021-01-15"), 4);
+		infPerDayALPHA.put(LocalDate.parse("2021-01-22"), 1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayALPHA);
+
+		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.65);
+		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 	}
 
