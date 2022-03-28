@@ -54,7 +54,7 @@ import java.util.function.BiFunction;
 /**
  * Scenario for Cologne using Senozon events for different weekdays.
  */
-public final class SnzCologneProductionScenario extends SnzProductionScenario {
+public class SnzCologneProductionScenario extends SnzProductionScenario {
 
 	public static class Builder extends SnzProductionScenario.Builder<SnzCologneProductionScenario> {
 
@@ -138,7 +138,7 @@ public final class SnzCologneProductionScenario extends SnzProductionScenario {
 		this(new Builder());
 	}
 
-	private SnzCologneProductionScenario(Builder builder) {
+	protected SnzCologneProductionScenario(Builder builder) {
 		this.sample = builder.sample;
 		this.diseaseImport = builder.diseaseImport;
 		this.restrictions = builder.restrictions;
