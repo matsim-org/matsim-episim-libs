@@ -214,6 +214,11 @@ public final class EpisimPerson implements Attributable {
 	private double antibodyLevelAtInfection = 0;
 
 	/**
+	 * Whether agent is part of subpopulation which is immune to infection
+	 */
+	private ImmuneResponse immuneResponse = ImmuneResponse.normal;
+
+	/**
 	 * Lookup age from attributes.
 	 */
 	private static int getAge(Attributes attrs) {
@@ -896,6 +901,20 @@ public final class EpisimPerson implements Attributable {
 		return spentTime;
 	}
 
+	/**
+	 * Getter for whether person is in immune subpopulation
+	 */
+	public ImmuneResponse getImmuneResponse() {
+		return immuneResponse;
+	}
+
+	/**
+	 * Set immune response status of person
+	 */
+	public void setImmuneResponse(ImmuneResponse immuneResponse) {
+		this.immuneResponse = immuneResponse;
+	}
+
 	@Override
 	public String toString() {
 		return "EpisimPerson{" +
@@ -1010,6 +1029,8 @@ public final class EpisimPerson implements Attributable {
 	 * Status of vaccination.
 	 */
 	public enum VaccinationStatus {yes, no}
+
+	public enum ImmuneResponse{low, normal, high}
 
 	/**
 	 * Stores when an activity is performed and in which context.

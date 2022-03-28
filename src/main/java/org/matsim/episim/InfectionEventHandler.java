@@ -754,6 +754,26 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
+		// Set group of super-immune people
+		// todo: set to first iteration after snapshop
+		if (date.isEqual(episimConfig.getImmuneDate())) {
+
+			if (2 * episimConfig.getImmuneShare() > 1.) {
+				throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
+			}
+
+			for (EpisimPerson person : personMap.values()) {
+				double rand = rnd.nextDouble();
+				if (rand < episimConfig.getImmuneShare()) {
+					person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
+				} else if (rand < 2 * episimConfig.getImmuneShare()) {
+					person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
+				}else{
+					person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
+				}
+			}
+		}
+
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "finished", -2);
