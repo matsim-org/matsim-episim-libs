@@ -62,6 +62,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double antibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
+
+				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
+
 				person.setAntibodies(strain2, antibodies);
 			}
 
@@ -72,7 +75,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(strain).get(strain2);
 				double antibodies = Math.min( 150., person.getAntibodies(strain2) * refreshFactor);
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
+
+
 				antibodies = Math.max(antibodies, initialAntibodies);
+
+				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies); //todo: should this come after the Math.max()?
+
 				person.setAntibodies(strain2, antibodies);
 			}
 
@@ -89,6 +97,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		if (firstImmunization) {
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double antibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
+
+				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
+
 				person.setAntibodies(strain2, antibodies);
 			}
 
@@ -100,11 +111,23 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double antibodies = Math.min( 150., person.getAntibodies(strain2) * refreshFactor);
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
 				antibodies = Math.max(antibodies, initialAntibodies);
+
+				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
+
 				person.setAntibodies(strain2, antibodies);
 			}
 
 		}
 
+	}
+
+	private double adjustAntibodiesBasedOnImmuneResponse(EpisimPerson person, double antibodies) {
+		if (person.getImmuneResponse().equals(EpisimPerson.ImmuneResponse.high)) {
+			antibodies *= antibodyConfig.getImmuneResponseMultiplier().get(EpisimPerson.ImmuneResponse.high);
+		} else if (person.getImmuneResponse().equals(EpisimPerson.ImmuneResponse.low)) {
+			antibodies *= antibodyConfig.getImmuneResponseMultiplier().get(EpisimPerson.ImmuneResponse.low);
+		}
+		return antibodies;
 	}
 
 	private boolean checkFirstImmunization(EpisimPerson person) {
@@ -117,14 +140,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		}
 		return firstImmunization;
 	}
-	
+
 	private static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
-		
+
 		if (!person.hadStrain(strain)) {
 			return 1.0;
 		}
 		else {
-			int lastInfectionWithStrain = 0; 
+			int lastInfectionWithStrain = 0;
 			for (int ii = 0; ii < person.getNumInfections();  ii++) {
 				if (person.getVirusStrain(ii) == strain) {
 					lastInfectionWithStrain = ii;
@@ -132,6 +155,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 			return 1.0 - Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 30.0 );
 		}
-				
+
 	}
 }
