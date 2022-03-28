@@ -1,4 +1,4 @@
-package org.matsim.episim.model;
+package org.matsim.run.modules;
 
 import com.google.inject.Provides;
 import org.matsim.core.config.Config;
