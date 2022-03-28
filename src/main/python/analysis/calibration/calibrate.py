@@ -42,6 +42,14 @@ def read_data(f, district, hospital, rki, window=5):
 
     return df, hospital, rki
 
+def read_incidence(f, district, incidence):
+    df = pd.read_csv(f, sep="\t", parse_dates=[2])
+    df = df[df.district == district]
+    df.set_index('date', drop=False, inplace=True)
+
+    cmp = pd.read_csv(incidence, parse_dates=[0])
+
+    return df, cmp
 
 def percentage_error(actual, predicted):
     """ https://stackoverflow.com/questions/47648133/mape-calculation-in-python """
@@ -146,6 +154,23 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
     dz = float(df.nContagiousCumulative.tail(1)) / float(rki.casesCumulative.tail(1))
 
     return error_cases, error_sick, error_critical, peak, dz
+
+def calc_incidence_error(f, district, start, end, population=919944, cases="InzidenzDunkelziffer.csv"):
+    """ Compares weekly incidence """
+
+    df, cases = read_incidence(f, district, cases)
+        
+    df["cases"] = df.nInfectedCumulative.diff(1)
+    df.cases.loc[0] = df.nInfectedCumulative[0]
+   
+    s = df.groupby(pd.Grouper(key='date', freq='W-SUN')).agg(cases=("cases", "sum"))
+   
+    s.cases = 100000* s.cases / population
+   
+    s = s[(s.index >= start) & (s.index <= end)]
+    cases = cases[(cases.Datum >= start) & (cases.Datum <= end)]
+   
+    return msle(s.cases, cases.DunkelzifferInzidenz)
 
 
 def objective_reinfection(trial):
@@ -253,6 +278,32 @@ def objective_hospital(trial):
 
     return df.error_sick.mean()
 
+def objective_incidence(trial):
+    """ Objective for (corrected) incidence """
+    n = trial.number
+    c = trial.suggest_uniform("calibrationParameter", 0.8e-5, 1.7e-5)
+
+    scenario = trial.study.user_attrs["scenario"]
+    district = trial.study.user_attrs.get("district", "unknown")
+    jvm = trial.study.user_attrs["jvm_opts"]
+
+    # Run trials for all seeds in parallel
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 8 --number %d --runs %d --calibParameter %.12f --days 330" \
+          % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
+
+    print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
+
+    if os.name != 'nt':
+        cmd = cmd.split(" ")
+
+    subprocess.run(cmd, shell=os.name == 'nt')
+
+    results = []
+    for i in range(1, trial.study.user_attrs["runs"] + 1):
+        res = calc_incidence_error("output-calibration/%d/run_%d/run%d.infections.txt" % (n, i, i), district, start="2020-03-01", end="2021-01-03")
+        results.append(res)
+
+    return np.mean(results)
 
 def objective_ci_correction(trial):
     """ Objective for ci correction """
@@ -344,14 +395,14 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Run calibrations with optuna.")
     parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
-    parser.add_argument("--district", type=str, default="Berlin",
+    parser.add_argument("--district", type=str, default="Köln",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
-    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="SnzBerlinProductionScenario")
+    parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="CologneStrainScenario")
     parser.add_argument("--runs", type=int, default=15, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
-    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "ci_correction", "multi"], default="hospital")
+    parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "incidence", "ci_correction", "multi"], default="incidence")
     parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -XX:+UseParallelGC -Xms20G -Xmx20G")
 
     args = parser.parse_args()
@@ -379,7 +430,8 @@ if __name__ == "__main__":
         "multi": objective_multi,
         "unconstrained": objective_unconstrained,
         "ci_correction": objective_ci_correction,
-        "hospital": objective_hospital
+        "hospital": objective_hospital,
+        "incidence": objective_incidence
     }
 
     objective = objectives[args.objective]
