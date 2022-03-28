@@ -6,10 +6,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 
 import org.apache.log4j.Logger;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.matsim.core.config.Config;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
@@ -658,121 +655,122 @@ public class DefaultAntibodyModelTest {
 
 	}
 
-//	@Test
-//	public void roesslerEtAlOlderPaper(){
-//		// https://www.nejm.org/doi/full/10.1056/NEJMc2119236 Fig.1
-//
-//		{
-//			// Fig.1: I use the top left (vaccinated with mRNA; against alpha) as base:
-//			double nAbBase;
-//			{
-//				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
-//				IntList immunityEventDays = IntList.of(0);
-//				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.ALPHA);
-//			}
-//
-//			// Fig.1 A (vaccinated with mRNA):
-//			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
-//			IntList immunityEventDays = IntList.of(0);
-//			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
-//
-//			{
-//				VirusStrain strain = VirusStrain.ALPHA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 700./700., nAb/nAbBase, 0);
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.DELTA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 300./700., nAb/nAbBase, 0.1 );
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.OMICRON_BA1;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 20./700., nAb/nAbBase, 0.5 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
-//			}
-//
-//			// Fig.1 B (vaccinated with vector):
-//			immunityEvents = List.of(VaccinationType.vector);
-//			immunityEventDays = IntList.of(0);
-//			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
-//
-//			{
-//				VirusStrain strain = VirusStrain.ALPHA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 210./700., nAb/nAbBase, 0.10);
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.DELTA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 150./700., nAb/nAbBase, 0.10 );
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.OMICRON_BA1;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 4./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
-//			}
-//
-//			// Fig.1 E (infected with Alpha):
-//			immunityEvents = List.of(VirusStrain.ALPHA);
-//			immunityEventDays = IntList.of(0);
-//			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
-//
-//			{
-//				VirusStrain strain = VirusStrain.ALPHA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 4.*300./700., nAb/nAbBase, 0.1);
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.DELTA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 4.*64./700., nAb/nAbBase, 0.1 );
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.OMICRON_BA1;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 6./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
-//			}
-//
-//			// Fig.1 G (infected with Delta):
-//			immunityEvents = List.of(VirusStrain.DELTA);
-//			immunityEventDays = IntList.of(0);
-//			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
-//
-//			{
-//				VirusStrain strain = VirusStrain.ALPHA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 4*210./700., nAb/nAbBase, 0.1);
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.DELTA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 4*450./700., nAb/nAbBase, 0.35 );
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.OMICRON_BA1;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 8*4./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
-//			}
-//
-//			// Fig.1 H (infected + vaccinated):
-//			immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.vector);
-//			immunityEventDays = IntList.of(0, 50);
-//			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
-//
-///*			{
-//				VirusStrain strain = VirusStrain.DELTA;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 4*1024./700., nAb/nAbBase, 0.1 );
-//			}*/
-///*			{
-//				VirusStrain strain = VirusStrain.OMICRON_BA1;
-//				double nAb = abLevels.get(100).get(strain);
-//				Assert.assertEquals( 256./550., nAb/nAbBase, 0.5 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
-//			}*/
-//		}
-//
-//	}
+	@Test
+	@Ignore
+	public void roesslerEtAlOlderPaper(){
+		// https://www.nejm.org/doi/full/10.1056/NEJMc2119236 Fig.1
+
+		{
+			// Fig.1: I use the top left (vaccinated with mRNA; against alpha) as base:
+			double nAbBase;
+			{
+				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
+				IntList immunityEventDays = IntList.of(0);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.ALPHA);
+			}
+
+			// Fig.1 A (vaccinated with mRNA):
+			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
+			IntList immunityEventDays = IntList.of(0);
+			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 700./700., nAb/nAbBase, 0);
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 300./700., nAb/nAbBase, 0.1 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 20./700., nAb/nAbBase, 0.5 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+			}
+
+			// Fig.1 B (vaccinated with vector):
+			immunityEvents = List.of(VaccinationType.vector);
+			immunityEventDays = IntList.of(0);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 210./700., nAb/nAbBase, 0.10);
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 150./700., nAb/nAbBase, 0.10 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+			}
+
+			// Fig.1 E (infected with Alpha):
+			immunityEvents = List.of(VirusStrain.ALPHA);
+			immunityEventDays = IntList.of(0);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4.*300./700., nAb/nAbBase, 0.1);
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4.*64./700., nAb/nAbBase, 0.1 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 6./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+			}
+
+			// Fig.1 G (infected with Delta):
+			immunityEvents = List.of(VirusStrain.DELTA);
+			immunityEventDays = IntList.of(0);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+			{
+				VirusStrain strain = VirusStrain.ALPHA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4*210./700., nAb/nAbBase, 0.1);
+			}
+			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4*450./700., nAb/nAbBase, 0.35 );
+			}
+			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 8*4./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+			}
+
+			// Fig.1 H (infected + vaccinated):
+			immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.vector);
+			immunityEventDays = IntList.of(0, 50);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+
+/*			{
+				VirusStrain strain = VirusStrain.DELTA;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 4*1024./700., nAb/nAbBase, 0.1 );
+			}*/
+/*			{
+				VirusStrain strain = VirusStrain.OMICRON_BA1;
+				double nAb = abLevels.get(100).get(strain);
+				Assert.assertEquals( 256./550., nAb/nAbBase, 0.5 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+			}*/
+		}
+
+	}
 
 /*	@Test // All the parts where this test failed were turned into comments
 		public void yamasobaEtAl(){
