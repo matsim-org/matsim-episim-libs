@@ -29,7 +29,7 @@ fi
 
 classpath="matsim-episim-*-SNAPSHOT.jar"
 # main
-main="analysis calculateRValues vaccinationEffectiveness extractInfectionsByAge --population=$EPISIM_INPUT/<REPLACE> --district Berlin"
+main="analysis extractInfectionsByAge --population=$EPISIM_INPUT/<REPLACE> --district Berlin"
 
 java -version
 

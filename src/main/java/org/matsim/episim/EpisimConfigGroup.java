@@ -83,6 +83,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 	private static final String SINGLE_EVENT_FILE = "singleEventFile";
 	private static final String END_EARLY = "endEarly";
+	private static final String IMMUNE_SHARE = "immuneShare";
+	private static final String IMMUNE_DATE = "immuneDate";
 
 	private static final Logger log = LogManager.getLogger(EpisimConfigGroup.class);
 	private static final String GROUPNAME = "episim";
@@ -190,6 +192,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Compliance if a curfew is set.
 	 */
 	private NavigableMap<LocalDate, Double> curfewCompliance = new TreeMap<>();
+
+
+	/**
+	 * Share of population that either has a high or low immune response to immunity events.
+	 */
+	private double immuneShare = 0.;
+
+	/**
+	 * Date at which subpopulations develop diverging immune responses
+	 */
+	private LocalDate immuneDate = LocalDate.parse("2099-01-01");
+
 
 	/**
 	 * Default constructor.
@@ -764,6 +778,31 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public void setReportTimeUse(ReportTimeUse reportTimeUse) {
 		this.reportTimeUse = reportTimeUse;
 	}
+
+	@StringSetter(IMMUNE_SHARE)
+	public void setImmuneShare(double immuneShare) {
+		this.immuneShare = immuneShare;
+	}
+
+	@StringGetter(IMMUNE_SHARE)
+	public double getImmuneShare() {
+		return this.immuneShare;
+	}
+
+	@StringSetter(IMMUNE_DATE)
+	public void setImmuneDate(String immuneDate) {
+		setImmuneDate(LocalDate.parse(immuneDate));
+	}
+
+	public void setImmuneDate(LocalDate immuneDate) {
+		this.immuneDate = immuneDate;
+	}
+
+	@StringGetter(IMMUNE_DATE)
+	public LocalDate getImmuneDate() {
+		return this.immuneDate;
+	}
+
 
 
 	@Override

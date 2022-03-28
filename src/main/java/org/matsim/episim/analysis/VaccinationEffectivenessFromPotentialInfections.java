@@ -23,6 +23,8 @@ package org.matsim.episim.analysis;
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2IntMap;
+import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.apache.commons.csv.CSVFormat;
@@ -48,7 +50,7 @@ import java.util.concurrent.Callable;
 		name = "vaccinationEffectiveness",
 		description = "Calculate vaccination effectiveness"
 )
-public class VaccinationEffectivenessFromPotentialInfections implements Callable<Integer> {
+public class VaccinationEffectivenessFromPotentialInfections implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(VaccinationEffectivenessFromPotentialInfections.class);
 
@@ -57,6 +59,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 
 	@CommandLine.Option(names = "--remove-infected", defaultValue = "false", description = "Remove infected persons from effectiveness calculation")
 	private boolean removeInfected;
+
+	@CommandLine.Option(names = "--min-sample", defaultValue = "100", description = "Filter entries with sample size below threshold")
+	private int minSample;
 
 	public static void main(String[] args) {
 		System.exit(new CommandLine(new VaccinationEffectivenessFromPotentialInfections()).execute(args));
@@ -76,7 +81,7 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 
 		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
-				calcValues(scenario);
+				analyzeOutput(scenario);
 			} catch (IOException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
@@ -87,18 +92,19 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 		return 0;
 	}
 
-	private void calcValues(Path scenario) throws IOException {
+	@Override
+	public void analyzeOutput(Path output) throws IOException {
 
-		String id = AnalysisCommand.getScenarioPrefix(scenario);
+		String id = AnalysisCommand.getScenarioPrefix(output);
 
 		Handler handler = new Handler();
 
-		AnalysisCommand.forEachEvent(scenario, s -> {}, handler);
+		AnalysisCommand.forEachEvent(output, s -> {}, handler);
 
 		// Entries with rarely used vaccines are filtered
 		List<String> collect = new ArrayList<>(handler.vac.keySet());
 
-		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(scenario.resolve(id + "post.vaccineEff.tsv")), CSVFormat.TDF)) {
+		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(output.resolve(id + "post.vaccineEff.tsv")), CSVFormat.TDF)) {
 
 			csv.print("day");
 			for (String s1 : collect) {
@@ -118,14 +124,17 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 					double a = handler.vac.get(k).get(i);
 					double b = handler.unVac.get(k).get(i);
 
-					csv.print((b - a) / b);
+					if (handler.n.get(k).get(i) >= minSample)
+						csv.print((b - a) / b);
+					else
+						csv.print(Double.NaN);
 				}
 
 				csv.println();
 			}
 		}
 
-		log.info("Calculated results for scenario {}", scenario);
+		log.info("Calculated results for scenario {}", output);
 	}
 
 	private final class Handler implements EpisimInfectionEventHandler, EpisimPotentialInfectionEventHandler, EpisimVaccinationEventHandler {
@@ -133,9 +142,12 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 		private final Object2IntMap<Id<Person>> vaccinationDay = new Object2IntOpenHashMap<>();
 		private final Map<Id<Person>, String> vaccine = new HashMap<>();
 		private final Set<Id<Person>> infected = new HashSet<>();
+		private final Set<Id<Person>> threeTimesVaccinated = new HashSet<>();
+
 
 		private final Map<String, Int2DoubleMap> vac = new HashMap<>();
 		private final Map<String, Int2DoubleMap> unVac = new HashMap<>();
+		private final Map<String, Int2IntMap> n = new HashMap<>();
 
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
@@ -150,8 +162,12 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 
 
 			String s = event.getVaccinationType().toString();
-			if (event.getReVaccination())
+			if (event.getN() == 2)
 				s += "_Booster";
+			if (event.getN() > 2) {
+				threeTimesVaccinated.add(event.getPersonId());
+				return;
+			}
 
 
 			vaccinationDay.put(event.getPersonId(), day);
@@ -172,6 +188,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 			if (infected.contains(event.getPersonId()))
 				return;
 
+			if (threeTimesVaccinated.contains(event.getPersonId()))
+				return;
+
 			String s = vaccine.get(event.getPersonId());
 			String strain = event.getStrain().toString();
 
@@ -182,6 +201,9 @@ public class VaccinationEffectivenessFromPotentialInfections implements Callable
 
 			unVac.computeIfAbsent(strainVaccine, (k) -> new Int2DoubleOpenHashMap())
 					.mergeDouble(daysSinceVaccination, event.getUnVacProbability(), Double::sum);
+
+			n.computeIfAbsent(strainVaccine, (k) -> new Int2IntOpenHashMap())
+					.mergeInt(daysSinceVaccination, 1, Integer::sum);
 
 		}
 	}

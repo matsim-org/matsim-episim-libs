@@ -56,7 +56,8 @@ import java.util.zip.GZIPInputStream;
 		subcommands = {
 				CommandLine.HelpCommand.class, AutoComplete.GenerateCompletion.class,
 				RValuesFromEvents.class, ExtractInfectionsByAge.class, CreateContactGraph.class,
-				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class
+				ExtractInfectionGraph.class, VaccinationEffectivenessFromPotentialInfections.class,
+				VaccinationEffectiveness.class, FilterEvents.class
 		},
 		subcommandsRepeatable = true
 )
@@ -204,7 +205,7 @@ public class AnalysisCommand implements Runnable {
 	}
 
 	/**
-	 * Check if events are present for the scenario.
+	 * Check if events are present for the scenario. This method fallbacks to reduced events, if original are not present.
 	 */
 	@Nullable
 	public static Path getEvents(Path scenario) {
@@ -215,6 +216,10 @@ public class AnalysisCommand implements Runnable {
 
 		try {
 			Optional<Path> o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
+
+			if (o.isEmpty())
+				o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events_reduced.tar")).findFirst();
+
 			return o.orElse(null);
 		} catch (IOException e) {
 			log.error("Error finding event files for {}", scenario);

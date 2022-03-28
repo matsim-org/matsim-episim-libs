@@ -16,13 +16,15 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 
 	// TODO: hasLink or hasCoord?
 
-	static final String EVENT_TYPE = "episimInfection";
+	public static final String EVENT_TYPE = "episimInfection";
+
 	static final String INFECTOR = "infector";
 	static final String CONTAINER = "container";
 	static final String INFECTION_TYPE = "infectionType";
 	static final String VIRUS_STRAIN = "virusStrain";
 	static final String PROBABILITY = "probability";
 	static final String GROUP_SIZE = "groupSize";
+	static final String ANTIBODIES = "antibodies";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
@@ -31,13 +33,14 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	private final int groupSize;
 	private final VirusStrain virusStrain;
 	private final double probability;
+	private final double antibodies;
 
 
 	/**
 	 * Constructor.
 	 */
 	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-								int groupSize, VirusStrain strain, double probability) {
+								int groupSize, VirusStrain strain, double probability, double antibodies) {
 		super(time);
 
 		this.personId = personId;
@@ -47,6 +50,7 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		this.groupSize = groupSize;
 		this.virusStrain = strain;
 		this.probability = probability;
+		this.antibodies = antibodies;
 	}
 
 	@Override
@@ -96,6 +100,13 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		return probability;
 	}
 
+	/**
+	 * Antibodies against the infecting strain.
+	 */
+	public double getAntibodies() {
+		return antibodies;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
@@ -106,6 +117,7 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		attr.put(GROUP_SIZE, Integer.toString(groupSize));
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
+		attr.put(ANTIBODIES, Double.toString(antibodies));
 
 		return attr;
 	}

@@ -30,7 +30,7 @@ import java.util.SplittableRandom;
 /**
  * Works exactly as the {@link ConfigurableProgressionModel}, but with age dependent transitions.
  */
-public class AgeDependentDiseaseStatusTransitionModel extends DefaultDiseaseStatusTransitionModel {
+public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentTransitionModel {
 
 	private final EpisimConfigGroup episimConfig;
 

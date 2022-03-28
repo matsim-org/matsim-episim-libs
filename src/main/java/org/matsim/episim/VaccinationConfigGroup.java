@@ -29,6 +29,8 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
 	private static final String DAYS_VALID = "daysValid";
+	private static final String BETA = "beta";
+	private static final String IGA = "IGA";
 	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
@@ -58,6 +60,15 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Validity of vaccination in days.
 	 */
 	private int daysValid = 180;
+	/**
+	 * Needed for antibody model.
+	 */
+	private double beta = 1.0;
+
+	/**
+	 * Needed for antibody model.
+	 */
+	private boolean useIgA = false;
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -218,6 +229,26 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return daysValid;
 	}
 
+	@StringSetter(BETA)
+	public void setBeta(double beta) {
+		this.beta = beta;
+	}
+
+	@StringGetter(BETA)
+	public double getBeta() {
+		return beta;
+	}
+
+	@StringSetter(IGA)
+	public void setUseIgA(boolean useIgA) {
+		this.useIgA = useIgA;
+	}
+
+	@StringGetter(IGA)
+	public boolean getUseIgA() {
+		return useIgA;
+	}
+
 	@StringSetter(VALID_DEADLINE)
 	public void setValidDeadline(String validDeadline) {
 		this.validDeadline = LocalDate.parse(validDeadline);
@@ -290,6 +321,29 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 		return (fullyVaccinated || booster) && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) <= daysValid;
 
+	}
+
+	/**
+	 * Computes the minimum factor over all vaccinations.
+	 * @param person person
+	 * @param day current iteration
+	 * @param f function of VaccinationParams to retrieve the desired factor
+	 * @return minimum factor or 1 if not vaccinated
+	 */
+	public double getMinFactor(EpisimPerson person, int day, VaccinationFactorFunction f) {
+
+		if (person.getNumVaccinations() == 0)
+			return 1;
+
+		double factor = 1d;
+		for (int i = 0; i < person.getNumVaccinations(); i++) {
+
+			VaccinationType type = person.getVaccinationType(i);
+
+			factor = Math.min(factor, f.getFactor(getParams(type), person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)));
+		}
+
+		return factor;
 	}
 
 	/**

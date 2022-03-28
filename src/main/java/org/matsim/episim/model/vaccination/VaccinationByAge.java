@@ -43,7 +43,7 @@ public class VaccinationByAge implements VaccinationModel {
 							p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible && !p.isRecentlyRecovered(iteration, 180) &&
 							(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &&
 							(p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.no) &&
-							(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType()).getBoostWaitPeriod() : true)) {
+							(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)) {
 
 				perAge[p.getAge()].add(p);
 			}
@@ -74,7 +74,7 @@ public class VaccinationByAge implements VaccinationModel {
 
 			for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
 				EpisimPerson person = candidates.get(i);
-				vaccinate(person, iteration, reVaccination ? null : VaccinationModel.chooseVaccinationType(prob, rnd), reVaccination);
+				vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));
 				vaccinationsLeft--;
 			}
 

@@ -26,9 +26,7 @@ public interface DiseaseStatusTransitionModel {
 	 */
 	default double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
-				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
-				: 1d;
+		double a = vaccinationConfig.getMinFactor(person, day, VaccinationConfigGroup.VaccinationParams::getFactorShowingSymptoms);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorShowingSymptoms(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
@@ -42,9 +40,7 @@ public interface DiseaseStatusTransitionModel {
 	 */
 	default double getSeriouslySickFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
-				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
-				: 1d;
+		double a = vaccinationConfig.getMinFactor(person, day, VaccinationConfigGroup.VaccinationParams::getFactorSeriouslySick);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
@@ -58,9 +54,7 @@ public interface DiseaseStatusTransitionModel {
 	 */
 	default double getCriticalFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
-				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorCritical(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
-				: 1d;
+		double a = vaccinationConfig.getMinFactor(person, day, VaccinationConfigGroup.VaccinationParams::getFactorCritical);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorCritical(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))

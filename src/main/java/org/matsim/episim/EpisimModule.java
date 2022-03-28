@@ -64,6 +64,7 @@ public class EpisimModule extends AbstractModule {
 		bind(ContactModel.class).to(DefaultContactModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
+		bind(AntibodyModel.class).to(DefaultAntibodyModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
@@ -78,7 +79,10 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
 
+		bind(AntibodyModel.Config.class).toInstance(AntibodyModel.newConfig());
+
 		Multibinder.newSetBinder(binder(), SimulationListener.class);
+		Multibinder.newSetBinder(binder(), VaccinationModel.class);
 	}
 
 	@Provides
@@ -90,7 +94,7 @@ public class EpisimModule extends AbstractModule {
 		if (config.getModules().size() == 0)
 			throw new IllegalArgumentException("Please provide a config module or binding.");
 
-		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
+		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore);
 
 		// save some time for not needed inputs
 //		config.facilities().setInputFile(null); // facilities are needed for location-based-restrictions

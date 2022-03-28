@@ -87,7 +87,13 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			if (attr != null)
 				virusStrain = VirusStrain.valueOf(attr);
 
-			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability);
+			double antibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
+				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
+			}
+
+
+			return new EpisimInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, antibodies);
 		};
 	}
 
@@ -109,7 +115,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
 			double rnd = Double.parseDouble(attributes.get(EpisimPotentialInfectionEvent.RND));
 
-			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, rnd);
+			double antibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
+				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
+			}
+
+			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, antibodies, rnd);
 		};
 	}
 
@@ -162,7 +173,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 					Double.parseDouble(attr.get(EpisimVaccinationEvent.ATTRIBUTE_TIME)),
 					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),
 					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),
-					Boolean.parseBoolean(attr.get(EpisimVaccinationEvent.RE_VACCINATION))
+					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))
 			);
 		};
 	}
