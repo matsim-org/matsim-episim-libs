@@ -35,7 +35,7 @@ import java.util.*;
  */
 public class CologneJR implements BatchRun<CologneJR.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 
 	@Nullable
 	@Override
@@ -97,7 +97,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (params.seed == 4711 && params.immuneShare == 0.3 && params.immuneDate.equals("2021-11-15") && params.ba1ba2x.equals("true") && params.ba1Inf == 2.1 && params.ba2Inf == 0.0) {
+			if (params.seed == 4711 &&
+					params.immuneShare == 0.3 &&
+					params.immuneRespLow == 0.01 &&
+					params.immuneRespHigh == 100 &&
+					params.ba1ba2x.equals("true") &&
+					params.ba1Inf == 2.7 &&
+					params.ba2Inf == 1.5) {
 			} else {
 				return null;
 			}
@@ -123,11 +129,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		episimConfig.setImmuneDate(DEBUG_MODE ? "2020-03-15" : params.immuneDate);
 
 
-		//local (see svn for more snapshots with different dates)
-//		episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220218/" + params.seed + "-540-2021-08-17.zip");
 
 		//cluster
-		if (!DEBUG_MODE) {
+
+		if (DEBUG_MODE) {
+			//local (see svn for more snapshots with different dates)
+			episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
+		}
+		else {
 			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
 			episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 
@@ -533,7 +542,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(1),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(700),
 				RunParallel.OPTION_METADATA
 		};
 
