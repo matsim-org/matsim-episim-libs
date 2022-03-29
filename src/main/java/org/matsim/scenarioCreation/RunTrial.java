@@ -10,7 +10,10 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.*;
+import org.matsim.episim.BatchRun;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimModule;
+import org.matsim.episim.PreparedRun;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunEpisim;
@@ -38,6 +41,21 @@ public final class RunTrial implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RunTrial.class);
 
+	/**
+	 * Parse parameter supplied to the Run trial script.
+	 *
+	 * @param name         name of the parameter
+	 * @param defaultValue default value if not present.
+	 */
+	public static double parseParam(String name, double defaultValue) {
+		String property = System.getProperty("EPISIM_" + name, null);
+
+		if (property == null)
+			return defaultValue;
+
+		return Double.parseDouble(property);
+	}
+
 	@CommandLine.Parameters(paramLabel = "MODULE", arity = "1", description = "Name of module to load (See RunEpisim)")
 	private String moduleName;
 
@@ -61,6 +79,9 @@ public final class RunTrial implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--ci", description = "Overwrite contact intensities", split = ";")
 	private Map<String, Double> ci = new HashMap<>();
+
+	@CommandLine.Option(names = "--param", description = "Specify arbitrary parameter", split = ";")
+	private Map<String, Double> params = new HashMap<>();
 
 	@CommandLine.Option(names = "--alpha", description = "Alpha parameter for restrictions", defaultValue = "-1")
 	private double alpha;
@@ -92,6 +113,10 @@ public final class RunTrial implements Callable<Integer> {
 
 		Configurator.setRootLevel(Level.ERROR);
 
+		for (Map.Entry<String, Double> e : params.entrySet()) {
+			System.setProperty("EPISIM_" + e.getKey(), String.valueOf(e.getValue()));
+		}
+
 		Module base = RunEpisim.resolveModules(List.of(moduleName)).get(0);
 		TrialBatch trial = new TrialBatch(base);
 
@@ -117,6 +142,8 @@ public final class RunTrial implements Callable<Integer> {
 		}
 
 		log.info("Starting trial number {} ({} runs) with {} iterations", number, preparedRuns.size(), days);
+
+		log.info("Parameters: {}", params);
 
 		String name = unconstrained ? "calibration-unconstrained" : "calibration";
 		if (correctionStart != null)

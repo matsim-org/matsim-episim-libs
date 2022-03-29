@@ -288,7 +288,7 @@ def objective_incidence(trial):
     jvm = trial.study.user_attrs["jvm_opts"]
 
     # Run trials for all seeds in parallel
-    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 8 --number %d --runs %d --calibParameter %.12f --days 330" \
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 12 --number %d --runs %d --calibParameter %.12f  --param leisureCorrection=1.0 --days 330" \
           % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
@@ -394,16 +394,16 @@ if __name__ == "__main__":
     # Needs to be run from top-level episim directory!
 
     parser = argparse.ArgumentParser(description="Run calibrations with optuna.")
-    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=10)
+    parser.add_argument("n_trials", metavar='N', type=int, nargs="?", help="Number of trials", default=30)
     parser.add_argument("--district", type=str, default="Köln",
                         help="District to calibrate for. Should be 'unknown' if no district information is available")
     parser.add_argument("--scenario", type=str, help="Scenario module used for calibration", default="CologneStrainScenario")
-    parser.add_argument("--runs", type=int, default=15, help="Number of runs per objective")
+    parser.add_argument("--runs", type=int, default=12, help="Number of runs per objective")
     parser.add_argument("--start", type=str, default="2020-03-06", help="Start date for ci correction")
     parser.add_argument("--days", type=int, default="70", help="Number of days to simulate after ci correction")
     parser.add_argument("--dz", type=float, default="1.5", help="Assumed Dunkelziffer for error metric")
     parser.add_argument("--objective", type=str, choices=["unconstrained", "hospital", "incidence", "ci_correction", "multi"], default="incidence")
-    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -XX:+UseParallelGC -Xms20G -Xmx20G")
+    parser.add_argument("--jvm-opts", type=str, default="-XX:+AlwaysPreTouch -XX:+UseParallelGC -Xms80G -Xmx80G")
 
     args = parser.parse_args()
 

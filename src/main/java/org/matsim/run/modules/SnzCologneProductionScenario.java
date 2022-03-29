@@ -62,7 +62,8 @@
 		 private double leisureOffset = 0.0;
 		 private double scale = 1.3;
 		 private boolean leisureNightly = false;
-		 public boolean leisureCorrection = true;
+
+		 private double leisureCorrection = 1.9;
 		 private double leisureNightlyScale = 1.0;
 		 private double householdSusc = 1.0;
 
@@ -95,7 +96,7 @@
 			 return this;
 		 }
 
-		 public Builder setLeisureCorrection(boolean leisureCorrection) {
+		 public Builder setLeisureCorrection(double leisureCorrection) {
 			 this.leisureCorrection = leisureCorrection;
 			 return this;
 		 }
@@ -128,7 +129,7 @@
 	 private final double leisureOffset;
 	 private final double scale;
 	 private final boolean leisureNightly;
-	 private final boolean leisureCorrection;
+	 private final double leisureCorrection;
 	 private final double leisureNightlyScale;
 	 private final double householdSusc;
 	 private final LocationBasedRestrictions locationBasedRestrictions;
@@ -420,8 +421,10 @@
 		 }
 
 		 //leisure & work factor
-		 if (this.restrictions != Restrictions.no && leisureCorrection) {
-			 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
+		 if (this.restrictions != Restrictions.no) {
+
+			 if (leisureCorrection != 1)
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "leisure");
 			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
 			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
