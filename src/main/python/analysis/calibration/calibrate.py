@@ -288,7 +288,7 @@ def objective_incidence(trial):
     jvm = trial.study.user_attrs["jvm_opts"]
 
     # Run trials for all seeds in parallel
-    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 12 --number %d --runs %d --calibParameter %.12f --days 330" \
+    cmd = "java -jar %s matsim-episim.jar scenarioCreation trial %s --max-tasks 12 --number %d --runs %d --calibParameter %.12f  --param leisureCorrection=1.0 --days 330" \
           % (jvm, scenario, n, trial.study.user_attrs["runs"], c)
 
     print("Running calibration for %s (district: %s) : %s" % (scenario, district, cmd))
