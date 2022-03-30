@@ -39,7 +39,7 @@ public class CologneStrainBatch implements BatchRun<CologneStrainBatch.Params> {
 
 		episimConfig.setCalibrationParameter(1.2202709637374418e-05);
 		episimConfig.setSnapshotInterval((int) ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2021-01-14")));
-		episimConfig.setSnapshotPrefix("strain_bas" + params.seed);
+		episimConfig.setSnapshotPrefix("strain_base_" + params.seed);
 
 		return config;
 	}

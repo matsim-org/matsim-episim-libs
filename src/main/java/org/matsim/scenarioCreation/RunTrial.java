@@ -60,6 +60,9 @@ public final class RunTrial implements Callable<Integer> {
 	@CommandLine.Option(names = "--number", description = "Trial number", required = true)
 	private int number;
 
+	@CommandLine.Option(names = "--name", defaultValue = "calibration", description = "Name for the output directory")
+	private String name;
+
 	@CommandLine.Option(names = "--runs", description = "Number of runs with different seeds", defaultValue = "3")
 	private int runs;
 
@@ -146,7 +149,6 @@ public final class RunTrial implements Callable<Integer> {
 
 		log.info("Parameters: {}", params);
 
-		String name = unconstrained ? "calibration-unconstrained" : "calibration";
 		if (correctionStart != null)
 			name += "-" + correctionStart;
 
@@ -245,8 +247,9 @@ public final class RunTrial implements Callable<Integer> {
 			}
 
 			if (snapshot != null) {
-				log.info("Starting from snapshot {}", snapshot);
-				episimConfig.setStartFromSnapshot(snapshot.toString());
+				String p = snapshot.toString().replace(".zip", params.seed + ".zip");
+				log.info("Starting from snapshot {}", p);
+				episimConfig.setStartFromSnapshot(p);
 			}
 
 			if (hospitalFactor > -1) {
