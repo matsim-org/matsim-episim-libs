@@ -206,9 +206,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1);
 		;
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
-		double deltaInf = 2.7;
+//		double deltaInf = 2.7;
 		double deltaHos = 1.5;
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(params.deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
 
@@ -219,10 +219,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		if (params.ba1Inf > 0) {
 			Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
 			infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayOmicron.put(LocalDate.parse(params.ba1Date), 4);
-			infPerDayOmicron.put(LocalDate.parse(params.ba1Date).plusDays(6), 1);
+			infPerDayOmicron.put(LocalDate.parse("2021-11-19"), 4);
+			infPerDayOmicron.put(LocalDate.parse("2021-11-19").plusDays(6), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * oInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(params.deltaInf * oInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
@@ -233,10 +233,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		if (params.ba2Inf > 0) {
 			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
 			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
-			infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(6), 1);
+			infPerDayBA2.put(LocalDate.parse("2021-12-22"), 4);
+			infPerDayBA2.put(LocalDate.parse("2021-12-22").plusDays(6), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * oInf * params.ba2Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(params.deltaInf * oInf * params.ba2Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
@@ -328,7 +328,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		eduTests.put(LocalDate.parse("2021-09-20"), 0.6);
 
-		if (params.testing.equals("no")) {
+		String testing = "current";
+		if (testing.equals("no")) {
 			kigaPrimaryTests.put(restrictionDate, 0.0);
 			workTests.put(restrictionDate, 0.0);
 			leisureTests.put(restrictionDate, 0.0);
@@ -358,7 +359,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		leisureTestsVaccinated.put(LocalDate.parse("2021-08-23"), 0.2);
 
-		if (params.testing.equals("no")) {
+		if (testing.equals("no")) {
 			leisureTestsVaccinated.put(restrictionDate, 0.0);
 			workTestsVaccinated.put(restrictionDate, 0.0);
 			eduTestsVaccinated.put(restrictionDate, 0.0);
@@ -390,7 +391,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
 
-		if (params.testing.equals("no")) {
+		if (testing.equals("no")) {
 			leisureTestsPCR.put(restrictionDate, 0.0);
 			workTestsPCR.put(restrictionDate, 0.0);
 			kigaPramaryTestsPCR.put(restrictionDate, 0.0);
@@ -505,32 +506,24 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({0.0, 0.1, 0.2, 0.3, 0.4})
 		double immuneShare;
 
-		@StringParameter({"2021-11-15"})
-		String immuneDate;
-
-		@StringParameter({"2021-11-19"})
-		String ba1Date;
-
-		@StringParameter({"2021-12-22"})
-		String ba2Date;
 
 		@StringParameter({"true"})
 		String ba1ba2x;
 
-		@Parameter({0.01, 0.1, 1.0})
+		@Parameter({0.1, 1.0})
 		Double immuneRespLow;
 
-		@Parameter({1.0, 10., 100.})
+		@Parameter({1.0, 10.})
 		Double immuneRespHigh;
 
-		@Parameter({2.7, 3.0, 3.3})
+		@Parameter({2.3,2.5,2.7})
+		double deltaInf;
+
+		@Parameter({2.1,2.4,2.7, 3.0, 3.3})
 		double ba1Inf;
 
 		@Parameter({1.5})
 		double ba2Inf;
-
-		@StringParameter({"current"})
-		String testing;
 
 	}
 
