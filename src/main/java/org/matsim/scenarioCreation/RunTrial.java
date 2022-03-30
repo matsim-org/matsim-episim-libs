@@ -239,9 +239,9 @@ public final class RunTrial implements Callable<Integer> {
 				iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
 
 				// Write a new snapshot
-				if (params.run == 0 && snapshot != null) {
-					episimConfig.setSnapshotInterval(iterations - 7);
-				}
+				//if (params.run == 0 && snapshot != null) {
+				//	episimConfig.setSnapshotInterval(iterations - 7);
+				//}
 			}
 
 			if (snapshot != null) {
@@ -259,7 +259,6 @@ public final class RunTrial implements Callable<Integer> {
 				VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(params.config, VirusStrainConfigGroup.class);
 
 				for (Map.Entry<VirusStrain, Double> e : infectiousness.entrySet()) {
-
 					log.info("Setting infectiousness for strain {}: {}", e.getKey(), e.getValue());
 					strainConfig.getOrAddParams(e.getKey()).setInfectiousness(e.getValue());
 				}
