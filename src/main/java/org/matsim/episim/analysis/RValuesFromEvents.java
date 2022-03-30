@@ -30,8 +30,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.events.*;
-import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInfectionEventHandler;
+import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.events.EpisimPersonStatusEventHandler;
 import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
 
@@ -43,6 +45,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
+import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 
@@ -68,9 +71,6 @@ public class RValuesFromEvents implements OutputAnalysis {
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
-
-	@CommandLine.Option(names = "--per-strain", defaultValue = "false")
-	private boolean perStrain;
 
 	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
 	private LocalDate startDate;
@@ -117,123 +117,83 @@ public class RValuesFromEvents implements OutputAnalysis {
 		List<String> eventFiles = AnalysisCommand.forEachEvent(output, s -> {
 		}, infHandler, rHandler);
 
-		try (BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "infectionsPerActivity.txt"))) {
-			bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
+		BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "infectionsPerActivity.txt"));
+		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
 
-			int rollingAveragae = 3;
-			for (int i = 0 + rollingAveragae; i <= eventFiles.size() - rollingAveragae; i++) {
-				for (Entry<String, Int2IntMap> e : infHandler.infectionsPerActivity.entrySet()) {
-					if (!e.getKey().equals("total")) {
-						int infections = 0;
-						int totalInfections = 0;
-						double infectionsShare = 0.;
-						for (int j = i - rollingAveragae; j <= i + rollingAveragae; j++) {
-							int infectionsDay = 0;
-							int totalInfectionsDay = 0;
+		int rollingAveragae = 3;
+		for (int i = 0 + rollingAveragae; i <= eventFiles.size() - rollingAveragae; i++) {
+			for (Entry<String, Int2IntMap> e : infHandler.infectionsPerActivity.entrySet()) {
+				if (!e.getKey().equals("total")) {
+					int infections = 0;
+					int totalInfections = 0;
+					double infectionsShare = 0.;
+					for (int j = i - rollingAveragae; j <= i + rollingAveragae; j++) {
+						int infectionsDay = 0;
+						int totalInfectionsDay = 0;
 
-							if (e.getValue().containsKey(j))
-								infectionsDay = e.getValue().get(j);
+						if (e.getValue().containsKey(j))
+							infectionsDay = e.getValue().get(j);
 
-							if (infHandler.infectionsPerActivity.get("total").containsKey(j))
-								totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
+						if (infHandler.infectionsPerActivity.get("total").containsKey(j))
+							totalInfectionsDay = infHandler.infectionsPerActivity.get("total").get(j);
 
-							infections = infections + infectionsDay;
-							totalInfections = totalInfections + totalInfectionsDay;
-						}
-						if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
-							infectionsShare = (double) infections / totalInfections;
-							bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
-						}
+						infections = infections + infectionsDay;
+						totalInfections = totalInfections + totalInfectionsDay;
+					}
+					if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
+						infectionsShare = (double) infections / totalInfections;
+						bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
 					}
 				}
 			}
 		}
 
-		if (perStrain) {
+		bw.close();
 
-			try (BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "rValuesPerStrain.txt"))) {
-				bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
-				bw.write(AnalysisCommand.TSV.join(Arrays.asList(VirusStrain.values())));
+		bw = Files.newBufferedWriter(output.resolve(id + "rValues.txt"));
+		bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
+		bw.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
 
-				for (int i = 0; i <= eventFiles.size(); i++) {
-
-					// infected persons per strain
-					Object2IntMap<VirusStrain> noOfInfectors = new Object2IntOpenHashMap<>();
-					Object2IntMap<VirusStrain> noOfInfected = new Object2IntOpenHashMap<>();
-
-					for (InfectedPerson ip : rHandler.getInfected()) {
-						if (ip.contagiousDay == i) {
-							noOfInfectors.mergeInt(ip.strain, 1, Integer::sum);
-							noOfInfected.mergeInt(ip.strain, ip.noOfInfected.values().intStream().sum(), Integer::sum);
-						}
-					}
-
-					int noOfInf = noOfInfectors.values().intStream().sum();
-
-					double r = noOfInf == 0 ? 0 : (double) noOfInfected.values().intStream().sum() / noOfInf;
-
-					String join = "\n" + AnalysisCommand.TSV.join(
-							i, startDate.plusDays(i).toString(), r, noOfInf, output.getFileName()
-					) + "\t";
-
-
-					join += AnalysisCommand.TSV.join(Arrays.stream(VirusStrain.values())
-							.map(k -> noOfInfectors.getInt(k) == 0 ? 0 : (double) noOfInfected.getInt(k) / noOfInfectors.getInt(k))
-							.collect(Collectors.toList())
-					);
-
-					bw.write(join);
+		for (int i = 0; i <= eventFiles.size(); i++) {
+			int noOfInfectors = 0;
+			// infected persons per activity
+			Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
+			for (InfectedPerson ip : rHandler.getInfected()) {
+				if (ip.contagiousDay == i) {
+					noOfInfectors++;
+					ip.noOfInfected.forEach((k, v) -> noOfInfected.mergeInt(k, v, Integer::sum));
 				}
 			}
+
+			double r = noOfInfectors == 0 ? 0 : (double) noOfInfected.getInt("total") / noOfInfectors;
+
+			String join = "\n" + AnalysisCommand.TSV.join(
+					i, startDate.plusDays(i).toString(), r, noOfInfectors, output.getFileName()
+			) + "\t";
+
+			int finalNoOfInfectors = noOfInfectors;
+			join += AnalysisCommand.TSV.join(ACTIVITY_TYPES.stream()
+					.map(k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
+					.collect(Collectors.toList())
+			);
+
+			bw.write(join);
 		}
 
-
-		try (BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "rValues.txt"))) {
-			bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
-			bw.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
-
-			for (int i = 0; i <= eventFiles.size(); i++) {
-				int noOfInfectors = 0;
-				// infected persons per activity
-				Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
-				for (InfectedPerson ip : rHandler.getInfected()) {
-					if (ip.contagiousDay == i) {
-						noOfInfectors++;
-						ip.noOfInfected.forEach((k, v) -> noOfInfected.mergeInt(k, v, Integer::sum));
-					}
-				}
-
-				double r = noOfInfectors == 0 ? 0 : (double) noOfInfected.getInt("total") / noOfInfectors;
-
-				String join = "\n" + AnalysisCommand.TSV.join(
-						i, startDate.plusDays(i).toString(), r, noOfInfectors, output.getFileName()
-				) + "\t";
-
-				int finalNoOfInfectors = noOfInfectors;
-				join += AnalysisCommand.TSV.join(ACTIVITY_TYPES.stream()
-						.map(k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
-						.collect(Collectors.toList())
-				);
-
-				bw.write(join);
-			}
-		}
+		bw.close();
 
 		log.info("Calculated results for scenario {}", output);
-	}
 
+	}
 
 	private static class InfectedPerson {
 
 		private final String id;
 		private final Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
-
-		private VirusStrain strain;
 		private int contagiousDay = 0;
 
-		InfectedPerson(String id, VirusStrain strain) {
+		InfectedPerson(String id) {
 			this.id = id;
-			this.strain = strain;
 		}
 
 		void increaseNoOfInfectedByOne(String infectionType) {
@@ -242,7 +202,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 		}
 	}
 
-	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler {
+	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
 
 		private final Set<String> activityTypes = new TreeSet<>();
 		private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
@@ -260,20 +220,9 @@ public class RValuesFromEvents implements OutputAnalysis {
 		}
 
 		@Override
-		public void handleEvent(EpisimInitialInfectionEvent event) {
-
-			InfectedPerson person = infectedPersons.computeIfAbsent(event.getPersonId().toString(), id -> new InfectedPerson(id, event.getVirusStrain()));
-			person.strain = event.getVirusStrain();
-
-		}
-
-		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectorId = event.getInfectorId().toString();
-
-			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, id -> new InfectedPerson(id, event.getVirusStrain()));
-			// Person might get a new strain, so it needs to be overwritten
-			infector.strain = event.getVirusStrain();
+			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, InfectedPerson::new);
 
 
 			String activityType = getActivityType(event.getInfectionType());
@@ -289,16 +238,13 @@ public class RValuesFromEvents implements OutputAnalysis {
 				int day = (int) (event.getTime() / 86400);
 				String personId = event.getPersonId().toString();
 
-				InfectedPerson person = infectedPersons.get(personId);
-				if (person == null)
-					return;
+				InfectedPerson person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
 
 				// a person is infected another time
 				if (person.contagiousDay > 0 && person.contagiousDay != day) {
 					handledInfections.add(infectedPersons.remove(personId));
 
-					person = new InfectedPerson(personId, person.strain);
-					infectedPersons.put(personId, person);
+					person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
 				}
 
 				person.contagiousDay = day;
