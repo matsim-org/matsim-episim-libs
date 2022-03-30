@@ -10,10 +10,8 @@ import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimModule;
-import org.matsim.episim.PreparedRun;
+import org.matsim.episim.*;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunEpisim;
@@ -82,6 +80,9 @@ public final class RunTrial implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--param", description = "Specify arbitrary parameter", split = ";")
 	private Map<String, Double> params = new HashMap<>();
+
+	@CommandLine.Option(names = "--infectiousness", description = "Set infectiousness for strain")
+	private Map<VirusStrain, Double> infectiousness = new HashMap<>();
 
 	@CommandLine.Option(names = "--alpha", description = "Alpha parameter for restrictions", defaultValue = "-1")
 	private double alpha;
@@ -251,6 +252,17 @@ public final class RunTrial implements Callable<Integer> {
 			if (hospitalFactor > -1) {
 				log.info("Setting hospital factor to {}", hospitalFactor);
 				episimConfig.setHospitalFactor(hospitalFactor);
+			}
+
+			if (!infectiousness.isEmpty()) {
+
+				VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(params.config, VirusStrainConfigGroup.class);
+
+				for (Map.Entry<VirusStrain, Double> e : infectiousness.entrySet()) {
+
+					log.info("Setting infectiousness for strain {}: {}", e.getKey(), e.getValue());
+					strainConfig.getOrAddParams(e.getKey()).setInfectiousness(e.getValue());
+				}
 			}
 
 			log.info("Setting seed for run {} to {}", params.run, params.seed);
