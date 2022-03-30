@@ -35,12 +35,11 @@ public class CologneStrainBatch implements BatchRun<CologneStrainBatch.Params> {
 		Config config = scenario.config();
 		config.global().setRandomSeed(params.seed);
 
-		System.out.println(params.seed);
-
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setCalibrationParameter(1.2202709637374418e-05);
 		episimConfig.setSnapshotInterval((int) ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2021-01-14")));
+		episimConfig.setSnapshotPrefix("strain_bas" + params.seed);
 
 		return config;
 	}
