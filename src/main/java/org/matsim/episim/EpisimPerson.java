@@ -493,6 +493,13 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * List of dates (in second format) on which agent was infected
+	 */
+	public DoubleList getInfectionDates(){
+		return infectionDates;
+	}
+
+	/**
 	 * Number of received vaccinations
 	 */
 	public int getNumVaccinations() {
@@ -513,6 +520,13 @@ public final class EpisimPerson implements Attributable {
 
 	public VaccinationType getVaccinationType(int idx) {
 		return vaccinations.get(idx);
+	}
+
+	/**
+	 * List of days that agent was infected on
+	 */
+	public IntList getVaccinationDates() {
+		return vaccinationDates;
 	}
 
 	/**

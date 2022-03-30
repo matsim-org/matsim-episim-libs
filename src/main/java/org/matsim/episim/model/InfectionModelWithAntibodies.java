@@ -87,20 +87,20 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 		double relativeAntibodyLevelTarget = target.getAntibodies(infector.getVirusStrain());
 
-		double relativeAntibodyLevelInfector = infector.getAntibodies(infector.getVirusStrain());
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
 
 		//reduced infectivity if infector has antibodies
-		infectivity *= 1.0 - (0.25 * (1.0 - 1.0 / (1.0 + Math.pow(relativeAntibodyLevelInfector, vaccinationConfig.getBeta()))));
+		double immunityFactorInfector = infector.getImmunityFactor(vaccinationConfig.getBeta());//getAntibodies(infector.getVirusStrain());
+		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));
 
 		{
 			double igaFactor = 0.0;
-			
+
 			if (target.hadStrain(infector.getVirusStrain())) {
 
-				int lastInfectionWithStrain = 0; 
+				int lastInfectionWithStrain = 0;
 				for (int ii = 0; ii < target.getNumInfections();  ii++) {
 					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {
 						lastInfectionWithStrain = ii;
@@ -110,10 +110,10 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
 
 			}
-			
+
 			if (vaccinationConfig.getUseIgA()) {
 				if (target.hadStrain(VirusStrain.OMICRON_BA1) && infector.getVirusStrain() == VirusStrain.OMICRON_BA2) {
-					int lastInfectionWithStrain = 0; 
+					int lastInfectionWithStrain = 0;
 					for (int ii = 0; ii < target.getNumInfections();  ii++) {
 						if (target.getVirusStrain(ii) == VirusStrain.OMICRON_BA1) {
 							lastInfectionWithStrain = ii;
@@ -124,9 +124,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 					fac = fac / 1.4;
 					igaFactor = Math.max(fac, igaFactor);
 				}
-				
+
 				if (target.hadStrain(VirusStrain.OMICRON_BA2) && infector.getVirusStrain() == VirusStrain.OMICRON_BA1) {
-					int lastInfectionWithStrain = 0; 
+					int lastInfectionWithStrain = 0;
 					for (int ii = 0; ii < target.getNumInfections();  ii++) {
 						if (target.getVirusStrain(ii) == VirusStrain.OMICRON_BA2) {
 							lastInfectionWithStrain = ii;
@@ -139,8 +139,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			}
 			susceptibility = susceptibility * (1.0 - igaFactor);
 		}
-		
-		
+
+
 
 		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
 		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));

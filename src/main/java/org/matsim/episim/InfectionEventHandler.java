@@ -202,7 +202,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
-		this.localRnd = new SplittableRandom( 65536); // fixed seed, because it should not change between snapshots
+		this.localRnd = new SplittableRandom(65536); // fixed seed, because it should not change between snapshots
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
 		this.antibodyModel = injector.getInstance(AntibodyModel.class);
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
@@ -254,12 +254,31 @@ public final class InfectionEventHandler implements Externalizable {
 				.sorted(Comparator.comparingInt(p -> ((EpisimPerson) p).getAgeOrDefault(-1)).reversed()
 						.thenComparing(p -> ((EpisimPerson) p).getPersonId()))
 				.forEach(p -> {
-			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
-			p.setVaccinable(localRnd.nextDouble() < compliance);
-		});
+					Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
+					p.setVaccinable(localRnd.nextDouble() < compliance);
+				});
 
 		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
 		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
+
+		// Divide population into groups based on antibody response to immunity events
+		// e.g. low responders could gain fewer antibodies following infection than high responders
+		{
+			if (2 * episimConfig.getImmuneShare() > 1.) {
+				throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
+			}
+
+			for (EpisimPerson person : personMap.values()) {
+				double rand = rnd.nextDouble();
+				if (rand < episimConfig.getImmuneShare()) {
+					person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
+				} else if (rand < 2 * episimConfig.getImmuneShare()) {
+					person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
+				} else {
+					person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
+				}
+			}
+		}
 
 		for (SimulationListener s : listener) {
 
@@ -559,16 +578,16 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, by setting
 	 * the taskId attribute of the containers to values between 0 and episimConfig.getThreds() - 1,
-     * so that the sum of numUsers * maxGroupSize has an even distribution
+	 * so that the sum of numUsers * maxGroupSize has an even distribution
 	 */
 	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		// We need the containers sorted by the load, with the highest load first.
 		// To get a deterministic distribution, we use the containerId for
 		// sorting the containers with the same estimatedLoad.
 		Comparator<Tuple<EpisimContainer<?>, Double>> loadComperator =
-			Comparator.<Tuple<EpisimContainer<?>, Double>,Double>comparing(
-						  t -> t.getSecond(), Comparator.reverseOrder()).
-			thenComparing(t -> t.getFirst().getContainerId().toString());
+				Comparator.<Tuple<EpisimContainer<?>, Double>, Double>comparing(
+						t -> t.getSecond(), Comparator.reverseOrder()).
+						thenComparing(t -> t.getFirst().getContainerId().toString());
 		Collections.sort(estimatedLoad, loadComperator);
 
 		final int numThreads = episimConfig.getThreads();
@@ -577,7 +596,7 @@ public final class InfectionEventHandler implements Externalizable {
 		for (int i = 0; i < numThreads; i++)
 			loadPerThread[i] = 0.0;
 
-		for(Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
+		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
 			// search for the thread/taskId with the minimal load
 			int useThread = 0;
 			Double minLoad = loadPerThread[0];
@@ -600,8 +619,9 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private void balanceContainersByHash(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
-		    final EpisimContainer<?> container = tuple.getFirst();
-			final int useThread = Math.abs(container.getContainerId().hashCode()) % episimConfig.getThreads();		     container.setTaskId(useThread);
+			final EpisimContainer<?> container = tuple.getFirst();
+			final int useThread = Math.abs(container.getContainerId().hashCode()) % episimConfig.getThreads();
+			container.setTaskId(useThread);
 		}
 	}
 
@@ -754,26 +774,6 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
-		// Set group of super-immune people
-		// todo: set to first iteration after snapshop
-		if (date.isEqual(episimConfig.getImmuneDate())) {
-
-			if (2 * episimConfig.getImmuneShare() > 1.) {
-				throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
-			}
-
-			for (EpisimPerson person : personMap.values()) {
-				double rand = rnd.nextDouble();
-				if (rand < episimConfig.getImmuneShare()) {
-					person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
-				} else if (rand < 2 * episimConfig.getImmuneShare()) {
-					person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
-				}else{
-					person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
-				}
-			}
-		}
-
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "finished", -2);
@@ -791,7 +791,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// additional vaccinations:
 		for (VaccinationModel vaccination : vaccinations) {
-			vaccination.handleVaccination(personMap,  date, iteration, now);
+			vaccination.handleVaccination(personMap, date, iteration, now);
 		}
 
 		reporting.reportCpuTime(iteration, "VaccinationModel", "finished", -1);

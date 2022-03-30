@@ -16,10 +16,18 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		this.antibodyConfig = antibodyConfig;
 	}
 
+	/**
+	 * Updates the antibody levels for person. If an immunity event occurs (vaccination or infection) on the previous
+	 * day, antibodies will increase. If not, they will decrease. This method was designed to also recalculate antibodies
+	 * when the simulation is started from snapshot.
+	 *
+	 * @param person person whose antibodies to update
+	 * @param day    current day / iteration
+	 */
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
 
-		if (day == 0) {
+		if (day == 1) {
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
 			}
@@ -29,18 +37,21 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			return;
 		}
 
-
-		if (person.getVaccinationStatus().equals(VaccinationStatus.yes) && person.daysSince(VaccinationStatus.yes, day) == 1) {
-			handleVaccination(person);
+		//handle vaccination
+		if (person.getVaccinationDates().contains(day - 1)) {
+			int vaccinationIndex = person.getVaccinationDates().indexOf(day - 1);
+			VaccinationType vaccinationType = person.getVaccinationType(vaccinationIndex);
+			handleVaccination(person, vaccinationType);
 			return;
 		}
 
-		// at the moment infections are only handled if there is no vaccination on the same day. Maybe we should change this.
-		if (person.hadDiseaseStatus(DiseaseStatus.recovered)) {
-			if (person.daysSince(DiseaseStatus.recovered, day) == 1) {
-				handleInfection(person);
-				return;
-			}
+		// handle infection
+		double dayDouble = (day - 1.) * 24. * 60. * 60.; // second -> day format
+		if (person.getInfectionDates().contains(dayDouble)) {
+			int infectionIndex = person.getInfectionDates().indexOf(dayDouble);
+			VirusStrain virusStrain = person.getVirusStrain(infectionIndex);
+			handleInfection(person, virusStrain);
+			return;
 		}
 
 		// if no immunity event: exponential decay, day by day:
@@ -52,11 +63,9 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	}
 
-	private void handleInfection(EpisimPerson person) {
-		VirusStrain strain = person.getVirusStrain(person.getNumInfections() - 1);
+	private void handleInfection(EpisimPerson person, VirusStrain strain) {
 
 		boolean firstImmunization = checkFirstImmunization(person);
-
 		// 1st immunization:
 		if (firstImmunization) {
 
@@ -79,17 +88,15 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 				antibodies = Math.max(antibodies, initialAntibodies);
 
-				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies); //todo: should this come after the Math.max()?
+				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
 
 				person.setAntibodies(strain2, antibodies);
 			}
 
 		}
-
 	}
 
-	private void handleVaccination(EpisimPerson person) {
-		VaccinationType vaccinationType = person.getVaccinationType(person.getNumVaccinations() - 1);
+	private void handleVaccination(EpisimPerson person, VaccinationType vaccinationType) {
 
 		boolean firstImmunization = checkFirstImmunization(person);
 
@@ -118,7 +125,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 
 		}
-
 	}
 
 	private double adjustAntibodiesBasedOnImmuneResponse(EpisimPerson person, double antibodies) {
