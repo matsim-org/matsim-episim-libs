@@ -20,6 +20,39 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 	}
 
+	@Override
+	public void init(Collection<EpisimPerson> persons, int iteration) {
+		// Divide population into groups based on antibody response to immunity events
+		// e.g. low responders could gain fewer antibodies following infection than high responders
+		if (2 * antibodyConfig.getImmuneShare() > 1.) {
+			throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
+		}
+
+		for (EpisimPerson person : persons) {
+			double rand = localRnd.nextDouble();
+			if (rand < antibodyConfig.getImmuneShare()) {
+				person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
+			} else if (rand < 2 * antibodyConfig.getImmuneShare()) {
+				person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
+			} else {
+				person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
+			}
+
+			for (VirusStrain strain : VirusStrain.values()) {
+				person.setAntibodies(strain, 0.0);
+			}
+
+			if (iteration > 1) {
+				for (int it = 1; it < iteration; it++) {
+					updateAntibodies(person, it);
+				}
+
+			}
+		}
+
+
+	}
+
 	/**
 	 * Updates the antibody levels for person. If an immunity event occurs (vaccination or infection) on the previous
 	 * day, antibodies will increase. If not, they will decrease. This method was designed to also recalculate antibodies
@@ -31,7 +64,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
 
-		if (day == 1) {
+		if (day == 0) {
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
 			}
@@ -64,35 +97,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			double oldAntibodyLevel = person.getAntibodies(strain);
 			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halfLife_days));
 		}
-
-	}
-
-	@Override
-	public void init(Collection<EpisimPerson> persons, int iteration) {
-		// Divide population into groups based on antibody response to immunity events
-		// e.g. low responders could gain fewer antibodies following infection than high responders
-		if (2 * antibodyConfig.getImmuneShare() > 1.) {
-			throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
-		}
-
-		for (EpisimPerson person : persons) {
-			double rand = localRnd.nextDouble();
-			if (rand < antibodyConfig.getImmuneShare()) {
-				person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
-			} else if (rand < 2 * antibodyConfig.getImmuneShare()) {
-				person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
-			} else {
-				person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
-			}
-
-			if (iteration > 1) {
-				for (int it = 1; it < iteration; it++) {
-					updateAntibodies(person, it);
-				}
-
-			}
-		}
-
 
 	}
 

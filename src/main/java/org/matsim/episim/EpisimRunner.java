@@ -125,7 +125,7 @@ public final class EpisimRunner {
 		antibodyModel.init(handler.getPersons(), iteration);
 
 
-			reporting.reportCpuTime(0, "Init", "finished", -1);
+		reporting.reportCpuTime(0, "Init", "finished", -1);
 
 		log.info("Starting from iteration {}...", iteration);
 

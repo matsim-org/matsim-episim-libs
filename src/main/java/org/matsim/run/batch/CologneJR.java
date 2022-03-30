@@ -100,11 +100,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		if (DEBUG_MODE) {
 			if (params.seed == 4711 &&
 					params.immuneShare == 0.4 &&
-					params.immuneRespLow == 0.01 &&
-					params.immuneRespHigh == 100 &&
+					params.immuneRespLow == 0.1 &&
+					params.immuneRespHigh == 10 &&
 					params.ba1ba2x.equals("true") &&
 					params.ba1Inf == 2.7 &&
-					params.ba2Inf == 1.5) {
+					params.ba2Inf == 1.5 &&
+					params.deltaInf == 2.1 &&
+			params.ba1Date.equals("2021-11-19")) {
 			} else {
 				return null;
 			}
@@ -218,8 +220,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		if (params.ba1Inf > 0) {
 			Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
 			infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayOmicron.put(LocalDate.parse("2021-11-19"), 4);
-			infPerDayOmicron.put(LocalDate.parse("2021-11-19").plusDays(6), 1);
+			infPerDayOmicron.put(LocalDate.parse(params.ba1Date), 4);
+			infPerDayOmicron.put(LocalDate.parse(params.ba1Date).plusDays(6), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(params.deltaInf * oInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
@@ -502,7 +504,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		public long seed;
 
 		// new
-		@Parameter({0.0, 0.1, 0.2, 0.3, 0.4})
+		@Parameter({0.0, 0.2, 0.4})
 		double immuneShare;
 
 
@@ -515,15 +517,17 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({1.0, 10.})
 		Double immuneRespHigh;
 
-		@Parameter({2.3,2.5,2.7})
+		@Parameter({2.1,2.3,2.5,2.7,2.9})
 		double deltaInf;
 
-		@Parameter({2.1,2.4,2.7, 3.0, 3.3})
+		@Parameter({1.8, 2.1,2.4,2.7})
 		double ba1Inf;
 
 		@Parameter({1.5})
 		double ba2Inf;
 
+		@StringParameter({"2021-11-14","2021-11-19"})
+		String ba1Date;
 	}
 
 	public static void main(String[] args) {
