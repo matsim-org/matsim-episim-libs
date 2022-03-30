@@ -261,25 +261,6 @@ public final class InfectionEventHandler implements Externalizable {
 		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
 		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
 
-		// Divide population into groups based on antibody response to immunity events
-		// e.g. low responders could gain fewer antibodies following infection than high responders
-		{
-			if (2 * episimConfig.getImmuneShare() > 1.) {
-				throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
-			}
-
-			for (EpisimPerson person : personMap.values()) {
-				double rand = localRnd.nextDouble();
-				if (rand < episimConfig.getImmuneShare()) {
-					person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
-				} else if (rand < 2 * episimConfig.getImmuneShare()) {
-					person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
-				} else {
-					person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
-				}
-			}
-		}
-
 		for (SimulationListener s : listener) {
 
 			log.info("Executing simulation init listener {}", s.toString());

@@ -4,16 +4,20 @@ package org.matsim.episim.model;
 import com.google.inject.Inject;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.EpisimPerson.VaccinationStatus;
+
+import java.util.Collection;
+import java.util.SplittableRandom;
 
 public class DefaultAntibodyModel implements AntibodyModel {
 
 	private final AntibodyModel.Config antibodyConfig;
+	private final SplittableRandom localRnd;
 
 
 	@Inject
 	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig) {
 		this.antibodyConfig = antibodyConfig;
+		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 	}
 
 	/**
@@ -58,8 +62,37 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		for (VirusStrain strain : VirusStrain.values()) {
 			double halfLife_days = 60.;
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow( 0.5, 1 / halfLife_days ));
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halfLife_days));
 		}
+
+	}
+
+	@Override
+	public void init(Collection<EpisimPerson> persons, int iteration) {
+		// Divide population into groups based on antibody response to immunity events
+		// e.g. low responders could gain fewer antibodies following infection than high responders
+		if (2 * antibodyConfig.getImmuneShare() > 1.) {
+			throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
+		}
+
+		for (EpisimPerson person : persons) {
+			double rand = localRnd.nextDouble();
+			if (rand < antibodyConfig.getImmuneShare()) {
+				person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
+			} else if (rand < 2 * antibodyConfig.getImmuneShare()) {
+				person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
+			} else {
+				person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
+			}
+
+			if (iteration > 1) {
+				for (int it = 1; it < iteration; it++) {
+					updateAntibodies(person, it);
+				}
+
+			}
+		}
+
 
 	}
 
@@ -78,11 +111,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 
 
-		}
-		else {
+		} else {
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(strain).get(strain2);
-				double antibodies = Math.min( 150., person.getAntibodies(strain2) * refreshFactor);
+				double antibodies = Math.min(150., person.getAntibodies(strain2) * refreshFactor);
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
 
 
@@ -111,11 +143,10 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 
 
-		}
-		else {
+		} else {
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(vaccinationType).get(strain2);
-				double antibodies = Math.min( 150., person.getAntibodies(strain2) * refreshFactor);
+				double antibodies = Math.min(150., person.getAntibodies(strain2) * refreshFactor);
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
 				antibodies = Math.max(antibodies, initialAntibodies);
 
@@ -151,15 +182,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 		if (!person.hadStrain(strain)) {
 			return 1.0;
-		}
-		else {
+		} else {
 			int lastInfectionWithStrain = 0;
-			for (int ii = 0; ii < person.getNumInfections();  ii++) {
+			for (int ii = 0; ii < person.getNumInfections(); ii++) {
 				if (person.getVirusStrain(ii) == strain) {
 					lastInfectionWithStrain = ii;
 				}
 			}
-			return 1.0 - Math.pow( 0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 30.0 );
+			return 1.0 - Math.pow(0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 30.0);
 		}
 
 	}

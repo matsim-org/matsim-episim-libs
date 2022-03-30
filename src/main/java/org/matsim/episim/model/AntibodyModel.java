@@ -1,7 +1,9 @@
 package org.matsim.episim.model;
 
+import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.EpisimPerson;
 
+import java.util.Collection;
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,6 +35,13 @@ public interface AntibodyModel {
 	}
 
 	/**
+	 * Initialize antibody model
+	 * @param persons
+	 * @param iteration
+	 */
+	void init(Collection<EpisimPerson> persons, int iteration);
+
+	/**
 	 * Class for antibody model configurations.
 	 */
 	public static class Config {
@@ -40,6 +49,13 @@ public interface AntibodyModel {
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies;
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors;
 		private Map<EpisimPerson.ImmuneResponse, Double> immuneResponseMultiplier;
+
+
+		/**
+		 * Share of population that either has a high or low immune response to immunity events.
+		 */
+		private double immuneShare = 0.;
+
 
 		public Config() {
 
@@ -174,6 +190,14 @@ public interface AntibodyModel {
 
 		public void setImmuneResponseMultiplier(Map<EpisimPerson.ImmuneResponse, Double> immuneResponseMultiplier) {
 			this.immuneResponseMultiplier = immuneResponseMultiplier;
+		}
+
+		public void setImmuneShare(double immuneShare) {
+			this.immuneShare = immuneShare;
+		}
+
+		public double getImmuneShare() {
+			return this.immuneShare;
 		}
 	}
 

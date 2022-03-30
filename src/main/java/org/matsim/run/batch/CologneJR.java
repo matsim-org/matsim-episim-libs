@@ -61,6 +61,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 					immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.normal, 1.);
 					immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.high, params.immuneRespHigh);
 					antibodyModelConfig.setImmuneResponseMultiplier(immuneResponseDoubleMap);
+					antibodyModelConfig.setImmuneShare(params.immuneShare);
 				}
 
 				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration, VaccinationType.mRNA, 0., 0.));
@@ -124,8 +125,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		double tf = 1.0;
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 * tf);
-
-		episimConfig.setImmuneShare(params.immuneShare);
 
 		//cluster
 
