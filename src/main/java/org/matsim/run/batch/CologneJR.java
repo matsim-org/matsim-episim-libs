@@ -35,7 +35,7 @@ import java.util.*;
  */
 public class CologneJR implements BatchRun<CologneJR.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 
 	@Nullable
 	@Override
@@ -98,7 +98,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		if (DEBUG_MODE) {
 			if (params.seed == 4711 &&
-					params.immuneShare == 0.3 &&
+					params.immuneShare == 0.4 &&
 					params.immuneRespLow == 0.01 &&
 					params.immuneRespHigh == 100 &&
 					params.ba1ba2x.equals("true") &&
@@ -126,9 +126,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 * tf);
 
 		episimConfig.setImmuneShare(params.immuneShare);
-		episimConfig.setImmuneDate(DEBUG_MODE ? "2020-03-15" : params.immuneDate);
-
-
 
 		//cluster
 

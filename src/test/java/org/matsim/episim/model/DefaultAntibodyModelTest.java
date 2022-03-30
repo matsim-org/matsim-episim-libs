@@ -5,9 +5,10 @@ import it.unimi.dsi.fastutil.ints.*;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.log4j.Logger;
 import org.junit.*;
-import org.matsim.core.config.Config;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.testcases.MatsimTestUtils;
@@ -26,14 +27,20 @@ import tech.tablesaw.table.TableSliceGroup;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertTrue;
 
 public class DefaultAntibodyModelTest {
 
-	private static final Logger log = Logger.getLogger( DefaultAntibodyModel.class);
+	private static final Logger log = Logger.getLogger(DefaultAntibodyModel.class);
 
 
 	@Rule
@@ -41,12 +48,14 @@ public class DefaultAntibodyModelTest {
 
 	private final List<VirusStrain> strainsToCheck = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
 	private DefaultAntibodyModel model;
+	private AntibodyModel.Config antibodyConfig;
 
 
 	@Before
 	public void setup() {
 
-		model = new DefaultAntibodyModel(AntibodyModel.newConfig());
+		antibodyConfig = AntibodyModel.newConfig();
+		model = new DefaultAntibodyModel(antibodyConfig);
 
 	}
 
@@ -94,7 +103,7 @@ public class DefaultAntibodyModelTest {
 		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
 		IntList immunityEventDays = IntList.of(50, 200, 600);
 
-		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750 );
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750, EpisimPerson.ImmuneResponse.normal);
 
 		// Plot 1: nAb
 		{
@@ -103,7 +112,7 @@ public class DefaultAntibodyModelTest {
 			StringColumn groupings = StringColumn.create("scenario");
 
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
 
 				for (Object strain : strainToAntibodyMap.keySet()) {
 					records.append(day);
@@ -115,7 +124,7 @@ public class DefaultAntibodyModelTest {
 
 				}
 			}
-			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents, "nAb.html" );
+			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents, "nAb.html");
 
 		}
 
@@ -126,7 +135,7 @@ public class DefaultAntibodyModelTest {
 			StringColumn groupings = StringColumn.create("scenario");
 
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
 
 				for (Object strain : strainToAntibodyMap.keySet()) {
 					records.append(day);
@@ -145,22 +154,178 @@ public class DefaultAntibodyModelTest {
 
 				}
 			}
-			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents, "ve.html" );
+			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents, "ve.html");
 		}
 
 
 	}
 
 	@Test
+	public void testSuperImmune() {
+
+
+		Map<EpisimPerson.ImmuneResponse, Double> immuneResponseDoubleMap = new HashMap<>();
+		immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.low, 0.01);
+		immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.normal, 1.);
+		immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.high, 100.);
+
+		antibodyConfig.setImmuneResponseMultiplier(immuneResponseDoubleMap);
+
+
+		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.SARS_CoV_2, VaccinationType.mRNA, VirusStrain.DELTA);
+		IntList immunityEventDays = IntList.of(50, 200, 600);
+
+
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevelsNormal = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750, EpisimPerson.ImmuneResponse.normal);
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevelsHigh = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750, EpisimPerson.ImmuneResponse.high);
+
+		// Plot 1: nAb
+		{
+			IntColumn records = IntColumn.create("day");
+			DoubleColumn values = DoubleColumn.create("antibodies");
+			StringColumn groupings = StringColumn.create("scenario");
+
+			for (int day : antibodyLevelsNormal.keySet()) {
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevelsNormal.get(day);
+
+				//				for (Object strain : strainToAntibodyMap.keySet()) {
+				records.append(day);
+
+				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.SARS_CoV_2, 0.);
+
+				values.append(nAb);
+				groupings.append("normal response");
+
+				//				}
+			}
+			for (int day : antibodyLevelsHigh.keySet()) {
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevelsHigh.get(day);
+
+				//				for (Object strain : strainToAntibodyMap.keySet()) {
+				records.append(day);
+
+				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.SARS_CoV_2, 0.);
+
+				values.append(nAb);
+				groupings.append("high response");
+
+				//				}
+			}
+			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents, "nAbResponse.html");
+
+		}
+
+		// Plot 2: ve
+//		{
+//			IntColumn records = IntColumn.create("day");
+//			DoubleColumn values = DoubleColumn.create("antibodies");
+//			StringColumn groupings = StringColumn.create("scenario");
+//
+//			for (int day : antibodyLevelsNormal.keySet()) {
+//				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevelsNormal.get(day);
+//
+//				for (Object strain : strainToAntibodyMap.keySet()) {
+//					records.append(day);
+//
+//					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
+//
+//					var beta = 1.;
+//					var fact = 0.001;
+//					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+//					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+//					final double probaWoVacc = 1 - Math.exp(-fact);
+//					final double ve = 1. - probaWVacc / probaWoVacc;
+//
+//					values.append(ve);
+//					groupings.append(strain.toString());
+//
+//				}
+//			}
+//			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents, "ve.html");
+//		}
+
+
+	}
+
+
+	@Test
+	public void produceDataForBarplot(){
+
+		List<List<ImmunityEvent>> scenarios = new ArrayList<>();
+
+		scenarios.add(List.of(VirusStrain.SARS_CoV_2));
+		scenarios.add(List.of(VirusStrain.ALPHA));
+		scenarios.add(List.of(VirusStrain.DELTA));
+		scenarios.add(List.of(VirusStrain.OMICRON_BA1));
+		scenarios.add(List.of(VirusStrain.OMICRON_BA2));
+		scenarios.add(List.of(VaccinationType.mRNA));
+		scenarios.add(List.of(VaccinationType.vector));
+		scenarios.add(List.of(VaccinationType.mRNA, VaccinationType.mRNA));
+		scenarios.add(List.of(VaccinationType.vector, VaccinationType.mRNA));
+
+		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(Path.of("AntibodiesPerVirusStrainForBarPlot.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'))) {
+
+
+			printer.printRecord("ImmunizationEvents", "DayOfSample", "ProtectionAgainst", "RelativeAntibodies");
+
+			for (List<ImmunityEvent> immunityEvents : scenarios) {
+				IntList immunityEventDays;
+				int lastImmunityDay;
+				if (immunityEvents.size() == 1) {
+					lastImmunityDay = 1;
+					immunityEventDays = IntList.of(lastImmunityDay);
+				} else if (immunityEvents.size() == 2) {
+					lastImmunityDay = 1 + 220;
+					immunityEventDays = IntList.of(1, lastImmunityDay);
+				} else {
+					throw new RuntimeException("not yet implemented");
+				}
+
+				Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750, EpisimPerson.ImmuneResponse.normal);
+
+
+				Object2DoubleMap<VirusStrain> day1Antibodies = antibodyLevels.get(lastImmunityDay + 1);
+
+				for (Object2DoubleMap.Entry<VirusStrain> entry : day1Antibodies.object2DoubleEntrySet()) {
+					printer.printRecord(
+							immunityEvents,
+							1,
+							entry.getKey(),
+							entry.getDoubleValue()
+					);
+				}
+
+				Object2DoubleMap<VirusStrain> day90Antibodies = antibodyLevels.get(lastImmunityDay + 90);
+
+				for (Object2DoubleMap.Entry<VirusStrain> entry : day90Antibodies.object2DoubleEntrySet()) {
+					printer.printRecord(
+							immunityEvents,
+							90,
+							entry.getKey(),
+							entry.getDoubleValue()
+					);
+				}
+			}
+
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new RuntimeException("output file incorrect");
+
+		}
+
+	}
+
+
+	@Test
 	public void immunizationByBa1() {
 
 		final String days = "day";
-		Column<Integer> records = IntColumn.create( days );
+		Column<Integer> records = IntColumn.create(days);
 
 		final String vaccineEfficacies = "VE";
-		Column<Double> values = DoubleColumn.create( vaccineEfficacies );
+		Column<Double> values = DoubleColumn.create(vaccineEfficacies);
 		final String grouping = "grouping";
-		var groupings = StringColumn.create( grouping );
+		var groupings = StringColumn.create(grouping);
 
 		var fact = 0.001;
 		var beta = 3.;
@@ -168,54 +333,54 @@ public class DefaultAntibodyModelTest {
 		// gather results from antibody model
 		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.OMICRON_BA1);
 		IntList immunityEventDays = IntList.of(0);
-		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600 );
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600, EpisimPerson.ImmuneResponse.normal);
 
-		for ( int ii=0; ii<600; ii++ ){
+		for (int ii = 0; ii < 600; ii++) {
 			Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(ii);
 			{
 				var nAb = strainToAntibodyMap.get(VirusStrain.OMICRON_BA1);
-				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
-				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
-				final double probaWoVacc = 1 - Math.exp( -fact );
+				double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+				final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+				final double probaWoVacc = 1 - Math.exp(-fact);
 				final double ve = 1. - probaWVacc / probaWoVacc;
-				log.info( ve );
-				records.append( ii );
-				values.append( ve );
-				groupings.append( "... against ba1" );
+				log.info(ve);
+				records.append(ii);
+				values.append(ve);
+				groupings.append("... against ba1");
 			}
 			{
 				var nAb = strainToAntibodyMap.get(VirusStrain.OMICRON_BA2);
-				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
-				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
-				final double probaWoVacc = 1 - Math.exp( -fact );
+				double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+				final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+				final double probaWoVacc = 1 - Math.exp(-fact);
 				final double ve = 1. - probaWVacc / probaWoVacc;
-				log.info( ve );
-				records.append( ii );
-				values.append( ve );
-				groupings.append( "... against ba2" );
+				log.info(ve);
+				records.append(ii);
+				values.append(ve);
+				groupings.append("... against ba2");
 			}
 			{
 				var nAb = strainToAntibodyMap.get(VirusStrain.DELTA);
-				double immunityFactor = 1.0 / (1.0 + Math.pow( nAb, beta ));
-				final double probaWVacc = 1 - Math.exp( -fact * immunityFactor );
-				final double probaWoVacc = 1 - Math.exp( -fact );
+				double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+				final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+				final double probaWoVacc = 1 - Math.exp(-fact);
 				final double ve = 1. - probaWVacc / probaWoVacc;
-				log.info( ve );
-				records.append( ii );
-				values.append( ve );
-				groupings.append( "... against delta" );
+				log.info(ve);
+				records.append(ii);
+				values.append(ve);
+				groupings.append("... against delta");
 			}
 
 		}
 
 		Table table = Table.create("Infection history: BA.1 infection");
-		table.addColumns( records );
-		table.addColumns( values );
-		table.addColumns( groupings );
-		var figure = LinePlot.create(table.name(), table, days, vaccineEfficacies, grouping ) ;
+		table.addColumns(records);
+		table.addColumns(values);
+		table.addColumns(groupings);
+		var figure = LinePlot.create(table.name(), table, days, vaccineEfficacies, grouping);
 
-		try ( Writer writer = new OutputStreamWriter(new FileOutputStream( "output.html" ), StandardCharsets.UTF_8)) {
-			writer.write( Page.pageBuilder(figure, "target" ).build().asJavascript() );
+		try (Writer writer = new OutputStreamWriter(new FileOutputStream("output.html"), StandardCharsets.UTF_8)) {
+			writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -250,13 +415,13 @@ public class DefaultAntibodyModelTest {
 		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
 
 		IntList immunityEventDays = IntList.of(1, 220);
-		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600 );
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600, EpisimPerson.ImmuneResponse.normal);
 
 
 		// antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3)
 		{
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
 
 				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.DELTA, 0.);
 
@@ -276,7 +441,7 @@ public class DefaultAntibodyModelTest {
 		// once more antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3), this time plotting VE against omicron
 		{
 			for (int day : antibodyLevels.keySet()) {
-				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day );
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
 				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.OMICRON_BA1, 0.);
 				{
 					records.append(day);
@@ -335,121 +500,121 @@ public class DefaultAntibodyModelTest {
 			{
 				records.append(ii);
 				groupings.append(nordstrom);
-//				if (ii <= 30) {
-				if ( ii==15 ) {
+				//				if (ii <= 30) {
+				if (ii == 15) {
 					values.append(0.92);
-//				} else if (ii <= 60) {
-				} else if (ii ==45) {
+					//				} else if (ii <= 60) {
+				} else if (ii == 45) {
 					values.append(0.89);
-//				} else if (ii <= 120) {
+					//				} else if (ii <= 120) {
 				} else if (ii == 90) {
 					values.append(0.85);
-//				} else if (ii <= 180) {
-				} else if (ii == 90+45) {
+					//				} else if (ii <= 180) {
+				} else if (ii == 90 + 45) {
 					values.append(0.47);
-//				} else if (ii <= 210) {
-				} else if (ii == 180+15) {
+					//				} else if (ii <= 210) {
+				} else if (ii == 180 + 15) {
 					values.append(0.29);
-				} else if ( ii==210+30){
+				} else if (ii == 210 + 30) {
 					values.append(0.23);
 				} else {
 					values.appendMissing();
-			}
+				}
 			}
 
 			//UKHSA, VE against Omicron
 			{
-				records.append( ii );
-				groupings.append( ukhsa );
-				if ( ii <= 28 ) {
+				records.append(ii);
+				groupings.append(ukhsa);
+				if (ii <= 28) {
 					values.append(0.63);
-				} else if ( ii <= 63 ) {
+				} else if (ii <= 63) {
 					values.append(0.50);
-				} else if ( ii <= 98 ){
-					values.append( 0.30 );
-				} else if ( ii <= 133 ){
-					values.append( 0.19 );
-				} else if ( ii <= 168 ){
-					values.append( 0.15 );
+				} else if (ii <= 98) {
+					values.append(0.30);
+				} else if (ii <= 133) {
+					values.append(0.19);
+				} else if (ii <= 168) {
+					values.append(0.15);
 				} else {
-					values.append( 0.1 );
+					values.append(0.1);
 				}
 			}
 			// UKHSA, VE against BA.1 after booster dose
 			{
-				records.append( ii );
-				groupings.append( ba1booster );
-				if ( ii <= 168 ) {
+				records.append(ii);
+				groupings.append(ba1booster);
+				if (ii <= 168) {
 					values.append(0.1);
-				} else if ( ii <= 168+28 ) {
+				} else if (ii <= 168 + 28) {
 					values.append(0.69);
-				} else if ( ii <= 168+63 ){
-					values.append( 0.61 );
+				} else if (ii <= 168 + 63) {
+					values.append(0.61);
 				} else {
-					values.append( 0.49 );
+					values.append(0.49);
 				}
 			}
 			// UKHSA, VE against BA.2 after booster dose
 			{
-				records.append( ii );
-				groupings.append( ba2booster );
-				if ( ii <= 168 ) {
+				records.append(ii);
+				groupings.append(ba2booster);
+				if (ii <= 168) {
 					values.append(0.1);
-				} else if ( ii <= 168+28 ) {
+				} else if (ii <= 168 + 28) {
 					values.append(0.74);
-				} else if ( ii <= 168+63 ){
-					values.append( 0.67 );
+				} else if (ii <= 168 + 63) {
+					values.append(0.67);
 				} else {
-					values.append( 0.46 );
+					values.append(0.46);
 				}
 			}
 
 			// UKHSA, VE against delta after booster dose
 			{
-				records.append( ii );
-				groupings.append( deltabooster );
-				if ( ii <= 168 ) {
+				records.append(ii);
+				groupings.append(deltabooster);
+				if (ii <= 168) {
 					values.append(0.61);
-				} else if ( ii <= 168+28 ) {
+				} else if (ii <= 168 + 28) {
 					values.append(0.95);
-				} else if ( ii <= 168+63 ){
-					values.append( 0.92 );
+				} else if (ii <= 168 + 63) {
+					values.append(0.92);
 				} else {
-					values.append( 0.90 );
+					values.append(0.90);
 				}
 			}
 		}
 
 		final String title = "Vaccine Efficacy, DefaultAntibodyModel vs. NordstromEtAl.; beta=" + beta;
-		Table table = Table.create( title );
+		Table table = Table.create(title);
 		table.addColumns(records);
 		table.addColumns(values);
 		table.addColumns(groupings);
 
-		TableSliceGroup tables = table.splitOn( table.categoricalColumn( grouping ) );
+		TableSliceGroup tables = table.splitOn(table.categoricalColumn(grouping));
 
-		Layout layout = Layout.builder( title, days, vaccineEfficacies ).showLegend(true ).build();
+		Layout layout = Layout.builder(title, days, vaccineEfficacies).showLegend(true).build();
 
 		ScatterTrace[] traces = new ScatterTrace[tables.size()];
 		for (int i = 0; i < tables.size(); i++) {
-		  List<Table> tableList = tables.asTableList();
+			List<Table> tableList = tables.asTableList();
 			final ScatterTrace.Mode mode;
-			if ( tableList.get(i).name().contains( "beta=" )){
-				traces[i] = ScatterTrace.builder( tableList.get(i).numberColumn( days ), tableList.get(i ).numberColumn( vaccineEfficacies ) )
-							.showLegend(true)
-							.name(tableList.get(i).name())
-							.mode( ScatterTrace.Mode.LINE )
-							.build();
+			if (tableList.get(i).name().contains("beta=")) {
+				traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn(days), tableList.get(i).numberColumn(vaccineEfficacies))
+						.showLegend(true)
+						.name(tableList.get(i).name())
+						.mode(ScatterTrace.Mode.LINE)
+						.build();
 			} else {
-				traces[i] = ScatterTrace.builder( tableList.get(i).numberColumn( days ), tableList.get(i ).numberColumn( vaccineEfficacies ) )
-							.showLegend(true)
-							.name(tableList.get(i).name())
-							.mode( ScatterTrace.Mode.MARKERS )
-							.build();
+				traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn(days), tableList.get(i).numberColumn(vaccineEfficacies))
+						.showLegend(true)
+						.name(tableList.get(i).name())
+						.mode(ScatterTrace.Mode.MARKERS)
+						.build();
 			}
 		}
-		var figure = new Figure( layout, traces );
-		figure.setLayout( Layout.builder().width( 1400 ).height( 800 ).build() );
+		var figure = new Figure(layout, traces);
+		figure.setLayout(Layout.builder().width(1400).height(800).build());
 
 		try (Writer writer = new OutputStreamWriter(new FileOutputStream("nordstrom.html"), StandardCharsets.UTF_8)) {
 			writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
@@ -462,7 +627,7 @@ public class DefaultAntibodyModelTest {
 
 
 	@Test
-	public void yuEtAl(){
+	public void yuEtAl() {
 		// https://doi.org/10.1101/2022.02.06.22270533
 
 		{
@@ -471,28 +636,28 @@ public class DefaultAntibodyModelTest {
 			{
 				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 				IntList immunityEventDays = IntList.of(0);
-				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.SARS_CoV_2);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal).get(100).get(VirusStrain.SARS_CoV_2);
 			}
 
 			// only vaccinated:
 			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 			IntList immunityEventDays = IntList.of(0);
-			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 658./658., nAb/nAbBase, 0.0);
+				Assert.assertEquals(658. / 658., nAb / nAbBase, 0.0);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 29./658., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(29. / 658., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA2;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 24./658., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(24. / 658., nAb / nAbBase, 0.1);
 			}
 
 			// yyyy more to be added here ...
@@ -502,22 +667,22 @@ public class DefaultAntibodyModelTest {
 
 
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
-				log.warn( "double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain) );
+				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
 
 				strain = VirusStrain.DELTA;
-				log.warn( "double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain) );
+				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
 
 				strain = VirusStrain.OMICRON_BA1;
-				log.warn( "double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain) );
+				log.warn("double vaccination against " + strain.name() + "=" + abLevels.get(100).get(strain));
 
 				immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
 				immunityEventDays = IntList.of(0, 200);
-				abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 300);
+				abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 300, EpisimPerson.ImmuneResponse.normal);
 
 				strain = VirusStrain.DELTA;
-				log.warn( "triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain) );
+				log.warn("triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain));
 				strain = VirusStrain.OMICRON_BA1;
-				log.warn( "triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain) );
+				log.warn("triple vaccination against " + strain.name() + "=" + abLevels.get(300).get(strain));
 			}
 
 
@@ -526,7 +691,7 @@ public class DefaultAntibodyModelTest {
 
 
 	@Test
-	public void roesslerEtAl(){
+	public void roesslerEtAl() {
 		// http://dx.doi.org/10.1101/2022.02.01.22270263 Fig.1
 
 		{
@@ -535,119 +700,119 @@ public class DefaultAntibodyModelTest {
 			{
 				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VirusStrain.OMICRON_BA1);
 				IntList immunityEventDays = IntList.of(0, 50);
-				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.SARS_CoV_2);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal).get(100).get(VirusStrain.SARS_CoV_2);
 			}
 
 			// Fig.1 A (vaccinated + omicron):
 			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VirusStrain.OMICRON_BA1);
 			IntList immunityEventDays = IntList.of(0, 50);
-			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1);
+				Assert.assertEquals(4000. / 4000., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(4000. / 4000., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 3000./4000., nAb/nAbBase, 0.4 );
+				Assert.assertEquals(3000. / 4000., nAb / nAbBase, 0.4);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 1000./4000., nAb/nAbBase, 0.4 );
+				Assert.assertEquals(1000. / 4000., nAb / nAbBase, 0.4);
 			}
 
 			// Fig1 B (only omicron):
 			immunityEvents = List.of(VirusStrain.OMICRON_BA1);
 			immunityEventDays = IntList.of(50);
-			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 0./4000., nAb/nAbBase, 0.1);
+				Assert.assertEquals(0. / 4000., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 0./4000., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(0. / 4000., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 10./4000., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(10. / 4000., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 60./4000., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(60. / 4000., nAb / nAbBase, 0.1);
 			}
 
 			// Fig1 C (vaccinated + delta + omicron):
 			// (not plausible that these come out lower than without the delta infection in between)
-//			person = EpisimTestUtils.createPerson();
-//			person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
-//			person.possibleInfection(
-//					new EpisimInfectionEvent( 33 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.DELTA, 1. ) );
-//			person.checkInfection();
-//			person.possibleInfection(
-//					new EpisimInfectionEvent( 66 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
-//			person.checkInfection();
-//			{
-//				VirusStrain strain = VirusStrain.SARS_CoV_2;
-//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
-//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
-//				Assert.assertEquals( 2000./4000., nAb/nAbBase, 0.5);
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.ALPHA;
-//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
-//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
-//				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1 );
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.DELTA;
-//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
-//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
-//				Assert.assertEquals( 3000./4000., nAb/nAbBase, 0.1 );
-//			}
-//			{
-//				VirusStrain strain = VirusStrain.OMICRON_BA1;
-//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
-//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
-//				Assert.assertEquals( 300./4000., nAb/nAbBase, 0.1 );
-//			}
+			//			person = EpisimTestUtils.createPerson();
+			//			person.setVaccinationStatus( EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0 );
+			//			person.possibleInfection(
+			//					new EpisimInfectionEvent( 33 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.DELTA, 1. ) );
+			//			person.checkInfection();
+			//			person.possibleInfection(
+			//					new EpisimInfectionEvent( 66 * 3600 * 24., person.getPersonId(), infector.getPersonId(), null, "dummy", 2, VirusStrain.OMICRON_BA1, 1. ) );
+			//			person.checkInfection();
+			//			{
+			//				VirusStrain strain = VirusStrain.SARS_CoV_2;
+			//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+			//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+			//				Assert.assertEquals( 2000./4000., nAb/nAbBase, 0.5);
+			//			}
+			//			{
+			//				VirusStrain strain = VirusStrain.ALPHA;
+			//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+			//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+			//				Assert.assertEquals( 4000./4000., nAb/nAbBase, 0.1 );
+			//			}
+			//			{
+			//				VirusStrain strain = VirusStrain.DELTA;
+			//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+			//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+			//				Assert.assertEquals( 3000./4000., nAb/nAbBase, 0.1 );
+			//			}
+			//			{
+			//				VirusStrain strain = VirusStrain.OMICRON_BA1;
+			//				double nAb = InfectionModelWithAntibodies.getAntibodyLevel( person, 100, person.getNumVaccinations(), person.getNumInfections(), strain )
+			//							     / InfectionModelWithAntibodies.getAk50( person, strain, ak50PerStrain, person.getNumInfections() );
+			//				Assert.assertEquals( 300./4000., nAb/nAbBase, 0.1 );
+			//			}
 
 			// Fig1 D (delta + omicron):
 			immunityEvents = List.of(VirusStrain.DELTA, VirusStrain.OMICRON_BA1);
 			immunityEventDays = IntList.of(0, 50);
-			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 			{
 				VirusStrain strain = VirusStrain.SARS_CoV_2;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 1000./4000., nAb/nAbBase, 0.5);
+				Assert.assertEquals(1000. / 4000., nAb / nAbBase, 0.5);
 			}
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 1000./4000., nAb/nAbBase, 0.5 );
+				Assert.assertEquals(1000. / 4000., nAb / nAbBase, 0.5);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 2000./4000., nAb/nAbBase, 0.5 );
+				Assert.assertEquals(2000. / 4000., nAb / nAbBase, 0.5);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 500./4000., nAb/nAbBase, 0.5 );
+				Assert.assertEquals(500. / 4000., nAb / nAbBase, 0.5);
 			}
 
 
@@ -657,7 +822,7 @@ public class DefaultAntibodyModelTest {
 
 	@Test
 	@Ignore
-	public void roesslerEtAlOlderPaper(){
+	public void roesslerEtAlOlderPaper() {
 		// https://www.nejm.org/doi/full/10.1056/NEJMc2119236 Fig.1
 
 		{
@@ -666,97 +831,97 @@ public class DefaultAntibodyModelTest {
 			{
 				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 				IntList immunityEventDays = IntList.of(0);
-				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100).get(100).get(VirusStrain.ALPHA);
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal).get(100).get(VirusStrain.ALPHA);
 			}
 
 			// Fig.1 A (vaccinated with mRNA):
 			List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 			IntList immunityEventDays = IntList.of(0);
-			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			Int2ObjectMap<Object2DoubleMap<VirusStrain>> abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 700./700., nAb/nAbBase, 0);
+				Assert.assertEquals(700. / 700., nAb / nAbBase, 0);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 300./700., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(300. / 700., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 20./700., nAb/nAbBase, 0.5 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+				Assert.assertEquals(20. / 700., nAb / nAbBase, 0.5); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
 			}
 
 			// Fig.1 B (vaccinated with vector):
 			immunityEvents = List.of(VaccinationType.vector);
 			immunityEventDays = IntList.of(0);
-			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 210./700., nAb/nAbBase, 0.10);
+				Assert.assertEquals(210. / 700., nAb / nAbBase, 0.10);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 150./700., nAb/nAbBase, 0.10 );
+				Assert.assertEquals(150. / 700., nAb / nAbBase, 0.10);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+				Assert.assertEquals(4. / 700., nAb / nAbBase, 0.1); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
 			}
 
 			// Fig.1 E (infected with Alpha):
 			immunityEvents = List.of(VirusStrain.ALPHA);
 			immunityEventDays = IntList.of(0);
-			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4.*300./700., nAb/nAbBase, 0.1);
+				Assert.assertEquals(4. * 300. / 700., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4.*64./700., nAb/nAbBase, 0.1 );
+				Assert.assertEquals(4. * 64. / 700., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 6./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+				Assert.assertEquals(6. / 700., nAb / nAbBase, 0.1); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
 			}
 
 			// Fig.1 G (infected with Delta):
 			immunityEvents = List.of(VirusStrain.DELTA);
 			immunityEventDays = IntList.of(0);
-			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 			{
 				VirusStrain strain = VirusStrain.ALPHA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4*210./700., nAb/nAbBase, 0.1);
+				Assert.assertEquals(4 * 210. / 700., nAb / nAbBase, 0.1);
 			}
 			{
 				VirusStrain strain = VirusStrain.DELTA;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 4*450./700., nAb/nAbBase, 0.35 );
+				Assert.assertEquals(4 * 450. / 700., nAb / nAbBase, 0.35);
 			}
 			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
-				Assert.assertEquals( 8*4./700., nAb/nAbBase, 0.1 ); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
+				Assert.assertEquals(8 * 4. / 700., nAb / nAbBase, 0.1); // Treat these results with care: The authors state that the antibody level against omicron is so little that it's hard to measure it
 			}
 
 			// Fig.1 H (infected + vaccinated):
 			immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.vector);
 			immunityEventDays = IntList.of(0, 50);
-			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100);
+			abLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimPerson.ImmuneResponse.normal);
 
 /*			{
 				VirusStrain strain = VirusStrain.DELTA;
@@ -833,7 +998,7 @@ public class DefaultAntibodyModelTest {
 				double nAb = abLevels.get(100).get(strain);
 				Assert.assertEquals( 3.2, nAbBase/nAb, 1);
 			}*//*
-*//*			{
+	 *//*			{
 				VirusStrain strain = VirusStrain.OMICRON_BA1;
 				double nAb = abLevels.get(100).get(strain);
 				Assert.assertEquals( 17, nAbBase/nAb, 1);
@@ -1001,9 +1166,10 @@ public class DefaultAntibodyModelTest {
 	 * @param immunityEvents    List of ImmunityEvent (either VaccinationType or VirusStrain) chronological order
 	 * @param immunityEventDays List of days that the ImmunityEvent occurs
 	 * @param maxDay            final day for which antibody levels are calculated
+	 * @param immuneResponse
 	 * @return map where keys are days and values are a second map. This nested map contains virus strain as key and antibody level as value
 	 */
-	private Int2ObjectMap<Object2DoubleMap<VirusStrain>> simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays, int maxDay) {
+	private Int2ObjectMap<Object2DoubleMap<VirusStrain>> simulateAntibodyLevels(List<ImmunityEvent> immunityEvents, IntList immunityEventDays, int maxDay, EpisimPerson.ImmuneResponse immuneResponse) {
 
 		if (immunityEventDays.size() != immunityEvents.size()) {
 			throw new RuntimeException("inputs must have same size");
@@ -1013,6 +1179,7 @@ public class DefaultAntibodyModelTest {
 
 		// create person
 		EpisimPerson person = EpisimTestUtils.createPerson();
+		person.setImmuneResponse(immuneResponse);
 
 		// day 0: initialization
 		int day = 0;
@@ -1054,7 +1221,7 @@ public class DefaultAntibodyModelTest {
 				throw new RuntimeException("unknown immunity event type");
 			}
 
-			System.out.println( immunityEvent + " on day " + day );
+			System.out.println(immunityEvent + " on day " + day);
 
 
 			model.updateAntibodies(person, day);
