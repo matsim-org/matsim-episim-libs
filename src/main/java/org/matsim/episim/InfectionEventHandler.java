@@ -269,7 +269,7 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 
 			for (EpisimPerson person : personMap.values()) {
-				double rand = rnd.nextDouble();
+				double rand = localRnd.nextDouble();
 				if (rand < episimConfig.getImmuneShare()) {
 					person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
 				} else if (rand < 2 * episimConfig.getImmuneShare()) {
