@@ -97,11 +97,13 @@ public class RunEpisimSnapshotTest {
 	@Test
 	public void compareSnapshots() throws IOException {
 
+		// run 1: save snapshot (save to /compareSnapshots)
 		episimConfig.setSnapshotInterval(15);
 		runner.run(30);
 
 		setup();
 
+		// run 2: start from snapshot (save to /fromSnapshot)
 		String fromSnapshot = utils.getOutputDirectory().replace(utils.getMethodName(), "fromSnapshot");
 		episimConfig.setStartFromSnapshot(utils.getOutputDirectory() + snapshotName());
 		config.controler().setOutputDirectory(fromSnapshot);
