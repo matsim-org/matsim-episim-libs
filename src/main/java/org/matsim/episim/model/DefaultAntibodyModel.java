@@ -64,14 +64,11 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	@Override
 	public void updateAntibodies(EpisimPerson person, int day) {
 
+		// todo: is this needed, now that we have an init
 		if (day == 0) {
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
 			}
-		}
-
-		if (person.getNumVaccinations() == 0 && !person.hadDiseaseStatus(DiseaseStatus.recovered)) {
-			return;
 		}
 
 		//handle vaccination
@@ -83,12 +80,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		}
 
 		// handle infection
-		double dayDouble = (day - 1.) * 24. * 60. * 60.; // second -> day format
-		if (person.getInfectionDates().contains(dayDouble)) {
-			int infectionIndex = person.getInfectionDates().indexOf(dayDouble);
-			VirusStrain virusStrain = person.getVirusStrain(infectionIndex);
-			handleInfection(person, virusStrain);
-			return;
+		for (int infectionIndex = 0; infectionIndex < person.getNumInfections(); infectionIndex++) {
+			if (person.daysSinceInfection(infectionIndex, day) == 1) {
+				VirusStrain virusStrain = person.getVirusStrain(infectionIndex);
+				handleInfection(person, virusStrain);
+				return;
+			}
 		}
 
 		// if no immunity event: exponential decay, day by day:
