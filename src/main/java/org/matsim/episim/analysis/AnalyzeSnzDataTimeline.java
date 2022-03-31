@@ -53,10 +53,10 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 /**
- * @author:rewert This class reads analysis the SENEZON timeline data for every
- *                day. The data is filtered by the zip codes of every area.
+ * @author: Ricardo Ewert This class reads analysis the SENEZON timeline data
+ *          for every day. The data is filtered by the zip codes of every area.
  */
-@CommandLine.Command(name = "AnalyzeSnzPersonsStat", description = "Aggregate snz timeline of the daily mobility data.")
+@CommandLine.Command(name = "AnalyzeSnzTimeline", description = "Aggregate snz timeline of the daily mobility data.")
 class AnalyzeSnzDataTimeline implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(AnalyzeSnzDataTimeline.class);
@@ -71,8 +71,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	};
 
 	private enum AnalyseAreas {
-		Germany, Berlin, Munich, Heinsberg, Bonn, Mannheim, Wolfsburg, BerlinDistricts, Test, Berchtesgaden, Hamburg,
-		Collogne, Frankfurt, AnyArea, Bundeslaender, Landkreise, UpdateMobilityDashboardData
+		Germany, Berlin, BerlinDistricts, Test, Cologne, AnyArea, Bundeslaender, Landkreise, UpdateMobilityDashboardData
 	}
 
 	private enum OutputData {
@@ -93,8 +92,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		boolean getPercentageResults = false;
-		boolean outputShareOutdoor = false;
+		boolean getPercentageResults = false; //false: result with number of activities, true: results compared to base days
+		boolean outputShareOutdoor = false; //additional output of the share of outdoor activities
 		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
 		AnalyseOptions selectedOptionForAnalyse = AnalyseOptions.onlyWeekends;
 		OutputData selectedOutputData = OutputData.EndNonHome;
@@ -139,13 +138,6 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
 					selectedOutputData, outputFolder, startDateStillUsingBaseDays, datesToIgnore);
 			break;
-		case Berchtesgaden:
-			IntSet zipCodesBerchtesgaden = new IntOpenHashSet(List.of(83317, 83364, 83395, 83404, 83410, 83416, 83435,
-					83451, 83454, 83457, 83458, 83471, 83483, 83486, 83487));
-			zipCodes.put("Berchtesgaden", zipCodesBerchtesgaden);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
 		case Berlin:
 			zipCodes = findZipCodesForAnyArea("Berlin");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
@@ -180,14 +172,6 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
 					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
-		case Bonn:
-			IntSet zipCodesBonn = new IntOpenHashSet();
-			for (int i = 53100; i <= 53299; i++)
-				zipCodesBonn.add(i);
-			zipCodes.put("Bonn", zipCodesBonn);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
 		case Germany:
 			IntSet zipCodesGER = new IntOpenHashSet();
 			for (int i = 0; i <= 99999; i++)
@@ -196,50 +180,8 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
 					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
-		case Hamburg:
-			IntSet zipCodesHamburg = new IntOpenHashSet();
-			for (int i = 22000; i <= 22999; i++)
-				zipCodesHamburg.add(i);
-			zipCodes.put("Hamburg", zipCodesHamburg);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
-		case Heinsberg:
-			IntSet zipCodesHeinsberg = new IntOpenHashSet(
-					List.of(41812, 52538, 52511, 52525, 41836, 52538, 52531, 41849, 41844));
-			zipCodes.put("Heinsberg", zipCodesHeinsberg);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
-		case Collogne:
-			IntSet zipCodesCollogne = new IntOpenHashSet(List.of(50667, 50668, 50670, 50672, 50674, 50676, 50677, 50678,
-					50679, 50733, 50735, 50737, 50739, 50765, 50767, 50769, 50823, 50825, 50827, 50829, 50858, 50859,
-					50931, 50933, 50935, 50937, 50939, 50968, 50969, 50996, 50997, 50999, 51061, 51063, 51065, 51067,
-					51069, 51103, 51105, 51107, 51109, 51143, 51145, 51147, 51149));
-			zipCodes.put("Collogne", zipCodesCollogne);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
-		case Frankfurt:
-			IntSet zipCodesFrankfurt = new IntOpenHashSet();
-			for (int i = 60306; i <= 60599; i++)
-				zipCodesFrankfurt.add(i);
-			zipCodesFrankfurt.addAll(List.of(65929, 65931, 65933, 65934, 65936));
-			zipCodes.put("FrankfurtMain", zipCodesFrankfurt);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-		case Mannheim:
-			IntSet zipCodesMannheim = new IntOpenHashSet(List.of(68159, 68161, 68163, 68165, 68167, 68169, 68199, 68219,
-					68229, 68239, 68259, 68305, 68307, 68309));
-			zipCodes.put("Mannheim", zipCodesMannheim);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
-		case Munich:
-			IntSet zipCodesMunich = new IntOpenHashSet();
-			for (int i = 80331; i <= 81929; i++)
-				zipCodesMunich.add(i);
-			zipCodes.put("Munich", zipCodesMunich);
+		case Cologne:
+			zipCodes = findZipCodesForAnyArea("Köln");
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
 					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
@@ -249,15 +191,10 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
 					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
 			break;
-		case Wolfsburg:
-			IntSet zipCodesWolfsburg = new IntOpenHashSet(List.of(38440, 38442, 38444, 38446, 38448));
-			zipCodes.put("Wolfsburg", zipCodesWolfsburg);
-			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,
-					selectedOutputData, null, startDateStillUsingBaseDays, datesToIgnore);
-			break;
 		case UpdateMobilityDashboardData:
 			zipCodes = findZIPCodesForLandkreise();
 			selectedOutputData = OutputData.EndNonHome22_5;
+			getPercentageResults = false;
 			outputFolder = Path.of("../public-svn/matsim/scenarios/countries/de/episim/mobilityData/landkreise/");
 			selectedOptionForAnalyse = AnalyseOptions.weeklyResultsOfAllDays;
 			analyzeDataForCertainAreas(zipCodes, getPercentageResults, outputShareOutdoor, selectedOptionForAnalyse,

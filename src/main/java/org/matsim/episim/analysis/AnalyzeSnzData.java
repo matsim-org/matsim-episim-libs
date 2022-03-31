@@ -43,10 +43,8 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 /**
- * @author: rewert This class reads the SENOZON data for every day. The data is
- *          filtered by the zip codes of every area. The base line is always the
- *          first day. The results for every day are the percentile of the
- *          changes compared to the base.
+ * @author: Ricardo Ewert This class reads the SENOZON mobility data for every
+ *          day. The data is filtered by the zip codes of every area.
  */
 @CommandLine.Command(name = "analyzeSnzData", description = "Aggregate snz mobility data.")
 class AnalyzeSnzData implements Callable<Integer> {
@@ -80,13 +78,12 @@ class AnalyzeSnzData implements Callable<Integer> {
 
 		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
-		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise
+		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise 
 		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD, only for Bundeslaender and Landkreise
-		String anyArea = "Köln"; //you can select a certain Landkreis and the zip codes are collected automatically
+		String anyArea = "Köln"; // you can select a certain Landkreis and the zip codes are collected automatically
 
-		// getPercentageResults: set to true if you want percentages compared to the base, if you select false you get the total amounts
-		boolean getPercentageResults = false; // true if you want a duration output
-		boolean ignoreDates = true; // true for mobilityDashboard
+		boolean getPercentageResults = false; // false: duration output, true: results compared to base days
+		boolean ignoreDates = true; // true for mobilityDashboard, false for simulation input
 
 		Set<String> datesToIgnore = Resources
 				.readLines(Resources.getResource("mobilityDatesToIgnore.txt"), StandardCharsets.UTF_8).stream()
@@ -112,6 +109,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 		List<String> baseDays = Arrays.asList();
 		String outputOption = null;
 
+		// sets the selected base days
 		switch (selectedBase) {
 		case March2020:
 			break;
@@ -188,8 +186,7 @@ class AnalyzeSnzData implements Callable<Integer> {
 			break;
 		case Koeln:
 			HashMap<String, IntSet> zipCodesAnyCologne = snz.findZipCodesForAnyArea("Köln");
-			snz.writeDataForCertainArea(
-					outputFolder.resolve("CologneSnzData_daily_until.csv"),
+			snz.writeDataForCertainArea(outputFolder.resolve("CologneSnzData_daily_until.csv"),
 					zipCodesAnyCologne.values().iterator().next(), getPercentageResults, baseDays, datesToIgnore);
 			break;
 		case Bundeslaender:
