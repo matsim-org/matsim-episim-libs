@@ -442,7 +442,9 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		int days = end.getDayOfYear() - start.getDayOfYear();
 		for (int i = 1; i <= days; i++) {
 			double fraction = (double) i / days;
-			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
+			int value = (int) Math.round(importFactor * (a + fraction * (b - a)));
+			value = Math.max(1, value);
+			importMap.put(start.plusDays(i), value);
 		}
 	}
 

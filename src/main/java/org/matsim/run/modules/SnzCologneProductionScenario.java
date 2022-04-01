@@ -288,19 +288,20 @@
 			 //disease import 2020
 			 Map<LocalDate, Integer> importMap = new HashMap<>();
 			 double importFactorBeforeJune = 4.0;
-			 double imprtFctMult = 1.0;
-			 long importOffset = 0;
-
-			 interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
-					 LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-			 interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
-					 LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-			 interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
-					 LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-
-			 importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
-			 importMap.put(LocalDate.parse("2020-08-09"), 1);
-
+			 
+			 interpolateImport(importMap, cologneFactor  * importFactorBeforeJune, LocalDate.parse("2020-02-24"),
+					 LocalDate.parse("2020-03-09"), 0.9, 23.1);
+			 interpolateImport(importMap, cologneFactor * importFactorBeforeJune, LocalDate.parse("2020-03-09"),
+					 LocalDate.parse("2020-03-23"), 23.1, 3.9);
+			 interpolateImport(importMap, cologneFactor * importFactorBeforeJune, LocalDate.parse("2020-03-23"),
+					 LocalDate.parse("2020-04-13"), 3.9, 0.1);
+			 
+			 //summer holidays
+			 LocalDate summerHolidaysEnd = LocalDate.parse("2020-08-11");
+			 
+			 interpolateImport(importMap, 1.0, summerHolidaysEnd.minusDays(21), summerHolidaysEnd, 1.0, 12);
+			 interpolateImport(importMap,  1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(21), 12, 1.0);
+			 
 			 episimConfig.setInfections_pers_per_day(importMap);
 		 }
 
