@@ -15,6 +15,7 @@ public class CologneStrainScenario extends SnzCologneProductionScenario {
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(0.0)
 				.setLeisureCorrection(RunTrial.parseParam("leisureCorrection", leisureCorrection))
+				.setAlphaOffsetDays((int) RunTrial.parseParam("alphaOffsetDays", 0))
 				.setVaccinations(Vaccinations.no)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setVaccinationModel(NoVaccination.class)

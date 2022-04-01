@@ -66,6 +66,7 @@
 		 private double leisureCorrection = 1.9;
 		 private double leisureNightlyScale = 1.0;
 		 private double householdSusc = 1.0;
+		 private int alphaOffsetDays = 0;
 
 		 public Builder() {
 			 this.vaccinationModel = VaccinationFromData.class;
@@ -106,6 +107,11 @@
 			 return this;
 		 }
 
+		 public Builder setAlphaOffsetDays(int alphaOffsetDays) {
+			 this.alphaOffsetDays = alphaOffsetDays;
+			 return this;
+		 }
+
 		 public Builder setSuscHouseholds_pct(double householdSusc) {
 			 this.householdSusc = householdSusc;
 			 return this;
@@ -132,6 +138,7 @@
 	 private final double leisureCorrection;
 	 private final double leisureNightlyScale;
 	 private final double householdSusc;
+	 private final int alphaOffsetDays;
 	 private final LocationBasedRestrictions locationBasedRestrictions;
 
 	 /**
@@ -165,6 +172,7 @@
 		 this.leisureCorrection = builder.leisureCorrection;
 		 this.leisureNightlyScale = builder.leisureNightlyScale;
 		 this.householdSusc = builder.householdSusc;
+		 this.alphaOffsetDays = builder.alphaOffsetDays;
 
 		 this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		 this.importFactorAfterJune = builder.importFactorAfterJune;
@@ -288,20 +296,20 @@
 			 //disease import 2020
 			 Map<LocalDate, Integer> importMap = new HashMap<>();
 			 double importFactorBeforeJune = 4.0;
-			 
+
 			 interpolateImport(importMap, cologneFactor  * importFactorBeforeJune, LocalDate.parse("2020-02-24"),
 					 LocalDate.parse("2020-03-09"), 0.9, 23.1);
 			 interpolateImport(importMap, cologneFactor * importFactorBeforeJune, LocalDate.parse("2020-03-09"),
 					 LocalDate.parse("2020-03-23"), 23.1, 3.9);
 			 interpolateImport(importMap, cologneFactor * importFactorBeforeJune, LocalDate.parse("2020-03-23"),
 					 LocalDate.parse("2020-04-13"), 3.9, 0.1);
-			 
+
 			 //summer holidays
 			 LocalDate summerHolidaysEnd = LocalDate.parse("2020-08-11");
-			 
+
 			 interpolateImport(importMap, 1.0, summerHolidaysEnd.minusDays(21), summerHolidaysEnd, 1.0, 12);
 			 interpolateImport(importMap,  1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(21), 12, 1.0);
-			 
+
 			 episimConfig.setInfections_pers_per_day(importMap);
 		 }
 
@@ -469,7 +477,7 @@
 			 }
 		 }
 
-		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
+		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class), alphaOffsetDays);
 
 		 builder.setHospitalScale(this.scale);
 

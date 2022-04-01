@@ -424,13 +424,17 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	}
 
-	public static void configureStrains(EpisimConfigGroup episimConfig, VirusStrainConfigGroup virusStrainConfig) {
+	public static void configureStrains(EpisimConfigGroup episimConfig, VirusStrainConfigGroup virusStrainConfig, int alphaOffset) {
 
 
 		Map<LocalDate, Integer> infPerDayALPHA = new HashMap<>();
+
+		LocalDate startDate = LocalDate.parse("2021-01-15").plusDays(alphaOffset);
+
 		infPerDayALPHA.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayALPHA.put(LocalDate.parse("2021-01-15"), 4);
-		infPerDayALPHA.put(LocalDate.parse("2021-01-22"), 1);
+		infPerDayALPHA.put(startDate, 4);
+		infPerDayALPHA.put(startDate.plusDays(7), 1);
+
 		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayALPHA);
 
 		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.65);
