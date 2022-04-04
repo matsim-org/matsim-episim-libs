@@ -214,9 +214,9 @@ public final class EpisimPerson implements Attributable {
 	private double antibodyLevelAtInfection = 0;
 
 	/**
-	 * Whether agent is part of subpopulation which is immune to infection
+	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event
 	 */
-	private ImmuneResponse immuneResponse = ImmuneResponse.normal;
+	private double immuneResponseMultiplier = 1.0;
 
 	/**
 	 * Lookup age from attributes.
@@ -916,17 +916,19 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Getter for whether person is in immune subpopulation
+	 * Getter for immune response multiplier, which is used to scale the antibody increase due to an immunity event
+	 * @return
 	 */
-	public ImmuneResponse getImmuneResponse() {
-		return immuneResponse;
+	public double getImmuneResponseMultiplier() {
+		return immuneResponseMultiplier;
 	}
 
 	/**
-	 * Set immune response status of person
+	 * Setter for immune response multiplier, which is used to scale the antibody increase due to an immunity event
+	 * @param immuneResponseMultiplier
 	 */
-	public void setImmuneResponse(ImmuneResponse immuneResponse) {
-		this.immuneResponse = immuneResponse;
+	public void setImmuneResponseMultiplier(double immuneResponseMultiplier) {
+		this.immuneResponseMultiplier = immuneResponseMultiplier;
 	}
 
 	@Override
@@ -1043,8 +1045,6 @@ public final class EpisimPerson implements Attributable {
 	 * Status of vaccination.
 	 */
 	public enum VaccinationStatus {yes, no}
-
-	public enum ImmuneResponse{low, normal, high}
 
 	/**
 	 * Stores when an activity is performed and in which context.

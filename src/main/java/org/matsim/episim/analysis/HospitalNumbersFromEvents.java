@@ -150,8 +150,8 @@
 			 ));
 
 	 private static final double factorWildAndAlpha = 0.5;
-	 private static final double factorDelta = 0.85;
-	 private static final double factorOmicron = 0.22;
+	 private static final double factorDelta = 0.7;
+	 private static final double factorOmicron = 0.13;
 
 	 private String outputAppendix = "";
 
@@ -437,7 +437,7 @@
 			 }
 
 
-			 producePlot(recordsDate, values, groupings, "", "7-Tage Hospitalisierungsinzidenz", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
+			 producePlot(recordsDate, values, groupings, "", "7-Tage Hospitalisierungsinzidenz", "HospIncidence" + outputAppendix + ".html");
 		 }
 
 
@@ -720,7 +720,6 @@
 			 // Antibodies at time of infection
 			 Double antibodiesAtTimeOfInfection = person.antibodies;
 
-			 // reverse exponential decay
 			 int numImmunityEvents = person.immunityDays.size();
 
 			 if (numImmunityEvents > 1) {
@@ -728,6 +727,7 @@
 				 int previousImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 2);
 				 int daysSincePreviousImmunityEvent = currentImmunityEvent - previousImmunityEvent;
 				 double halfLife_days = 60.;
+				 // reverse exponential decay
 				 double antibodiesAfterPreviousImmunityEvent = antibodiesAtTimeOfInfection * Math.pow(2., daysSincePreviousImmunityEvent / halfLife_days);
 				 return 1. / (1. + Math.pow(0.5 * antibodiesAfterPreviousImmunityEvent, beta));
 			 }
