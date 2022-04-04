@@ -41,7 +41,6 @@
  import org.matsim.episim.EpisimConfigGroup;
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
- import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
@@ -100,10 +99,8 @@
 	 private VirusStrainConfigGroup strainConfig;
 
 	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
-	 private static final double immunityFactorDefault = 1.0;
 	 private static final double beta = 1.2;
 	 private final int populationCnt = 919_936;
-	 private static final boolean useAntibodiesFromInfectionEvent = true;
 
 
 	 //	 private static final int lagBetweenInfectionAndHospitalisation = 10;
@@ -157,7 +154,6 @@
 	 private static final double factorOmicron = 0.22;
 
 	 private String outputAppendix = "";
-	 private Int2ObjectMap<Object2DoubleMap<VirusStrain>> immunity;
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -178,7 +174,7 @@
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
-//		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
+		 //		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
 		 List<Double> strainFactors = List.of(factorOmicron);
 
 		 for (Double facA : strainFactors) {
@@ -205,39 +201,6 @@
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
 			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorStrainB);
-
-
-			 // IMMUNITY FACTORS CONFIGURATION
-			 immunity = new Int2ObjectAVLTreeMap<>();
-
-			 immunity.put(1, new Object2DoubleAVLTreeMap<>());
-			 immunity.put(2, new Object2DoubleAVLTreeMap<>());
-
-
-			 // one immunity event: first round of vaccination (2 shots) or infection
-			 double valAlpha1 = 0.34;
-			 double valDelta1 = 0.15;
-			 double valOmicron1 = 0.6;
-
-			 immunity.get(1).put(VirusStrain.SARS_CoV_2, valAlpha1);
-			 immunity.get(1).put(VirusStrain.ALPHA, valAlpha1);
-			 immunity.get(1).put(VirusStrain.DELTA, valDelta1);
-			 immunity.get(1).put(VirusStrain.OMICRON_BA1, valOmicron1);
-			 immunity.get(1).put(VirusStrain.OMICRON_BA2, valOmicron1);
-			 immunity.get(1).put(VirusStrain.STRAIN_A, valOmicron1);
-			 immunity.get(1).put(VirusStrain.STRAIN_B, valOmicron1);
-
-			 // two or more immunity events: boosted through vaccination or infection
-			 double valAlpha2 = 0.2;
-			 double valDelta2 = 0.09;
-			 double valOmicron2 = 0.35;
-			 immunity.get(2).put(VirusStrain.SARS_CoV_2, valAlpha2);
-			 immunity.get(2).put(VirusStrain.ALPHA, valAlpha2);
-			 immunity.get(2).put(VirusStrain.DELTA, valDelta2);
-			 immunity.get(2).put(VirusStrain.OMICRON_BA1, valOmicron2);
-			 immunity.get(2).put(VirusStrain.OMICRON_BA2, valOmicron2);
-			 immunity.get(2).put(VirusStrain.STRAIN_A, valOmicron2);
-			 immunity.get(2).put(VirusStrain.STRAIN_B, valOmicron2);
 
 
 			 // Part 1: calculate hospitalizations and save as csv
@@ -293,7 +256,7 @@
 
 		 Map<Id<Person>, Handler.Holder> data = new IdMap<>(Person.class, population.getPersons().size());
 
-		 Handler handler = new Handler(data, startDate, population, strainConfig, this.immunity);
+		 Handler handler = new Handler(data, startDate, population, strainConfig);
 
 		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
@@ -591,16 +554,13 @@
 		 private final Int2IntSortedMap postProcessHospitalFilledBeds;
 		 private final Int2IntSortedMap postProcessHospitalFilledBedsICU;
 
-		 private final Int2ObjectMap<Object2DoubleMap<VirusStrain>> immunity;
 
-
-		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig, Int2ObjectMap<Object2DoubleMap<VirusStrain>> immunity) {
+		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig) {
 			 this.data = data;
 			 this.startDate = startDate;
 			 this.population = population;
 			 this.rnd = new Random(1234);
 			 this.strainConfig = strainConfig;
-			 this.immunity = immunity;
 
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
@@ -611,85 +571,71 @@
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
-			 Id<Person> personId = event.getPersonId();
-			 Holder person = data.computeIfAbsent(personId, Holder::new);
-
+			 Holder person = data.computeIfAbsent(event.getPersonId(), Holder::new);
 			 int day = (int) (event.getTime() / 86_400);
 
-			 person.infections.add(day);
-			 person.strains.add(event.getVirusStrain());
-
+			 person.immunityDays.add(day);
 			 person.antibodies = event.getAntibodies();
 
-			 updateHospitalizationsPost(personId, person, event.getStrain(), day);
+			 updateHospitalizationsPost(person, event.getStrain(), day);
 
 		 }
 
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
+			 Holder person = data.computeIfAbsent(event.getPersonId(), Holder::new);
 			 int day = (int) (event.getTime() / 86_400);
-			 LocalDate date = startDate.plusDays(day);
-			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
+			 person.immunityDays.add(day);
 
-			 if (event.getN() == 2) {
-				 attr.boosterDate = date;
-			 } else if (event.getN() == 1) {
-				 attr.vaccinationDate = date;
-				 attr.vaccine = event.getVaccinationType();
-			 } else {
-				 //todo
-			 }
+
 		 }
 
-		 private void updateHospitalizationsPost(Id<Person> personId, Holder person, VirusStrain strain, int infectionIteration) {
-			 if (person.infections.size() > 0) {
+		 private void updateHospitalizationsPost(Holder person, VirusStrain strain, int infectionIteration) {
 
-				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+			 int age = (int) population.getPersons().get(person.personId).getAttributes().getAttribute("microm:modeled:age");
 
-				 String district = (String) population.getPersons().get(personId).getAttributes().getAttribute("district");
+			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
 
-				 if (!district.equals("Köln")) {
-					 return;
-				 }
-
-
-				 if (goToHospital(person, strain, age)) {
-
-					 // newly admitted to hospital
-					 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
-					 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
+			 if (!district.equals("Köln")) {
+				 return;
+			 }
 
 
-					 if (goToICU(strain, age)) {
+			 if (goToHospital(person, strain, age)) {
 
-						 int inICU = inHospital + lagBetweenHospitalizationAndICU.getInt(strain);
-						 int outICU = inICU + daysInICU.getInt(strain);
-						 int outHospital = inHospital + daysInHospitalGivenICU.getInt(strain);
-
-						 if (outICU > outHospital) {
-							 throw new RuntimeException("Agent cannot leave ICU after leaving hospital");
-						 }
-
-						 // total days in hospital (in or out of ICU)
-						 for (int day = inHospital; day < outHospital; day++) {
-							 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
-						 }
-
-						 //days in ICU (critical)
-						 for (int day = inICU; day < outICU; day++) {
-							 postProcessHospitalFilledBedsICU.mergeInt(day, 1, Integer::sum);
-						 }
+				 // newly admitted to hospital
+				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
+				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
 
 
-					 } else {
-						 int outHospital = inHospital + daysInHospitalGivenNoICU.getInt(strain);
-						 //days in regular part of hospital
-						 for (int day = inHospital; day < outHospital; day++) {
-							 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
-						 }
+				 if (goToICU(strain, age)) {
+
+					 int inICU = inHospital + lagBetweenHospitalizationAndICU.getInt(strain);
+					 int outICU = inICU + daysInICU.getInt(strain);
+					 int outHospital = inHospital + daysInHospitalGivenICU.getInt(strain);
+
+					 if (outICU > outHospital) {
+						 throw new RuntimeException("Agent cannot leave ICU after leaving hospital");
+					 }
+
+					 // total days in hospital (in or out of ICU)
+					 for (int day = inHospital; day < outHospital; day++) {
+						 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
+					 }
+
+					 //days in ICU (critical)
+					 for (int day = inICU; day < outICU; day++) {
+						 postProcessHospitalFilledBedsICU.mergeInt(day, 1, Integer::sum);
+					 }
+
+
+				 } else {
+					 int outHospital = inHospital + daysInHospitalGivenNoICU.getInt(strain);
+					 //days in regular part of hospital
+					 for (int day = inHospital; day < outHospital; day++) {
+						 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
 					 }
 				 }
-
 			 }
 
 		 }
@@ -710,7 +656,7 @@
 			 // checks whether agents goes to hospital
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
-					 * getSeriouslySickFactor(person, strain);
+					 * getSeriouslySickFactor(person);
 		 }
 
 		 /**
@@ -769,100 +715,27 @@
 		 }
 
 
-		 /**
-		  * Adapted from AntibodyDependentTransitionModel.
-		  * changed inputs & immunity factor
-		  */
+		 public double getSeriouslySickFactor(Holder person) {
 
-		 //		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
-		 //
-		 //
-		 //			 int numVaccinations = 0;
-		 //
-		 //			 if (person.boosterDate != null) {
-		 //				 numVaccinations = 2;
-		 //			 } else if (person.vaccinationDate != null) {
-		 //				 numVaccinations = 1;
-		 //			 }
-		 //
-		 //			 int numInfections = person.infections.size() - 1;
-		 //
-		 //			 if (numVaccinations == 0 && numInfections == 0)
-		 //				 return 1.0;
-		 //
-		 //			 double veSeriouslySick = 0.0;
-		 //
-		 //			 //vaccinated persons that are boostered either by infection or by 3rd shot
-		 //			 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
-		 //				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
-		 //					 veSeriouslySick = 0.9;
-		 //				 else
-		 //					 veSeriouslySick = 0.95;
-		 //			 }
-		 //
-		 //			 //vaccinated persons or persons who have had a severe course of disease in the past
-		 //			 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
-		 //			 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA)) {
-		 //
-		 //				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
-		 //					 veSeriouslySick = 0.55;
-		 //				 else
-		 //					 veSeriouslySick = 0.9;
-		 //
-		 //			 } else {
-		 //				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
-		 //					 veSeriouslySick = 0.55;
-		 //				 else
-		 //					 veSeriouslySick = 0.6;
-		 //			 }
-		 //
-		 //			 double factorInf;
-		 //			 if (person.antibodies == null || person.antibodies.equals(-1.) || !useAntibodiesFromInfectionEvent) {
-		 //				 factorInf = immunityFactorDefault;
-		 //			 } else {
-		 //				 factorInf = 1.0 / (1.0 + Math.pow(person.antibodies, beta)); // goes up over time
-		 //			 }
-		 //
-		 //
-		 //			 // immunity factor = chance of infection w/ respect to non-immunized person.
-		 //			 // 1- veSeriouslySick = remaining risk of hospitalization w/ repect to non-immunized person
-		 //			 // factorSeriouslySick = risk of hospitalization given infection w/ respect to non-imm...
-		 //
-		 //
-		 //			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf; // goes down over time
-		 //
-		 //			 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
-		 //			 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
-		 //
-		 //			 return factorSeriouslySick;
-		 //		 }
-		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
+			 // Antibodies at time of infection
+			 Double antibodiesAtTimeOfInfection = person.antibodies;
 
+			 // reverse exponential decay
+			 int numImmunityEvents = person.immunityDays.size();
 
-			 int numVaccinations = 0;
-
-			 if (person.boosterDate != null) {
-				 numVaccinations = 2;
-			 } else if (person.vaccinationDate != null) {
-				 numVaccinations = 1;
+			 if (numImmunityEvents > 1) {
+				 int currentImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 1);
+				 int previousImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 2);
+				 int daysSincePreviousImmunityEvent = currentImmunityEvent - previousImmunityEvent;
+				 double halfLife_days = 60.;
+				 double antibodiesAfterPreviousImmunityEvent = antibodiesAtTimeOfInfection * Math.pow(2., daysSincePreviousImmunityEvent / halfLife_days);
+				 return 1. / (1. + Math.pow(0.5 * antibodiesAfterPreviousImmunityEvent, beta));
 			 }
 
-			 int numInfections = person.infections.size() - 1;
+			 // if agent didn't experience immunity events prior to current immunity event, they do don't benefit from any protection.
+			 return 1.;
 
 
-			 int immunityEvents = numVaccinations + numInfections;
-
-			 try {
-				 if (immunityEvents == 0)
-					 return 1.0;
-				 else if (immunityEvents == 1) {
-					 return immunity.get(1).get(strain);
-				 } else {
-					 return immunity.get(2).get(strain);
-				 }
-			 } catch (NullPointerException e) {
-				 throw new RuntimeException(strain + " is not accounted for");
-			 }
 
 		 }
 
@@ -877,16 +750,11 @@
 		 private static final class Holder {
 
 			 private Double antibodies = null;
-			 private VaccinationType vaccine = null;
-			 private LocalDate vaccinationDate = null;
-			 private LocalDate boosterDate = null;
-			 private final List<VirusStrain> strains = new ArrayList<>();
-			 private final IntList infections = new IntArrayList();
-			 //		 private final List<LocalDate> contagiousDates = new ArrayList<>();
-			 //		 private final List<LocalDate> recoveredDates = new ArrayList<>();
+			 private final Id<Person> personId;
+			 private final IntList immunityDays = new IntArrayList();
 
 			 private Holder(Id<Person> personId) {
-				 // Id is not stored at the moment
+				 this.personId = personId;
 			 }
 
 		 }
