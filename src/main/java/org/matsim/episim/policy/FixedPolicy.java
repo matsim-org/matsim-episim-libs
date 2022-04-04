@@ -32,6 +32,7 @@ import org.matsim.episim.EpisimReporting;
 import javax.annotation.Nullable;
 import javax.inject.Named;
 import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -210,9 +211,15 @@ public final class FixedPolicy extends ShutdownPolicy {
 				Iterator<Map.Entry<String, Object>> it = map.entrySet().iterator();
 				while (it.hasNext()) {
 					Map.Entry<String, Object> e = it.next();
-					LocalDate other = LocalDate.parse(e.getKey());
-					if (other.isEqual(ref) || other.isAfter(ref))
-						it.remove();
+
+					try {
+						LocalDate other = LocalDate.parse(e.getKey());
+						if (other.isEqual(ref) || other.isAfter(ref))
+							it.remove();
+					} catch (DateTimeParseException ex) {
+						// not all entries are necessarily dates anymore
+						log.debug("Ignored entry: {} | {}", e.getKey(), ex);
+					}
 
 				}
 			}
