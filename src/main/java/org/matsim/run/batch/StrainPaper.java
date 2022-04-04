@@ -11,13 +11,16 @@ import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.run.RunParallel;
+import org.matsim.run.batch.CologneStrainBatch.Params;
 import org.matsim.run.modules.AbstractSnzScenario2020;
+import org.matsim.run.modules.CologneStrainScenario;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 
 /**
@@ -26,13 +29,13 @@ import java.util.Map;
 public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 	@Override
-	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().createSnzBerlinProductionScenario();
+	public CologneStrainScenario getBindings(int id, @Nullable Params params) {
+		return new CologneStrainScenario( 1.0);
 	}
 
 	@Override
-	public Metadata getMetadata() {
-		return Metadata.of("berlin", "strainPaper");
+	public BatchRun.Metadata getMetadata() {
+		return BatchRun.Metadata.of("cologne", "strain");
 	}
 
 //	@Override
@@ -40,22 +43,18 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 //		return 1500;
 //	}
 
-	@Override
+	@Nullable
+	@Override	
 	public Config prepareConfig(int id, Params params) {
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder()
-				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
-				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
-				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-				.setVaccinations(SnzBerlinProductionScenario.Vaccinations.no)
-				.createSnzBerlinProductionScenario();
-		Config config = module.config();
+		CologneStrainScenario scenario = getBindings(id, params);
+
+		Config config = scenario.config();
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-		episimConfig.setStartFromSnapshot("../episim-snapshot-270-2020-11-20.zip");
+		episimConfig.setCalibrationParameter(1.1293077849372072e-05);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
@@ -77,19 +76,24 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 			builder.restrict("2020-12-15", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
 		}
 
-		episimConfig.setPolicy(FixedPolicy.class, builder.build());
+		episimConfig.setPolicy(builder.build());
+		
+		{
+			Map<LocalDate, Double> outdoorFractionOld = episimConfig.getLeisureOutdoorFraction();
+			Map<LocalDate, Double> outdoorFractionNew = new HashMap<LocalDate, Double>();
+			
+			for (Entry<LocalDate, Double> entry : outdoorFractionOld.entrySet()) {
+				if (entry.getKey().isBefore(LocalDate.parse("2021-01-01")))
+						outdoorFractionNew.put(entry.getKey(), entry.getValue());
+			}
+			
+			episimConfig.setLeisureOutdoorFraction(outdoorFractionNew);
+		}
 
-		episimConfig.setLeisureOutdoorFraction(0.);
-
-		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
-		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayVariant.put(LocalDate.parse(params.b117date), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayVariant);
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.b117inf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.5);
 
 		return config;
 	}
