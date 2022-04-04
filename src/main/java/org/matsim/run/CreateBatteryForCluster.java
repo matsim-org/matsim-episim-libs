@@ -75,7 +75,7 @@ public class CreateBatteryForCluster<T> implements Callable<Integer> {
 	@CommandLine.Option(names = "--batch-output", defaultValue = "output")
 	private Path batchOutput;
 
-	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v16")
+	@CommandLine.Option(names = "--run-version", description = "Run version", defaultValue = "v17")
 	private String runVersion;
 
 	@CommandLine.Option(names = "--step-size", description = "Step size of the job array", defaultValue = "32")

@@ -116,6 +116,7 @@ public final class RunTrial implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		Configurator.setRootLevel(Level.ERROR);
+		Configurator.setLevel(log.getName(), Level.INFO);
 
 		for (Map.Entry<String, Double> e : params.entrySet()) {
 			System.setProperty("EPISIM_" + e.getKey(), String.valueOf(e.getValue()));
