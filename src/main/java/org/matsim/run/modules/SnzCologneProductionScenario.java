@@ -433,7 +433,7 @@
 		 if (this.restrictions != Restrictions.no) {
 
 			 if (leisureCorrection != 1)
-				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "leisure");
+				 builder.apply("2020-10-15", "2020-12-07", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "leisure");
 			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
 
 			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
