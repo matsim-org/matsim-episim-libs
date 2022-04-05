@@ -56,12 +56,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 					oVacStartDate = LocalDate.parse("2099-01-01");
 					campaignDuration = 50;
 
-					Map<EpisimPerson.ImmuneResponse, Double> immuneResponseDoubleMap = new HashMap<>();
-					immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.low, params.immuneRespLow);
-					immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.normal, 1.);
-					immuneResponseDoubleMap.put(EpisimPerson.ImmuneResponse.high, params.immuneRespHigh);
-					antibodyModelConfig.setImmuneResponseMultiplier(immuneResponseDoubleMap);
-					antibodyModelConfig.setImmuneShare(params.immuneShare);
+					antibodyModelConfig.setImmuneReponseSigma(params.immuneResponseSigma);
 				}
 
 				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration, VaccinationType.mRNA, 0., 0.));
@@ -99,9 +94,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		if (DEBUG_MODE) {
 			if (params.seed == 4711 &&
-					params.immuneShare == 0.4 &&
-					params.immuneRespLow == 0.1 &&
-					params.immuneRespHigh == 10 &&
+					params.immuneResponseSigma == 1.0 &&
 					params.ba1ba2x.equals("true") &&
 					params.ba1Inf == 2.7 &&
 					params.ba2Inf == 1.5 &&
@@ -124,6 +117,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+//		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
 		double tf = 1.0;
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 * tf);
@@ -503,30 +498,26 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		// new
-		@Parameter({0.0, 0.2, 0.4})
-		double immuneShare;
+		@Parameter({0.0, 1.0, 3.0})
+		double immuneResponseSigma;
 
+//		@Parameter({1.0})
+//		double thetaFactor;
 
 		@StringParameter({"true"})
 		String ba1ba2x;
 
-		@Parameter({0.1, 1.0})
-		Double immuneRespLow;
 
-		@Parameter({1.0, 10.})
-		Double immuneRespHigh;
-
-		@Parameter({2.1,2.3,2.5,2.7,2.9})
+		@Parameter({2.3,2.5,2.7})
 		double deltaInf;
 
-		@Parameter({1.8, 2.1,2.4,2.7})
+		@Parameter({2.1, 2.4, 2.7, 3.0, 3.3})
 		double ba1Inf;
 
 		@Parameter({1.5})
 		double ba2Inf;
 
-		@StringParameter({"2021-11-14","2021-11-19"})
+		@StringParameter({"2021-11-14", "2021-11-19", "2021-11-24", "2021-11-29", "2021-12-03","2021-12-08"})
 		String ba1Date;
 	}
 
