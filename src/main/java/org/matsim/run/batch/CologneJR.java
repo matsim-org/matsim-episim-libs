@@ -498,7 +498,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.0, 1.0, 3.0})
+		@Parameter({0.0, 3.0, 6.0, 9.})
 		double immuneResponseSigma;
 
 //		@Parameter({1.0})
@@ -511,13 +511,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({2.3,2.5,2.7})
 		double deltaInf;
 
-		@Parameter({2.1, 2.4, 2.7, 3.0, 3.3})
+		@Parameter({3.0, 3.4, 3.8, 4.2, 4.6})
 		double ba1Inf;
 
 		@Parameter({1.5})
 		double ba2Inf;
 
-		@StringParameter({"2021-11-14", "2021-11-19", "2021-11-24", "2021-11-29", "2021-12-03","2021-12-08"})
+		@StringParameter({"2021-11-29","2021-12-01","2021-12-03","2021-12-05","2021-12-07"})
 		String ba1Date;
 	}
 
