@@ -115,8 +115,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 				antibodies = Math.max(antibodies, initialAntibodies);
 
-				antibodies *= person.getImmuneResponseMultiplier();
-
 				person.setAntibodies(strain2, antibodies);
 			}
 
@@ -144,8 +142,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double antibodies = Math.min(150* person.getImmuneResponseMultiplier(), person.getAntibodies(strain2) * refreshFactor* person.getImmuneResponseMultiplier());
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
 				antibodies = Math.max(antibodies, initialAntibodies * person.getImmuneResponseMultiplier());
-
-				antibodies *= person.getImmuneResponseMultiplier();
 
 				person.setAntibodies(strain2, antibodies);
 			}
