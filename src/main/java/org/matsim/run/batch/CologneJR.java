@@ -37,10 +37,11 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 	boolean DEBUG_MODE = false;
 
+
 	@Nullable
 	@Override
 	public Module getBindings(int id, @Nullable Params params) {
-		return Modules.override(getBindings(0.0)).with(new AbstractModule() {
+		return Modules.override(getBindings(0.0, params)).with(new AbstractModule() {
 			@Override
 			protected void configure() {
 
@@ -66,8 +67,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		});
 	}
 
-	private SnzCologneProductionScenario getBindings(double pHousehold) {
+	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
+				.setCarnivalModel(params==null ? SnzCologneProductionScenario.CarnivalModel.no : params.carnivalModel)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -109,7 +111,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		LocalDate restrictionDate = LocalDate.parse("2022-03-01");
 
-		SnzCologneProductionScenario module = getBindings(0.0);
+		SnzCologneProductionScenario module = getBindings(0.0, params);
 
 		Config config = module.config();
 
@@ -498,8 +500,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.0, 3.0, 6.0, 9.})
+		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
+		SnzCologneProductionScenario.CarnivalModel carnivalModel;
+
+		@Parameter({3.0, 5.0})
 		double immuneResponseSigma;
+
 
 //		@Parameter({1.0})
 //		double thetaFactor;
@@ -511,13 +517,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({2.3,2.5,2.7})
 		double deltaInf;
 
-		@Parameter({3.0, 3.4, 3.8, 4.2, 4.6})
+		@Parameter({2.1, 2.4, 2.7, 3.0, 3.3})
 		double ba1Inf;
 
 		@Parameter({1.5})
 		double ba2Inf;
 
-		@StringParameter({"2021-11-29","2021-12-01","2021-12-03","2021-12-05","2021-12-07"})
+		@StringParameter({"2021-11-16","2021-11-18","2021-11-20","2021-11-22","2021-11-24","2021-11-26"})
 		String ba1Date;
 	}
 

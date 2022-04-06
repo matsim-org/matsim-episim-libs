@@ -98,7 +98,7 @@
 
 	 private VirusStrainConfigGroup strainConfig;
 
-	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
+	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; relates to % of cases reported.
 	 private static final double beta = 1.2;
 	 private final int populationCnt = 919_936;
 

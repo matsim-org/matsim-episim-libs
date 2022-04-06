@@ -66,6 +66,9 @@
 		 private double leisureCorrection = 1.9;
 		 private double leisureNightlyScale = 1.0;
 		 private double householdSusc = 1.0;
+		 public CarnivalModel carnivalModel = CarnivalModel.no;
+
+
 
 		 public Builder() {
 			 this.vaccinationModel = VaccinationFromData.class;
@@ -110,6 +113,11 @@
 			 this.householdSusc = householdSusc;
 			 return this;
 		 }
+
+		 public Builder setCarnivalModel(CarnivalModel carnivalModel) {
+			 this.carnivalModel = carnivalModel;
+			 return this;
+		 }
 	 }
 
 	 private final int sample;
@@ -133,6 +141,10 @@
 	 private final double leisureNightlyScale;
 	 private final double householdSusc;
 	 private final LocationBasedRestrictions locationBasedRestrictions;
+	 private final CarnivalModel carnivalModel;
+
+
+	 public enum CarnivalModel {yes, no}
 
 	 /**
 	  * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -169,6 +181,7 @@
 		 this.importFactorBeforeJune = builder.importFactorBeforeJune;
 		 this.importFactorAfterJune = builder.importFactorAfterJune;
 		 this.locationBasedRestrictions = builder.locationBasedRestrictions;
+		 this.carnivalModel = builder.carnivalModel;
 	 }
 
 
@@ -466,6 +479,15 @@
 
 				 vaccinationConfig.setFromFile(INPUT.resolve("Aktuell_Deutschland_Landkreise_COVID-19-Impfungen.csv").toString());
 			 }
+		 }
+
+		 if (carnivalModel.equals(CarnivalModel.yes)) {
+		 	// Friday 25.2 to Monday 28.2 (Rosenmontag)
+			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "leisure");
+			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "leisure"); // sunday, to overwrite the setting on sundays
+			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "leisure"); // tuesday, back to normal after carnival
+
+			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SATURDAY); // set monday to be a sunday
 		 }
 
 		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
