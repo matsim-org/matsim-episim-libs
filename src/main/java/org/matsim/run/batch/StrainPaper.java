@@ -30,7 +30,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 	@Override
 	public CologneStrainScenario getBindings(int id, @Nullable Params params) {
-		return new CologneStrainScenario( 1.0);
+		return new CologneStrainScenario( 1.8993316907481814);
 	}
 
 	@Override
@@ -54,15 +54,15 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(1.1293077849372072e-05);
+		episimConfig.setCalibrationParameter(1.1293063756440906e-05);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		builder.clearAfter("2020-12-14");
+		builder.clearAfter("2020-12-31");
 
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
 //			if (act.contains("educ_higher")) continue;
-			builder.restrict("2020-12-15", params.activityLevel, act);
+			builder.restrict("2021-01-01", params.activityLevel / 1.3, act);
 		}
 
 		//schools
@@ -88,32 +88,30 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 			}
 			
 			episimConfig.setLeisureOutdoorFraction(outdoorFractionNew);
+
 		}
 
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.b117inf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.alphaInf);
 
 		return config;
 	}
 
 	public static final class Params {
 
-		@GenerateSeeds(10)
+		@GenerateSeeds(12)
 		public long seed;
 
 //		@StringParameter({"50%open", "open", "activityLevel"})
 		@StringParameter({"activityLevel"})
 		public String schools;
 
-		@StringParameter({"2020-12-15"})
-		String b117date;
-
 		@Parameter({1.2, 1.5, 1.8, 2.1, 2.4})
-		double b117inf;
+		double alphaInf;
 
-		@Parameter({0.47, 0.57, 0.67, 0.77, 0.87})
+		@Parameter({0.4, 0.5, 0.6, 0.7, 0.8})
 		double activityLevel;
 
 	}
