@@ -1284,9 +1284,9 @@ public class DefaultAntibodyModelTest {
 			throw new RuntimeException("inputs must have same size");
 		}
 
-		if (immunityEventDays.getInt(0) < 1) {
-			throw new RuntimeException("first immunity event cannot take place before day 1");
-		}
+//		if (immunityEventDays.getInt(0) < 1) {
+//			throw new RuntimeException("first immunity event cannot take place before day 1");
+//		}
 
 		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodiesPerDayAndStrain = new Int2ObjectAVLTreeMap<>();
 
