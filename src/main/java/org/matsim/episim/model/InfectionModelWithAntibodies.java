@@ -92,7 +92,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
 
 		//reduced infectivity if infector has antibodies
-		double immunityFactorInfector = infector.getImmunityFactor(vaccinationConfig.getBeta());//getAntibodies(infector.getVirusStrain());
+		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));
 		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));
 
 		{

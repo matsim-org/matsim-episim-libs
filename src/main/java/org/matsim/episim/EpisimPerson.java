@@ -566,8 +566,8 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Immunity factor based on antibody level at infection.
 	 */
-	public double getImmunityFactor(double beta) {
-		return 1.0 / (1.0 + Math.pow(antibodyLevelAtInfection, beta));
+	public double getAntibodyLevelAtInfection() {
+		return antibodyLevelAtInfection;
 	}
 
 	public double getAntibodies(VirusStrain strain) {
