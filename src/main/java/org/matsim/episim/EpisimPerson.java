@@ -407,11 +407,13 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public void setInitialInfection(double now, VirusStrain strain) {
 
-		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain));
+		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain, antibodies.getDouble(strain)));
 
 		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
 		infectionDates.add(now);
+
+		antibodyLevelAtInfection = antibodies.getDouble(strain);
 
 	}
 

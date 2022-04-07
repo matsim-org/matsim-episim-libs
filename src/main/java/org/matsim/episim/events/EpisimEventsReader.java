@@ -132,8 +132,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			double time = Double.parseDouble(attributes.get(EpisimInfectionEvent.ATTRIBUTE_TIME));
 			Id<Person> person = Id.createPersonId(attributes.get(EpisimInfectionEvent.ATTRIBUTE_PERSON));
 			VirusStrain virusStrain = VirusStrain.valueOf( attributes.get(EpisimInfectionEvent.VIRUS_STRAIN));
+			double antibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.ANTIBODIES)) {
+				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
+			}
 
-			return new EpisimInitialInfectionEvent(time, person,virusStrain);
+			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies);
 		};
 	}
 
