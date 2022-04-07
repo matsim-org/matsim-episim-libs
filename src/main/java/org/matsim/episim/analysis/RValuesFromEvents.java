@@ -270,8 +270,17 @@ public class RValuesFromEvents implements OutputAnalysis {
 			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, InfectedPerson::new);
 			infector.strain = event.getVirusStrain();
 
-			InfectedPerson infected = infectedPersons.computeIfAbsent(event.getPersonId().toString(), InfectedPerson::new);
-			infected.strain = event.getVirusStrain();
+
+			String infectedId = event.getPersonId().toString();
+			if (infectedPersons.containsKey(infectedId)) {
+
+				// person was already infected and is now moved
+				handledInfections.add(infectedPersons.remove(infectedId));
+
+				// create new infected person
+				InfectedPerson infected = infectedPersons.computeIfAbsent(infectedId, InfectedPerson::new);
+				infected.strain = event.getVirusStrain();
+			}
 
 			String activityType = getActivityType(event.getInfectionType());
 			activityTypes.add(activityType);
