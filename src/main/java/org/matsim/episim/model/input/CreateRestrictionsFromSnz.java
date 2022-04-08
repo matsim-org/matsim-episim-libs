@@ -93,6 +93,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 				}
 			}
 		}
+		Collections.sort(fileData);
 		return fileData;
 	}
 
@@ -574,7 +575,6 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 		startDateStillUsingBaseDays = findNextDateToContinueFile(startDateStillUsingBaseDays, filesWithData, finalPath);
 
-		Collections.sort(filesWithData);
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
 
@@ -913,12 +913,12 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 		}
 		boolean nextDateIsStartDate = false;
 		for (File file : filesWithData) {
-			String test = file.getName().split("_")[0];
+			String dateOfFile = file.getName().split("_")[0];
 			if (nextDateIsStartDate) {
-				startDateStillUsingBaseDays = test;
+				startDateStillUsingBaseDays = dateOfFile;
 				break;
 			}
-			if (startDateStillUsingBaseDays.equals(test))
+			if (startDateStillUsingBaseDays.equals(dateOfFile))
 				nextDateIsStartDate = true;
 		}
 		return startDateStillUsingBaseDays;
