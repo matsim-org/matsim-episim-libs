@@ -69,7 +69,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
-				.setCarnivalModel(params==null ? SnzCologneProductionScenario.CarnivalModel.no : params.carnivalModel)
+//				.setCarnivalModel(params==null ? SnzCologneProductionScenario.CarnivalModel.no : params.carnivalModel)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -178,34 +178,34 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.7);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
+
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-		infPerDayMUTB.put(LocalDate.parse("2021-06-21"), 10);
-		infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(1), 1);
+		infPerDayMUTB.put(LocalDate.parse("2021-06-21"), 4);
+		infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
 
+		//disease import 2021		
+		LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
+		int imp1 = 120;
+		int imp2 = 1;
+		int imp3 = 40;
+		
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
+		
+		
+		LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
+		
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
+		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
+		
 
-		//disease import 2021
-		double cologneFactor = 0.5;
-		int imp1 = 10;
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-07-03").plusDays(0),
-				LocalDate.parse("2021-07-25").plusDays(0), 1, 48);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-07-26").plusDays(0),
-				LocalDate.parse("2021-08-17").plusDays(0), 48, imp1);
-
-		int imp = (int) (48 * 0.5);
-		imp = Math.max(imp, imp1);
-
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-10-09").plusDays(0),
-				LocalDate.parse("2021-10-16").plusDays(0), imp1, imp);
-		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, cologneFactor * 5, LocalDate.parse("2021-10-17").plusDays(0),
-				LocalDate.parse("2021-10-24").plusDays(0), imp, imp1);
-		infPerDayMUTB.put(LocalDate.parse("2021-10-25"), 1);
-		;
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
 //		double deltaInf = 2.7;
-		double deltaHos = 1.5;
+		double deltaHos = 0.7;
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(params.deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
@@ -213,12 +213,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		//omicron
 		double oInf = params.ba1Inf;
-		double oHos = 0.3;
+		double oHos = 0.13;
 		if (params.ba1Inf > 0) {
 			Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
 			infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayOmicron.put(LocalDate.parse(params.ba1Date), 4);
-			infPerDayOmicron.put(LocalDate.parse(params.ba1Date).plusDays(6), 1);
+			infPerDayOmicron.put(LocalDate.parse(params.ba1Date).plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(params.deltaInf * oInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
@@ -232,7 +232,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
 			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayBA2.put(LocalDate.parse("2021-12-22"), 4);
-			infPerDayBA2.put(LocalDate.parse("2021-12-22").plusDays(6), 1);
+			infPerDayBA2.put(LocalDate.parse("2021-12-22").plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(params.deltaInf * oInf * params.ba2Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
@@ -500,12 +500,11 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
-		SnzCologneProductionScenario.CarnivalModel carnivalModel;
+//		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
+//		SnzCologneProductionScenario.CarnivalModel carnivalModel;
 
-		@Parameter({3.0, 5.0})
+		@Parameter({3.0})
 		double immuneResponseSigma;
-
 
 //		@Parameter({1.0})
 //		double thetaFactor;
@@ -513,18 +512,18 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"true"})
 		String ba1ba2x;
 
-
-		@Parameter({2.3,2.5,2.7})
+		@Parameter({2.7})
 		double deltaInf;
 
-		@Parameter({2.1, 2.4, 2.7, 3.0, 3.3})
+		@Parameter({2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1})
 		double ba1Inf;
 
-		@Parameter({1.5})
+		@Parameter({0.0, 1.5})
 		double ba2Inf;
 
-		@StringParameter({"2021-11-16","2021-11-18","2021-11-20","2021-11-22","2021-11-24","2021-11-26"})
+		@StringParameter({"2021-11-18", "2021-11-19", "2021-11-20", "2021-11-21", "2021-11-22", "2021-11-23", "2021-11-24", "2021-11-25", "2021-11-26"})
 		String ba1Date;
+		
 	}
 
 	public static void main(String[] args) {
