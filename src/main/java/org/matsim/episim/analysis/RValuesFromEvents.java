@@ -241,7 +241,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 
 		@Nullable
 		private VirusStrain strain;
-		private int contagiousDay = 0;
+		private int contagiousDay = -1;
 
 		InfectedPerson(String id) {
 			this.id = id;
@@ -321,7 +321,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 				InfectedPerson person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
 
 				// a person is infected another time
-				if (person.contagiousDay > 0 && person.contagiousDay != day) {
+				if (person.contagiousDay >= 0 && person.contagiousDay != day) {
 					handledInfections.add(infectedPersons.remove(personId));
 
 					person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
