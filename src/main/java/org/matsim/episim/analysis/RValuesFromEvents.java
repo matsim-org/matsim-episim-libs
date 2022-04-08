@@ -201,7 +201,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 
 					if (ip.contagiousDay == i) {
 						noOfInfectors.mergeInt(strain, 1, Integer::sum);
-						noOfInfected.mergeInt(strain, ip.noOfInfected.values().intStream().sum(), Integer::sum);
+						noOfInfected.mergeInt(strain, ip.noOfInfected.getInt("total"), Integer::sum);
 					}
 				}
 
