@@ -21,6 +21,17 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 
 	}
+	
+	public static void main(String[] args) {
+		SplittableRandom rnd = new SplittableRandom(1);
+		for (int i = 0; i<100; i++) {
+			double immuneResponseMultiplier = EpisimUtils.nextLogNormal(rnd, 0, 3.0);
+			System.out.println(immuneResponseMultiplier);
+
+		}
+
+	}
+
 
 	@Override
 	public void init(Collection<EpisimPerson> persons, int iteration) {
@@ -99,8 +110,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double antibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
-
-				antibodies *= person.getImmuneResponseMultiplier();
+				
+				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
 			}
@@ -109,12 +120,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		} else {
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(strain).get(strain2);
-				double antibodies = Math.min(150., person.getAntibodies(strain2) * refreshFactor);
+				
+				double antibodies = person.getAntibodies(strain2) * refreshFactor;
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
 
 				antibodies = Math.max(antibodies, initialAntibodies);
-
-				antibodies *= person.getImmuneResponseMultiplier();
+				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
 			}
@@ -131,7 +142,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double antibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
 
-				antibodies *= person.getImmuneResponseMultiplier();
+				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
 			}
@@ -140,11 +151,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		} else {
 			for (VirusStrain strain2 : VirusStrain.values()) {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(vaccinationType).get(strain2);
-				double antibodies = Math.min(150, person.getAntibodies(strain2) * refreshFactor);
+				
+				double antibodies = person.getAntibodies(strain2) * refreshFactor;
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
-				antibodies = Math.max(antibodies, initialAntibodies );
-
-				antibodies *= person.getImmuneResponseMultiplier();
+				
+				antibodies = Math.max(antibodies, initialAntibodies);
+				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
 			}
