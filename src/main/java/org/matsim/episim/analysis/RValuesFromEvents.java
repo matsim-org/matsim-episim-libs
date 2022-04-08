@@ -30,14 +30,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.events.EpisimInfectionEvent;
-import org.matsim.episim.events.EpisimInfectionEventHandler;
-import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.events.EpisimPersonStatusEventHandler;
+import org.matsim.episim.events.*;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
 
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -198,9 +196,12 @@ public class RValuesFromEvents implements OutputAnalysis {
 				Object2IntMap<VirusStrain> noOfInfected = new Object2IntOpenHashMap<>();
 
 				for (InfectedPerson ip : rHandler.getInfected()) {
-					if (ip.contagiousDay == i && ip.strain != null) {
-						noOfInfectors.mergeInt(ip.strain, 1, Integer::sum);
-						noOfInfected.mergeInt(ip.strain, ip.noOfInfected.values().intStream().sum(), Integer::sum);
+
+					VirusStrain strain =  ip.strain != null ? ip.strain : rHandler.initialStrains.get(ip.id);
+
+					if (ip.contagiousDay == i) {
+						noOfInfectors.mergeInt(strain, 1, Integer::sum);
+						noOfInfected.mergeInt(strain, ip.noOfInfected.values().intStream().sum(), Integer::sum);
 					}
 				}
 
@@ -234,6 +235,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 		private final String id;
 		private final Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
 
+		@Nullable
 		private VirusStrain strain;
 		private int contagiousDay = 0;
 
@@ -247,10 +249,11 @@ public class RValuesFromEvents implements OutputAnalysis {
 		}
 	}
 
-	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
+	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler {
 
 		private final Set<String> activityTypes = new TreeSet<>();
 		private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
+		private final Map<String, VirusStrain> initialStrains = new HashMap<>();
 
 		/**
 		 * If a person is infected another time it will be removed from {@link #infectedPersons} and put here.
@@ -262,6 +265,12 @@ public class RValuesFromEvents implements OutputAnalysis {
 		 */
 		private Iterable<InfectedPerson> getInfected() {
 			return Iterables.concat(infectedPersons.values(), handledInfections);
+		}
+
+		@Override
+		public void handleEvent(EpisimInitialInfectionEvent event) {
+			// Store strains to be used when strain was not assigned to person
+			initialStrains.put(event.getPersonId().toString(), event.getVirusStrain());
 		}
 
 		@Override
