@@ -200,6 +200,10 @@ public class RValuesFromEvents implements OutputAnalysis {
 					VirusStrain strain =  ip.strain != null ? ip.strain : rHandler.initialStrains.get(ip.id);
 
 					if (ip.contagiousDay == i) {
+
+						if (strain == null)
+							log.warn("Strain of person {} not known", ip.id);
+
 						noOfInfectors.mergeInt(strain, 1, Integer::sum);
 						noOfInfected.mergeInt(strain, ip.noOfInfected.getInt("total"), Integer::sum);
 					}
@@ -270,7 +274,11 @@ public class RValuesFromEvents implements OutputAnalysis {
 		@Override
 		public void handleEvent(EpisimInitialInfectionEvent event) {
 			// Store strains to be used when strain was not assigned to person
-			initialStrains.put(event.getPersonId().toString(), event.getVirusStrain());
+			String id = event.getPersonId().toString();
+			if (initialStrains.containsKey(id))
+				log.warn("Initial infection happened twice on: {}, {}", event.getPersonId(), event.getVirusStrain());
+
+			initialStrains.put(id, event.getVirusStrain());
 		}
 
 		@Override
@@ -289,6 +297,12 @@ public class RValuesFromEvents implements OutputAnalysis {
 				// create new infected person
 				InfectedPerson infected = infectedPersons.computeIfAbsent(infectedId, InfectedPerson::new);
 				infected.strain = event.getVirusStrain();
+			} else {
+
+				// store strain of newly effected
+				InfectedPerson infected = infectedPersons.computeIfAbsent(infectedId, InfectedPerson::new);
+				infected.strain = event.getVirusStrain();
+
 			}
 
 			String activityType = getActivityType(event.getInfectionType());
