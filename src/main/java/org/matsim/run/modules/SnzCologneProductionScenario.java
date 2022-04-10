@@ -483,11 +483,11 @@
 
 		 if (carnivalModel.equals(CarnivalModel.yes)) {
 		 	// Friday 25.2 to Monday 28.2 (Rosenmontag)
-			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "leisure");
-			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "leisure"); // sunday, to overwrite the setting on sundays
-			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "leisure"); // tuesday, back to normal after carnival
+			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
+			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
+			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
 
-			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SATURDAY); // set monday to be a sunday
+			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
 		 }
 
 		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));

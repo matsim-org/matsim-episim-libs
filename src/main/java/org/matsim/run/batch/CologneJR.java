@@ -69,7 +69,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
-//				.setCarnivalModel(params==null ? SnzCologneProductionScenario.CarnivalModel.no : params.carnivalModel)
+				.setCarnivalModel(params==null ? SnzCologneProductionScenario.CarnivalModel.no : params.carnivalModel)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -231,8 +231,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		if (params.ba2Inf > 0) {
 			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
 			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayBA2.put(LocalDate.parse("2021-12-22"), 4);
-			infPerDayBA2.put(LocalDate.parse("2021-12-22").plusDays(7), 1);
+			infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
+			infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(params.deltaInf * oInf * params.ba2Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
@@ -500,8 +500,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
-//		SnzCologneProductionScenario.CarnivalModel carnivalModel;
+		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
+		SnzCologneProductionScenario.CarnivalModel carnivalModel;
 
 		@Parameter({3.0})
 		double immuneResponseSigma;
@@ -509,20 +509,23 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //		@Parameter({1.0})
 //		double thetaFactor;
 
-		@StringParameter({"true"})
+		@StringParameter({"true", "false"})
 		String ba1ba2x;
 
 		@Parameter({2.7})
 		double deltaInf;
 
-		@Parameter({2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 2.9, 3.0, 3.1})
+		@Parameter({2.5})
 		double ba1Inf;
 
-		@Parameter({0.0, 1.5})
+		@Parameter({0.0, 1.3, 1.4, 1.5, 1.6, 1.7})
 		double ba2Inf;
 
-		@StringParameter({"2021-11-18", "2021-11-19", "2021-11-20", "2021-11-21", "2021-11-22", "2021-11-23", "2021-11-24", "2021-11-25", "2021-11-26"})
+		@StringParameter({"2021-11-21"})
 		String ba1Date;
+		
+		@StringParameter({"2021-12-12", "2021-12-14", "2021-12-16", "2021-12-18", "2021-12-20", "2021-12-22"})
+		String ba2Date;
 		
 	}
 
