@@ -122,10 +122,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(strain).get(strain2);
 				
 				double antibodies = person.getAntibodies(strain2) * refreshFactor;
+				
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
-
+				initialAntibodies = Math.min(150., initialAntibodies * person.getImmuneResponseMultiplier());
+				
 				antibodies = Math.max(antibodies, initialAntibodies);
-				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
+				antibodies = Math.min(150., antibodies);
 
 				person.setAntibodies(strain2, antibodies);
 			}
@@ -153,10 +155,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(vaccinationType).get(strain2);
 				
 				double antibodies = person.getAntibodies(strain2) * refreshFactor;
+				
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
+				initialAntibodies = Math.min(150., initialAntibodies * person.getImmuneResponseMultiplier());
 				
 				antibodies = Math.max(antibodies, initialAntibodies);
-				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
+				antibodies = Math.min(150., antibodies);
 
 				person.setAntibodies(strain2, antibodies);
 			}
