@@ -146,39 +146,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		}
 	}
 
-//	private void handleImmunization(EpisimPerson person, VaccinationType vaccinationType) {
-//
-//		boolean firstImmunization = checkFirstImmunization(person);
-//
-//		// 1st immunization:
-//		if (firstImmunization) {
-//			for (VirusStrain strain2 : VirusStrain.values()) {
-//				double antibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
-//
-//				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
-//
-//				person.setAntibodies(strain2, antibodies);
-//			}
-//
-//
-//		} else {
-//			for (VirusStrain strain2 : VirusStrain.values()) {
-//				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(vaccinationType).get(strain2);
-//
-//				double antibodies = person.getAntibodies(strain2) * refreshFactor;
-//
-//				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
-//				initialAntibodies = Math.min(150., initialAntibodies * person.getImmuneResponseMultiplier());
-//
-//				antibodies = Math.max(antibodies, initialAntibodies);
-//				antibodies = Math.min(150., antibodies);
-//
-//				person.setAntibodies(strain2, antibodies);
-//			}
-//
-//		}
-//	}
-
 	private boolean checkFirstImmunization(EpisimPerson person) {
 		boolean firstImmunization = true;
 		for (double abLevel : person.getAntibodies().values()) {
