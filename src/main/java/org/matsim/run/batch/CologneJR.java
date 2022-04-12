@@ -423,7 +423,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		Map<LocalDate, Integer> vaccinations = new HashMap<>();
 		double population = 2_352_480;
-		vaccinations.put(LocalDate.parse("2022-02-15"), (int) (0.0035 * population / 7));
+		vaccinations.put(LocalDate.parse("2022-04-12"), (int) (0.0002 * population / 7));
 		vaccinations.put(LocalDate.parse("2022-06-30"), 0);
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
@@ -647,7 +647,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
 
-		boosterVaccinations.put(LocalDate.parse("2022-02-15"), (int) (2_352_480 * 0.04 * boosterSpeed / 7));
+		boosterVaccinations.put(LocalDate.parse("2022-04-12"), (int) (2_352_480 * 0.002 * boosterSpeed / 7));
 		boosterVaccinations.put(LocalDate.parse("2022-06-30"), 0);
 
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
