@@ -324,7 +324,7 @@
 		 //restrictions and masks
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20220311.csv"));
+		 activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20220409.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
