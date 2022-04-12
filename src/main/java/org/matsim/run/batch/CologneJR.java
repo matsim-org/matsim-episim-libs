@@ -194,6 +194,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 						else if (immunityType == VaccinationType.vector) {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
 						}
+						else if (immunityType == VaccinationType.omicronUpdate) {
+							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+						}
 						else {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);
 						}
