@@ -191,7 +191,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		//disease import 2021
 		LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
 		int imp1 = 120;
-		int imp2 = 1;
+		int imp2 = params.fallImport;
 		int imp3 = 40;
 
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
@@ -206,7 +206,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
 //		double deltaInf = 2.7;
-		double deltaHos = 0.7;
+		double deltaHos = 0.9;
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(params.deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
@@ -501,14 +501,16 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
+		@IntParameter({10})
+		int fallImport;
+
+
 		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
 		SnzCologneProductionScenario.CarnivalModel carnivalModel;
 
-		@Parameter({3.0, 6.0})
+		@Parameter({3.0})
 		double immuneResponseSigma;
 
-//		@Parameter({1.0})
-//		double thetaFactor;
 
 		@StringParameter({"true", "false"})
 		String ba1ba2x;
@@ -516,16 +518,16 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({2.7})
 		double deltaInf;
 
-		@Parameter({2.5})
+		@Parameter( {2.3,2.4})
 		double ba1Inf;
 
-		@Parameter({0.0, 1.3, 1.4, 1.5, 1.6, 1.7})
+		@Parameter({0.0, 1.3, 1.5, 1.7})
 		double ba2Inf;
 
 		@StringParameter({"2021-11-21"})
 		String ba1Date;
 
-		@StringParameter({"2021-12-12", "2021-12-14", "2021-12-16", "2021-12-18", "2021-12-20", "2021-12-22"})
+		@StringParameter({"2021-12-10","2021-12-12", "2021-12-14", "2021-12-16", "2021-12-18"})
 		String ba2Date;
 
 	}
