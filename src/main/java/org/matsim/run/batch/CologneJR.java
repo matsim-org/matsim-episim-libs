@@ -241,10 +241,26 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
 		}
 
+//		//STRAIN_A
+//		if (params.mutAInf > 0) {
+//			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
+//			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
+//			infPerDayStrainA.put(LocalDate.parse(params.mutDate), 4);
+//			infPerDayStrainA.put(LocalDate.parse(params.mutDate).plusDays(6), 1);
+//			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(params.deltaInf * params.ba1Inf * params.ba2Inf * params.mutAInf);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.3);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.3);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.35);
+//		}
+
 
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setUseIgA(Boolean.valueOf(params.ba1ba2x));
+		vaccinationConfig.setTimePeriodIgA(params.timePeriodIgA);
+
+
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 		for (int i = 0; i < 5; i++) vaccinationCompliance.put(i, 0.0);
 		for (int i = 5; i <= 11; i++) vaccinationCompliance.put(i, 0.4);
@@ -410,9 +426,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				"educ_other", eduTestsPCR
 		)));
 
-		Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> eduTestsPCRVaccinated = new HashMap<LocalDate, Double>();
+		Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<>();
+		Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<>();
+		Map<LocalDate, Double> eduTestsPCRVaccinated = new HashMap<>();
 		leisureTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 		workTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 		eduTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
@@ -500,6 +516,15 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		@GenerateSeeds(5)
 		public long seed;
+
+		@StringParameter({"2022-07-01","2022-10-01"})
+		public String mutDate;
+
+		@Parameter({120.,730.})
+		public double timePeriodIgA;
+
+		@Parameter({1.})
+		public boolean mutAInf;
 
 		@IntParameter({10})
 		int fallImport;
