@@ -51,8 +51,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				set.addBinding().to(VaccinationStrategyBMBF0422.class).in(Singleton.class);
 
 
-				AntibodyModel.Config antibodyModelConfig = new AntibodyModel.Config();
-
 				double mutEscOm = 1.;
 
 				LocalDate start = null;
@@ -71,6 +69,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				bind(VaccinationStrategyBMBF0422.Config.class).toInstance(new VaccinationStrategyBMBF0422.Config(start, 30, vaccinationType, minAge, compliance));
 
 				//initial antibodies
+				AntibodyModel.Config antibodyModelConfig = new AntibodyModel.Config();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscOm);
@@ -671,7 +670,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		// cross immunity time
+		// cross immunity
 		@Parameter({120.,730.})
 		public double timePeriodIgA;
 
