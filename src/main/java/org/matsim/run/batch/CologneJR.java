@@ -18,6 +18,7 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategy;
+import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0422;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
@@ -47,22 +48,26 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
 
-				set.addBinding().to(VaccinationStrategy.class).in(Singleton.class);
-				LocalDate oVacStartDate = null;
-				int campaignDuration = 0;
+				set.addBinding().to(VaccinationStrategyBMBF0422.class).in(Singleton.class);
+
 
 				AntibodyModel.Config antibodyModelConfig = new AntibodyModel.Config();
 
 				double mutEscOm = 1.;
+				
+				LocalDate start = null;
+				VaccinationType vaccinationType = null;
+				int minAge = Integer.MAX_VALUE;
+				double compliance = 0.0;
 
 				if (params != null) {
-					oVacStartDate = LocalDate.parse("2099-01-01");
-					campaignDuration = 50;
-
 					mutEscOm = params.mutEscOm;
+					vaccinationType = VaccinationType.valueOf(params.vacType);
+					minAge = params.minAge;
+					compliance = params.compl;
 				}
-
-				bind(VaccinationStrategy.Config.class).toInstance(new VaccinationStrategy.Config(oVacStartDate, campaignDuration, VaccinationType.mRNA, 0., 0.));
+				
+				bind(VaccinationStrategyBMBF0422.Config.class).toInstance(new VaccinationStrategyBMBF0422.Config(start, 30, vaccinationType, minAge, compliance));
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
@@ -656,8 +661,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-
-
 		@Parameter({120.,730.})
 		public double timePeriodIgA;
 
@@ -669,7 +672,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		@IntParameter({10})
 		int fallImport;
-
 
 		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
 		SnzCologneProductionScenario.CarnivalModel carnivalModel;
@@ -695,9 +697,20 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"2021-12-18"})
 		String ba2Date;
 
-
 		@StringParameter({"2022-07-01","2022-10-01"})
 		public String mutDate;
+		
+		@StringParameter({"2022-10-01"})
+		public String vacDate;
+		
+		@StringParameter({"mRNA", "omicronUpdate"})
+		public String vacType;
+		
+		@Parameter({0.0, 0.5, 1.0})
+		double compl;
+		
+		@IntParameter({18, 50, 70})
+		int minAge;
 	}
 
 	public static void main(String[] args) {
