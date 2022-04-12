@@ -54,7 +54,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				AntibodyModel.Config antibodyModelConfig = new AntibodyModel.Config();
 
 				double mutEscOm = 1.;
-				
+
 				LocalDate start = null;
 				VaccinationType vaccinationType = null;
 				int minAge = Integer.MAX_VALUE;
@@ -67,7 +67,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 					minAge = params.minAge;
 					compliance = params.compl;
 				}
-				
+
 				bind(VaccinationStrategyBMBF0422.Config.class).toInstance(new VaccinationStrategyBMBF0422.Config(start, 30, vaccinationType, minAge, compliance));
 
 				//initial antibodies
@@ -217,7 +217,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
-				.setCarnivalModel(params == null ? SnzCologneProductionScenario.CarnivalModel.no : params.carnivalModel)
+				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -245,12 +245,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		if (DEBUG_MODE) {
 			if (params.seed == 4711 &&
 					params.immuneResponseSigma == 3.0 &&
-					params.carnivalModel == SnzCologneProductionScenario.CarnivalModel.yes &&
-					params.ba1ba2x.equals("true") &&
-					params.ba1Inf == 2.5 &&
-					params.ba2Inf == 1.5 &&
-					params.deltaInf == 2.7 &&
-					params.ba2Date.equals("2021-12-12")) {
+//					params.carnivalModel == SnzCologneProductionScenario.CarnivalModel.yes &&
+					params.ba1ba2x.equals("true")
+//					params.ba1Inf == 2.5 &&
+//					params.ba2Inf == 1.5 &&
+//					params.deltaInf == 2.7 &&
+//					params.ba2Date.equals("2021-12-12")
+					) {
 			} else {
 				return null;
 			}
@@ -339,7 +340,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		//disease import 2021
 		LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
 		int imp1 = 120;
-		int imp2 = params.fallImport;
+		int imp2 = 10;
 		int imp3 = 40;
 
 		SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
@@ -353,23 +354,25 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
-//		double deltaInf = 2.7;
+		double deltaInf = 2.7;
 		double deltaHos = 0.9;
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(params.deltaInf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
 
 
 		//omicron
-		double oInf = params.ba1Inf;
+//		double oInf = params.ba1Inf;
 		double oHos = 0.13;
-		if (params.ba1Inf > 0) {
+		String ba1Date = "2021-11-21";
+		double ba1Inf = 2.4;
+		if (ba1Inf > 0) {
 			Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
 			infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayOmicron.put(LocalDate.parse(params.ba1Date), 4);
-			infPerDayOmicron.put(LocalDate.parse(params.ba1Date).plusDays(7), 1);
+			infPerDayOmicron.put(LocalDate.parse(ba1Date), 4);
+			infPerDayOmicron.put(LocalDate.parse(ba1Date).plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(params.deltaInf * oInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
@@ -377,26 +380,29 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 		//BA.2
-		if (params.ba2Inf > 0) {
+		double ba2Inf= 1.7;
+		String ba2Date = "2021-12-18";
+		if (ba2Inf > 0) {
 			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
 			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
-			infPerDayBA2.put(LocalDate.parse(params.ba2Date), 4);
-			infPerDayBA2.put(LocalDate.parse(params.ba2Date).plusDays(7), 1);
+			infPerDayBA2.put(LocalDate.parse(ba2Date), 4);
+			infPerDayBA2.put(LocalDate.parse(ba2Date).plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(params.deltaInf * oInf * params.ba2Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * ba1Inf * ba2Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
 		}
 
 		//STRAIN_A
-		if (params.mutAInf > 0) {
+		double mutAInf = 1.0;
+		if (mutAInf > 0) {
 			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
 			infPerDayStrainA.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayStrainA.put(LocalDate.parse(params.mutDate), 4);
 			infPerDayStrainA.put(LocalDate.parse(params.mutDate).plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(params.deltaInf * params.ba1Inf * params.ba2Inf * params.mutAInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(deltaInf * ba1Inf * ba2Inf * mutAInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(0.3);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(0.3);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(0.35);
@@ -665,56 +671,66 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
+		// cross immunity time
 		@Parameter({120.,730.})
 		public double timePeriodIgA;
-
-		@Parameter({1.})
-		public double mutAInf;
-
-		@Parameter({1., 6., 36.})
-		public double mutEscOm;
-
-		@IntParameter({10})
-		int fallImport;
-
-		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
-		SnzCologneProductionScenario.CarnivalModel carnivalModel;
-
-		@Parameter({3.0})
-		double immuneResponseSigma;
 
 		@StringParameter({"true"})
 		String ba1ba2x;
 
-		@Parameter({2.7})
-		double deltaInf;
-
-		@Parameter( {2.4})
-		double ba1Inf;
-
-		@Parameter({1.7})
-		double ba2Inf;
-
-		@StringParameter({"2021-11-21"})
-		String ba1Date;
-
-		@StringParameter({"2021-12-18"})
-		String ba2Date;
+		// strainA
+		@Parameter({1., 6., 36.})
+		public double mutEscOm;
 
 		@StringParameter({"2022-07-01","2022-10-01"})
 		public String mutDate;
-		
+
+		// vaccination campaign
 		@StringParameter({"2022-10-01"})
 		public String vacDate;
-		
+
 		@StringParameter({"mRNA", "omicronUpdate"})
 		public String vacType;
-		
+
 		@Parameter({0.0, 0.5, 1.0})
 		double compl;
-		
+
 		@IntParameter({18, 50, 70})
 		int minAge;
+
+		@Parameter({3.0})
+		double immuneResponseSigma;
+
+
+
+
+		//		@Parameter({1.})
+//		public double mutAInf;
+
+
+//		@IntParameter({10})
+//		int fallImport;
+
+//		@EnumParameter(SnzCologneProductionScenario.CarnivalModel.class)
+//		SnzCologneProductionScenario.CarnivalModel carnivalModel;
+
+
+//		@Parameter({2.7})
+//		double deltaInf;
+
+//		@Parameter( {2.4})
+//		double ba1Inf;
+
+//		@Parameter({1.7})
+//		double ba2Inf;
+
+//		@StringParameter({"2021-11-21"})
+//		String ba1Date;
+
+//		@StringParameter({"2021-12-18"})
+//		String ba2Date;
+
+
 	}
 
 	public static void main(String[] args) {
