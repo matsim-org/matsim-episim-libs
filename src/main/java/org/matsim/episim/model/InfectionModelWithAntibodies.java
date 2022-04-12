@@ -8,7 +8,6 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -98,6 +97,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		{
 			double igaFactor = 0.0;
 
+			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
 			if (target.hadStrain(infector.getVirusStrain())) {
 
 				int lastInfectionWithStrain = 0;
@@ -107,7 +107,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 					}
 				}
 //				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
-				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
+				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 
 			}
 
@@ -120,7 +120,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 						}
 					}
 //					double fac = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
-					double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
+					double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 					fac = fac / 1.4;
 					igaFactor = Math.max(fac, igaFactor);
 				}
@@ -132,7 +132,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 							lastInfectionWithStrain = ii;
 						}
 					}
-					double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
+					double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 					fac = fac / 1.4;
 					igaFactor = Math.max(fac, igaFactor);
 				}
