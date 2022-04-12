@@ -36,7 +36,8 @@ import java.util.*;
  */
 public class CologneJR implements BatchRun<CologneJR.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
+	int runCount = 0;
 
 
 	@Nullable
@@ -69,7 +70,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				bind(VaccinationStrategyBMBF0422.Config.class).toInstance(new VaccinationStrategyBMBF0422.Config(start, 30, vaccinationType, minAge, compliance));
 
 				//initial antibodies
-				AntibodyModel.Config antibodyModelConfig = new AntibodyModel.Config();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscOm);
@@ -77,7 +77,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
 				if (params != null) {
-					antibodyModelConfig.setImmuneReponseSigma(params.immuneResponseSigma);
+					antibodyConfig.setImmuneReponseSigma(params.immuneResponseSigma);
 				}
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
@@ -245,12 +245,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			if (params.seed == 4711 &&
 					params.immuneResponseSigma == 3.0 &&
 //					params.carnivalModel == SnzCologneProductionScenario.CarnivalModel.yes &&
-					params.ba1ba2x.equals("true")
+					params.ba1ba2x.equals("true") &&
 //					params.ba1Inf == 2.5 &&
 //					params.ba2Inf == 1.5 &&
 //					params.deltaInf == 2.7 &&
 //					params.ba2Date.equals("2021-12-12")
+					runCount == 0
 					) {
+				runCount++;
 			} else {
 				return null;
 			}
@@ -278,7 +280,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		if (DEBUG_MODE) {
 			//local (see svn for more snapshots with different dates)
-			episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
+//			episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
 		}
 		else {
 			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
@@ -737,7 +739,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(700),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(2),
 				RunParallel.OPTION_METADATA
 		};
 
