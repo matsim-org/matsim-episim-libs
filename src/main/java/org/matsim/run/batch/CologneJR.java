@@ -36,7 +36,7 @@ import java.util.*;
  */
 public class CologneJR implements BatchRun<CologneJR.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
 
@@ -160,7 +160,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA1, mRNAAlpha);
 
 				//BA.2
-				double mRNABA2 = mRNABA1 / 1.4;
+				double mRNABA2 = mRNABA1;
 				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, mRNABA2);
 				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA2, mRNABA2 * 4./20.);
 				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6./20.);
@@ -181,7 +181,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.STRAIN_A,  64.0 / 300. / 1.4 / mutEscOm);
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.STRAIN_A, 64.0 / 300./ mutEscOm);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.STRAIN_A, 64.0 / 300.);
-				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.STRAIN_A, mRNADelta / mutEscOm);
+				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscOm);
 
 				for (VaccinationType immunityType : VaccinationType.values()) {
 					antibodyRefreshFactors.put(immunityType, new EnumMap<>( VirusStrain.class ) );
@@ -680,14 +680,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		String ba1ba2x;
 
 		// strainA
-		@Parameter({1., 6., 36.})
+		@Parameter({1., 6.})
 		public double mutEscOm;
 
 		@StringParameter({"2022-07-01","2022-10-01"})
 		public String mutDate;
 
 		// vaccination campaign
-		@StringParameter({"2022-10-01"})
+		@StringParameter({"2022-09-01","2022-10-01"})
 		public String vacDate;
 
 		@StringParameter({"mRNA", "omicronUpdate"})
@@ -696,7 +696,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({0.0, 0.5, 1.0})
 		double compl;
 
-		@IntParameter({18, 50, 70})
+		@IntParameter({5, 18, 50, 70})
 		int minAge;
 
 		@Parameter({3.0})
