@@ -734,6 +734,186 @@ public class DefaultAntibodyModelTest {
 
 	}
 
+	@Test
+	public void testNordstroemEtAl_hosp(){
+
+
+		final String days = "day";
+		IntColumn records = IntColumn.create(days);
+
+		final String vaccineEfficacies = "VE";
+		DoubleColumn values = DoubleColumn.create(vaccineEfficacies);
+		final String grouping = "grouping";
+		var groupings = StringColumn.create(grouping);
+
+
+		final String ukhsaDelta = "UKHSA (Delta)";
+		final String ukhsaDeltaBoost = "UKHSA (Delta, booster)";
+
+		final String ukhsaOmicron = "UKHSA (Omicron)";
+		final String ukhsaOmicronBoost = "UKHSA (Omicron, booster)";
+
+
+		var fact = 0.001;
+		var beta = 1.2;
+
+		// gather results from antibody model
+		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA);
+
+		IntList immunityEventDays = IntList.of(1, 220);
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 600, EpisimTestUtils.createPerson());
+
+
+		// antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3)
+		{
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
+
+				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.DELTA, 0.);
+
+				{
+					records.append(day);
+					double immunityFactor = 1.0 / (1.0 + Math.pow(0.5 * nAb, beta)); // this is the only difference
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append("Delta; beta=" + beta);
+				}
+			}
+		}
+
+		// once more antibodies from DefaultAntibodyModel, converted to vaccine efficiency (for beta = 1 and beta = 3), this time plotting VE against omicron
+		{
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
+				double nAb = strainToAntibodyMap.getOrDefault(VirusStrain.OMICRON_BA1, 0.);
+				{
+					records.append(day);
+					double immunityFactor = 1.0 / (1.0 + Math.pow(0.5 * nAb, beta)); // here again
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append("Omicron; beta=" + beta);
+				}
+			}
+		}
+
+
+		// add ve progression from literature
+		for (int ii = 0; ii < 600; ii++) {
+
+
+			//UKHSA, VE against Delta
+			{
+				records.append(ii);
+				groupings.append(ukhsaDelta);
+				if (ii <= 28) {
+					values.append(0.95);
+				} else if (ii <= 63) {
+					values.append(0.99);
+				} else if (ii <= 98) {
+					values.append(0.98);
+				} else if (ii <= 133) {
+					values.append(0.98);
+				} else if (ii <= 168) {
+					values.append(0.96);
+				} else {
+					values.append(0.95);
+				}
+			}
+			// UKHSA, VE against Delta after booster dose
+			{
+				records.append(ii);
+				groupings.append(ukhsaDeltaBoost);
+				if (ii <= 168) {
+					values.append(0.99);
+				} else if (ii <= 168 + 28) {
+					values.append(1.);
+				} else if (ii <= 168 + 63) {
+					values.append(0.99);
+				} else {
+					values.append(0.99);
+				}
+			}
+			//UKHSA, VE against Omicron
+			{
+				records.append(ii);
+				groupings.append(ukhsaOmicron);
+				if (ii <= 28) {
+					values.append(0.72);
+				} else if (ii <= 63) {
+					values.append(0.71);
+				} else if (ii <= 98) {
+					values.append(0.53);
+				} else if (ii <= 133) {
+					values.append(0.6);
+				} else if (ii <= 168) {
+					values.append(0.58);
+				} else {
+					values.append(0.35);
+				}
+			}
+			// UKHSA, VE against Omicron after booster dose
+			{
+				records.append(ii);
+				groupings.append(ukhsaOmicronBoost);
+				if (ii <= 168) {
+					values.append(0.79);
+				} else if (ii <= 168 + 28) {
+					values.append(0.89);
+				} else if (ii <= 168 + 63) {
+					values.append(0.85);
+				} else {
+					values.append(0.76);
+				}
+			}
+		}
+
+		final String title = "Vaccine Efficacy, DefaultAntibodyModel vs. UKHSA; beta=" + beta;
+		Table table = Table.create(title);
+		table.addColumns(records);
+		table.addColumns(values);
+		table.addColumns(groupings);
+
+		TableSliceGroup tables = table.splitOn(table.categoricalColumn(grouping));
+
+		Layout layout = Layout.builder(title, days, vaccineEfficacies).showLegend(true).build();
+
+		ScatterTrace[] traces = new ScatterTrace[tables.size()];
+		for (int i = 0; i < tables.size(); i++) {
+			List<Table> tableList = tables.asTableList();
+			final ScatterTrace.Mode mode;
+			if (tableList.get(i).name().contains("beta=")) {
+				traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn(days), tableList.get(i).numberColumn(vaccineEfficacies))
+						.showLegend(true)
+						.name(tableList.get(i).name())
+						.mode(ScatterTrace.Mode.LINE)
+						.build();
+			} else {
+				traces[i] = ScatterTrace.builder(tableList.get(i).numberColumn(days), tableList.get(i).numberColumn(vaccineEfficacies))
+						.showLegend(true)
+						.name(tableList.get(i).name())
+						.mode(ScatterTrace.Mode.MARKERS)
+						.build();
+			}
+		}
+		var figure = new Figure(layout, traces);
+		figure.setLayout(Layout.builder().width(1400).height(800).build());
+
+		try (Writer writer = new OutputStreamWriter(new FileOutputStream("nordstrom.html"), StandardCharsets.UTF_8)) {
+			writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+
+	}
+
+
 
 	@Test
 	public void yuEtAl() {
@@ -809,7 +989,8 @@ public class DefaultAntibodyModelTest {
 			{
 				List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VirusStrain.OMICRON_BA1);
 				IntList immunityEventDays = IntList.of(0, 50);
-				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, EpisimTestUtils.createPerson()).get(100).get(VirusStrain.SARS_CoV_2);
+				EpisimPerson person = EpisimTestUtils.createPerson();
+				nAbBase = simulateAntibodyLevels(immunityEvents, immunityEventDays, 100, person).get(100).get(VirusStrain.SARS_CoV_2);
 			}
 
 			// Fig.1 A (vaccinated + omicron):
