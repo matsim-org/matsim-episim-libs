@@ -149,9 +149,9 @@ import org.matsim.episim.model.VirusStrain;
 					 VirusStrain.SARS_CoV_2, 1.,
 					 VirusStrain.ALPHA, 1.,
 					 VirusStrain.DELTA, 1.,
-					 VirusStrain.OMICRON_BA1, 3., //8. without incr. boost effectiveness
-					 VirusStrain.OMICRON_BA2, 3.,
-					 VirusStrain.STRAIN_A, 3.
+					 VirusStrain.OMICRON_BA1, 3.7, //8. without incr. boost effectiveness
+					 VirusStrain.OMICRON_BA2, 3.7,
+					 VirusStrain.STRAIN_A, 3.6
 			 ));
 
 
