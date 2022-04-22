@@ -148,16 +148,16 @@
 					 VirusStrain.SARS_CoV_2, 1.,
 					 VirusStrain.ALPHA, 1.,
 					 VirusStrain.DELTA, 1.,
-					 VirusStrain.OMICRON_BA1, 4.,
-					 VirusStrain.OMICRON_BA2, 4.,
-					 VirusStrain.STRAIN_A, 4.
+					 VirusStrain.OMICRON_BA1, 10.,
+					 VirusStrain.OMICRON_BA2, 10.,
+					 VirusStrain.STRAIN_A, 10.
 			 ));
 
 
 
-	 private static final double factorWildAndAlpha = 0.25;
-	 private static final double factorDelta = 0.45;
-	 private static final double factorOmicron = 0.07;
+	 private static final double factorWildAndAlpha = 0.27;
+	 private static final double factorDelta = 0.36;
+	 private static final double factorOmicron = 0.10;
 
 	 private String outputAppendix = "";
 
