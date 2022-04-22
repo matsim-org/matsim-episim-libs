@@ -40,7 +40,8 @@
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.ImmunityEvent;
- import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.model.VaccinationType;
+import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
  import tech.tablesaw.api.*;
@@ -74,7 +75,7 @@
 
 
 //	 	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-04-14-Analysis/1-0-reduce/")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-04-14-Analysis/1-0-reduce/")
 	 private Path output;
 
 //	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -148,16 +149,16 @@
 					 VirusStrain.SARS_CoV_2, 1.,
 					 VirusStrain.ALPHA, 1.,
 					 VirusStrain.DELTA, 1.,
-					 VirusStrain.OMICRON_BA1, 10.,
-					 VirusStrain.OMICRON_BA2, 10.,
-					 VirusStrain.STRAIN_A, 10.
+					 VirusStrain.OMICRON_BA1, 3., //8. without incr. boost effectiveness
+					 VirusStrain.OMICRON_BA2, 3.,
+					 VirusStrain.STRAIN_A, 3.
 			 ));
 
 
 
 	 private static final double factorWildAndAlpha = 0.27;
 	 private static final double factorDelta = 0.36;
-	 private static final double factorOmicron = 0.10;
+	 private static final double factorOmicron = 0.3 * factorDelta;
 
 	 private String outputAppendix = "";
 
@@ -555,7 +556,7 @@
 		 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
 
 		 Axis xAxis = Axis.builder().title("Datum").build();
-		 Axis yAxis = Axis.builder().range(0., 150.)
+		 Axis yAxis = Axis.builder().range(0., 20.)
 				 //				  .type(Axis.Type.LOG)
 				 .title(yAxisTitle).build();
 
@@ -837,7 +838,7 @@
 				 double halfLife_days = 60.;
 				 // reverse exponential decay
 				 double antibodiesAfterPreviousImmunityEvent = antibodiesAtTimeOfInfection * Math.pow(2., daysSincePreviousImmunityEvent / halfLife_days);
-//				 antibodiesAfterPreviousImmunityEvent = person.immunityEvents.stream().filter(x -> x instanceof VaccinationType).count() > 1 ? 2 * antibodiesAfterPreviousImmunityEvent : antibodiesAfterPreviousImmunityEvent;
+				 antibodiesAfterPreviousImmunityEvent = person.immunityEvents.stream().filter(x -> x instanceof VaccinationType).count() > 1 ? 4 * antibodiesAfterPreviousImmunityEvent : antibodiesAfterPreviousImmunityEvent;
 				 antibodiesAfterPreviousImmunityEvent *= antibodyMultiplier.get(strain);
 				 return 1. / (1. + Math.pow(0.5 * antibodiesAfterPreviousImmunityEvent, beta));
 
