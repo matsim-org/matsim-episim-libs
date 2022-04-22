@@ -84,16 +84,12 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	/**
 	 * Variant which the person was infected with.
 	 */
-	public VirusStrain getStrain() {
+	public VirusStrain getVirusStrain() {
 		return virusStrain;
 	}
 
 	public int getGroupSize() {
 		return groupSize;
-	}
-
-	public VirusStrain getVirusStrain() {
-		return virusStrain;
 	}
 
 	public double getProbability() {
