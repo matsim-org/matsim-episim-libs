@@ -98,8 +98,6 @@
 	 private static final double beta = 1.2;
 	 private final int populationCntOfficial = 919_936;
 
-
-	 //	 private static final int lagBetweenInfectionAndHospitalisation = 10;
 	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
 			 Map.of(VirusStrain.SARS_CoV_2, 10,
 					 VirusStrain.ALPHA, 10,
@@ -144,7 +142,7 @@
 					 VirusStrain.OMICRON_BA2, 8,
 					 VirusStrain.STRAIN_A, 21
 			 ));
-	 
+
 	 private static final Map<VirusStrain, Double> antibodyMultiplier = new HashMap<>(
 			 Map.of(
 					 VirusStrain.SARS_CoV_2, 1.,
@@ -155,11 +153,11 @@
 					 VirusStrain.STRAIN_A, 4.
 			 ));
 
-	 
 
-	 private static final double factorWildAndAlpha = 0.5/2;
-	 private static final double factorDelta = 0.9/2;
-	 private static final double factorOmicron = 0.08/2;
+
+	 private static final double factorWildAndAlpha = 0.25;
+	 private static final double factorDelta = 0.45;
+	 private static final double factorOmicron = 0.07;
 
 	 private String outputAppendix = "";
 
