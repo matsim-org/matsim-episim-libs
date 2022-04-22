@@ -152,6 +152,18 @@
 					 VirusStrain.OMICRON_BA2, 8,
 					 VirusStrain.STRAIN_A, 21
 			 ));
+	 
+	 private static final Map<VirusStrain, Double> antibodyMultiplier = new HashMap<>(
+			 Map.of(
+					 VirusStrain.SARS_CoV_2, 1.,
+					 VirusStrain.ALPHA, 1.,
+					 VirusStrain.DELTA, 1.,
+					 VirusStrain.OMICRON_BA1, 4.,
+					 VirusStrain.OMICRON_BA2, 4.,
+					 VirusStrain.STRAIN_A, 4.
+			 ));
+
+	 
 
 	 private static final double factorWildAndAlpha = 0.5/2;
 	 private static final double factorDelta = 0.9/2;
@@ -763,7 +775,7 @@
 			 // checks whether agents goes to hospital
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
-					 * getSeriouslySickFactor(person);
+					 * getSeriouslySickFactor(person, strain);
 		 }
 
 		 /**
@@ -822,7 +834,7 @@
 		 }
 
 
-		 public double getSeriouslySickFactor(Holder person) {
+		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
 
 			 // Antibodies at time of infection
 			 Double antibodiesAtTimeOfInfection = person.antibodies;
@@ -837,6 +849,7 @@
 				 // reverse exponential decay
 				 double antibodiesAfterPreviousImmunityEvent = antibodiesAtTimeOfInfection * Math.pow(2., daysSincePreviousImmunityEvent / halfLife_days);
 //				 antibodiesAfterPreviousImmunityEvent = person.immunityEvents.stream().filter(x -> x instanceof VaccinationType).count() > 1 ? 2 * antibodiesAfterPreviousImmunityEvent : antibodiesAfterPreviousImmunityEvent;
+				 antibodiesAfterPreviousImmunityEvent *= antibodyMultiplier.get(strain);
 				 return 1. / (1. + Math.pow(0.5 * antibodiesAfterPreviousImmunityEvent, beta));
 
 			 }
