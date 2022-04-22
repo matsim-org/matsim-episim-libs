@@ -19,7 +19,6 @@
  package org.matsim.episim.analysis;
 
 
- import com.google.inject.Inject;
  import it.unimi.dsi.fastutil.ints.*;
  import it.unimi.dsi.fastutil.objects.*;
  import org.apache.commons.csv.CSVFormat;
@@ -32,7 +31,6 @@
  import org.apache.logging.log4j.core.config.Configurator;
  import org.matsim.api.core.v01.Id;
  import org.matsim.api.core.v01.IdMap;
- import org.matsim.api.core.v01.Scenario;
  import org.matsim.api.core.v01.population.Person;
  import org.matsim.api.core.v01.population.Population;
  import org.matsim.core.config.Config;
@@ -42,7 +40,6 @@
  import org.matsim.episim.VirusStrainConfigGroup;
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.ImmunityEvent;
- import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
@@ -96,15 +93,10 @@
 	 private Population population;
 	 private List<Id<Person>> filteredPopulationIds;
 
-	 @Inject
-	 private Scenario scenario;
-
-
 	 private VirusStrainConfigGroup strainConfig;
 
-//	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; relates to % of cases reported.
 	 private static final double beta = 1.2;
-	 private final int populationCnt = 919_936;
+	 private final int populationCntOfficial = 919_936;
 
 
 	 //	 private static final int lagBetweenInfectionAndHospitalisation = 10;
@@ -189,13 +181,12 @@
 
 
 
-		 //		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
+		 // Here we define values factorSeriouslySickStrainA should have
 //		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
 		 List<Double> strainFactors = List.of(factorOmicron);
 
 		 for (Double facA : strainFactors) {
 
-			 //			 outputAppendix = "_A" + facA;
 			 if (facA == factorWildAndAlpha) {
 				 outputAppendix = "_Alpha";
 			 } else if (facA == factorDelta) {
@@ -207,8 +198,8 @@
 			 }
 
 
+			 // configure factorSeriouslySick for each strain
 			 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-
 			 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 			 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWildAndAlpha);
 			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorWildAndAlpha);
@@ -395,7 +386,7 @@
 
 				 double incidence;
 				 try {
-					 incidence = Double.parseDouble(record.get("allgemeinpatienten")) * 100_000. / populationCnt;
+					 incidence = Double.parseDouble(record.get("allgemeinpatienten")) * 100_000. / populationCntOfficial;
 				 } catch (NumberFormatException e) {
 					 incidence = 0.;
 				 }
@@ -418,7 +409,7 @@
 
 				 double incidence = 0.;
 				 try {
-					 incidence = Double.parseDouble(record.get("faelle_covid_aktuell")) * 100_000. / populationCnt;
+					 incidence = Double.parseDouble(record.get("faelle_covid_aktuell")) * 100_000. / populationCntOfficial;
 				 } catch (NumberFormatException ignored) {
 
 				 }
