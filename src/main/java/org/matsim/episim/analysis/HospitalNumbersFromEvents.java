@@ -151,7 +151,7 @@ import org.matsim.episim.model.VirusStrain;
 					 VirusStrain.DELTA, 1.,
 					 VirusStrain.OMICRON_BA1, 3.7, //8. without incr. boost effectiveness
 					 VirusStrain.OMICRON_BA2, 3.7,
-					 VirusStrain.STRAIN_A, 3.6
+					 VirusStrain.STRAIN_A, 1.0
 			 ));
 
 
@@ -193,8 +193,8 @@ import org.matsim.episim.model.VirusStrain;
 
 
 		 // Here we define values factorSeriouslySickStrainA should have
-//		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
-		 List<Double> strainFactors = List.of(factorOmicron);
+		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
+//		 List<Double> strainFactors = List.of(factorOmicron);
 
 		 for (Double facA : strainFactors) {
 
@@ -765,7 +765,7 @@ import org.matsim.episim.model.VirusStrain;
 			 // checks whether agents goes to hospital
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
-					 * getSeriouslySickFactor(person, strain);
+					 * getImmunityFactorSeriouslySick(person, strain);
 		 }
 
 		 /**
@@ -824,22 +824,31 @@ import org.matsim.episim.model.VirusStrain;
 		 }
 
 
-		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
+		 public double getImmunityFactorSeriouslySick(Holder person, VirusStrain strain) {
 
-			 // Antibodies at time of infection
+			 // Antibodies at time of current infection
 			 Double antibodiesAtTimeOfInfection = person.antibodies;
 
 			 int numImmunityEvents = person.immunityDays.size();
 
+			 // here we calculate back to get the antibodies at previous immunity event (infection or vaccination)
 			 if (numImmunityEvents > 1) {
+				 // calculate days since previous immunity event
 				 int currentImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 1);
 				 int previousImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 2);
 				 int daysSincePreviousImmunityEvent = currentImmunityEvent - previousImmunityEvent;
-				 double halfLife_days = 60.;
+
 				 // reverse exponential decay
+				 double halfLife_days = 60.;
 				 double antibodiesAfterPreviousImmunityEvent = antibodiesAtTimeOfInfection * Math.pow(2., daysSincePreviousImmunityEvent / halfLife_days);
+
+				 // Two modifications to antibody level below:
+				 // a) we multiply the antibody level by 4 if the agent is boostered
+				 // b) if strain is omicron, an additional factor is applied
 				 antibodiesAfterPreviousImmunityEvent = person.immunityEvents.stream().filter(x -> x instanceof VaccinationType).count() > 1 ? 4 * antibodiesAfterPreviousImmunityEvent : antibodiesAfterPreviousImmunityEvent;
 				 antibodiesAfterPreviousImmunityEvent *= antibodyMultiplier.get(strain);
+
+				 // return immunity factor for seriously sick: if 1, then same chance of infection as unimmunized person.
 				 return 1. / (1. + Math.pow(0.5 * antibodiesAfterPreviousImmunityEvent, beta));
 
 			 }
