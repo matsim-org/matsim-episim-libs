@@ -55,7 +55,7 @@ import static org.matsim.episim.EpisimUtils.writeChars;
 /**
  * Persons current state in the simulation.
  */
-public final class EpisimPerson implements Attributable {
+public final class EpisimPerson implements Immunizable, Attributable {
 
 	private final Id<Person> personId;
 	private final EpisimReporting reporting;
@@ -194,7 +194,7 @@ public final class EpisimPerson implements Attributable {
 	private final IntList vaccinationDates = new IntArrayList();
 
 	/**
-	 * Iterations when a person was infected.
+	 * Second at which a person is infected (divide by 24*60*60 to get iteration/day)
 	 */
 	private final DoubleList infectionDates = new DoubleArrayList();
 
@@ -238,7 +238,7 @@ public final class EpisimPerson implements Attributable {
 		return trajectory;
 	}
 
-	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
+	public EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
 	}
 

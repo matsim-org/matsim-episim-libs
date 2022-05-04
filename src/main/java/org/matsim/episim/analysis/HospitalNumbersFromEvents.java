@@ -19,6 +19,8 @@
  package org.matsim.episim.analysis;
 
 
+ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+ import it.unimi.dsi.fastutil.doubles.DoubleList;
  import it.unimi.dsi.fastutil.ints.*;
  import it.unimi.dsi.fastutil.objects.*;
  import org.apache.commons.csv.CSVFormat;
@@ -36,12 +38,10 @@
  import org.matsim.core.config.Config;
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
- import org.matsim.episim.EpisimConfigGroup;
- import org.matsim.episim.VirusStrainConfigGroup;
+ import org.matsim.episim.*;
  import org.matsim.episim.events.*;
- import org.matsim.episim.model.ImmunityEvent;
-import org.matsim.episim.model.VaccinationType;
-import org.matsim.episim.model.VirusStrain;
+ import org.matsim.episim.model.VirusStrain;
+ import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
  import tech.tablesaw.api.*;
@@ -67,7 +67,7 @@ import org.matsim.episim.model.VirusStrain;
   */
  @CommandLine.Command(
 		 name = "hospitalNumbers",
-		 description = "Calculate vaccination effectiveness from events"
+		 description = "Calculate hospital numbers from events"
  )
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
@@ -75,7 +75,7 @@ import org.matsim.episim.model.VirusStrain;
 
 
 //	 	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-04-14-Analysis/1-0-reduce/")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-04-14-Analysis/1-3-reduce/")
 	 private Path output;
 
 //	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -94,7 +94,9 @@ import org.matsim.episim.model.VirusStrain;
 	 private Population population;
 	 private List<Id<Person>> filteredPopulationIds;
 
+	 private EpisimConfigGroup episimConfig;
 	 private VirusStrainConfigGroup strainConfig;
+	 private VaccinationConfigGroup vaccinationConfig;
 
 	 private static final double beta = 1.2;
 	 private final int populationCntOfficial = 919_936;
@@ -193,8 +195,8 @@ import org.matsim.episim.model.VirusStrain;
 
 
 		 // Here we define values factorSeriouslySickStrainA should have
-		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
-//		 List<Double> strainFactors = List.of(factorOmicron);
+//		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
+		 List<Double> strainFactors = List.of(factorOmicron);
 
 		 for (Double facA : strainFactors) {
 
@@ -208,9 +210,17 @@ import org.matsim.episim.model.VirusStrain;
 				 throw new RuntimeException("not clear what to do");
 			 }
 
+			 outputAppendix += "-test";
 
-			 // configure factorSeriouslySick for each strain
+
+
 			 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+
+			 // configure episimConfig
+			 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+			 episimConfig.setHospitalFactor(1.0);
+
+			 // configure strainConfig: add factorSeriouslySick for each strain
 			 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 			 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWildAndAlpha);
 			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorWildAndAlpha);
@@ -219,6 +229,9 @@ import org.matsim.episim.model.VirusStrain;
 			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
 
+			 // configure vaccinationConfig: set beta factor
+			 vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+			 vaccinationConfig.setBeta(beta);
 
 			 // Part 1: calculate hospitalizations for each seed and save as csv
 			 AnalysisCommand.forEachScenario(output, scenario -> {
@@ -262,9 +275,9 @@ import org.matsim.episim.model.VirusStrain;
 
 		 bw.write("day\tdate\tpostProcessHospitalizations\tppBeds\tppBedsICU\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted");
 
-		 Map<Id<Person>, Handler.Holder> data = new IdMap<>(Person.class, population.getPersons().size());
+		 Map<Id<Person>, Handler.ImmunizablePerson> data = new IdMap<>(Person.class, population.getPersons().size());
 
-		 Handler handler = new Handler(data, startDate, population, strainConfig);
+		 Handler handler = new Handler(data, population, episimConfig, strainConfig, vaccinationConfig);
 
 		 AnalysisCommand.forEachEvent(output, s -> {
 		 }, handler);
@@ -593,13 +606,13 @@ import org.matsim.episim.model.VirusStrain;
 	 }
 
 
-	 private static class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
+	 private static final class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
 
-		 private final Map<Id<Person>, Holder> data;
-		 private final LocalDate startDate;
+		 private final Map<Id<Person>, ImmunizablePerson> data;
 		 private final Population population;
 		 private final Random rnd;
 		 private final VirusStrainConfigGroup strainConfig;
+		 private final VaccinationConfigGroup vaccinationConfig;
 
 		 private final Int2IntSortedMap postProcessHospitalAdmissions;
 		 private final Int2IntSortedMap postProcessHospitalFilledBeds;
@@ -611,17 +624,20 @@ import org.matsim.episim.model.VirusStrain;
 		 private final Int2IntMap hospNoImmunity;
 		 private final Int2IntMap hospBoostered;
 		 private final Int2IntMap hospBaseImmunity;
-		 public final Int2IntMap incNoImmunity;
-		 public final Int2IntMap incBaseImmunity;
-		 public final Int2IntMap incBoostered;
+		 private final Int2IntMap incNoImmunity;
+		 private final Int2IntMap incBaseImmunity;
+		 private final Int2IntMap incBoostered;
+
+		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
 
 
-		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig) {
+		 private Handler(Map<Id<Person>, ImmunizablePerson> data, Population population, EpisimConfigGroup episimConfig, VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
 			 this.data = data;
-			 this.startDate = startDate;
 			 this.population = population;
 			 this.rnd = new Random(1234);
 			 this.strainConfig = strainConfig;
+			 this.vaccinationConfig = vaccinationConfig;
+
 
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
@@ -636,31 +652,33 @@ import org.matsim.episim.model.VirusStrain;
 			 this.incNoImmunity = new Int2IntAVLTreeMap();
 			 this.incBaseImmunity = new Int2IntAVLTreeMap();
 			 this.incBoostered = new Int2IntAVLTreeMap();
+
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), episimConfig, vaccinationConfig, strainConfig);
 		 }
 
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
-			 Holder person = data.computeIfAbsent(event.getPersonId(), Holder::new);
+			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(),
+					 personId -> new ImmunizablePerson(personId, getAge(personId)));
 
 			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
-			 int age = (int) population.getPersons().get(person.personId).getAttributes().getAttribute("microm:modeled:age");
 
-			 if (!district.equals("Köln")){// || age < 18 || age > 59) {
+			 if (!district.equals("Köln")){
 				 return;
 			 }
 
-			 int day = (int) (event.getTime() / 86_400);
+			 person.addInfection(event.getTime());
+			 person.setAntibodyLevelAtInfection(event.getAntibodies());
+			 person.setVirusStrain(event.getVirusStrain());
 
-			 person.immunityDays.add(day);
-			 person.immunityEvents.add(event.getVirusStrain());
-			 person.antibodies = event.getAntibodies();
+			 int day = (int) (event.getTime() / 86_400);
 
 			 updateHospitalizationsPost(person, event.getVirusStrain(), day);
 
-			 if (person.immunityStatus == Holder.ImmunityStatus.no) {
+			 if (person.getNumVaccinations()==0) {
 				 incNoImmunity.mergeInt(day, 1, Integer::sum);
-			 } else if (person.immunityStatus == Holder.ImmunityStatus.base) {
+			 } else if (person.getNumVaccinations()==1) {
 				 incBaseImmunity.mergeInt(day, 1, Integer::sum);
 			 } else {
 				 incBoostered.mergeInt(day, 1, Integer::sum);
@@ -668,56 +686,56 @@ import org.matsim.episim.model.VirusStrain;
 
 		 }
 
+
+
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
-			 Holder person = data.computeIfAbsent(event.getPersonId(), Holder::new);
+			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
 
 			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
-			 int age = (int) population.getPersons().get(person.personId).getAttributes().getAttribute("microm:modeled:age");
 
-			 if (!district.equals("Köln")){ // || age < 18 || age > 59) {
+			 if (!district.equals("Köln")){
 				 return;
 			 }
 
 			 int day = (int) (event.getTime() / 86_400);
 
-			 if (person.immunityStatus == Holder.ImmunityStatus.no) {
-				 person.immunityStatus = Holder.ImmunityStatus.base;
+			 if (person.getNumVaccinations()==0) {
 				 changeBaseImmunity.mergeInt(day, 1, Integer::sum);
 				 changeNoImmunity.mergeInt(day, -1, Integer::sum);
-			 } else if (person.immunityStatus == Holder.ImmunityStatus.base) {
-				 person.immunityStatus = Holder.ImmunityStatus.boost;
+			 } else if (person.getNumVaccinations() == 1) {
 				 changeBoostered.mergeInt(day, 1, Integer::sum);
 				 changeBaseImmunity.mergeInt(day, -1, Integer::sum);
 			 }
 
 
-			 person.immunityDays.add(day);
-			 person.immunityEvents.add(event.getVaccinationType());
+			 person.addVaccination(day);
 		 }
 
-		 private void updateHospitalizationsPost(Holder person, VirusStrain strain, int infectionIteration) {
+		 private int getAge(Id<Person> personId) {
+			 return (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+		 }
 
-			 int age = (int) population.getPersons().get(person.personId).getAttributes().getAttribute("microm:modeled:age");
+		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
 
 
-			 if (goToHospital(person, strain, age)) {
+			 if (goToHospital(person, infectionIteration)) {
 
 				 // newly admitted to hospital
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
 
 
-				 if (person.immunityStatus == Holder.ImmunityStatus.no) {
+				 if (person.getNumVaccinations()==0) {
 					 hospNoImmunity.mergeInt(inHospital, 1, Integer::sum);
-				 } else if (person.immunityStatus == Holder.ImmunityStatus.base) {
+				 } else if (person.getNumVaccinations()==1) {
 					 hospBaseImmunity.mergeInt(inHospital, 1, Integer::sum);
 				 } else {
 					 hospBoostered.mergeInt(inHospital, 1, Integer::sum);
 				 }
 
 
-				 if (goToICU(strain, age)) {
+				 if (goToICU(person, inHospital)) {
 
 					 int inICU = inHospital + lagBetweenHospitalizationAndICU.getInt(strain);
 					 int outICU = inICU + daysInICU.getInt(strain);
@@ -749,140 +767,148 @@ import org.matsim.episim.model.VirusStrain;
 
 		 }
 
-		 private boolean goToICU(VirusStrain strain, int age) {
-			 return rnd.nextDouble() < getProbaOfTransitioningToCritical(age) * strainConfig.getParams(strain).getFactorCritical()
-					 * getCriticalFactor();
-		 }
+
 
 		 /**
 		  * calculates the probability that agent goes to hospital given an infection.
 		  */
-		 private boolean goToHospital(Holder person, VirusStrain strain, int age) {
+		 private boolean goToHospital(ImmunizablePerson person, int day) {
 
-			 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-			 double strainFactor = strainConfig.getParams(strain).getFactorSeriouslySick();
+			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
+			 double strainFactor = strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
+			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, vaccinationConfig, day);
 
-			 // checks whether agents goes to hospital
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
-					 * getImmunityFactorSeriouslySick(person, strain);
+					 * immunityFactor;
 		 }
 
 		 /**
-		  * Adapted from AgeDependentDiseaseStatusTransitionModel, signature changed.
+		  * calculates the probability that agent goes to into critical care (ICU) given hospitalization
 		  */
-		 protected double getProbaOfTransitioningToSeriouslySick(int age) {
+		 private boolean goToICU(ImmunizablePerson person, int day) {
 
-			 double proba;
 
-			 if (age < 10) {
-				 proba = 0.1 / 100;
-			 } else if (age < 20) {
-				 proba = 0.3 / 100;
-			 } else if (age < 30) {
-				 proba = 1.2 / 100;
-			 } else if (age < 40) {
-				 proba = 3.2 / 100;
-			 } else if (age < 50) {
-				 proba = 4.9 / 100;
-			 } else if (age < 60) {
-				 proba = 10.2 / 100;
-			 } else if (age < 70) {
-				 proba = 16.6 / 100;
-			 } else if (age < 80) {
-				 proba = 24.3 / 100;
-			 } else {
-				 proba = 27.3 / 100;
-			 }
+			 double ageFactor = transitionModel.getProbaOfTransitioningToCritical(person);
+			 double strainFactor = strainConfig.getParams(person.getVirusStrain()).getFactorCritical();
+			 double immunityFactor = transitionModel.getCriticalFactor(person, vaccinationConfig, day);
 
-			 return proba; //* hospitalFactor;
+			 return rnd.nextDouble() < ageFactor
+					 * strainFactor
+					 * immunityFactor;
 		 }
 
-		 /**
-		  * Adapted from AgeDependentDiseaseStatusTransitionModel
-		  */
-		 protected double getProbaOfTransitioningToCritical(int age) {
-			 double proba;
-
-			 //		 int age = person.getAge();
-
-			 if (age < 40) {
-				 proba = 5. / 100;
-			 } else if (age < 50) {
-				 proba = 6.3 / 100;
-			 } else if (age < 60) {
-				 proba = 12.2 / 100;
-			 } else if (age < 70) {
-				 proba = 27.4 / 100;
-			 } else if (age < 80) {
-				 proba = 43.2 / 100;
-			 } else {
-				 proba = 70.9 / 100;
-			 }
-
-			 return proba;
-		 }
-
-
-		 public double getImmunityFactorSeriouslySick(Holder person, VirusStrain strain) {
-
-			 // Antibodies at time of current infection
-			 Double antibodiesAtTimeOfInfection = person.antibodies;
-
-			 int numImmunityEvents = person.immunityDays.size();
-
-			 // here we calculate back to get the antibodies at previous immunity event (infection or vaccination)
-			 if (numImmunityEvents > 1) {
-				 // calculate days since previous immunity event
-				 int currentImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 1);
-				 int previousImmunityEvent = person.immunityDays.getInt(numImmunityEvents - 2);
-				 int daysSincePreviousImmunityEvent = currentImmunityEvent - previousImmunityEvent;
-
-				 // reverse exponential decay
-				 double halfLife_days = 60.;
-				 double antibodiesAfterPreviousImmunityEvent = antibodiesAtTimeOfInfection * Math.pow(2., daysSincePreviousImmunityEvent / halfLife_days);
-
-				 // Two modifications to antibody level below:
-				 // a) we multiply the antibody level by 4 if the agent is boostered
-				 // b) if strain is omicron, an additional factor is applied
-				 antibodiesAfterPreviousImmunityEvent = person.immunityEvents.stream().filter(x -> x instanceof VaccinationType).count() > 1 ? 4 * antibodiesAfterPreviousImmunityEvent : antibodiesAfterPreviousImmunityEvent;
-				 antibodiesAfterPreviousImmunityEvent *= antibodyMultiplier.get(strain);
-
-				 // return immunity factor for seriously sick: if 1, then same chance of infection as unimmunized person.
-				 return 1. / (1. + Math.pow(0.5 * antibodiesAfterPreviousImmunityEvent, beta));
-
-			 }
-
-			 // if agent didn't experience immunity events prior to current immunity event, they do don't benefit from any protection.
-			 return 1.;
-
-
-
-		 }
-
-		 public static double getCriticalFactor() { //todo: is this right?
-			 return 1.0;
-		 }
 
 
 		 /**
 		  * Data holder for attributes
 		  */
-		 private static final class Holder {
+		 private static final class ImmunizablePerson implements Immunizable{
 
-			 public enum ImmunityStatus {no, base, boost}
 
-			 private Double antibodies = null;
+			 /**
+			  * Id of person which this data structure emulates.
+			  */
 			 private final Id<Person> personId;
-			 private final IntList immunityDays = new IntArrayList();
-			 private final ObjectList<ImmunityEvent> immunityEvents = new ObjectArrayList();
-			 private ImmunityStatus immunityStatus;
+
+			 /**
+			  * Iteration when this person was vaccinated.
+			  */
+			 private final IntList vaccinationDates = new IntArrayList();
+
+			 /**
+			  * Second at which a person is infected (divide by 24*60*60 to get iteration/day)
+			  */
+			 private final DoubleList infectionDates = new DoubleArrayList();
+
+			 /**
+			  * Virus strain of most recent (or current) infection
+ 			  */
+			 private VirusStrain strain;
+
+			 /**
+			  * Antibody level at last infection.
+			  */
+			 private double antibodyLevelAtInfection = 0;
+			 private int age;
 
 
-			 private Holder(Id<Person> personId) {
+			 private ImmunizablePerson(Id<Person> personId, int age) {
 				 this.personId = personId;
-				 this.immunityStatus = ImmunityStatus.no;
+				 this.age = age;
 			 }
+
+			 @Override
+			 public Id<Person> getPersonId() {
+				 return this.personId;
+			 }
+
+			 @Override
+			 public int getNumVaccinations() {
+				 return vaccinationDates.size();
+			 }
+
+			 @Override
+			 public int getNumInfections() {
+				 return infectionDates.size();
+			 }
+
+			 public void setVirusStrain(VirusStrain strain) {
+				 this.strain = strain;
+			 }
+
+
+			 @Override
+			 public VirusStrain getVirusStrain() {
+				 return strain;
+			 }
+
+			 public void addVaccination(int day) {
+				 vaccinationDates.add(day);
+			 }
+
+			 @Override
+			 public IntList getVaccinationDates() {
+				 return this.vaccinationDates;
+			 }
+
+
+			 public void addInfection(double seconds) {
+				 this.infectionDates.add(seconds);
+			 }
+
+			 @Override
+			 public DoubleList getInfectionDates() {
+				 return this.infectionDates;
+			 }
+
+
+			 public void setAntibodyLevelAtInfection(double antibodyLevelAtInfection) {
+				 this.antibodyLevelAtInfection = antibodyLevelAtInfection;
+			 }
+
+			 @Override
+			 public double getAntibodyLevelAtInfection() {
+				 return antibodyLevelAtInfection;
+			 }
+
+			 @Override
+			 public boolean hadDiseaseStatus(EpisimPerson.DiseaseStatus status) {
+				 throw new UnsupportedOperationException("this method is not supported by Holder");
+
+			 }
+
+			 @Override
+			 public int daysSince(EpisimPerson.DiseaseStatus status, int day) {
+				 throw new UnsupportedOperationException("this method is not supported by Holder");
+
+			 }
+
+			 @Override
+			 public int getAge() {
+				 return this.age;
+			 }
+
 
 		 }
 

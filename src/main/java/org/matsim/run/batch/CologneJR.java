@@ -739,7 +739,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(2),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(70),
 				RunParallel.OPTION_METADATA
 		};
 

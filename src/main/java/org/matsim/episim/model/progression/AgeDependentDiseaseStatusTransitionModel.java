@@ -73,7 +73,7 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	}
 
 	@Override
-	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
+	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
 
 		double proba = -1;
 
@@ -103,7 +103,7 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	}
 
 	@Override
-	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
+	public double getProbaOfTransitioningToCritical(Immunizable person) {
 		double proba = -1;
 
 		int age = person.getAge();
