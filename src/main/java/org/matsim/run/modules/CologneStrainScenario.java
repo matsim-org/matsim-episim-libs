@@ -1,8 +1,10 @@
 package org.matsim.run.modules;
 
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.AgeAndProgressionDependentInfectionModelWithSeasonality;
 import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.vaccination.NoVaccination;
+import org.matsim.episim.model.vaccination.VaccinationFromData;
 import org.matsim.scenarioCreation.RunTrial;
 
 /**
@@ -18,8 +20,8 @@ public class CologneStrainScenario extends SnzCologneProductionScenario {
 				.setAlphaOffsetDays((int) RunTrial.parseParam("alphaOffsetDays", 0))
 				.setVaccinations(Vaccinations.no)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setVaccinationModel(NoVaccination.class)
-				.setInfectionModel(InfectionModelWithAntibodies.class)
+				.setVaccinationModel(VaccinationFromData.class)
+				.setInfectionModel(AgeAndProgressionDependentInfectionModelWithSeasonality.class)
 		);
 	}
 
