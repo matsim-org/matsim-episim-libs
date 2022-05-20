@@ -284,7 +284,7 @@ import java.util.Map;
 		 episimConfig.setActivityHandling(activityHandling);
 
 
-		 episimConfig.setCalibrationParameter(1.0e-05 * 0.83 * 1.4);
+		 episimConfig.setCalibrationParameter(1.13e-05 * 0.92);
 		 episimConfig.setStartDate("2020-02-25");
 		 episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		 episimConfig.setSampleSize(this.sample / 100.);

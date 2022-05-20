@@ -4,8 +4,10 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.model.vaccination.NoVaccination;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.CologneStrainScenario;
+import org.matsim.run.modules.SnzProductionScenario.Vaccinations;
 
 import javax.annotation.Nullable;
 import java.time.LocalDate;
@@ -18,7 +20,7 @@ public class CologneStrainBatch implements BatchRun<CologneStrainBatch.Params> {
 
 	@Override
 	public CologneStrainScenario getBindings(int id, @Nullable Params params) {
-		return new CologneStrainScenario( 1.8993316907481814);
+		return new CologneStrainScenario( 1.8993316907481814, Vaccinations.no, NoVaccination.class, false);
 	}
 
 	@Override
