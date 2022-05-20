@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import sqlite3
 from glob import glob
-from os import path
+from os import path, getcwd
 
 
 # %%
@@ -35,7 +35,7 @@ def best(f, study_name="strain", p="infectiousness", top=3):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Generate summary from weekly strains calibration.")
-    parser.add_argument("--output", type=str, help="Output CSV", default="result.csv")
+    parser.add_argument("--output", type=str, help="Output CSV", default=getcwd() + ".csv")
     parser.add_argument("--strain", type=str, help="Strain", default="ALPHA")
     parser.add_argument("--district", type=str, default="Köln", help="District to extract data for.")
 
@@ -44,6 +44,7 @@ if __name__ == "__main__":
     out = glob("calibration*.db")
 
     trials = []
+    results = []
 
     for db in out:
 
@@ -52,6 +53,12 @@ if __name__ == "__main__":
         print("Analyzing", db, "for date", date)
 
         n, value, err = best(db)
+
+        results.append({
+            "date": date,
+            "param": value,
+            "error": err
+        })
 
         print("Best:", n, "with value:", value, "and error", err)
 
@@ -97,4 +104,10 @@ if __name__ == "__main__":
 
         trials.append(pd.concat(dfs))
 
+    print("Writing to", args.output)
     pd.concat(trials).to_csv(args.output)
+    df = pd.DataFrame(results)
+    df["date"] = pd.to_datetime(df['date'])
+    df = df.set_index("date").sort_index()
+
+    df.to_csv(args.output.replace(".csv", "_params.csv"))

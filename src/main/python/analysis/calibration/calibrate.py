@@ -156,7 +156,7 @@ def calc_multi_error(f, district, start, end, assumed_dz=2, hospital="berlin-hos
 
     return error_cases, error_sick, error_critical, peak, dz
 
-def calc_incidence_error(f, district, start, end, population=919944, cases="InzidenzDunkelziffer.csv"):
+def calc_incidence_error(f, district, start, end, population=919944, cases="InzidenzDunkelzifferCologne.csv", weights_sim=None, weights_real=None):
     """ Compares weekly incidence """
 
     df, cases = read_incidence(f, district, cases)
@@ -170,8 +170,11 @@ def calc_incidence_error(f, district, start, end, population=919944, cases="Inzi
    
     s = s[(s.index >= start) & (s.index <= end)]
     cases = cases[(cases.Datum >= start) & (cases.Datum <= end)]
-   
-    return msle(s.cases, cases.DunkelzifferInzidenz)
+
+    if weights_sim is not None and weights_real is not None:
+        return msle(s.cases * weights_sim, cases.DunkelzifferInzidenz * weights_real)
+    else:
+        return msle(s.cases, cases.DunkelzifferInzidenz)
 
 def calc_strain_error(f, start, end, strain="ALPHA", shares="AlphaAnteileNRW.csv"):
     
@@ -192,7 +195,7 @@ def calc_strain_error(f, start, end, strain="ALPHA", shares="AlphaAnteileNRW.csv
     
     merged = s.merge(shares, left_on="date", right_on="Date")
     
-    return msle(merged.share, merged.Share)  
+    return msle(merged.share, merged.Share), merged.share.to_numpy(), merged.Share.to_numpy()
 
 def objective_reinfection(trial):
     """ Objective for reinfection number R """
@@ -329,19 +332,21 @@ def objective_incidence(trial):
 def objective_strain(trial):
     n = trial.number
 
-    c = 1.2202709637374418e-05
-    l = 1.964770489586272
-    inf = trial.suggest_float("infectiousness", 1, 2.5)
+    c = 1.1293063756440906e-05
+    l = 1.8993316907481814
+    offset = 0
+    inf = trial.suggest_float("infectiousness", 1.1, 2.5)
 
     start = trial.study.user_attrs["start"]
     end = trial.study.user_attrs["end"]
     scenario = trial.study.user_attrs["scenario"]
+    district = trial.study.user_attrs.get("district", "unknown")
     jvm = trial.study.user_attrs["jvm_opts"]
 
     # Run trials for all seeds in parallel
-    cmd = "java -jar %s matsim-episim.jar scenarioCreation" \
-          " trial %s --max-tasks 12 --number %d --runs %d --snapshot snapshots/strain_base_.zip --name %s --calibParameter %.12f --param leisureCorrection=%.5f --infectiousness ALPHA=%.5f --days 460" \
-          % (jvm, scenario, n, trial.study.user_attrs["runs"], end, c, l, inf)
+    cmd = "java -jar %s ../matsim-episim.jar scenarioCreation" \
+          " trial %s --max-tasks 12 --number %d --runs %d --snapshot snapshots/strain_base_.zip --name %s --calibParameter %.12f --param leisureCorrection=%.5f;alphaOffsetDays=%d --infectiousness ALPHA=%.5f --days 500" \
+          % (jvm, scenario, n, trial.study.user_attrs["runs"], end, c, l, offset, inf)
 
     print("Running calibration for %s (end: %s) : %s" % (scenario, end, cmd))
 
@@ -352,8 +357,11 @@ def objective_strain(trial):
 
     results = []
     for i in range(1, trial.study.user_attrs["runs"] + 1):
-        res = calc_strain_error("output-%s/%d/run_%d/run%d.strains.tsv" % (end, n, i, i), start=start, end=end)
-        results.append(res)
+        err_strain, share_sim, share_real = calc_strain_error("output-%s/%d/run_%d/run%d.strains.tsv" % (end, n, i, i), start=start, end=end)
+        err_inc = calc_incidence_error("output-%s/%d/run_%d/run%d.infections.txt" % (end, n, i, i), district, start=start, end=end,
+                                       weights_sim=share_sim, weights_real=share_real)
+
+        results.append(err_strain + err_inc)
 
     return np.mean(results)
 
