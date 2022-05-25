@@ -160,14 +160,14 @@ def calc_incidence_error(f, district, start, end, population=919944, cases="Inzi
     """ Compares weekly incidence """
 
     df, cases = read_incidence(f, district, cases)
-        
+
     df["cases"] = df.nInfectedCumulative.diff(1)
     df.cases.loc[0] = df.nInfectedCumulative[0]
-   
+
     s = df.groupby(pd.Grouper(key='date', freq='W-SUN')).agg(cases=("cases", "sum"))
-   
+
     s.cases = 100000* s.cases / population
-   
+
     s = s[(s.index >= start) & (s.index <= end)]
     cases = cases[(cases.Datum >= start) & (cases.Datum <= end)]
 
@@ -177,24 +177,24 @@ def calc_incidence_error(f, district, start, end, population=919944, cases="Inzi
         return msle(s.cases, cases.DunkelzifferInzidenz)
 
 def calc_strain_error(f, start, end, strain="ALPHA", shares="AlphaAnteileNRW.csv"):
-    
+
     df = pd.read_csv(f, sep="\t", parse_dates=[1])
-    
+
     total = np.sum(df.to_numpy()[:,2:], axis=1)
     total[total==0]= np.nan
-    
+
     # replace 0 for the division to change it back later
-    
-    df["total"] = total 
+
+    df["total"] = total
     df["share"] = (df[strain] / df.total).fillna(0)
-    
-    s = df.groupby(pd.Grouper(key='date', freq='W-SUN')).agg(share=("share", "mean"))    
+
+    s = df.groupby(pd.Grouper(key='date', freq='W-SUN')).agg(share=("share", "mean"))
     s = s[(s.index >= start) & (s.index <= end)]
-    
+
     shares = pd.read_csv(shares, parse_dates=[0])
-    
+
     merged = s.merge(shares, left_on="date", right_on="Date")
-    
+
     return msle(merged.share, merged.Share), merged.share.to_numpy(), merged.Share.to_numpy()
 
 def objective_reinfection(trial):

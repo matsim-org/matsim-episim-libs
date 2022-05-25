@@ -30,8 +30,8 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 	@Override
 	public CologneStrainScenario getBindings(int id, @Nullable Params params) {
-		
-		return new CologneStrainScenario( 1.95, Vaccinations.no, NoVaccination.class, false);
+
+		return new CologneStrainScenario( 1.95, Vaccinations.no, NoVaccination.class, false, 1);
 	}
 
 	@Override
@@ -45,7 +45,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 //	}
 
 	@Nullable
-	@Override	
+	@Override
 	public Config prepareConfig(int id, Params params) {
 
 		CologneStrainScenario scenario = getBindings(id, params);
@@ -54,7 +54,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		if (Boolean.valueOf(params.snapshot)) {
 			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/runs/christian/strains/weekly/snapshots/strain_base_" + params.seed + ".zip");
 			episimConfig.setSnapshotSeed(SnapshotSeed.restore);
@@ -63,7 +63,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		episimConfig.setCalibrationParameter(1.13e-05 * 0.92);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-				
+
 		builder.clearAfter(params.date);
 
 		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
@@ -83,16 +83,16 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		}
 
 		episimConfig.setPolicy(builder.build());
-		
+
 		{
 			Map<LocalDate, Double> outdoorFractionOld = episimConfig.getLeisureOutdoorFraction();
 			Map<LocalDate, Double> outdoorFractionNew = new HashMap<LocalDate, Double>();
-			
+
 			for (Entry<LocalDate, Double> entry : outdoorFractionOld.entrySet()) {
 				if (entry.getKey().isBefore(LocalDate.parse("2021-01-01")))
 						outdoorFractionNew.put(entry.getKey(), entry.getValue());
 			}
-			
+
 			episimConfig.setLeisureOutdoorFraction(outdoorFractionNew);
 
 		}
@@ -113,10 +113,10 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 //		@StringParameter({"50%open", "open", "activityLevel"})
 		@StringParameter({"activityLevel"})
 		public String schools;
-		
+
 		@StringParameter({"false"})
 		public String snapshot;
-		
+
 		@StringParameter({"2021-03-12"})
 		public String date;
 

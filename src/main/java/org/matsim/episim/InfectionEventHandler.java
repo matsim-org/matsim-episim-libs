@@ -38,7 +38,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.collections.Tuple;
 import org.matsim.episim.events.EpisimInfectionEvent;
-import org.matsim.episim.events.EpisimPotentialInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
@@ -553,6 +552,25 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 		balanceContainersByLoad(estimatedLoad);
+
+	}
+
+	/**
+	 * Called when a snapshot has been loaded.
+	 */
+	void onSnapshotLoaded(int iteration) {
+
+		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
+		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
+
+		for (SimulationListener s : listener) {
+			s.onSnapshotLoaded(iteration, localRnd, personMap, pseudoFacilityMap, vehicleMap);
+		}
+
+
+		for (SimulationListener s : vaccinations) {
+			s.onSnapshotLoaded(iteration, localRnd, personMap, pseudoFacilityMap, vehicleMap);
+		}
 
 	}
 

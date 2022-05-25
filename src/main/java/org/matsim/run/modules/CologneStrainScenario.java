@@ -1,9 +1,10 @@
 package org.matsim.run.modules;
 
+import com.google.inject.multibindings.Multibinder;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.model.AgeAndProgressionDependentInfectionModelWithSeasonality;
-import org.matsim.episim.model.InfectionModelWithAntibodies;
-import org.matsim.episim.model.vaccination.NoVaccination;
+import org.matsim.episim.model.InitRecoveredPersons;
+import org.matsim.episim.model.SimulationListener;
 import org.matsim.episim.model.vaccination.VaccinationFromData;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.scenarioCreation.RunTrial;
@@ -13,7 +14,9 @@ import org.matsim.scenarioCreation.RunTrial;
  */
 public class CologneStrainScenario extends SnzCologneProductionScenario {
 
-	public CologneStrainScenario(double leisureCorrection, Vaccinations vaccinations, Class<? extends VaccinationModel> vacModel, boolean testing ) {
+	private final double scaleRecovered;
+
+	public CologneStrainScenario(double leisureCorrection, Vaccinations vaccinations, Class<? extends VaccinationModel> vacModel, boolean testing, double scaleRecovered) {
 		super((Builder) new Builder()
 				.setTesting(testing)
 				.setScaleForActivityLevels(1.3)
@@ -25,10 +28,21 @@ public class CologneStrainScenario extends SnzCologneProductionScenario {
 				.setVaccinationModel(vacModel)
 				.setInfectionModel(AgeAndProgressionDependentInfectionModelWithSeasonality.class)
 		);
+		this.scaleRecovered = RunTrial.parseParam("scaleRecovered", scaleRecovered);
 	}
 
 	public CologneStrainScenario() {
-		this(1.95, Vaccinations.yes, VaccinationFromData.class, true);
+		this(1.95, Vaccinations.yes, VaccinationFromData.class, true, 1);
 	}
 
+	@Override
+	protected void configure() {
+		super.configure();
+
+		if (scaleRecovered > 1) {
+			Multibinder.newSetBinder(binder(), SimulationListener.class).addBinding()
+					.toInstance(new InitRecoveredPersons(scaleRecovered));
+		}
+
+	}
 }

@@ -20,7 +20,7 @@ public class CologneStrainBatch implements BatchRun<CologneStrainBatch.Params> {
 
 	@Override
 	public CologneStrainScenario getBindings(int id, @Nullable Params params) {
-		return new CologneStrainScenario( 1.8993316907481814, Vaccinations.no, NoVaccination.class, false);
+		return new CologneStrainScenario( 1.8993316907481814, Vaccinations.no, NoVaccination.class, false, 1);
 	}
 
 	@Override

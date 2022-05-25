@@ -108,6 +108,8 @@ public final class EpisimRunner {
 				log.error("Snapshot output could not be created", e);
 				return;
 			}
+
+			handler.onSnapshotLoaded(iteration);
 		}
 
 		reporting.reportCpuTime(0, "Init", "finished", -1);
