@@ -46,7 +46,10 @@ public class InitRecoveredPersons implements SimulationListener {
 
 		while (numRecovered > 0 && candidates.size() > 0) {
 			EpisimPerson randomPerson = candidates.remove(rnd.nextInt(candidates.size()));
+
+			//randomPerson.setInitialInfection(0, VirusStrain.SARS_CoV_2);
 			randomPerson.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.recovered);
+
 			numRecovered--;
 		}
 
