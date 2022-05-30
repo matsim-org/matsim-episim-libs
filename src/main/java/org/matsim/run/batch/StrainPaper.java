@@ -56,20 +56,20 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		if (Boolean.valueOf(params.snapshot)) {
-			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/runs/christian/strains/weekly/snapshots/strain_base_" + params.seed + ".zip");
+			episimConfig.setStartFromSnapshot("./snapshots/strain_base_" + params.seed + "-310-2020-12-30.zip");
 			episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 		}
 
-		episimConfig.setCalibrationParameter(1.13e-05 * 0.92);
+		episimConfig.setCalibrationParameter(1.13e-05 * params.tf);
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+				
+//		builder.clearAfter(params.date);
 
-		builder.clearAfter(params.date);
-
-		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-//			if (act.contains("educ_higher")) continue;
-			builder.restrict(params.date, params.activityLevel / 1.3, act);
-		}
+//		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+////			if (act.contains("educ_higher")) continue;
+//			builder.restrict(params.date, params.activityLevel / 1.3, act);
+//		}
 
 		//schools
 		if (params.schools.equals("50%open")) {
@@ -113,18 +113,21 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 //		@StringParameter({"50%open", "open", "activityLevel"})
 		@StringParameter({"activityLevel"})
 		public String schools;
-
-		@StringParameter({"false"})
+		
+		@StringParameter({"true"})
 		public String snapshot;
+		
+//		@StringParameter({"2021-03-12"})
+//		public String date;
 
-		@StringParameter({"2021-03-12"})
-		public String date;
-
-		@Parameter({1.2, 1.5, 1.8, 2.1, 2.4})
+		@Parameter({0.1})
 		double alphaInf;
+		
+		@Parameter({0.92, 0.88, 0.84, 0.8, 0.76, 0.72})
+		double tf;
 
-		@Parameter({0.4, 0.6, 0.8, 1.0})
-		double activityLevel;
+//		@Parameter({0.4, 0.6, 0.8, 1.0})
+//		double activityLevel;
 
 	}
 
