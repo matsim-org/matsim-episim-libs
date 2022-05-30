@@ -87,14 +87,14 @@ public class VaccinationFromDataTest {
 		long vaccinated = persons.values().stream().filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
 
 		assertThat(vaccinated)
-				.isEqualTo(511);
+				.isEqualTo(518);
 
 		model.handleVaccination(persons, true, -1, LocalDate.of(2021,10, 14), 180, 0);
 
 		long reVaccinated = persons.values().stream().filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
 
 		assertThat(reVaccinated)
-				.isEqualTo(24);
+				.isEqualTo(25);
 
 
 	}

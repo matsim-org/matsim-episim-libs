@@ -270,7 +270,7 @@ public final class RunTrial implements Callable<Integer> {
 
 			log.info("Setting seed for run {} to {}", params.run, params.seed);
 			params.config.global().setRandomSeed(params.seed);
-			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 			// events are not needed for calibration
 			episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.none);
