@@ -103,12 +103,105 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		return 0.8;
 	}
 
-	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
-		return 0.0;
+	@Override
+	public double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
+		return 1.0;
 	}
 
 	@Override
 	public double getSeriouslySickFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
+
+
+		int numVaccinations = person.getNumVaccinations();
+		int numInfections = person.getNumInfections() - 1;
+
+		if (numVaccinations + numInfections == 1) {
+			return 0.3;
+		}
+
+		if (numVaccinations + numInfections > 1) {
+			return 0.1;
+		}
+
+		return 1.0;
+
+//
+//
+//		if (numVaccinations == 0 && numInfections == 0)
+//			return 1.0;
+//
+//		VirusStrain strain = person.getVirusStrain();
+//
+//		int lastVaccination = 0;
+//
+//		if (numVaccinations > 0)
+//			lastVaccination = person.getVaccinationDates().getInt(numVaccinations - 1);
+//
+//		int lastInfection = 0;
+//
+//		if (numInfections > 0)
+//			lastInfection = (int) (person.getInfectionDates().getDouble(numInfections - 1) / 86400.);
+//
+//		int lastImmunityEvent = Math.max(lastVaccination, lastInfection);
+//		int daysSinceLastImmunityEvent = day - lastImmunityEvent;
+//
+//
+//		double antibodiesAfterLastImmunityEvent = person.getAntibodyLevelAtInfection() * Math.pow(2., daysSinceLastImmunityEvent / 60.);
+//
+//		// Two modifications to antibody level below:
+//		// a) we multiply the antibody level by 4 if the agent is boostered
+//		if (numVaccinations > 1) {
+//			antibodiesAfterLastImmunityEvent *= 4;
+//		}
+//		// b) if strain is omicron, an additional factor of 3.7 is applied
+//		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) || strain.equals(VirusStrain.STRAIN_A)) {
+//			antibodiesAfterLastImmunityEvent *= 3.7;
+//		}
+//
+//		return 1. / (1. + Math.pow( antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
+//
+//
+//		double veSeriouslySick = 0.0;
+//
+//		//vaccinated persons that are boostered either by infection or by 3rd shot
+//		if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
+//			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+//				veSeriouslySick = 0.9;
+//			else
+//				veSeriouslySick = 0.95;
+//		}
+//
+//		//vaccinated persons or persons who have had a severe course of disease in the past
+//		// I think this does not work, because old states are removed when changing from recovered to susceptible. SM
+//		else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick)) {
+////		else if (numVaccinations == 1 || person.hadStrain(VirusStrain.SARS_CoV_2) || person.hadStrain(VirusStrain.ALPHA) || person.hadStrain(VirusStrain.DELTA))
+//
+//			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+//				veSeriouslySick = 0.55;
+//			else
+//				veSeriouslySick = 0.9;
+//		}
+//
+//
+//		else {
+//			if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2)
+//				veSeriouslySick = 0.55;
+//			else
+//				veSeriouslySick = 0.6;
+//		}
+//
+//		double factorInf = person.getImmunityFactor(vaccinationConfig.getBeta());
+//
+//		double factorSeriouslySick =  (1.0 - veSeriouslySick) / factorInf;
+//
+//		factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
+//		factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
+//
+//		return factorSeriouslySick;
+	}
+
+	@Override
+	public double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
 
 		int numVaccinations = person.getNumVaccinations();
 		int numInfections = person.getNumInfections() - 1;
@@ -143,7 +236,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 			antibodiesAfterLastImmunityEvent *= 3.7;
 		}
 
-		return 1. / (1. + Math.pow(0.5 * antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
+		return 1. / (1. + Math.pow(antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
 
 //
 //		double veSeriouslySick = 0.0;
@@ -184,15 +277,17 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 //
 //		return factorSeriouslySick;
 	}
-	@Override
-	public double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
-		return 1.0;
-	}
-	@Override
-	public double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
-		return 1.0;
+
+
+	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
+		return 0.0;
 	}
 
+//	@Override
+//	public double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
+//		return 1.0;
+//	}
+//
 
 
 }

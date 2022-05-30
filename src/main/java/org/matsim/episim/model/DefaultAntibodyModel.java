@@ -21,17 +21,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	}
 
-	public static void main(String[] args) {
-		SplittableRandom rnd = new SplittableRandom(1);
-		for (int i = 0; i < 100; i++) {
-			double immuneResponseMultiplier = EpisimUtils.nextLogNormal(rnd, 0, 3.0);
-			System.out.println(immuneResponseMultiplier);
-
-		}
-
-	}
-
-
 	@Override
 	public void init(Collection<EpisimPerson> persons, int iteration) {
 
@@ -157,19 +146,4 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		return firstImmunization;
 	}
 
-	private static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
-
-		if (!person.hadStrain(strain)) {
-			return 1.0;
-		} else {
-			int lastInfectionWithStrain = 0;
-			for (int ii = 0; ii < person.getNumInfections(); ii++) {
-				if (person.getVirusStrain(ii) == strain) {
-					lastInfectionWithStrain = ii;
-				}
-			}
-			return 1.0 - Math.pow(0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 30.0);
-		}
-
-	}
 }
