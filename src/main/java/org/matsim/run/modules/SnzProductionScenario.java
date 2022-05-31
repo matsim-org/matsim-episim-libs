@@ -178,12 +178,12 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	/**
 	 * Configure outdoor fractions for weather model.
 	 */
-	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather) {
+	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather, double maxOutdoorFraction) {
 		if (weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0, maxOutdoorFraction);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);

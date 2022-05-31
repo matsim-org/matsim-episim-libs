@@ -82,6 +82,10 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 	static double getIndoorOutdoorFactor(double outdoorFraction, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
 
 		if (!act1.isSeasonal() && !act2.isSeasonal()) return 1.;
+		
+		if (!act1.getContainerName().contains("leisure") && !act2.getContainerName().contains("leisure")) {
+			outdoorFraction = outdoorFraction * 0.5;
+		}
 
 		double indoorOutdoorFactor = 1.;
 		if (rnd.nextDouble() < outdoorFraction) {

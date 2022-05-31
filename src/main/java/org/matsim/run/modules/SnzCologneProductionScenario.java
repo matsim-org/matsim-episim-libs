@@ -423,7 +423,7 @@
 
 			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
 					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile()
+					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 1.0
 			 );
 
 
