@@ -324,7 +324,7 @@
 		 //restrictions and masks
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("cologneSnzData_daily_until20220409.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220528.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -489,7 +489,7 @@
 
 			builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure");
 			builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure");
-			 
+
 			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
 		 }
 
