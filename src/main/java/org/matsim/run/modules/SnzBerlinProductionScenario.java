@@ -347,7 +347,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 			SnzProductionScenario.configureWeather(episimConfig, weatherModel,
 					INPUT.resolve("tempelhofWeatherUntil20220208.csv").toFile(),
-					INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile())
+					INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 1.0)
 			;
 
 
