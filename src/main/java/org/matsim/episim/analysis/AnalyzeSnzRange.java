@@ -680,6 +680,7 @@ class AnalyzeSnzRange implements Callable<Integer> {
 				}
 			}
 		}
+		Collections.sort(fileData);
 		return fileData;
 	}
 

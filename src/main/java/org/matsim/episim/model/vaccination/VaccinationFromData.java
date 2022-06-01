@@ -52,6 +52,11 @@ public class VaccinationFromData extends VaccinationByAge {
 	private TreeMap<LocalDate, DoubleList> booster = null;
 
 	/**
+	 * Refresher vaccination for each day.
+	 */
+	private TreeMap<LocalDate, DoubleList> refresher = null;
+
+	/**
 	 * Config for this class.
 	 */
 	private final VaccinationFromData.Config config;
@@ -76,6 +81,7 @@ public class VaccinationFromData extends VaccinationByAge {
 		ageGroups = new ArrayList<>();
 		entries = new TreeMap<>();
 		booster = new TreeMap<>();
+		refresher = new TreeMap<>();
 
 		ColumnType[] types = {LOCAL_DATE, STRING, STRING, INTEGER, INTEGER};
 
@@ -115,6 +121,15 @@ public class VaccinationFromData extends VaccinationByAge {
 			mergeData(filtered, booster, endDate, "60+", config.groups.getDouble("60+"), 3);
 
 
+			Selection refresherVaccinations = vaccinationno.isEqualTo(4);
+			filtered = table.where(refresherVaccinations);
+
+			mergeData(filtered, refresher, endDate, "05-11", config.groups.getDouble("05-11"), 0);
+			mergeData(filtered, refresher, endDate, "12-17", config.groups.getDouble("12-17"), 1);
+			mergeData(filtered, refresher, endDate, "18-59", config.groups.getDouble("18-59"), 2);
+			mergeData(filtered, refresher, endDate, "60+", config.groups.getDouble("60+"), 3);
+
+
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -148,12 +163,22 @@ public class VaccinationFromData extends VaccinationByAge {
 		if (availableVaccinations >= 0)
 			return random.handleVaccination(persons, reVaccination, availableVaccinations, date, iteration, now);
 
-		DoubleList entry;
-
+		// booster and refresher shot
+		// TODO: upstream API and config would not an update to better differentiate
 		if (reVaccination)
-			entry = EpisimUtils.findValidEntry(booster, null, date);
+			return vaccinate(persons, booster, 2, date, iteration, now) + vaccinate(persons, refresher,3, date, iteration, now);
 		else
-			entry = EpisimUtils.findValidEntry(entries, null, date);
+			return vaccinate(persons, entries, 1, date, iteration, now);
+
+	}
+
+	/**
+	 * Vaccinate all persons with the nth vaccination
+	 * @param vaccinationN the nth vaccination
+	 */
+	private int vaccinate(Map<Id<Person>, EpisimPerson> persons, TreeMap<LocalDate, DoubleList> entries, int vaccinationN, LocalDate date, int iteration, double now) {
+
+		DoubleList entry = EpisimUtils.findValidEntry(entries, null, date);
 
 		// No vaccinations today
 		if (entry == null)
@@ -176,15 +201,15 @@ public class VaccinationFromData extends VaccinationByAge {
 
 			VaccinationFromData.AgeGroup ag = ageGroups.get(idx);
 
-			if (p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes && (!reVaccination || p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes)) {
+			if (p.getNumVaccinations() >= vaccinationN) {
 				ag.vaccinated++;
 				continue;
 			}
 
 			if (p.isVaccinable() && p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible &&
 					//!p.isRecentlyRecovered(iteration) &&
-					(p.getVaccinationStatus() == (reVaccination ? EpisimPerson.VaccinationStatus.yes : EpisimPerson.VaccinationStatus.no)) &&
-					(reVaccination ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)
+					(p.getNumVaccinations() == vaccinationN - 1) &&
+					(vaccinationN > 1 ? p.daysSince(EpisimPerson.VaccinationStatus.yes, iteration) >= vaccinationConfig.getParams(p.getVaccinationType(0)).getBoostWaitPeriod() : true)
 			) {
 				perAge[idx].add(p);
 			}
@@ -210,7 +235,7 @@ public class VaccinationFromData extends VaccinationByAge {
 			int n = Math.min(candidates.size(), vaccinationsLeft);
 			for (int i = 0; i < n; i++) {
 				EpisimPerson person = candidates.get(i);
-				vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));
+				vaccinate(person, iteration, vaccinationN > 1 ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));
 				vaccinationsLeft--;
 				totalVaccinations++;
 			}
