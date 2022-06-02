@@ -841,6 +841,7 @@ class AnalyzeSnzDataTimeline implements Callable<Integer> {
 				}
 			}
 		}
+		Collections.sort(fileData);
 		return fileData;
 	}
 
