@@ -320,13 +320,13 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 		//mutations
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.7);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.aInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
 
 
-		double deltaInf = 2.7;
-		double deltaHos = 0.9;
+		double deltaInf = params.dInf;
+		double deltaHos = 1.0;
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
@@ -334,8 +334,8 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 		//omicron
 //		double oInf = params.ba1Inf;
-		double oHos = 0.13;
-		double ba1Inf = 2.4;
+		double oHos = 0.2;
+		double ba1Inf = 2.2;
 		if (ba1Inf > 0) {
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
@@ -592,7 +592,9 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 				
 		for (Entry<LocalDate, Integer> entry : episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2).entrySet() ) {
 			if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
-				infPerDayWild.put(entry.getKey(), entry.getValue());
+				int value = entry.getValue();
+				value = Math.max(1, value);
+				infPerDayWild.put(entry.getKey(), value);
 			}
 		}
 				
@@ -601,8 +603,8 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 		Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>();
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>();
 		
-		double facWild = 6.0;
-		double facAlpha = 6.0;
+		double facWild = 4.0;
+		double facAlpha = 4.0;
 		double facDelta = 4.0;
 		double facBa1 = 4.0;
 		double facBa2 = 4.0;
@@ -610,7 +612,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 		LocalDate dateAlpha = LocalDate.parse("2021-01-23");
 		LocalDate dateDelta = LocalDate.parse("2021-06-28");
 		LocalDate dateBa1 = LocalDate.parse("2021-12-12");
-		LocalDate dateBa2 = LocalDate.parse("2022-01-15");
+		LocalDate dateBa2 = LocalDate.parse("2022-01-05");
 		
 		infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
@@ -696,23 +698,29 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 	public static final class Params {
 
-		@GenerateSeeds(5)
+		@GenerateSeeds(12)
 		public long seed;
 
-		@StringParameter({"no", "yes"})
+		@StringParameter({"yes"})
 		public String nonLeisSeasonal;
 		
-		@Parameter({0.9, 0.95, 1.0, 1.05, 1.1, 1.15})
+		@Parameter({0.95, 1.0, 1.05})
 		double theta;
 		
-		@Parameter({0.4, 0.6, 0.8, 1.0})
+		@Parameter({0.6})
 		double leisCi;
 		
 //		@Parameter({1.0, 2.0, 4.0})
 //		double imp;
 		
-		@Parameter({0.4, 0.6, 0.8, 1.0})
+		@Parameter({0.8})
 		double outdoorAlpha;
+		
+		@Parameter({1.7, 1.75, 1.8, 1.85, 1.9})
+		double aInf;
+		
+		@Parameter({2.6, 2.7, 2.8, 2.9, 3.0, 3.1})
+		double dInf;
 
 	}
 
