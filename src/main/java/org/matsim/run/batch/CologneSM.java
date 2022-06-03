@@ -255,7 +255,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 * params.theta);
+//		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 * params.theta);
 
 
 //		if (params.snapshot.equals("yes")) {
@@ -265,29 +265,29 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 //		episimConfig.setSnapshotInterval(625);
 
-		episimConfig.getOrAddContainerParams("work").setSeasonal(true);
+//		episimConfig.getOrAddContainerParams("work").setSeasonal(true);
+//
+//		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * params.leisCi);
+//
+//		if (params.nonLeisSeasonal.equals("yes")) {
+//			episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("educ_secondary").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("educ_higher").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("educ_other").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("errands").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("business").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("visit").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("home").setSeasonal(true);
+//			episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
+//		}
 
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * params.leisCi);
 
-		if (params.nonLeisSeasonal.equals("yes")) {
-			episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("educ_secondary").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("educ_higher").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("educ_other").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("errands").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("business").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("visit").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("home").setSeasonal(true);
-			episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
-		}
-
-
-		 SnzProductionScenario.configureWeather(episimConfig, WeatherModel.midpoints_185_250,
-				 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-				 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), params.outdoorAlpha
-		 );
+//		 SnzProductionScenario.configureWeather(episimConfig, WeatherModel.midpoints_185_250,
+//				 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+//				 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), params.outdoorAlpha
+//		 );
 
 		//restrictions
 //		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
@@ -700,20 +700,20 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 		@GenerateSeeds(12)
 		public long seed;
 
-		@StringParameter({"yes"})
-		public String nonLeisSeasonal;
+//		@StringParameter({"yes"})
+//		public String nonLeisSeasonal;
 
-		@Parameter({1.0})
-		double theta;
+//		@Parameter({1.0})
+//		double theta;
 
-		@Parameter({0.6})
-		double leisCi;
+//		@Parameter({0.6})
+//		double leisCi;
 
 //		@Parameter({1.0, 2.0, 4.0})
 //		double imp;
 
-		@Parameter({0.8})
-		double outdoorAlpha;
+//		@Parameter({0.8})
+//		double outdoorAlpha;
 
 //		@Parameter({1.9})
 //		double aInf;

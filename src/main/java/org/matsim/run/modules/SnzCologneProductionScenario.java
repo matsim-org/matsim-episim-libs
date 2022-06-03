@@ -269,6 +269,8 @@
 		 //episim config
 		 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+		 episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 );
+
 		 episimConfig.addInputEventsFile(inputForSample("cologne_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				 .addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
@@ -288,6 +290,24 @@
 		 episimConfig.setHospitalFactor(0.5);
 		 episimConfig.setThreads(8);
 		 episimConfig.setDaysInfectious(Integer.MAX_VALUE);
+
+		 episimConfig.getOrAddContainerParams("work").setSeasonal(true);
+
+		 double leisCi = 0.6;
+
+		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
+
+		 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("educ_higher").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("educ_other").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("errands").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("business").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("visit").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("home").setSeasonal(true);
+		 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
 
 
 		 //progression model
@@ -445,7 +465,7 @@
 		 //outdoorFractions
 		 if (this.weatherModel != WeatherModel.no) {
 
-			 double outdoorAlpha = 1.0; // todo: this is 0.8 in CologneSM
+			 double outdoorAlpha = 0.8; // todo: used to be 1.0, check with SM
 			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
 					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
 					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), outdoorAlpha
