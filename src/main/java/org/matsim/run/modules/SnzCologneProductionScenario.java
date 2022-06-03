@@ -224,6 +224,12 @@
 						 .withAgeGroup("60+", 250986)
 		 );
 
+
+		 // antibody model
+		 AntibodyModel.Config antibodyConfig = new AntibodyModel.Config();
+		 antibodyConfig.setImmuneReponseSigma(3.0);
+		 bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
+
 		/* Bremen:
 		bind(VaccinationFromData.Config.class).toInstance(
 				VaccinationFromData.newConfig("04011")
