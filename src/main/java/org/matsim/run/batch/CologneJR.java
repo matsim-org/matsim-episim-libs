@@ -1,5 +1,6 @@
 package org.matsim.run.batch;
 
+import ch.sbb.matsim.routing.pt.raptor.SwissRailRaptorData;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Singleton;
@@ -60,7 +61,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				double compliance = 0.0;
 
 				if (params != null) {
-//					mutEscOm = params.mutEscOm;
+					mutEscOm = params.mutEscOm;
 					start = LocalDate.parse(params.vacDate);
 					vaccinationType = VaccinationType.valueOf(params.vacType);
 					minAge = params.minAge;
@@ -209,6 +210,36 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 						antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 					}
 				}
+
+
+
+				System.out.print("immunityGiver");
+				for (VirusStrain immunityFrom : VirusStrain.values()) {
+					if (immunityFrom == VirusStrain.OMICRON_BA1) {
+						System.out.print( "," + "BA.1");
+					} else 		if (immunityFrom == VirusStrain.OMICRON_BA2) {
+						System.out.print( "," + "BA.2");
+					} else {
+						System.out.print( "," + immunityFrom);
+					}
+				}
+
+
+				for (ImmunityEvent immunityGiver : VaccinationType.values()) {
+					System.out.print("\n" + immunityGiver);
+					for (VirusStrain immunityFrom : VirusStrain.values()) {
+						System.out.print("," +  String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
+					}
+				}
+				for (ImmunityEvent immunityGiver : VirusStrain.values()) {
+					System.out.print("\n" + immunityGiver);
+					for (VirusStrain immunityFrom : VirusStrain.values()) {
+						System.out.print("," + String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
+					}
+				}
+
+				System.out.println();
+
 			}
 		});
 
@@ -273,7 +304,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 //		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
 
-		double tf = 1.0;
+		double tf = params.thetaCorrection;
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.96 * 1.06 * tf);
 
 		//cluster
@@ -672,21 +703,21 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
+		@Parameter({0.95, 0.96, 0.97, 0.98, 0.99, 1.0})
+		public double thetaCorrection;
+
 		// cross immunity
-		@Parameter({120.,730.})
+		@Parameter({120., 730.})
 		public double timePeriodIgA;
 
 		@StringParameter({"true"})
 		String ba1ba2x;
 
-		// strainA
-//		@Parameter({1., 6.})
-//		public double mutEscOm;
-//
-		@StringParameter({"2022-04-10","2022-04-20","2022-05-01","2022-05-10","2022-05-20"})
+
+		@StringParameter({"2022-03-20", "2022-03-27", "2022-04-03", "2022-04-10"})
 		public String mutDate;
 
-		@Parameter({1.0, 1.2, 1.4, 1.6})
+		@Parameter({0.0, 1.2, 1.3, 1.4})
 		double mutAInf;
 
 		// vaccination campaign
@@ -705,6 +736,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({3.0})
 		double immuneResponseSigma;
 
+
+		@Parameter({1., 2., 4.})
+		public double mutEscOm;
+//
 
 
 
