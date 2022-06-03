@@ -50,9 +50,6 @@ import java.util.Map.Entry;
  */
 public class CologneSM implements BatchRun<CologneSM.Params> {
 
-	int runCount = 0;
-
-
 	@Nullable
 	@Override
 	public Module getBindings(int id, @Nullable Params params) {
@@ -247,7 +244,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 	public Config prepareConfig(int id, Params params) {
 
 
-		LocalDate restrictionDate = LocalDate.parse("2022-03-01");
+//		LocalDate restrictionDate = LocalDate.parse("2022-03-01");
 
 		SnzCologneProductionScenario module = getBindings(0.0, params);
 
@@ -266,7 +263,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 //			episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 //		}
 
-		episimConfig.setSnapshotInterval(625);
+//		episimConfig.setSnapshotInterval(625);
 
 		episimConfig.getOrAddContainerParams("work").setSeasonal(true);
 
@@ -293,67 +290,67 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 		 );
 
 		//restrictions
-		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+//		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 
-		double leis = 1.0;
-		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
-		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(leis), "leisure");
-
-		//2G
-		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
-		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(leis), "leisure");
-
-		double schoolFac = 0.5;
-		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		double leis = 1.0;
+//		builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
+//		builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(leis), "leisure");
+//
+//		//2G
+//		builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
+//		builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(leis), "leisure");
+//
+//		double schoolFac = 0.5;
+//		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//
+//		builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 
 		//		builder.restrict(restrictionDate, 0.78, "work", "leisure", "shop_daily", "shop_other", "visit", "errands", "business");
 
-		episimConfig.setPolicy(builder.build());
+//		episimConfig.setPolicy(builder.build());
 
-		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
-		inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
-
-		episimConfig.setInputDays(inputDays);
+//		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
+//		inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
+//
+//		episimConfig.setInputDays(inputDays);
 
 		//mutations
-		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.aInf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
+//		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.aInf);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
+//
+//
+//		double deltaInf = params.dInf;
+//		double deltaHos = 1.0;
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
+//
+//
+//		//omicron
+////		double oInf = params.ba1Inf;
+//		double oHos = 0.2;
+//		double ba1Inf = 2.2;
+//		if (ba1Inf > 0) {
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
+//		}
 
-
-		double deltaInf = params.dInf;
-		double deltaHos = 1.0;
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
-
-
-		//omicron
-//		double oInf = params.ba1Inf;
-		double oHos = 0.2;
-		double ba1Inf = 2.2;
-		if (ba1Inf > 0) {
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySickVaccinated(oHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(oHos);
-		}
-
-
-		//BA.2
-		double ba2Inf= 1.7;
-		if (ba2Inf > 0) {
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * ba1Inf * ba2Inf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
-		}
+//
+//		//BA.2
+//		double ba2Inf= 1.7;
+//		if (ba2Inf > 0) {
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(deltaInf * ba1Inf * ba2Inf);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(oHos);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySickVaccinated(oHos);
+//			virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
+//		}
 
 		//vaccinations -- moved
 //		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -380,207 +377,207 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 //
 //		configureBooster(vaccinationConfig, 1.0, 3);
 
-		//testing
-		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-
-		testingConfigGroup.setTestAllPersonsAfter(LocalDate.parse("2021-10-01"));
-
-		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
-		TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
-
-		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
-
-		List<String> actsList = new ArrayList<String>();
-		actsList.add("leisure");
-		actsList.add("work");
-		actsList.add("business");
-		actsList.add("educ_kiga");
-		actsList.add("educ_primary");
-		actsList.add("educ_secondary");
-		actsList.add("educ_tertiary");
-		actsList.add("educ_other");
-		actsList.add("educ_higher");
-		testingConfigGroup.setActivities(actsList);
-
-		rapidTest.setFalseNegativeRate(0.3);
-		rapidTest.setFalsePositiveRate(0.03);
-
-		pcrTest.setFalseNegativeRate(0.1);
-		pcrTest.setFalsePositiveRate(0.01);
-
-		testingConfigGroup.setHouseholdCompliance(1.0);
-
-		LocalDate testingStartDate = LocalDate.parse("2021-03-19");
-
-		Map<LocalDate, Double> leisureTests = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> workTests = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> eduTests = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> kigaPrimaryTests = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> uniTests = new HashMap<LocalDate, Double>();
-		leisureTests.put(LocalDate.parse("2020-01-01"), 0.);
-		workTests.put(LocalDate.parse("2020-01-01"), 0.);
-		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
-		kigaPrimaryTests.put(LocalDate.parse("2020-01-01"), 0.);
-		uniTests.put(LocalDate.parse("2020-01-01"), 0.);
-
-		for (int i = 1; i <= 31; i++) {
-			leisureTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
-			workTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
-			eduTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
-			kigaPrimaryTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
-			uniTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
-
-		}
-
-		kigaPrimaryTests.put(LocalDate.parse("2021-05-10"), 0.0);
-
-		workTests.put(LocalDate.parse("2021-06-04"), 0.05);
-
-		workTests.put(LocalDate.parse("2021-11-24"), 0.5);
-
-		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
-		leisureTests.put(LocalDate.parse("2021-08-23"), 0.2);
-
-		eduTests.put(LocalDate.parse("2021-09-20"), 0.6);
-
-		String testing = "current";
-		if (testing.equals("no")) {
-			kigaPrimaryTests.put(restrictionDate, 0.0);
-			workTests.put(restrictionDate, 0.0);
-			leisureTests.put(restrictionDate, 0.0);
-			eduTests.put(restrictionDate, 0.0);
-			uniTests.put(restrictionDate, 0.0);
-		}
-
-		rapidTest.setTestingRatePerActivityAndDate((Map.of(
-				"leisure", leisureTests,
-				"work", workTests,
-				"business", workTests,
-				"educ_kiga", eduTests,
-				"educ_primary", eduTests,
-				"educ_secondary", eduTests,
-				"educ_tertiary", eduTests,
-				"educ_higher", uniTests,
-				"educ_other", eduTests
-		)));
-
-		Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> workTestsVaccinated = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> eduTestsVaccinated = new HashMap<LocalDate, Double>();
-
-		leisureTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
-		workTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
-		eduTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
-
-		leisureTestsVaccinated.put(LocalDate.parse("2021-08-23"), 0.2);
-
-		if (testing.equals("no")) {
-			leisureTestsVaccinated.put(restrictionDate, 0.0);
-			workTestsVaccinated.put(restrictionDate, 0.0);
-			eduTestsVaccinated.put(restrictionDate, 0.0);
-		}
-
-
-		rapidTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
-				"leisure", leisureTestsVaccinated,
-				"work", workTestsVaccinated,
-				"business", workTestsVaccinated,
-				"educ_kiga", eduTestsVaccinated,
-				"educ_primary", eduTestsVaccinated,
-				"educ_secondary", eduTestsVaccinated,
-				"educ_tertiary", eduTestsVaccinated,
-				"educ_higher", eduTestsVaccinated,
-				"educ_other", eduTestsVaccinated
-		)));
-
-
-		Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> kigaPramaryTestsPCR = new HashMap<LocalDate, Double>();
-		Map<LocalDate, Double> eduTestsPCR = new HashMap<LocalDate, Double>();
-
-		leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-		kigaPramaryTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-
-		kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
-
-		if (testing.equals("no")) {
-			leisureTestsPCR.put(restrictionDate, 0.0);
-			workTestsPCR.put(restrictionDate, 0.0);
-			kigaPramaryTestsPCR.put(restrictionDate, 0.0);
-			eduTestsPCR.put(restrictionDate, 0.0);
-		}
-
-
-		pcrTest.setTestingRatePerActivityAndDate((Map.of(
-				"leisure", leisureTestsPCR,
-				"work", workTestsPCR,
-				"business", workTestsPCR,
-				"educ_kiga", kigaPramaryTestsPCR,
-				"educ_primary", kigaPramaryTestsPCR,
-				"educ_secondary", eduTestsPCR,
-				"educ_tertiary", eduTestsPCR,
-				"educ_higher", eduTestsPCR,
-				"educ_other", eduTestsPCR
-		)));
-
-		Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<>();
-		Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<>();
-		Map<LocalDate, Double> eduTestsPCRVaccinated = new HashMap<>();
-		leisureTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
-		workTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
-		eduTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
-
-		pcrTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
-				"leisure", leisureTestsPCRVaccinated,
-				"work", workTestsPCRVaccinated,
-				"business", workTestsPCRVaccinated,
-				"educ_kiga", eduTestsPCRVaccinated,
-				"educ_primary", eduTestsPCRVaccinated,
-				"educ_secondary", eduTestsPCRVaccinated,
-				"educ_tertiary", eduTestsPCRVaccinated,
-				"educ_higher", eduTestsPCRVaccinated,
-				"educ_other", eduTestsPCRVaccinated
-		)));
-
-		rapidTest.setTestingCapacity_pers_per_day(Map.of(
-				LocalDate.of(1970, 1, 1), 0,
-				testingStartDate, Integer.MAX_VALUE));
-
-		pcrTest.setTestingCapacity_pers_per_day(Map.of(
-				LocalDate.of(1970, 1, 1), 0,
-				testingStartDate, Integer.MAX_VALUE));
-
-		//tracing
-		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-		boolean qv = false;
-		//		if (params.qV.equals("yes")) {
-		//			qv = true;
-		//		}
-		tracingConfig.setQuarantineVaccinated((Map.of(
-				episimConfig.getStartDate(), false
-				//				restrictionDate, qv
-		)));
-
-		tracingConfig.setQuarantineDuration(Map.of(
-				episimConfig.getStartDate(), 14,
-				LocalDate.parse("2022-01-01"), 10
-		));
-
-		int greenPassValid = 90;
-		int greenPassValidBoostered = Integer.MAX_VALUE;
-
-		tracingConfig.setGreenPassValidDays(greenPassValid);
-		tracingConfig.setGreenPassBoosterValidDays(greenPassValidBoostered);
-
-		QuarantineStatus qs = QuarantineStatus.atHome;
-
-		tracingConfig.setQuarantineStatus(Map.of(
-				episimConfig.getStartDate(), QuarantineStatus.atHome
-				//					restrictionDate, qs
-		));
+//		//testing
+//		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
+//
+//		testingConfigGroup.setTestAllPersonsAfter(LocalDate.parse("2021-10-01"));
+//
+//		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
+//		TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+//
+//		testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
+//
+//		List<String> actsList = new ArrayList<String>();
+//		actsList.add("leisure");
+//		actsList.add("work");
+//		actsList.add("business");
+//		actsList.add("educ_kiga");
+//		actsList.add("educ_primary");
+//		actsList.add("educ_secondary");
+//		actsList.add("educ_tertiary");
+//		actsList.add("educ_other");
+//		actsList.add("educ_higher");
+//		testingConfigGroup.setActivities(actsList);
+//
+//		rapidTest.setFalseNegativeRate(0.3);
+//		rapidTest.setFalsePositiveRate(0.03);
+//
+//		pcrTest.setFalseNegativeRate(0.1);
+//		pcrTest.setFalsePositiveRate(0.01);
+//
+//		testingConfigGroup.setHouseholdCompliance(1.0);
+//
+//		LocalDate testingStartDate = LocalDate.parse("2021-03-19");
+//
+//		Map<LocalDate, Double> leisureTests = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> workTests = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> eduTests = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> kigaPrimaryTests = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> uniTests = new HashMap<LocalDate, Double>();
+//		leisureTests.put(LocalDate.parse("2020-01-01"), 0.);
+//		workTests.put(LocalDate.parse("2020-01-01"), 0.);
+//		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
+//		kigaPrimaryTests.put(LocalDate.parse("2020-01-01"), 0.);
+//		uniTests.put(LocalDate.parse("2020-01-01"), 0.);
+//
+//		for (int i = 1; i <= 31; i++) {
+//			leisureTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
+//			workTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
+//			eduTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
+//			kigaPrimaryTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
+//			uniTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
+//
+//		}
+//
+//		kigaPrimaryTests.put(LocalDate.parse("2021-05-10"), 0.0);
+//
+//		workTests.put(LocalDate.parse("2021-06-04"), 0.05);
+//
+//		workTests.put(LocalDate.parse("2021-11-24"), 0.5);
+//
+//		leisureTests.put(LocalDate.parse("2021-06-04"), 0.05);
+//		leisureTests.put(LocalDate.parse("2021-08-23"), 0.2);
+//
+//		eduTests.put(LocalDate.parse("2021-09-20"), 0.6);
+//
+//		String testing = "current";
+//		if (testing.equals("no")) {
+//			kigaPrimaryTests.put(restrictionDate, 0.0);
+//			workTests.put(restrictionDate, 0.0);
+//			leisureTests.put(restrictionDate, 0.0);
+//			eduTests.put(restrictionDate, 0.0);
+//			uniTests.put(restrictionDate, 0.0);
+//		}
+//
+//		rapidTest.setTestingRatePerActivityAndDate((Map.of(
+//				"leisure", leisureTests,
+//				"work", workTests,
+//				"business", workTests,
+//				"educ_kiga", eduTests,
+//				"educ_primary", eduTests,
+//				"educ_secondary", eduTests,
+//				"educ_tertiary", eduTests,
+//				"educ_higher", uniTests,
+//				"educ_other", eduTests
+//		)));
+//
+//		Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> workTestsVaccinated = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> eduTestsVaccinated = new HashMap<LocalDate, Double>();
+//
+//		leisureTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
+//		workTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
+//		eduTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
+//
+//		leisureTestsVaccinated.put(LocalDate.parse("2021-08-23"), 0.2);
+//
+//		if (testing.equals("no")) {
+//			leisureTestsVaccinated.put(restrictionDate, 0.0);
+//			workTestsVaccinated.put(restrictionDate, 0.0);
+//			eduTestsVaccinated.put(restrictionDate, 0.0);
+//		}
+//
+//
+//		rapidTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
+//				"leisure", leisureTestsVaccinated,
+//				"work", workTestsVaccinated,
+//				"business", workTestsVaccinated,
+//				"educ_kiga", eduTestsVaccinated,
+//				"educ_primary", eduTestsVaccinated,
+//				"educ_secondary", eduTestsVaccinated,
+//				"educ_tertiary", eduTestsVaccinated,
+//				"educ_higher", eduTestsVaccinated,
+//				"educ_other", eduTestsVaccinated
+//		)));
+//
+//
+//		Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> kigaPramaryTestsPCR = new HashMap<LocalDate, Double>();
+//		Map<LocalDate, Double> eduTestsPCR = new HashMap<LocalDate, Double>();
+//
+//		leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+//		workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+//		kigaPramaryTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+//		eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+//
+//		kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
+//
+//		if (testing.equals("no")) {
+//			leisureTestsPCR.put(restrictionDate, 0.0);
+//			workTestsPCR.put(restrictionDate, 0.0);
+//			kigaPramaryTestsPCR.put(restrictionDate, 0.0);
+//			eduTestsPCR.put(restrictionDate, 0.0);
+//		}
+//
+//
+//		pcrTest.setTestingRatePerActivityAndDate((Map.of(
+//				"leisure", leisureTestsPCR,
+//				"work", workTestsPCR,
+//				"business", workTestsPCR,
+//				"educ_kiga", kigaPramaryTestsPCR,
+//				"educ_primary", kigaPramaryTestsPCR,
+//				"educ_secondary", eduTestsPCR,
+//				"educ_tertiary", eduTestsPCR,
+//				"educ_higher", eduTestsPCR,
+//				"educ_other", eduTestsPCR
+//		)));
+//
+//		Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<>();
+//		Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<>();
+//		Map<LocalDate, Double> eduTestsPCRVaccinated = new HashMap<>();
+//		leisureTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
+//		workTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
+//		eduTestsPCRVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
+//
+//		pcrTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
+//				"leisure", leisureTestsPCRVaccinated,
+//				"work", workTestsPCRVaccinated,
+//				"business", workTestsPCRVaccinated,
+//				"educ_kiga", eduTestsPCRVaccinated,
+//				"educ_primary", eduTestsPCRVaccinated,
+//				"educ_secondary", eduTestsPCRVaccinated,
+//				"educ_tertiary", eduTestsPCRVaccinated,
+//				"educ_higher", eduTestsPCRVaccinated,
+//				"educ_other", eduTestsPCRVaccinated
+//		)));
+//
+//		rapidTest.setTestingCapacity_pers_per_day(Map.of(
+//				LocalDate.of(1970, 1, 1), 0,
+//				testingStartDate, Integer.MAX_VALUE));
+//
+//		pcrTest.setTestingCapacity_pers_per_day(Map.of(
+//				LocalDate.of(1970, 1, 1), 0,
+//				testingStartDate, Integer.MAX_VALUE));
+//
+//		//tracing
+//		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
+//		boolean qv = false;
+//		//		if (params.qV.equals("yes")) {
+//		//			qv = true;
+//		//		}
+//		tracingConfig.setQuarantineVaccinated((Map.of(
+//				episimConfig.getStartDate(), false
+//				//				restrictionDate, qv
+//		)));
+//
+//		tracingConfig.setQuarantineDuration(Map.of(
+//				episimConfig.getStartDate(), 14,
+//				LocalDate.parse("2022-01-01"), 10
+//		));
+//
+//		int greenPassValid = 90;
+//		int greenPassValidBoostered = Integer.MAX_VALUE;
+//
+//		tracingConfig.setGreenPassValidDays(greenPassValid);
+//		tracingConfig.setGreenPassBoosterValidDays(greenPassValidBoostered);
+//
+//		QuarantineStatus qs = QuarantineStatus.atHome;
+//
+//		tracingConfig.setQuarantineStatus(Map.of(
+//				episimConfig.getStartDate(), QuarantineStatus.atHome
+//				//					restrictionDate, qs
+//		));
 
 //		configureImport(episimConfig);
 
@@ -718,11 +715,11 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 		@Parameter({0.8})
 		double outdoorAlpha;
 
-		@Parameter({1.9})
-		double aInf;
+//		@Parameter({1.9})
+//		double aInf;
 
-		@Parameter({3.1})
-		double dInf;
+//		@Parameter({3.1})
+//		double dInf;
 
 	}
 
