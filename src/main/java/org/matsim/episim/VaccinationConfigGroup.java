@@ -567,8 +567,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringSetter(BOOST_WAIT_PERIOD)
-		public void setBoostWaitPeriod(int boostWaitPeriod) {
+		public VaccinationParams setBoostWaitPeriod(int boostWaitPeriod) {
 			this.boostWaitPeriod = boostWaitPeriod;
+			return this;
 		}
 
 		@StringGetter(BOOST_WAIT_PERIOD)

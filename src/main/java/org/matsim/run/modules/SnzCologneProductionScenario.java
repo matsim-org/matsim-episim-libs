@@ -21,6 +21,8 @@
 
  import com.google.inject.Provides;
  import com.google.inject.multibindings.Multibinder;
+ import org.apache.commons.csv.CSVFormat;
+ import org.apache.commons.csv.CSVRecord;
  import org.matsim.core.config.Config;
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.episim.EpisimConfigGroup;
@@ -43,11 +45,11 @@
  import org.matsim.episim.policy.ShutdownPolicy;
 
  import javax.inject.Singleton;
- import java.io.IOException;
- import java.io.UncheckedIOException;
+ import java.io.*;
  import java.nio.file.Path;
  import java.time.DayOfWeek;
  import java.time.LocalDate;
+ import java.time.format.DateTimeFormatter;
  import java.util.HashMap;
  import java.util.Map;
  import java.util.function.BiFunction;
@@ -250,8 +252,8 @@
 
 		 double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model, -> 2_352_480
 
-//		if (this.sample != 25 && this.sample != 100)
-//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		if (this.sample != 25 && this.sample != 100)
+			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
 		 //general config
 		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -315,6 +317,9 @@
 			 importMap.put(LocalDate.parse("2020-08-09"), 1);
 
 			 episimConfig.setInfections_pers_per_day(importMap);
+
+			 configureImport(episimConfig); //todo: integrate this with code above
+
 		 }
 
 
@@ -479,6 +484,29 @@
 
 				 vaccinationConfig.setFromFile(INPUT.resolve("Aktuell_Deutschland_Landkreise_COVID-19-Impfungen.csv").toString());
 			 }
+
+			 vaccinationConfig.setUseIgA(true);
+			 vaccinationConfig.setTimePeriodIgA(730);
+
+			 Map<Integer, Double> vaccinationCompliance = new HashMap<>();
+			 for (int i = 0; i < 5; i++) vaccinationCompliance.put(i, 0.0);
+			 for (int i = 5; i <= 11; i++) vaccinationCompliance.put(i, 0.4);
+			 for (int i = 12; i <= 120; i++) vaccinationCompliance.put(i, 1.0);
+			 vaccinationConfig.setCompliancePerAge(vaccinationCompliance);
+
+			 Map<LocalDate, Integer> vaccinations = new HashMap<>();
+			 double population = 2_352_480;
+			 vaccinations.put(LocalDate.parse("2022-04-12"), (int) (0.0002 * population / 7));
+			 vaccinations.put(LocalDate.parse("2022-06-30"), 0);
+
+			 vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
+			 vaccinationConfig.setDaysValid(270);
+			 vaccinationConfig.setValidDeadline(LocalDate.parse("2022-01-01"));
+
+			 vaccinationConfig.setBeta(1.2);
+
+			 configureBooster(vaccinationConfig, 1.0, 3);
+
 		 }
 
 		 if (carnivalModel.equals(CarnivalModel.yes)) {
@@ -493,15 +521,127 @@
 			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
 		 }
 
-		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
-
 		 builder.setHospitalScale(this.scale);
 
 		 episimConfig.setPolicy(builder.build());
+
+		 // configure strains
+		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
 
 		 config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		 return config;
 	 }
+
+	 private void configureImport(EpisimConfigGroup episimConfig) {
+
+		 Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
+
+		 for (Map.Entry<LocalDate, Integer> entry : episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2).entrySet() ) {
+			 if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
+				 int value = entry.getValue();
+				 value = Math.max(1, value);
+				 infPerDayWild.put(entry.getKey(), value);
+			 }
+		 }
+
+		 Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>();
+		 Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
+		 Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>();
+		 Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>();
+
+		 double facWild = 4.0;
+		 double facAlpha = 4.0;
+		 double facDelta = 4.0;
+		 double facBa1 = 4.0;
+		 double facBa2 = 4.0;
+
+		 LocalDate dateAlpha = LocalDate.parse("2021-01-23");
+		 LocalDate dateDelta = LocalDate.parse("2021-06-28");
+		 LocalDate dateBa1 = LocalDate.parse("2021-12-12");
+		 LocalDate dateBa2 = LocalDate.parse("2022-01-05");
+
+		 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
+		 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
+
+
+		 Reader in;
+		 try {
+			 in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv").toFile());
+			 Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+			 DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
+			 for (CSVRecord record : records) {
+
+				 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
+
+				 double cases = factor * Integer.parseInt(record.get("cases"));
+
+				 LocalDate date = LocalDate.parse(record.get(0), fmt);
+
+				 if (date.isAfter(dateBa2)) {
+					 infPerDayBa2.put(date, (int) (cases * facBa2));
+				 }
+				 else if (date.isAfter(dateBa1)) {
+					 infPerDayBa1.put(date, (int) (cases * facBa1));
+				 }
+				 else if (date.isAfter(dateDelta)) {
+					 infPerDayDelta.put(date, (int) (cases * facDelta));
+				 }
+				 else if (date.isAfter(dateAlpha)) {
+					 infPerDayAlpha.put(date, (int) (cases * facAlpha));
+				 }
+				 else {
+					 infPerDayWild.put(date, (int) (cases * facWild));
+				 }
+			 }
+
+		 } catch (FileNotFoundException e) {
+			 // TODO Auto-generated catch block
+			 e.printStackTrace();
+		 } catch (IOException e) {
+			 // TODO Auto-generated catch block
+			 e.printStackTrace();
+		 }
+
+		 infPerDayWild.put(dateAlpha.plusDays(1), 0);
+		 infPerDayAlpha.put(dateDelta.plusDays(1), 0);
+		 infPerDayDelta.put(dateBa1.plusDays(1), 0);
+		 infPerDayBa1.put(dateBa2.plusDays(1), 0);
+
+		 episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
+		 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
+		 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
+		 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
+		 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
+
+	 }
+
+	 private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterSpeed, int boostAfter) {
+
+		 Map<LocalDate, Integer> boosterVaccinations = new HashMap<>();
+
+		 boosterVaccinations.put(LocalDate.parse("2020-01-01"), 0);
+
+		 boosterVaccinations.put(LocalDate.parse("2022-04-12"), (int) (2_352_480 * 0.002 * boosterSpeed / 7));
+		 boosterVaccinations.put(LocalDate.parse("2022-06-30"), 0);
+
+		 vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
+
+
+		 vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+				 .setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
+		 ;
+
+		 vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
+				 .setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
+		 ;
+
+		 vaccinationConfig.getOrAddParams(VaccinationType.vector)
+				 .setBoostWaitPeriod(boostAfter * 30 + 9 * 7);
+		 ;
+	 }
+
 
  }
