@@ -83,7 +83,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 
 				antibodyConfig.setImmuneReponseSigma(3.0);
-				
+
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
@@ -265,11 +265,13 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 //			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
 //			episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 //		}
-		
+
+		episimConfig.setSnapshotInterval(625);
+
 		episimConfig.getOrAddContainerParams("work").setSeasonal(true);
-		
+
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * params.leisCi);
-		
+
 		if (params.nonLeisSeasonal.equals("yes")) {
 			episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
 			episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
@@ -284,7 +286,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 			episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
 		}
 
-		
+
 		 SnzProductionScenario.configureWeather(episimConfig, WeatherModel.midpoints_185_250,
 				 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
 				 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), params.outdoorAlpha
@@ -579,17 +581,17 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 				episimConfig.getStartDate(), QuarantineStatus.atHome
 				//					restrictionDate, qs
 		));
-		
+
 		configureImport(episimConfig);
-		
+
 		return config;
 	}
 
 
 	private void configureImport(EpisimConfigGroup episimConfig) {
-		
+
 		Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
-				
+
 		for (Entry<LocalDate, Integer> entry : episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2).entrySet() ) {
 			if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
 				int value = entry.getValue();
@@ -597,23 +599,23 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 				infPerDayWild.put(entry.getKey(), value);
 			}
 		}
-				
+
 		Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>();
 		Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
 		Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>();
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>();
-		
+
 		double facWild = 4.0;
 		double facAlpha = 4.0;
 		double facDelta = 4.0;
 		double facBa1 = 4.0;
 		double facBa2 = 4.0;
-		
+
 		LocalDate dateAlpha = LocalDate.parse("2021-01-23");
 		LocalDate dateDelta = LocalDate.parse("2021-06-28");
 		LocalDate dateBa1 = LocalDate.parse("2021-12-12");
 		LocalDate dateBa2 = LocalDate.parse("2022-01-05");
-		
+
 		infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
@@ -626,13 +628,13 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 			Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
 			for (CSVRecord record : records) {
-				
+
 				double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
-				
+
 				double cases = factor * Integer.parseInt(record.get("cases"));
-				
+
 				LocalDate date = LocalDate.parse(record.get(0), fmt);
-				
+
 				if (date.isAfter(dateBa2)) {
 					infPerDayBa2.put(date, (int) (cases * facBa2));
 				}
@@ -649,7 +651,7 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 					infPerDayWild.put(date, (int) (cases * facWild));
 				}
 			}
-			
+
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -657,18 +659,18 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		infPerDayWild.put(dateAlpha.plusDays(1), 0);
 		infPerDayAlpha.put(dateDelta.plusDays(1), 0);
 		infPerDayDelta.put(dateBa1.plusDays(1), 0);
 		infPerDayBa1.put(dateBa2.plusDays(1), 0);
-		
+
 		episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
 		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
 		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
-		
+
 	}
 
 	private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterSpeed, int boostAfter) {
@@ -703,23 +705,23 @@ public class CologneSM implements BatchRun<CologneSM.Params> {
 
 		@StringParameter({"yes"})
 		public String nonLeisSeasonal;
-		
-		@Parameter({0.95, 1.0, 1.05})
+
+		@Parameter({1.0})
 		double theta;
-		
+
 		@Parameter({0.6})
 		double leisCi;
-		
+
 //		@Parameter({1.0, 2.0, 4.0})
 //		double imp;
-		
+
 		@Parameter({0.8})
 		double outdoorAlpha;
-		
-		@Parameter({1.7, 1.75, 1.8, 1.85, 1.9})
+
+		@Parameter({1.9})
 		double aInf;
-		
-		@Parameter({2.6, 2.7, 2.8, 2.9, 3.0, 3.1})
+
+		@Parameter({3.1})
 		double dInf;
 
 	}
