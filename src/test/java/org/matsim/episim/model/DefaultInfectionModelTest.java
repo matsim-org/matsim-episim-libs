@@ -74,7 +74,7 @@ public class DefaultInfectionModelTest {
 
 		// test with re vaccination
 
-		p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 0);
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 0);
 
 		// person does not has full effect from first vaccine
 		assertThat(
@@ -123,7 +123,7 @@ public class DefaultInfectionModelTest {
 
 		EpisimPerson p = EpisimTestUtils.createPerson(true, -1);
 
-		p.possibleInfection(new EpisimInfectionEvent(0, p.getPersonId(), p.getPersonId(), null, "somewhere", 1, VirusStrain.SARS_CoV_2, 1d));
+		p.possibleInfection(new EpisimInfectionEvent(0, p.getPersonId(), p.getPersonId(), null, "somewhere", 1, VirusStrain.SARS_CoV_2, 1d, -1));
 		p.checkInfection();
 		p.setDiseaseStatus(1000, EpisimPerson.DiseaseStatus.recovered);
 		p.setDiseaseStatus(2000, EpisimPerson.DiseaseStatus.susceptible);
@@ -161,7 +161,7 @@ public class DefaultInfectionModelTest {
 		assertThat(DefaultInfectionModel.getVaccinationInfectivity(p, cov2, vacConfig, 5))
 				.isCloseTo(0.5, Offset.offset(0.001));
 
-		p.setReVaccinationStatus(EpisimPerson.VaccinationStatus.yes, 5);
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.generic, 5);
 
 		assertThat(DefaultInfectionModel.getVaccinationInfectivity(p, cov2, vacConfig, 10))
 				.isCloseTo(0.2, Offset.offset(0.001));

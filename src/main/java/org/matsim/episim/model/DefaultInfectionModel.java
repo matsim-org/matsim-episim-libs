@@ -78,9 +78,9 @@ public final class DefaultInfectionModel implements InfectionModel {
 
 		double vaccineEffectiveness;
 
-		// use re vaccine effectiveness if person received the new vaccine
-		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			vaccineEffectiveness = params.getBoostEffectiveness(strain, daysVaccinated);
+		// person with infection also have the boost effectiveness
+		if (target.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || target.getNumInfections() >= 1) {
+			vaccineEffectiveness = params.getBoostEffectiveness(strain, Math.min(daysVaccinated, target.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));
 		} else {
 			vaccineEffectiveness = params.getEffectiveness(strain, daysVaccinated);
 		}
@@ -117,8 +117,8 @@ public final class DefaultInfectionModel implements InfectionModel {
 
 		VaccinationConfigGroup.VaccinationParams params = config.getParams(infector.getVaccinationType());
 
-		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			return params.getBoostInfectivity(strain.getStrain(), daysVaccinated);
+		if (infector.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || infector.getNumInfections() >= 1) {
+			return params.getBoostInfectivity(strain.getStrain(), Math.min(daysVaccinated, infector.daysSinceOrElse(EpisimPerson.DiseaseStatus.recovered, iteration, Integer.MAX_VALUE)));
 		} else
 			return params.getInfectivity(strain.getStrain(), daysVaccinated);
 	}

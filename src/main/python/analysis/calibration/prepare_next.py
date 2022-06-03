@@ -63,7 +63,7 @@ if __name__ == "__main__":
 
         params.append((t, param))
 
-    # Choose median of best 5 trials
+    # Choose median of best top trials
     params = sorted(params, key=lambda x: x[1][3])
     best = params[int((args.top - 1) / 2)]
     print("Best Trial: " + str(best))

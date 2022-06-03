@@ -27,6 +27,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 	private final int groupSize;
 	private final VirusStrain virusStrain;
 	private final double probability;
+	private final double antibodies;
 
 	private final double unVacProbability;
 	private final double rnd;
@@ -35,7 +36,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 	 * Constructor.
 	 */
 	public EpisimPotentialInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double rnd) {
+	                                     int groupSize, VirusStrain strain, double probability, double unVacProbability, double antibodies, double rnd) {
 
 		super(time);
 
@@ -46,6 +47,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 		this.groupSize = groupSize;
 		this.virusStrain = strain;
 		this.probability = probability;
+		this.antibodies = antibodies;
 
 		this.unVacProbability = unVacProbability;
 		this.rnd = rnd;
@@ -106,6 +108,10 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 		return rnd;
 	}
 
+	public double getAntibodies() {
+		return antibodies;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
@@ -116,6 +122,7 @@ public class EpisimPotentialInfectionEvent extends Event implements HasPersonId,
 		attr.put(GROUP_SIZE, Integer.toString(groupSize));
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
+		attr.put(ANTIBODIES, Double.toString(antibodies));
 
 		attr.put(UNVAC_PROBABILITY, Double.toString(unVacProbability));
 		attr.put(RND, Double.toString(rnd));

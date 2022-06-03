@@ -21,6 +21,10 @@
 package org.matsim.episim;
 
 import com.google.common.annotations.Beta;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2DoubleLinkedOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
@@ -123,7 +127,7 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * List of all potential infection that happened during the day.
 	 */
-	private List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
+	private final List<EpisimPotentialInfectionEvent> potentialInfectionEvents = new ArrayList<>();
 
 	/**
 	 * The facility where the person got infected. Can be null if person was initially infected.
@@ -145,29 +149,9 @@ public final class EpisimPerson implements Attributable {
 	private QuarantineStatus quarantineStatus = QuarantineStatus.no;
 
 	/**
-	 * Strain of the virus the person was infected with.
-	 */
-	private VirusStrain virusStrain = VirusStrain.SARS_CoV_2;
-
-	/**
-	 * Current {@link VaccinationStatus}.
-	 */
-	private VaccinationStatus vaccinationStatus = VaccinationStatus.no;
-
-	/**
-	 * Current status for re-vaccination.
-	 */
-	private VaccinationStatus reVaccinationStatus = VaccinationStatus.no;
-
-	/**
 	 * Current {@link TestStatus}.
 	 */
 	private TestStatus testStatus = TestStatus.untested;
-
-	/**
-	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
-	 */
-	private int vaccinationDate = -1;
 
 	/**
 	 * Iteration when this person got into quarantine. Negative if person was never quarantined.
@@ -178,11 +162,6 @@ public final class EpisimPerson implements Attributable {
 	 * Iteration when this person was tested. Negative if person was never tested.
 	 */
 	private int testDate = -1;
-
-	/**
-	 * How many times a person did go through the infected -> recovered cycle.
-	 */
-	private int numInfections = 0;
 
 	/**
 	 * Age of the person in years.
@@ -200,14 +179,44 @@ public final class EpisimPerson implements Attributable {
 	private boolean vaccinable = true;
 
 	/**
-	 * Received vaccination type.
-	 */
-	private VaccinationType vaccinationType = VaccinationType.generic;
-
-	/**
 	 * Individual susceptibility of a person.
 	 */
 	private double susceptibility = 1;
+
+	/**
+	 * Types of received vaccination. Index 0 is the first received.
+	 */
+	private final List<VaccinationType> vaccinations = new ArrayList<>();
+
+	/**
+	 * Iteration when this person was vaccinated. Negative if person was never vaccinated.
+	 */
+	private final IntList vaccinationDates = new IntArrayList();
+
+	/**
+	 * Iterations when a person was infected.
+	 */
+	private final DoubleList infectionDates = new DoubleArrayList();
+
+	/**
+	 * Strain of the virus the person was infected with.
+	 */
+	private final List<VirusStrain> virusStrains = new ArrayList<>();
+
+	/**
+	 * Antibody level for each virus strain.
+	 */
+	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
+
+	/**
+	 * Antibody level at last infection.
+	 */
+	private double antibodyLevelAtInfection = 0;
+
+	/**
+	 * Whether agent is part of subpopulation which is immune to infection
+	 */
+	private ImmuneResponse immuneResponse = ImmuneResponse.normal;
 
 	/**
 	 * Lookup age from attributes.
@@ -277,23 +286,36 @@ public final class EpisimPerson implements Attributable {
 			spentTime.put(act, in.readDouble());
 		}
 
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			vaccinations.add(VaccinationType.values()[in.readInt()]);
+			vaccinationDates.add(in.readInt());
+		}
+
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			infectionDates.add(in.readDouble());
+			virusStrains.add(VirusStrain.values()[in.readInt()]);
+		}
+
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			VirusStrain strain = VirusStrain.values()[in.readInt()];
+			antibodies.put(strain, in.readDouble());
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
-		virusStrain = VirusStrain.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
-		vaccinationStatus = VaccinationStatus.values()[in.readInt()];
-		reVaccinationStatus = VaccinationStatus.values()[in.readInt()];
-		vaccinationDate = in.readInt();
 		testStatus = TestStatus.values()[in.readInt()];
 		testDate = in.readInt();
 		traceable = in.readBoolean();
-		numInfections = in.readInt();
 
 		// vaccinable, which is not restored from snapshot
 		in.readBoolean();
 
-		vaccinationType = VaccinationType.values()[in.readInt()];
 		susceptibility = in.readDouble();
+		antibodyLevelAtInfection = in.readDouble();
 	}
 
 	/**
@@ -302,9 +324,9 @@ public final class EpisimPerson implements Attributable {
 	void write(ObjectOutput out) throws IOException {
 
 		out.writeInt(traceableContactPersons.size());
-		for (Map.Entry<EpisimPerson, Double> kv : traceableContactPersons.entrySet()) {
+		for (Object2DoubleMap.Entry<EpisimPerson> kv : traceableContactPersons.object2DoubleEntrySet()) {
 			writeChars(out, kv.getKey().getPersonId().toString());
-			out.writeDouble(kv.getValue());
+			out.writeDouble(kv.getDoubleValue());
 		}
 
 		out.writeInt(statusChanges.size());
@@ -324,26 +346,38 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		out.writeInt(spentTime.size());
-
 		for (Object2DoubleMap.Entry<String> kv : spentTime.object2DoubleEntrySet()) {
 			writeChars(out, kv.getKey());
 			out.writeDouble(kv.getDoubleValue());
 		}
 
+		out.writeInt(vaccinations.size());
+		for (int i = 0; i < vaccinations.size(); i++) {
+			out.writeInt(vaccinations.get(i).ordinal());
+			out.writeInt(vaccinationDates.getInt(i));
+		}
+
+		out.writeInt(infectionDates.size());
+		for (int i = 0; i < infectionDates.size(); i++) {
+			out.writeDouble(infectionDates.getDouble(i));
+			out.writeInt(virusStrains.get(i).ordinal());
+		}
+
+		out.writeInt(antibodies.size());
+		for (Object2DoubleMap.Entry<VirusStrain> kv : antibodies.object2DoubleEntrySet()) {
+			out.writeInt(kv.getKey().ordinal());
+			out.writeDouble(kv.getDoubleValue());
+		}
+
 		out.writeInt(status.ordinal());
-		out.writeInt(virusStrain.ordinal());
 		out.writeInt(quarantineStatus.ordinal());
 		out.writeInt(quarantineDate);
-		out.writeInt(vaccinationStatus.ordinal());
-		out.writeInt(reVaccinationStatus.ordinal());
-		out.writeInt(vaccinationDate);
 		out.writeInt(testStatus.ordinal());
 		out.writeInt(testDate);
 		out.writeBoolean(traceable);
-		out.writeInt(numInfections);
 		out.writeBoolean(vaccinable);
-		out.writeInt(vaccinationType.ordinal());
 		out.writeDouble(susceptibility);
+		out.writeDouble(antibodyLevelAtInfection);
 	}
 
 	public Id<Person> getPersonId() {
@@ -358,11 +392,11 @@ public final class EpisimPerson implements Attributable {
 		this.status = status;
 
 		// when person goes back to susceptible, old states are removed
-		if (status == DiseaseStatus.susceptible) {
+		if (status == DiseaseStatus.susceptible || status == DiseaseStatus.deceased) {
 			statusChanges.keySet().removeIf(p -> p != DiseaseStatus.recovered);
 		}
 
-		if (!statusChanges.containsKey(status))
+		if (!statusChanges.containsKey(status) || status == DiseaseStatus.recovered)
 			statusChanges.put(status, now);
 
 		reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(now, personId, status));
@@ -375,13 +409,14 @@ public final class EpisimPerson implements Attributable {
 
 		reporting.reportInfection(new EpisimInitialInfectionEvent(now, getPersonId(), strain));
 
-		setVirusStrain(strain);
+		virusStrains.add(strain);
 		setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
+		infectionDates.add(now);
 
 	}
 
 	/**
-	 * Adds an infection possibility to this persons. Will be executed in {@link #checkInfection()}
+	 * Adds an infection possibility to this person. Will be executed in {@link #checkInfection()}
 	 */
 	synchronized public void possibleInfection(EpisimInfectionEvent event) {
 		if (earliestInfection == null || event.compareTo(earliestInfection) < 0) {
@@ -406,12 +441,15 @@ public final class EpisimPerson implements Attributable {
 
 			EpisimInfectionEvent event = this.earliestInfection;
 			setDiseaseStatus(event.getTime(), EpisimPerson.DiseaseStatus.infectedButNotContagious);
-			setVirusStrain(event.getVirusStrain());
-			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
-			setInfectionType(event.getInfectionType());
-			numInfections++;
 
-			this.earliestInfection = null;
+			virusStrains.add(event.getVirusStrain());
+			infectionContainer = (Id<ActivityFacility>) event.getContainerId();
+
+			infectionType = event.getInfectionType();
+			infectionDates.add(event.getTime());
+
+			earliestInfection = null;
+			antibodyLevelAtInfection = antibodies.getDouble(event.getVirusStrain());
 			return event;
 		}
 
@@ -438,44 +476,60 @@ public final class EpisimPerson implements Attributable {
 		//reporting.reportPersonStatus(this, new EpisimPersonStatusEvent(iteration * 86400d, personId, quarantineStatus));
 	}
 
-	public void setVirusStrain(VirusStrain virusStrain) {
-		this.virusStrain = virusStrain;
+	public VirusStrain getVirusStrain() {
+		// Backwards compatibility
+		if (virusStrains.isEmpty())
+			return VirusStrain.SARS_CoV_2;
+
+		return virusStrains.get(virusStrains.size() - 1);
 	}
 
-	public VirusStrain getVirusStrain() {
-		return virusStrain;
+	/**
+	 * Virus strain of infection.
+	 * @param idx index of infection starting at 0
+	 */
+	public VirusStrain getVirusStrain(int idx) {
+		return virusStrains.get(idx);
+	}
+
+	/**
+	 * Number of received vaccinations
+	 */
+	public int getNumVaccinations() {
+		return vaccinations.size();
 	}
 
 	public VaccinationStatus getVaccinationStatus() {
-		return vaccinationStatus;
+		return vaccinations.size() > 0 ? VaccinationStatus.yes : VaccinationStatus.no;
 	}
 
+	/**
+	 * Use {@link #getVaccinationType(int)}
+	 */
+	@Deprecated
 	public VaccinationType getVaccinationType() {
-		return vaccinationType;
+		return vaccinations.get(0);
 	}
 
+	public VaccinationType getVaccinationType(int idx) {
+		return vaccinations.get(idx);
+	}
+
+	/**
+	 * Use {@link #getNumVaccinations()}
+	 */
+	@Deprecated
 	public VaccinationStatus getReVaccinationStatus() {
-		return reVaccinationStatus;
+		return vaccinations.size() > 1 ? VaccinationStatus.yes : VaccinationStatus.no;
 	}
 
 	public void setVaccinationStatus(VaccinationStatus vaccinationStatus, VaccinationType type, int iteration) {
 		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Vaccination can only be set to yes.");
 
-		this.vaccinationType = type;
-		this.vaccinationStatus = vaccinationStatus;
-		this.vaccinationDate = iteration;
+		vaccinations.add(type);
+		vaccinationDates.add(iteration);
 
-		reporting.reportVaccination(personId, iteration, type, false);
-	}
-
-	public void setReVaccinationStatus(VaccinationStatus vaccinationStatus, int iteration) {
-		if (this.vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("First vaccination must already be present.");
-		if (vaccinationStatus != VaccinationStatus.yes) throw new IllegalArgumentException("Re-vaccination can only be set to yes.");
-
-		this.reVaccinationStatus = vaccinationStatus;
-		this.vaccinationDate = iteration;
-
-		reporting.reportVaccination(personId, iteration, vaccinationType,true);
+		reporting.reportVaccination(personId, iteration, type, vaccinations.size());
 	}
 
 	public TestStatus getTestStatus() {
@@ -496,6 +550,25 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Immunity factor based on antibody level at infection.
+	 */
+	public double getImmunityFactor(double beta) {
+		return 1.0 / (1.0 + Math.pow(antibodyLevelAtInfection, beta));
+	}
+
+	public double getAntibodies(VirusStrain strain) {
+		return antibodies.getDouble(strain);
+	}
+
+	public Object2DoubleMap<VirusStrain> getAntibodies() {
+		return antibodies;
+	}
+
+	public double setAntibodies(VirusStrain strain, double value) {
+		return antibodies.put(strain, value);
+	}
+
+	/**
 	 * Days elapsed since a certain status was set.
 	 * This will always round the change as if it happened on the start of a day.
 	 *
@@ -512,10 +585,44 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
+	 * Days elapsed since nth infection occurred.
+	 *
+	 * @param idx index starting at 0
+	 */
+	public int daysSinceInfection(int idx, int currentDay) {
+		if (infectionDates.size() <= idx) throw new IllegalStateException("Person did not had infection with index " + idx);
+
+		double day = Math.floor(infectionDates.getDouble(idx) / EpisimUtils.DAY);
+		return currentDay - (int) day;
+
+	}
+	/**
+	 * Return days since status, or default value if this status was not attained.
+	 */
+	public int daysSinceOrElse(DiseaseStatus status, int currentDay, int defaultValue) {
+		if (!hadDiseaseStatus(status)) return defaultValue;
+		return  daysSince(status, currentDay);
+	}
+
+	/**
 	 * Return whether a person had (or currently has) a certain disease status.
 	 */
 	public boolean hadDiseaseStatus(DiseaseStatus status) {
 		return statusChanges.containsKey(status);
+	}
+
+	/**
+	 * Return whether a person received certain vaccination type.
+	 */
+	public boolean hadVaccinationType(VaccinationType type) {
+		return vaccinations.contains(type);
+	}
+
+	/**
+	 * Return whether a person was infected with certain virus strain.
+	 */
+	public boolean hadStrain(VirusStrain strain) {
+		return virusStrains.contains(strain);
 	}
 
 	/**
@@ -541,9 +648,18 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public int daysSince(VaccinationStatus status, int currentDay) {
 		if (status != VaccinationStatus.yes) throw new IllegalArgumentException("Only supports querying when person was vaccinated");
-		if (vaccinationDate < 0) throw new IllegalStateException("Person was never vaccinated");
+		if (vaccinations.isEmpty()) throw new IllegalStateException("Person was never vaccinated");
 
-		return currentDay - vaccinationDate;
+		return currentDay - vaccinationDates.getInt(vaccinationDates.size() - 1);
+	}
+
+	/**
+	 * Days since the nth vaccination (starting at 0)
+	 */
+	public int daysSinceVaccination(int idx, int currentDay) {
+		if (vaccinations.size() <= idx) throw new IllegalStateException("Person did not receive vaccination with index " + idx);
+
+		return currentDay - vaccinationDates.getInt(idx);
 	}
 
 	/**
@@ -562,14 +678,16 @@ public final class EpisimPerson implements Attributable {
 	 * Number of times person was infected.
 	 */
 	public int getNumInfections() {
-		return numInfections;
+		return infectionDates.size();
 	}
 
 	/**
 	 * Whether this person is handled as a recovered person.
+	 *
+	 * @param threshold after how many days the status will expire
 	 */
-	public boolean isRecentlyRecovered(int currentDay) {
-		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && numInfections >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= 180);
+	public boolean isRecentlyRecovered(int currentDay, int threshold) {
+		return status == DiseaseStatus.recovered || (status == DiseaseStatus.susceptible && infectionDates.size() >= 1 && daysSince(DiseaseStatus.recovered, currentDay) <= threshold);
 	}
 
 	public synchronized void addTraceableContactPerson(EpisimPerson personWrapper, double now) {
@@ -765,10 +883,6 @@ public final class EpisimPerson implements Attributable {
 		return infectionContainer;
 	}
 
-	public void setInfectionType(String infectionType) {
-		this.infectionType = infectionType;
-	}
-
 	public String getInfectionType() {
 		return infectionType;
 	}
@@ -785,6 +899,20 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public Object2DoubleMap<String> getSpentTime() {
 		return spentTime;
+	}
+
+	/**
+	 * Getter for whether person is in immune subpopulation
+	 */
+	public ImmuneResponse getImmuneResponse() {
+		return immuneResponse;
+	}
+
+	/**
+	 * Set immune response status of person
+	 */
+	public void setImmuneResponse(ImmuneResponse immuneResponse) {
+		this.immuneResponse = immuneResponse;
 	}
 
 	@Override
@@ -884,13 +1012,13 @@ public final class EpisimPerson implements Attributable {
 	 */
 	public enum DiseaseStatus {
 		susceptible, infectedButNotContagious, contagious, showingSymptoms,
-		seriouslySick, critical, seriouslySickAfterCritical, recovered
+		seriouslySick, critical, seriouslySickAfterCritical, recovered, deceased
 	}
 
 	/**
 	 * Quarantine status of a person.
 	 */
-	public enum QuarantineStatus {full, atHome, no}
+	public enum QuarantineStatus {full, atHome, testing, no}
 
 	/**
 	 * Latest test result of this person.
@@ -901,6 +1029,8 @@ public final class EpisimPerson implements Attributable {
 	 * Status of vaccination.
 	 */
 	public enum VaccinationStatus {yes, no}
+
+	public enum ImmuneResponse{low, normal, high}
 
 	/**
 	 * Stores when an activity is performed and in which context.

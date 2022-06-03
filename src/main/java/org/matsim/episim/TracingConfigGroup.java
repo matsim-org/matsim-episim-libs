@@ -5,8 +5,7 @@ import com.google.common.base.Splitter;
 import org.matsim.core.config.ReflectiveConfigGroup;
 
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -21,7 +20,9 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String TRACING_DAYS_DISTANCE = "tracingDaysDistance";
 	private static final String TRACING_PROBABILITY = "tracingProbability";
 	private static final String TRACING_DELAY = "tracingDelay";
+	private static final String QUARANTINE_VACCINATED = "quarantineVaccinated";
 	private static final String QUARANTINE_DURATION = "quarantineDuration";
+	private static final String QUARANTINE_STATUS = "quarantineStatus";
 	private static final String MIN_DURATION = "minDuration";
 	private static final String QUARANTINE_HOUSEHOLD = "quarantineHousehold";
 	private static final String QUARANTINE_RELEASE = "quarantineRelease";
@@ -31,6 +32,9 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private static final String CAPACITY_TYPE = "capacityType";
 	private static final String STRATEGY = "strategy";
 	private static final String LOCATION_THRESHOLD = "locationThreshold";
+	private static final String GREEN_PASS_DAYS = "greenPassValidDays";
+	private static final String GREEN_PASS_BOOSTER_DAYS = "greenPassBoosterValidDays";
+	private static final String IGNORED_ACTIVITIES = "ignoredActivities";
 	private static final String GROUPNAME = "episimTracing";
 
 	/**
@@ -48,6 +52,26 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	private final Map<LocalDate, Integer> tracingDelay = new TreeMap<>();
 
 	/**
+	 * Whether vaccinated persons should be put into quarantine.
+	 */
+	private final Map<LocalDate, Boolean> quarantineVaccinated = new TreeMap<>();
+
+	/**
+	 * Duration of quarantine in days.
+	 */
+	private final Map<LocalDate, Integer> quarantineDuration = new TreeMap<>();
+
+	/**
+	 * Quarantine to use after certain dates.
+	 */
+	private final Map<LocalDate, EpisimPerson.QuarantineStatus> quarantineStatus = new TreeMap<>();
+
+	/**
+	 * Activities that will not be traced.
+	 */
+	private final Set<String> ignoredActivities = new HashSet<>();
+
+	/**
 	 * Day after which tracing starts and puts persons into quarantine.
 	 */
 	private int putTraceablePersonsInQuarantineAfterDay = Integer.MAX_VALUE;
@@ -55,10 +79,7 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * How many days the tracing works back.
 	 */
 	private int tracingDayDistance = 4;
-	/**
-	 * Duration of quarantine in days.
-	 */
-	private int quarantineDuration = 14;
+
 	/**
 	 * Probability that a person is equipped with a tracing device.
 	 */
@@ -98,6 +119,16 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	 * How many infections are required for location based tracing to trigger.
 	 */
 	private int locationThreshold = 4;
+
+	/**
+	 * Overwrite green pass valid days, -1 means default value.
+	 */
+	private int greenPassValidDays = -1;
+
+	/**
+	 * Valid days for persons with booster.
+	 */
+	private int greenPassBoosterValidDays = -1;
 
 	/**
 	 * Default constructor.
@@ -226,6 +257,74 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 		return JOINER.join(tracingCapacity);
 	}
 
+	public void setQuarantineVaccinated(Map<LocalDate, Boolean> value) {
+		quarantineVaccinated.clear();
+		quarantineVaccinated.putAll(value);
+	}
+
+	public Map<LocalDate, Boolean> getQuarantineVaccinated() {
+		return quarantineVaccinated;
+	}
+
+	@StringSetter(QUARANTINE_VACCINATED)
+	void setQuarantineVaccinated(String value) {
+		Map<String, String> map = SPLITTER.split(value);
+		setQuarantineVaccinated(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Boolean.parseBoolean(e.getValue())
+		)));
+	}
+
+	@StringGetter(QUARANTINE_VACCINATED)
+	String getQuarantineVaccinatedString() {
+		return JOINER.join(quarantineVaccinated);
+	}
+
+
+	public void setQuarantineDuration(Map<LocalDate, Integer> value) {
+		quarantineDuration.clear();
+		quarantineDuration.putAll(value);
+	}
+
+	public Map<LocalDate, Integer> getQuarantineDuration() {
+		return quarantineDuration;
+	}
+
+	@StringSetter(QUARANTINE_DURATION)
+	void setQuarantineDuration(String value) {
+		Map<String, String> map = SPLITTER.split(value);
+		setQuarantineDuration(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> Integer.parseInt(e.getValue())
+		)));
+	}
+
+	@StringGetter(QUARANTINE_DURATION)
+	String getQuarantineDurationString() {
+		return JOINER.join(quarantineDuration);
+	}
+
+
+	public Map<LocalDate, EpisimPerson.QuarantineStatus> getQuarantineStatus() {
+		return quarantineStatus;
+	}
+
+	public void setQuarantineStatus(Map<LocalDate, EpisimPerson.QuarantineStatus> value) {
+		quarantineStatus.clear();
+		quarantineStatus.putAll(value);
+	}
+
+	@StringSetter(QUARANTINE_STATUS)
+	void setQuarantineStatus(String value) {
+		Map<String, String> map = SPLITTER.split(value);
+		setQuarantineStatus(map.entrySet().stream().collect(Collectors.toMap(
+				e -> LocalDate.parse(e.getKey()), e -> EpisimPerson.QuarantineStatus.valueOf(e.getValue())
+		)));
+	}
+
+	@StringGetter(QUARANTINE_STATUS)
+	String getQuarantineStatusString() {
+		return JOINER.join(quarantineStatus);
+	}
+
 	@StringGetter(EQUIPMENT_RATE)
 	public double getEquipmentRate() {
 		return equipmentRate;
@@ -234,16 +333,6 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(EQUIPMENT_RATE)
 	public void setEquipmentRate(double equipmentRate) {
 		this.equipmentRate = equipmentRate;
-	}
-
-	@StringSetter(QUARANTINE_DURATION)
-	public void setQuarantineDuration(int quarantineDuration) {
-		this.quarantineDuration = quarantineDuration;
-	}
-
-	@StringGetter(QUARANTINE_DURATION)
-	public int getQuarantineDuration() {
-		return quarantineDuration;
 	}
 
 	@StringGetter(QUARANTINE_RELEASE)
@@ -314,6 +403,45 @@ public class TracingConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(LOCATION_THRESHOLD)
 	public void setLocationThreshold(int locationThreshold) {
 		this.locationThreshold = locationThreshold;
+	}
+
+	@StringGetter(GREEN_PASS_DAYS)
+	public int getGreenPassValidDays() {
+		return greenPassValidDays;
+	}
+
+	@StringSetter(GREEN_PASS_DAYS)
+	public void setGreenPassValidDays(int greenPassValidDays) {
+		this.greenPassValidDays = greenPassValidDays;
+	}
+
+	@StringSetter(GREEN_PASS_BOOSTER_DAYS)
+	public void setGreenPassBoosterValidDays(int greenPassBoosterValidDays) {
+		this.greenPassBoosterValidDays = greenPassBoosterValidDays;
+	}
+
+	@StringGetter(GREEN_PASS_BOOSTER_DAYS)
+	public int getGreenPassBoosterValidDays() {
+		return greenPassBoosterValidDays;
+	}
+
+	public Set<String> getIgnoredActivities() {
+		return ignoredActivities;
+	}
+
+	public void setIgnoredActivities(Collection<String> value) {
+		ignoredActivities.clear();
+		ignoredActivities.addAll(value);
+	}
+
+	@StringSetter(IGNORED_ACTIVITIES)
+	public void setIgnoredActivities(String value) {
+		setIgnoredActivities(Splitter.on(";").splitToList(value));
+	}
+
+	@StringGetter(IGNORED_ACTIVITIES)
+	String getIgnoredActivitiesString() {
+		return Joiner.on(";").join(ignoredActivities);
 	}
 
 	public enum CapacityType {PER_PERSON, PER_CONTACT_PERSON}

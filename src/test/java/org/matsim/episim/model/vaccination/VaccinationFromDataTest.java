@@ -66,6 +66,7 @@ public class VaccinationFromDataTest {
 		}
 
 		VaccinationFromData.Config conf = VaccinationFromData.newConfig("05315")
+				.withAgeGroup("05-11", 67158.47)
 				.withAgeGroup("12-17", 54587.2)
 				.withAgeGroup("18-59", 676995)
 				.withAgeGroup("60+", 250986);
@@ -86,14 +87,14 @@ public class VaccinationFromDataTest {
 		long vaccinated = persons.values().stream().filter(p -> p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
 
 		assertThat(vaccinated)
-				.isEqualTo(511);
+				.isEqualTo(518);
 
 		model.handleVaccination(persons, true, -1, LocalDate.of(2021,10, 14), 180, 0);
 
 		long reVaccinated = persons.values().stream().filter(p -> p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes).count();
 
 		assertThat(reVaccinated)
-				.isEqualTo(24);
+				.isEqualTo(25);
 
 
 	}

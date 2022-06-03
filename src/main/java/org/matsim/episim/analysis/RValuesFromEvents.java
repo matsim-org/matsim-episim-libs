@@ -30,13 +30,12 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.events.EpisimInfectionEvent;
-import org.matsim.episim.events.EpisimInfectionEventHandler;
-import org.matsim.episim.events.EpisimPersonStatusEvent;
-import org.matsim.episim.events.EpisimPersonStatusEventHandler;
+import org.matsim.episim.events.*;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
 
+import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,7 +44,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 
@@ -58,7 +56,7 @@ import java.util.stream.Collectors;
 		name = "calculateRValues",
 		description = "Calculate R values summaries"
 )
-public class RValuesFromEvents implements Callable<Integer> {
+public class RValuesFromEvents implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(RValuesFromEvents.class);
 
@@ -71,6 +69,9 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
+
+	@CommandLine.Option(names = "--per-strain", defaultValue = "false")
+	private boolean perStrain;
 
 	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
 	private LocalDate startDate;
@@ -92,40 +93,32 @@ public class RValuesFromEvents implements Callable<Integer> {
 			return 2;
 		}
 
-		BufferedWriter rValues = Files.newBufferedWriter(output.resolve("rValues.txt"));
-		rValues.write("day\tdate\trValue\tnewContagious\tscenario\t");
-		rValues.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
-
-		BufferedWriter infectionsPerActivity = Files.newBufferedWriter(output.resolve("infectionsPerActivity.txt"));
-		infectionsPerActivity.write("day\tdate\tactivity\tinfections\tscenario");
 
 		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
-				calcValues(scenario, rValues, infectionsPerActivity);
+				analyzeOutput(scenario);
 			} catch (IOException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
 		});
 
-		rValues.close();
-		infectionsPerActivity.close();
-
-		log.info("done");
+		log.info("Done");
 
 		return 0;
 	}
 
-	private void calcValues(Path scenario, BufferedWriter rValues, BufferedWriter infectionsPerActivity) throws IOException {
+	@Override
+	public void analyzeOutput(Path output) throws IOException {
 
-		String id = AnalysisCommand.getScenarioPrefix(scenario);
+		String id = AnalysisCommand.getScenarioPrefix(output);
 
 		InfectionsHandler infHandler = new InfectionsHandler();
 		RHandler rHandler = new RHandler();
 
-		List<String> eventFiles = AnalysisCommand.forEachEvent(scenario, s -> {
+		List<String> eventFiles = AnalysisCommand.forEachEvent(output, s -> {
 		}, infHandler, rHandler);
 
-		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
+		BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
 
 		int rollingAveragae = 3;
@@ -151,16 +144,14 @@ public class RValuesFromEvents implements Callable<Integer> {
 					if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
 						infectionsShare = (double) infections / totalInfections;
 						bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
-						infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare + "\t" + scenario.getFileName());
 					}
 				}
 			}
 		}
 
-		infectionsPerActivity.flush();
 		bw.close();
 
-		bw = Files.newBufferedWriter(scenario.resolve(id + "rValues.txt"));
+		bw = Files.newBufferedWriter(output.resolve(id + "rValues.txt"));
 		bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
 		bw.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
 
@@ -178,7 +169,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 			double r = noOfInfectors == 0 ? 0 : (double) noOfInfected.getInt("total") / noOfInfectors;
 
 			String join = "\n" + AnalysisCommand.TSV.join(
-					i, startDate.plusDays(i).toString(), r, noOfInfectors, scenario.getFileName()
+					i, startDate.plusDays(i).toString(), r, noOfInfectors, output.getFileName()
 			) + "\t";
 
 			int finalNoOfInfectors = noOfInfectors;
@@ -188,13 +179,58 @@ public class RValuesFromEvents implements Callable<Integer> {
 			);
 
 			bw.write(join);
-			rValues.write(join);
 		}
 
-		rValues.flush();
 		bw.close();
 
-		log.info("Calculated results for scenario {}", scenario);
+		if (perStrain) {
+
+			bw = Files.newBufferedWriter(output.resolve(id + "rValuesPerStrain.txt"));
+			bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
+			bw.write(AnalysisCommand.TSV.join(Arrays.asList(VirusStrain.values())));
+
+			for (int i = 0; i <= eventFiles.size(); i++) {
+
+				// infected persons per strain
+				Object2IntMap<VirusStrain> noOfInfectors = new Object2IntOpenHashMap<>();
+				Object2IntMap<VirusStrain> noOfInfected = new Object2IntOpenHashMap<>();
+
+				for (InfectedPerson ip : rHandler.getInfected()) {
+
+					VirusStrain strain =  ip.strain != null ? ip.strain : rHandler.initialStrains.get(ip.id);
+
+					if (ip.contagiousDay == i) {
+
+						if (strain == null)
+							log.warn("Strain of person {} not known", ip.id);
+
+						noOfInfectors.mergeInt(strain, 1, Integer::sum);
+						noOfInfected.mergeInt(strain, ip.noOfInfected.getInt("total"), Integer::sum);
+					}
+				}
+
+				int noOfInf = noOfInfectors.values().intStream().sum();
+
+				double r = noOfInf == 0 ? 0 : (double) noOfInfected.values().intStream().sum() / noOfInf;
+
+				String join = "\n" + AnalysisCommand.TSV.join(
+						i, startDate.plusDays(i).toString(), r, noOfInf, output.getFileName()
+				) + "\t";
+
+
+				join += AnalysisCommand.TSV.join(Arrays.stream(VirusStrain.values())
+						.map(k -> noOfInfectors.getInt(k) == 0 ? 0 : (double) noOfInfected.getInt(k) / noOfInfectors.getInt(k))
+						.collect(Collectors.toList())
+				);
+
+				bw.write(join);
+			}
+
+			bw.close();
+		}
+
+
+		log.info("Calculated results for scenario {}", output);
 
 	}
 
@@ -202,7 +238,10 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		private final String id;
 		private final Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
-		private int contagiousDay = 0;
+
+		@Nullable
+		private VirusStrain strain;
+		private int contagiousDay = -1;
 
 		InfectedPerson(String id) {
 			this.id = id;
@@ -214,10 +253,11 @@ public class RValuesFromEvents implements Callable<Integer> {
 		}
 	}
 
-	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler {
+	private static class RHandler implements EpisimPersonStatusEventHandler, EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler {
 
 		private final Set<String> activityTypes = new TreeSet<>();
 		private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
+		private final Map<String, VirusStrain> initialStrains = new HashMap<>();
 
 		/**
 		 * If a person is infected another time it will be removed from {@link #infectedPersons} and put here.
@@ -232,10 +272,38 @@ public class RValuesFromEvents implements Callable<Integer> {
 		}
 
 		@Override
+		public void handleEvent(EpisimInitialInfectionEvent event) {
+			// Store strains to be used when strain was not assigned to person
+			String id = event.getPersonId().toString();
+			if (initialStrains.containsKey(id))
+				log.warn("Initial infection happened twice on: {}, {}", event.getPersonId(), event.getVirusStrain());
+
+			initialStrains.put(id, event.getVirusStrain());
+		}
+
+		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectorId = event.getInfectorId().toString();
 			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, InfectedPerson::new);
+			infector.strain = event.getVirusStrain();
 
+
+			String infectedId = event.getPersonId().toString();
+			if (infectedPersons.containsKey(infectedId)) {
+
+				// person was already infected and is now moved
+				handledInfections.add(infectedPersons.remove(infectedId));
+
+				// create new infected person
+				InfectedPerson infected = infectedPersons.computeIfAbsent(infectedId, InfectedPerson::new);
+				infected.strain = event.getVirusStrain();
+			} else {
+
+				// store strain of newly effected
+				InfectedPerson infected = infectedPersons.computeIfAbsent(infectedId, InfectedPerson::new);
+				infected.strain = event.getVirusStrain();
+
+			}
 
 			String activityType = getActivityType(event.getInfectionType());
 			activityTypes.add(activityType);
@@ -253,7 +321,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 				InfectedPerson person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
 
 				// a person is infected another time
-				if (person.contagiousDay > 0 && person.contagiousDay != day) {
+				if (person.contagiousDay >= 0 && person.contagiousDay != day) {
 					handledInfections.add(infectedPersons.remove(personId));
 
 					person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);

@@ -79,7 +79,7 @@ public class SMAdaptivePolicy implements BatchRun<SMAdaptivePolicy.Params> {
 			Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 			infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayVariant.put(LocalDate.parse("2020-12-15"), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+			episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayVariant);
 			if (params.B1351.contains("yes")) {
 				Map<LocalDate, Integer> infPerDayB1351 = new HashMap<>();
 				infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);

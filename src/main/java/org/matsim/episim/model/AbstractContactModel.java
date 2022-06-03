@@ -48,6 +48,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	protected final SplittableRandom rnd;
 	protected final EpisimConfigGroup episimConfig;
 	protected final EpisimReporting reporting;
+	protected final TracingConfigGroup tracingConfig;
 
 	/**
 	 * Infections parameter instances for re-use. These are params that are always needed independent of the scenario.
@@ -85,6 +86,7 @@ public abstract class AbstractContactModel implements ContactModel {
 	AbstractContactModel(SplittableRandom rnd, Config config, InfectionModel infectionModel, EpisimReporting reporting, Scenario scenario) {
 		this.rnd = rnd;
 		this.episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		this.tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		this.infectionModel = infectionModel;
 		this.reporting = reporting;
 		this.trParams = episimConfig.selectInfectionParams("tr");
@@ -124,6 +126,7 @@ public abstract class AbstractContactModel implements ContactModel {
 			case seriouslySick: // assume is in hospital
 			case critical:
 			case seriouslySickAfterCritical:
+			case deceased:
 				return false;
 
 			default:
@@ -187,6 +190,11 @@ public abstract class AbstractContactModel implements ContactModel {
 		// Don't track certain activities
 		if (infectionType.indexOf("pt") >= 0 || infectionType.indexOf("shop") >= 0) {
 			return;
+		}
+
+		for (String act : tracingConfig.getIgnoredActivities()) {
+			if (infectionType.indexOf(act) >= 0)
+				return;
 		}
 
 		// don't track below threshold
@@ -259,7 +267,7 @@ public abstract class AbstractContactModel implements ContactModel {
 
 	private boolean tripRelevantForInfectionDynamics(double time, EpisimPerson person, Map<String, Restriction> restrictions, SplittableRandom rnd) {
 
-		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no)
+		if (person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.no && person.getQuarantineStatus() != EpisimPerson.QuarantineStatus.testing)
 			return false;
 
 		EpisimPerson.PerformedActivity lastAct = person.getActivity(day, time % 86400);
@@ -380,7 +388,8 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		personWrapper.possibleInfection(
 				new EpisimInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-				container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob)
+				container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob,
+						personWrapper.getAntibodies(infector.getVirusStrain()))
 		);
 
 		// check infection immediately if there is only one thread
@@ -398,7 +407,8 @@ public abstract class AbstractContactModel implements ContactModel {
 
 		personWrapper.potentialInfection(
 				new EpisimPotentialInfectionEvent(now, personWrapper.getPersonId(), infector.getPersonId(),
-						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob, probUnVac, rnd)
+						container.getContainerId(), infectionType.toString(), container.getPersons().size(), infector.getVirusStrain(), prob, probUnVac,
+						personWrapper.getAntibodies(infector.getVirusStrain()), rnd)
 		);
 
 	}

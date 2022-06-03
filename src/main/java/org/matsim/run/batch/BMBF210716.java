@@ -113,28 +113,28 @@ public class BMBF210716 implements BatchRun<BMBF210716.Params> {
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayB117.put(LocalDate.parse("2020-11-30"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		double vaccineEffectiveness = vaccinationConfig.getParams(VaccinationType.generic).getEffectiveness();
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.8);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse("2021-04-07"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setReVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
+		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(2.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setVaccineEffectiveness(params.mutBVaccinationEffectiveness / vaccineEffectiveness);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setReVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(0.05 / (1- params.mutBVaccinationEffectiveness));
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 

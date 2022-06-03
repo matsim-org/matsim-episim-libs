@@ -28,6 +28,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String RECAPACITY = "reVaccinationCapacity";
 	private static final String SHARE = "vaccinationShare";
 	private static final String FROM_FILE = "vaccinationFile";
+	private static final String DAYS_VALID = "daysValid";
+	private static final String BETA = "beta";
+	private static final String IGA = "IGA";
+	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
 
@@ -51,6 +55,25 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Load vaccinations from file instead.
 	 */
 	private String fromFile;
+
+	/**
+	 * Validity of vaccination in days.
+	 */
+	private int daysValid = 180;
+	/**
+	 * Needed for antibody model.
+	 */
+	private double beta = 1.0;
+
+	/**
+	 * Needed for antibody model.
+	 */
+	private boolean useIgA = false;
+
+	/**
+	 * Deadline after which days valid is in effect.
+	 */
+	private LocalDate validDeadline = LocalDate.of(2022, 2, 1);
 
 	/**
 	 * Vaccination compliance by age groups. Keys are the left bounds of age group intervals.
@@ -196,6 +219,133 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return fromFile;
 	}
 
+	@StringSetter(DAYS_VALID)
+	public void setDaysValid(int daysValid) {
+		this.daysValid = daysValid;
+	}
+
+	@StringGetter(DAYS_VALID)
+	int getDaysValid() {
+		return daysValid;
+	}
+
+	@StringSetter(BETA)
+	public void setBeta(double beta) {
+		this.beta = beta;
+	}
+
+	@StringGetter(BETA)
+	public double getBeta() {
+		return beta;
+	}
+
+	@StringSetter(IGA)
+	public void setUseIgA(boolean useIgA) {
+		this.useIgA = useIgA;
+	}
+
+	@StringGetter(IGA)
+	public boolean getUseIgA() {
+		return useIgA;
+	}
+
+	@StringSetter(VALID_DEADLINE)
+	public void setValidDeadline(String validDeadline) {
+		this.validDeadline = LocalDate.parse(validDeadline);
+	}
+
+	public void setValidDeadline(LocalDate validDeadline) {
+		this.validDeadline = validDeadline;
+	}
+
+	@StringGetter(VALID_DEADLINE)
+	public LocalDate getValidDeadline() {
+		return validDeadline;
+	}
+
+	/**
+	 * Check if person is recently recovered or vaccinated.
+	 */
+	public boolean hasGreenPass(EpisimPerson person, int day, LocalDate date) {
+		return hasGreenPass(person, day, date, daysValid);
+	}
+
+	/**
+	 * Check 2G plus status, but use given {@code daysValid}.
+	 */
+	public boolean hasGreenPass(EpisimPerson person, int day, LocalDate date, int daysValid) {
+		return hasRecoveredStatus(person, day, date, daysValid > -1 ? daysValid : this.daysValid) || hasValidVaccination(person, day, date, daysValid > -1 ? daysValid : this.daysValid);
+	}
+
+	/**
+	 * Special type of green pass with separate setting for boostered or equivalent status.
+	 */
+	public boolean hasGreenPassForBooster(EpisimPerson p, int day, LocalDate date, int greenPassValidDays, int greenPassBoosterValidDays) {
+		int valid = greenPassValidDays;
+
+		// infected and vaccinated count as booster
+		if (p.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes || (p.getNumInfections() >= 1 && p.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes))
+			valid = greenPassBoosterValidDays;
+
+		return hasGreenPass(p, day, date, valid);
+	}
+
+	/**
+	 * Check whether person has the recovered status.
+	 */
+	private boolean hasRecoveredStatus(EpisimPerson person, int day, LocalDate date, int daysValid) {
+		// Initial the threshold was 180 days, this setting is adjusted to the threshold after the deadline
+		return date.isBefore(validDeadline) ? person.isRecentlyRecovered(day, 180) : person.isRecentlyRecovered(day, daysValid);
+	}
+
+	/**
+	 * Check if person has a valid vaccination card.
+	 *
+	 * @param person person to check
+	 * @param day    current simulation day
+	 * @param date   simulation date
+	 */
+	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date) {
+		return hasValidVaccination(person, day, date, getDaysValid());
+	}
+
+	private boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
+		if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
+			return false;
+
+		boolean fullyVaccinated = person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > getParams(person.getVaccinationType()).getDaysBeforeFullEffect();
+		boolean booster = person.getReVaccinationStatus() == EpisimPerson.VaccinationStatus.yes;
+
+		if (date.isBefore(validDeadline))
+			return fullyVaccinated || booster;
+
+		return (fullyVaccinated || booster) && person.daysSince(EpisimPerson.VaccinationStatus.yes, day) <= daysValid;
+
+	}
+
+	/**
+	 * Computes the minimum factor over all vaccinations.
+	 * @param person person
+	 * @param day current iteration
+	 * @param f function of VaccinationParams to retrieve the desired factor
+	 * @return minimum factor or 1 if not vaccinated
+	 */
+	public double getMinFactor(EpisimPerson person, int day, VaccinationFactorFunction f) {
+
+		if (person.getNumVaccinations() == 0)
+			return 1;
+
+		double factor = 1d;
+		for (int i = 0; i < person.getNumVaccinations(); i++) {
+
+			VaccinationType type = person.getVaccinationType(i);
+
+			factor = Math.min(factor, f.getFactor(getParams(type), person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)));
+		}
+
+		return factor;
+	}
+
 	/**
 	 * @see #setVaccinationCapacity_pers_per_day(Map)
 	 */
@@ -307,6 +457,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private static final String BOOST_WAIT_PERIOD = "boostWaitPeriod";
 		private static final String FACTOR_SHOWINGS_SYMPTOMS = "factorShowingSymptoms";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
+		private static final String FACTOR_CRITICAL = "factorCritical";
 
 		private VaccinationType type;
 
@@ -318,7 +469,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		/**
 		 * Wait period before boost can be applied.
 		 */
-		private int boostWaitPeriod = 5* 30;
+		private int boostWaitPeriod = 5 * 30;
 
 		/**
 		 * Effectiveness, i.e. how much susceptibility is reduced.
@@ -367,6 +518,14 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		private Map<VirusStrain, Parameter> factorSeriouslySick = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
 				forStrain(VirusStrain.SARS_CoV_2)
 						.atDay(5, 0.5)
+		));
+
+		/**
+		 * Factor for probability if person is vaccinated.
+		 */
+		private Map<VirusStrain, Parameter> factorCritical = new EnumMap<>(Map.of(VirusStrain.SARS_CoV_2,
+				forStrain(VirusStrain.SARS_CoV_2)
+						.atDay(0, 1)
 		));
 
 		VaccinationParams() {
@@ -451,6 +610,10 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 			return setParamsInternal(factorSeriouslySick, parameters);
 		}
 
+		public VaccinationParams setFactorCritical(Parameter... parameters) {
+			return setParamsInternal(factorCritical, parameters);
+		}
+
 		public double getEffectiveness(VirusStrain strain, int day) {
 			return getParamsInternal(effectiveness, strain, day);
 		}
@@ -474,6 +637,11 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		public double getFactorSeriouslySick(VirusStrain strain, int day) {
 			return getParamsInternal(factorSeriouslySick, strain, day);
 		}
+
+		public double getFactorCritical(VirusStrain strain, int day) {
+			return getParamsInternal(factorCritical, strain, day);
+		}
+
 		/**
 		 * Load serialized parameters
 		 */
@@ -535,6 +703,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
 		String getFactorSeriouslySick() {
 			return getParamsInternal(factorSeriouslySick);
+		}
+
+		@StringSetter(FACTOR_CRITICAL)
+		void setFactorCritical(String value) {
+			setParamsInternal(factorCritical, value);
+		}
+
+		@StringGetter(FACTOR_CRITICAL)
+		public String getFactorCritical() {
+			return getParamsInternal(factorCritical);
 		}
 
 		@StringSetter(INFECTIVITY)
