@@ -849,9 +849,7 @@
 		 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
 
 
-		 Reader in;
-		 try {
-			 in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv").toFile());
+		 try (Reader in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv").toFile())) {
 			 Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 			 DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
 			 for (CSVRecord record : records) {
@@ -879,12 +877,8 @@
 				 }
 			 }
 
-		 } catch (FileNotFoundException e) {
-			 // TODO Auto-generated catch block
-			 e.printStackTrace();
 		 } catch (IOException e) {
-			 // TODO Auto-generated catch block
-			 e.printStackTrace();
+			 throw new UncheckedIOException(e);
 		 }
 
 		 infPerDayWild.put(dateAlpha.plusDays(1), 0);
