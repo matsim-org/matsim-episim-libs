@@ -32,6 +32,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.gbl.Gbl;
+import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
 
 import java.io.Externalizable;
@@ -44,6 +45,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -61,16 +63,18 @@ public final class EpisimRunner {
 	private final Provider<ReplayHandler> replayProvider;
 	private final Provider<EpisimReporting> reportingProvider;
 	private final Provider<ProgressionModel> progressionProvider;
+	private final Provider<AntibodyModel> antibodyModelProvider;
 
 	@Inject
 	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider, Provider<ReplayHandler> replay,
-	                    Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider) {
+	                    Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
 		this.replayProvider = replay;
 		this.reportingProvider = reportingProvider;
 		this.progressionProvider = progressionProvider;
+		this.antibodyModelProvider = antibodyModelProvider;
 	}
 
 	/**
@@ -84,6 +88,7 @@ public final class EpisimRunner {
 		final ReplayHandler replay = replayProvider.get();
 		final InfectionEventHandler handler = handlerProvider.get();
 		final EpisimReporting reporting = reportingProvider.get();
+		final AntibodyModel antibodyModel = antibodyModelProvider.get();
 
 		reporting.reportCpuTime(0, "Init", "start", -1);
 		// reporting will write events if necessary
@@ -111,6 +116,14 @@ public final class EpisimRunner {
 
 			handler.onSnapshotLoaded(iteration);
 		}
+
+		// recalculate antibodies for every agent if starting from snapshot.
+		// The antibodies profile is generated using the immunity event history in the
+		// snapshot; the antibody model config of the snapshot simulation will
+		// be superceded by the config of the current simulation. Thus, the antibody development
+		// during the snapshot can be rewritten without modifying the immunity event history.
+
+		antibodyModel.init(handler.getPersons(), iteration);
 
 		reporting.reportCpuTime(0, "Init", "finished", -1);
 
