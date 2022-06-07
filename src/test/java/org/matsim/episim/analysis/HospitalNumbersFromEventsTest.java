@@ -3,6 +3,7 @@ package org.matsim.episim.analysis;
 import org.assertj.core.data.Offset;
 import org.assertj.core.data.Percentage;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.IdMap;
@@ -102,6 +103,7 @@ public class HospitalNumbersFromEventsTest {
 	 * In addition, probability of transitioning to critical (ICU) given hospitalization is checked.
 	 * Test is applied to 25 year-olds and 75 year-olds.
 	 */
+	@Ignore
 	@Test
 	public void testAgeComponent() {
 
@@ -181,6 +183,7 @@ public class HospitalNumbersFromEventsTest {
 
 	}
 
+	@Ignore
 	@Test
 	public void testImmunityComponent() {
 
