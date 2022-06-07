@@ -28,6 +28,15 @@ public interface SimulationListener {
 	}
 
 	/**
+	 * Called after a snapshot has been loaded.
+	 *
+	 * @param iteration restored iteration
+	 * @see #init(SplittableRandom, Map, Map, Map)
+	 */
+	default void onSnapshotLoaded(int iteration, SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
+	}
+
+	/**
 	 * Called just before iteration is about to start and events for the day will be handled.
 	 */
 	default void onIterationStart(int iteration, LocalDate date) {
