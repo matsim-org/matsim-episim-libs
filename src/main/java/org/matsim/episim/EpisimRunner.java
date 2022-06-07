@@ -101,7 +101,6 @@ public final class EpisimRunner {
 
 		handler.init(replay.getEvents());
 
-
 		Path output = Path.of(config.controler().getOutputDirectory());
 
 		int iteration = 1;
@@ -114,6 +113,8 @@ public final class EpisimRunner {
 				log.error("Snapshot output could not be created", e);
 				return;
 			}
+
+			handler.onSnapshotLoaded(iteration);
 		}
 
 		// recalculate antibodies for every agent if starting from snapshot.
@@ -123,7 +124,6 @@ public final class EpisimRunner {
 		// during the snapshot can be rewritten without modifying the immunity event history.
 
 		antibodyModel.init(handler.getPersons(), iteration);
-
 
 		reporting.reportCpuTime(0, "Init", "finished", -1);
 
