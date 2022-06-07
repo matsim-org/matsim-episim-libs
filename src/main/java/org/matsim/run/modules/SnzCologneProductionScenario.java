@@ -70,6 +70,8 @@
 		 private double householdSusc = 1.0;
 		 public CarnivalModel carnivalModel = CarnivalModel.no;
 
+		 private boolean sebastianUpdate = true;
+
 
 
 		 public Builder() {
@@ -120,6 +122,12 @@
 			 this.carnivalModel = carnivalModel;
 			 return this;
 		 }
+
+		 public Builder setSebastianUpdate(boolean sebastianUpdate) {
+			 this.sebastianUpdate = sebastianUpdate;
+			 return this;
+		 }
+
 	 }
 
 	 private final int sample;
@@ -147,6 +155,8 @@
 
 
 	 public enum CarnivalModel {yes, no}
+
+	 public final boolean sebastianUpdate;
 
 	 /**
 	  * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -184,6 +194,8 @@
 		 this.importFactorAfterJune = builder.importFactorAfterJune;
 		 this.locationBasedRestrictions = builder.locationBasedRestrictions;
 		 this.carnivalModel = builder.carnivalModel;
+
+		 this.sebastianUpdate = builder.sebastianUpdate;
 	 }
 
 
@@ -297,24 +309,27 @@
 		 episimConfig.setThreads(8);
 		 episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
-		 episimConfig.getOrAddContainerParams("work").setSeasonal(true);
+		 if (sebastianUpdate) {
 
-		 double leisCi = 0.6;
+			 episimConfig.getOrAddContainerParams("work").setSeasonal(true);
 
-		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
+			 double leisCi = 0.6;
 
-		 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("educ_higher").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("educ_other").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("errands").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("business").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("visit").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("home").setSeasonal(true);
-		 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
 
+			 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("educ_higher").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("educ_other").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("errands").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("business").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("visit").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("home").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
+
+		 }
 
 		 //progression model
 		 //episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
@@ -345,7 +360,60 @@
 
 			 episimConfig.setInfections_pers_per_day(importMap);
 
-			 configureImport(episimConfig); //todo: integrate this with code above
+			 if (sebastianUpdate) {
+				 configureImport(episimConfig); //todo: integrate this with code above
+			 } else {
+
+				 //ALPHA
+				 Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
+				 infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
+
+				 infPerDayB117.put(LocalDate.parse("2021-01-16"), 20);
+				 infPerDayB117.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
+				 infPerDayB117.put(LocalDate.parse("2020-12-31"), 1);
+
+				 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
+
+				 // DELTA
+				 Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
+				 infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
+				 infPerDayMUTB.put(LocalDate.parse("2021-06-21"), 4);
+				 infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
+
+				 LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
+				 int imp1 = 120;
+				 int imp2 = 10;
+				 int imp3 = 40;
+
+				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
+				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
+
+
+				 LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
+
+				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
+				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
+
+
+				 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
+
+				 //BA.1
+				 String ba1Date = "2021-11-21";
+				 Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
+				 infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
+				 infPerDayOmicron.put(LocalDate.parse(ba1Date), 4);
+				 infPerDayOmicron.put(LocalDate.parse(ba1Date).plusDays(7), 1);
+				 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
+
+
+				 //BA.2
+				 String ba2Date = "2021-12-18";
+				 Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
+				 infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
+				 infPerDayBA2.put(LocalDate.parse(ba2Date), 4);
+				 infPerDayBA2.put(LocalDate.parse(ba2Date).plusDays(7), 1);
+				 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
+			 }
 
 		 }
 
@@ -471,7 +539,7 @@
 		 //outdoorFractions
 		 if (this.weatherModel != WeatherModel.no) {
 
-			 double outdoorAlpha = 0.8; // todo: used to be 1.0, check with SM
+			 double outdoorAlpha = sebastianUpdate ? 0.8 : 1.0;
 			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
 					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
 					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), outdoorAlpha
@@ -571,8 +639,9 @@
 
 		 episimConfig.setPolicy(builder.build());
 
-		 // configure strains
-		 double aInf = 1.9;
+		 //configure strains
+		 //alpha
+		 double aInf = sebastianUpdate ? 1.9 : 1.7; //todo: choose value, see CologneJR
 		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
 		 VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(aInf);
@@ -580,8 +649,9 @@
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
 
 
-		 double deltaInf = 3.1;
-		 double deltaHos = 1.0;
+		 //delta
+		 double deltaInf = sebastianUpdate ? 3.1 : 2.7 ; //todo: choose value, see CologneJR
+		 double deltaHos = sebastianUpdate ? 1.0 : 0.9;//todo: choose value, see CologneJR
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(deltaInf);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(deltaHos);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySickVaccinated(deltaHos);
@@ -589,8 +659,9 @@
 
 		 //omicron
 //		double oInf = params.ba1Inf;
-		 double oHos = 0.2;
-		 double ba1Inf = 2.2;
+		 double oHos = sebastianUpdate ? 0.2 : 0.13;
+		 double ba1Inf = sebastianUpdate ? 2.2 : 2.4;
+
 		 if (ba1Inf > 0) {
 			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(deltaInf * ba1Inf);
 			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(oHos);
