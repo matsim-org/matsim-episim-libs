@@ -72,7 +72,7 @@ public class VaccinationByAge implements VaccinationModel {
 			if (candidates.size() > vaccinationsLeft)
 				Collections.shuffle(perAge[age], new Random(EpisimUtils.getSeed(rnd)));
 
-			for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) {
+			for (int i = 0; i < Math.min(candidates.size(), vaccinationsLeft); i++) { //todo: should vaccinationsLeft be both in loop statement as maximum and counter?
 				EpisimPerson person = candidates.get(i);
 				vaccinate(person, iteration, reVaccination ? VaccinationType.mRNA : VaccinationModel.chooseVaccinationType(prob, rnd));
 				vaccinationsLeft--;

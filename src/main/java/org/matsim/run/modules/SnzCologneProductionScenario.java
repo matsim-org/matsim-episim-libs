@@ -375,27 +375,27 @@
 				 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
 				 // DELTA
-				 Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
-				 infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
-				 infPerDayMUTB.put(LocalDate.parse("2021-06-21"), 4);
-				 infPerDayMUTB.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
+				 Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
+				 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+				 infPerDayDelta.put(LocalDate.parse("2021-06-21"), 4);
+				 infPerDayDelta.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
 
 				 LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
 				 int imp1 = 120;
 				 int imp2 = 10;
 				 int imp3 = 40;
 
-				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
-				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
+				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
+				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
 
 
 				 LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
 
-				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
-				 SnzCologneProductionScenario.interpolateImport(infPerDayMUTB, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
+				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
+				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
 
 
-				 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
+				 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
 
 				 //BA.1
 				 String ba1Date = "2021-11-21";
@@ -920,7 +920,7 @@
 		 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
 
 
-		 try (Reader in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv").toFile())) {
+		 try (Reader in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv").toFile())) {
 			 Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
 			 DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
 			 for (CSVRecord record : records) {
@@ -952,10 +952,11 @@
 			 throw new UncheckedIOException(e);
 		 }
 
-		 infPerDayWild.put(dateAlpha.plusDays(1), 0);
-		 infPerDayAlpha.put(dateDelta.plusDays(1), 0);
-		 infPerDayDelta.put(dateBa1.plusDays(1), 0);
-		 infPerDayBa1.put(dateBa2.plusDays(1), 0);
+		 // Disease Import after new strain becomes prominent; todo: does it make sense to have import of 1 for rest of simulation?
+		 infPerDayWild.put(dateAlpha.plusDays(1), 1);
+		 infPerDayAlpha.put(dateDelta.plusDays(1), 1);
+		 infPerDayDelta.put(dateBa1.plusDays(1), 1);
+		 infPerDayBa1.put(dateBa2.plusDays(1), 1);
 
 		 episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
 		 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
