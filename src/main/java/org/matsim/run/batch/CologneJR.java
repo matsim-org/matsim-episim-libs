@@ -7,6 +7,8 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
@@ -21,11 +23,24 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario;
+import tech.tablesaw.api.DateColumn;
+import tech.tablesaw.api.DoubleColumn;
+import tech.tablesaw.api.StringColumn;
+import tech.tablesaw.api.Table;
+import tech.tablesaw.plotly.components.Axis;
+import tech.tablesaw.plotly.components.Figure;
+import tech.tablesaw.plotly.components.Layout;
+import tech.tablesaw.plotly.components.Page;
+import tech.tablesaw.plotly.traces.ScatterTrace;
+import tech.tablesaw.table.TableSliceGroup;
 
 import javax.annotation.Nullable;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.function.BiFunction;
 
 
 /**
@@ -317,7 +332,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.sebaUp.equals("false") && Objects.equals(params.vacCamp, "age")) {
+			if (runCount == 0 && params.strAEsc != 0.0 && params.ba5Inf == 0.) {
+
 				runCount++;
 			} else {
 				return null;
@@ -337,6 +353,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+
+//		episimConfig.setSnapshotInterval(1150);
 		if (DEBUG_MODE) {
 			//local (see svn for more snapshots with different dates)
 //			episimConfig.setStartFromSnapshot("../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input/snapshots-cologne-20220316/" + params.seed + "-450-2021-05-19.zip");
@@ -354,26 +372,24 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		// Restrictions starting on December 1, 2022
 		LocalDate restrictionDate = LocalDate.of(2022, 12, 1);
 		//school
-		BiFunction<LocalDate, Double, Double> schoolFactor = (d, rf) -> Math.max(rf * params.school, 0.2);
-		builder.applyToRf(restrictionDate.toString(), restrictionDate.plusDays(1000).toString(), schoolFactor, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.restrict(restrictionDate, params.school, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(300).toString(), (d, rf) -> params.school, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		//university
-		BiFunction<LocalDate, Double, Double> uniFactor = (d, rf) -> Math.max(rf * params.uni, 0.2);
-		builder.applyToRf(restrictionDate.toString(), restrictionDate.plusDays(1000).toString(), uniFactor, "educ_higher");
-		//shopping: masks
-		if (Boolean.parseBoolean(params.maskShop)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9 ), "shop_daily", "shop_other", "errands");
-		}
-		//public transit: masks
-		if (Boolean.parseBoolean(params.maskPt)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9), "pt");
+		builder.restrict(restrictionDate, params.uni, "educ_higher");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(300).toString(), (d, rf) -> params.uni, "educ_higher");
+
+//		BiFunction<LocalDate, Double, Double> uniFactor = (d, rf) -> Math.max(rf * params.uni, 0.2);
+		//shopping & pt: masks
+		if (Boolean.parseBoolean(params.maskShopAndPt)) {
+			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9 ), "shop_daily", "shop_other", "errands", "pt");
 		}
 		//work
-		BiFunction<LocalDate, Double, Double> workFactor = (d, rf) -> rf * params.work;
-		builder.applyToRf(restrictionDate.toString(), restrictionDate.plusDays(1000).toString(), workFactor, "work");
+		builder.restrict(restrictionDate, 0.78 * params.work, "work");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.work, "work");
 
 		//leisure
-		BiFunction<LocalDate, Double, Double> leisFactor = (d, rf) -> rf * params.leis;
-		builder.applyToRf(restrictionDate.toString(), restrictionDate.plusDays(1000).toString(), leisFactor, "leisure");
+		builder.restrict(restrictionDate, 0.88 * params.leis, "leisure");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.leis, "leisure");
 
 		episimConfig.setPolicy(builder.build());
 
@@ -381,6 +397,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		//mutations
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
+		//clear disease import
+		episimConfig.getInfections_pers_per_day().clear();
 		//BA5
 		if (params.ba5Inf > 0) {
 			double oHos = virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getFactorSeriouslySick();
@@ -398,7 +416,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 //		STRAIN_A
-		if (params.strAInf > 0) {
+
+		double strAInf = 1.0;
+		if (params.strAEsc != 0.) {
+
 			double oHos = virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getFactorSeriouslySick();
 
 			Map<LocalDate, Integer> infPerDayStrainA = new HashMap<>();
@@ -406,7 +427,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			infPerDayStrainA.put(LocalDate.parse(params.strADate), 4);
 			infPerDayStrainA.put(LocalDate.parse(params.strADate).plusDays(7), 1);
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrainA);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * params.ba5Inf * params.strAInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * params.ba5Inf * strAInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(oHos);
@@ -418,7 +439,206 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		vaccinationConfig.setUseIgA(true);
 		vaccinationConfig.setTimePeriodIgA(params.igATime);
 
+		diseaseImp(episimConfig, Boolean.parseBoolean(params.sebaUp),params.ba5Inf!=0., params.strAEsc != 0.);
+
+		if(DEBUG_MODE)
+			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
+
+
+
 		return config;
+	}
+
+
+	public void diseaseImp(EpisimConfigGroup episimConfig, boolean sebastianUpdate,boolean ba5,boolean strainA){
+		Map<LocalDate, Integer> importMap = new HashMap<>();
+		double importFactorBeforeJune = 4.0;
+		double imprtFctMult = 1.0;
+		long importOffset = 0;
+		double cologneFactor = 0.5;
+
+		SnzProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
+				LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+		SnzProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
+				LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+		SnzProductionScenario.interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
+				LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
+
+		importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
+		importMap.put(LocalDate.parse("2020-08-09"), 1);
+
+		episimConfig.setInfections_pers_per_day(importMap);
+
+		if (sebastianUpdate) {
+			configureImport(episimConfig, ba5, strainA); //todo: integrate this with code above
+		} else {
+
+			//ALPHA
+			Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
+			infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
+
+			infPerDayB117.put(LocalDate.parse("2021-01-16"), 20);
+			infPerDayB117.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
+			infPerDayB117.put(LocalDate.parse("2020-12-31"), 1);
+
+			episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
+
+			// DELTA
+			Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
+			infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayDelta.put(LocalDate.parse("2021-06-21"), 4);
+			infPerDayDelta.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
+
+			LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
+			int imp1 = 120;
+			int imp2 = 10;
+			int imp3 = 40;
+
+			SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
+			SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
+
+
+			LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
+
+			SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
+			SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
+
+
+			episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
+
+			//BA.1
+			String ba1Date = "2021-11-21";
+			Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
+			infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayOmicron.put(LocalDate.parse(ba1Date), 4);
+			infPerDayOmicron.put(LocalDate.parse(ba1Date).plusDays(7), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
+
+
+			//BA.2
+			String ba2Date = "2021-12-18";
+			Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
+			infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
+			infPerDayBA2.put(LocalDate.parse(ba2Date), 4);
+			infPerDayBA2.put(LocalDate.parse(ba2Date).plusDays(7), 1);
+			episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
+		}
+	}
+
+	private void configureImport(EpisimConfigGroup episimConfig, boolean ba5, boolean strainA) {
+
+		Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
+
+		for (Map.Entry<LocalDate, Integer> entry : episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2).entrySet() ) {
+			if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
+				int value = entry.getValue();
+				value = Math.max(1, value);
+				infPerDayWild.put(entry.getKey(), value);
+			}
+		}
+
+		Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.ALPHA, new TreeMap<>()));
+		Map<LocalDate, Integer> infPerDayDelta = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.DELTA, new TreeMap<>()));
+		Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA1, new TreeMap<>()));
+		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
+		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
+		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
+
+		int facWild = 4;
+		int facAlpha = 4;
+		int facDelta = 4;
+		int facBa1 = 4;
+		int facBa2 = 4;
+		int facBa5 = 4;
+		int facStrA = 4;
+
+		// dates for disease import to switch strains
+		LocalDate dateAlpha = LocalDate.parse("2021-01-23");
+		LocalDate dateDelta = LocalDate.parse("2021-06-28");
+		LocalDate dateBa1 = LocalDate.parse("2021-12-12");
+		LocalDate dateBa2 = LocalDate.parse("2022-01-05");
+		LocalDate dateBa5 = LocalDate.parse("2022-05-01");
+		LocalDate dateStrainA = LocalDate.parse("2022-11-18");
+
+
+		infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayBa5.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
+
+
+
+
+
+		LocalDate date = null;
+		try (Reader in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv").toFile())) {
+			Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
+			DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
+			for (CSVRecord record : records) {
+
+				double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
+
+				double cases = factor * Integer.parseInt(record.get("cases"));
+
+				date = LocalDate.parse(record.get(0), fmt);
+
+				if (date.isAfter(dateStrainA) && strainA) {
+					infPerDayStrA.put(date, ((int) cases * facStrA) == 0 ? 1 : (int) (cases * facStrA));
+				} else if (date.isAfter(dateBa5) && ba5) {
+					infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
+				} else if (date.isAfter(dateBa2)) {
+					infPerDayBa2.put(date, ((int) cases * facBa2) == 0 ? 1 : (int) (cases * facBa2));
+				} else if (date.isAfter(dateBa1)) {
+					infPerDayBa1.put(date, ((int) cases * facBa1) == 0 ? 1 : (int) (cases * facBa1));
+				} else if (date.isAfter(dateDelta)) {
+					infPerDayDelta.put(date, ((int) cases * facDelta) == 0 ? 1 : (int) (cases * facDelta));
+				} else if (date.isAfter(dateAlpha)) {
+					infPerDayAlpha.put(date, ((int) cases * facAlpha) == 0 ? 1 : (int) (cases * facAlpha));
+				} else {
+					infPerDayWild.put(date, ((int) cases * facWild) == 0 ? 1 : (int) (cases * facWild));
+				}
+			}
+
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
+
+		if (date == null) {
+			throw new RuntimeException("something went wrong while reading csv");
+		}
+
+		// Disease Import after new strain becomes prominent; todo: does it make sense to have import of 1 for rest of simulation?
+		infPerDayWild.put(dateAlpha.plusDays(1), 1);
+		infPerDayAlpha.put(dateDelta.plusDays(1), 1);
+		infPerDayDelta.put(dateBa1.plusDays(1), 1);
+		infPerDayBa1.put(dateBa2.plusDays(1), 1);
+		if(ba5 && strainA) {
+			infPerDayBa2.put(dateBa5.plusDays(1), 1);
+			infPerDayBa5.put(dateStrainA.plusDays(1), 1);
+			infPerDayStrA.put(date.plusDays(1), 1);
+		} else if(ba5) {
+			infPerDayBa2.put(dateBa5.plusDays(1), 1);
+			infPerDayBa5.put(date.plusDays(1), 1);
+		}
+		else if(strainA) {
+			infPerDayBa2.put(dateStrainA.plusDays(1), 1);
+			infPerDayStrA.put(date.plusDays(1), 1);
+		} else{
+			infPerDayBa2.put(date.plusDays(1), 1);
+		}
+
+
+
+		episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
+		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
+		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
+		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
+		episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
+
 	}
 
 
@@ -430,7 +650,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		@StringParameter({"true"})
 		public String sebaUp;
-
 
 		// Antibody Model
 		@Parameter({3.0})
@@ -444,7 +663,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"2022-04-10"})
 		public String ba5Date;
 
-		@Parameter({0.9})
+		@Parameter({0.0, 0.9})
 		double ba5Inf;
 
 		@Parameter({3.})
@@ -454,12 +673,11 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"2022-11-01"})
 		public String strADate;
 
-		@Parameter({1., 6.})
+		@Parameter({0.0, 1., 6.}) // 0.0 = strainA is off
 		public double strAEsc;
 
-		@Parameter({0.0, 1.0})
-		public double strAInf;
-
+//		@Parameter({0.0, 1.0})
+//		public double strAInf;
 
 		// vaccination campaign
 		@StringParameter({"2022-12-01"})
@@ -482,18 +700,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		// shopping: mask
 		@StringParameter({"true", "false"})
-		String maskShop;
-
-		// pt: mask
-		@StringParameter({"true", "false"})
-		String maskPt;
+		String maskShopAndPt;
 
 		// work:
 		@Parameter({ 0.5, 1.0})
 		double work;
 
 		// leisure
-		@Parameter({0.5, 0.75, 1.0})
+		@Parameter({0.25, 0.5, 0.75, 1.0})
 		double leis;
 
 	}
