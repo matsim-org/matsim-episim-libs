@@ -797,7 +797,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.iteration = iteration;
 
 		reporting.reportCpuTime(iteration, "HandleInfections", "start", -1);
-		int infected = this.initialInfections.handleInfections(personMap, iteration);
+		Object2IntMap infected = this.initialInfections.handleInfections(personMap, iteration);
 		reporting.reportCpuTime(iteration, "HandleInfections", "finished", -1);
 
 		reporting.reportCpuTime(iteration, "Reporting", "start", -1);
