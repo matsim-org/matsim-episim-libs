@@ -316,6 +316,8 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		susceptibility = in.readDouble();
 		antibodyLevelAtInfection = in.readDouble();
+		immuneResponseMultiplier = in.readDouble();
+
 	}
 
 	/**
@@ -378,6 +380,8 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		out.writeBoolean(vaccinable);
 		out.writeDouble(susceptibility);
 		out.writeDouble(antibodyLevelAtInfection);
+		out.writeDouble(immuneResponseMultiplier);
+
 	}
 
 	public Id<Person> getPersonId() {
