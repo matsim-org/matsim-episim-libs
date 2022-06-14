@@ -311,23 +311,23 @@
 
 		 if (sebastianUpdate) {
 
-			 episimConfig.getOrAddContainerParams("work").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("work").setSeasonality(0.5);
 
 			 double leisCi = 0.6;
 
 			 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
 
-			 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("educ_primary").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("educ_higher").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("educ_other").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("errands").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("business").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("visit").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("home").setSeasonal(true);
-			 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonal(true);
+			 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("educ_other").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("errands").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("business").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("visit").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("home").setSeasonality(0.5);
+			 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonality(0.5);
 
 		 }
 
@@ -506,14 +506,15 @@
 		 curfewCompliance.put(LocalDate.parse("2021-05-31"), 0.0);
 		 episimConfig.setCurfewCompliance(curfewCompliance);
 
-		 //2G
+		 // vaccinated individuals (even tho they are allowed to complete activities, they will naturally reduce their activities)
+		 LocalDate transition2gTo3g = LocalDate.of(2022, 3, 4);
 		 double leis = 1.0;
 		 builder.restrict(LocalDate.parse("2021-12-01"), Restriction.ofVaccinatedRf(0.75), "leisure");
-		 builder.restrict(restrictionDate, Restriction.ofVaccinatedRf(leis), "leisure");
+		 builder.restrict(transition2gTo3g, Restriction.ofVaccinatedRf(leis), "leisure");
 
-		 //2G
+		 //2G for unvaccinated susceptible agents  (will move more activities in private homes, thats why we assume 0.75 for both vaccinated and unvaccinated)
 		 builder.restrict(LocalDate.parse("2021-11-22"), Restriction.ofSusceptibleRf(0.75), "leisure");
-		 builder.restrict(restrictionDate, Restriction.ofSusceptibleRf(leis), "leisure");
+		 builder.restrict(transition2gTo3g, Restriction.ofSusceptibleRf(leis), "leisure");
 
 		 double schoolFac = 0.5;
 		 builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofCiCorrection(1 - (0.5 * schoolFac)), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -521,6 +522,9 @@
 		 builder.restrict(LocalDate.parse("2021-08-17"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2021-11-02"), Restriction.ofMask(FaceMask.N95, 0.0), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2021-12-02"), Restriction.ofMask(FaceMask.N95, 0.9 * schoolFac), "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+
+		 // mask mandate removed
+		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(FaceMask.N95, 0.), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "leisure", "work", "business"); //todo: check
 
 
 
@@ -742,14 +746,21 @@
 
 		 eduTests.put(LocalDate.parse("2021-09-20"), 0.6);
 
-		 String testing = "current";
-		 if (testing.equals("no")) {
-			 kigaPrimaryTests.put(restrictionDate, 0.0);
-			 workTests.put(restrictionDate, 0.0);
-			 leisureTests.put(restrictionDate, 0.0);
-			 eduTests.put(restrictionDate, 0.0);
-			 uniTests.put(restrictionDate, 0.0);
-		 }
+//		 String testing = "current";
+
+
+		 // 3g removed for work
+		 workTests.put(LocalDate.of(2022, 3, 20), 0.);
+
+//		 if (testing.equals("no")) {
+		 // turn of school tests after easter break
+		 kigaPrimaryTests.put(LocalDate.of(2022,4,25), 0.0);
+		 eduTests.put(LocalDate.of(2022,4,25), 0.0);
+		 uniTests.put(LocalDate.of(2022,4,25), 0.0);
+//		 }
+
+		 // no more regulation regarding test, we assume once every 2 weeks
+		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);
 
 		 rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				 "leisure", leisureTests,
@@ -763,9 +774,9 @@
 				 "educ_other", eduTests
 		 )));
 
-		 Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<LocalDate, Double>();
-		 Map<LocalDate, Double> workTestsVaccinated = new HashMap<LocalDate, Double>();
-		 Map<LocalDate, Double> eduTestsVaccinated = new HashMap<LocalDate, Double>();
+		 Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<>();
+		 Map<LocalDate, Double> workTestsVaccinated = new HashMap<>();
+		 Map<LocalDate, Double> eduTestsVaccinated = new HashMap<>();
 
 		 leisureTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
 		 workTestsVaccinated.put(LocalDate.parse("2020-01-01"), 0.);
@@ -773,11 +784,11 @@
 
 		 leisureTestsVaccinated.put(LocalDate.parse("2021-08-23"), 0.2);
 
-		 if (testing.equals("no")) {
-			 leisureTestsVaccinated.put(restrictionDate, 0.0);
-			 workTestsVaccinated.put(restrictionDate, 0.0);
-			 eduTestsVaccinated.put(restrictionDate, 0.0);
-		 }
+//		 if (testing.equals("no")) {
+		 leisureTestsVaccinated.put(LocalDate.of(2022, 4, 25), 0.0);
+		 workTestsVaccinated.put(LocalDate.of(2022, 4, 25),0.0);
+		 eduTestsVaccinated.put(LocalDate.of(2022, 4, 25), 0.0);
+//		 }
 
 
 		 rapidTest.setTestingRatePerActivityAndDateVaccinated((Map.of(
@@ -805,12 +816,12 @@
 
 		 kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
 
-		 if (testing.equals("no")) {
-			 leisureTestsPCR.put(restrictionDate, 0.0);
-			 workTestsPCR.put(restrictionDate, 0.0);
-			 kigaPramaryTestsPCR.put(restrictionDate, 0.0);
-			 eduTestsPCR.put(restrictionDate, 0.0);
-		 }
+//		 if (testing.equals("no")) {
+			 leisureTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
+			 workTestsPCR.put(LocalDate.of(2022, 4, 25),0.0);
+			 kigaPramaryTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
+			 eduTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
+//		 }
 
 
 		 pcrTest.setTestingRatePerActivityAndDate((Map.of(
