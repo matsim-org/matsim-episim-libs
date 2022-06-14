@@ -125,8 +125,8 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 		return 1.0;
 
-//
-//
+
+
 //		if (numVaccinations == 0 && numInfections == 0)
 //			return 1.0;
 //

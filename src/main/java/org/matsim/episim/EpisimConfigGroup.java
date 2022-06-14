@@ -35,7 +35,6 @@ import org.magnos.trie.Tries;
 import org.matsim.core.config.ConfigGroup;
 import org.matsim.core.config.ReflectiveConfigGroup;
 import org.matsim.episim.model.VirusStrain;
-import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 
@@ -1059,7 +1058,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		public static final String ACTIVITY_TYPE = "activityType";
 		public static final String CONTACT_INTENSITY = "contactIntensity";
 		public static final String SPACES_PER_FACILITY = "nSpacesPerFacility";
-		public static final String SEASONAL = "seasonal";
+		public static final String SEASONALITY = "seasonal";
 		public static final String MAPPED_NAMES = "mappedNames";
 
 		static final String SET_TYPE = "infectionParams";
@@ -1080,9 +1079,9 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		private double spacesPerFacility = 20.;
 
 		/**
-		 * This activity type is seasonal.
+		 * If 1.0, activity type is seasonal; 0.0 means it is not.
 		 */
-		private boolean seasonal = false;
+		private double seasonality = 0.0;
 
 		/**
 		 * See {@link #InfectionParams(String, String...)}. Name itself will also be used as prefix.
@@ -1165,18 +1164,18 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 			return this;
 		}
 
-		@StringSetter(SEASONAL)
-		public InfectionParams setSeasonal(boolean seasonal) {
-			this.seasonal = seasonal;
+		@StringSetter(SEASONALITY)
+		public InfectionParams setSeasonality(double seasonality) {
+			this.seasonality = seasonality;
 			return this;
 		}
 
 		/**
-		 * Whether this activity has some seasonal effects.
+		 * The extent of an activity's seasonal effects
 		 */
-		@StringGetter(SEASONAL)
-		public boolean isSeasonal() {
-			return seasonal;
+		@StringGetter(SEASONALITY)
+		public double getSeasonality() {
+			return seasonality;
 		}
 
 		/**

@@ -80,41 +80,41 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 		int age = person.getAge();
 
 		// source 3
-//		if (age < 5) {
-//			proba = 4.0 / 100;
-//		} else if (age < 15) {
-//			proba = 1.1 / 100;
-//		} else if (age < 35) {
-//			proba = 2.4 / 100;
-//		} else if (age < 60) {
-//			proba = 5.6 / 100;
-//		} else if (age < 80) {
-//			proba = 23. / 100;
-//		} else {
-//			proba = 36. / 100;
-//		}
+		if (age < 5) {
+			proba = 4.0 / 100;
+		} else if (age < 15) {
+			proba = 1.1 / 100;
+		} else if (age < 35) {
+			proba = 2.4 / 100;
+		} else if (age < 60) {
+			proba = 5.6 / 100;
+		} else if (age < 80) {
+			proba = 23. / 100;
+		} else {
+			proba = 36. / 100;
+		}
 
 
 		// source 2
-		if (age < 10) {
-			proba = 0.1 / 100;
-		} else if (age < 20) {
-			proba = 0.2 / 100;
-		} else if (age < 30) {
-			proba = 0.5 / 100;
-		} else if (age < 40) {
-			proba = 1.0 / 100;
-		} else if (age < 50) {
-			proba = 2.1 / 100;
-		} else if (age < 60) {
-			proba = 4.1 / 100;
-		} else if (age < 70) {
-			proba = 8.9 / 100;
-		} else if (age < 80) {
-			proba = 17.1 / 100;
-		} else {
-			proba = 30.3 / 100;
-		}
+//		if (age < 10) {
+//			proba = 0.1 / 100;
+//		} else if (age < 20) {
+//			proba = 0.2 / 100;
+//		} else if (age < 30) {
+//			proba = 0.5 / 100;
+//		} else if (age < 40) {
+//			proba = 1.0 / 100;
+//		} else if (age < 50) {
+//			proba = 2.1 / 100;
+//		} else if (age < 60) {
+//			proba = 4.1 / 100;
+//		} else if (age < 70) {
+//			proba = 8.9 / 100;
+//		} else if (age < 80) {
+//			proba = 17.1 / 100;
+//		} else {
+//			proba = 30.3 / 100;
+//		}
 
 		// source 1
 //		if (age < 5) {
@@ -163,41 +163,41 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 		int age = person.getAge();
 
 		// source 3
-//		if (age < 5) {
-//			proba = 7.0 / 100;
-//		} else if (age < 15) {
-//			proba = 0.0 / 100;
-//		} else if (age < 35) {
-//			proba = 15.0 / 100;
-//		} else if (age < 60) {
-//			proba = 30.0 / 100;
-//		} else if (age < 80) {
-//			proba = 41. / 100;
-//		} else {
-//			proba = 27. / 100;
-//		}
+		if (age < 5) {
+			proba = 7.0 / 100;
+		} else if (age < 15) {
+			proba = 0.0 / 100;
+		} else if (age < 35) {
+			proba = 15.0 / 100;
+		} else if (age < 60) {
+			proba = 30.0 / 100;
+		} else if (age < 80) {
+			proba = 41. / 100;
+		} else {
+			proba = 27. / 100;
+		}
 
 
 		// source 2
-		if (age < 10) {
-			proba = 8.5 / 100;
-		} else if (age < 20) {
-			proba = 10.9 / 100;
-		} else if (age < 30) {
-			proba = 13.4 / 100;
-		} else if (age < 40) {
-			proba = 17.2 / 100;
-		} else if (age < 50) {
-			proba = 21.9 / 100;
-		} else if (age < 60) {
-			proba = 27.3 / 100;
-		} else if (age < 70) {
-			proba = 37.1 / 100;
-		} else if (age < 80) {
-			proba = 48.5/ 100;
-		} else {
-			proba = 64.0 / 100;
-		}
+//		if (age < 10) {
+//			proba = 8.5 / 100;
+//		} else if (age < 20) {
+//			proba = 10.9 / 100;
+//		} else if (age < 30) {
+//			proba = 13.4 / 100;
+//		} else if (age < 40) {
+//			proba = 17.2 / 100;
+//		} else if (age < 50) {
+//			proba = 21.9 / 100;
+//		} else if (age < 60) {
+//			proba = 27.3 / 100;
+//		} else if (age < 70) {
+//			proba = 37.1 / 100;
+//		} else if (age < 80) {
+//			proba = 48.5/ 100;
+//		} else {
+//			proba = 64.0 / 100;
+//		}
 
 ////		// source 1
 //		if (age < 5) {
