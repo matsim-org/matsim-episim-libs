@@ -297,6 +297,23 @@ public class TestingConfigGroup extends ReflectiveConfigGroup {
 			return map;
 		}
 
+		/**
+		 * testing rate for configured activities
+		 * @return
+		 */
+		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivities() {
+			return ratePerActivity;
+		}
+
+		/**
+		 * testing rate for vaccinated persons.
+		 * @see #getDailyTestingRateForActivities(LocalDate)
+		 * @return
+		 */
+		public Map<String, NavigableMap<LocalDate, Double>> getTestingRateForActivitiesVaccinated() {
+			return ratePerActivityVaccinated;
+		}
+
 
 		@StringGetter(FALSE_POSITIVE_RATE)
 		public double getFalsePositiveRate() {
