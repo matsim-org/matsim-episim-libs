@@ -54,8 +54,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import java.util.zip.GZIPOutputStream;
 
 import static org.matsim.episim.EpisimUtils.readChars;
@@ -203,11 +201,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
-//		Object[] rest = {"nInfected", VirusStrain.values()};
-//		List<Object> rest = Arrays.asList(VirusStrain.values()).add("nInfected");
-		List<String> rest = Arrays.stream(VirusStrain.values()).map(Enum::toString).collect(Collectors.toList());
-		rest.add(0,"nInfected");
-		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date",  rest.toArray(new Object[0]));
+		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "strain", "n");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
@@ -782,15 +776,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Write number of initially infected persons.
 	 */
-	void reportDiseaseImport(Object2IntMap infectedByStrain, int iteration, String date) {
-		String[] out = new String[VirusStrain.values().length + 3];
-		out[0] = String.valueOf(iteration);
-		out[1] = date;
-		out[2] = String.valueOf(infectedByStrain.values().intStream().sum() * (1 / sampleSize));
-		for (int i = 0; i < VirusStrain.values().length; i++) {
-			out[i+3] = String.valueOf(infectedByStrain.getInt(VirusStrain.values()[i])  * (1 / sampleSize));
+	void reportDiseaseImport(Object2IntMap<VirusStrain> infectedByStrain, int iteration, String date) {
+		for (VirusStrain strain : infectedByStrain.keySet()) {
+			String[] out = new String[4];
+			out[0] = String.valueOf(iteration);
+			out[1] = date;
+			out[2] = strain.toString();
+			out[3] = String.valueOf(infectedByStrain.getInt(strain) / sampleSize);
+			writer.append(diseaseImport, out);
 		}
-		writer.append(diseaseImport, out);
 	}
 
 	/**
