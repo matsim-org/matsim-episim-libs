@@ -450,6 +450,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPcr = pcrTest.getTestingRateForActivities();
 			testingRateForActivitiesPcr.get("educ_kiga").put(restrictionDate, 0.4);
 			testingRateForActivitiesPcr.get("educ_primary").put(restrictionDate, 0.4);
+			
+			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPcrVac = pcrTest.getTestingRateForActivitiesVaccinated();
+			testingRateForActivitiesPcrVac.get("educ_kiga").put(restrictionDate, 0.4);
+			testingRateForActivitiesPcrVac.get("educ_primary").put(restrictionDate, 0.4);
 
 			//add rapid tests for older kids
 			TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
@@ -457,6 +461,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			testingRateForActivitiesRapid.get("educ_secondary").put(restrictionDate, 0.6);
 			testingRateForActivitiesRapid.get("educ_tertiary").put(restrictionDate, 0.6);
 			testingRateForActivitiesRapid.get("educ_other").put(restrictionDate, 0.6);
+			
+			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesRapidVac = rapidTest.getTestingRateForActivitiesVaccinated();
+			testingRateForActivitiesRapidVac.get("educ_secondary").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapidVac.get("educ_tertiary").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapidVac.get("educ_other").put(restrictionDate, 0.6);
+			
 		}
 
 		if(DEBUG_MODE)
@@ -663,7 +673,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 	public static final class Params {
 
 		// general
-		@GenerateSeeds(1)
+		@GenerateSeeds(3)
 		public long seed;
 
 		@StringParameter({"true"})
@@ -675,7 +685,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		@Parameter({730.}) //120,
 		public double igATime;
-
 
 		// BA5
 		@StringParameter({"2022-04-10"})
@@ -691,7 +700,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"2022-11-01"})
 		public String strADate;
 
-		@Parameter({0.0, 1., 6.}) // 0.0 = strainA is off
+		@Parameter({0.0, 6.}) // 0.0 = strainA is off
 		public double strAEsc;
 
 //		@Parameter({0.0, 1.0})
@@ -704,7 +713,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"omicronUpdate"})
 		public String vacType;
 
-		@StringParameter({"off", "age", "eu"})
+		@StringParameter({"off", "age"})
 		String vacCamp;
 
 		// other restrictions
@@ -725,7 +734,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		String maskShopAndPt;
 
 		// work:
-		@Parameter({ 0.5, 1.0})
+		@Parameter({0.5, 1.0})
 		double work;
 
 		// leisure
