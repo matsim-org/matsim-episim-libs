@@ -48,10 +48,7 @@
  import java.time.DayOfWeek;
  import java.time.LocalDate;
  import java.time.format.DateTimeFormatter;
- import java.util.ArrayList;
- import java.util.HashMap;
- import java.util.List;
- import java.util.Map;
+ import java.util.*;
  import java.util.function.BiFunction;
 
  /**
@@ -361,7 +358,7 @@
 			 episimConfig.setInfections_pers_per_day(importMap);
 
 			 if (sebastianUpdate) {
-				 configureImport(episimConfig); //todo: integrate this with code above
+				 configureImport(episimConfig, false); //todo: integrate this with code above
 			 } else {
 
 				 //ALPHA
@@ -531,7 +528,7 @@
 				 FaceMask.N95, 0.0,
 				 FaceMask.SURGICAL, 0.0)),
 		 "shop_daily", "shop_other", "errands");
-		 
+
 		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(Map.of(
 				 FaceMask.CLOTH, 0.0,
 				 FaceMask.N95, 0.25,
@@ -908,7 +905,7 @@
 		 return config;
 	 }
 
-	 private void configureImport(EpisimConfigGroup episimConfig) {
+	 private void configureImport(EpisimConfigGroup episimConfig, boolean useShares) {
 
 		 Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
 
@@ -941,44 +938,59 @@
 		 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
 		 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
 
+		 NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
 
-		 try (Reader in = new FileReader(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv").toFile())) {
-			 Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
-			 DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd.MM.yy");
-			 for (CSVRecord record : records) {
+		 NavigableMap<LocalDate, Map<VirusStrain, Double>> shares = useShares ? DataUtils.readVOC(SnzCologneProductionScenario.INPUT.resolve("VOC_Cologne_RKI.csv")) : null;
 
-				 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
+		 // Get import share
+		 BiFunction<LocalDate, VirusStrain, Double> lookup = (date, strain) -> shares.floorEntry(date).getValue().getOrDefault(strain, 0d);
 
-				 double cases = factor * Integer.parseInt(record.get("cases"));
+		 for (Map.Entry<LocalDate, Double> e : data.entrySet()) {
 
-				 LocalDate date = LocalDate.parse(record.get(0), fmt);
+			 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
 
+			 double cases = factor * e.getValue();
+			 LocalDate date = e.getKey();
+
+			 if (!useShares) {
+				 // all import into one strain
 				 if (date.isAfter(dateBa2)) {
 					 infPerDayBa2.put(date, (int) (cases * facBa2));
-				 }
-				 else if (date.isAfter(dateBa1)) {
+				 } else if (date.isAfter(dateBa1)) {
 					 infPerDayBa1.put(date, (int) (cases * facBa1));
-				 }
-				 else if (date.isAfter(dateDelta)) {
+				 } else if (date.isAfter(dateDelta)) {
 					 infPerDayDelta.put(date, (int) (cases * facDelta));
-				 }
-				 else if (date.isAfter(dateAlpha)) {
+				 } else if (date.isAfter(dateAlpha)) {
 					 infPerDayAlpha.put(date, (int) (cases * facAlpha));
-				 }
-				 else {
+				 } else {
 					 infPerDayWild.put(date, (int) (cases * facWild));
 				 }
+
+			 } else {
+
+				 infPerDayBa2.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA2) * cases * facBa2));
+				 infPerDayBa1.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA1) * cases * facBa2));
+				 infPerDayDelta.put(date, (int) (lookup.apply(date, VirusStrain.DELTA) * cases * facBa2));
+				 infPerDayAlpha.put(date, (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facBa2));
+				 infPerDayWild.put(date, (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facBa2));
+
 			 }
 
-		 } catch (IOException e) {
-			 throw new UncheckedIOException(e);
 		 }
 
-		 // Disease Import after new strain becomes prominent; todo: does it make sense to have import of 1 for rest of simulation?
-		 infPerDayWild.put(dateAlpha.plusDays(1), 1);
-		 infPerDayAlpha.put(dateDelta.plusDays(1), 1);
-		 infPerDayDelta.put(dateBa1.plusDays(1), 1);
-		 infPerDayBa1.put(dateBa2.plusDays(1), 1);
+		 if (!useShares) {
+
+			 // Disease Import after new strain becomes prominent; todo: does it make sense to have import of 1 for rest of simulation?
+			 infPerDayWild.put(dateAlpha.plusDays(1), 1);
+			 infPerDayAlpha.put(dateDelta.plusDays(1), 1);
+			 infPerDayDelta.put(dateBa1.plusDays(1), 1);
+			 infPerDayBa1.put(dateBa2.plusDays(1), 1);
+
+		 } else {
+
+			 // TODO: shares into the future will not be present
+
+		 }
 
 		 episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
 		 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
