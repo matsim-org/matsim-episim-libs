@@ -472,12 +472,20 @@
 		 //Sommerferien
 		 builder.restrict(LocalDate.parse("2022-06-27"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2022-08-09"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+		 builder.restrict(LocalDate.parse("2022-07-23"), 0.2, "educ_higher");
+		 builder.restrict(LocalDate.parse("2022-10-17"), 1.0, "educ_higher");
+
 		 //Herbstferien
 		 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 //Weihnachtsferien
 		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
+		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+
 
 
 		 {
@@ -531,7 +539,7 @@
 				 FaceMask.N95, 0.0,
 				 FaceMask.SURGICAL, 0.0)),
 		 "shop_daily", "shop_other", "errands");
-		 
+
 		 builder.restrict(LocalDate.of(2022, 4, 4), Restriction.ofMask(Map.of(
 				 FaceMask.CLOTH, 0.0,
 				 FaceMask.N95, 0.25,
