@@ -35,6 +35,7 @@
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
  import org.matsim.episim.model.testing.TestType;
+ import org.matsim.episim.model.testing.TestingModel;
  import org.matsim.episim.model.vaccination.VaccinationFromData;
  import org.matsim.episim.model.vaccination.VaccinationModel;
  import org.matsim.episim.policy.FixedPolicy;
@@ -136,6 +137,8 @@
 	 private final WeatherModel weatherModel;
 	 private final Class<? extends InfectionModel> infectionModel;
 	 private final Class<? extends VaccinationModel> vaccinationModel;
+
+	 private final Class<? extends TestingModel> testingModel;
 	 private final EpisimConfigGroup.ActivityHandling activityHandling;
 
 	 private final double imprtFctMult;
@@ -177,6 +180,7 @@
 		 this.infectionModel = builder.infectionModel;
 		 this.importOffset = builder.importOffset;
 		 this.vaccinationModel = builder.vaccinationModel;
+		 this.testingModel = builder.testingModel;
 		 this.vaccinations = builder.vaccinations;
 		 this.weatherModel = builder.weatherModel;
 		 this.imprtFctMult = builder.imprtFctMult;
@@ -211,6 +215,7 @@
 		 bind(DiseaseStatusTransitionModel.class).to(AgeDependentDiseaseStatusTransitionModel.class).in(Singleton.class);
 		 bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		 bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
+		 bind(TestingModel.class).to(testingModel).in(Singleton.class);
 		 bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
 
 		 if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
