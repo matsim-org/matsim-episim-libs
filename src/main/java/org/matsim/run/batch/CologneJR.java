@@ -455,14 +455,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		}
 
 		// leisure: 2g+
-		if (params.lTest.equals("all")) {
-			testingRateForActivitiesRapid.get("leisure").put(restrictionDate, params.lTestRate);
-			testingRateForActivitiesRapidVac.get("leisure").put(restrictionDate, params.lTestRate);
-		} else if (params.lTest.equals("none")) {
+		if (params.testScheme.equals("all")) {
+			testingRateForActivitiesRapid.get("leisure").put(restrictionDate, params.testRate);
+			testingRateForActivitiesRapidVac.get("leisure").put(restrictionDate, params.testRate);
+		} else if (params.testScheme.equals("none")) {
 
 		} else{
-			int vacTimePeriod = Integer.parseInt(params.lTest.split("-")[0]);
-			int unvacTimePeriod = Integer.parseInt(params.lTest.split("-")[1]);
+			int vacTimePeriod = Integer.parseInt(params.testScheme.split("-")[0]);
+			int unvacTimePeriod = Integer.parseInt(params.testScheme.split("-")[1]);
 
 			// TODO: how do we set vac & unvac time period.
 
@@ -615,16 +615,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //		@Parameter({0.2})
 		double edu;
 
-		// testing in schools
-		@StringParameter({"no", "unvac", "all"})
-//		@StringParameter({"all"})
-		String eduTest;
-
-		// work tests
-		@StringParameter({"no", "unvac", "all"})
-//		@StringParameter({"all"})
-		String workTest;
-
 		// university
 //		@Parameter({0.0, 1.0})
 //		double uni;
@@ -644,13 +634,27 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //		@Parameter({ 0.5})
 		double leis;
 
+		// testing in schools
+//		@StringParameter({"no", "unvac", "all"})
+////		@StringParameter({"all"})
+//				String eduTest;
+
+		// work tests
+		@StringParameter({"none", "all", "part"})
+		String workTest;
+
+		@StringParameter({"none","all","part"})
+		String eduTest;
+
+		@StringParameter({"none","all","part"})
+		String leisTest;
 
 		//2g+
-		@StringParameter({"none","all","3-0","3-3", "3-6","3-9", "3-12", "6-0","6-3", "6-6","6-9", "6-12","9-0","9-3", "9-6","9-9", "9-12", "12-0","12-3", "12-6","12-9", "12-12"})
-		String lTest;
+		@StringParameter({"3-0","3-3", "3-6","3-9", "3-12", "6-0","6-3", "6-6","6-9", "6-12","9-0","9-3", "9-6","9-9", "9-12", "12-0","12-3", "12-6","12-9", "12-12"})
+		String testScheme;
 
 		@Parameter({0.05, 0.5})
-		double lTestRate;
+		double testRate;
 
 	}
 
