@@ -796,7 +796,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
 	 * This method takes {@link #activityParticipation} into account.
 	 *
-	 * @param reduce       reduce function called on each activities with current result
+	 * @param reduce       reduce function called on each activity with current result
 	 * @param defaultValue default value and initial value for the reduce function
 	 */
 	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T, T> reduce, T defaultValue) {
