@@ -10,6 +10,8 @@ import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationByAge;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
@@ -544,6 +546,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
+		Class<? extends TestingModel> testingModel = DefaultTestingModel.class;
+
 		double imprtFctMult = 1.;
 		double importFactorBeforeJune = 4.;
 		double importFactorAfterJune = 0.5;
@@ -630,6 +634,10 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		public Builder<T> setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
+			return this;
+		}
+		public Builder<T> setTestingModel(Class<? extends TestingModel> testingModel) {
+			this.testingModel = testingModel;
 			return this;
 		}
 

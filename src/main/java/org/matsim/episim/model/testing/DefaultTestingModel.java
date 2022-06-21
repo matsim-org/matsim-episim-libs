@@ -31,9 +31,14 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing rates for configured activities for current day.
 	 */
-	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
+	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
 
-	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
+	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
+
+	/**
+	 * Current date
+	 */
+	protected LocalDate date;
 
 	/**
 	 * Ids of households that are not compliant.
@@ -49,11 +54,6 @@ public class DefaultTestingModel implements TestingModel {
 	 * Don't test person with booster.
 	 */
 	private boolean withOutBooster;
-
-	/**
-	 * Current date
-	 */
-	private LocalDate date;
 
 	@Inject
 	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
