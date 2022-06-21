@@ -404,6 +404,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //		diseaseImp(episimConfig, Boolean.parseBoolean(params.sebaUp),params.ba5Inf!=0., params.strAEsc != 0.);
 
 		// testing
+
+		int vacTimePeriod = Integer.parseInt(params.testScheme.split("-")[0]);
+		int unvacTimePeriod = Integer.parseInt(params.testScheme.split("-")[1]);
+
 		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 		TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
 		Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPcr = pcrTest.getTestingRateForActivities();
@@ -461,8 +465,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		} else if (params.testScheme.equals("none")) {
 
 		} else{
-			int vacTimePeriod = Integer.parseInt(params.testScheme.split("-")[0]);
-			int unvacTimePeriod = Integer.parseInt(params.testScheme.split("-")[1]);
+
 
 			// TODO: how do we set vac & unvac time period.
 
@@ -502,7 +505,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		infPerDayBa5.put(ba5Date.plusDays(7), 1);
 
 		//StrainA
+
 		if (params.strAEsc != 0.) {
+			infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
 			LocalDate strADate = LocalDate.parse(params.strADate);
 			for (int i = 0; i < 7; i++) {
 				infPerDayStrA.put(strADate.plusDays(i), 4);
