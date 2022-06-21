@@ -1,5 +1,7 @@
 package org.matsim.run.batch;
 
+import com.typesafe.config.Config;
+import com.typesafe.config.ConfigValue;
 import org.matsim.episim.model.VirusStrain;
 import tech.tablesaw.api.DateColumn;
 import tech.tablesaw.api.DoubleColumn;
@@ -58,6 +60,49 @@ public class UtilsJR {
 
 
 	}
+
+//	static void produceMaskPlot(Config policyConfig) {
+//
+//
+//		LocalDate startDate = LocalDate.of(2020, 2, 1);
+//		LocalDate endDate = LocalDate.of(2023, 2, 25);
+//
+//		DateColumn recordsDate = DateColumn.create("date");
+//		DoubleColumn values = DoubleColumn.create("import");
+//		StringColumn groupings = StringColumn.create("scenario");
+//
+//
+//		for (Map.Entry<String, ConfigValue> config : policyConfig.entrySet()) {
+//
+//			(HashMap<String,>) config.getValue()
+//
+//			NavigableMap<LocalDate, Integer> mapForStrain = infections_pers_per_day.get(strain);
+//			int prev = 0;
+//
+//
+//			LocalDate date = startDate;
+//			while (date.isBefore(endDate)) {
+//				recordsDate.append(date);
+//				int val = mapForStrain.getOrDefault(date, prev);
+//				values.append(val);
+//				prev = val;
+//				groupings.append(strain.toString());
+//
+//				date = date.plusDays(1);
+//			}
+//
+////			for (Map.Entry<LocalDate, Integer> entry : infections_pers_per_day.get(strain).entrySet()) {
+////				recordsDate.append(entry.getKey());
+////				values.append(entry.getValue());
+////				groupings.append(strain.toString());
+////			}
+//		}
+//
+//		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain.html");
+//
+//
+//
+//	}
 
 
 	private static void producePlot(DateColumn records, DoubleColumn values, StringColumn groupings, String title, String yAxisTitle, String filename) {

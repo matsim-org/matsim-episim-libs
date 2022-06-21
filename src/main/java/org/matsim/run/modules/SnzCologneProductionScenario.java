@@ -21,8 +21,6 @@
 
  import com.google.inject.Provides;
  import com.google.inject.multibindings.Multibinder;
- import org.apache.commons.csv.CSVFormat;
- import org.apache.commons.csv.CSVRecord;
  import org.matsim.core.config.Config;
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.episim.*;
@@ -47,7 +45,6 @@
  import java.nio.file.Path;
  import java.time.DayOfWeek;
  import java.time.LocalDate;
- import java.time.format.DateTimeFormatter;
  import java.util.*;
  import java.util.function.BiFunction;
 
@@ -340,77 +337,7 @@
 			 //			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
 			 //					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
 			 //disease import 2020
-			 Map<LocalDate, Integer> importMap = new HashMap<>();
-			 double importFactorBeforeJune = 4.0;
-			 double imprtFctMult = 1.0;
-			 long importOffset = 0;
-
-			 interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
-					 LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-			 interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
-					 LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-			 interpolateImport(importMap, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
-					 LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-
-			 importMap.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
-			 importMap.put(LocalDate.parse("2020-08-09"), 1);
-
-			 episimConfig.setInfections_pers_per_day(importMap);
-
-			 if (sebastianUpdate) {
-				 configureImport(episimConfig, false); //todo: integrate this with code above
-			 } else {
-
-				 //ALPHA
-				 Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
-				 infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
-
-				 infPerDayB117.put(LocalDate.parse("2021-01-16"), 20);
-				 infPerDayB117.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
-				 infPerDayB117.put(LocalDate.parse("2020-12-31"), 1);
-
-				 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
-
-				 // DELTA
-				 Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
-				 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
-				 infPerDayDelta.put(LocalDate.parse("2021-06-21"), 4);
-				 infPerDayDelta.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
-
-				 LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
-				 int imp1 = 120;
-				 int imp2 = 10;
-				 int imp3 = 40;
-
-				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
-				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
-
-
-				 LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
-
-				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
-				 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
-
-
-				 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
-
-				 //BA.1
-				 String ba1Date = "2021-11-21";
-				 Map<LocalDate, Integer> infPerDayOmicron = new HashMap<>();
-				 infPerDayOmicron.put(LocalDate.parse("2020-01-01"), 0);
-				 infPerDayOmicron.put(LocalDate.parse(ba1Date), 4);
-				 infPerDayOmicron.put(LocalDate.parse(ba1Date).plusDays(7), 1);
-				 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayOmicron);
-
-
-				 //BA.2
-				 String ba2Date = "2021-12-18";
-				 Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
-				 infPerDayBA2.put(LocalDate.parse("2020-01-01"), 0);
-				 infPerDayBA2.put(LocalDate.parse(ba2Date), 4);
-				 infPerDayBA2.put(LocalDate.parse(ba2Date).plusDays(7), 1);
-				 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBA2);
-			 }
+			 configureDiseaseImport(cologneFactor, episimConfig);
 
 		 }
 
@@ -662,7 +589,7 @@
 		 //configure strains
 		 //alpha
 		 double aInf = sebastianUpdate ? 1.9 : 1.7; //todo: choose value, see CologneJR
-		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
+//		 SnzProductionScenario.configureStrains(episimConfig, ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class));
 		 VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(aInf);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
@@ -913,99 +840,155 @@
 		 return config;
 	 }
 
-	 private void configureImport(EpisimConfigGroup episimConfig, boolean useShares) {
+	 private void configureDiseaseImport(double cologneFactor, EpisimConfigGroup episimConfig) {
 
+		 // initialize map to store initial infections per strain
 		 Map<LocalDate, Integer> infPerDayWild = new HashMap<>();
-
-		 for (Map.Entry<LocalDate, Integer> entry : episimConfig.getInfections_pers_per_day().get(VirusStrain.SARS_CoV_2).entrySet() ) {
-			 if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
-				 int value = entry.getValue();
-				 value = Math.max(1, value);
-				 infPerDayWild.put(entry.getKey(), value);
-			 }
-		 }
-
 		 Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>();
 		 Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
 		 Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>();
 		 Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>();
+		 Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>();
 
-		 double facWild = 4.0;
-		 double facAlpha = 4.0;
-		 double facDelta = 4.0;
-		 double facBa1 = 4.0;
-		 double facBa2 = 4.0;
 
-		 LocalDate dateAlpha = LocalDate.parse("2021-01-23");
-		 LocalDate dateDelta = LocalDate.parse("2021-06-28");
-		 LocalDate dateBa1 = LocalDate.parse("2021-12-12");
-		 LocalDate dateBa2 = LocalDate.parse("2022-01-05");
+		 // Wild Type Disease Import (before we have import data)
+		 double importFactorBeforeJune = 4.0;
+		 double imprtFctMult = 1.0;
+		 long importOffset = 0;
 
-		 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
-		 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
-		 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
-		 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
+		 interpolateImport(infPerDayWild, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
+				 LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
+		 interpolateImport(infPerDayWild, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
+				 LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
+		 interpolateImport(infPerDayWild, cologneFactor * imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
+				 LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
 
-		 NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
+		 infPerDayWild.put(LocalDate.parse("2020-07-19"), (int) (0.5 * 32));
+		 infPerDayWild.put(LocalDate.parse("2020-08-09"), 1);
 
-		 NavigableMap<LocalDate, Map<VirusStrain, Double>> shares = useShares ? DataUtils.readVOC(SnzCologneProductionScenario.INPUT.resolve("VOC_Cologne_RKI.csv")) : null;
+//		 episimConfig.setInfections_pers_per_day(infPerDayWild);
 
-		 // Get import share
-		 BiFunction<LocalDate, VirusStrain, Double> lookup = (date, strain) -> shares.floorEntry(date).getValue().getOrDefault(strain, 0d);
+		 if (sebastianUpdate) {
 
-		 for (Map.Entry<LocalDate, Double> e : data.entrySet()) {
-
-			 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
-
-			 double cases = factor * e.getValue();
-			 LocalDate date = e.getKey();
-
-			 if (!useShares) {
-				 // all import into one strain
-				 if (date.isAfter(dateBa2)) {
-					 infPerDayBa2.put(date, (int) (cases * facBa2));
-				 } else if (date.isAfter(dateBa1)) {
-					 infPerDayBa1.put(date, (int) (cases * facBa1));
-				 } else if (date.isAfter(dateDelta)) {
-					 infPerDayDelta.put(date, (int) (cases * facDelta));
-				 } else if (date.isAfter(dateAlpha)) {
-					 infPerDayAlpha.put(date, (int) (cases * facAlpha));
-				 } else {
-					 infPerDayWild.put(date, (int) (cases * facWild));
+			 for (Map.Entry<LocalDate, Integer> entry : infPerDayWild.entrySet()) {
+				 if (entry.getKey().isBefore(LocalDate.parse("2020-08-12"))) {
+					 int value = entry.getValue();
+					 value = Math.max(1, value);
+					 infPerDayWild.put(entry.getKey(), value);
 				 }
+			 }
 
-			 } else {
+			 double facWild = 4.0;
+			 double facAlpha = 4.0;
+			 double facDelta = 4.0;
+			 double facBa1 = 4.0;
+			 double facBa2 = 4.0;
+			 double facBa5 = 4.0;
 
+			 LocalDate dateAlpha = LocalDate.parse("2021-01-23");
+			 LocalDate dateDelta = LocalDate.parse("2021-06-28");
+			 LocalDate dateBa1 = LocalDate.parse("2021-12-12");
+			 LocalDate dateBa2 = LocalDate.parse("2022-01-05");
+
+
+			 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayBa5.put(LocalDate.parse("2020-01-01"), 0);
+
+			 NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport.csv"));
+
+			 NavigableMap<LocalDate, Map<VirusStrain, Double>> shares = DataUtils.readVOC(SnzCologneProductionScenario.INPUT.resolve("VOC_Cologne_RKI.csv"));
+
+			 // Get import share
+			 BiFunction<LocalDate, VirusStrain, Double> lookup = (date, strain) -> shares.floorEntry(date).getValue().getOrDefault(strain, 0d);
+			 LocalDate date = null;
+
+			 for (Map.Entry<LocalDate, Double> e : data.entrySet()) {
+
+				 double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City, so we have to scale it to the whole model
+
+				 double cases = factor * e.getValue();
+				 date = e.getKey();
+
+				 infPerDayBa5.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA5) * cases * facBa5));
 				 infPerDayBa2.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA2) * cases * facBa2));
-				 infPerDayBa1.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA1) * cases * facBa2));
-				 infPerDayDelta.put(date, (int) (lookup.apply(date, VirusStrain.DELTA) * cases * facBa2));
-				 infPerDayAlpha.put(date, (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facBa2));
-				 infPerDayWild.put(date, (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facBa2));
+				 infPerDayBa1.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA1) * cases * facBa1));
+				 infPerDayDelta.put(date, date.isBefore(LocalDate.of(2022, 1, 16)) ? (int) (lookup.apply(date, VirusStrain.DELTA) * cases * facDelta) : 1);
+				 infPerDayAlpha.put(date, date.isBefore(LocalDate.of(2021, 7, 17)) ? (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facAlpha) : 1);
+				 infPerDayWild.put(date, date.isBefore(LocalDate.of(2021, 11, 21)) ? (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facWild) : 1);
 
 			 }
 
-		 }
 
-		 if (!useShares) {
 
-			 // Disease Import after new strain becomes prominent; todo: does it make sense to have import of 1 for rest of simulation?
-			 infPerDayWild.put(dateAlpha.plusDays(1), 1);
-			 infPerDayAlpha.put(dateDelta.plusDays(1), 1);
-			 infPerDayDelta.put(dateBa1.plusDays(1), 1);
-			 infPerDayBa1.put(dateBa2.plusDays(1), 1);
+			 LocalDate dateAfterCsvEnds = date.plusDays(1);
+			 infPerDayBa2.put(dateAfterCsvEnds, 1);
+
+
+
 
 		 } else {
 
-			 // TODO: shares into the future will not be present
+			 //ALPHA
+//			 Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
+			 infPerDayAlpha.put(LocalDate.parse("2020-01-01"), 0);
 
+			 infPerDayAlpha.put(LocalDate.parse("2021-01-16"), 20);
+			 infPerDayAlpha.put(LocalDate.parse("2021-01-16").plusDays(1), 1);
+			 infPerDayAlpha.put(LocalDate.parse("2020-12-31"), 1);
+
+//			 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
+
+			 // DELTA
+//			 Map<LocalDate, Integer> infPerDayDelta = new HashMap<>();
+			 infPerDayDelta.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayDelta.put(LocalDate.parse("2021-06-21"), 4);
+			 infPerDayDelta.put(LocalDate.parse("2021-06-21").plusDays(7), 1);
+
+			 LocalDate summerHolidaysEnd = LocalDate.parse("2021-08-17").minusDays(14);
+			 int imp1 = 120;
+			 int imp2 = 10;
+			 int imp3 = 40;
+
+			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd.minusDays(5 * 7), summerHolidaysEnd, 1, imp1);
+			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, summerHolidaysEnd, summerHolidaysEnd.plusDays(3 * 7), imp1, imp2);
+
+
+			 LocalDate autumnHolidaysEnd = LocalDate.parse("2021-10-17");
+
+			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd.minusDays(2 * 7), autumnHolidaysEnd, imp2, imp3);
+			 SnzCologneProductionScenario.interpolateImport(infPerDayDelta, 1.0, autumnHolidaysEnd, autumnHolidaysEnd.plusDays(2 * 7), imp3, 1);
+
+
+//			 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
+
+			 //BA.1
+			 String ba1Date = "2021-11-21";
+//			 Map<LocalDate, Integer> infPerDayBA1 = new HashMap<>();
+			 infPerDayBa1.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayBa1.put(LocalDate.parse(ba1Date), 4);
+			 infPerDayBa1.put(LocalDate.parse(ba1Date).plusDays(7), 1);
+//			 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
+
+
+			 //BA.2
+			 String ba2Date = "2021-12-18";
+//			 Map<LocalDate, Integer> infPerDayBA2 = new HashMap<>();
+			 infPerDayBa2.put(LocalDate.parse("2020-01-01"), 0);
+			 infPerDayBa2.put(LocalDate.parse(ba2Date), 4);
+			 infPerDayBa2.put(LocalDate.parse(ba2Date).plusDays(7), 1);
+//			 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		 }
 
+		 // set all initial infections
 		 episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
 		 episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
 		 episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayDelta);
 		 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
 		 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
-
+		 episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
 	 }
 
 	 private void configureBooster(VaccinationConfigGroup vaccinationConfig, double boosterSpeed, int boostAfter) {

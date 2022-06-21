@@ -71,7 +71,7 @@ public final class DataUtils {
 						VirusStrain.B1351, getOrZero(record, "Beta (B.1.351) Fälle pro Tag (%)"),
 						VirusStrain.OMICRON_BA1, getOrZero(record, "BA.1 Fälle pro Tag (%)"),
 						VirusStrain.OMICRON_BA2, getOrZero(record, "BA.2 Fälle pro Tag (%)"),
-						VirusStrain.OMICRON_BA5, getOrZero(record, " BA.5 Fälle pro Tag Deutschland (%)")
+						VirusStrain.OMICRON_BA5, getOrZero(record, "BA.5 Fälle pro Tag Deutschland (%)")
 				);
 
 				result.put(date, strains);
