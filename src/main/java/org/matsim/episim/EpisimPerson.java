@@ -809,7 +809,24 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		}
 
 		return result;
+	}
 
+	/**
+	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
+	 * This method takes {@link #activityParticipation} into account.
+	 *
+	 * @see #matchActivities(DayOfWeek, Set, BiFunction, Object)
+	 */
+	public <T> T matchActivities(DayOfWeek day, BiFunction<String, T, T> reduce, T defaultValue) {
+
+		T result = defaultValue;
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			String act = trajectory.get(i).params.getContainerName();
+			if (activityParticipation.get(i))
+				result = reduce.apply(act, result);
+		}
+
+		return result;
 	}
 
 	/**

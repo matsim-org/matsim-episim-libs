@@ -322,7 +322,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return hasValidVaccination(person, day, date, getDaysValid());
 	}
 
-	private boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
+	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
 		if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 			return false;
 

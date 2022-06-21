@@ -15,6 +15,8 @@ import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.analysis.VaccinationEffectiveness;
 import org.matsim.episim.analysis.VaccinationEffectivenessFromPotentialInfections;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.FlexibleTestingModel;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
@@ -24,8 +26,10 @@ import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
 import javax.annotation.Nullable;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.BiFunction;
 
 
 /**
@@ -35,7 +39,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
-
 
 	@Nullable
 	@Override
@@ -105,6 +108,71 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
+				if (params != null) {
+
+					// date of no restrictions and new restrictions
+					LocalDate unresDate = LocalDate.parse(params.unResDate);
+					LocalDate resDate = LocalDate.parse(params.resDate);
+
+					String[] s = params.testScheme.split("-");
+
+					// Green pass validity for vaccinated and infected
+					int vacDays = Integer.parseInt(s[0]) * 30;
+					int infDays = Integer.parseInt(s[1]) * 30;
+
+					bind(FlexibleTestingModel.TestRate.class).toInstance(new FlexibleTestingModel.TestRate() {
+						@Override
+						public boolean useFullyVaccinatedTestRate(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, VaccinationConfigGroup vac) {
+
+							if (date.isBefore(unresDate))
+								return vac.hasValidVaccination(person, day, date);
+
+							// When restrictions have been lifted, days valid is set to a high number
+							// many tests are voluntary
+							if (date.isBefore(resDate))
+								return vac.hasValidVaccination(person, day, date, 360);
+
+							// this returns true if for any activities, the person requires increased testing regime
+							BiFunction<String, Boolean, Boolean> anyUnVac = (act, red) -> {
+
+								boolean res = false;
+								TestScheme scheme = null;
+
+								if (act.equals("leisure"))
+									scheme = params.leisTest;
+								else if (act.equals("work"))
+									scheme = params.workTest;
+								else if (act.startsWith("edu"))
+									scheme = params.eduTest;
+
+								// null and none, will be false
+								if (scheme == TestScheme.all)
+									res = true;
+								else if (scheme == TestScheme.part) {
+									res = person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vacDays && !person.isRecentlyRecovered(day, infDays);
+
+								}
+
+								return red || res;
+							};
+
+							return !person.matchActivities(dow, anyUnVac, false);
+						}
+					});
+
+					bind(FlexibleTestingModel.TestPolicy.class).toInstance(new FlexibleTestingModel.TestPolicy() {
+						@Override
+						public boolean shouldTest(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, VaccinationConfigGroup vac) {
+
+							if (date.isBefore(unresDate))
+								return vac.hasGreenPass(person, day, date);
+
+							// after restrictions everybody is tested according to the rates
+							return true;
+						}
+					});
+
+				}
 			}
 
 			private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
@@ -295,6 +363,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
+				.setTestingModel(FlexibleTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
 	}
@@ -549,7 +618,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		}
 
 
-
 		//
 
 
@@ -597,6 +665,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //		@Parameter({0.0, 1.0})
 //		public double strAInf;
 
+		@StringParameter({"2022-04-25"})
+		public String unResDate;
+
 		// General Restriction date
 		@StringParameter({"2022-12-01"})
 		public String resDate;
@@ -640,14 +711,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //				String eduTest;
 
 		// work tests
-		@StringParameter({"none", "all", "part"})
-		String workTest;
+		@EnumParameter(TestScheme.class)
+		TestScheme workTest;
 
-		@StringParameter({"none","all","part"})
-		String eduTest;
+		@EnumParameter(TestScheme.class)
+		TestScheme eduTest;
 
-		@StringParameter({"none","all","part"})
-		String leisTest;
+		@EnumParameter(TestScheme.class)
+		TestScheme leisTest;
 
 		//2g+
 		@StringParameter({"3-0","3-3", "3-6","3-9", "3-12", "6-0","6-3", "6-6","6-9", "6-12","9-0","9-3", "9-6","9-9", "9-12", "12-0","12-3", "12-6","12-9", "12-12"})
@@ -656,6 +727,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({0.05, 0.5})
 		double testRate;
 
+	}
+
+	public enum TestScheme {
+		none,
+		all,
+		part
 	}
 
 	public static void main(String[] args) {
