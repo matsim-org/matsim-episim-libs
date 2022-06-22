@@ -42,6 +42,7 @@
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
+ import org.matsim.episim.reporting.EpisimWriter;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
  import tech.tablesaw.api.*;
@@ -72,7 +73,7 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 	 //	 	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-04-14-Analysis/1-0-reduce/")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-06-16/2/analysis/policy_leis75/")
 	 private Path output;
 
 	 //	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -183,10 +184,10 @@
 	 // base
 	 private static final double factorWild =  1.0;
 
-	 private static final double factorAlpha = 1.53 * factorWild;
+	 private static final double factorAlpha = 1.0 * factorWild;
 
 	 // delta: 2.3x more severe than alpha - Hospital admission and emergency care attendance risk for SARS-CoV-2 delta (B.1.617.2) compared with alpha (B.1.1.7) variants of concern: a cohort study
-	 private static final double factorDelta = 2.08 * factorWild;
+	 private static final double factorDelta = 1.6 * factorWild;
 
 	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
 	 private static final double factorOmicron = 0.3  * factorDelta; // * reportedShareOmicron / reportedShareDelta
@@ -220,8 +221,8 @@
 
 
 		 // Here we define values factorSeriouslySickStrainA should have
-//		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
-		 List<Double> strainFactors = List.of(factorOmicron);
+		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
+//		 List<Double> strainFactors = List.of(factorOmicron);
 
 		 for (Double facA : strainFactors) {
 
@@ -244,7 +245,7 @@
 			 log.info("done");
 
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
-			 aggregateAndProducePlots(output, pathList);
+//			 aggregateAndProducePlots(output, pathList);
 
 		 }
 
@@ -296,6 +297,8 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(factorOmicronICU);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(factorOmicronICU);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorOmicronICU);
 
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
@@ -390,7 +393,7 @@
 
 
 			 bw.newLine();
-			 bw.write(AnalysisCommand.TSV.join(day, date, intakesHosp, intakesIcu, occupancyHosp, occupancyIcu, hospNoImmunity, hospBaseImmunity, hospBoosted,incNoImmunity,incBaseImmunity,incBoosted));
+			 bw.write(AnalysisCommand.TSV.join(day, date, intakesHosp, intakesIcu, occupancyHosp, occupancyIcu)); //hospNoImmunity, hospBaseImmunity, hospBoosted,incNoImmunity,incBaseImmunity,incBoosted));
 
 		 }
 
@@ -421,6 +424,11 @@
 		 private final Int2IntMap incBaseImmunity;
 		 private final Int2IntMap incBoostered;
 
+//		 private final EpisimWriter episimWriter;
+		  BufferedWriter hospCalibration;
+
+//		 private CSVPrinter printer;
+
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
 
 
@@ -448,6 +456,13 @@
 			 this.incBoostered = new Int2IntAVLTreeMap();
 
 			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), episimConfig, vaccinationConfig, strainConfig);
+
+//			 try {
+//				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
+//				 printer.printRecord("day", "date", "personId", "age", "strain", "numInfections","numVaccinations");
+//			 } catch (IOException ex) {
+//				 ex.printStackTrace();
+//			 }
 		 }
 
 		 @Override
@@ -477,6 +492,23 @@
 			 } else {
 				 incBoostered.mergeInt(day, 1, Integer::sum);
 			 }
+
+			 // print to csv
+
+//			 System.out.println(event.getVirusStrain().toString());
+
+//			 try {
+//				 this.printer.printRecord(String.valueOf(day)
+//						 , LocalDate.of(2020, 2, 25).plusDays(day).toString()
+//						 , person.getPersonId().toString()
+//						 , String.valueOf(person.getAge())
+//						 , event.getVirusStrain().toString()
+//						 , String.valueOf(person.getNumInfections() - 1)
+//						 , String.valueOf(person.getNumVaccinations()));
+//
+//			 } catch (IOException e) {
+//				 e.printStackTrace();
+//			 }
 
 		 }
 
