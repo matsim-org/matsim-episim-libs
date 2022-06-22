@@ -235,7 +235,7 @@ public class RCalculator implements BatchRun<RCalculator.Params> {
 		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayVariant);
 
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());

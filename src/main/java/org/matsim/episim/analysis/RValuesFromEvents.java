@@ -20,6 +20,7 @@
 
 package org.matsim.episim.analysis;
 
+import com.google.common.collect.Iterables;
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
@@ -28,11 +29,11 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
-import org.matsim.core.api.experimental.events.EventsManager;
-import org.matsim.core.events.EventsUtils;
-import org.matsim.core.utils.io.UncheckedIOException;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
-import org.matsim.episim.events.*;
+import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.EpisimInfectionEventHandler;
+import org.matsim.episim.events.EpisimPersonStatusEvent;
+import org.matsim.episim.events.EpisimPersonStatusEventHandler;
 import org.matsim.run.AnalysisCommand;
 import picocli.CommandLine;
 
@@ -45,7 +46,6 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 
@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 		name = "calculateRValues",
 		description = "Calculate R values summaries"
 )
-public class RValuesFromEvents implements Callable<Integer> {
+public class RValuesFromEvents implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(RValuesFromEvents.class);
 
@@ -92,39 +92,32 @@ public class RValuesFromEvents implements Callable<Integer> {
 			return 2;
 		}
 
-		BufferedWriter rValues = Files.newBufferedWriter(output.resolve("rValues.txt"));
-		rValues.write("day\tdate\trValue\tnewContagious\tscenario\t");
-		rValues.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
-
-		BufferedWriter infectionsPerActivity = Files.newBufferedWriter(output.resolve("infectionsPerActivity.txt"));
-		infectionsPerActivity.write("day\tdate\tactivity\tinfections\tscenario");
 
 		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
-				calcValues(scenario, rValues, infectionsPerActivity);
+				analyzeOutput(scenario);
 			} catch (IOException e) {
 				log.error("Failed processing {}", scenario, e);
 			}
 		});
 
-		rValues.close();
-		infectionsPerActivity.close();
-
-		log.info("done");
+		log.info("Done");
 
 		return 0;
 	}
 
-	private void calcValues(Path scenario, BufferedWriter rValues, BufferedWriter infectionsPerActivity) throws IOException {
+	@Override
+	public void analyzeOutput(Path output) throws IOException {
 
-		String id = AnalysisCommand.getScenarioPrefix(scenario);
+		String id = AnalysisCommand.getScenarioPrefix(output);
 
 		InfectionsHandler infHandler = new InfectionsHandler();
 		RHandler rHandler = new RHandler();
 
-		List<String> eventFiles = AnalysisCommand.forEachEvent(scenario, s -> {}, infHandler, rHandler);
+		List<String> eventFiles = AnalysisCommand.forEachEvent(output, s -> {
+		}, infHandler, rHandler);
 
-		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "infectionsPerActivity.txt"));
+		BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");
 
 		int rollingAveragae = 3;
@@ -150,16 +143,14 @@ public class RValuesFromEvents implements Callable<Integer> {
 					if (startDate.plusDays(i).getDayOfWeek() == DayOfWeek.THURSDAY) {
 						infectionsShare = (double) infections / totalInfections;
 						bw.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare);
-						infectionsPerActivity.write("\n" + i + "\t" + startDate.plusDays(i).toString() + "\t" + e.getKey() + "\t" + (double) infections / (2 * rollingAveragae + 1) + "\t" + infectionsShare + "\t" + scenario.getFileName());
 					}
 				}
 			}
 		}
 
-		infectionsPerActivity.flush();
 		bw.close();
 
-		bw = Files.newBufferedWriter(scenario.resolve(id + "rValues.txt"));
+		bw = Files.newBufferedWriter(output.resolve(id + "rValues.txt"));
 		bw.write("day\tdate\trValue\tnewContagious\tscenario\t");
 		bw.write(AnalysisCommand.TSV.join(ACTIVITY_TYPES));
 
@@ -167,33 +158,31 @@ public class RValuesFromEvents implements Callable<Integer> {
 			int noOfInfectors = 0;
 			// infected persons per activity
 			Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
-			for (InfectedPerson ip : rHandler.infectedPersons.values()) {
+			for (InfectedPerson ip : rHandler.getInfected()) {
 				if (ip.contagiousDay == i) {
 					noOfInfectors++;
-					ip.noOfInfected.forEach((k,v) -> noOfInfected.mergeInt(k, v, Integer::sum));
+					ip.noOfInfected.forEach((k, v) -> noOfInfected.mergeInt(k, v, Integer::sum));
 				}
 			}
 
 			double r = noOfInfectors == 0 ? 0 : (double) noOfInfected.getInt("total") / noOfInfectors;
 
 			String join = "\n" + AnalysisCommand.TSV.join(
-					i, startDate.plusDays(i).toString(), r, noOfInfectors, scenario.getFileName()
+					i, startDate.plusDays(i).toString(), r, noOfInfectors, output.getFileName()
 			) + "\t";
 
 			int finalNoOfInfectors = noOfInfectors;
 			join += AnalysisCommand.TSV.join(ACTIVITY_TYPES.stream()
-					.map( k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
+					.map(k -> finalNoOfInfectors == 0 ? 0 : (double) noOfInfected.getInt(k) / finalNoOfInfectors)
 					.collect(Collectors.toList())
 			);
 
 			bw.write(join);
-			rValues.write(join);
 		}
 
-		rValues.flush();
 		bw.close();
 
-		log.info("Calculated results for scenario {}", scenario);
+		log.info("Calculated results for scenario {}", output);
 
 	}
 
@@ -201,7 +190,7 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 		private final String id;
 		private final Object2IntMap<String> noOfInfected = new Object2IntOpenHashMap<>();
-		private int contagiousDay;
+		private int contagiousDay = 0;
 
 		InfectedPerson(String id) {
 			this.id = id;
@@ -218,10 +207,24 @@ public class RValuesFromEvents implements Callable<Integer> {
 		private final Set<String> activityTypes = new TreeSet<>();
 		private final Map<String, InfectedPerson> infectedPersons = new LinkedHashMap<>();
 
+		/**
+		 * If a person is infected another time it will be removed from {@link #infectedPersons} and put here.
+		 */
+		private final List<InfectedPerson> handledInfections = new ArrayList<>();
+
+		/**
+		 * All infected persons, where a persons can occur multiple times.
+		 */
+		private Iterable<InfectedPerson> getInfected() {
+			return Iterables.concat(infectedPersons.values(), handledInfections);
+		}
+
 		@Override
 		public void handleEvent(EpisimInfectionEvent event) {
 			String infectorId = event.getInfectorId().toString();
 			InfectedPerson infector = infectedPersons.computeIfAbsent(infectorId, InfectedPerson::new);
+
+
 			String activityType = getActivityType(event.getInfectionType());
 			activityTypes.add(activityType);
 			infector.increaseNoOfInfectedByOne(activityType);
@@ -232,9 +235,19 @@ public class RValuesFromEvents implements Callable<Integer> {
 
 			if (event.getDiseaseStatus() == DiseaseStatus.contagious) {
 
+				int day = (int) (event.getTime() / 86400);
 				String personId = event.getPersonId().toString();
+
 				InfectedPerson person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
-				person.contagiousDay = (int) (event.getTime() / 86400);
+
+				// a person is infected another time
+				if (person.contagiousDay > 0 && person.contagiousDay != day) {
+					handledInfections.add(infectedPersons.remove(personId));
+
+					person = infectedPersons.computeIfAbsent(personId, InfectedPerson::new);
+				}
+
+				person.contagiousDay = day;
 			}
 		}
 	}

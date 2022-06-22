@@ -11,6 +11,8 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.model.DefaultInfectionModel.*;
+
 /**
  * Extension of the {@link DefaultInfectionModel} with a seasonality component.
  */
@@ -55,10 +57,11 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 		// exp( - 1 * 1 * 100 ) \approx 0, and thus the infection proba becomes 1.  Which also means that changes in contactIntensity has
 		// no effect.  kai, mar'20
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		double susceptibility = target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no ? 1
-				: DefaultInfectionModel.getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
+		double susceptibility = Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * contactIntensity * jointTimeInContainer * ciCorrection
+				* getVaccinationInfectivity(infector, strain, vaccinationConfig, iteration)
+				* target.getSusceptibility()
 				* susceptibility
 				* strain.getInfectiousness()
 				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
@@ -78,7 +81,11 @@ public final class InfectionModelWithSeasonality implements InfectionModel {
 
 	static double getIndoorOutdoorFactor(double outdoorFraction, SplittableRandom rnd, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2) {
 
-		if (!act1.isSeasonal() && !act2.isSeasonal()) return 1.;
+		if (act1.getSeasonality() == 0.0 && act2.getSeasonality() == 0.0) {
+			return 1.;
+		}
+
+		outdoorFraction = outdoorFraction * Math.max(act1.getSeasonality(), act2.getSeasonality());
 
 		double indoorOutdoorFactor = 1.;
 		if (rnd.nextDouble() < outdoorFraction) {

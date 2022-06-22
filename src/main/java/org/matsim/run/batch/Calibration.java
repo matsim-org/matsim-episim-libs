@@ -3,6 +3,7 @@ package org.matsim.run.batch;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
 import org.matsim.episim.model.Transition;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
@@ -12,6 +13,9 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
+import org.matsim.run.modules.SnzProductionScenario.Tracing;
 
 import javax.annotation.Nullable;
 
@@ -32,13 +36,14 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
+
 		return new SnzBerlinProductionScenario.Builder()
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 //				.setWeatherModel(params == null ? SnzBerlinProductionScenario.WeatherModel.midpoints_200_250 : params.weatherModel)
 //				.setImportFactorBeforeJune(params == null ? 1d : params.importFactorBeforeJune)
 //				.setImportFactorAfterJune(params == null ? 1d : params.importFactorAfterJune)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
-				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.restrictive)
+				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
 				.createSnzBerlinProductionScenario();
 	}
 
@@ -56,13 +61,18 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setProgressionConfig(progressionConfig(params, Transition.config()).build());
 		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
 		episimConfig.setCalibrationParameter(1.0e-05);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thetaFactor);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 0.83);
+
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-20210820/" + params.seed + "-270-2020-11-20.zip");
+
+		episimConfig.setSnapshotSeed(SnapshotSeed.restore);
+
 
 //		if (id == 1)
 //			episimConfig.setSnapshotInterval(100);
@@ -72,13 +82,12 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
 		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
-		curfewCompliance.put(LocalDate.parse("2021-04-06"), 0.5);
+		curfewCompliance.put(LocalDate.parse("2021-04-06"), 1.0);
 		curfewCompliance.put(LocalDate.parse("2021-05-16"), 0.0);
 		episimConfig.setCurfewCompliance(curfewCompliance);
 
-		LocalDate date1 = LocalDate.parse("2021-08-06");
 		//kein zusätzliches Lüften mehr nach den Sommerferien
-		builder.restrict("2021-08-07", Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+		builder.restrict("2021-08-07", Restriction.ofCiCorrection(1.0), "educ_primary", "educ_kiga", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
 
 		builder.restrict("2021-10-18", 1.0, "educ_higher");
 		builder.restrict("2021-12-20", 0.2, "educ_higher");
@@ -94,85 +103,141 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		 */
 
 		episimConfig.setPolicy(FixedPolicy.class, builder.build());
-		
+
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(),
-					SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, params.midPointSpring, params.midPointFall, 5.);
+					SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5.);
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-	
+
 
 		//mutations and vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-		
+
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayB117.put(LocalDate.parse(params.alphaDate), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.alphaInf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(params.alphaSeriouslySickFactor);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.alphaInf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(params.alphaSeriouslySickFactor);
 
 		Map<LocalDate, Integer> infPerDayMUTB = new HashMap<>();
 		infPerDayMUTB.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayMUTB.put(LocalDate.parse("2021-04-07"), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.MUTB, infPerDayMUTB);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.MUTB).setInfectiousness(2.5);
+		episimConfig.setInfections_pers_per_day(VirusStrain.DELTA, infPerDayMUTB);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(params.deltaInf);
 
-		double effectivnessMRNA = 0.7;
-		double factorShowingSymptomsMRNA = 0.05 / (1 - effectivnessMRNA); //95% protection against symptoms
-		double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
-		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
-		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-				.setDaysBeforeFullEffect(fullEffectMRNA)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+
+		if (params.delta1Vac.equals("0.5")) {
+			double effectivnessMRNA = params.deltaEscape * 0.7;
+			double factorShowingSymptomsMRNA = params.deltaEscape * 0.05 / (1 - effectivnessMRNA);
+			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA);
+			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setDaysBeforeFullEffect(fullEffectMRNA)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 0.0)
+							.atDay(fullEffectMRNA-7, effectivnessMRNA/2.)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 1.0)
+							.atDay(fullEffectMRNA-7, factorShowingSymptomsMRNA*2.)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 1.0)
+							.atDay(fullEffectMRNA-7, factorSeriouslySickMRNA*2.)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					;
+
+			double effectivnessVector = params.deltaEscape * 0.5;
+			double factorShowingSymptomsVector = params.deltaEscape * 0.25 / (1 - effectivnessVector);
+			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
+			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
+				.setDaysBeforeFullEffect(fullEffectVector)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
-						.atDay(fullEffectMRNA-1, effectivnessMRNA/2.)
-						.atFullEffect(effectivnessMRNA)
-						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector-7, effectivnessVector/2.)
+						.atFullEffect(effectivnessVector)
+						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
-						.atFullEffect(factorShowingSymptomsMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector-7, factorShowingSymptomsVector*2.)
+						.atFullEffect(factorShowingSymptomsVector)
+						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
-						.atFullEffect(factorSeriouslySickMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+						.atDay(fullEffectVector-7, factorSeriouslySickVector*2.)
+						.atFullEffect(factorSeriouslySickVector)
+						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				; 
-	
-		double effectivnessVector = 0.5;
-		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
-		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsMRNA); //85% protection against severe disease
-		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
-	
-		vaccinationConfig.getOrAddParams(VaccinationType.vector)
-			.setDaysBeforeFullEffect(fullEffectVector)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			;
-		
-		
-		
+				;
+		}
+
+		else {
+			double effectivnessMRNA = params.deltaEscape * 0.7;
+			double factorShowingSymptomsMRNA = params.deltaEscape * 0.05 / (1 - effectivnessMRNA);
+			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA);
+			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setDaysBeforeFullEffect(fullEffectMRNA)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					;
+
+			double effectivnessVector = params.deltaEscape * 0.5;
+			double factorShowingSymptomsVector = params.deltaEscape * 0.25 / (1 - effectivnessVector);
+			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
+			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
+				.setDaysBeforeFullEffect(fullEffectVector)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+						.atDay(1, 0.0)
+						.atFullEffect(effectivnessVector)
+						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+				)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+						.atDay(1, 1.0)
+						.atFullEffect(factorShowingSymptomsVector)
+						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+				)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+						.atDay(1, 1.0)
+						.atFullEffect(factorSeriouslySickVector)
+						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+				)
+				;
+		}
+
+
 
 		Map<Integer, Double> vaccinationCompliance = new HashMap<>();
 
@@ -224,16 +289,16 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 
 		for (int i = 1; i <= 31; i++) {
-			leisureTests.put(testingStartDate.plusDays(i), 0.05 * i / 31.);
-			workTests.put(testingStartDate.plusDays(i), 0.05 * i / 31.);
-			eduTests.put(testingStartDate.plusDays(i), 0.2 * i / 31.);
+			leisureTests.put(testingStartDate.plusDays(i), params.testFactor * 0.1 * i / 31.);
+			workTests.put(testingStartDate.plusDays(i), params.testFactor * 0.1 * i / 31.);
+			eduTests.put(testingStartDate.plusDays(i), params.testFactor * 0.4 * i / 31.);
 		}
 
 		eduTests.put(LocalDate.parse("2021-06-24"), 0.0);
-		workTests.put(LocalDate.parse("2021-06-24"), 0.0);
-		leisureTests.put(LocalDate.parse("2021-06-24"), 0.0);
+		workTests.put(LocalDate.parse("2021-06-04"), params.testFactor * params.testRateJune);
+		leisureTests.put(LocalDate.parse("2021-06-04"), params.testFactor * params.testRateJune);
 
-		eduTests.put(LocalDate.parse("2021-08-06"), 0.2);
+//		eduTests.put(LocalDate.parse("2021-08-06"), 0.2);
 
 		rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				"leisure", leisureTests,
@@ -284,33 +349,44 @@ public class Calibration implements BatchRun<Calibration.Params> {
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.76, 0.77, 0.78, 0.79, 0.8})
-		double thetaFactor;
+//		@Parameter({0.78, 0.79, 0.80, 0.81, 0.82, 0.83, 0.84, 0.85, 0.86, 0.87, 0.88, 0.89})
+//		double thetaFactor;
 
-//		@Parameter({4})
-//		double importFactorBeforeJune;
+//		@Parameter({16.5, 17.5, 18.5})
+//		double midPointSpring;
 //
-//		@Parameter({0.25})
-//		double importFactorAfterJune;
-		
-//		@Parameter({15.5, 16.5, 17.5, 18.5, 19.5})
-		@Parameter({18.5})
-		double midPointSpring;
+//		@Parameter({24.5, 25.0, 25.5})
+//		double midPointFall;
 
-		@Parameter({25.0})
-		double midPointFall;
-		
-//		@Parameter({180.0})
-//		double recoveredSusceptible;
-		
-		@StringParameter({"2020-11-30", "2020-12-05", "2020-12-10", "2020-12-15"})
+		@StringParameter({"2020-11-30", "2020-12-05"})
 		String alphaDate;
-		
-		@Parameter({1.5, 1.0})
+
+		@Parameter({1.0})
 		double alphaSeriouslySickFactor;
-		
-		@Parameter({1.8, 1.6})
+
+		@Parameter({1.7})
 		double alphaInf;
+
+		@Parameter({2.5, 2.7, 2.9})
+		double deltaInf;
+
+		@Parameter({0.7, 1.0})
+		double deltaEscape;
+
+		@StringParameter({"alpha", "0.5"})
+		String delta1Vac;
+
+		@IntParameter({1, 2})
+		int testFactor;
+
+		@Parameter({0.0, 0.05, 0.1})
+		double testRateJune;
+
+//		@StringParameter({"no"})
+//		String christmasModel;
+
+//		@IntParameter({1, 2, 4, 8})
+//		int testFactorLeisureWork;
 
 //		@EnumParameter(value = SnzBerlinProductionScenario.WeatherModel.class, ignore = {"no", "midpoints_175_175"})
 //		SnzBerlinProductionScenario.WeatherModel weatherModel;
@@ -331,17 +407,17 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 		RunParallel.main(args2);
 	}
-	
+
 	/**
 	 * Adds progression config to the given builder.
-	 * @param params 
+	 * @param params
 	 */
 	private static Transition.Builder progressionConfig(Params params, Transition.Builder builder) {
-		
+
 		Transition transitionRecSus;
-		
+
 		transitionRecSus = Transition.logNormalWithMedianAndStd(180., 10.);
-		
+
 		return builder
 				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
 				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
@@ -369,7 +445,7 @@ public class Calibration implements BatchRun<Calibration.Params> {
 
 				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
 						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
-				
+
 				.from(EpisimPerson.DiseaseStatus.recovered,
 						to(EpisimPerson.DiseaseStatus.susceptible, transitionRecSus))
 				;

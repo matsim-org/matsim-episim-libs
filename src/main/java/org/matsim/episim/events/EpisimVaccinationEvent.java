@@ -15,17 +15,17 @@ public class EpisimVaccinationEvent extends Event implements HasPersonId {
 
 	public static final String EVENT_TYPE = "episimVaccination";
 	public static final String TYPE = "vaccinationType";
-	public static final String RE_VACCINATION = "reVaccination";
+	public static final String N = "n";
 
 	private final Id<Person> personId;
 	private final VaccinationType type;
-	private final boolean reVaccination;
+	private final int n;
 
-	public EpisimVaccinationEvent(double time, Id<Person> personId, VaccinationType type, boolean reVaccination) {
+	public EpisimVaccinationEvent(double time, Id<Person> personId, VaccinationType type, int n) {
 		super(time);
 		this.personId = personId;
 		this.type = type;
-		this.reVaccination = reVaccination;
+		this.n = n;
 	}
 
 
@@ -39,10 +39,26 @@ public class EpisimVaccinationEvent extends Event implements HasPersonId {
 		return personId;
 	}
 
+	public VaccinationType getVaccinationType() {
+		return type;
+	}
+
+	@Deprecated
+	public boolean getReVaccination() {
+		return n > 1;
+	}
+
+	/**
+	 * Number of vaccination. Starts at 1.
+	 */
+	public int getN() {
+		return n;
+	}
+
 	@Override
 	public Map<String, String> getAttributes() {
 		Map<String, String> attr = super.getAttributes();
-		attr.put(RE_VACCINATION, String.valueOf(reVaccination));
+		attr.put(N, String.valueOf(n));
 		attr.put(TYPE, type.toString());
 
 		return attr;

@@ -2,6 +2,8 @@ package org.matsim.episim.model;
 
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.objects.Object2IntAVLTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -38,9 +40,9 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 	}
 
 	@Override
-	public int handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
+	public Object2IntMap<VirusStrain> handleInfections(Map<Id<Person>, EpisimPerson> persons, int iteration) {
 
-		if (initialInfectionsLeft == 0) return 0;
+		if (initialInfectionsLeft == 0) return new Object2IntAVLTreeMap<>();
 
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 
@@ -51,9 +53,12 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
-		int infected = 0;
+//		int infected = 0;
+		Object2IntMap<VirusStrain> infectedByStrain = new Object2IntAVLTreeMap<>();
 
 		for (Map.Entry<VirusStrain, NavigableMap<LocalDate, Integer>> e : episimConfig.getInfections_pers_per_day().entrySet()) {
+
+			infectedByStrain.put(e.getKey(), 0);
 
 			int numInfections = EpisimUtils.findValidEntry(e.getValue(), 1, date);
 
@@ -72,18 +77,19 @@ public class RandomInitialInfections implements InitialInfectionHandler {
 			while (numInfections > 0 && initialInfectionsLeft > 0 && candidates.size() > 0) {
 				EpisimPerson randomPerson = candidates.remove(rnd.nextInt(candidates.size()));
 				if (randomPerson.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible) {
-					randomPerson.setDiseaseStatus(now, EpisimPerson.DiseaseStatus.infectedButNotContagious);
-					randomPerson.setVirusStrain(e.getKey());
+					randomPerson.setInitialInfection(now, e.getKey());
 					log.warn("Person {} has initial infection with {}.", randomPerson.getPersonId(), e.getKey());
 					initialInfectionsLeft--;
 					numInfections--;
-					infected++;
+					infectedByStrain.merge(e.getKey(), 1, Integer::sum);
+//					infected++;
+
 				}
 			}
 		}
 
 
-		return infected;
+		return infectedByStrain;
 	}
 
 	@Override

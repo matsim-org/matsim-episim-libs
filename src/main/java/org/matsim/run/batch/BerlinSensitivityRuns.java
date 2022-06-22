@@ -9,13 +9,13 @@ import org.matsim.episim.TracingConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.ChristmasModel;
-import org.matsim.run.modules.SnzBerlinProductionScenario.DiseaseImport;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Masks;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Restrictions;
+import org.matsim.run.modules.SnzProductionScenario.ChristmasModel;
+import org.matsim.run.modules.SnzProductionScenario.DiseaseImport;
+import org.matsim.run.modules.SnzProductionScenario.Masks;
+import org.matsim.run.modules.SnzProductionScenario.Restrictions;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
-import org.matsim.run.modules.SnzBerlinProductionScenario.WeatherModel;
+import org.matsim.run.modules.SnzProductionScenario.Tracing;
+import org.matsim.run.modules.SnzProductionScenario.WeatherModel;
 
 import javax.annotation.Nullable;
 

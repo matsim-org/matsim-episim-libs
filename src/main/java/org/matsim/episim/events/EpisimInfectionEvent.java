@@ -12,17 +12,19 @@ import java.util.Map;
 /**
  * Notifies when a person got infected by another person.
  */
-public final class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<EpisimInfectionEvent> {
+public class EpisimInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
 
 	// TODO: hasLink or hasCoord?
 
-	static final String EVENT_TYPE = "episimInfection";
+	public static final String EVENT_TYPE = "episimInfection";
+
 	static final String INFECTOR = "infector";
 	static final String CONTAINER = "container";
 	static final String INFECTION_TYPE = "infectionType";
 	static final String VIRUS_STRAIN = "virusStrain";
 	static final String PROBABILITY = "probability";
 	static final String GROUP_SIZE = "groupSize";
+	static final String ANTIBODIES = "antibodies";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
@@ -31,13 +33,14 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId, Co
 	private final int groupSize;
 	private final VirusStrain virusStrain;
 	private final double probability;
+	private final double antibodies;
 
 
 	/**
 	 * Constructor.
 	 */
 	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-								int groupSize, VirusStrain strain, double probability) {
+								int groupSize, VirusStrain strain, double probability, double antibodies) {
 		super(time);
 
 		this.personId = personId;
@@ -47,6 +50,7 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId, Co
 		this.groupSize = groupSize;
 		this.virusStrain = strain;
 		this.probability = probability;
+		this.antibodies = antibodies;
 	}
 
 	@Override
@@ -80,7 +84,7 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId, Co
 	/**
 	 * Variant which the person was infected with.
 	 */
-	public VirusStrain getStrain() {
+	public VirusStrain getVirusStrain() {
 		return virusStrain;
 	}
 
@@ -88,12 +92,15 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId, Co
 		return groupSize;
 	}
 
-	public VirusStrain getVirusStrain() {
-		return virusStrain;
-	}
-
 	public double getProbability() {
 		return probability;
+	}
+
+	/**
+	 * Antibodies against the infecting strain.
+	 */
+	public double getAntibodies() {
+		return antibodies;
 	}
 
 	@Override
@@ -106,17 +113,23 @@ public final class EpisimInfectionEvent extends Event implements HasPersonId, Co
 		attr.put(GROUP_SIZE, Integer.toString(groupSize));
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
+		attr.put(ANTIBODIES, Double.toString(antibodies));
 
 		return attr;
 	}
 
 	@Override
-	public int compareTo(EpisimInfectionEvent o) {
-
+	public int compareTo(Event obj) {
 		// Defines a stable ordering for events
 
-		if (getTime() != o.getTime())
-			return Double.compare(getTime(), o.getTime());
+		if (getTime() != obj.getTime())
+			return Double.compare(getTime(), obj.getTime());
+
+		EpisimInfectionEvent o;
+		if (obj instanceof EpisimInfectionEvent)
+			o = (EpisimInfectionEvent) obj;
+		else
+			return 1;
 
 		if (infectorId != o.infectorId)
 			return infectorId.compareTo(o.infectorId);

@@ -1,4 +1,4 @@
-package org.matsim.episim.model;
+package org.matsim.episim.model.vaccination;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -7,6 +7,7 @@ import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
 import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.model.vaccination.VaccinationByAge;
 
 import java.time.LocalDate;
 import java.util.HashMap;

@@ -132,7 +132,7 @@ public class StrainPaperAdaptivePolicy implements BatchRun<StrainPaperAdaptivePo
 		Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 		infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayB117.put(LocalDate.parse(params.b117date), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		double vaccineEffectiveness = vaccinationConfig.getParams(VaccinationType.generic).getEffectiveness();
 
@@ -143,11 +143,11 @@ VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, Va
 virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.b117inf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setReVaccineEffectiveness(1.0);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.b117inf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setReVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.05 / (1-vaccineEffectiveness));
 
 
 

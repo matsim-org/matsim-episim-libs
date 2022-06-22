@@ -47,12 +47,23 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 	private static final Logger log = LogManager.getLogger(FixedPolicy.class);
 
+	private final double hospitalScale;
+
 	/**
 	 * Constructor.
 	 */
 	@Inject
 	public FixedPolicy(@Named("policy") Config config) {
 		super(config);
+
+		if (config.hasPath("hospital")) {
+			Config c = config.getConfig("hospital");
+			if (c.hasPath("scale"))
+				hospitalScale = c.getDouble("scale");
+			else
+				hospitalScale = 1d;
+		} else
+			hospitalScale = 1d;
 	}
 
 	/**
@@ -125,7 +136,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 				if (rf < 0)
 					log.warn("Remaining fraction smaller 0: {} (critical/sick: {}/{}, total: {})", rf, report.nCritical, report.nSeriouslySick, report.nTotal());
 
-				entry.getValue().setRemainingFraction(rf);
+				entry.getValue().setRemainingFraction(rf / hospitalScale);
 			}
 
 		}
@@ -387,7 +398,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 					throw new IllegalArgumentException("The interpolation is invalid. RemainingFraction and contact intensity correction are undefined.");
 
 				restrict(today.toString(), new Restriction(Double.isNaN(r) ? null : r, Double.isNaN(e) ? null : e,
-						null, null, null, null, null, new HashMap<String, Double>(), null, restriction), activities);
+						null, null, null, null, null, new HashMap<String, Double>(), null, null, restriction), activities);
 				today = today.plusDays(1);
 				day++;
 			}
@@ -467,6 +478,16 @@ public final class FixedPolicy extends ShutdownPolicy {
 
 			return this;
 		}
+
+
+		/**
+		 * Set scaling for remaining fraction when regression is used.
+		 */
+		public ConfigBuilder setHospitalScale(double scale) {
+			params.put("hospital", Map.of("scale", scale));
+			return this;
+		}
+
 	}
 
 }

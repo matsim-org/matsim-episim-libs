@@ -8,17 +8,23 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.TestingModel;
+import org.matsim.episim.model.vaccination.VaccinationByAge;
+import org.matsim.episim.model.vaccination.VaccinationModel;
+import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
+
+import static org.matsim.episim.model.Transition.to;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
@@ -69,7 +75,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonality(1.0);
 //		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -116,14 +122,69 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	}
 
 	/**
+	 * Configure default christmas model.
+	 */
+	public static void configureChristmasModel(ChristmasModel christmasModel, Map<LocalDate, DayOfWeek> inputDays, FixedPolicy.ConfigBuilder builder) {
+
+		inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
+
+		inputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
+		inputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
+
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			double fraction = 0.5925;
+
+			if (christmasModel == ChristmasModel.restrictive) {
+				builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
+			}
+			if (christmasModel == ChristmasModel.permissive) {
+				builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
+				builder.restrict(LocalDate.parse("2020-12-31"), 1.0, act);
+				builder.restrict(LocalDate.parse("2021-01-02"), fraction, act);
+			}
+		}
+
+	}
+
+
+	/**
+	 * Configure easter model.
+	 */
+	protected static void configureEasterModel(Map<LocalDate, DayOfWeek> inputDays, FixedPolicy.ConfigBuilder builder) {
+		inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
+		inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
+
+		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
+			if (act.contains("educ")) continue;
+			double fraction = 0.72;
+			builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
+			builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
+		}
+	}
+
+
+	/**
 	 * Configure outdoor fractions for weather model.
 	 */
-	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather) {
+	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather, double maxOutdoorFraction) {
 		if (weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(weather, avgWeather, 0.5, midpoint1, midpoint2, 5.);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0, maxOutdoorFraction);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
@@ -140,88 +201,148 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	 */
 	public static void configureVaccines(VaccinationConfigGroup vaccinationConfig, int population) {
 
-		double effectivnessMRNA = 0.7;
-		double factorShowingSymptomsMRNA = 0.05 / (1 - effectivnessMRNA); //95% protection against symptoms
-		double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
-		int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
-		vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-				.setDaysBeforeFullEffect(fullEffectMRNA)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-						.atDay(1, 0.0)
-						.atFullEffect(effectivnessMRNA)
-						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-						.atDay(1, 0.0)
-						.atFullEffect(effectivnessMRNA)
-						.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-						.atDay(1, 1.0)
-						.atFullEffect(factorShowingSymptomsMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-						.atDay(1, 1.0)
-						.atFullEffect(factorShowingSymptomsMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-						.atDay(1, 1.0)
-						.atFullEffect(factorSeriouslySickMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-						.atDay(1, 1.0)
-						.atFullEffect(factorSeriouslySickMRNA)
-						.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-		;
+		//wildtype and alpha
+		{
+			double effectivnessMRNA = 0.7;
+			double factorShowingSymptomsMRNA = 0.05 / (1 - effectivnessMRNA); //95% protection against symptoms
+			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
+			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setDaysBeforeFullEffect(fullEffectMRNA)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+			;
 
-		double effectivnessVector = 0.5;
-		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
-		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
-		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+			double effectivnessVector = 0.5;
+			double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
+			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
+			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
 
-		vaccinationConfig.getOrAddParams(VaccinationType.vector)
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
+					.setDaysBeforeFullEffect(fullEffectVector)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessVector)
+							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
+							.atDay(1, 0.0)
+							.atFullEffect(effectivnessVector)
+							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
+							.atDay(1, 1.0)
+							.atFullEffect(factorShowingSymptomsVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
+							.atDay(1, 1.0)
+							.atFullEffect(factorSeriouslySickVector)
+							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
+					);
+		}
+
+		//delta
+		{
+			double effectivnessMRNA = 0.7;
+			double factorShowingSymptomsMRNA =  0.12 / (1 - effectivnessMRNA);
+			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA);
+			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
+			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
+					.setDaysBeforeFullEffect(fullEffectMRNA)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 0.0)
+							.atDay(fullEffectMRNA-7, effectivnessMRNA/2.)
+							.atFullEffect(effectivnessMRNA)
+							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 1.0)
+							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
+							.atFullEffect(factorShowingSymptomsMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
+							.atDay(1, 1.0)
+							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
+							.atFullEffect(factorSeriouslySickMRNA)
+							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
+					)
+					;
+
+			double effectivnessVector = 0.7 * 0.5/0.7;
+			double factorShowingSymptomsVector = 0.32 / (1 - effectivnessVector);
+			double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector);
+			int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+
+			vaccinationConfig.getOrAddParams(VaccinationType.vector)
 				.setDaysBeforeFullEffect(fullEffectVector)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
+						.atDay(fullEffectVector-7, effectivnessVector/2.)
 						.atFullEffect(effectivnessVector)
 						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 				)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-						.atDay(1, 0.0)
-						.atFullEffect(effectivnessVector)
-						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
+						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
 						.atFullEffect(factorShowingSymptomsVector)
 						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
-						.atFullEffect(factorShowingSymptomsVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-						.atDay(1, 1.0)
+						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
 						.atFullEffect(factorSeriouslySickVector)
 						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-						.atDay(1, 1.0)
-						.atFullEffect(factorSeriouslySickVector)
-						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-				);
+				;
+
+		}
 
 
 		// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
 
 		Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
 
-		share.put(LocalDate.parse("2020-01-01"), Map.of(VaccinationType.mRNA, 1d, VaccinationType.vector, 0d));
+		share.put(LocalDate.parse("2020-12-01"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2020-12-28"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2021-01-04"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2021-01-11"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
@@ -246,15 +367,26 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		share.put(LocalDate.parse("2021-05-24"), Map.of(VaccinationType.mRNA, 0.67d, VaccinationType.vector, 0.33d));
 		share.put(LocalDate.parse("2021-05-31"), Map.of(VaccinationType.mRNA, 0.72d, VaccinationType.vector, 0.28d));
 		share.put(LocalDate.parse("2021-06-07"), Map.of(VaccinationType.mRNA, 0.74d, VaccinationType.vector, 0.26d));
-		share.put(LocalDate.parse("2021-06-14"), Map.of(VaccinationType.mRNA, 0.79d, VaccinationType.vector, 0.21d));
+		share.put(LocalDate.parse("2021-06-14"), Map.of(VaccinationType.mRNA, 0.80d, VaccinationType.vector, 0.20d));
 		share.put(LocalDate.parse("2021-06-21"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
 		share.put(LocalDate.parse("2021-06-28"), Map.of(VaccinationType.mRNA, 0.91d, VaccinationType.vector, 0.09d));
 		share.put(LocalDate.parse("2021-07-05"), Map.of(VaccinationType.mRNA, 0.91d, VaccinationType.vector, 0.09d));
 		share.put(LocalDate.parse("2021-07-12"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
 		share.put(LocalDate.parse("2021-07-19"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
 		share.put(LocalDate.parse("2021-07-26"), Map.of(VaccinationType.mRNA, 0.86d, VaccinationType.vector, 0.14d));
-		share.put(LocalDate.parse("2021-08-02"), Map.of(VaccinationType.mRNA, 0.85d, VaccinationType.vector, 0.15d));
-		share.put(LocalDate.parse("2021-08-09"), Map.of(VaccinationType.mRNA, 0.86d, VaccinationType.vector, 0.14d));
+		share.put(LocalDate.parse("2021-08-02"), Map.of(VaccinationType.mRNA, 0.84d, VaccinationType.vector, 0.16d));
+		share.put(LocalDate.parse("2021-08-09"), Map.of(VaccinationType.mRNA, 0.84d, VaccinationType.vector, 0.16d));
+		share.put(LocalDate.parse("2021-08-16"), Map.of(VaccinationType.mRNA, 0.84d, VaccinationType.vector, 0.16d));
+		share.put(LocalDate.parse("2021-08-23"), Map.of(VaccinationType.mRNA, 0.85d, VaccinationType.vector, 0.15d));
+		share.put(LocalDate.parse("2021-08-30"), Map.of(VaccinationType.mRNA, 0.86d, VaccinationType.vector, 0.14d));
+		share.put(LocalDate.parse("2021-09-06"), Map.of(VaccinationType.mRNA, 0.85d, VaccinationType.vector, 0.15d));
+		share.put(LocalDate.parse("2021-09-13"), Map.of(VaccinationType.mRNA, 0.84d, VaccinationType.vector, 0.16d));
+		share.put(LocalDate.parse("2021-09-20"), Map.of(VaccinationType.mRNA, 0.84d, VaccinationType.vector, 0.16d));
+		share.put(LocalDate.parse("2021-09-27"), Map.of(VaccinationType.mRNA, 0.86d, VaccinationType.vector, 0.14d));
+		share.put(LocalDate.parse("2021-10-04"), Map.of(VaccinationType.mRNA, 0.87d, VaccinationType.vector, 0.13d));
+		share.put(LocalDate.parse("2021-10-11"), Map.of(VaccinationType.mRNA, 0.89d, VaccinationType.vector, 0.11d));
+		share.put(LocalDate.parse("2021-10-18"), Map.of(VaccinationType.mRNA, 0.89d, VaccinationType.vector, 0.11d));
+
 
 		vaccinationConfig.setVaccinationShare(share);
 
@@ -290,6 +422,20 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
+
+	}
+
+	public static void configureStrains(EpisimConfigGroup episimConfig, VirusStrainConfigGroup virusStrainConfig) {
+
+
+		Map<LocalDate, Integer> infPerDayALPHA = new HashMap<>();
+		infPerDayALPHA.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayALPHA.put(LocalDate.parse("2021-01-15"), 4);
+		infPerDayALPHA.put(LocalDate.parse("2021-01-22"), 1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayALPHA);
+
+		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.65);
+		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 	}
 
@@ -371,11 +517,9 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 	public enum Vaccinations {yes, no}
 
-	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
-
 	public enum ChristmasModel {no, restrictive, permissive}
 
-	public enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
+	public enum WeatherModel {no, midpoints_175_175, midpoints_185_250, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
 
 	public enum AdjustRestrictions {yes, no}
 
@@ -387,31 +531,41 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	 * Abstract builder with default config options.
 	 */
 	public abstract static class Builder<T extends SnzProductionScenario> {
-		private int importOffset = 0;
-		private int sample = 25;
-		private DiseaseImport diseaseImport = DiseaseImport.yes;
-		private Restrictions restrictions = Restrictions.yes;
-		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
-		private Masks masks = Masks.yes;
-		private Tracing tracing = Tracing.yes;
-		private Vaccinations vaccinations = Vaccinations.yes;
-		private ChristmasModel christmasModel = ChristmasModel.restrictive;
-		private EasterModel easterModel = EasterModel.no;
-		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
-		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
-		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
-		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
+		int importOffset = 0;
+		int sample = 25;
+		DiseaseImport diseaseImport = DiseaseImport.yes;
+		Restrictions restrictions = Restrictions.yes;
+		AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
+		Masks masks = Masks.yes;
+		Tracing tracing = Tracing.yes;
+		Vaccinations vaccinations = Vaccinations.yes;
+		ChristmasModel christmasModel = ChristmasModel.restrictive;
+		EasterModel easterModel = EasterModel.no;
+		WeatherModel weatherModel = WeatherModel.midpoints_185_250;
+		EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
+		Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
+		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
-		private double imprtFctMult = 1.;
-		private double importFactorBeforeJune = 4.;
-		private double importFactorAfterJune = 0.5;
+		Class<? extends TestingModel> testingModel = DefaultTestingModel.class;
 
-		private LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
+		double imprtFctMult = 1.;
+		double importFactorBeforeJune = 4.;
+		double importFactorAfterJune = 0.5;
+
+		LocationBasedRestrictions locationBasedRestrictions = LocationBasedRestrictions.no;
 
 		/**
 		 * Build the scenario module.
 		 */
 		public abstract T build();
+
+		/**
+		 * Use {@link #build()}. This method is only here to avoid changes of old batch runs for now.
+		 */
+		@Deprecated
+		public T createSnzBerlinProductionScenario() {
+			return build();
+		}
 
 		public Builder<T> setImportFactorBeforeJune(double importFactorBeforeJune) {
 			this.importFactorBeforeJune = importFactorBeforeJune;
@@ -482,6 +636,10 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
+		public Builder<T> setTestingModel(Class<? extends TestingModel> testingModel) {
+			this.testingModel = testingModel;
+			return this;
+		}
 
 		public Builder<T> setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
 			this.activityHandling = activityHandling;
@@ -497,6 +655,46 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
+	}
+
+
+	/**
+	 * Adds progression config to the given builder.
+	 * @param params
+	 */
+	static Transition.Builder progressionConfig(Transition.Builder builder) {
+
+		return builder
+				// Inkubationszeit: Die Inkubationszeit [ ... ] liegt im Mittel (Median) bei 5–6 Tagen (Spannweite 1 bis 14 Tage)
+				.from(EpisimPerson.DiseaseStatus.infectedButNotContagious,
+						to(EpisimPerson.DiseaseStatus.contagious, Transition.fixed(0)))
+
+// Dauer Infektiosität:: Es wurde geschätzt, dass eine relevante Infektiosität bereits zwei Tage vor Symptombeginn vorhanden ist und die höchste Infektiosität am Tag vor dem Symptombeginn liegt
+// Dauer Infektiosität: Abstrichproben vom Rachen enthielten vermehrungsfähige Viren bis zum vierten, aus dem Sputum bis zum achten Tag nach Symptombeginn
+				.from(EpisimPerson.DiseaseStatus.contagious,
+						to(EpisimPerson.DiseaseStatus.showingSymptoms, Transition.logNormalWithMedianAndStd(6., 6.)),    //80%
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))            //20%
+
+// Erkankungsbeginn -> Hospitalisierung: Eine Studie aus Deutschland zu 50 Patienten mit eher schwereren Verläufen berichtete für alle Patienten eine mittlere (Median) Dauer von vier Tagen (IQR: 1–8 Tage)
+				.from(EpisimPerson.DiseaseStatus.showingSymptoms,
+						to(EpisimPerson.DiseaseStatus.seriouslySick, Transition.logNormalWithMedianAndStd(5., 5.)),
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(8., 8.)))
+
+// Hospitalisierung -> ITS: In einer chinesischen Fallserie betrug diese Zeitspanne im Mittel (Median) einen Tag (IQR: 0–3 Tage)
+				.from(EpisimPerson.DiseaseStatus.seriouslySick,
+						to(EpisimPerson.DiseaseStatus.critical, Transition.logNormalWithMedianAndStd(1., 1.)),
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(14., 14.)))
+
+// Dauer des Krankenhausaufenthalts: „WHO-China Joint Mission on Coronavirus Disease 2019“ wird berichtet, dass milde Fälle im Mittel (Median) einen Krankheitsverlauf von zwei Wochen haben und schwere von 3–6 Wochen
+				.from(EpisimPerson.DiseaseStatus.critical,
+						to(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical, Transition.logNormalWithMedianAndStd(21., 21.)))
+
+				.from(EpisimPerson.DiseaseStatus.seriouslySickAfterCritical,
+						to(EpisimPerson.DiseaseStatus.recovered, Transition.logNormalWithMedianAndStd(7., 7.)))
+
+				.from(EpisimPerson.DiseaseStatus.recovered,
+						to(EpisimPerson.DiseaseStatus.susceptible, Transition.fixed(1)))
+				;
 	}
 
 }

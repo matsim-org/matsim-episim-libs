@@ -82,6 +82,7 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		private static final String STRAIN = "strain";
 		private static final String INFECTIOUSNESS = "infectiousness";
 		private static final String FACTOR_SERIOUSLY_SICK = "factorSeriouslySick";
+		private static final String FACTOR_CRITICAL = "factorCritical";
 		private static final String FACTOR_SERIOUSLY_SICK_VAC = "factorSeriouslySickVaccinated";
 
 		/**
@@ -98,6 +99,11 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		 * Factor for probability
 		 */
 		private double factorSeriouslySick = 1.0;
+
+		/**
+		 * Factor for critical probability.
+		 */
+		private double factorCritical = 1.0;
 
 		/**
 		 * Factor for probability when person is vaccinated
@@ -156,6 +162,16 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		@StringGetter(FACTOR_SERIOUSLY_SICK)
 		public double getFactorSeriouslySick() {
 			return factorSeriouslySick;
+		}
+
+		@StringGetter(FACTOR_CRITICAL)
+		public double getFactorCritical() {
+			return factorCritical;
+		}
+
+		@StringSetter(FACTOR_CRITICAL)
+		public void setFactorCritical(double factorCritical) {
+			this.factorCritical = factorCritical;
 		}
 
 		/**

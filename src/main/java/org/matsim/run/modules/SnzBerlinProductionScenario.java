@@ -20,16 +20,13 @@
 
 package org.matsim.run.modules;
 
-import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import org.matsim.api.core.v01.Scenario;
+import com.google.inject.multibindings.Multibinder;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.config.groups.VspExperimentalConfigGroup;
-import org.matsim.core.controler.ControlerUtils;
-import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.*;
-import org.matsim.episim.TracingConfigGroup.CapacityType;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.DefaultParticipationModel;
@@ -37,13 +34,15 @@ import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.input.CreateAdjustedRestrictionsFromCSV;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.model.input.RestrictionInput;
+import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
 import org.matsim.episim.policy.*;
 import org.matsim.vehicles.VehicleType;
+import org.matsim.episim.model.vaccination.VaccinationFromData;
+import org.matsim.episim.model.vaccination.VaccinationModel;
 
 import javax.inject.Singleton;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
@@ -51,129 +50,23 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 /**
  * Scenario for Berlin using Senozon events for different weekdays.
  */
-public final class SnzBerlinProductionScenario extends AbstractModule {
+public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
-	public static class Builder {
-		private int importOffset = 0;
-		private int sample = 25;
-		private DiseaseImport diseaseImport = DiseaseImport.yes;
-		private Restrictions restrictions = Restrictions.yes;
-		private AdjustRestrictions adjustRestrictions = AdjustRestrictions.no;
-		private Masks masks = Masks.yes;
-		private Tracing tracing = Tracing.yes;
-		private Vaccinations vaccinations = Vaccinations.yes;
-		private ChristmasModel christmasModel = ChristmasModel.restrictive;
-		private EasterModel easterModel = EasterModel.no;
-		private WeatherModel weatherModel = WeatherModel.midpoints_175_250;
+	public static class Builder extends SnzProductionScenario.Builder<SnzBerlinProductionScenario> {
+
 		private Snapshot snapshot = Snapshot.no;
-		private EpisimConfigGroup.ActivityHandling activityHandling = EpisimConfigGroup.ActivityHandling.startOfDay;
-		private Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
-		private Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
-
-		private double imprtFctMult = 1.;
-		private double importFactorBeforeJune = 4.;
-		private double importFactorAfterJune = 0.5;
 
 		private EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions = EpisimConfigGroup.DistrictLevelRestrictions.no;
 		private LocationBasedContactIntensity locationBasedContactIntensity = LocationBasedContactIntensity.no;
 		private AdaptiveRestrictions adaptiveRestrictions = AdaptiveRestrictions.no;
 
-
-		public Builder setImportFactorBeforeJune(double importFactorBeforeJune) {
-			this.importFactorBeforeJune = importFactorBeforeJune;
-			return this;
-		}
-
-		public Builder setImportFactorAfterJune(double importFactorAfterJune) {
-			this.importFactorAfterJune = importFactorAfterJune;
-			return this;
-		}
-
-		public Builder setSample(int sample) {
-			this.sample = sample;
-			return this;
-		}
-
-		public Builder setDiseaseImport(DiseaseImport diseaseImport) {
-			this.diseaseImport = diseaseImport;
-			return this;
-		}
-
-		public Builder setRestrictions(Restrictions restrictions) {
-			this.restrictions = restrictions;
-			return this;
-		}
-
-		public Builder setAdjustRestrictions(AdjustRestrictions adjustRestrictions) {
-			this.adjustRestrictions = adjustRestrictions;
-			return this;
-		}
-
-		public Builder setMasks(Masks masks) {
-			this.masks = masks;
-			return this;
-		}
-
-		public Builder setTracing(Tracing tracing) {
-			this.tracing = tracing;
-			return this;
-		}
-
-		public Builder setVaccinations(Vaccinations vaccinations) {
-			this.vaccinations = vaccinations;
-			return this;
-		}
-
-		public Builder setChristmasModel(ChristmasModel christmasModel) {
-			this.christmasModel = christmasModel;
-			return this;
-		}
-
-		public Builder setEasterModel(EasterModel easterModel) {
-			this.easterModel = easterModel;
-			return this;
-		}
-
-		public Builder setWeatherModel(WeatherModel weatherModel) {
-			this.weatherModel = weatherModel;
-			return this;
-		}
-
 		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
-			return this;
-		}
-
-		public Builder setInfectionModel(Class<? extends InfectionModel> infectionModel) {
-			this.infectionModel = infectionModel;
-			return this;
-		}
-
-		public Builder setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
-			this.vaccinationModel = vaccinationModel;
-			return this;
-		}
-
-		public Builder setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
-			this.activityHandling = activityHandling;
-			return this;
-		}
-
-		public SnzBerlinProductionScenario createSnzBerlinProductionScenario() {
-			return new SnzBerlinProductionScenario(this);
-		}
-
-		public Builder setImportOffset(int importOffset) {
-			this.importOffset = importOffset;
-			return this;
-		}
-
-		public Builder setImportFactor(double imprtFctMult) {
-			this.imprtFctMult = imprtFctMult;
 			return this;
 		}
 
@@ -181,43 +74,26 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 			this.locationBasedRestrictions = locationBasedRestrictions;
 			return this;
 		}
-
 		public Builder setLocationBasedContactIntensity(LocationBasedContactIntensity localCI) {
 			this.locationBasedContactIntensity = localCI;
 			return this;
 		}
-
 		public Builder setAdaptiveRestrictions(AdaptiveRestrictions adaptiveRestrictions) {
 			this.adaptiveRestrictions = adaptiveRestrictions;
 			return this;
 		}
 
+		@Override
+		public SnzBerlinProductionScenario build() {
+			return new SnzBerlinProductionScenario(this);
+		}
 	}
 
-	public static enum DiseaseImport {yes, onlySpring, no}
-
-	public static enum Restrictions {yes, no, onlyEdu, allExceptSchoolsAndDayCare, allExceptUniversities, allExceptEdu}
-
-	public static enum Masks {yes, no}
-
-	public static enum Tracing {yes, no}
-
-	public static enum Vaccinations {yes, no}
-
-	public static enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
-
-	public static enum ChristmasModel {no, restrictive, permissive}
-
-	public static enum WeatherModel {no, midpoints_175_175, midpoints_175_250, midpoints_200_250, midpoints_175_200, midpoints_200_200}
-
-	public static enum AdjustRestrictions {yes, no}
-
-	public static enum EasterModel {yes, no}
+	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
 	public static enum LocationBasedContactIntensity {yes, no}
 
 	public static enum AdaptiveRestrictions {yesGlobal, yesLocal, no}
-
 	private final int sample;
 	private final int importOffset;
 	private final DiseaseImport diseaseImport;
@@ -278,14 +154,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		this.adaptiveRestrictions = builder.adaptiveRestrictions;
 	}
 
-	public static void interpolateImport(Map<LocalDate, Integer> importMap, double importFactor, LocalDate start, LocalDate end, double a, double b) {
-		int days = end.getDayOfYear() - start.getDayOfYear();
-		for (int i = 1; i <= days; i++) {
-			double fraction = (double) i / days;
-			importMap.put(start.plusDays(i), (int) Math.round(importFactor * (a + fraction * (b - a))));
-		}
-	}
-
 	/**
 	 * Resolve input for sample size. Smaller than 25pt samples are in a different subfolder.
 	 */
@@ -301,6 +169,7 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		bind(InfectionModel.class).to(infectionModel).in(Singleton.class);
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 
+		//TODO: this is not in the cologne prod scenario, is it still needed?
 		if (adjustRestrictions == AdjustRestrictions.yes) {
 			bind(ShutdownPolicy.class).to(AdjustedPolicy.class).in(Singleton.class);
 			if (adaptiveRestrictions != AdaptiveRestrictions.no) {
@@ -316,18 +185,32 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
 				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
 		}
+
+		bind(VaccinationFromData.Config.class).toInstance(
+				VaccinationFromData.newConfig("11000")
+						.withAgeGroup("05-11", 237886.9)
+						.withAgeGroup("12-17", 182304.4)
+						.withAgeGroup("18-59", 2138015)
+						.withAgeGroup("60+", 915851)
+		);
+
+		// TODO: from Cologne, do we need?
+		//		Multibinder.newSetBinder(binder(), SimulationListener.class)
+		//				.addBinding().to(HouseholdSusceptibility.class);
+
+
 	}
 
 	@Provides
 	@Singleton
 	public Config config() {
 
-//		if (this.sample != 25 && this.sample != 100)
-//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
+		//		if (this.sample != 25 && this.sample != 100)
+		//			throw new RuntimeException("Sample size not calibrated! Currently only 25% is calibrated. Comment this line out to continue.");
 
+		//general config
 		Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
-		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		config.global().setRandomSeed(7564655870752979346L);
 
@@ -335,15 +218,19 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		// overwritten later, if location-based restrictions implemented
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+
+		//episim config
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
 		if (locationBasedContactIntensity == LocationBasedContactIntensity.no) {
-			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
-					.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
-			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
-					.addDays(DayOfWeek.SATURDAY);
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+				.addDays(DayOfWeek.SATURDAY);
 
-			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
-					.addDays(DayOfWeek.SUNDAY);
+		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+				.addDays(DayOfWeek.SUNDAY);
 		} else {
 			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_withLivingSpace.xml.gz", sample))
 					.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
@@ -358,113 +245,75 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		episimConfig.setActivityHandling(activityHandling);
 
-		episimConfig.setThreads(6);
+		//		episimConfig.setThreads(6); // TODO: check repeat from below
 
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
-//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
-//				.addDays(DayOfWeek.SATURDAY);
-//
-//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
-//				.addDays(DayOfWeek.SUNDAY);
+		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
+		//				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+		//
+		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split.xml.gz", sample))
+		//				.addDays(DayOfWeek.SATURDAY);
+		//
+		//		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
+		//				.addDays(DayOfWeek.SUNDAY);
 
 		episimConfig.setCalibrationParameter(1.7E-5 * 0.8);
 		episimConfig.setStartDate("2020-02-25");
 		episimConfig.setFacilitiesHandling(EpisimConfigGroup.FacilitiesHandling.snz);
 		episimConfig.setSampleSize(this.sample / 100.);
 		episimConfig.setHospitalFactor(0.5);
-		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
 		episimConfig.setThreads(8);
+		episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
-		if (this.snapshot != Snapshot.no) episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
+		//progression model
+		//		episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
+		episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());
 
-		//inital infections and import
+
+		//snapshot
+		if (this.snapshot != Snapshot.no)
+			episimConfig.setStartFromSnapshot(INPUT.resolve("snapshots/" + snapshot + ".zip").toString());
+
+		//inital infections and import // TODO: this is done differently in Cologne
 		episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		if (this.diseaseImport != DiseaseImport.no) {
-			episimConfig.setInitialInfectionDistrict(null);
-			Map<LocalDate, Integer> importMap = new HashMap<>();
-			interpolateImport(importMap, imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-02-24").plusDays(importOffset),
-					LocalDate.parse("2020-03-09").plusDays(importOffset), 0.9, 23.1);
-			interpolateImport(importMap, imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-09").plusDays(importOffset),
-					LocalDate.parse("2020-03-23").plusDays(importOffset), 23.1, 3.9);
-			interpolateImport(importMap, imprtFctMult * importFactorBeforeJune, LocalDate.parse("2020-03-23").plusDays(importOffset),
-					LocalDate.parse("2020-04-13").plusDays(importOffset), 3.9, 0.1);
-			if (this.diseaseImport == DiseaseImport.yes) {
-				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-06-08").plusDays(importOffset),
-						LocalDate.parse("2020-07-13").plusDays(importOffset), 0.1, 2.7);
-				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-07-13").plusDays(importOffset),
-						LocalDate.parse("2020-08-10").plusDays(importOffset), 2.7, 17.9);
-				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-08-10").plusDays(importOffset),
-						LocalDate.parse("2020-09-07").plusDays(importOffset), 17.9, 6.1);
-				interpolateImport(importMap, imprtFctMult * importFactorAfterJune, LocalDate.parse("2020-10-26").plusDays(importOffset),
-						LocalDate.parse("2020-12-21").plusDays(importOffset), 6.1, 1.1);
-			}
-			episimConfig.setInfections_pers_per_day(importMap);
+
+			SnzProductionScenario.configureDiseaseImport(
+					episimConfig,
+					diseaseImport,
+					importOffset,
+					imprtFctMult,
+					importFactorBeforeJune,
+					importFactorAfterJune
+			);
+
 		} else {
 			episimConfig.setInitialInfectionDistrict("Berlin");
 			episimConfig.setCalibrationParameter(2.54e-5);
 		}
 
+		//age-dependent infection model
 		if (this.infectionModel != AgeDependentInfectionModelWithSeasonality.class) {
 			if (this.diseaseImport == DiseaseImport.yes) {
-				episimConfig.setCalibrationParameter(1.6E-5);
+				episimConfig.setCalibrationParameter(1.6E-5); // TODO: setting calibration param in multiple places may be error-prone
 			} else {
 				episimConfig.setCalibrationParameter(1.6E-5 * 2.54e-5 / 1.7E-5);
 			}
 		}
 
-		int spaces = 20;
-
 		//contact intensities
-		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-//		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
-		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(11.).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(5.5).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(11.).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("shop_daily").setContactIntensity(0.88).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("shop_other").setContactIntensity(0.88).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("errands").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("business").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("visit").setContactIntensity(9.24).setSpacesPerFacility(spaces); // 33/3.57
-		episimConfig.getOrAddContainerParams("quarantine_home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
-		episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1);
-
-
-//		if (locationBasedContactIntensity == LocationBasedContactIntensity.yes) {
-//			episimConfig.getOrAddContainerParams("home_15").setContactIntensity(1.47).setSpacesPerFacility(1);
-//			episimConfig.getOrAddContainerParams("home_25").setContactIntensity(0.88).setSpacesPerFacility(1);
-//			episimConfig.getOrAddContainerParams("home_35").setContactIntensity(0.63).setSpacesPerFacility(1);
-//			episimConfig.getOrAddContainerParams("home_45").setContactIntensity(0.49).setSpacesPerFacility(1);
-//			episimConfig.getOrAddContainerParams("home_55").setContactIntensity(0.40).setSpacesPerFacility(1);
-//			episimConfig.getOrAddContainerParams("home_65").setContactIntensity(0.34).setSpacesPerFacility(1);
-//			episimConfig.getOrAddContainerParams("home_75").setContactIntensity(0.29).setSpacesPerFacility(1);
-//
-//			// weighted average of contact intensities (39 m2 per person)
-//			episimConfig.getOrAddContainerParams("home").setContactIntensity(0.56).setSpacesPerFacility(1);
-//
-//		} else {
-//			episimConfig.getOrAddContainerParams("home").setContactIntensity(1.0).setSpacesPerFacility(1); // 33/33
-//		}
-
-		// todo: use the plain 1/v values (1./3.57, 1./33, ...) and multiply theta with 33.  kai, feb'21
+		SnzProductionScenario.configureContactIntensities(episimConfig);
 
 		//restrictions and masks
 		RestrictionInput activityParticipation;
-		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig);
+		SnzBerlinScenario25pct2020.BasePolicyBuilder basePolicyBuilder = new SnzBerlinScenario25pct2020.BasePolicyBuilder(episimConfig); // TODO: should SnzBerlinScenario25pct2020 be absorbed into this class to match Cologne
 		if (adjustRestrictions == AdjustRestrictions.yes) {
 			activityParticipation = new CreateAdjustedRestrictionsFromCSV();
 		} else {
 			activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 		}
 
-		String untilDate = "20210518";
-		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until" + untilDate + ".csv"));
+		String untilDate = "20220204";
+		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 
 		//location based restrictions
 		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
@@ -503,138 +352,90 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 		basePolicyBuilder.setCiCorrections(Map.of());
 		FixedPolicy.ConfigBuilder builder = basePolicyBuilder.buildFixed();
 
+		//curfew TODO: when is the restriction of closing hours lifted? (also for Cologne)
+		builder.restrict("2021-04-24", Restriction.ofClosingHours(22, 5), "leisure", "visit");
+		Map<LocalDate, Double> curfewCompliance = new HashMap<LocalDate, Double>();
+		curfewCompliance.put(LocalDate.parse("2021-04-24"), 1.0);//https://www.berlin.de/aktuelles/berlin/6522691-958092-naechtliche-ausgangsbeschraenkungen-ab-s.html
+		curfewCompliance.put(LocalDate.parse("2021-05-19"), 0.0); //https://www.berlin.de/aktuelles/berlin/6593002-958092-ausgangsbeschraenkungen-gelten-mittwoch-.html
+		episimConfig.setCurfewCompliance(curfewCompliance);
+
+
 		//tracing
 		if (this.tracing == Tracing.yes) {
-			TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
-//			int offset = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), LocalDate.parse("2020-04-01")) + 1);
-			int offset = 46;
-			tracingConfig.setPutTraceablePersonsInQuarantineAfterDay(offset);
-			tracingConfig.setTracingProbability(0.5);
-			tracingConfig.setTracingPeriod_days(2);
-			tracingConfig.setMinContactDuration_sec(15 * 60.);
-			tracingConfig.setQuarantineHouseholdMembers(true);
-			tracingConfig.setEquipmentRate(1.);
-			tracingConfig.setTracingDelay_days(5);
-			tracingConfig.setTraceSusceptible(true);
-			tracingConfig.setCapacityType(CapacityType.PER_PERSON);
-			int tracingCapacity = 200;
-			tracingConfig.setTracingCapacity_pers_per_day(Map.of(
-					LocalDate.of(2020, 4, 1), (int) (tracingCapacity * 0.2),
-					LocalDate.of(2020, 6, 15), tracingCapacity
-			));
+
+			SnzProductionScenario.configureTracing(config, 1.0);
+
 		}
+
+		//christmas and easter models
 		Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 
-		//christmasModel
 		if (this.christmasModel != ChristmasModel.no) {
-			inputDays.put(LocalDate.parse("2020-12-21"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-22"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-23"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-24"), DayOfWeek.SUNDAY);
-			inputDays.put(LocalDate.parse("2020-12-25"), DayOfWeek.SUNDAY);
-			inputDays.put(LocalDate.parse("2020-12-26"), DayOfWeek.SUNDAY);
-
-			inputDays.put(LocalDate.parse("2020-12-28"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-29"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-30"), DayOfWeek.SATURDAY);
-			inputDays.put(LocalDate.parse("2020-12-31"), DayOfWeek.SUNDAY);
-			inputDays.put(LocalDate.parse("2021-01-01"), DayOfWeek.SUNDAY);
-
-			// TODO: this need to be set earlier in the policy builder
-			if (this.adjustRestrictions != AdjustRestrictions.no) {
-				throw new RuntimeException("Christmas model currently only works when adjusted restrictions are switched off!");
-			}
-
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				double fraction = 0.5925;
-
-				if (locationBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.no) {
-					if (this.christmasModel == ChristmasModel.restrictive) {
-						builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
-					}
-					if (this.christmasModel == ChristmasModel.permissive) {
-						builder.restrict(LocalDate.parse("2020-12-24"), 1.0, act);
-						builder.restrict(LocalDate.parse("2020-12-31"), 1.0, act);
-						builder.restrict(LocalDate.parse("2021-01-02"), fraction, act);
-					}
-				} else {
-					if (this.christmasModel == ChristmasModel.restrictive) {
-						builder.restrictWithDistrict(LocalDate.parse("2020-12-24"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					}
-					if (this.christmasModel == ChristmasModel.permissive) {
-						builder.restrictWithDistrict(LocalDate.parse("2020-12-24"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-						builder.restrictWithDistrict(LocalDate.parse("2020-12-31"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-						builder.restrictWithDistrict(LocalDate.parse("2021-01-02"), makeUniformLocalRf(subdistricts, fraction), fraction, act);
-					}
-				}
-			}
+			SnzProductionScenario.configureChristmasModel(christmasModel, inputDays, builder);
 		}
 
 		if (this.easterModel == EasterModel.yes) {
-			inputDays.put(LocalDate.parse("2021-03-08"), DayOfWeek.SUNDAY);
-			inputDays.put(LocalDate.parse("2021-04-02"), DayOfWeek.SUNDAY);
-			inputDays.put(LocalDate.parse("2021-04-05"), DayOfWeek.SUNDAY);
-
-			// TODO: this need to be set earlier in the policy builder
-			if (this.adjustRestrictions != AdjustRestrictions.no) {
-				throw new RuntimeException("Easter model currently only works when adjusted restrictions are switched off!");
-			}
-
-			for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-				if (act.contains("educ")) continue;
-				double fraction = 0.72;
-
-				if (locationBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.no) {
-					builder.restrict(LocalDate.parse("2021-04-02"), 1.0, act);
-					builder.restrict(LocalDate.parse("2021-04-03"), 1.0, act);
-					builder.restrict(LocalDate.parse("2021-04-04"), 1.0, act);
-					builder.restrict(LocalDate.parse("2021-04-05"), 1.0, act);
-					builder.restrict(LocalDate.parse("2021-04-06"), fraction, act);
-				} else {
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-02"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-03"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-04"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-05"), makeUniformLocalRf(subdistricts, 1.0), 1.0, act);
-					builder.restrictWithDistrict(LocalDate.parse("2021-04-06"), makeUniformLocalRf(subdistricts, fraction), fraction, act);
-				}
-			}
+			SnzProductionScenario.configureEasterModel(inputDays, builder);
 		}
-
 
 		episimConfig.setInputDays(inputDays);
 
 		//outdoorFractions
 		if (this.weatherModel != WeatherModel.no) {
-			double midpoint1 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[1]);
-			double midpoint2 = 0.1 * Double.parseDouble(this.weatherModel.toString().split("_")[2]);
-			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutdoorFractions2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210816.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, midpoint1, midpoint2, 5.);
-				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+
+			SnzProductionScenario.configureWeather(episimConfig, weatherModel,
+					INPUT.resolve("tempelhofWeatherUntil20220208.csv").toFile(),
+					INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 1.0)
+			;
+
+
 		} else {
 			episimConfig.setLeisureOutdoorFraction(Map.of(
 					LocalDate.of(2020, 1, 1), 0.)
 			);
 		}
 
-		// TODO: is this still needed with adjusted policy?
 		//leisure & work factor
 		double leisureFactor = 1.6;
 		if (this.restrictions != Restrictions.no) {
-			builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureFactor * (1 - (double) e.get("fraction"))), "leisure");
+			builder.applyToRf("2020-10-15", "2020-12-14", (d, e) -> 1 - leisureFactor * (1 - e), "leisure");
 
 			double workVacFactor = 0.92;
-			builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
-			builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("fraction", workVacFactor * (double) e.get("fraction")), "work", "business");
+			BiFunction<LocalDate, Double, Double> f = (d, e) -> workVacFactor * e;
+			//WorkVac Factors are applied from last school day -> last vacation day (Saturday not Sunday,
+			// if vacation ends on weekend, b/c new restrictions for following week are always set sundays)
+			builder.applyToRf("2020-04-03", "2020-04-17", f, "work", "business");
+			//Sommerferien
+			builder.applyToRf("2020-06-26", "2020-08-07", f, "work", "business");
+			//Herbstferien
+			builder.applyToRf("2020-10-09", "2020-10-23", f, "work", "business");
+			//Weihnachtsferien
+			builder.applyToRf("2020-12-18", "2021-01-01", f, "work", "business");
+			//Winterferien
+			builder.applyToRf("2021-01-29", "2021-02-05", f, "work", "business");
+			//Osterferien
+			builder.applyToRf("2021-03-26", "2021-04-09", f, "work", "business");
+			//Sommerfeirien
+			builder.applyToRf("2021-06-25", "2021-08-06", f, "work", "business");
+			//Herbstferien
+			builder.applyToRf("2021-10-08", "2021-10-22", f, "work", "business");
+			//Weihnachtsferien
+			builder.applyToRf("2021-12-17", "2022-01-04", f, "work", "business");
+			//Winterferien
+			builder.applyToRf("2022-01-28", "2022-02-04", f, "work", "business");
+			// future
+			//Osterferien
+			builder.restrict(LocalDate.parse("2022-04-08"), 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2022-04-23"), 1.0, "work", "business");
+			//Sommerferien
+			builder.restrict(LocalDate.parse("2022-07-07"), 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2022-08-19"), 1.0, "work", "business");
+			//Herbstferien
+			builder.restrict(LocalDate.parse("2022-10-21"), 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2022-11-05"), 1.0, "work", "business");
+			//Weihnachtsferien
+			builder.restrict(LocalDate.parse("2022-12-22"), 0.92, "work", "business");
+			builder.restrict(LocalDate.parse("2023-01-02"), 1.0, "work", "business");
 
 			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
 				// applies same leisure adjustment from above to the localRf
@@ -663,131 +464,32 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 				builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
 				builder.apply("2021-06-25", "2021-08-06", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 
+				builder.apply("2021-10-08", "2021-10-22", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-10-08", "2021-10-22", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				//Weihnachtsferien
+				builder.apply("2021-12-17", "2022-01-04", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-12-17", "2022-01-04", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				//Winterferien
+				builder.apply("2022-01-28", "2022-02-04", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2022-01-28", "2022-02-04", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				//Osterferien
+				builder.apply("2022-04-08", "2022-04-23", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2022-04-08", "2022-04-23", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
 			}
-
-
 		}
 
 
-		// vaccinations
-		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-
+		//vaccinations
 		if (this.vaccinations.equals(Vaccinations.yes)) {
-			double effectivnessMRNA = 0.7;
-			double factorShowingSymptomsMRNA = 0.05 / (1 - effectivnessMRNA); //95% protection against symptoms
-			double factorSeriouslySickMRNA = 0.02 / ((1 - effectivnessMRNA) * factorShowingSymptomsMRNA); //98% protection against severe disease
-			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
-			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
-					.setDaysBeforeFullEffect(fullEffectMRNA)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-							.atDay(1, 0.0)
-							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-					)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-							.atDay(1, 0.0)
-							.atFullEffect(effectivnessMRNA)
-							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-							.atDay(1, 1.0)
-							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-							.atDay(1, 1.0)
-							.atFullEffect(factorShowingSymptomsMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-							.atDay(1, 1.0)
-							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-							.atDay(1, 1.0)
-							.atFullEffect(factorSeriouslySickMRNA)
-							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-					)
-					;
 
-		double effectivnessVector = 0.5;
-		double factorShowingSymptomsVector = 0.25 / (1 - effectivnessVector); //75% protection against symptoms
-		double factorSeriouslySickVector = 0.15 / ((1 - effectivnessVector) * factorShowingSymptomsVector); //85% protection against severe disease
-		int fullEffectVector = 10 * 7; //second shot after 9 weeks, full effect one week after second shot
+			VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 
-		vaccinationConfig.getOrAddParams(VaccinationType.vector)
-			.setDaysBeforeFullEffect(fullEffectVector)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 0.0)
-					.atFullEffect(effectivnessVector)
-					.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 1.0)
-					.atFullEffect(factorShowingSymptomsVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.SARS_CoV_2)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
-					.atDay(1, 1.0)
-					.atFullEffect(factorSeriouslySickVector)
-					.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
-			)
-			;
+			SnzProductionScenario.configureVaccines(vaccinationConfig, 4_800_000);
 
-			// Based on https://experience.arcgis.com/experience/db557289b13c42e4ac33e46314457adc
-
-			Map<LocalDate, Integer> vaccinations = new HashMap<>();
-
-			int population = 4_800_000;
-
-			vaccinations.put(LocalDate.parse("2020-01-01"), 0);
-
-			vaccinations.put(LocalDate.parse("2020-12-27"), (int) (0.003 * population / 6));
-			vaccinations.put(LocalDate.parse("2021-01-02"), (int) ((0.007 - 0.004) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-01-09"), (int) ((0.013 - 0.007) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-01-16"), (int) ((0.017 - 0.013) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-01-23"), (int) ((0.024 - 0.017) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-01-30"), (int) ((0.030 - 0.024) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-02-06"), (int) ((0.034 - 0.030) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-02-13"), (int) ((0.039 - 0.034) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-02-20"), (int) ((0.045 - 0.039) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-02-27"), (int) ((0.057 - 0.045) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-03-06"), (int) ((0.071 - 0.057) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-03-13"), (int) ((0.088 - 0.071) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-03-20"), (int) ((0.105 - 0.088) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-03-27"), (int) ((0.120 - 0.105) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-04-03"), (int) ((0.140 - 0.120) * population / 7));
-			vaccinations.put(LocalDate.parse("2021-04-10"), (int) ((0.183 - 0.140) * population / 7));
-			//extrapolated from 5.4. until 22.4.
-			vaccinations.put(LocalDate.parse("2021-04-17"), (int) ((0.207 - 0.123) * population / 17));
-
-			vaccinations.put(LocalDate.parse("2021-04-22"), (int) ((0.279 - 0.207) * population / 13));
-			vaccinations.put(LocalDate.parse("2021-05-05"), (int) ((0.404 - 0.279) * population / 23));
-			vaccinations.put(LocalDate.parse("2021-05-28"), (int) ((0.484 - 0.404) * population / 14));
-			vaccinations.put(LocalDate.parse("2021-06-11"), (int) ((0.535 - 0.484) * population / 14));
-			vaccinations.put(LocalDate.parse("2021-06-25"), (int) ((0.583 - 0.535) * population / 19));
-			vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
-
-			vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
 		}
-
-
 
 		episimConfig.setPolicy(builder.build());
 
@@ -805,69 +507,6 @@ public final class SnzBerlinProductionScenario extends AbstractModule {
 
 		return localRf;
 	}
-
-	@Provides
-	@Singleton
-	public Scenario scenario(Config config) {
-
-		// guice will use no args constructor by default, we check if this config was initialized
-		// this is only the case when no explicit binding are required
-		if (config.getModules().size() == 0)
-			throw new IllegalArgumentException("Please provide a config module or binding.");
-
-		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
-
-		// save some time for not needed inputs (facilities are needed for location based restrictions)
-		//		if (locationBasedRestrictions == EpisimConfigGroup.DistrictLevelRestrictions.no) {
-		//			config.facilities().setInputFile(null);
-		//		}
-
-		ControlerUtils.checkConfigConsistencyAndWriteToLog(config, "before loading scenario");
-
-		final Scenario scenario = ScenarioUtils.loadScenario(config);
-
-		double capFactor = 1.3;
-
-		for (VehicleType vehicleType : scenario.getVehicles().getVehicleTypes().values()) {
-			switch (vehicleType.getId().toString()) {
-				case "bus":
-					vehicleType.getCapacity().setSeats((int) (70 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (40 * capFactor));
-					// https://de.wikipedia.org/wiki/Stadtbus_(Fahrzeug)#Stehpl%C3%A4tze
-					break;
-				case "metro":
-					vehicleType.getCapacity().setSeats((int) (200 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (550 * capFactor));
-					// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
-					break;
-				case "plane":
-					vehicleType.getCapacity().setSeats((int) (200 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (0 * capFactor));
-					break;
-				case "pt":
-					vehicleType.getCapacity().setSeats((int) (70 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (70 * capFactor));
-					break;
-				case "ship":
-					vehicleType.getCapacity().setSeats((int) (150 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (150 * capFactor));
-					// https://www.berlin.de/tourismus/dampferfahrten/faehren/1824948-1824660-faehre-f10-wannsee-altkladow.html
-					break;
-				case "train":
-					vehicleType.getCapacity().setSeats((int) (250 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (750 * capFactor));
-					// https://de.wikipedia.org/wiki/Stadler_KISS#Technische_Daten_der_Varianten , mehr als ICE (https://inside.bahn.de/ice-baureihen/)
-					break;
-				case "tram":
-					vehicleType.getCapacity().setSeats((int) (84 * capFactor));
-					vehicleType.getCapacity().setStandingRoom((int) (216 * capFactor));
-					// https://mein.berlin.de/ideas/2019-04585/#:~:text=Ein%20Vollzug%20der%20Baureihe%20H,mehr%20Stehpl%C3%A4tze%20zur%20Verf%C3%BCgung%20stehen.
-					break;
-				default:
-					throw new IllegalStateException("Unexpected value=|" + vehicleType.getId().toString() + "|");
-			}
-		}
-
-		return scenario;
-	}
 }
+
+

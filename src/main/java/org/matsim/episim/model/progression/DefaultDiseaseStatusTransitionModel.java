@@ -30,8 +30,7 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 				return EpisimPerson.DiseaseStatus.contagious;
 
 			case contagious:
-				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
-						vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)) : 1d))
+				if (rnd.nextDouble() < getProbaOfTransitioningToShowingSymptoms(person) * getShowingSymptomsFactor(person, vaccinationConfig, day))
 					return EpisimPerson.DiseaseStatus.showingSymptoms;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
@@ -41,22 +40,26 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySickVaccinated() :
 						strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick())
-						* (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes ?
-						vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day)) : 1.0)
-						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
+						* getSeriouslySickFactor(person, vaccinationConfig, day))
+//						* (person.getNumInfections() > 1 ? getFactorRecovered(person, day) : 1.0))
 					return EpisimPerson.DiseaseStatus.seriouslySick;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
 
 			case seriouslySick:
 				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)
-						&& rnd.nextDouble() < getProbaOfTransitioningToCritical(person))
+						&& (rnd.nextDouble() < getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()
+						* getCriticalFactor(person, vaccinationConfig, day)))
 					return EpisimPerson.DiseaseStatus.critical;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
 
 			case critical:
-				return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
+				double proba = getProbaOfTransitioningToDeceased(person);
+				if (proba != 0 && rnd.nextDouble() < proba)
+					return DiseaseStatus.deceased;
+				else
+					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
 
 			case seriouslySickAfterCritical:
 				return EpisimPerson.DiseaseStatus.recovered;
@@ -67,15 +70,15 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 			default:
 				throw new IllegalStateException("No state transition defined for " + person.getDiseaseStatus());
 		}
-	}	
-	
+	}
+
 	/**
 	 * Probability that a person transitions from {@code showingSymptoms} to {@code seriouslySick} when person was already infected.
 	 */
 	protected double getFactorRecovered(EpisimPerson person, int day) {
 
 		int daysSince = person.daysSince(DiseaseStatus.recovered, day);
-		
+
 		//we assume about 20% loss of protection against severe progression every year
 		return Math.min(0.2 * (daysSince / 365), 1.0);
 	}
@@ -96,6 +99,10 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
 		return 0.8;
+	}
+
+	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
+		return 0.0;
 	}
 
 }

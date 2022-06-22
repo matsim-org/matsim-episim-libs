@@ -11,6 +11,8 @@ import org.matsim.episim.policy.Restriction;
 import java.util.Map;
 import java.util.SplittableRandom;
 
+import static org.matsim.episim.model.DefaultInfectionModel.*;
+
 /**
  * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependen additions.
  */
@@ -35,6 +37,7 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 	private double outdoorFactor;
 	private int iteration;
+	private double lastUnVac;
 
 	@Inject
 	AgeAndProgressionDependentInfectionModelWithSeasonality(FaceMaskModel faceMaskModel, ProgressionModel progression,
@@ -66,6 +69,11 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 	}
 
 	@Override
+	public double getLastUnVacInfectionProbability() {
+		return lastUnVac;
+	}
+
+	@Override
 	public double calcInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions,
 										   EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2,
 										   double contactIntensity, double jointTimeInContainer) {
@@ -78,17 +86,45 @@ public final class AgeAndProgressionDependentInfectionModelWithSeasonality imple
 
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
-		if (target.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes) {
-			susceptibility *= DefaultInfectionModel.getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration);
-		}
+		susceptibility *= Math.min(getVaccinationEffectiveness(strain, target, vaccinationConfig, iteration), getImmunityEffectiveness(strain, target, vaccinationConfig, iteration));
 
 		double indoorOutdoorFactor = InfectionModelWithSeasonality.getIndoorOutdoorFactor(outdoorFactor, rnd, act1, act2);
+		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
+		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
+
+		lastUnVac = calcUnVacInfectionProbability(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake);
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
+				* target.getSusceptibility()
 				* getInfectivity(infector)
 				* strain.getInfectiousness()
-				* maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding
-				* maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake
+				* shedding
+				* intake
+				* indoorOutdoorFactor
+		);
+	}
+
+	private double calcUnVacInfectionProbability(EpisimPerson target, EpisimPerson infector, Map<String, Restriction> restrictions, EpisimConfigGroup.InfectionParams act1, EpisimConfigGroup.InfectionParams act2, double contactIntensity, double jointTimeInContainer,
+	                                            double indoorOutdoorFactor, double shedding, double intake) {
+		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
+		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
+
+		double susceptibility = this.susceptibility[target.getAge()];
+		double infectivity = this.infectivity[infector.getAge()];
+
+		// apply reduced susceptibility of vaccinated persons
+		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
+		// vac is reduced from this term
+		susceptibility *= getImmunityEffectiveness(strain, target, vaccinationConfig, iteration);
+
+		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
+				* DefaultInfectionModel.getInfectivity(infector, strain, vaccinationConfig, iteration)
+				* target.getSusceptibility()
+				* getInfectivity(infector)
+				* strain.getInfectiousness()
+				* shedding
+				* intake
 				* indoorOutdoorFactor
 		);
 	}

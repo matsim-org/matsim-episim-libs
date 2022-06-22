@@ -10,11 +10,11 @@ import org.matsim.episim.model.*;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
-import org.matsim.run.modules.SnzBerlinProductionScenario.DiseaseImport;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Masks;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Restrictions;
+import org.matsim.run.modules.SnzProductionScenario.DiseaseImport;
+import org.matsim.run.modules.SnzProductionScenario.Masks;
+import org.matsim.run.modules.SnzProductionScenario.Restrictions;
 import org.matsim.run.modules.SnzBerlinProductionScenario.Snapshot;
-import org.matsim.run.modules.SnzBerlinProductionScenario.Tracing;
+import org.matsim.run.modules.SnzProductionScenario.Tracing;
 
 import javax.annotation.Nullable;
 
@@ -31,8 +31,8 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 
 	@Override
 	public AbstractModule getBindings(int id, @Nullable Params params) {
-		return new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setSnapshot(
-				Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
+		return new SnzBerlinProductionScenario.Builder().setSnapshot(
+				Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks( Masks.yes ).setTracing( Tracing.yes ).setInfectionModel( AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 	}
 
 	@Override
@@ -52,15 +52,15 @@ public class InterventionMix implements BatchRun<InterventionMix.Params> {
 		}
 
 
-		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
-				Masks.yes ).setTracing( Tracing.yes ).setSnapshot( Snapshot.episim_snapshot_240_2020_10_21 ).setInfectionModel(
+		SnzBerlinProductionScenario module = new SnzBerlinProductionScenario.Builder().setSnapshot( Snapshot.episim_snapshot_240_2020_10_21 ).setDiseaseImport( DiseaseImport.yes ).setRestrictions( Restrictions.yes ).setMasks(
+				Masks.yes ).setTracing( Tracing.yes ).setInfectionModel(
 				AgeDependentInfectionModelWithSeasonality.class ).createSnzBerlinProductionScenario();
 		Config config = module.config();
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
-		
+
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
-		
+
 		TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.config();

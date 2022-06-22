@@ -120,7 +120,7 @@ public class RunSnzIntegrationTest {
 					.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 					.setDiseaseImport(SnzBerlinProductionScenario.DiseaseImport.yes)
 					.setRestrictions(r)
-					.createSnzBerlinProductionScenario();
+					.build();
 		}
 
 		@Override

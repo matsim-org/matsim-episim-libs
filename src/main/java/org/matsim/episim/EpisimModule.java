@@ -23,6 +23,7 @@ package org.matsim.episim;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.Multibinder;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
@@ -35,11 +36,12 @@ import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.activity.AllParticipationModel;
 import org.matsim.episim.model.progression.DefaultDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.TestingModel;
-import org.matsim.episim.reporting.AsyncEpisimWriter;
+import org.matsim.episim.model.vaccination.RandomVaccination;
+import org.matsim.episim.model.vaccination.VaccinationModel;
+import org.matsim.episim.policy.FixedPolicy;
+import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.episim.reporting.EpisimWriter;
 
 import javax.inject.Named;
@@ -62,6 +64,7 @@ public class EpisimModule extends AbstractModule {
 		bind(ContactModel.class).to(DefaultContactModel.class).in(Singleton.class);
 		bind(InfectionModel.class).to(DefaultInfectionModel.class).in(Singleton.class);
 		bind(ProgressionModel.class).to(ConfigurableProgressionModel.class).in(Singleton.class);
+		bind(AntibodyModel.class).to(DefaultAntibodyModel.class).in(Singleton.class);
 		bind(DiseaseStatusTransitionModel.class).to(DefaultDiseaseStatusTransitionModel.class).in(Singleton.class);
 		bind(FaceMaskModel.class).to(DefaultFaceMaskModel.class).in(Singleton.class);
 		bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
@@ -76,7 +79,10 @@ public class EpisimModule extends AbstractModule {
 		bind(InfectionEventHandler.class).in(Singleton.class);
 		bind(EpisimReporting.class).in(Singleton.class);
 
-		// Ah, ok, here one sees how it is plugged together.  kai, apr'20
+		bind(AntibodyModel.Config.class).toInstance(AntibodyModel.newConfig());
+
+		Multibinder.newSetBinder(binder(), SimulationListener.class);
+		Multibinder.newSetBinder(binder(), VaccinationModel.class);
 	}
 
 	@Provides
@@ -88,7 +94,7 @@ public class EpisimModule extends AbstractModule {
 		if (config.getModules().size() == 0)
 			throw new IllegalArgumentException("Please provide a config module or binding.");
 
-		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.warn);
+		config.vspExperimental().setVspDefaultsCheckingLevel(VspExperimentalConfigGroup.VspDefaultsCheckingLevel.ignore);
 
 		// save some time for not needed inputs
 //		config.facilities().setInputFile(null); // facilities are needed for location-based-restrictions
@@ -130,12 +136,13 @@ public class EpisimModule extends AbstractModule {
 	@Singleton
 	public EpisimWriter episimWriter(EpisimConfigGroup episimConfig) {
 
+		// TODO: needs to be fixed for single event files, synchronization after each iteration would be needed
 		// Async writer is used for huge event number
-		if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
+		//if (Runtime.getRuntime().availableProcessors() > 1 && episimConfig.getWriteEvents() != EpisimConfigGroup.WriteEvents.episim)
 			// by default only one episim simulation is running
-			return new AsyncEpisimWriter(1);
-		else
-			return new EpisimWriter();
+		//	return new AsyncEpisimWriter(1);
+
+		return new EpisimWriter();
 	}
 
 	@Provides

@@ -108,7 +108,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 			}
 		}
 
-		FilteredObjectAttributes attributes = readAndFilterAttributes(input, personIds);
+		FilteredObjectAttributes attributes = readAndFilterAttributes(input, new FilteredObjectAttributes(personIds));
 		Population populationFromAttributes = buildPopulationFromAttributes(attributes);
 
 		PopulationUtils.writePopulation(populationFromAttributes, output.toString());
@@ -174,11 +174,10 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		return population;
 	}
 
-	private FilteredObjectAttributes readAndFilterAttributes(Path attributesFile, Set<String> personIds) {
+	static <T extends ObjectAttributes> T readAndFilterAttributes(Path attributesFile, T attributes) {
 		Config config = ConfigUtils.createConfig();
 		config.plans().setInputPersonAttributeFile(attributesFile.toString());
 		String personAttributes = config.plans().getInputPersonAttributeFile();
-		FilteredObjectAttributes attributes = new FilteredObjectAttributes(personIds);
 		ObjectAttributesXmlReader reader = new ObjectAttributesXmlReader(attributes);
 		reader.parse(IOUtils.getInputStream(IOUtils.getFileUrl(personAttributes)));
 		return attributes;
@@ -187,7 +186,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 	/**
 	 * Filter for certain persons. This class should work but is badly designed because of API limitations.
 	 */
-	private static final class FilteredObjectAttributes extends ObjectAttributes {
+	static final class FilteredObjectAttributes extends ObjectAttributes {
 
 		private final Set<String> ids;
 
@@ -196,7 +195,7 @@ public class ConvertPersonAttributes implements Callable<Integer> {
 		}
 
 		@SuppressWarnings("unchecked")
-		private Map<String, Map<String, Object>> getAttributes() {
+		Map<String, Map<String, Object>> getAttributes() {
 			try {
 				Field field = ObjectAttributes.class.getDeclaredField("attributes");
 				field.setAccessible(true);

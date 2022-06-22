@@ -11,6 +11,8 @@ import org.matsim.episim.model.OldSymmetricContactModel;
 import org.matsim.run.modules.SnzBerlinWeekScenario2020;
 
 import javax.annotation.Nullable;
+import java.time.LocalDate;
+import java.util.Map;
 
 
 /**
@@ -42,7 +44,7 @@ public class BerlinQuarantine implements BatchRun<BerlinQuarantine.Params> {
 
 		tracingConfig.setQuarantineRelease(TracingConfigGroup.QuarantineRelease.valueOf(params.quarantineRelease));
 
-		tracingConfig.setQuarantineDuration(params.quarantineDuration);
+		tracingConfig.setQuarantineDuration(Map.of(LocalDate.EPOCH, params.quarantineDuration));
 
 		return config;
 	}
