@@ -15,6 +15,7 @@ import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.analysis.VaccinationEffectiveness;
 import org.matsim.episim.analysis.VaccinationEffectivenessFromPotentialInfections;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.FlexibleTestingModel;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
@@ -66,7 +67,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 				if (params != null) {
-					mutEscBa5 = params.ba5Esc;
+					mutEscBa5 = 3.0;
 					mutEscStrainA = params.strAEsc;
 
 					start = LocalDate.parse(params.resDate);
@@ -101,8 +102,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
+				double immuneSigma = 3.0;
 				if (params != null) {
-					antibodyConfig.setImmuneReponseSigma(params.immuneSigma);
+					antibodyConfig.setImmuneReponseSigma(immuneSigma);
 				}
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
@@ -358,7 +360,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
 				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
-				.setSebastianUpdate(params == null ? false : Boolean.parseBoolean(params.sebaUp))
+				.setSebastianUpdate(true)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -442,8 +444,9 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		//configure new strains
 		//BA5
+		double ba5Inf = 0.9;
 		double oHos = virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getFactorSeriouslySick();
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * params.ba5Inf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * ba5Inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(oHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySickVaccinated(oHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(oHos);
@@ -453,7 +456,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		double strAInf = 1.0;
 		if (params.strAEsc != 0.) {
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * (params.ba5Inf == 0. ? 1 : params.ba5Inf) * strAInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * ba5Inf * strAInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(oHos);
@@ -467,7 +470,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		//vaccinations
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setUseIgA(true);
-		vaccinationConfig.setTimePeriodIgA(params.igATime);
+		vaccinationConfig.setTimePeriodIgA(730.);
 
 //		diseaseImp(episimConfig, Boolean.parseBoolean(params.sebaUp),params.ba5Inf!=0., params.strAEsc != 0.);
 
@@ -541,7 +544,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		infPerDayBa2.put(ba2Date.plusDays(7), 1);
 
 		//BA.5
-		LocalDate ba5Date = LocalDate.parse(params.ba5Date);
+		LocalDate ba5Date = LocalDate.parse("2022-04-10");
 		for (int i = 0; i < 7; i++) {
 			infPerDayBa5.put(ba5Date.plusDays(i), 4);
 		}
@@ -580,7 +583,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				infPerDayStrA.put(date, ((int) cases * facStrA) == 0 ? 1 : (int) (cases * facStrA));
 				infPerDayBa5.put(date, 1);
 				infPerDayBa2.put(date, 1);
-			} else if (date.isAfter(dateBa5) && params.ba5Inf != 0.) {
+			} else if (date.isAfter(dateBa5)) {
 				infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
 				infPerDayBa2.put(date, 1);
 			} else if (date.isAfter(dateBa2)) {
@@ -613,25 +616,25 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@GenerateSeeds(1)
 		public long seed;
 
-		@StringParameter({"true"})
-		public String sebaUp;
+//		@StringParameter({"true"})
+//		public String sebaUp;
 
 		// Antibody Model
-		@Parameter({3.0})
-		double immuneSigma;
+//		@Parameter({3.0})
+//		double immuneSigma;
 
-		@Parameter({730.}) //120,
-		public double igATime;
+//		@Parameter({730.}) //120,
+//		public double igATime;
 
 		// BA5
-		@StringParameter({"2022-04-10"})
-		public String ba5Date;
-
-		@Parameter({0.9}) //,1.0,1.1,1.2,1.3})
-		double ba5Inf;
-
-		@Parameter({3.})
-		public double ba5Esc;
+//		@StringParameter({"2022-04-10"})
+//		public String ba5Date;
+//
+//		@Parameter({0.9}) //,1.0,1.1,1.2,1.3})
+//		double ba5Inf;
+//
+//		@Parameter({3.})
+//		public double ba5Esc;
 
 		// StrainA
 		@StringParameter({"2022-11-01"})
