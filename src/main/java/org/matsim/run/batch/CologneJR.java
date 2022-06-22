@@ -150,7 +150,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 								if (scheme == TestScheme.all)
 									res = true;
 								else if (scheme == TestScheme.part) {
-									res = person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vacDays && !person.isRecentlyRecovered(day, infDays);
+									res = (person.getNumVaccinations() == 0 || person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vacDays)
+											&& !person.isRecentlyRecovered(day, infDays);
 
 								}
 
