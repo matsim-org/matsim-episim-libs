@@ -114,52 +114,56 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 		int numVaccinations = person.getNumVaccinations();
 		int numInfections = person.getNumInfections() - 1;
-
-		if (numVaccinations + numInfections == 1) {
-			return 0.3;
-		}
-
-		if (numVaccinations + numInfections > 1) {
-			return 0.1;
-		}
-
-		return 1.0;
-
-
-
-//		if (numVaccinations == 0 && numInfections == 0)
-//			return 1.0;
-//
-//		VirusStrain strain = person.getVirusStrain();
-//
-//		int lastVaccination = 0;
-//
-//		if (numVaccinations > 0)
-//			lastVaccination = person.getVaccinationDates().getInt(numVaccinations - 1);
-//
-//		int lastInfection = 0;
-//
-//		if (numInfections > 0)
-//			lastInfection = (int) (person.getInfectionDates().getDouble(numInfections - 1) / 86400.);
-//
-//		int lastImmunityEvent = Math.max(lastVaccination, lastInfection);
-//		int daysSinceLastImmunityEvent = day - lastImmunityEvent;
-//
-//
-//		double antibodiesAfterLastImmunityEvent = person.getAntibodyLevelAtInfection() * Math.pow(2., daysSinceLastImmunityEvent / 60.);
-//
-//		// Two modifications to antibody level below:
-//		// a) we multiply the antibody level by 4 if the agent is boostered
-//		if (numVaccinations > 1) {
-//			antibodiesAfterLastImmunityEvent *= 4;
-//		}
-//		// b) if strain is omicron, an additional factor of 3.7 is applied
-//		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) || strain.equals(VirusStrain.STRAIN_A)) {
-//			antibodiesAfterLastImmunityEvent *= 3.7;
+		// Version from Sander
+		// --
+//		if (numVaccinations + numInfections == 1) {
+//			return 0.3;
 //		}
 //
-//		return 1. / (1. + Math.pow( antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
+//		if (numVaccinations + numInfections > 1) {
+//			return 0.1;
+//		}
 //
+//		return 1.0;
+
+		// --
+ 		// version with antibodies
+		if (numVaccinations == 0 && numInfections == 0)
+			return 1.0;
+
+		VirusStrain strain = person.getVirusStrain();
+
+		int lastVaccination = 0;
+
+		if (numVaccinations > 0)
+			lastVaccination = person.getVaccinationDates().getInt(numVaccinations - 1);
+
+		int lastInfection = 0;
+
+		if (numInfections > 0)
+			lastInfection = (int) (person.getInfectionDates().getDouble(numInfections - 1) / 86400.);
+
+		int lastImmunityEvent = Math.max(lastVaccination, lastInfection);
+		int daysSinceLastImmunityEvent = day - lastImmunityEvent;
+
+
+		double antibodiesAfterLastImmunityEvent = person.getAntibodyLevelAtInfection() * Math.pow(2., daysSinceLastImmunityEvent / 60.);
+
+		// Two modifications to antibody level below:
+		// a) we multiply the antibody level by 4 if the agent is boostered
+		if (numVaccinations > 1) {
+			antibodiesAfterLastImmunityEvent *= 4;
+		}
+		// b) if strain is omicron, an additional factor of 3.7 is applied
+		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) || strain.equals(VirusStrain.OMICRON_BA5) || strain.equals(VirusStrain.STRAIN_A)) {
+			antibodiesAfterLastImmunityEvent *= 3.7;
+		}
+
+		return 1. / (1. + Math.pow( antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
+
+
+		// --
+		// even older version
 //
 //		double veSeriouslySick = 0.0;
 //
