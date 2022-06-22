@@ -362,7 +362,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setTestingModel(FlexibleTestingModel.class)
+				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
 	}
