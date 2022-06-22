@@ -48,6 +48,7 @@
  import java.time.LocalDate;
  import java.util.*;
  import java.util.function.BiFunction;
+ import java.util.stream.Collectors;
 
  /**
   * Scenario for Cologne using Senozon events for different weekdays.
@@ -710,6 +711,8 @@
 		 // no more regulation regarding test, we assume once every 2 weeks
 		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);
 
+
+
 		 rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				 "leisure", leisureTests,
 				 "work", workTests,
@@ -917,15 +920,26 @@
 				 double cases = factor * e.getValue();
 				 date = e.getKey();
 
-				 infPerDayBa5.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA5) * cases * facBa5));
+//				 infPerDayBa5.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA5) * cases * facBa5));
 				 infPerDayBa2.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA2) * cases * facBa2));
 				 infPerDayBa1.put(date, (int) (lookup.apply(date, VirusStrain.OMICRON_BA1) * cases * facBa1));
-				 infPerDayDelta.put(date, date.isBefore(LocalDate.of(2022, 1, 16)) ? (int) (lookup.apply(date, VirusStrain.DELTA) * cases * facDelta) : 1);
-				 infPerDayAlpha.put(date, date.isBefore(LocalDate.of(2021, 7, 17)) ? (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facAlpha) : 1);
-				 infPerDayWild.put(date, date.isBefore(LocalDate.of(2021, 11, 21)) ? (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facWild) : 1);
+				 infPerDayDelta.put(date,(int) (lookup.apply(date, VirusStrain.DELTA) * cases * facDelta));
+				 infPerDayAlpha.put(date, (int) (lookup.apply(date, VirusStrain.ALPHA) * cases * facAlpha));
+				 infPerDayWild.put(date, (int) (lookup.apply(date, VirusStrain.SARS_CoV_2) * cases * facWild));
 
 			 }
 
+			 LocalDate wildImportEnds = LocalDate.of(2021, 11, 21);
+			 infPerDayWild = infPerDayWild.entrySet().stream().filter(entry -> entry.getKey().isBefore(wildImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+			 infPerDayWild.put(wildImportEnds, 1);
+
+			 LocalDate alphaImportEnds = LocalDate.of(2021, 7, 17);
+			 infPerDayAlpha = infPerDayAlpha.entrySet().stream().filter(entry -> entry.getKey().isBefore(alphaImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+			 infPerDayAlpha.put(alphaImportEnds, 1);
+
+			 LocalDate deltaImportEnds = LocalDate.of(2022, 1, 16);
+			 infPerDayDelta = infPerDayDelta.entrySet().stream().filter(entry -> entry.getKey().isBefore(deltaImportEnds)).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+			 infPerDayDelta.put(deltaImportEnds, 1);
 
 
 			 LocalDate dateAfterCsvEnds = date.plusDays(1);
