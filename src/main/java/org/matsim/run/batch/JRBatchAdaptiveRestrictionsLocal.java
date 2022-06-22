@@ -24,17 +24,17 @@ public class JRBatchAdaptiveRestrictionsLocal implements BatchRun<JRBatchAdaptiv
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
-		return new Builder()
+		return new SnzBerlinProductionScenario.Builder()
 				.setSnapshot(Snapshot.no)
+				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
+				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : AdaptiveRestrictions.no)
 				.setChristmasModel(ChristmasModel.no)
 				.setEasterModel(EasterModel.no)
 				.setVaccinations(Vaccinations.no)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
-				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : AdaptiveRestrictions.no)
 				.setSample(DEBUG ? 1 : 25)
 				.setTracing(Tracing.yes)
-				.createSnzBerlinProductionScenario();
+				.build();
 
 	}
 

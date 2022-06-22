@@ -126,7 +126,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	 * Empty constructor is needed for running scenario from command line.
 	 */
 	@SuppressWarnings("unused")
-	private SnzBerlinProductionScenario() {
+	public SnzBerlinProductionScenario() {
 		this(new Builder());
 	}
 
