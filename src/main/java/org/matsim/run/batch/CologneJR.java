@@ -123,7 +123,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 					bind(FlexibleTestingModel.TestRate.class).toInstance(new FlexibleTestingModel.TestRate() {
 						@Override
-						public boolean useFullyVaccinatedTestRate(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, VaccinationConfigGroup vac) {
+						public boolean useFullyVaccinatedTestRate(EpisimPerson person, int day, DayOfWeek dow, LocalDate date,
+						                                          TestingConfigGroup test, VaccinationConfigGroup vac) {
 
 							if (date.isBefore(unresDate))
 								return vac.hasValidVaccination(person, day, date);
@@ -164,10 +165,14 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 					bind(FlexibleTestingModel.TestPolicy.class).toInstance(new FlexibleTestingModel.TestPolicy() {
 						@Override
-						public boolean shouldTest(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, VaccinationConfigGroup vac) {
+						public boolean shouldTest(EpisimPerson person, int day, DayOfWeek dow, LocalDate date,
+						                          TestingConfigGroup test, VaccinationConfigGroup vac) {
 
-							if (date.isBefore(unresDate))
-								return vac.hasGreenPass(person, day, date);
+							if (date.isBefore(unresDate)) {
+
+								boolean testAllPersons = test.getTestAllPersonsAfter() != null && date.isAfter(test.getTestAllPersonsAfter());
+								return testAllPersons || !vac.hasGreenPass(person, day, date);
+							}
 
 							// after restrictions everybody is tested according to the rates
 							return true;
