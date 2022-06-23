@@ -106,7 +106,7 @@ public class VaccinationFromDataTest {
 				.isEqualTo(493);
 
 		assertThat(refreshed)
-				.isEqualTo(25L);
+				.isEqualTo(26L);
 
 	}
 }
