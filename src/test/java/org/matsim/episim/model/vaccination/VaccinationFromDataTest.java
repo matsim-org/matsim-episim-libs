@@ -94,7 +94,7 @@ public class VaccinationFromDataTest {
 		long reVaccinated = persons.values().stream().filter(p -> p.getNumVaccinations() == 2).count();
 
 		assertThat(reVaccinated)
-				.isEqualTo(25);
+				.isEqualTo(26);
 
 
 		model.handleVaccination(persons, true, -1, LocalDate.of(2022,6, 1), 500, 0);
@@ -103,7 +103,7 @@ public class VaccinationFromDataTest {
 		long refreshed = persons.values().stream().filter(p -> p.getNumVaccinations() == 3).count();
 
 		assertThat(reVaccinated)
-				.isEqualTo(493);
+				.isEqualTo(492);
 
 		assertThat(refreshed)
 				.isEqualTo(26L);
