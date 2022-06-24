@@ -42,7 +42,6 @@
  import org.matsim.episim.events.*;
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
- import org.matsim.episim.reporting.EpisimWriter;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
  import tech.tablesaw.api.*;
@@ -100,6 +99,7 @@
 	 private final String OCCUPANCY_ICU = "occupancyIcu";
 
 	 private Population population;
+	 List<Double> strainFactors;
 	 private List<Id<Person>> filteredPopulationIds;
 
 	 private EpisimConfigGroup episimConfig;
@@ -221,13 +221,13 @@
 
 
 		 // Here we define values factorSeriouslySickStrainA should have
-		 List<Double> strainFactors = List.of(factorOmicron, factorDelta);
+		 strainFactors = List.of(factorOmicron, factorDelta);
+
+		 configure();
+
 //		 List<Double> strainFactors = List.of(factorOmicron);
 
-		 for (Double facA : strainFactors) {
 
-			 // configure post processing run
-			 configure(facA);
 
 			 // Part 1: calculate hospitalizations for each seed and save as csv
 			 List<Path> pathList = new ArrayList<>();
@@ -247,7 +247,7 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 aggregateAndProducePlots(output, pathList);
 
-		 }
+//		 }
 
 
 		 return 0;
@@ -256,25 +256,24 @@
 	 /**
 	  * This method configures the episim config, vaccination config, and strain config to the extent
 	  * necessary for post processing.
-	  * @param facA - FactorSeriouslySick for hypothetical StrainA
+	  * @param
 	  */
-	 private void configure(Double facA) {
-		 Double facAICU;
+	 private void configure() {
+//		 Double facAICU;
 		 // here we configure file name of the outputs produced by the post-processing analysis.
-		 if (facA == factorWild) {
-			 outputAppendix = "_Alpha";
-			 facAICU = factorWildAndAlphaICU;
-		 } else if (facA == factorDelta) {
-			 outputAppendix = "_Delta";
-			 facAICU = factorDeltaICU;
-		 } else if (facA == factorOmicron) {
-			 outputAppendix = "_Omicron";
-			 facAICU = factorOmicronICU;
-		 } else {
-			 throw new RuntimeException("not clear what to do");
-		 }
-
-		 outputAppendix += "-test";
+//		 if (facA == factorWild) {
+////			 outputAppendix = "_Alpha";
+//			 facAICU = factorWildAndAlphaICU;
+//		 } else if (facA == factorDelta) {
+////			 outputAppendix = "_Delta";
+//			 facAICU = factorDeltaICU;
+//		 } else if (facA == factorOmicron) {
+////			 outputAppendix = "_Omicron";
+//			 facAICU = factorOmicronICU;
+//		 } else {
+//			 throw new RuntimeException("not clear what to do");
+//		 }
+//
 
 
 		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
@@ -300,9 +299,9 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorOmicron);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorOmicronICU);
 
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
-
+//		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
+//		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
+//
 
 		 // configure vaccinationConfig: set beta factor
 		 vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -311,6 +310,7 @@
 
 	 @Override
 	 public void analyzeOutput(Path pathToScenario) throws IOException {
+
 
 		 String id = AnalysisCommand.getScenarioPrefix(pathToScenario);
 
@@ -333,68 +333,100 @@
 	  * @throws IOException
 	  */
 	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath) throws IOException {
-
 		 // open new buffered writer for hospitalization output and write the header row.
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
-		 bw.write(AnalysisCommand.TSV.join(DAY,  DATE,INTAKES_HOSP, INTAKES_ICU, OCCUPANCY_HOSP, OCCUPANCY_ICU)); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
-
-		 // instantiate the custom event handler that calculates hospitalizations based on events
-		 Map<Id<Person>, Handler.ImmunizablePerson> data = new IdMap<>(Person.class, population.getPersons().size());
-		 Handler handler = new Handler(data, population, episimConfig, strainConfig, vaccinationConfig);
-
-		 // feed the output events file to the handler, so that the hospitalizations may be calculated
-		 AnalysisCommand.forEachEvent(pathToScenario, s -> {
-		 }, handler);
+//		 bw.write(AnalysisCommand.TSV.join(DAY,  DATE,INTAKES_HOSP, INTAKES_ICU, OCCUPANCY_HOSP, OCCUPANCY_ICU)); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
+		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
 
 
-		 int maxIteration = Math.max(
-				 Math.max(handler.postProcessHospitalAdmissions.keySet().lastInt(),
-						 handler.postProcessICUAdmissions.keySet().lastInt()),
-				 Math.max(handler.postProcessHospitalFilledBeds.keySet().lastInt(),
-						 handler.postProcessHospitalFilledBedsICU.keySet().lastInt()));
+		 for (Double facA : strainFactors) {
+
+			 // configure post processing run
+//			 configure(facA);
+			 double facAICU = 0.;
+			 String diseaseSevName = "";
+			 if (facA == factorWild) {
+				 diseaseSevName = "Alpha";
+				 facAICU = factorWildAndAlphaICU;
+			 } else if (facA == factorDelta) {
+				 diseaseSevName = "Delta";
+				 facAICU = factorDeltaICU;
+			 } else if (facA == factorOmicron) {
+				 diseaseSevName = "Omicron";
+				 facAICU = factorOmicronICU;
+			 } else {
+				 throw new RuntimeException("not clear what to do");
+			 }
+
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
+			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
 
 
 
-		 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
-		 // this is used to normalize the hospitalization values
-		 double popSize = (int) population.getPersons().values().stream()
-				 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
+			 // instantiate the custom event handler that calculates hospitalizations based on events
+			 Map<Id<Person>, Handler.ImmunizablePerson> data = new IdMap<>(Person.class, population.getPersons().size());
+			 Handler handler = new Handler(data, population, episimConfig, strainConfig, vaccinationConfig);
+
+			 // feed the output events file to the handler, so that the hospitalizations may be calculated
+			 AnalysisCommand.forEachEvent(pathToScenario, s -> {
+			 }, handler);
 
 
+			 int maxIteration = Math.max(
+					 Math.max(handler.postProcessHospitalAdmissions.keySet().lastInt(),
+							 handler.postProcessICUAdmissions.keySet().lastInt()),
+					 Math.max(handler.postProcessHospitalFilledBeds.keySet().lastInt(),
+							 handler.postProcessHospitalFilledBedsICU.keySet().lastInt()));
 
-		 double totNoImmunity = popSize;
-		 double totbaseImmunity = 0;
-		 double totBoostered = 0;
 
-		 for (int day = 0; day <= maxIteration; day++) {
-			 LocalDate date = startDate.plusDays(day);
+			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
+			 // this is used to normalize the hospitalization values
+			 double popSize = (int) population.getPersons().values().stream()
+					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
 
-			 // calculates Incidence - 7day hospitalizations per 100,000 residents
-			 double intakesHosp = getWeeklyHospitalizations(handler.postProcessHospitalAdmissions, day)  * 100_000. / popSize;
-			 double intakesIcu = getWeeklyHospitalizations(handler.postProcessICUAdmissions, day) * 100_000. / popSize;
 
-			 // calculates daily hospital occupancy, per 100,000 residents
-			 double occupancyHosp = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0) * 100_000. / popSize;
-			 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
+			 double totNoImmunity = popSize;
+			 double totbaseImmunity = 0;
+			 double totBoostered = 0;
+
+			 for (int day = 0; day <= maxIteration; day++) {
+				 LocalDate date = startDate.plusDays(day);
+
+				 // calculates Incidence - 7day hospitalizations per 100,000 residents
+				 double intakesHosp = getWeeklyHospitalizations(handler.postProcessHospitalAdmissions, day) * 100_000. / popSize;
+
+				 double intakesIcu = getWeeklyHospitalizations(handler.postProcessICUAdmissions, day) * 100_000. / popSize;
+
+				 // calculates daily hospital occupancy, per 100,000 residents
+				 double occupancyHosp = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0) * 100_000. / popSize;
+				 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
+
+
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesHosp", diseaseSevName, intakesHosp));
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesICU", diseaseSevName, intakesIcu));
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyHosp ", diseaseSevName, occupancyHosp));
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyICU", diseaseSevName, occupancyIcu));
 
 //			 //
-			 totNoImmunity += handler.changeNoImmunity.get(day);
-			 totbaseImmunity += handler.changeBaseImmunity.get(day);
-			 totBoostered += handler.changeBoostered.get(day);
+//			 totNoImmunity += handler.changeNoImmunity.get(day);
+//			 totbaseImmunity += handler.changeBaseImmunity.get(day);
+//			 totBoostered += handler.changeBoostered.get(day);
+//
+//			 double hospNoImmunity = getWeeklyHospitalizations(handler.hospNoImmunity, day) * 100_000. / totNoImmunity;
+//			 double hospBaseImmunity = getWeeklyHospitalizations(handler.hospBaseImmunity, day) * 100_000. / totbaseImmunity;
+//			 double hospBoosted = getWeeklyHospitalizations(handler.hospBoostered, day) * 100_000. / totBoostered;
+//
+//			 double incNoImmunity = getWeeklyHospitalizations(handler.incNoImmunity, day) * 100_000. / totNoImmunity;
+//			 double incBaseImmunity = getWeeklyHospitalizations(handler.incBaseImmunity, day) * 100_000. / totbaseImmunity;
+//			 double incBoosted = getWeeklyHospitalizations(handler.incBoostered, day) * 100_000. / totBoostered;
 
-			 double hospNoImmunity = getWeeklyHospitalizations(handler.hospNoImmunity, day) * 100_000. / totNoImmunity;
-			 double hospBaseImmunity = getWeeklyHospitalizations(handler.hospBaseImmunity, day) * 100_000. / totbaseImmunity;
-			 double hospBoosted = getWeeklyHospitalizations(handler.hospBoostered, day) * 100_000. / totBoostered;
 
-			 double incNoImmunity = getWeeklyHospitalizations(handler.incNoImmunity, day) * 100_000. / totNoImmunity;
-			 double incBaseImmunity = getWeeklyHospitalizations(handler.incBaseImmunity, day) * 100_000. / totbaseImmunity;
-			 double incBoosted = getWeeklyHospitalizations(handler.incBoostered, day) * 100_000. / totBoostered;
-
-
-			 bw.newLine();
-			 bw.write(AnalysisCommand.TSV.join(day, date, intakesHosp, intakesIcu, occupancyHosp, occupancyIcu)); //hospNoImmunity, hospBaseImmunity, hospBoosted,incNoImmunity,incBaseImmunity,incBoosted));
-
+			 }
 		 }
 
 		 bw.close();
