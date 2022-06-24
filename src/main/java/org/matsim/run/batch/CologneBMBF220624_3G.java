@@ -35,7 +35,7 @@ import java.util.function.BiFunction;
 /**
  * Batch for Bmbf runs
  */
-public class CologneJR implements BatchRun<CologneJR.Params> {
+public class CologneBMBF220624_3G implements BatchRun<CologneBMBF220624_3G.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -150,7 +150,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 								// null and none, will be false
 								if (scheme == TestScheme.all)
 									res = true;
-								else if (scheme == TestScheme.part) {
+								else if (scheme == TestScheme.gp) {
 									res = (person.getNumVaccinations() == 0 || person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vacDays)
 											&& !person.isRecentlyRecovered(day, infDays);
 
@@ -500,28 +500,28 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			//pcr tests for younger kids
 			testingRateForActivitiesPcr.get("educ_kiga").put(restrictionDate, 0.4);
 			testingRateForActivitiesPcr.get("educ_primary").put(restrictionDate, 0.4);
-			testingRateForActivitiesPcrVac.get("educ_kiga").put(restrictionDate, params.unvacRate);
-			testingRateForActivitiesPcrVac.get("educ_primary").put(restrictionDate, params.unvacRate);
+			testingRateForActivitiesPcrVac.get("educ_kiga").put(restrictionDate, params.gpTestRate);
+			testingRateForActivitiesPcrVac.get("educ_primary").put(restrictionDate, params.gpTestRate);
 
 			//add rapid tests for older kids
 			testingRateForActivitiesRapid.get("educ_secondary").put(restrictionDate, 0.6);
 			testingRateForActivitiesRapid.get("educ_tertiary").put(restrictionDate, 0.6);
 			testingRateForActivitiesRapid.get("educ_other").put(restrictionDate, 0.6);
-			testingRateForActivitiesRapidVac.get("educ_secondary").put(restrictionDate, params.unvacRate);
-			testingRateForActivitiesRapidVac.get("educ_tertiary").put(restrictionDate, params.unvacRate);
-			testingRateForActivitiesRapidVac.get("educ_other").put(restrictionDate, params.unvacRate);
+			testingRateForActivitiesRapidVac.get("educ_secondary").put(restrictionDate, params.gpTestRate);
+			testingRateForActivitiesRapidVac.get("educ_tertiary").put(restrictionDate, params.gpTestRate);
+			testingRateForActivitiesRapidVac.get("educ_other").put(restrictionDate, params.gpTestRate);
 		}
 
 		// work
 		{
 			testingRateForActivitiesRapid.get("work").put(restrictionDate, 0.6);
-			testingRateForActivitiesRapidVac.get("work").put(restrictionDate, params.unvacRate);
+			testingRateForActivitiesRapidVac.get("work").put(restrictionDate, params.gpTestRate);
 		}
 
 		// leisure:
 		{
 			testingRateForActivitiesRapid.get("leisure").put(restrictionDate, 0.6);
-			testingRateForActivitiesRapidVac.get("leisure").put(restrictionDate, params.unvacRate);
+			testingRateForActivitiesRapidVac.get("leisure").put(restrictionDate, params.gpTestRate);
 		}
 
 		if(DEBUG_MODE) {
@@ -612,15 +612,49 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
-		episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
+		if( params.strAEsc!=0.) {
+			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
+		}
 	}
 
 
 	public static final class Params {
 
 		// general
-		@GenerateSeeds(1)
+		@GenerateSeeds(3)
 		public long seed;
+
+
+
+//		@StringParameter({"off"})
+		@StringParameter({"off", "age"})
+		String vacCamp;
+
+
+		/*
+		if workTest = TestScheme.all -> every agent at work will be seen as unvaccinated such that "getTestingRateForActivities" will be called to find test rate (even if agent is actually vaccinated)
+		if workTest = TestScheme.none -> every agent at work will be seen as vaccinated such that "getTestingRateForActivitiesVaccinated" will be called to find test rate.
+		if workTest = TestScheme.part -> agents with GreenPass will use rate "getTestingRateForActivitiesVaccinated" and agents without GreenPass will use "getTestingRateForActivities"
+		 */
+
+		// work tests
+		@EnumParameter(TestScheme.class)
+		TestScheme workTest;
+
+		@EnumParameter(TestScheme.class)
+		TestScheme eduTest;
+
+		@EnumParameter(TestScheme.class)
+		TestScheme leisTest;
+
+		//2g+
+//		@StringParameter({"3-0", "3-3", "3-6", "3-9", "3-12", "6-0", "6-3", "6-6", "6-9", "6-12", "9-0", "9-3", "9-6", "9-9", "9-12", "12-0", "12-3", "12-6", "12-9", "12-12"})
+		@StringParameter({"3-0", "3-3", "6-0", "6-3", "6-6", "9-0", "9-3", "9-6", "9-9", "12-0", "12-12"})
+		String gpMonths;
+
+		@Parameter({0.0})
+		Double gpTestRate;
+
 
 //		@StringParameter({"true"})
 //		public String sebaUp;
@@ -664,9 +698,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"omicronUpdate"})
 		public String vacType;
 
-		//		@StringParameter({"off", "age"})
-		@StringParameter({"off"})
-		String vacCamp;
+//		@Parameter({0.05, 0.5})
+//		double testRate;
 
 		// other restrictions
 		// schools & university
@@ -699,43 +732,18 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //				String eduTest;
 
 
-		/*
-		if workTest = TestScheme.all -> every agent at work will be seen as unvaccinated such that "getTestingRateForActivities" will be called to find test rate (even if agent is actually vaccinated)
-		if workTest = TestScheme.none -> every agent at work will be seen as vaccinated such that "getTestingRateForActivitiesVaccinated" will be called to find test rate.
-		if workTest = TestScheme.part -> agents with GreenPass will use rate "getTestingRateForActivitiesVaccinated" and agents without GreenPass will use "getTestingRateForActivities"
-		 */
-
-		// work tests
-		@EnumParameter(TestScheme.class)
-		TestScheme workTest;
-
-		@EnumParameter(TestScheme.class)
-		TestScheme eduTest;
-
-		@EnumParameter(TestScheme.class)
-		TestScheme leisTest;
-
-		//2g+
-		@StringParameter({"3-0", "3-3", "3-6", "3-9", "3-12", "6-0", "6-3", "6-6", "6-9", "6-12", "9-0", "9-3", "9-6", "9-9", "9-12", "12-0", "12-3", "12-6", "12-9", "12-12"})
-		String gpMonths;
-
-		@Parameter({0.0, 0.05})
-		Double unvacRate;
-
-//		@Parameter({0.05, 0.5})
-//		double testRate;
 
 	}
 
 	public enum TestScheme {
 		none,
 		all,
-		part
+		gp
 	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF220624_3G.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(70),
