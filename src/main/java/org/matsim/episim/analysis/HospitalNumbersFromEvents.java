@@ -19,6 +19,7 @@
  package org.matsim.episim.analysis;
 
 
+ import com.google.inject.Inject;
  import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
  import it.unimi.dsi.fastutil.doubles.DoubleList;
  import it.unimi.dsi.fastutil.ints.*;
@@ -29,6 +30,7 @@
  import org.apache.logging.log4j.core.config.Configurator;
  import org.matsim.api.core.v01.Id;
  import org.matsim.api.core.v01.IdMap;
+ import org.matsim.api.core.v01.Scenario;
  import org.matsim.api.core.v01.population.Person;
  import org.matsim.api.core.v01.population.Population;
  import org.matsim.core.config.Config;
@@ -57,12 +59,12 @@
  )
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-	 //	 	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-06-16/2/analysis/policy_leis75/")
+	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
+//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-06-16/2/analysis/policy_leis75/")
 	 private Path output;
 
-	 //	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
-	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
+	 	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+//	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	 private String input;
 
 	 @CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
@@ -84,14 +86,12 @@
 	 private final String OCCUPANCY_HOSP = "occupancyHosp";
 	 private final String OCCUPANCY_ICU = "occupancyIcu";
 
+	 @Inject
+	 private Scenario scenario;
+
 	 private Population population;
-	 List<Double> strainFactors;
+
 	 private List<Id<Person>> filteredPopulationIds;
-
-	 private EpisimConfigGroup episimConfig;
-	 private VirusStrainConfigGroup strainConfig;
-	 private VaccinationConfigGroup vaccinationConfig;
-
 
 	 // source: incidence wave vs. hospitalization wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
 	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
@@ -100,16 +100,18 @@
 					 VirusStrain.DELTA, 14,
 					 VirusStrain.OMICRON_BA1, 14,
 					 VirusStrain.OMICRON_BA2, 14,
+					 VirusStrain.OMICRON_BA5, 14,
 					 VirusStrain.STRAIN_A, 14
 			 ));
 
-	 // source: hospitalization wave vs. ICU wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
+	  // source: hospitalization wave vs. ICU wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
 	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
 			 Map.of(VirusStrain.SARS_CoV_2, 6,
 					 VirusStrain.ALPHA, 6,
 					 VirusStrain.DELTA, 6,
 					 VirusStrain.OMICRON_BA1, 6,
 					 VirusStrain.OMICRON_BA2, 6,
+					 VirusStrain.OMICRON_BA5, 6,
 					 VirusStrain.STRAIN_A, 6
 			 ));
 
@@ -120,6 +122,7 @@
 					 VirusStrain.DELTA, 12,
 					 VirusStrain.OMICRON_BA1, 7,
 					 VirusStrain.OMICRON_BA2, 7,
+					 VirusStrain.OMICRON_BA5,7,
 					 VirusStrain.STRAIN_A, 7
 			 ));
 
@@ -129,6 +132,7 @@
 					 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
 					 VirusStrain.OMICRON_BA1, 10,
 					 VirusStrain.OMICRON_BA2, 10,
+					 VirusStrain.OMICRON_BA5,10,
 					 VirusStrain.STRAIN_A, 10
 			 ));
 
@@ -139,6 +143,7 @@
 					 VirusStrain.DELTA, 60,
 					 VirusStrain.OMICRON_BA1, 60,
 					 VirusStrain.OMICRON_BA2, 60,
+					 VirusStrain.OMICRON_BA5,60,
 					 VirusStrain.STRAIN_A, 60
 			 ));
 
@@ -161,6 +166,8 @@
 	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
 	 private static final double factorOmicron = 0.3  * factorDelta; // * reportedShareOmicron / reportedShareDelta
 
+
+//	 private static final List<Double> strainFactors = List.of(factorOmicron, factorDelta);
 
 	 // ??
 	 private static final double factorWildAndAlphaICU = 1.;
@@ -190,16 +197,13 @@
 
 
 		 // Here we define values factorSeriouslySickStrainA should have
-		 strainFactors = List.of(factorOmicron, factorDelta);
-
-		 configure();
 
 
 		 // Part 1: calculate hospitalizations for each seed and save as csv
-		 List<Path> pathList = new ArrayList<>();
+//		 List<Path> pathList = new ArrayList<>();
 		 AnalysisCommand.forEachScenario(output, pathToScenario -> {
 			 try {
-				 pathList.add(pathToScenario);
+//				 pathList.add(pathToScenario);
 				 // analyzeOutput is where the hospitalization post processing occurs
 				 analyzeOutput(pathToScenario);
 
@@ -222,6 +226,8 @@
 	 @Override
 	 public void analyzeOutput(Path pathToScenario) throws IOException {
 
+		 if (scenario != null)
+			 population = scenario.getPopulation();
 
 		 String id = AnalysisCommand.getScenarioPrefix(pathToScenario);
 
@@ -253,33 +259,22 @@
 		 for (Double facA : strainFactors) {
 
 			 // configure post processing run
-			 double facAICU = 0.;
-			 String diseaseSevName = "";
-			 if (facA == factorWild) {
-				 diseaseSevName = "Alpha";
-				 facAICU = factorWildAndAlphaICU;
-			 } else if (facA == factorDelta) {
-				 diseaseSevName = "Delta";
-				 facAICU = factorDeltaICU;
-			 } else if (facA == factorOmicron) {
-				 diseaseSevName = "Omicron";
-				 facAICU = factorOmicronICU;
-			 } else {
-				 throw new RuntimeException("not clear what to do");
-			 }
+//			 double facAICU = 0.;
+//			 String diseaseSevName = "";
+//			 if (facA == factorWild) {
+//				 diseaseSevName = "Alpha";
+//				 facAICU = factorWildAndAlphaICU;
+//			 } else if (facA == factorDelta) {
+//				 diseaseSevName = "Delta";
+//				 facAICU = factorDeltaICU;
+//			 } else if (facA == factorOmicron) {
+//				 diseaseSevName = "Omicron";
+//				 facAICU = factorOmicronICU;
+//			 } else {
+//				 throw new RuntimeException("not clear what to do");
+//			 }
 
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
-
-
-			 // instantiate the custom event handler that calculates hospitalizations based on events
-			 Map<Id<Person>, Handler.ImmunizablePerson> data = new IdMap<>(Person.class, population.getPersons().size());
-			 Handler handler = new Handler(data, population, episimConfig, strainConfig, vaccinationConfig);
-
-			 // feed the output events file to the handler, so that the hospitalizations may be calculated
-			 AnalysisCommand.forEachEvent(pathToScenario, s -> {
-			 }, handler);
-
+		 for (Handler handler : handlers) {
 
 			 int maxIteration = Math.max(
 					 Math.max(handler.postProcessHospitalAdmissions.keySet().lastInt(),
@@ -308,11 +303,11 @@
 
 
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesHosp", diseaseSevName, intakesHosp));
+				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesHosp", handler.name , intakesHosp));
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesICU", diseaseSevName, intakesIcu));
+				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesICU", handler.name, intakesIcu));
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyHosp ", diseaseSevName, occupancyHosp));
+				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyHosp ", handler.name, occupancyHosp));
 				 bw.newLine();
 				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyICU", diseaseSevName, occupancyIcu));
 
@@ -480,6 +475,15 @@
 		 }
 
 		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
+
+
+			 if (!lagBetweenInfectionAndHospitalisation.containsKey(strain)
+					 || !lagBetweenHospitalizationAndICU.containsKey(strain)
+					 || !daysInHospitalGivenNoICU.containsKey(strain)
+					 || !daysInICU.containsKey(strain)
+					 || !daysInHospitalGivenICU.containsKey(strain)) {
+				 throw new RuntimeException("strain " + strain + " not registered in all data structures which describe length of stay in hospital");
+			 }
 
 
 			 if (goToHospital(person, infectionIteration)) {
@@ -688,16 +692,16 @@
 	  * necessary for post processing.
 	  * @param
 	  */
-	 private void configure() {
+	 private ConfigHolder configure(double facA, double facAICU) {
 
 		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
 
 		 // configure episimConfig
-		 episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 		 episimConfig.setHospitalFactor(hospitalFactor);
 
 		 // configure strainConfig: add factorSeriouslySick for each strain
-		 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		 VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWild);
 		 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorCritical(factorWildAndAlphaICU);
 		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
@@ -713,10 +717,28 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorOmicron);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorOmicronICU);
 
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
+
 
 		 // configure vaccinationConfig: set beta factor
-		 vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		 vaccinationConfig.setBeta(beta);
+
+		 return new ConfigHolder(episimConfig, vaccinationConfig, strainConfig);
+	 }
+
+	 private static final class ConfigHolder {
+		 private final EpisimConfigGroup episimConfig;
+		 private final VaccinationConfigGroup vaccinationConfig;
+		 private final VirusStrainConfigGroup strainConfig;
+
+
+		 private ConfigHolder(EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfig) {
+			 this.episimConfig = episimConfig;
+			 this.vaccinationConfig = vaccinationConfig;
+			 this.strainConfig = strainConfig;
+		 }
 	 }
  }
 
