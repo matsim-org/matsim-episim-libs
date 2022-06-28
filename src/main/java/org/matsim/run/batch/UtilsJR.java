@@ -61,18 +61,24 @@ public class UtilsJR {
 
 	}
 
-//	static void produceMaskPlot(Config policyConfig) {
-//
-//
-//		LocalDate startDate = LocalDate.of(2020, 2, 1);
-//		LocalDate endDate = LocalDate.of(2023, 2, 25);
-//
-//		DateColumn recordsDate = DateColumn.create("date");
-//		DoubleColumn values = DoubleColumn.create("import");
-//		StringColumn groupings = StringColumn.create("scenario");
-//
-//
-//		for (Map.Entry<String, ConfigValue> config : policyConfig.entrySet()) {
+	static void produceMaskPlot(Config policyConfig) {
+
+
+		LocalDate startDate = LocalDate.of(2020, 2, 1);
+		LocalDate endDate = LocalDate.of(2023, 2, 25);
+
+		DateColumn recordsDate = DateColumn.create("date");
+		DoubleColumn values = DoubleColumn.create("import");
+		StringColumn groupings = StringColumn.create("scenario");
+
+
+		for (Map.Entry<String, ConfigValue> config : policyConfig.entrySet()) {
+
+			System.out.println(config.getKey());
+			System.out.println(config.getValue());
+
+
+		}
 //
 //			(HashMap<String,>) config.getValue()
 //
@@ -90,18 +96,18 @@ public class UtilsJR {
 //
 //				date = date.plusDays(1);
 //			}
-//
-////			for (Map.Entry<LocalDate, Integer> entry : infections_pers_per_day.get(strain).entrySet()) {
-////				recordsDate.append(entry.getKey());
-////				values.append(entry.getValue());
-////				groupings.append(strain.toString());
-////			}
-//		}
-//
+
+//			for (Map.Entry<LocalDate, Integer> entry : infections_pers_per_day.get(strain).entrySet()) {
+//				recordsDate.append(entry.getKey());
+//				values.append(entry.getValue());
+//				groupings.append(strain.toString());
+//			}
+		}
+
 //		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain.html");
-//
-//
-//
+
+
+
 //	}
 
 

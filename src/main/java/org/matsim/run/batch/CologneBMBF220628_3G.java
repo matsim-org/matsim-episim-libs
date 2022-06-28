@@ -10,11 +10,11 @@ import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.analysis.OutputAnalysis;
-import org.matsim.episim.analysis.RValuesFromEvents;
-import org.matsim.episim.analysis.VaccinationEffectiveness;
-import org.matsim.episim.analysis.VaccinationEffectivenessFromPotentialInfections;
+import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.FlexibleTestingModel;
+import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
 import org.matsim.episim.policy.FixedPolicy;
@@ -23,14 +23,16 @@ import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
 import javax.annotation.Nullable;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.function.BiFunction;
 
 
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
+public class CologneBMBF220628_3G implements BatchRun<CologneBMBF220628_3G.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -104,6 +106,77 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
+				if (params != null) {
+
+					// date of no restrictions and new restrictions
+					LocalDate unresDate = LocalDate.parse(params.unResDate);
+					LocalDate resDate = LocalDate.parse(params.resDate);
+
+					String[] s = params.gpMonths.split("-");
+
+					// Green pass validity for vaccinated and infected
+					int vacDays = Integer.parseInt(s[0]) * 30;
+					int infDays = Integer.parseInt(s[1]) * 30;
+
+					bind(FlexibleTestingModel.TestRate.class).toInstance(new FlexibleTestingModel.TestRate() {
+						@Override
+						public boolean useFullyVaccinatedTestRate(EpisimPerson person, int day, DayOfWeek dow, LocalDate date,
+						                                          TestingConfigGroup test, VaccinationConfigGroup vac) {
+
+							if (date.isBefore(unresDate))
+								return vac.hasValidVaccination(person, day, date);
+
+							// When restrictions have been lifted, days valid is set to a high number
+							// many tests are voluntary
+							if (date.isBefore(resDate))
+								return vac.hasValidVaccination(person, day, date, 360);
+
+							// this returns true if for any activities, the person requires increased testing regime
+							BiFunction<String, Boolean, Boolean> anyUnVac = (act, red) -> {
+
+								boolean res = false;
+								TestScheme scheme = null;
+
+								if (act.equals("leisure"))
+									scheme = params.leisTest;
+								else if (act.equals("work"))
+									scheme = params.workTest;
+								else if (act.startsWith("edu"))
+									scheme = params.eduTest;
+
+								// null and none, will be false
+								if (scheme == TestScheme.all)
+									res = true;
+								else if (scheme == TestScheme.gp) {
+									res = (person.getNumVaccinations() == 0 || person.daysSince(EpisimPerson.VaccinationStatus.yes, day) > vacDays)
+											&& !person.isRecentlyRecovered(day, infDays);
+
+								}
+
+								return red || res;
+							};
+
+							return !person.matchActivities(dow, anyUnVac, false);
+						}
+					});
+
+					bind(FlexibleTestingModel.TestPolicy.class).toInstance(new FlexibleTestingModel.TestPolicy() {
+						@Override
+						public boolean shouldTest(EpisimPerson person, int day, DayOfWeek dow, LocalDate date,
+						                          TestingConfigGroup test, VaccinationConfigGroup vac) {
+
+							if (date.isBefore(unresDate)) {
+
+								boolean testAllPersons = test.getTestAllPersonsAfter() != null && date.isAfter(test.getTestAllPersonsAfter());
+								return testAllPersons || !vac.hasGreenPass(person, day, date);
+							}
+
+							// after restrictions everybody is tested according to the rates
+							return true;
+						}
+					});
+
+				}
 			}
 
 			private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
@@ -294,7 +367,7 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-//				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
+				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
 	}
@@ -307,9 +380,10 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected")
+				new HospitalNumbersFromEvents().withArgs()
+//				new VaccinationEffectiveness().withArgs(), //TODO REVERT
+//				new RValuesFromEvents().withArgs(),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected")
 		);
 	}
 
@@ -341,40 +415,21 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 		LocalDate restrictionDate = LocalDate.parse(params.resDate);
 
 		//school
-		if(params.edu.equals("close")) {
-			if (params.resDate.equals("2022-12-01")) {
-				builder.restrict(restrictionDate, 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-			}
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-			//university
-			builder.restrict(restrictionDate, 0.2, "educ_higher");
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_higher");
-		} else if (params.edu.equals("maskVent")) {
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
-							FaceMask.CLOTH, 0.0,
-							FaceMask.N95, 0.25,
-							FaceMask.SURGICAL, 0.25)),
-					"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-		} else if (params.edu.equals("normal")) {
-
-		} else {
-			throw new RuntimeException("param value doesn't exist");
+		if (params.resDate.equals("2022-12-01")) {
+			builder.restrict(restrictionDate, params.edu, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		}
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(params.edu, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-		//pt: masks
-		if (Boolean.parseBoolean(params.maskPt)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "pt");
 
+		//university
+		builder.restrict(restrictionDate, params.edu, "educ_higher");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(params.edu, rf), "educ_higher");
+
+//		BiFunction<LocalDate, Double, Double> uniFactor = (d, rf) -> Math.max(rf * params.uni, 0.2);
+		//shopping & pt: masks
+		if (Boolean.parseBoolean(params.maskShopAndPt)) {
+			builder.restrict(restrictionDate, Restriction.ofMask(FaceMask.N95, 0.9 ), "shop_daily", "shop_other", "errands", "pt");
 		}
-
-		//shopping: masks
-		if (Boolean.parseBoolean(params.maskShop)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "shop_daily", "shop_other", "errands");
-		}
-
 		//work
 		builder.restrict(restrictionDate, 0.78 * params.work, "work");
 		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.work, "work");
@@ -382,6 +437,7 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 		//leisure
 		builder.restrict(restrictionDate, 0.88 * params.leis, "leisure");
 		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.leis, "leisure");
+
 
 
 		episimConfig.setPolicy(builder.build());
@@ -420,11 +476,60 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 		vaccinationConfig.setUseIgA(true);
 		vaccinationConfig.setTimePeriodIgA(730.);
 
+//		diseaseImp(episimConfig, Boolean.parseBoolean(params.sebaUp),params.ba5Inf!=0., params.strAEsc != 0.);
+
+		// testing
+
+//		int vacTimePeriod = Integer.parseInt(params.gpMonths.split("-")[0]);
+//		int unvacTimePeriod = Integer.parseInt(params.gpMonths.split("-")[1]);
+
+		TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
+		TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+		Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPcr = pcrTest.getTestingRateForActivities();
+		Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPcrVac = pcrTest.getTestingRateForActivitiesVaccinated();
+
+		TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
+		Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesRapid = rapidTest.getTestingRateForActivities();
+		Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesRapidVac = rapidTest.getTestingRateForActivitiesVaccinated();
+
+
+		// school
+		{
+			//pcr tests for younger kids
+			testingRateForActivitiesPcr.get("educ_kiga").put(restrictionDate, 0.4);
+			testingRateForActivitiesPcr.get("educ_primary").put(restrictionDate, 0.4);
+			testingRateForActivitiesPcrVac.get("educ_kiga").put(restrictionDate, params.gpTestRate);
+			testingRateForActivitiesPcrVac.get("educ_primary").put(restrictionDate, params.gpTestRate);
+
+			//add rapid tests for older kids
+			testingRateForActivitiesRapid.get("educ_secondary").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapid.get("educ_tertiary").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapid.get("educ_other").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapidVac.get("educ_secondary").put(restrictionDate, params.gpTestRate);
+			testingRateForActivitiesRapidVac.get("educ_tertiary").put(restrictionDate, params.gpTestRate);
+			testingRateForActivitiesRapidVac.get("educ_other").put(restrictionDate, params.gpTestRate);
+		}
+
+		// work
+		{
+			testingRateForActivitiesRapid.get("work").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapidVac.get("work").put(restrictionDate, params.gpTestRate);
+		}
+
+		// leisure:
+		{
+			testingRateForActivitiesRapid.get("leisure").put(restrictionDate, 0.6);
+			testingRateForActivitiesRapidVac.get("leisure").put(restrictionDate, params.gpTestRate);
+		}
 
 		if(DEBUG_MODE) {
-//			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
-//			UtilsJR.produceMaskPlot(episimConfig.getPolicy());
+			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
 		}
+
+		//
+
+
+
 
 			return config;
 	}
@@ -505,8 +610,7 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
-
-		if (params.strAEsc != 0.) {
+		if( params.strAEsc!=0.) {
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
 		}
 	}
@@ -518,51 +622,37 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 		@GenerateSeeds(3)
 		public long seed;
 
-		//TODO VARY
-		@Parameter({0.0,6.})  // 0.0 = strainA is off
-		public double strAEsc;
 
 
-		// General Restriction date
-		@StringParameter({"2022-07-01","2022-12-01"})
-		public String resDate;
-
-
+//		@StringParameter({"off"})
 		@StringParameter({"off", "age"})
 		String vacCamp;
 
-		// other restrictions
-		// schools & university // close: rf reduced // maskVent: ciCorrection reduced & surgical mask for most // normal: no changes made
-		@StringParameter({"close", "maskVent", "normal"})
-		String edu;
 
-		// shopping: mask
-		@StringParameter({"true", "false"})
-		String maskShop;
+		/*
+		if workTest = TestScheme.all -> every agent at work will be seen as unvaccinated such that "getTestingRateForActivities" will be called to find test rate (even if agent is actually vaccinated)
+		if workTest = TestScheme.none -> every agent at work will be seen as vaccinated such that "getTestingRateForActivitiesVaccinated" will be called to find test rate.
+		if workTest = TestScheme.part -> agents with GreenPass will use rate "getTestingRateForActivitiesVaccinated" and agents without GreenPass will use "getTestingRateForActivities"
+		 */
 
-		// pt: mask
-		@StringParameter({"true", "false"})
-		String maskPt;
+		// work tests
+		@EnumParameter(TestScheme.class)
+		TestScheme workTest;
 
-		// work:
-		@Parameter({0.5, 1.0})
-		double work;
+		@EnumParameter(TestScheme.class)
+		TestScheme eduTest;
 
-		// leisure
-		@Parameter({0.25, 0.5, 0.75, 1.0})
-		double leis;
+		@EnumParameter(TestScheme.class)
+		TestScheme leisTest;
 
+		//2g+
+//		@StringParameter({"3-0", "3-3", "3-6", "3-9", "3-12", "6-0", "6-3", "6-6", "6-9", "6-12", "9-0", "9-3", "9-6", "9-9", "9-12", "12-0", "12-3", "12-6", "12-9", "12-12"})
+		@StringParameter({"3-0", "3-3", "6-0", "6-3", "6-6", "9-0", "9-3", "9-6", "9-9", "12-0", "12-12"})
+		String gpMonths;
 
-		// vaccination campaign
-		@StringParameter({"omicronUpdate"})
-		public String vacType;
+		@Parameter({0.0})
+		Double gpTestRate;
 
-		@StringParameter({"2022-04-25"})
-		public String unResDate;
-
-		// StrainA
-		@StringParameter({"2022-11-01"})
-		public String strADate;
 
 //		@StringParameter({"true"})
 //		public String sebaUp;
@@ -584,15 +674,74 @@ public class CologneBMBF220624 implements BatchRun<CologneBMBF220624.Params> {
 //		@Parameter({3.})
 //		public double ba5Esc;
 
-		//		@Parameter({0.0, 1.0})
+		// StrainA
+		@StringParameter({"2022-11-01"})
+		public String strADate;
+
+		@Parameter({6.}) // 0.0 = strainA is off
+//		@Parameter({6.}) // 0.0 = strainA is off
+		public double strAEsc;
+
+//		@Parameter({0.0, 1.0})
 //		public double strAInf;
+
+		@StringParameter({"2022-04-25"})
+		public String unResDate;
+
+		// General Restriction date
+		@StringParameter({"2022-12-01"})
+		public String resDate;
+
+		// vaccination campaign
+		@StringParameter({"omicronUpdate"})
+		public String vacType;
+
+//		@Parameter({0.05, 0.5})
+//		double testRate;
+
+		// other restrictions
+		// schools & university
+//		@Parameter({0.2, 0.5, 1.0})
+		@Parameter({1.0})
+		double edu;
+
+		// university
+//		@Parameter({0.0, 1.0})
+//		double uni;
+
+		// shopping: mask
+//		@StringParameter({"true", "false"})
+		@StringParameter({"false"})
+		String maskShopAndPt;
+
+		// work:
+//		@Parameter({0.5, 1.0})
+		@Parameter({1.0})
+		double work;
+
+		// leisure
+//		@Parameter({0.25, 0.5, 0.75, 1.0})
+		@Parameter({1.0})
+		double leis;
+
+		// testing in schools
+//		@StringParameter({"no", "unvac", "all"})
+////		@StringParameter({"all"})
+//				String eduTest;
+
+
 
 	}
 
+	public enum TestScheme {
+		none,
+		all,
+		gp
+	}
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF220624.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF220628_3G.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(70),
