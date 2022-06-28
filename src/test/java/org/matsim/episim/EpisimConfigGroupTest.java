@@ -112,13 +112,13 @@ public class EpisimConfigGroupTest {
 
 		Map<LocalDate, Integer> ref = Map.of(LocalDate.of(2020, 12, 12), 10);
 
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, ref);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, ref);
 
 		String s = episimConfig.getInfectionsPerDay();
 
 		episimConfig.setInfectionsPerDay(s);
 
-		assertThat(episimConfig.getInfections_pers_per_day().get(VirusStrain.B117))
+		assertThat(episimConfig.getInfections_pers_per_day().get(VirusStrain.ALPHA))
 				.isEqualTo(ref);
 
 	}

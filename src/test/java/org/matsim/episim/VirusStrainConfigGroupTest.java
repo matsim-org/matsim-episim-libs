@@ -23,7 +23,7 @@ public class VirusStrainConfigGroupTest {
 		tmp.deleteOnExit();
 
 
-		group.getOrAddParams(VirusStrain.B117)
+		group.getOrAddParams(VirusStrain.ALPHA)
 				.setInfectiousness(0.5);
 
 		ConfigUtils.writeConfig(config, tmp.toString());
@@ -31,7 +31,7 @@ public class VirusStrainConfigGroupTest {
 		VirusStrainConfigGroup copyGroup = new VirusStrainConfigGroup();
 		Config copyConfig = ConfigUtils.loadConfig(tmp.toString(), copyGroup);
 
-		assertThat(group.getParams(VirusStrain.B117).getInfectiousness())
+		assertThat(group.getParams(VirusStrain.ALPHA).getInfectiousness())
 				.isEqualTo(0.5);
 
 	}

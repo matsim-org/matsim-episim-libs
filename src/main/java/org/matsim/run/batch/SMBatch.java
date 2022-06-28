@@ -142,12 +142,12 @@ public class SMBatch implements BatchRun<SMBatch.Params> {
 			Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 			infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayVariant.put(LocalDate.parse(params.newVariantDate), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+			episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayVariant);
 		}
 
 			episimConfig.setPolicy(FixedPolicy.class, builder.build());
 
-//		VirusStrain.B117.infectiousness = params.newVariantInfectiousness;
+//		VirusStrain.ALPHA.infectiousness = params.newVariantInfectiousness;
 
 		return config;
 	}

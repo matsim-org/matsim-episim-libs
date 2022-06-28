@@ -138,4 +138,45 @@ public class VaccinationConfigGroupTest {
 				.isEqualTo(0.35);
 
 	}
+
+	@Test
+	public void validVaccination() {
+
+		Config config = ConfigUtils.createConfig();
+		VaccinationConfigGroup group = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+
+		group.getOrAddParams(VaccinationType.mRNA)
+						.setDaysBeforeFullEffect(40);
+
+		group.setDaysValid(90);
+		group.setValidDeadline(LocalDate.parse("2022-09-01"));
+
+		LocalDate date = LocalDate.parse("2022-01-01");
+
+		EpisimPerson p = EpisimTestUtils.createPerson(true, 20);
+
+		assertThat(group.hasValidVaccination(p, 0, date))
+				.isEqualTo(false);
+
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 0);
+
+		assertThat(group.hasValidVaccination(p, 10, date.plusDays(10)))
+				.isEqualTo(false);
+
+		assertThat(group.hasValidVaccination(p, 41, date.plusDays(41)))
+				.isEqualTo(true);
+
+
+		p.setVaccinationStatus(EpisimPerson.VaccinationStatus.yes, VaccinationType.mRNA, 50);
+
+		assertThat(group.hasValidVaccination(p, 55, date.plusDays(55)))
+				.isEqualTo(true);
+
+		assertThat(group.hasValidVaccination(p, 140, date.plusDays(140)))
+				.isEqualTo(true);
+
+		assertThat(group.hasValidVaccination(p, 300, date.plusDays(300)))
+				.isEqualTo(false);
+
+	}
 }

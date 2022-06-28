@@ -547,7 +547,7 @@ public final class EpisimUtils {
 		return outdoorFractions;
 	}
 
-	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha) throws IOException {
+	public static Map<LocalDate, Double> getOutDoorFractionFromDateAndTemp2(File weatherCSV, File avgWeatherCSV, double rainThreshold, Double TmidSpring2020, Double TmidFall2020, Double TmidSpring, Double TmidFall, Double Trange, Double alpha, double maxOutdoorFraction) throws IOException {
 
 		Reader in = new FileReader(weatherCSV);
 		Iterable<CSVRecord> records = CSVFormat.DEFAULT.withFirstRecordAsHeader().withCommentMarker('#').parse(in);
@@ -567,10 +567,10 @@ public final class EpisimUtils {
 			double prcp = Double.parseDouble(record.get("prcp"));
 			
 			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
-				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
+				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 			else {
-				outdoorFractions.put(date, getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
+				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 			
 			lastDate = date;

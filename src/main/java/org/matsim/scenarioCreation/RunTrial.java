@@ -11,6 +11,7 @@ import org.apache.logging.log4j.core.config.Configurator;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.run.RunEpisim;
@@ -38,11 +39,29 @@ public final class RunTrial implements Callable<Integer> {
 
 	private static final Logger log = LogManager.getLogger(RunTrial.class);
 
+	/**
+	 * Parse parameter supplied to the Run trial script.
+	 *
+	 * @param name         name of the parameter
+	 * @param defaultValue default value if not present.
+	 */
+	public static double parseParam(String name, double defaultValue) {
+		String property = System.getProperty("EPISIM_" + name, null);
+
+		if (property == null)
+			return defaultValue;
+
+		return Double.parseDouble(property);
+	}
+
 	@CommandLine.Parameters(paramLabel = "MODULE", arity = "1", description = "Name of module to load (See RunEpisim)")
 	private String moduleName;
 
 	@CommandLine.Option(names = "--number", description = "Trial number", required = true)
 	private int number;
+
+	@CommandLine.Option(names = "--name", defaultValue = "calibration", description = "Name for the output directory")
+	private String name;
 
 	@CommandLine.Option(names = "--runs", description = "Number of runs with different seeds", defaultValue = "3")
 	private int runs;
@@ -61,6 +80,12 @@ public final class RunTrial implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--ci", description = "Overwrite contact intensities", split = ";")
 	private Map<String, Double> ci = new HashMap<>();
+
+	@CommandLine.Option(names = "--param", description = "Specify arbitrary parameter", split = ";")
+	private Map<String, Double> params = new HashMap<>();
+
+	@CommandLine.Option(names = "--infectiousness", description = "Set infectiousness for strain")
+	private Map<VirusStrain, Double> infectiousness = new HashMap<>();
 
 	@CommandLine.Option(names = "--alpha", description = "Alpha parameter for restrictions", defaultValue = "-1")
 	private double alpha;
@@ -91,6 +116,11 @@ public final class RunTrial implements Callable<Integer> {
 	public Integer call() throws Exception {
 
 		Configurator.setRootLevel(Level.ERROR);
+		Configurator.setLevel(log.getName(), Level.INFO);
+
+		for (Map.Entry<String, Double> e : params.entrySet()) {
+			System.setProperty("EPISIM_" + e.getKey(), String.valueOf(e.getValue()));
+		}
 
 		Module base = RunEpisim.resolveModules(List.of(moduleName)).get(0);
 		TrialBatch trial = new TrialBatch(base);
@@ -118,7 +148,8 @@ public final class RunTrial implements Callable<Integer> {
 
 		log.info("Starting trial number {} ({} runs) with {} iterations", number, preparedRuns.size(), days);
 
-		String name = unconstrained ? "calibration-unconstrained" : "calibration";
+		log.info("Parameters: {}", params);
+
 		if (correctionStart != null)
 			name += "-" + correctionStart;
 
@@ -211,14 +242,15 @@ public final class RunTrial implements Callable<Integer> {
 				iterations = (int) (ChronoUnit.DAYS.between(episimConfig.getStartDate(), endDate) + 1);
 
 				// Write a new snapshot
-				if (params.run == 0 && snapshot != null) {
-					episimConfig.setSnapshotInterval(iterations - 7);
-				}
+				//if (params.run == 0 && snapshot != null) {
+				//	episimConfig.setSnapshotInterval(iterations - 7);
+				//}
 			}
 
 			if (snapshot != null) {
-				log.info("Starting from snapshot {}", snapshot);
-				episimConfig.setStartFromSnapshot(snapshot.toString());
+				String p = snapshot.toString().replace(".zip", params.seed + ".zip");
+				log.info("Starting from snapshot {}", p);
+				episimConfig.setStartFromSnapshot(p);
 			}
 
 			if (hospitalFactor > -1) {
@@ -226,9 +258,19 @@ public final class RunTrial implements Callable<Integer> {
 				episimConfig.setHospitalFactor(hospitalFactor);
 			}
 
+			if (!infectiousness.isEmpty()) {
+
+				VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(params.config, VirusStrainConfigGroup.class);
+
+				for (Map.Entry<VirusStrain, Double> e : infectiousness.entrySet()) {
+					log.info("Setting infectiousness for strain {}: {}", e.getKey(), e.getValue());
+					strainConfig.getOrAddParams(e.getKey()).setInfectiousness(e.getValue());
+				}
+			}
+
 			log.info("Setting seed for run {} to {}", params.run, params.seed);
 			params.config.global().setRandomSeed(params.seed);
-			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.reseed);
+			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 			// events are not needed for calibration
 			episimConfig.setWriteEvents(EpisimConfigGroup.WriteEvents.none);

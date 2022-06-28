@@ -48,13 +48,18 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 
 			case seriouslySick:
 				if (!person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.critical)
-						&& rnd.nextDouble() < getProbaOfTransitioningToCritical(person))
+						&& (rnd.nextDouble() < getProbaOfTransitioningToCritical(person) * strainConfig.getParams(person.getVirusStrain()).getFactorCritical()
+						* getCriticalFactor(person, vaccinationConfig, day)))
 					return EpisimPerson.DiseaseStatus.critical;
 				else
 					return EpisimPerson.DiseaseStatus.recovered;
 
 			case critical:
-				return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
+				double proba = getProbaOfTransitioningToDeceased(person);
+				if (proba != 0 && rnd.nextDouble() < proba)
+					return DiseaseStatus.deceased;
+				else
+					return EpisimPerson.DiseaseStatus.seriouslySickAfterCritical;
 
 			case seriouslySickAfterCritical:
 				return EpisimPerson.DiseaseStatus.recovered;
@@ -94,6 +99,10 @@ public class DefaultDiseaseStatusTransitionModel implements DiseaseStatusTransit
 
 	protected double getProbaOfTransitioningToShowingSymptoms(EpisimPerson person) {
 		return 0.8;
+	}
+
+	protected double getProbaOfTransitioningToDeceased(EpisimPerson person) {
+		return 0.0;
 	}
 
 }

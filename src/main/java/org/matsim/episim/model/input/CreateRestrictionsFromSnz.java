@@ -93,6 +93,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 				}
 			}
 		}
+		Collections.sort(fileData);
 		return fileData;
 	}
 
@@ -492,37 +493,54 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 
+		Path finalPath = null;
 		Path thisOutputFile = outputFile.resolve("mobilityData_OverviewBL_new.csv");
 
-		Collections.sort(filesWithData);
-
-		log.info("Searching for files in the folder: " + inputFolder);
-		log.info("Amount of found files: " + filesWithData.size());
-
-		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
-		try {
-			String[] header = new String[] { "date", "BundeslandID", "outOfHomeDuration",
-					"percentageChangeComparedToBeforeCorona" };
-			JOIN_LK.appendTo(writer, header);
-			writer.write("\n");
-
-			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
-
-			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer, zipCodesBL,
-					startDateStillUsingBaseDays, datesToIgnore);
-			writer.close();
-
-			Path finalPath = null;
-			if (selectedOutputOption.contains("daily"))
-				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_daily"));
-			else if (selectedOutputOption.contains("weekly"))
+		if (outputFile.endsWith("mobilityData/bundeslaender/")) {
+			if (selectedOutputOption.contains("weekly"))
 				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekly"));
 			else if (selectedOutputOption.contains("weekdays"))
 				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekdays"));
 			else if (selectedOutputOption.contains("weekends"))
 				finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekends"));
+		}
 
-			Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
+		Collections.sort(filesWithData);
+
+		startDateStillUsingBaseDays = findNextDateToContinueFile(startDateStillUsingBaseDays, filesWithData, finalPath);
+
+		log.info("Searching for files in the folder: " + inputFolder);
+		log.info("Amount of found files: " + filesWithData.size());
+
+		BufferedWriter writer = null;
+		if (finalPath == null)
+			writer = IOUtils.getBufferedWriter(thisOutputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
+		else
+			writer = IOUtils.getBufferedWriter(finalPath.toUri().toURL(), StandardCharsets.UTF_8, true);
+		try {
+			if (finalPath == null) {
+				String[] header = new String[] { "date", "BundeslandID", "outOfHomeDuration",
+						"percentageChangeComparedToBeforeCorona" };
+				JOIN_LK.appendTo(writer, header);
+				writer.write("\n");
+			}
+			HashMap<String, IntSet> zipCodesBL = findZIPCodesForBundeslaender();
+
+			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer, zipCodesBL,
+					startDateStillUsingBaseDays, datesToIgnore);
+			writer.close();
+			if (finalPath == null) {
+				if (selectedOutputOption.contains("daily"))
+					finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_daily"));
+				else if (selectedOutputOption.contains("weekly"))
+					finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekly"));
+				else if (selectedOutputOption.contains("weekdays"))
+					finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekdays"));
+				else if (selectedOutputOption.contains("weekends"))
+					finalPath = Path.of(thisOutputFile.toString().replace("BL_new", "BL_weekends"));
+
+				Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
+			}
 			log.info("Write analyze of " + filesWithData.size() + " is writen to " + thisOutputFile);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -543,37 +561,53 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 		List<File> filesWithData = findInputFiles(inputFolder.toFile());
 
+		Path finalPath = null;
 		Path thisOutputFile = outputFile.resolve("LK_mobilityData_new.csv");
 
-		Collections.sort(filesWithData);
+		if (outputFile.endsWith("mobilityData/landkreise/")) {
+			if (selectedOutputOption.contains("weekly"))
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekly"));
+			else if (selectedOutputOption.contains("weekdays"))
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekdays"));
+			else if (selectedOutputOption.contains("weekends"))
+				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekends"));
+		}
+
+		startDateStillUsingBaseDays = findNextDateToContinueFile(startDateStillUsingBaseDays, filesWithData, finalPath);
+
 		log.info("Searching for files in the folder: " + inputFolder);
 		log.info("Amount of found files: " + filesWithData.size());
 
-		BufferedWriter writer = IOUtils.getBufferedWriter(thisOutputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
+		BufferedWriter writer = null;
+		if (finalPath == null)
+			writer = IOUtils.getBufferedWriter(thisOutputFile.toUri().toURL(), StandardCharsets.UTF_8, true);
+		else
+			writer = IOUtils.getBufferedWriter(finalPath.toUri().toURL(), StandardCharsets.UTF_8, true);
 		try {
-			String[] header = new String[] { "date", "Landkreis", "outOfHomeDuration",
-					"percentageChangeComparedToBeforeCorona" };
-			JOIN_LK.appendTo(writer, header);
-			writer.write("\n");
-
+			if (finalPath == null) {
+				String[] header = new String[] { "date", "Landkreis", "outOfHomeDuration",
+						"percentageChangeComparedToBeforeCorona" };
+				JOIN_LK.appendTo(writer, header);
+				writer.write("\n");
+			}
 			HashMap<String, IntSet> zipCodesLK = findZIPCodesForLandkreise();
 
 			readAndWriteResultsOfAllDays(selectedOutputOption, filesWithData, writer, zipCodesLK,
 					startDateStillUsingBaseDays, datesToIgnore);
 
 			writer.close();
-			Path finalPath = null;
-			if (selectedOutputOption.contains("daily"))
-				finalPath = Path.of(thisOutputFile.toString().replace("new", "daily"));
-			else if (selectedOutputOption.contains("weekly"))
-				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekly"));
-			else if (selectedOutputOption.contains("weekdays"))
-				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekdays"));
-			else if (selectedOutputOption.contains("weekends"))
-				finalPath = Path.of(thisOutputFile.toString().replace("new", "weekends"));
+			if (finalPath == null) {
+				if (selectedOutputOption.contains("daily"))
+					finalPath = Path.of(thisOutputFile.toString().replace("new", "daily"));
+				else if (selectedOutputOption.contains("weekly"))
+					finalPath = Path.of(thisOutputFile.toString().replace("new", "weekly"));
+				else if (selectedOutputOption.contains("weekdays"))
+					finalPath = Path.of(thisOutputFile.toString().replace("new", "weekdays"));
+				else if (selectedOutputOption.contains("weekends"))
+					finalPath = Path.of(thisOutputFile.toString().replace("new", "weekends"));
 
-			Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
-
+				Files.move(thisOutputFile, finalPath, StandardCopyOption.REPLACE_EXISTING);
+			}
 			log.info("Write analyze of " + filesWithData.size() + " is writen to " + finalPath);
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -615,10 +649,10 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 			LocalDate date = LocalDate.parse(dateString, FMT);
 			DayOfWeek day = date.getDayOfWeek();
 
-			if (dateString.equals(startDateStillUsingBaseDays))
+			if (dateString.equals(startDateStillUsingBaseDays) || startDateStillUsingBaseDays.equals(""))
 				reachedStartDate = true;
 
-			if (startDateStillUsingBaseDays.equals("") || countingDays <= 7 || reachedStartDate) {
+			if (countingDays <= 7 || reachedStartDate) {
 
 				List<String> areasWithBankHoliday = new ArrayList<>();
 				getAreasWithBankHoliday(areasWithBankHoliday, allHolidays, date);
@@ -688,18 +722,17 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 							// add the number of persons in this area from data
 							if (personsPerArea.isEmpty())
 								personsPerArea = getPersonsInThisZIPCodes(zipCodesAreas, inputFolder.toFile());
-
-							List<String> row = new ArrayList<>();
-							row.add(dateString);
-							row.add(nameOfArea);
-							row.add(String.valueOf(round2Decimals(
-									sums.getDouble("notAtHome") / personsPerArea.get(nameOfArea) / 3600)));
-							row.add(String.valueOf(Math.round(
-									(sums.getDouble("notAtHome") / base.get(day).get(nameOfArea).getDouble("notAtHome")
-											- 1) * 100)));
-							JOIN_LK.appendTo(writer, row);
-							writer.write("\n");
-
+							if (reachedStartDate) {
+								List<String> row = new ArrayList<>();
+								row.add(dateString);
+								row.add(nameOfArea);
+								row.add(String.valueOf(round2Decimals(
+										sums.getDouble("notAtHome") / personsPerArea.get(nameOfArea) / 3600)));
+								row.add(String.valueOf(Math.round((sums.getDouble("notAtHome")
+										/ base.get(day).get(nameOfArea).getDouble("notAtHome") - 1) * 100)));
+								JOIN_LK.appendTo(writer, row);
+								writer.write("\n");
+							}
 						}
 
 					anaylzedDaysPerAreaAndPeriod.clear();
@@ -862,6 +895,33 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 						"For the choosen area " + anyArea + " more the following districts are possible: "
 								+ possibleAreas.toString() + " Choose one and start again.");
 		return zipCodes;
+	}
+	
+	
+	/** Finds the date after the last day in the given output file.
+	 * @param startDateStillUsingBaseDays
+	 * @param filesWithData
+	 * @param finalPath
+	 * @return
+	 * @throws IOException
+	 */
+	private String findNextDateToContinueFile(String startDateStillUsingBaseDays, List<File> filesWithData,
+			Path finalPath) throws IOException {
+		if (finalPath != null) {
+			List<String> existingData = Files.readAllLines(finalPath);
+			startDateStillUsingBaseDays = existingData.get(existingData.size() - 1).split(";")[0];
+		}
+		boolean nextDateIsStartDate = false;
+		for (File file : filesWithData) {
+			String dateOfFile = file.getName().split("_")[0];
+			if (nextDateIsStartDate) {
+				startDateStillUsingBaseDays = dateOfFile;
+				break;
+			}
+			if (startDateStillUsingBaseDays.equals(dateOfFile))
+				nextDateIsStartDate = true;
+		}
+		return startDateStillUsingBaseDays;
 	}
 
 	/**

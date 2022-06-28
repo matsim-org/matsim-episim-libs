@@ -1,6 +1,7 @@
 package org.matsim.episim.model.progression;
 
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.Immunizable;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
 
@@ -26,9 +27,7 @@ public interface DiseaseStatusTransitionModel {
 	 */
 	default double getShowingSymptomsFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
-				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorShowingSymptoms(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
-				: 1d;
+		double a = vaccinationConfig.getMinFactor(person, day, VaccinationConfigGroup.VaccinationParams::getFactorShowingSymptoms);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorShowingSymptoms(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
@@ -40,11 +39,9 @@ public interface DiseaseStatusTransitionModel {
 	/**
 	 * Factor for showing symptoms depending on vaccination or immunity.
 	 */
-	default double getSeriouslySickFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
+	default double getSeriouslySickFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.yes
-				? vaccinationConfig.getParams(person.getVaccinationType()).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.VaccinationStatus.yes, day))
-				: 1d;
+		double a = vaccinationConfig.getMinFactor((EpisimPerson) person, day, VaccinationConfigGroup.VaccinationParams::getFactorSeriouslySick);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
@@ -52,5 +49,20 @@ public interface DiseaseStatusTransitionModel {
 
 		return Math.min(a, b);
 	}
+
+	/**
+	 * Factor for showing symptoms depending on vaccination or immunity.
+	 */
+	default double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
+
+		double a = vaccinationConfig.getMinFactor((EpisimPerson) person, day, VaccinationConfigGroup.VaccinationParams::getFactorCritical);
+
+		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
+				? vaccinationConfig.getParams(VaccinationType.natural).getFactorCritical(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
+				: 1d;
+
+		return Math.min(a, b);
+	}
+
 
 }

@@ -76,13 +76,13 @@ public class InicidencePerStrain implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--output", defaultValue = "./output/211217/")
 	private Path output;
-	
+
 	@CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	private String input;
-	
+
 	@CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
 	private String populationFile;
-	
+
 	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
 	private LocalDate startDate;
 
@@ -102,7 +102,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 			log.error("Output path {} does not exist.", output);
 			return 2;
 		}
-		
+
 		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
 				calcValues(scenario);
@@ -128,27 +128,27 @@ public class InicidencePerStrain implements Callable<Integer> {
 
 		Population population = readPopulation();
 		initPopulation(population);
-		
+
 		String id = AnalysisCommand.getScenarioPrefix(scenario);
-		
+
 		BufferedWriter bw = Files.newBufferedWriter(scenario.resolve(id + "vaccineEff.txt"));
 		bw.write("vacDate" + "\t" + "date" + "\t" + "period" + "\t" +  "vaccinatedInfected" + "\t" + "vaccinatedNotInfected" + "\t" + "controlGroupInfected" + "\t" + "controlGroupNotInfected" + "\t" + "efficacy" );
 		bw.flush();
-		
+
 		Map<String, Map<LocalDate, Integer>> symptoms = new HashMap<>();
 		Map<String, Map<LocalDate, Integer>> seriouslySick = new HashMap<>();
-		
+
 		Handler handler = new Handler(population, startDate, symptoms, seriouslySick);
-		
+
 		AnalysisCommand.forEachEvent(scenario, s -> {}, handler);
-		
+
 		int persons = 0;
 		for (Person p : population.getPersons().values()) {
 			if (p.getAttributes().getAttribute("district").equals("Köln")) {
 				persons++;
 			}
 		}
-		
+
 		System.out.print("date");
 		for (String strain : symptoms.keySet()) {
 			System.out.print("\t");
@@ -156,7 +156,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 		}
 		System.out.println("");
 
-		
+
 		for (int i = 0; i<850; i++) {
 			LocalDate date = startDate.plusDays(i);
 			System.out.print(date);
@@ -172,7 +172,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 			}
 			System.out.println("");
 		}
-		
+
 //		for (int i = 0; i<850; i++) {
 //			LocalDate date = startDate.plusDays(i);
 //			System.out.print(date);
@@ -188,9 +188,9 @@ public class InicidencePerStrain implements Callable<Integer> {
 //			}
 //			System.out.println("");
 //		}
-		
+
 		bw.close();
-		
+
 		log.info("Calculated results for scenario {}", scenario);
 
 	}
@@ -198,12 +198,12 @@ public class InicidencePerStrain implements Callable<Integer> {
 
 
 	private void initPopulation(Population population) {
-		
+
 		for (Person p : population.getPersons().values()) {
 			Attributes attributes = p.getAttributes();
 			attributes.putAttribute("strain", "");
 		}
-		
+
 	}
 
 
@@ -214,7 +214,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 		private Map<String, Map<LocalDate, Integer>> symptoms = new HashMap<>();
 		private Map<String, Map<LocalDate, Integer>> seriouslySick = new HashMap<>();
 
-	
+
 		public Handler(Population population, LocalDate startDate, Map<String, Map<LocalDate, Integer>> symptoms, Map<String, Map<LocalDate, Integer>> seriouslySick) {
 			this.population = population;
 			this.startDate = startDate;
@@ -227,34 +227,34 @@ public class InicidencePerStrain implements Callable<Integer> {
 		public void handleEvent(EpisimInfectionEvent event) {
 			Person person = this.population.getPersons().get(event.getPersonId());
 			Attributes attr = person.getAttributes();
-			attr.putAttribute("strain", event.getStrain().toString());
+			attr.putAttribute("strain", event.getVirusStrain().toString());
 		}
 
 
 		@Override
 		public void handleEvent(EpisimPersonStatusEvent event) {
-			
+
 			DiseaseStatus status = event.getDiseaseStatus();
-			
+
 			if (!(status == DiseaseStatus.showingSymptoms || status == DiseaseStatus.seriouslySick)) {
 				return;
 			}
 
 			Person person = this.population.getPersons().get(event.getPersonId());
 			Attributes attr = person.getAttributes();
-			
+
 			if (!attr.getAttribute("district").equals("Köln")) {
 				return;
 			}
-			
+
 			String strain = (String) attr.getAttribute("strain");
 			if (strain == "") {
 				System.out.println(status);
 				return;
 			}
-			
+
 			LocalDate date = startDate.plusDays( (int) (event.getTime() / 86_400));
-			
+
 			if (status == DiseaseStatus.showingSymptoms) {
 				if (symptoms.containsKey(strain)) {
 					if (symptoms.get(strain).containsKey(date)) {
@@ -287,7 +287,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 					seriouslySick.put(strain, map);
 				}
 			}
-			
+
 		}
 
 

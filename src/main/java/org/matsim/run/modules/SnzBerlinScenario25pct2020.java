@@ -115,13 +115,30 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 			//Weihnachtsferien
 			.restrict("2021-12-21", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
 			.restrict("2022-01-04", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			// ** 2022 **
+			//Winterferien
+			.restrict("2022-01-29", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-02-05", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Osterferien
+			.restrict("2022-04-11", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-04-23", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Sommerferien
+			.restrict("2022-07-07", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-08-19", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Herbstferien
+			.restrict("2022-10-24", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2022-11-05", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			//Weihnachtsferien
+			.restrict("2022-12-22", 0.2, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+			.restrict("2023-01-02", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other")
+
 			;
 		}
 
 		if (restrictUniversities ) {
 			restrictions.restrict("2020-03-14", 0., "educ_higher")
-			.restrict("2020-05-11", 0.2, "educ_higher")
-			;
+			.restrict("2020-05-11", 0.2, "educ_higher");
+			//TODO: what happened to higher education in 2021/2022
 		}
 
 		for (Map.Entry<String, Double> e : ciCorrections.entrySet()) {
@@ -175,11 +192,32 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 				FaceMask.SURGICAL, 0.9 * 1./2.)),
 				"pt", "shop_daily", "shop_other", "errands");
 
-		//FFP2-Maskenpflicht https://www.berlin.de/aktuelles/berlin/6489489-958092-ab-mittwoch-an-vielen-orten-ffp2masken-p.html
+		//FFP2-Maskenpflicht 2021: https://www.berlin.de/aktuelles/berlin/6489489-958092-ab-mittwoch-an-vielen-orten-ffp2masken-p.html
 		restrictions.restrict(LocalDate.parse("2021-03-31"), Restriction.ofMask(Map.of(
 				FaceMask.N95, 0.9)),
 				"pt", "shop_daily", "shop_other", "errands");
 
+		//Maskenpflicht Lockerung: medizinische Masken im Einzelhandel: https://www.berlin.de/rbmskzl/aktuelles/pressemitteilungen/2021/pressemitteilung.1103648.php
+		restrictions.restrict(LocalDate.parse("2021-07-10"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9 * 1./2.,
+				FaceMask.SURGICAL, 0.9 * 1./2.)),
+				"shop_daily", "shop_other", "errands");
+
+		//FFP2-Pflicht Lockerung im ÖPNV mit der Einführung der 3G Regelung: https://gesetze.berlin.de/bsbe/document/jlr-CoronaV4VBEV4P2
+		restrictions.restrict(LocalDate.parse("2021-12-18"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9 * 1./2.,
+				FaceMask.SURGICAL, 0.9 * 1./2.)),
+				"pt");
+
+		//FFP2-Maskenpflicht in public transit (2022): https://www.berlin.de/aktuelles/7240429-958090-senat-beschliesst-ffp2maskenpflicht-im-o.html
+		restrictions.restrict(LocalDate.parse("2022-01-15"), Restriction.ofMask(Map.of(
+				FaceMask.N95, 0.9)),
+				"pt");
+
+		//FFP2-Maskenpflicht in pt and businesses (2022) TODO: coming soon:https://www.berlin.de/aktuelles/7299635-958090-ffp2maskenpflicht-statt-2gregel-im-einze.html
+//		restrictions.restrict(LocalDate.parse("2021-03-31"), Restriction.ofMask(Map.of(
+//				FaceMask.N95, 0.9)),
+//				"pt", "shop_daily", "shop_other", "errands");
 
 		restrictions.restrict(LocalDate.parse("2020-10-25"), Restriction.ofMask(Map.of(
 				FaceMask.CLOTH, 0.9 * 1./3.,
@@ -275,7 +313,7 @@ public final class SnzBerlinScenario25pct2020 extends AbstractSnzScenario2020 {
 		public BasePolicyBuilder(EpisimConfigGroup episimConfig) {
 			this.episimConfig = episimConfig;
 			this.activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
-			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20210709.csv"));
+			this.activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 		}
 
 		public void setIntroductionPeriod(long introductionPeriod) {

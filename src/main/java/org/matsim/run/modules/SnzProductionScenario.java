@@ -8,16 +8,13 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.config.groups.VspExperimentalConfigGroup;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimUtils;
-import org.matsim.episim.TracingConfigGroup;
-import org.matsim.episim.VaccinationConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationByAge;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.batch.CologneOmicron.Params;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -78,7 +75,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonality(1.0);
 //		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -182,12 +179,12 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	/**
 	 * Configure outdoor fractions for weather model.
 	 */
-	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather) {
+	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather, double maxOutdoorFraction) {
 		if (weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0, maxOutdoorFraction);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
@@ -217,7 +214,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 							.atFullEffect(effectivnessMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
@@ -227,7 +224,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 							.atFullEffect(factorShowingSymptomsMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 							.atDay(1, 1.0)
 							.atFullEffect(factorShowingSymptomsMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
@@ -237,7 +234,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 							.atFullEffect(factorSeriouslySickMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 							.atDay(1, 1.0)
 							.atFullEffect(factorSeriouslySickMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
@@ -256,7 +253,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 							.atFullEffect(effectivnessVector)
 							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 							.atDay(1, 0.0)
 							.atFullEffect(effectivnessVector)
 							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
@@ -266,7 +263,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 							.atFullEffect(factorShowingSymptomsVector)
 							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 							.atDay(1, 1.0)
 							.atFullEffect(factorShowingSymptomsVector)
 							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
@@ -276,7 +273,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 							.atFullEffect(factorSeriouslySickVector)
 							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.B117)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.ALPHA)
 							.atDay(1, 1.0)
 							.atFullEffect(factorSeriouslySickVector)
 							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
@@ -291,19 +288,19 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 					.setDaysBeforeFullEffect(fullEffectMRNA)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 0.0)
 							.atDay(fullEffectMRNA-7, effectivnessMRNA/2.)
 							.atFullEffect(effectivnessMRNA)
 							.atDay(fullEffectMRNA + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 1.0)
 							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
 							.atFullEffect(factorShowingSymptomsMRNA)
 							.atDay(fullEffectMRNA + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 1.0)
 							.atDay(fullEffectMRNA-7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
 							.atFullEffect(factorSeriouslySickMRNA)
@@ -318,19 +315,19 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 			vaccinationConfig.getOrAddParams(VaccinationType.vector)
 				.setDaysBeforeFullEffect(fullEffectVector)
-				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 0.0)
 						.atDay(fullEffectVector-7, effectivnessVector/2.)
 						.atFullEffect(effectivnessVector)
 						.atDay(fullEffectVector + 5*365, 0.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
 						.atFullEffect(factorShowingSymptomsVector)
 						.atDay(fullEffectVector + 5*365, 1.0) //10% reduction every 6 months (source: TC)
 				)
-				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+				.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 						.atDay(1, 1.0)
 						.atDay(fullEffectVector-7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
 						.atFullEffect(factorSeriouslySickVector)
@@ -345,6 +342,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		Map<LocalDate, Map<VaccinationType, Double>> share = new HashMap<>();
 
+		share.put(LocalDate.parse("2020-12-01"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2020-12-28"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2021-01-04"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
 		share.put(LocalDate.parse("2021-01-11"), Map.of(VaccinationType.mRNA, 1.00d, VaccinationType.vector, 0.00d));
@@ -424,6 +422,20 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		vaccinations.put(LocalDate.parse("2021-07-14"), (int) ((0.605 - 0.583) * population / 14)); // until 07-28
 
 		vaccinationConfig.setVaccinationCapacity_pers_per_day(vaccinations);
+
+	}
+
+	public static void configureStrains(EpisimConfigGroup episimConfig, VirusStrainConfigGroup virusStrainConfig) {
+
+
+		Map<LocalDate, Integer> infPerDayALPHA = new HashMap<>();
+		infPerDayALPHA.put(LocalDate.parse("2020-01-01"), 0);
+		infPerDayALPHA.put(LocalDate.parse("2021-01-15"), 4);
+		infPerDayALPHA.put(LocalDate.parse("2021-01-22"), 1);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayALPHA);
+
+		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.65);
+		virusStrainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 	}
 
@@ -534,6 +546,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
+		Class<? extends TestingModel> testingModel = DefaultTestingModel.class;
+
 		double imprtFctMult = 1.;
 		double importFactorBeforeJune = 4.;
 		double importFactorAfterJune = 0.5;
@@ -622,6 +636,10 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			this.vaccinationModel = vaccinationModel;
 			return this;
 		}
+		public Builder<T> setTestingModel(Class<? extends TestingModel> testingModel) {
+			this.testingModel = testingModel;
+			return this;
+		}
 
 		public Builder<T> setActivityHandling(EpisimConfigGroup.ActivityHandling activityHandling) {
 			this.activityHandling = activityHandling;
@@ -638,7 +656,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 			return this;
 		}
 	}
-	
+
 
 	/**
 	 * Adds progression config to the given builder.

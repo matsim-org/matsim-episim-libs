@@ -84,12 +84,12 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		Map<LocalDate, Integer> infPerDayVariant = new HashMap<>();
 		infPerDayVariant.put(LocalDate.parse("2020-01-01"), 0);
 		infPerDayVariant.put(LocalDate.parse(params.b117date), 1);
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayVariant);
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(params.b117inf);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.5);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.b117inf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.5);
 
 		return config;
 	}

@@ -33,6 +33,7 @@ import org.matsim.api.core.v01.Scenario;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
+import org.matsim.episim.analysis.OutputAnalysis;
 import org.matsim.episim.reporting.AsyncEpisimWriter;
 import org.matsim.episim.reporting.EpisimWriter;
 import picocli.CommandLine;
@@ -40,10 +41,12 @@ import picocli.CommandLine;
 import javax.annotation.Nullable;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
@@ -114,6 +117,10 @@ public class RunParallel<T> implements Callable<Integer> {
 
 	@CommandLine.Option(names = "--silent", defaultValue = "false", description = "Disable info and warn logging")
 	private boolean silent;
+
+	public static final String OPTION_POST_ONLY = "--post-only";
+	@CommandLine.Option(names = OPTION_POST_ONLY, defaultValue = "false", description = "Run only the post-processing")
+	private boolean postOnly;
 
 	public static final String OPTION_METADATA = "--write-metadata";
 	@CommandLine.Option(names = OPTION_METADATA, description = "Write metadata to output directory.", defaultValue = "false")
@@ -229,8 +236,16 @@ public class RunParallel<T> implements Callable<Integer> {
 			run.config.controler().setRunId(prepare.setup.getMetadata().name + run.id);
 			run.config.setContext(context);
 
+			Collection<OutputAnalysis> post = prepare.setup.postProcessing();
+
 			futures.add(CompletableFuture.runAsync(
-					new Task(((BatchRun) prepare.setup).getBindings(run.id, run.args), new ParallelModule(run.config, scenario, replay, writer), maxIterations), executor)
+					new Task(
+							((BatchRun) prepare.setup).getBindings(run.id, run.args),
+							new ParallelModule(run.config, scenario, replay, writer),
+							maxIterations,
+							postOnly,
+							post
+					), executor)
 					.exceptionally(t -> {
 						log.error("Task {} failed", outputPath, t);
 						return null;
@@ -296,11 +311,15 @@ public class RunParallel<T> implements Callable<Integer> {
 		private final Module bindings;
 		private final ParallelModule module;
 		private final int maxIterations;
+		private final boolean postOnly;
+		private final Collection<OutputAnalysis> post;
 
-		private Task(@Nullable Module bindings, ParallelModule module, int maxIterations) {
+		private Task(@Nullable Module bindings, ParallelModule module, int maxIterations, boolean postOnly, Collection<OutputAnalysis> post) {
 			this.bindings = bindings;
 			this.module = module;
 			this.maxIterations = maxIterations;
+			this.postOnly = postOnly;
+			this.post = post;
 		}
 
 		@Override
@@ -320,13 +339,29 @@ public class RunParallel<T> implements Callable<Integer> {
 				RunEpisim.printBindings(injector);
 			}
 
-			log.info("Starting task: {}", this.module.config.controler().getOutputDirectory());
+			String output = this.module.config.controler().getOutputDirectory();
 
-			EpisimRunner runner = injector.getInstance(EpisimRunner.class);
+			log.info("Starting task: {}", output);
 
-			runner.run(maxIterations);
+			if (!postOnly) {
+				EpisimRunner runner = injector.getInstance(EpisimRunner.class);
+				runner.run(maxIterations);
+			}
 
-			log.info("Task finished: {}", this.module.config.controler().getOutputDirectory());
+			for (OutputAnalysis analysis : post) {
+				log.info("Running analysis {} on {}", analysis.getClass().getSimpleName(), output);
+
+				injector.injectMembers(analysis);
+
+				try {
+					analysis.analyzeOutput(Path.of(output));
+				} catch (IOException e) {
+					log.warn("Output analysis failed", e);
+				}
+			}
+
+
+			log.info("Task finished: {}", output);
 		}
 	}
 

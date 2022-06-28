@@ -114,7 +114,7 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 		infPerDayVariant.put(LocalDate.parse("2020-12-05"), 1);
 //		infPerDayVariant.put(LocalDate.parse("2020-11-25"), 1);
 
-		episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayVariant);
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayVariant);
 
 
 		builder.restrict("2021-04-06", Restriction.ofClosingHours(21, 5), "leisure", "visit");
@@ -281,9 +281,9 @@ public class SMTesting implements BatchRun<SMTesting.Params> {
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(2.0);
-//		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.8);
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setVaccineEffectiveness(1.0);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(2.0);
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.8);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setVaccineEffectiveness(1.0);
 
 //		if (!params.B1351.equals("no")) {
 //			episimConfig.setInfections_pers_per_day(VirusStrain.B1351, Map.of(
