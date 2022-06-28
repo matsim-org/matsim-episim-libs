@@ -254,9 +254,19 @@
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
 		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
+		 ConfigHolder holderOmicron = configure(factorOmicron,factorOmicronICU) ;
+		 ConfigHolder holderDelta = configure(factorDelta,factorDeltaICU) ;
 
+		 List<Handler> handlers = List.of(
+				  new Handler("Omicron", population, holderOmicron ),
+				 new Handler("Delta", population, holderDelta)
+		 );
 
-		 for (Double facA : strainFactors) {
+		 // feed the output events file to the handler, so that the hospitalizations may be calculated
+		 AnalysisCommand.forEachEvent(pathToScenario, s -> {
+		 }, handlers.toArray(new Handler[0]));
+
+//		 for (Double facA : strainFactors) {
 
 			 // configure post processing run
 //			 double facAICU = 0.;
@@ -301,7 +311,6 @@
 				 double occupancyHosp = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0) * 100_000. / popSize;
 				 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
 
-
 				 bw.newLine();
 				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesHosp", handler.name , intakesHosp));
 				 bw.newLine();
@@ -309,7 +318,7 @@
 				 bw.newLine();
 				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyHosp ", handler.name, occupancyHosp));
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyICU", diseaseSevName, occupancyIcu));
+				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyICU", handler.name, occupancyIcu));
 
 			 }
 		 }
@@ -336,10 +345,10 @@
 
 
 		 final Map<Id<Person>, ImmunizablePerson> data;
+		 private final String name;
 		 private final Population population;
 		 private final Random rnd;
-		 private final VirusStrainConfigGroup strainConfig;
-		 private final VaccinationConfigGroup vaccinationConfig;
+		 private final ConfigHolder holder;
 
 		 final Int2IntSortedMap postProcessHospitalAdmissions;
 		 final Int2IntSortedMap postProcessICUAdmissions;
@@ -364,13 +373,14 @@
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
 
 
-		 Handler(Map<Id<Person>, ImmunizablePerson> data, Population population, EpisimConfigGroup episimConfig, VirusStrainConfigGroup strainConfig, VaccinationConfigGroup vaccinationConfig) {
-			 this.data = data;
+		 Handler(String name, Population population, ConfigHolder holder) {
+
+			 // instantiate the custom event handler that calculates hospitalizations based on events
+			 this.name = name;
+			 this.data =  new IdMap<>(Person.class, population.getPersons().size());
 			 this.population = population;
 			 this.rnd = new Random(1234);
-			 this.strainConfig = strainConfig;
-			 this.vaccinationConfig = vaccinationConfig;
-
+			 this.holder = holder;
 
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
@@ -387,7 +397,7 @@
 			 this.incBaseImmunity = new Int2IntAVLTreeMap();
 			 this.incBoostered = new Int2IntAVLTreeMap();
 
-			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), episimConfig, vaccinationConfig, strainConfig);
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
 
 //			 try {
 //				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
@@ -546,8 +556,8 @@
 		 private boolean goToHospital(ImmunizablePerson person, int day) {
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
-			 double strainFactor = strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
-			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, vaccinationConfig, day);
+			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
+			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
 
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
@@ -561,8 +571,8 @@
 
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToCritical(person);
-			 double strainFactor = strainConfig.getParams(person.getVirusStrain()).getFactorCritical();
-			 double immunityFactor =  transitionModel.getCriticalFactor(person, vaccinationConfig, day); //todo: revert
+			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorCritical();
+			 double immunityFactor =  transitionModel.getCriticalFactor(person, holder.vaccinationConfig, day); //todo: revert
 
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
