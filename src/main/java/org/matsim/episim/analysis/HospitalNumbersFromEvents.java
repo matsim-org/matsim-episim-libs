@@ -20,12 +20,10 @@
 
 
  import com.google.inject.Inject;
+ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+ import it.unimi.dsi.fastutil.doubles.DoubleList;
  import it.unimi.dsi.fastutil.ints.*;
  import it.unimi.dsi.fastutil.objects.*;
- import org.apache.commons.csv.CSVFormat;
- import org.apache.commons.csv.CSVParser;
- import org.apache.commons.csv.CSVPrinter;
- import org.apache.commons.csv.CSVRecord;
  import org.apache.logging.log4j.Level;
  import org.apache.logging.log4j.LogManager;
  import org.apache.logging.log4j.Logger;
@@ -38,27 +36,17 @@
  import org.matsim.core.config.Config;
  import org.matsim.core.config.ConfigUtils;
  import org.matsim.core.population.PopulationUtils;
- import org.matsim.episim.EpisimConfigGroup;
- import org.matsim.episim.VirusStrainConfigGroup;
+ import org.matsim.episim.*;
  import org.matsim.episim.events.*;
- import org.matsim.episim.model.VaccinationType;
  import org.matsim.episim.model.VirusStrain;
+ import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.run.AnalysisCommand;
  import picocli.CommandLine;
- import tech.tablesaw.api.*;
- import tech.tablesaw.plotly.components.Axis;
- import tech.tablesaw.plotly.components.Figure;
- import tech.tablesaw.plotly.components.Layout;
- import tech.tablesaw.plotly.components.Page;
- import tech.tablesaw.plotly.traces.ScatterTrace;
- import tech.tablesaw.table.TableSliceGroup;
 
  import java.io.*;
- import java.nio.charset.StandardCharsets;
  import java.nio.file.Files;
  import java.nio.file.Path;
  import java.time.LocalDate;
- import java.time.temporal.ChronoUnit;
  import java.util.*;
 
 
@@ -67,19 +55,16 @@
   */
  @CommandLine.Command(
 		 name = "hospitalNumbers",
-		 description = "Calculate vaccination effectiveness from events"
+		 description = "Calculate hospital numbers from events"
  )
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-	 private static final Logger log = LogManager.getLogger(HospitalNumbersFromEvents.class);
-
-
-	 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-03-18/1/unguenstigerFall_1")
+	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
+//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-06-16/2/analysis/policy_leis75/")
 	 private Path output;
 
-	 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
-	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
+	 	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+//	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	 private String input;
 
 	 @CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
@@ -91,73 +76,105 @@
 	 @CommandLine.Option(names = "--district", description = "District to filter for", defaultValue = "Köln")
 	 private String district;
 
-	 private Population population;
+	 private static final Logger log = LogManager.getLogger(HospitalNumbersFromEvents.class);
+
+
+	 private final String DATE = "date";
+	 private final String DAY = "day";
+	 private final String INTAKES_HOSP = "intakesHosp";
+	 private final String INTAKES_ICU = "intakesIcu";
+	 private final String OCCUPANCY_HOSP = "occupancyHosp";
+	 private final String OCCUPANCY_ICU = "occupancyIcu";
 
 	 @Inject
 	 private Scenario scenario;
 
+	 private Population population;
 
-	 private VirusStrainConfigGroup strainConfig;
+	 private List<Id<Person>> filteredPopulationIds;
 
-	 private static final double hospitalFactor = 0.5; // This value was taken from the episim config file for the runs in question; TODO: what should this be?
-	 private static final double immunityFactorDefault = 1.0;
-	 private static final double beta = 1.2;
-	 private final int populationCnt = 919_936;
-	 private static final boolean useAntibodiesFromInfectionEvent = true;
-
-
-	 //	 private static final int lagBetweenInfectionAndHospitalisation = 10;
+	 // source: incidence wave vs. hospitalization wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
 	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 10,
-					 VirusStrain.ALPHA, 10,
-					 VirusStrain.DELTA, 10,
-					 VirusStrain.OMICRON_BA1, 10,
-					 VirusStrain.OMICRON_BA2, 10,
-					 VirusStrain.STRAIN_A, 10
-			 ));
-
-	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 3,
-					 VirusStrain.ALPHA, 3,
-					 VirusStrain.DELTA, 1,
-					 VirusStrain.OMICRON_BA1, 1,
-					 VirusStrain.OMICRON_BA2, 1,
-					 VirusStrain.STRAIN_A, 1
-			 ));
-
-	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 22,
-					 VirusStrain.ALPHA, 22,
+			 Map.of(VirusStrain.SARS_CoV_2, 14,
+					 VirusStrain.ALPHA, 14,
 					 VirusStrain.DELTA, 14,
 					 VirusStrain.OMICRON_BA1, 14,
 					 VirusStrain.OMICRON_BA2, 14,
+					 VirusStrain.OMICRON_BA5, 14,
 					 VirusStrain.STRAIN_A, 14
 			 ));
 
-	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 38,
-					 VirusStrain.ALPHA, 38,
-					 VirusStrain.DELTA, 20,
-					 VirusStrain.OMICRON_BA1, 20,
-					 VirusStrain.OMICRON_BA2, 20,
-					 VirusStrain.STRAIN_A, 29
+	  // source: hospitalization wave vs. ICU wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
+	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 6,
+					 VirusStrain.ALPHA, 6,
+					 VirusStrain.DELTA, 6,
+					 VirusStrain.OMICRON_BA1, 6,
+					 VirusStrain.OMICRON_BA2, 6,
+					 VirusStrain.OMICRON_BA5, 6,
+					 VirusStrain.STRAIN_A, 6
+			 ));
+
+	 // Austria study in https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=0
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 12,
+					 VirusStrain.ALPHA, 12,
+					 VirusStrain.DELTA, 12,
+					 VirusStrain.OMICRON_BA1, 7,
+					 VirusStrain.OMICRON_BA2, 7,
+					 VirusStrain.OMICRON_BA5,7,
+					 VirusStrain.STRAIN_A, 7
 			 ));
 
 	 private static final Object2IntMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 28,
-					 VirusStrain.ALPHA, 28,
-					 VirusStrain.DELTA, 17,
-					 VirusStrain.OMICRON_BA1, 8,
-					 VirusStrain.OMICRON_BA2, 8,
-					 VirusStrain.STRAIN_A, 21
+			 Map.of(VirusStrain.SARS_CoV_2, 15, // Debeka & Ireland studies
+					 VirusStrain.ALPHA, 15, // Debeka & Ireland studies
+					 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
+					 VirusStrain.OMICRON_BA1, 10,
+					 VirusStrain.OMICRON_BA2, 10,
+					 VirusStrain.OMICRON_BA5,10,
+					 VirusStrain.STRAIN_A, 10
 			 ));
 
-	 private static final double factorWildAndAlpha = 0.5;
-	 private static final double factorDelta = 0.85;
-	 private static final double factorOmicron = 0.22;
+	 // ??
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
+			 Map.of(VirusStrain.SARS_CoV_2, 60,
+					 VirusStrain.ALPHA, 60,
+					 VirusStrain.DELTA, 60,
+					 VirusStrain.OMICRON_BA1, 60,
+					 VirusStrain.OMICRON_BA2, 60,
+					 VirusStrain.OMICRON_BA5,60,
+					 VirusStrain.STRAIN_A, 60
+			 ));
+
+
+	 private static final double beta = 1.2;
+	 private final int populationCntOfficialKoelln = 919_936;
+	 private final int populationCntOfficialNrw = 17_930_000;
+
+
+	 private static final double hospitalFactor = 0.4;
+
+	 // base
+	 private static final double factorWild =  1.0;
+
+	 private static final double factorAlpha = 1.0 * factorWild;
+
+	 // delta: 2.3x more severe than alpha - Hospital admission and emergency care attendance risk for SARS-CoV-2 delta (B.1.617.2) compared with alpha (B.1.1.7) variants of concern: a cohort study
+	 private static final double factorDelta = 1.6 * factorWild;
+
+	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
+	 private static final double factorOmicron = 0.3  * factorDelta; // * reportedShareOmicron / reportedShareDelta
+
+
+//	 private static final List<Double> strainFactors = List.of(factorOmicron, factorDelta);
+
+	 // ??
+	 private static final double factorWildAndAlphaICU = 1.;
+	 private static final double factorDeltaICU = 1.;
+	 private static final double factorOmicronICU = 1.;
 
 	 private String outputAppendix = "";
-	 private Int2ObjectMap<Object2DoubleMap<VirusStrain>> immunity;
 
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
@@ -178,393 +195,137 @@
 
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
-//		 List<Double> strainFactors = List.of(factorWildAndAlpha, factorDelta, factorOmicron);
-		 List<Double> strainFactors = List.of(factorOmicron);
 
-		 for (Double facA : strainFactors) {
+		 // Here we define values factorSeriouslySickStrainA should have
 
-			 //			 outputAppendix = "_A" + facA;
-			 if (facA == factorWildAndAlpha) {
-				 outputAppendix = "_Alpha";
-			 } else if (facA == factorDelta) {
-				 outputAppendix = "_Delta";
-			 } else if (facA == factorOmicron) {
-				 outputAppendix = "_Omicron";
-			 } else {
-				 throw new RuntimeException("not clear what to do");
+
+		 // Part 1: calculate hospitalizations for each seed and save as csv
+//		 List<Path> pathList = new ArrayList<>();
+		 AnalysisCommand.forEachScenario(output, pathToScenario -> {
+			 try {
+//				 pathList.add(pathToScenario);
+				 // analyzeOutput is where the hospitalization post processing occurs
+				 analyzeOutput(pathToScenario);
+
+			 } catch (IOException e) {
+				 log.error("Failed processing {}", pathToScenario, e);
 			 }
+		 });
 
-
-			 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
-
-			 strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-			 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWildAndAlpha);
-			 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorWildAndAlpha);
-			 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
-			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
-			 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
-			 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
-			 //				 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(factorStrainB);
-
-
-			 // IMMUNITY FACTORS CONFIGURATION
-			 immunity = new Int2ObjectAVLTreeMap<>();
-
-			 immunity.put(1, new Object2DoubleAVLTreeMap<>());
-			 immunity.put(2, new Object2DoubleAVLTreeMap<>());
-
-
-			 // one immunity event: first round of vaccination (2 shots) or infection
-			 double valAlpha1 = 0.34;
-			 double valDelta1 = 0.15;
-			 double valOmicron1 = 0.6;
-
-			 immunity.get(1).put(VirusStrain.SARS_CoV_2, valAlpha1);
-			 immunity.get(1).put(VirusStrain.ALPHA, valAlpha1);
-			 immunity.get(1).put(VirusStrain.DELTA, valDelta1);
-			 immunity.get(1).put(VirusStrain.OMICRON_BA1, valOmicron1);
-			 immunity.get(1).put(VirusStrain.OMICRON_BA2, valOmicron1);
-			 immunity.get(1).put(VirusStrain.STRAIN_A, valOmicron1);
-			 immunity.get(1).put(VirusStrain.STRAIN_B, valOmicron1);
-
-			 // two or more immunity events: boosted through vaccination or infection
-			 double valAlpha2 = 0.2;
-			 double valDelta2 = 0.09;
-			 double valOmicron2 = 0.35;
-			 immunity.get(2).put(VirusStrain.SARS_CoV_2, valAlpha2);
-			 immunity.get(2).put(VirusStrain.ALPHA, valAlpha2);
-			 immunity.get(2).put(VirusStrain.DELTA, valDelta2);
-			 immunity.get(2).put(VirusStrain.OMICRON_BA1, valOmicron2);
-			 immunity.get(2).put(VirusStrain.OMICRON_BA2, valOmicron2);
-			 immunity.get(2).put(VirusStrain.STRAIN_A, valOmicron2);
-			 immunity.get(2).put(VirusStrain.STRAIN_B, valOmicron2);
-
-
-			 // Part 1: calculate hospitalizations and save as csv
-			 // can be run once and then commented out!
-
-
-			 AnalysisCommand.forEachScenario(output, scenario -> {
-				 try {
-					 analyzeOutput(scenario);
-
-				 } catch (IOException e) {
-					 log.error("Failed processing {}", scenario, e);
-				 }
-			 });
-
-			 log.info("done");
-
-			 // ===
+		 log.info("done");
 
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
-			 List<Path> pathList = new ArrayList<>();
-			 AnalysisCommand.forEachScenario(output, pathList::add);
+//			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-			 aggregateDataAndProduceTSV(output, pathList);
-
-		 }
+//		 }
 
 
 		 return 0;
 	 }
 
 	 @Override
-	 public void analyzeOutput(Path output) throws IOException {
+	 public void analyzeOutput(Path pathToScenario) throws IOException {
 
 		 if (scenario != null)
 			 population = scenario.getPopulation();
 
+		 String id = AnalysisCommand.getScenarioPrefix(pathToScenario);
 
-		 String id = AnalysisCommand.getScenarioPrefix(output);
+		 // builds the path to the output file that is produced by this analysis
+		 final Path tsvPath = pathToScenario.resolve(id + "post.hospital" + outputAppendix + ".tsv");
 
-		 final Path tsvPath = output.resolve(id + "post.hospital" + outputAppendix + ".tsv");
+		 // calculates hospitalizations
+		 calculateHospitalizationsAndWriteOutput(pathToScenario, tsvPath);
 
-		 calculateHospitalizationsAndWriteOutput(output, tsvPath);
-
-		 log.info("Calculated results for output {}", output);
+		 log.info("Calculated results for output {}", pathToScenario);
 
 	 }
 
-	 private void calculateHospitalizationsAndWriteOutput(Path output, Path tsvPath) throws IOException {
+
+	 /**
+	  * calculates hospitalizations based on the events file for the scenario. This is done by calling
+	  * the custom EventHandler, which is defined later in this class.
+	  * @param pathToScenario path to the directory containing the output events file
+	  * @param tsvPath filename for the hospitalization output produced by this method
+	  * @throws IOException
+	  */
+	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath) throws IOException {
+		 // open new buffered writer for hospitalization output and write the header row.
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
+		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
-		 bw.write("day\tdate\tpostProcessHospitalizations\tppBeds\tppBedsICU");
+		 ConfigHolder holderOmicron = configure(factorOmicron,factorOmicronICU) ;
+		 ConfigHolder holderDelta = configure(factorDelta,factorDeltaICU) ;
 
-		 Map<Id<Person>, Handler.Holder> data = new IdMap<>(Person.class, population.getPersons().size());
+		 List<Handler> handlers = List.of(
+				  new Handler("Omicron", population, holderOmicron ),
+				 new Handler("Delta", population, holderDelta)
+		 );
 
-		 Handler handler = new Handler(data, startDate, population, strainConfig, this.immunity);
+		 // feed the output events file to the handler, so that the hospitalizations may be calculated
+		 AnalysisCommand.forEachEvent(pathToScenario, s -> {
+		 }, handlers.toArray(new Handler[0]));
 
-		 AnalysisCommand.forEachEvent(output, s -> {
-		 }, handler);
+//		 for (Double facA : strainFactors) {
 
-		 int maxIteration = Math.max(
-				 handler.postProcessHospitalAdmissions.keySet().lastInt(),
-				 Math.max(handler.postProcessHospitalFilledBeds.keySet().lastInt(),
-						 handler.postProcessHospitalFilledBedsICU.keySet().lastInt()));
+			 // configure post processing run
+//			 double facAICU = 0.;
+//			 String diseaseSevName = "";
+//			 if (facA == factorWild) {
+//				 diseaseSevName = "Alpha";
+//				 facAICU = factorWildAndAlphaICU;
+//			 } else if (facA == factorDelta) {
+//				 diseaseSevName = "Delta";
+//				 facAICU = factorDeltaICU;
+//			 } else if (facA == factorOmicron) {
+//				 diseaseSevName = "Omicron";
+//				 facAICU = factorOmicronICU;
+//			 } else {
+//				 throw new RuntimeException("not clear what to do");
+//			 }
+
+		 for (Handler handler : handlers) {
+
+			 int maxIteration = Math.max(
+					 Math.max(handler.postProcessHospitalAdmissions.keySet().lastInt(),
+							 handler.postProcessICUAdmissions.keySet().lastInt()),
+					 Math.max(handler.postProcessHospitalFilledBeds.keySet().lastInt(),
+							 handler.postProcessHospitalFilledBedsICU.keySet().lastInt()));
 
 
-		 for (int day = 0; day <= maxIteration; day++) {
-			 LocalDate date = startDate.plusDays(day);
+			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
+			 // this is used to normalize the hospitalization values
+			 double popSize = (int) population.getPersons().values().stream()
+					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
 
-			 // calculates Incidence - 7day hospitalizations per 100,000 residents
-			 double ppHosp = getWeeklyHospitalizations(handler.postProcessHospitalAdmissions, day) * 4 * 100_000. / populationCnt;
 
-			 // calculates daily hospital occupancy, per 100,000 residents
-			 double ppBed = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0) * 4 * 100_000. / populationCnt;
-			 double ppBedICU = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 4 * 100_000. / populationCnt;
+			 for (int day = 0; day <= maxIteration; day++) {
+				 LocalDate date = startDate.plusDays(day);
 
-			 bw.newLine();
-			 bw.write(AnalysisCommand.TSV.join(day, date, ppHosp, ppBed, ppBedICU));
+				 // calculates Incidence - 7day hospitalizations per 100,000 residents
+				 double intakesHosp = getWeeklyHospitalizations(handler.postProcessHospitalAdmissions, day) * 100_000. / popSize;
 
+				 double intakesIcu = getWeeklyHospitalizations(handler.postProcessICUAdmissions, day) * 100_000. / popSize;
+
+				 // calculates daily hospital occupancy, per 100,000 residents
+				 double occupancyHosp = handler.postProcessHospitalFilledBeds.getOrDefault(day, 0) * 100_000. / popSize;
+				 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
+
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesHosp", handler.name , intakesHosp));
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesICU", handler.name, intakesIcu));
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyHosp ", handler.name, occupancyHosp));
+				 bw.newLine();
+				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyICU", handler.name, occupancyIcu));
+
+			 }
 		 }
 
 		 bw.close();
 	 }
 
-	 private void aggregateDataAndProduceTSV(Path output, List<Path> pathList) throws IOException {
-
-
-		 // read hospitalization tsv for all seeds and aggregate them!
-		 // NOTE: all other parameters should be the same, otherwise the results will be useless!
-		 Int2DoubleSortedMap postProcessHospitalizations = new Int2DoubleAVLTreeMap();
-		 Int2DoubleSortedMap ppBeds = new Int2DoubleAVLTreeMap();
-		 Int2DoubleSortedMap ppBedsICU = new Int2DoubleAVLTreeMap();
-
-
-		 for (Path path : pathList) {
-
-			 String id = AnalysisCommand.getScenarioPrefix(path);
-
-			 final Path tsvPath = path.resolve(id + "post.hospital" + outputAppendix + ".tsv");
-
-			 try (CSVParser parser = new CSVParser(Files.newBufferedReader(tsvPath), CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader())) {
-
-				 for (CSVRecord record : parser) {
-
-					 int day = Integer.parseInt(record.get("day"));
-
-					 postProcessHospitalizations.mergeDouble(day, Double.parseDouble(record.get("postProcessHospitalizations")) / pathList.size(), Double::sum);
-					 ppBeds.mergeDouble(day, Double.parseDouble(record.get("ppBeds")) / pathList.size(), Double::sum);
-					 ppBedsICU.mergeDouble(day, Double.parseDouble(record.get("ppBedsICU")) / pathList.size(), Double::sum);
-				 }
-			 }
-		 }
-
-		 // read rki data and add to tsv
-		 Int2DoubleMap rkiHospIncidence = new Int2DoubleAVLTreeMap();
-		 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../covid-sim/src/assets/rki-deutschland-hospitalization.csv")),
-				 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
-
-			 for (CSVRecord record : parser) {
-				 if (!record.get("Bundesland").equals("Nordrhein-Westfalen")) {
-					 continue;
-				 }
-				 LocalDate date = LocalDate.parse((record.get("Datum")));
-				 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-				 double incidence;
-				 try {
-					 incidence = Double.parseDouble(record.get("PS_adjustierte_7T_Hospitalisierung_Inzidenz"));
-				 } catch (NumberFormatException e) {
-					 incidence = Double.NaN;
-
-				 }
-
-				 rkiHospIncidence.put(day, incidence);
-			 }
-		 }
-
-		 // read rki data and add to columns
-		 // pink plot from covid-sim: general beds
-		 //  https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv (pinke Linie)
-		 Int2DoubleMap reportedBeds = new Int2DoubleAVLTreeMap();
-		 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/hospital-cases/cologne/KoelnAllgemeinpatienten.csv")),
-				 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
-
-			 for (CSVRecord record : parser) {
-				 String dateStr = record.get("date").split("T")[0];
-				 LocalDate date = LocalDate.parse(dateStr);
-				 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-				 double incidence;
-				 try {
-					 incidence = Double.parseDouble(record.get("allgemeinpatienten")) * 100_000. / populationCnt;
-				 } catch (NumberFormatException e) {
-					 incidence = 0.;
-				 }
-
-				 reportedBeds.put(day, incidence);
-			 }
-		 }
-
-
-		 //green plot from covid-sim (Ich denke, das ist die Spalte "faelle_covid_aktuell", aber ich bin nicht ganz sicher.)
-		 //https://svn.vsp.tu-berlin.de/repos/public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv (grüne Linie)
-		 Int2DoubleMap reportedBedsICU = new Int2DoubleAVLTreeMap();
-		 try (CSVParser parser = new CSVParser(Files.newBufferedReader(Path.of("../public-svn/matsim/scenarios/countries/de/episim/original-data/Fallzahlen/DIVI/cologne-divi-processed.csv")),
-				 CSVFormat.DEFAULT.withDelimiter(',').withFirstRecordAsHeader())) {
-
-			 for (CSVRecord record : parser) {
-				 String dateStr = record.get("date").split("T")[0];
-				 LocalDate date = LocalDate.parse(dateStr);
-				 int day = (int) startDate.until(date, ChronoUnit.DAYS);
-
-				 double incidence = 0.;
-				 try {
-					 incidence = Double.parseDouble(record.get("faelle_covid_aktuell")) * 100_000. / populationCnt;
-				 } catch (NumberFormatException ignored) {
-
-				 }
-
-				 reportedBedsICU.put(day, incidence);
-			 }
-		 }
-
-		 // Produce TSV w/ aggregated data as well as all rki numbers
-		 try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.resolve("post.hospital.agg" + outputAppendix + ".tsv")), CSVFormat.DEFAULT.withDelimiter('\t'))) {
-
-			 printer.printRecord("day", "date", "modelIncidencePost", "modelHospRate", "modelCriticalRate", "rkiIncidence", "rkiHospRate", "rkiCriticalRate");
-
-			 double maxIteration = Double.max(postProcessHospitalizations.lastIntKey(), Double.max(ppBeds.lastIntKey(), ppBedsICU.lastIntKey()));
-
-			 for (int day = 0; day <= maxIteration; day++) {
-				 LocalDate date = startDate.plusDays(day);
-				 printer.printRecord(
-						 day,
-						 date,
-						 postProcessHospitalizations.get(day),
-						 ppBeds.get(day),
-						 ppBedsICU.get(day),
-						 rkiHospIncidence.get(day),
-						 reportedBeds.get(day),
-						 reportedBedsICU.get(day)
-				 );
-			 }
-		 }
-
-		 // PLOT 1: People admitted to hospital
-		 {
-			 IntColumn records = IntColumn.create("day");
-			 DateColumn recordsDate = DateColumn.create("date");
-			 DoubleColumn values = DoubleColumn.create("hospitalizations");
-			 StringColumn groupings = StringColumn.create("scenario");
-
-			 // post-processed hospitalizations from episim
-			 for (Int2DoubleMap.Entry entry : postProcessHospitalizations.int2DoubleEntrySet()) {
-				 int day = entry.getIntKey();
-				 records.append(day);
-				 recordsDate.append(startDate.plusDays(day));
-				 values.append(postProcessHospitalizations.getOrDefault(day, Double.NaN));
-				 groupings.append("postProcess");
-			 }
-
-
-			 for (Int2DoubleMap.Entry entry : rkiHospIncidence.int2DoubleEntrySet()) {
-				 int day = entry.getIntKey();
-				 records.append(day);
-				 recordsDate.append(startDate.plusDays(day));
-				 final double value = rkiHospIncidence.getOrDefault(day, Double.NaN);
-				 if (Double.isNaN(value)) {
-					 values.appendMissing();
-				 } else {
-					 values.append(value);
-				 }
-				 groupings.append("RKI NRW Adjusted");
-			 }
-
-
-			 producePlot(recordsDate, values, groupings, "", "7-Tage Hospitalisierungsinzidenz", "HospitalizationComparisonIncidence" + outputAppendix + ".html");
-		 }
-
-
-		 // PLOT 2: People taking up beds in hospital (regular and ICU)
-		 {
-			 IntColumn records = IntColumn.create("day");
-			 DateColumn recordsDate = DateColumn.create("date");
-			 DoubleColumn values = DoubleColumn.create("hospitalizations");
-			 StringColumn groupings = StringColumn.create("scenario");
-
-
-			 for (Int2DoubleMap.Entry entry : ppBeds.int2DoubleEntrySet()) {
-				 int day = entry.getIntKey();
-				 records.append(day);
-				 recordsDate.append(startDate.plusDays(day));
-
-				 values.append(ppBeds.get(day));
-				 groupings.append("generalBeds");
-			 }
-
-			 for (Int2DoubleMap.Entry entry : ppBedsICU.int2DoubleEntrySet()) {
-				 int day = entry.getIntKey();
-				 records.append(day);
-				 recordsDate.append(startDate.plusDays(day));
-
-				 values.append(ppBedsICU.get(day));
-				 groupings.append("ICUBeds");
-			 }
-
-
-			 for (Int2DoubleMap.Entry entry : reportedBeds.int2DoubleEntrySet()) {
-				 int day = entry.getIntKey();
-				 records.append(day);
-				 recordsDate.append(startDate.plusDays(day));
-
-				 values.append(entry.getDoubleValue());
-				 groupings.append("Reported: General Beds");
-			 }
-
-
-			 for (Int2DoubleMap.Entry entry : reportedBedsICU.int2DoubleEntrySet()) {
-				 int day = entry.getIntKey();
-				 records.append(day);
-				 recordsDate.append(startDate.plusDays(day));
-
-				 values.append(entry.getDoubleValue());
-				 groupings.append("Reported: ICU Beds");
-			 }
-
-
-			 // Make plot
-			 producePlot(recordsDate, values, groupings, "Filled Beds", "Beds Filled / 100k Population", "FilledBeds" + outputAppendix + ".html");
-		 }
-
-
-	 }
-
-	 private void producePlot(DateColumn records, DoubleColumn values, StringColumn groupings, String title, String yAxisTitle, String filename) {
-		 // Make plot
-		 Table table = Table.create(title);
-		 table.addColumns(records);
-		 table.addColumns(values);
-		 table.addColumns(groupings);
-
-		 TableSliceGroup tables = table.splitOn(table.categoricalColumn("scenario"));
-
-		 Axis xAxis = Axis.builder().title("Datum").build();
-		 Axis yAxis = Axis.builder().range(0., 150.)
-				 //				  .type(Axis.Type.LOG)
-				 .title(yAxisTitle).build();
-
-		 Layout layout = Layout.builder(title).xAxis(xAxis).yAxis(yAxis).showLegend(true).height(500).width(1000).build();
-
-		 ScatterTrace[] traces = new ScatterTrace[tables.size()];
-		 for (int i = 0; i < tables.size(); i++) {
-			 List<Table> tableList = tables.asTableList();
-			 traces[i] = ScatterTrace.builder(tableList.get(i).dateColumn("date"), tableList.get(i).numberColumn("hospitalizations"))
-					 .showLegend(true)
-					 .name(tableList.get(i).name())
-					 .mode(ScatterTrace.Mode.LINE)
-					 .build();
-		 }
-		 var figure = new Figure(layout, traces);
-
-		 try (Writer writer = new OutputStreamWriter(new FileOutputStream(output.resolve(filename).toString()), StandardCharsets.UTF_8)) {
-			 writer.write(Page.pageBuilder(figure, "target").build().asJavascript());
-		 } catch (IOException e) {
-			 throw new UncheckedIOException(e);
-		 }
-	 }
 
 	 private int getWeeklyHospitalizations(Int2IntMap hospMap, Integer today) {
 		 int weeklyHospitalizations = 0;
@@ -579,319 +340,415 @@
 	 }
 
 
-	 private static class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
+	 public static final class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
 
-		 private final Map<Id<Person>, Holder> data;
-		 private final LocalDate startDate;
+
+
+		 final Map<Id<Person>, ImmunizablePerson> data;
+		 private final String name;
 		 private final Population population;
 		 private final Random rnd;
-		 private final VirusStrainConfigGroup strainConfig;
+		 private final ConfigHolder holder;
 
-		 private final Int2IntSortedMap postProcessHospitalAdmissions;
-		 private final Int2IntSortedMap postProcessHospitalFilledBeds;
-		 private final Int2IntSortedMap postProcessHospitalFilledBedsICU;
+		 final Int2IntSortedMap postProcessHospitalAdmissions;
+		 final Int2IntSortedMap postProcessICUAdmissions;
+		 final Int2IntSortedMap postProcessHospitalFilledBeds;
+		 final Int2IntSortedMap postProcessHospitalFilledBedsICU;
 
-		 private final Int2ObjectMap<Object2DoubleMap<VirusStrain>> immunity;
+		 private final Int2IntSortedMap changeBaseImmunity;
+		 private final Int2IntMap changeNoImmunity;
+		 private final Int2IntMap changeBoostered;
+		 private final Int2IntMap hospNoImmunity;
+		 private final Int2IntMap hospBoostered;
+		 private final Int2IntMap hospBaseImmunity;
+		 private final Int2IntMap incNoImmunity;
+		 private final Int2IntMap incBaseImmunity;
+		 private final Int2IntMap incBoostered;
+
+//		 private final EpisimWriter episimWriter;
+		  BufferedWriter hospCalibration;
+
+//		 private CSVPrinter printer;
+
+		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
 
 
-		 public Handler(Map<Id<Person>, Holder> data, LocalDate startDate, Population population, VirusStrainConfigGroup strainConfig, Int2ObjectMap<Object2DoubleMap<VirusStrain>> immunity) {
-			 this.data = data;
-			 this.startDate = startDate;
+		 Handler(String name, Population population, ConfigHolder holder) {
+
+			 // instantiate the custom event handler that calculates hospitalizations based on events
+			 this.name = name;
+			 this.data =  new IdMap<>(Person.class, population.getPersons().size());
 			 this.population = population;
 			 this.rnd = new Random(1234);
-			 this.strainConfig = strainConfig;
-			 this.immunity = immunity;
+			 this.holder = holder;
 
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
+			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
 
+			 this.changeNoImmunity = new Int2IntAVLTreeMap();
+			 this.changeBaseImmunity = new Int2IntAVLTreeMap();
+			 this.changeBoostered = new Int2IntAVLTreeMap();
+			 this.hospNoImmunity = new Int2IntAVLTreeMap();
+			 this.hospBoostered = new Int2IntAVLTreeMap();
+			 this.hospBaseImmunity = new Int2IntAVLTreeMap();
+			 this.incNoImmunity = new Int2IntAVLTreeMap();
+			 this.incBaseImmunity = new Int2IntAVLTreeMap();
+			 this.incBoostered = new Int2IntAVLTreeMap();
+
+			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
+
+//			 try {
+//				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
+//				 printer.printRecord("day", "date", "personId", "age", "strain", "numInfections","numVaccinations");
+//			 } catch (IOException ex) {
+//				 ex.printStackTrace();
+//			 }
 		 }
 
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
-			 Id<Person> personId = event.getPersonId();
-			 Holder person = data.computeIfAbsent(personId, Holder::new);
+			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(),
+					 personId -> new ImmunizablePerson(personId, getAge(personId)));
+
+			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
+
+			 if (!district.equals("Köln")){
+				 return;
+			 }
+
+			 person.addInfection(event.getTime());
+			 person.setAntibodyLevelAtInfection(event.getAntibodies());
+			 person.setVirusStrain(event.getVirusStrain());
 
 			 int day = (int) (event.getTime() / 86_400);
 
-			 person.infections.add(day);
-			 person.strains.add(event.getVirusStrain());
+			 updateHospitalizationsPost(person, event.getVirusStrain(), day);
 
-			 person.antibodies = event.getAntibodies();
+			 if (person.getNumVaccinations()==0) {
+				 incNoImmunity.mergeInt(day, 1, Integer::sum);
+			 } else if (person.getNumVaccinations()==1) {
+				 incBaseImmunity.mergeInt(day, 1, Integer::sum);
+			 } else {
+				 incBoostered.mergeInt(day, 1, Integer::sum);
+			 }
 
-			 updateHospitalizationsPost(personId, person, event.getStrain(), day);
+			 // print to csv
+
+//			 System.out.println(event.getVirusStrain().toString());
+
+//			 try {
+//				 this.printer.printRecord(String.valueOf(day)
+//						 , LocalDate.of(2020, 2, 25).plusDays(day).toString()
+//						 , person.getPersonId().toString()
+//						 , String.valueOf(person.getAge())
+//						 , event.getVirusStrain().toString()
+//						 , String.valueOf(person.getNumInfections() - 1)
+//						 , String.valueOf(person.getNumVaccinations()));
+//
+//			 } catch (IOException e) {
+//				 e.printStackTrace();
+//			 }
 
 		 }
+
+
 
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
-			 int day = (int) (event.getTime() / 86_400);
-			 LocalDate date = startDate.plusDays(day);
-			 Holder attr = data.computeIfAbsent(event.getPersonId(), Holder::new);
+			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
 
-			 if (event.getN() == 2) {
-				 attr.boosterDate = date;
-			 } else if (event.getN() == 1) {
-				 attr.vaccinationDate = date;
-				 attr.vaccine = event.getVaccinationType();
-			 } else {
-				 //todo
+			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
+
+			 if (!district.equals("Köln")){
+				 return;
 			 }
+
+			 int day = (int) (event.getTime() / 86_400);
+
+			 if (person.getNumVaccinations()==0) {
+				 changeBaseImmunity.mergeInt(day, 1, Integer::sum);
+				 changeNoImmunity.mergeInt(day, -1, Integer::sum);
+			 } else if (person.getNumVaccinations() == 1) {
+				 changeBoostered.mergeInt(day, 1, Integer::sum);
+				 changeBaseImmunity.mergeInt(day, -1, Integer::sum);
+			 }
+
+
+			 person.addVaccination(day);
 		 }
 
-		 private void updateHospitalizationsPost(Id<Person> personId, Holder person, VirusStrain strain, int infectionIteration) {
-			 if (person.infections.size() > 0) {
+		 private int getAge(Id<Person> personId) {
+			 return (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+		 }
 
-				 int age = (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
+		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
 
-				 String district = (String) population.getPersons().get(personId).getAttributes().getAttribute("district");
 
-				 if (!district.equals("Köln")) {
-					 return;
+			 if (!lagBetweenInfectionAndHospitalisation.containsKey(strain)
+					 || !lagBetweenHospitalizationAndICU.containsKey(strain)
+					 || !daysInHospitalGivenNoICU.containsKey(strain)
+					 || !daysInICU.containsKey(strain)
+					 || !daysInHospitalGivenICU.containsKey(strain)) {
+				 throw new RuntimeException("strain " + strain + " not registered in all data structures which describe length of stay in hospital");
+			 }
+
+
+			 if (goToHospital(person, infectionIteration)) {
+
+				 // newly admitted to hospital
+				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
+				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
+
+
+				 if (person.getNumVaccinations()==0) {
+					 hospNoImmunity.mergeInt(inHospital, 1, Integer::sum);
+				 } else if (person.getNumVaccinations()==1) {
+					 hospBaseImmunity.mergeInt(inHospital, 1, Integer::sum);
+				 } else {
+					 hospBoostered.mergeInt(inHospital, 1, Integer::sum);
 				 }
 
 
-				 if (goToHospital(person, strain, age)) {
+				 if (goToICU(person, inHospital)) {
 
-					 // newly admitted to hospital
-					 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
-					 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
-
-
-					 if (goToICU(strain, age)) {
-
-						 int inICU = inHospital + lagBetweenHospitalizationAndICU.getInt(strain);
-						 int outICU = inICU + daysInICU.getInt(strain);
-						 int outHospital = inHospital + daysInHospitalGivenICU.getInt(strain);
-
-						 if (outICU > outHospital) {
-							 throw new RuntimeException("Agent cannot leave ICU after leaving hospital");
-						 }
-
-						 // total days in hospital (in or out of ICU)
-						 for (int day = inHospital; day < outHospital; day++) {
-							 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
-						 }
-
-						 //days in ICU (critical)
-						 for (int day = inICU; day < outICU; day++) {
-							 postProcessHospitalFilledBedsICU.mergeInt(day, 1, Integer::sum);
-						 }
+					 // newly admitted to ICU
+					 int inICU = inHospital + lagBetweenHospitalizationAndICU.getInt(strain);
+					 postProcessICUAdmissions.mergeInt(inHospital, 1, Integer::sum);
 
 
-					 } else {
-						 int outHospital = inHospital + daysInHospitalGivenNoICU.getInt(strain);
-						 //days in regular part of hospital
-						 for (int day = inHospital; day < outHospital; day++) {
-							 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
-						 }
+					 int outICU = inICU + daysInICU.getInt(strain);
+					 int outHospital = inHospital + daysInHospitalGivenICU.getInt(strain);
+
+					 if (outICU > outHospital) {
+						 throw new RuntimeException("Agent cannot leave ICU after leaving hospital");
+					 }
+
+					 // total days in hospital (in or out of ICU)
+					 for (int day = inHospital; day < outHospital; day++) {
+						 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
+					 }
+
+					 //days in ICU (critical)
+					 for (int day = inICU; day < outICU; day++) {
+						 postProcessHospitalFilledBedsICU.mergeInt(day, 1, Integer::sum);
+					 }
+
+
+				 } else {
+					 int outHospital = inHospital + daysInHospitalGivenNoICU.getInt(strain);
+					 //days in regular part of hospital
+					 for (int day = inHospital; day < outHospital; day++) {
+						 postProcessHospitalFilledBeds.mergeInt(day, 1, Integer::sum);
 					 }
 				 }
-
 			 }
 
 		 }
 
-		 private boolean goToICU(VirusStrain strain, int age) {
-			 return rnd.nextDouble() < getProbaOfTransitioningToCritical(age) * strainConfig.getParams(strain).getFactorCritical()
-					 * getCriticalFactor();
-		 }
+
 
 		 /**
 		  * calculates the probability that agent goes to hospital given an infection.
 		  */
-		 private boolean goToHospital(Holder person, VirusStrain strain, int age) {
+		 private boolean goToHospital(ImmunizablePerson person, int day) {
 
-			 double ageFactor = getProbaOfTransitioningToSeriouslySick(age);
-			 double strainFactor = strainConfig.getParams(strain).getFactorSeriouslySick();
+			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
+			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
+			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
 
-			 // checks whether agents goes to hospital
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
-					 * getSeriouslySickFactor(person, strain);
+					 * immunityFactor;
 		 }
 
 		 /**
-		  * Adapted from AgeDependentDiseaseStatusTransitionModel, signature changed.
+		  * calculates the probability that agent goes to into critical care (ICU) given hospitalization
 		  */
-		 protected double getProbaOfTransitioningToSeriouslySick(int age) {
+		 private boolean goToICU(ImmunizablePerson person, int day) {
 
-			 double proba;
 
-			 if (age < 10) {
-				 proba = 0.1 / 100;
-			 } else if (age < 20) {
-				 proba = 0.3 / 100;
-			 } else if (age < 30) {
-				 proba = 1.2 / 100;
-			 } else if (age < 40) {
-				 proba = 3.2 / 100;
-			 } else if (age < 50) {
-				 proba = 4.9 / 100;
-			 } else if (age < 60) {
-				 proba = 10.2 / 100;
-			 } else if (age < 70) {
-				 proba = 16.6 / 100;
-			 } else if (age < 80) {
-				 proba = 24.3 / 100;
-			 } else {
-				 proba = 27.3 / 100;
-			 }
+			 double ageFactor = transitionModel.getProbaOfTransitioningToCritical(person);
+			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorCritical();
+			 double immunityFactor =  transitionModel.getCriticalFactor(person, holder.vaccinationConfig, day); //todo: revert
 
-			 return proba * hospitalFactor;
+			 return rnd.nextDouble() < ageFactor
+					 * strainFactor
+					 * immunityFactor;
 		 }
 
-		 /**
-		  * Adapted from AgeDependentDiseaseStatusTransitionModel
-		  */
-		 protected double getProbaOfTransitioningToCritical(int age) {
-			 double proba;
-
-			 //		 int age = person.getAge();
-
-			 if (age < 40) {
-				 proba = 5. / 100;
-			 } else if (age < 50) {
-				 proba = 6.3 / 100;
-			 } else if (age < 60) {
-				 proba = 12.2 / 100;
-			 } else if (age < 70) {
-				 proba = 27.4 / 100;
-			 } else if (age < 80) {
-				 proba = 43.2 / 100;
-			 } else {
-				 proba = 70.9 / 100;
-			 }
-
-			 return proba;
-		 }
-
-
-		 /**
-		  * Adapted from AntibodyDependentTransitionModel.
-		  * changed inputs & immunity factor
-		  */
-
-		 //		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
-		 //
-		 //
-		 //			 int numVaccinations = 0;
-		 //
-		 //			 if (person.boosterDate != null) {
-		 //				 numVaccinations = 2;
-		 //			 } else if (person.vaccinationDate != null) {
-		 //				 numVaccinations = 1;
-		 //			 }
-		 //
-		 //			 int numInfections = person.infections.size() - 1;
-		 //
-		 //			 if (numVaccinations == 0 && numInfections == 0)
-		 //				 return 1.0;
-		 //
-		 //			 double veSeriouslySick = 0.0;
-		 //
-		 //			 //vaccinated persons that are boostered either by infection or by 3rd shot
-		 //			 if (numVaccinations > 1 || (numVaccinations > 0 && numInfections > 1)) {
-		 //				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
-		 //					 veSeriouslySick = 0.9;
-		 //				 else
-		 //					 veSeriouslySick = 0.95;
-		 //			 }
-		 //
-		 //			 //vaccinated persons or persons who have had a severe course of disease in the past
-		 //			 //		 else if (numVaccinations == 1 || person.hadDiseaseStatus(DiseaseStatus.seriouslySick))
-		 //			 else if (numVaccinations == 1 || person.strains.contains(VirusStrain.SARS_CoV_2) || person.strains.contains(VirusStrain.ALPHA) || person.strains.contains(VirusStrain.DELTA)) {
-		 //
-		 //				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
-		 //					 veSeriouslySick = 0.55;
-		 //				 else
-		 //					 veSeriouslySick = 0.9;
-		 //
-		 //			 } else {
-		 //				 if (strain == VirusStrain.OMICRON_BA1 || strain == VirusStrain.OMICRON_BA2 || strain == VirusStrain.STRAIN_A)
-		 //					 veSeriouslySick = 0.55;
-		 //				 else
-		 //					 veSeriouslySick = 0.6;
-		 //			 }
-		 //
-		 //			 double factorInf;
-		 //			 if (person.antibodies == null || person.antibodies.equals(-1.) || !useAntibodiesFromInfectionEvent) {
-		 //				 factorInf = immunityFactorDefault;
-		 //			 } else {
-		 //				 factorInf = 1.0 / (1.0 + Math.pow(person.antibodies, beta)); // goes up over time
-		 //			 }
-		 //
-		 //
-		 //			 // immunity factor = chance of infection w/ respect to non-immunized person.
-		 //			 // 1- veSeriouslySick = remaining risk of hospitalization w/ repect to non-immunized person
-		 //			 // factorSeriouslySick = risk of hospitalization given infection w/ respect to non-imm...
-		 //
-		 //
-		 //			 double factorSeriouslySick = (1.0 - veSeriouslySick) / factorInf; // goes down over time
-		 //
-		 //			 factorSeriouslySick = Math.min(1.0, factorSeriouslySick);
-		 //			 factorSeriouslySick = Math.max(0.0, factorSeriouslySick);
-		 //
-		 //			 return factorSeriouslySick;
-		 //		 }
-		 public double getSeriouslySickFactor(Holder person, VirusStrain strain) {
-
-
-			 int numVaccinations = 0;
-
-			 if (person.boosterDate != null) {
-				 numVaccinations = 2;
-			 } else if (person.vaccinationDate != null) {
-				 numVaccinations = 1;
-			 }
-
-			 int numInfections = person.infections.size() - 1;
-
-
-			 int immunityEvents = numVaccinations + numInfections;
-
-			 try {
-				 if (immunityEvents == 0)
-					 return 1.0;
-				 else if (immunityEvents == 1) {
-					 return immunity.get(1).get(strain);
-				 } else {
-					 return immunity.get(2).get(strain);
-				 }
-			 } catch (NullPointerException e) {
-				 throw new RuntimeException(strain + " is not accounted for");
-			 }
-
-		 }
-
-		 public static double getCriticalFactor() { //todo: is this right?
-			 return 1.0;
-		 }
 
 
 		 /**
 		  * Data holder for attributes
 		  */
-		 private static final class Holder {
+		 static final class ImmunizablePerson implements Immunizable{
 
-			 private Double antibodies = null;
-			 private VaccinationType vaccine = null;
-			 private LocalDate vaccinationDate = null;
-			 private LocalDate boosterDate = null;
-			 private final List<VirusStrain> strains = new ArrayList<>();
-			 private final IntList infections = new IntArrayList();
-			 //		 private final List<LocalDate> contagiousDates = new ArrayList<>();
-			 //		 private final List<LocalDate> recoveredDates = new ArrayList<>();
 
-			 private Holder(Id<Person> personId) {
-				 // Id is not stored at the moment
+			 /**
+			  * Id of person which this data structure emulates.
+			  */
+			 private final Id<Person> personId;
+
+			 /**
+			  * Iteration when this person was vaccinated.
+			  */
+			 private final IntList vaccinationDates = new IntArrayList();
+
+			 /**
+			  * Second at which a person is infected (divide by 24*60*60 to get iteration/day)
+			  */
+			 private final DoubleList infectionDates = new DoubleArrayList();
+
+			 /**
+			  * Virus strain of most recent (or current) infection
+			  */
+			 private VirusStrain strain;
+
+			 /**
+			  * Antibody level at last infection.
+			  */
+			 private double antibodyLevelAtInfection = 0;
+			 private int age;
+
+
+			 ImmunizablePerson(Id<Person> personId, int age) {
+				 this.personId = personId;
+				 this.age = age;
 			 }
+
+			 @Override
+			 public Id<Person> getPersonId() {
+				 return this.personId;
+			 }
+
+			 @Override
+			 public int getNumVaccinations() {
+				 return vaccinationDates.size();
+			 }
+
+			 @Override
+			 public int getNumInfections() {
+				 return infectionDates.size();
+			 }
+
+			 public void setVirusStrain(VirusStrain strain) {
+				 this.strain = strain;
+			 }
+
+
+			 @Override
+			 public VirusStrain getVirusStrain() {
+				 return strain;
+			 }
+
+			 public void addVaccination(int day) {
+				 vaccinationDates.add(day);
+			 }
+
+			 @Override
+			 public IntList getVaccinationDates() {
+				 return this.vaccinationDates;
+			 }
+
+
+			 public void addInfection(double seconds) {
+				 this.infectionDates.add(seconds);
+			 }
+
+			 @Override
+			 public DoubleList getInfectionDates() {
+				 return this.infectionDates;
+			 }
+
+
+			 public void setAntibodyLevelAtInfection(double antibodyLevelAtInfection) {
+				 this.antibodyLevelAtInfection = antibodyLevelAtInfection;
+			 }
+
+			 @Override
+			 public double getAntibodyLevelAtInfection() {
+				 return antibodyLevelAtInfection;
+			 }
+
+			 @Override
+			 public boolean hadDiseaseStatus(EpisimPerson.DiseaseStatus status) {
+				 throw new UnsupportedOperationException("this method is not supported by Holder");
+
+			 }
+
+			 @Override
+			 public int daysSince(EpisimPerson.DiseaseStatus status, int day) {
+				 throw new UnsupportedOperationException("this method is not supported by Holder");
+
+			 }
+
+			 @Override
+			 public int getAge() {
+				 return this.age;
+			 }
+
 
 		 }
 
 	 }
 
+
+
+	 /**
+	  * This method configures the episim config, vaccination config, and strain config to the extent
+	  * necessary for post processing.
+	  * @param
+	  */
+	 private ConfigHolder configure(double facA, double facAICU) {
+
+		 Config config = ConfigUtils.createConfig(new EpisimConfigGroup());
+
+		 // configure episimConfig
+		 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+		 episimConfig.setHospitalFactor(hospitalFactor);
+
+		 // configure strainConfig: add factorSeriouslySick for each strain
+		 VirusStrainConfigGroup strainConfig = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorSeriouslySick(factorWild);
+		 strainConfig.getOrAddParams(VirusStrain.SARS_CoV_2).setFactorCritical(factorWildAndAlphaICU);
+		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(factorAlpha);
+		 strainConfig.getOrAddParams(VirusStrain.ALPHA).setFactorCritical(factorAlpha);
+
+		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorSeriouslySick(factorDelta);
+		 strainConfig.getOrAddParams(VirusStrain.DELTA).setFactorCritical(factorDeltaICU);
+
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(factorOmicronICU);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(factorOmicronICU);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorOmicron);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorOmicronICU);
+
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
+		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
+
+
+		 // configure vaccinationConfig: set beta factor
+		 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		 vaccinationConfig.setBeta(beta);
+
+		 return new ConfigHolder(episimConfig, vaccinationConfig, strainConfig);
+	 }
+
+	 private static final class ConfigHolder {
+		 private final EpisimConfigGroup episimConfig;
+		 private final VaccinationConfigGroup vaccinationConfig;
+		 private final VirusStrainConfigGroup strainConfig;
+
+
+		 private ConfigHolder(EpisimConfigGroup episimConfig, VaccinationConfigGroup vaccinationConfig, VirusStrainConfigGroup strainConfig) {
+			 this.episimConfig = episimConfig;
+			 this.vaccinationConfig = vaccinationConfig;
+			 this.strainConfig = strainConfig;
+		 }
+	 }
  }
 

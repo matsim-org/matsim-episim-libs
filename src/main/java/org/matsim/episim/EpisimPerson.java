@@ -55,7 +55,7 @@ import static org.matsim.episim.EpisimUtils.writeChars;
 /**
  * Persons current state in the simulation.
  */
-public final class EpisimPerson implements Attributable {
+public final class EpisimPerson implements Immunizable, Attributable {
 
 	private final Id<Person> personId;
 	private final EpisimReporting reporting;
@@ -194,7 +194,7 @@ public final class EpisimPerson implements Attributable {
 	private final IntList vaccinationDates = new IntArrayList();
 
 	/**
-	 * Iterations when a person was infected.
+	 * Second at which a person is infected (divide by 24*60*60 to get iteration/day)
 	 */
 	private final DoubleList infectionDates = new DoubleArrayList();
 
@@ -214,9 +214,9 @@ public final class EpisimPerson implements Attributable {
 	private double antibodyLevelAtInfection = 0;
 
 	/**
-	 * Whether agent is part of subpopulation which is immune to infection
+	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event
 	 */
-	private ImmuneResponse immuneResponse = ImmuneResponse.normal;
+	private double immuneResponseMultiplier = 1.0;
 
 	/**
 	 * Lookup age from attributes.
@@ -238,7 +238,7 @@ public final class EpisimPerson implements Attributable {
 		return trajectory;
 	}
 
-	EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
+	public EpisimPerson(Id<Person> personId, Attributes attrs, EpisimReporting reporting) {
 		this(personId, attrs, true, reporting);
 	}
 
@@ -316,6 +316,8 @@ public final class EpisimPerson implements Attributable {
 
 		susceptibility = in.readDouble();
 		antibodyLevelAtInfection = in.readDouble();
+		immuneResponseMultiplier = in.readDouble();
+
 	}
 
 	/**
@@ -378,6 +380,8 @@ public final class EpisimPerson implements Attributable {
 		out.writeBoolean(vaccinable);
 		out.writeDouble(susceptibility);
 		out.writeDouble(antibodyLevelAtInfection);
+		out.writeDouble(immuneResponseMultiplier);
+
 	}
 
 	public Id<Person> getPersonId() {
@@ -568,8 +572,8 @@ public final class EpisimPerson implements Attributable {
 	/**
 	 * Immunity factor based on antibody level at infection.
 	 */
-	public double getImmunityFactor(double beta) {
-		return 1.0 / (1.0 + Math.pow(antibodyLevelAtInfection, beta));
+	public double getAntibodyLevelAtInfection() {
+		return antibodyLevelAtInfection;
 	}
 
 	public double getAntibodies(VirusStrain strain) {
@@ -792,7 +796,7 @@ public final class EpisimPerson implements Attributable {
 	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
 	 * This method takes {@link #activityParticipation} into account.
 	 *
-	 * @param reduce       reduce function called on each activities with current result
+	 * @param reduce       reduce function called on each activity with current result
 	 * @param defaultValue default value and initial value for the reduce function
 	 */
 	public <T> T matchActivities(DayOfWeek day, Set<String> activities, BiFunction<String, T, T> reduce, T defaultValue) {
@@ -805,7 +809,24 @@ public final class EpisimPerson implements Attributable {
 		}
 
 		return result;
+	}
 
+	/**
+	 * Matches all activities of a person for a day. Calls {@code reduce} on all matched activities.
+	 * This method takes {@link #activityParticipation} into account.
+	 *
+	 * @see #matchActivities(DayOfWeek, Set, BiFunction, Object)
+	 */
+	public <T> T matchActivities(DayOfWeek day, BiFunction<String, T, T> reduce, T defaultValue) {
+
+		T result = defaultValue;
+		for (int i = getStartOfDay(day); i < getEndOfDay(day); i++) {
+			String act = trajectory.get(i).params.getContainerName();
+			if (activityParticipation.get(i))
+				result = reduce.apply(act, result);
+		}
+
+		return result;
 	}
 
 	/**
@@ -918,17 +939,19 @@ public final class EpisimPerson implements Attributable {
 	}
 
 	/**
-	 * Getter for whether person is in immune subpopulation
+	 * Getter for immune response multiplier, which is used to scale the antibody increase due to an immunity event
+	 * @return
 	 */
-	public ImmuneResponse getImmuneResponse() {
-		return immuneResponse;
+	public double getImmuneResponseMultiplier() {
+		return immuneResponseMultiplier;
 	}
 
 	/**
-	 * Set immune response status of person
+	 * Setter for immune response multiplier, which is used to scale the antibody increase due to an immunity event
+	 * @param immuneResponseMultiplier
 	 */
-	public void setImmuneResponse(ImmuneResponse immuneResponse) {
-		this.immuneResponse = immuneResponse;
+	public void setImmuneResponseMultiplier(double immuneResponseMultiplier) {
+		this.immuneResponseMultiplier = immuneResponseMultiplier;
 	}
 
 	@Override
@@ -1045,8 +1068,6 @@ public final class EpisimPerson implements Attributable {
 	 * Status of vaccination.
 	 */
 	public enum VaccinationStatus {yes, no}
-
-	public enum ImmuneResponse{low, normal, high}
 
 	/**
 	 * Stores when an activity is performed and in which context.

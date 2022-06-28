@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.util.concurrent.Callable;
 
 /**
- * Interface for an analysis that needs to output folder of a completed run.
+ * Interface for an analysis that needs the output folder of a completed run.
  */
 public interface OutputAnalysis extends Callable<Integer> {
 

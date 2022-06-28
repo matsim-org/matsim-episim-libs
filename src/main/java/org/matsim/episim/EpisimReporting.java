@@ -41,7 +41,6 @@ import org.matsim.core.events.handler.BasicEventHandler;
 import org.matsim.core.utils.io.IOUtils;
 import org.matsim.episim.EpisimPerson.VaccinationStatus;
 import org.matsim.episim.events.*;
-import org.matsim.episim.model.InfectionModelWithAntibodies;
 import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.Restriction;
@@ -202,7 +201,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
 		timeUse = EpisimWriter.prepare(base + "timeUse.txt",
 				"day", "date", episimConfig.createInitialRestrictions().keySet().toArray());
-		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "nInfected");
+		diseaseImport = EpisimWriter.prepare(base + "diseaseImport.tsv", "day", "date", "strain", "n");
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
@@ -777,8 +776,15 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Write number of initially infected persons.
 	 */
-	void reportDiseaseImport(int infected, int iteration, String date) {
-		writer.append(diseaseImport, new String[]{String.valueOf(iteration), date, String.valueOf(infected * (1 / sampleSize))});
+	void reportDiseaseImport(Object2IntMap<VirusStrain> infectedByStrain, int iteration, String date) {
+		for (VirusStrain strain : infectedByStrain.keySet()) {
+			String[] out = new String[4];
+			out[0] = String.valueOf(iteration);
+			out[1] = date;
+			out[2] = strain.toString();
+			out[3] = String.valueOf(infectedByStrain.getInt(strain) / sampleSize);
+			writer.append(diseaseImport, out);
+		}
 	}
 
 	/**

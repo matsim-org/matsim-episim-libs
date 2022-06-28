@@ -31,9 +31,14 @@ public class DefaultTestingModel implements TestingModel {
 	/**
 	 * Testing rates for configured activities for current day.
 	 */
-	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
+	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivities = new EnumMap<>(TestType.class);
 
-	private final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
+	protected final Map<TestType, Object2DoubleMap<String>> testingRateForActivitiesVaccinated = new EnumMap<>(TestType.class);
+
+	/**
+	 * Current date
+	 */
+	protected LocalDate date;
 
 	/**
 	 * Ids of households that are not compliant.
@@ -49,11 +54,6 @@ public class DefaultTestingModel implements TestingModel {
 	 * Don't test person with booster.
 	 */
 	private boolean withOutBooster;
-
-	/**
-	 * Current date
-	 */
-	private LocalDate date;
 
 	@Inject
 	DefaultTestingModel(SplittableRandom rnd, Config config, TestingConfigGroup testingConfig, VaccinationConfigGroup vaccinationConfig, EpisimConfigGroup episimConfig) {
@@ -203,8 +203,11 @@ public class DefaultTestingModel implements TestingModel {
 			double rate = params.getFalseNegativeRate();
 
 			// TODO: configurable
-			if (person.getVirusStrain() == VirusStrain.OMICRON_BA1 || person.getVirusStrain() == VirusStrain.OMICRON_BA2)
+			if (params.getType().equals (TestType.RAPID_TEST) && (person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||
+					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||
+					person.getVirusStrain() == VirusStrain.OMICRON_BA5) ){
 				rate = 0.5;
+			}
 
 			EpisimPerson.TestStatus testStatus = rnd.nextDouble() >= rate ? EpisimPerson.TestStatus.positive : EpisimPerson.TestStatus.negative;
 			person.setTestStatus(testStatus, day);

@@ -3,7 +3,7 @@ package org.matsim.episim.model;
 
 import com.google.inject.Inject;
 import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimPerson.DiseaseStatus;
+import org.matsim.episim.EpisimUtils;
 
 import java.util.Collection;
 import java.util.SplittableRandom;
@@ -18,25 +18,23 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig) {
 		this.antibodyConfig = antibodyConfig;
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
+
 	}
 
 	@Override
 	public void init(Collection<EpisimPerson> persons, int iteration) {
-		// Divide population into groups based on antibody response to immunity events
-		// e.g. low responders could gain fewer antibodies following infection than high responders
-		if (2 * antibodyConfig.getImmuneShare() > 1.) {
-			throw new RuntimeException("Sum of immune population shares cannot be > 1.0");
-		}
 
 		for (EpisimPerson person : persons) {
-			double rand = localRnd.nextDouble();
-			if (rand < antibodyConfig.getImmuneShare()) {
-				person.setImmuneResponse(EpisimPerson.ImmuneResponse.low);
-			} else if (rand < 2 * antibodyConfig.getImmuneShare()) {
-				person.setImmuneResponse(EpisimPerson.ImmuneResponse.high);
-			} else {
-				person.setImmuneResponse(EpisimPerson.ImmuneResponse.normal);
+
+			// mu = log(median); log(1)=0
+
+			// we assume immune response multiplier follows log-normal distribution, bounded by 0.01 and 10.
+			double immuneResponseMultiplier = 0;
+			while (immuneResponseMultiplier < 0.1 || immuneResponseMultiplier > 10) {
+				immuneResponseMultiplier = EpisimUtils.nextLogNormal(localRnd, 0, antibodyConfig.getImmuneReponseSigma());
 			}
+
+			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
@@ -75,7 +73,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		if (person.getVaccinationDates().contains(day - 1)) {
 			int vaccinationIndex = person.getVaccinationDates().indexOf(day - 1);
 			VaccinationType vaccinationType = person.getVaccinationType(vaccinationIndex);
-			handleVaccination(person, vaccinationType);
+			handleImmunization(person, vaccinationType);
 			return;
 		}
 
@@ -83,7 +81,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		for (int infectionIndex = 0; infectionIndex < person.getNumInfections(); infectionIndex++) {
 			if (person.daysSinceInfection(infectionIndex, day) == 1) {
 				VirusStrain virusStrain = person.getVirusStrain(infectionIndex);
-				handleInfection(person, virusStrain);
+				handleImmunization(person, virusStrain);
 				return;
 			}
 		}
@@ -97,16 +95,16 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 	}
 
-	private void handleInfection(EpisimPerson person, VirusStrain strain) {
+	private void handleImmunization(EpisimPerson person, ImmunityEvent immunityEventType) {
 
 		boolean firstImmunization = checkFirstImmunization(person);
 		// 1st immunization:
 		if (firstImmunization) {
 
 			for (VirusStrain strain2 : VirusStrain.values()) {
-				double antibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
+				double antibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2);
 
-				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
+				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
 				person.setAntibodies(strain2, antibodies);
 			}
@@ -114,58 +112,27 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 		} else {
 			for (VirusStrain strain2 : VirusStrain.values()) {
-				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(strain).get(strain2);
-				double antibodies = Math.min(150., person.getAntibodies(strain2) * refreshFactor);
-				double initialAntibodies = antibodyConfig.initialAntibodies.get(strain).get(strain2);
+				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(immunityEventType).get(strain2);
 
+				// antibodies before refresh
+				double antibodies = person.getAntibodies(strain2);
 
+				// refresh antibodies; ensure that antibody level does not decrease.
+				if (refreshFactor * person.getImmuneResponseMultiplier() >= 1) {
+					antibodies = antibodies * refreshFactor * person.getImmuneResponseMultiplier();
+				}
+
+				// check that new antibody level at least as high as initial antibodies
+				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
-				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
+				// check that new antibody level is at most 150
+				antibodies = Math.min(150., antibodies);
 
 				person.setAntibodies(strain2, antibodies);
 			}
 
 		}
-	}
-
-	private void handleVaccination(EpisimPerson person, VaccinationType vaccinationType) {
-
-		boolean firstImmunization = checkFirstImmunization(person);
-
-		// 1st immunization:
-		if (firstImmunization) {
-			for (VirusStrain strain2 : VirusStrain.values()) {
-				double antibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
-
-				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
-
-				person.setAntibodies(strain2, antibodies);
-			}
-
-
-		} else {
-			for (VirusStrain strain2 : VirusStrain.values()) {
-				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(vaccinationType).get(strain2);
-				double antibodies = Math.min(150., person.getAntibodies(strain2) * refreshFactor);
-				double initialAntibodies = antibodyConfig.initialAntibodies.get(vaccinationType).get(strain2);
-				antibodies = Math.max(antibodies, initialAntibodies);
-
-				antibodies = adjustAntibodiesBasedOnImmuneResponse(person, antibodies);
-
-				person.setAntibodies(strain2, antibodies);
-			}
-
-		}
-	}
-
-	private double adjustAntibodiesBasedOnImmuneResponse(EpisimPerson person, double antibodies) {
-		if (person.getImmuneResponse().equals(EpisimPerson.ImmuneResponse.high)) {
-			antibodies *= antibodyConfig.getImmuneResponseMultiplier().get(EpisimPerson.ImmuneResponse.high);
-		} else if (person.getImmuneResponse().equals(EpisimPerson.ImmuneResponse.low)) {
-			antibodies *= antibodyConfig.getImmuneResponseMultiplier().get(EpisimPerson.ImmuneResponse.low);
-		}
-		return antibodies;
 	}
 
 	private boolean checkFirstImmunization(EpisimPerson person) {
@@ -179,19 +146,4 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		return firstImmunization;
 	}
 
-	private static double getIgA(EpisimPerson person, int day, VirusStrain strain) {
-
-		if (!person.hadStrain(strain)) {
-			return 1.0;
-		} else {
-			int lastInfectionWithStrain = 0;
-			for (int ii = 0; ii < person.getNumInfections(); ii++) {
-				if (person.getVirusStrain(ii) == strain) {
-					lastInfectionWithStrain = ii;
-				}
-			}
-			return 1.0 - Math.pow(0.5, person.daysSinceInfection(lastInfectionWithStrain, day) / 30.0);
-		}
-
-	}
 }

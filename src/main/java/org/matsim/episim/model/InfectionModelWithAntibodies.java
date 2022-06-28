@@ -8,7 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -92,12 +92,13 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
 
 		//reduced infectivity if infector has antibodies
-		double immunityFactorInfector = infector.getImmunityFactor(vaccinationConfig.getBeta());//getAntibodies(infector.getVirusStrain());
+		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));
 		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));
 
 		{
 			double igaFactor = 0.0;
 
+			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
 			if (target.hadStrain(infector.getVirusStrain())) {
 
 				int lastInfectionWithStrain = 0;
@@ -107,34 +108,26 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 					}
 				}
 //				igaFactor = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
-				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
+				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 
-			}
+			} else if (vaccinationConfig.getUseIgA()) {
+				List<VirusStrain> crossImmunityStrains = List.of(VirusStrain.OMICRON_BA1,VirusStrain.OMICRON_BA2,VirusStrain.OMICRON_BA5,VirusStrain.STRAIN_A);
 
-			if (vaccinationConfig.getUseIgA()) {
-				if (target.hadStrain(VirusStrain.OMICRON_BA1) && infector.getVirusStrain() == VirusStrain.OMICRON_BA2) {
+				if(crossImmunityStrains.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;
+					boolean targetHadStrain = false;
 					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (target.getVirusStrain(ii) == VirusStrain.OMICRON_BA1) {
+						if (crossImmunityStrains.contains(target.getVirusStrain(ii))){
+							targetHadStrain = true;
 							lastInfectionWithStrain = ii;
 						}
 					}
-//					double fac = Math.exp( - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0);
-					double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
-					fac = fac / 1.4;
-					igaFactor = Math.max(fac, igaFactor);
-				}
 
-				if (target.hadStrain(VirusStrain.OMICRON_BA2) && infector.getVirusStrain() == VirusStrain.OMICRON_BA1) {
-					int lastInfectionWithStrain = 0;
-					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (target.getVirusStrain(ii) == VirusStrain.OMICRON_BA2) {
-							lastInfectionWithStrain = ii;
-						}
+					if (targetHadStrain) {
+						double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
+						fac = fac / 1.4;
+						igaFactor = Math.max(fac, igaFactor);
 					}
-					double fac = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / 120.0)));
-					fac = fac / 1.4;
-					igaFactor = Math.max(fac, igaFactor);
 				}
 			}
 			susceptibility = susceptibility * (1.0 - igaFactor);

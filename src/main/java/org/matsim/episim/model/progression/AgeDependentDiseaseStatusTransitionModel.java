@@ -73,54 +73,162 @@ public class AgeDependentDiseaseStatusTransitionModel extends AntibodyDependentT
 	}
 
 	@Override
-	protected double getProbaOfTransitioningToSeriouslySick(EpisimPerson person) {
+	public double getProbaOfTransitioningToSeriouslySick(Immunizable person) {
 
-		double proba = -1;
+		double proba;
 
 		int age = person.getAge();
 
-		if (age < 10) {
-			proba = 0.1 / 100;
-		} else if (age < 20) {
-			proba = 0.3 / 100;
-		} else if (age < 30) {
-			proba = 1.2 / 100;
-		} else if (age < 40) {
-			proba = 3.2 / 100;
-		} else if (age < 50) {
-			proba = 4.9 / 100;
+		// source 3
+		if (age < 5) {
+			proba = 4.0 / 100;
+		} else if (age < 15) {
+			proba = 1.1 / 100;
+		} else if (age < 35) {
+			proba = 2.4 / 100;
 		} else if (age < 60) {
-			proba = 10.2 / 100;
-		} else if (age < 70) {
-			proba = 16.6 / 100;
+			proba = 5.6 / 100;
 		} else if (age < 80) {
-			proba = 24.3 / 100;
+			proba = 23. / 100;
 		} else {
-			proba = 27.3 / 100;
+			proba = 36. / 100;
 		}
+
+
+		// source 2
+//		if (age < 10) {
+//			proba = 0.1 / 100;
+//		} else if (age < 20) {
+//			proba = 0.2 / 100;
+//		} else if (age < 30) {
+//			proba = 0.5 / 100;
+//		} else if (age < 40) {
+//			proba = 1.0 / 100;
+//		} else if (age < 50) {
+//			proba = 2.1 / 100;
+//		} else if (age < 60) {
+//			proba = 4.1 / 100;
+//		} else if (age < 70) {
+//			proba = 8.9 / 100;
+//		} else if (age < 80) {
+//			proba = 17.1 / 100;
+//		} else {
+//			proba = 30.3 / 100;
+//		}
+
+		// source 1
+//		if (age < 5) {
+//			proba = 12.9 / 100;
+//		} else if (age < 20) {
+//			proba = 4.0 / 100;
+//		} else if (age < 40) {
+//			proba = 5.9 / 100;
+//		} else if (age < 60) {
+//			proba = 13.0 / 100;
+//		} else if (age < 80) {
+//			proba = 43.2 / 100;
+//		} else {
+//			proba = 64.8 / 100;
+//		}
+
+
+		//old
+//		if (age < 10) {
+//			proba = 0.1 / 100;
+//		} else if (age < 20) {
+//			proba = 0.3 / 100;
+//		} else if (age < 30) {
+//			proba = 1.2 / 100;
+//		} else if (age < 40) {
+//			proba = 3.2 / 100;
+//		} else if (age < 50) {
+//			proba = 4.9 / 100;
+//		} else if (age < 60) {
+//			proba = 10.2 / 100;
+//		} else if (age < 70) {
+//			proba = 16.6 / 100;
+//		} else if (age < 80) {
+//			proba = 24.3 / 100;
+//		} else {
+//			proba = 27.3 / 100;
+//		}
 
 		return proba * episimConfig.getHospitalFactor();
 	}
 
 	@Override
-	protected double getProbaOfTransitioningToCritical(EpisimPerson person) {
+	public double getProbaOfTransitioningToCritical(Immunizable person) {
 		double proba = -1;
 
 		int age = person.getAge();
 
-		if (age < 40) {
-			proba = 5. / 100;
-		} else if (age < 50) {
-			proba = 6.3 / 100;
+		// source 3
+		if (age < 5) {
+			proba = 7.0 / 100;
+		} else if (age < 15) {
+			proba = 0.0 / 100;
+		} else if (age < 35) {
+			proba = 15.0 / 100;
 		} else if (age < 60) {
-			proba = 12.2 / 100;
-		} else if (age < 70) {
-			proba = 27.4 / 100;
+			proba = 30.0 / 100;
 		} else if (age < 80) {
-			proba = 43.2 / 100;
+			proba = 41. / 100;
 		} else {
-			proba = 70.9 / 100;
+			proba = 27. / 100;
 		}
+
+
+		// source 2
+//		if (age < 10) {
+//			proba = 8.5 / 100;
+//		} else if (age < 20) {
+//			proba = 10.9 / 100;
+//		} else if (age < 30) {
+//			proba = 13.4 / 100;
+//		} else if (age < 40) {
+//			proba = 17.2 / 100;
+//		} else if (age < 50) {
+//			proba = 21.9 / 100;
+//		} else if (age < 60) {
+//			proba = 27.3 / 100;
+//		} else if (age < 70) {
+//			proba = 37.1 / 100;
+//		} else if (age < 80) {
+//			proba = 48.5/ 100;
+//		} else {
+//			proba = 64.0 / 100;
+//		}
+
+////		// source 1
+//		if (age < 5) {
+//			proba = 3.5 / 100;
+//		} else if (age < 20) {
+//			proba = 1.7 / 100;
+//		} else if (age < 40) {
+//			proba = 7.3 / 100;
+//		} else if (age < 60) {
+//			proba = 18.0 / 100;
+//		} else if (age < 80) {
+//			proba = 37.0 / 100;
+//		} else {
+//			proba = 42.9 / 100;
+//		}
+//
+
+		// old
+//		if (age < 40) {
+//			proba = 5. / 100;
+//		} else if (age < 50) {
+//			proba = 6.3 / 100;
+//		} else if (age < 60) {
+//			proba = 12.2 / 100;
+//		} else if (age < 70) {
+//			proba = 27.4 / 100;
+//		} else if (age < 80) {
+//			proba = 43.2 / 100;
+//		} else {
+//			proba = 70.9 / 100;
+//		}
 
 		return proba;
 	}

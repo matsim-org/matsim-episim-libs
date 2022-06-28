@@ -179,7 +179,7 @@ public class Bmbf210924Cologne implements BatchRun<Bmbf210924Cologne.Params> {
 		//weather model
 		try {
 			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, 18.5, 5., 1.0);
+					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, 18.5, 5., 1.0, 1.0);
 			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 		} catch (IOException e) {
 			e.printStackTrace();

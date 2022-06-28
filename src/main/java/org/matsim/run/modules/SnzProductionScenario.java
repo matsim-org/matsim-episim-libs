@@ -10,10 +10,11 @@ import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
+import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationByAge;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.run.batch.CologneOmicron.Params;
 import org.matsim.vehicles.VehicleType;
 
 import javax.inject.Singleton;
@@ -74,7 +75,7 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		//contact intensities
 		episimConfig.getOrAddContainerParams("pt", "tr").setContactIntensity(10.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("work").setContactIntensity(1.47).setSpacesPerFacility(spaces);
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonality(1.0);
 //		episimConfig.getOrAddContainerParams("restaurant").setContactIntensity(9.24).setSpacesPerFacility(spaces).setSeasonal(true);
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(11.0).setSpacesPerFacility(spaces);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(11.0).setSpacesPerFacility(spaces);
@@ -178,12 +179,12 @@ public abstract class SnzProductionScenario extends AbstractModule {
 	/**
 	 * Configure outdoor fractions for weather model.
 	 */
-	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather) {
+	public static void configureWeather(EpisimConfigGroup episimConfig, WeatherModel weatherModel, File weather, File avgWeather, double maxOutdoorFraction) {
 		if (weatherModel != WeatherModel.no) {
 			double midpoint1 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[1]);
 			double midpoint2 = 0.1 * Double.parseDouble(weatherModel.toString().split("_")[2]);
 			try {
-				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0);
+				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(weather, avgWeather, 0.5, midpoint1, midpoint2, midpoint1, midpoint1, 5., 1.0, maxOutdoorFraction);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				throw new UncheckedIOException(e);
@@ -545,6 +546,8 @@ public abstract class SnzProductionScenario extends AbstractModule {
 		Class<? extends InfectionModel> infectionModel = AgeAndProgressionDependentInfectionModelWithSeasonality.class;
 		Class<? extends VaccinationModel> vaccinationModel = VaccinationByAge.class;
 
+		Class<? extends TestingModel> testingModel = DefaultTestingModel.class;
+
 		double imprtFctMult = 1.;
 		double importFactorBeforeJune = 4.;
 		double importFactorAfterJune = 0.5;
@@ -631,6 +634,10 @@ public abstract class SnzProductionScenario extends AbstractModule {
 
 		public Builder<T> setVaccinationModel(Class<? extends VaccinationModel> vaccinationModel) {
 			this.vaccinationModel = vaccinationModel;
+			return this;
+		}
+		public Builder<T> setTestingModel(Class<? extends TestingModel> testingModel) {
+			this.testingModel = testingModel;
 			return this;
 		}
 

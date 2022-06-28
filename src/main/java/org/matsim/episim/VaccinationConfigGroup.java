@@ -31,6 +31,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	private static final String DAYS_VALID = "daysValid";
 	private static final String BETA = "beta";
 	private static final String IGA = "IGA";
+	private static final String TIME_PERIOD_IGA = "timePeriodIgA";
 	private static final String VALID_DEADLINE = "validDeadline";
 
 	private static final String GROUPNAME = "episimVaccination";
@@ -69,6 +70,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Needed for antibody model.
 	 */
 	private boolean useIgA = false;
+	private double timePeriodIgA = 120.;
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -85,6 +87,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 * Holds all specific vaccination params.
 	 */
 	private final Map<VaccinationType, VaccinationParams> params = new EnumMap<>(VaccinationType.class);
+
 
 	/**
 	 * Default constructor.
@@ -249,6 +252,16 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return useIgA;
 	}
 
+	@StringSetter(TIME_PERIOD_IGA)
+	public void setTimePeriodIgA(double timePeriodIgA){
+		this.timePeriodIgA = timePeriodIgA;
+	}
+
+	@StringGetter(TIME_PERIOD_IGA)
+	public double getTimePeriodIgA() {
+		return this.timePeriodIgA;
+	}
+
 	@StringSetter(VALID_DEADLINE)
 	public void setValidDeadline(String validDeadline) {
 		this.validDeadline = LocalDate.parse(validDeadline);
@@ -309,7 +322,7 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return hasValidVaccination(person, day, date, getDaysValid());
 	}
 
-	private boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
+	public boolean hasValidVaccination(EpisimPerson person, int day, LocalDate date, int daysValid) {
 		if (person.getVaccinationStatus() == EpisimPerson.VaccinationStatus.no)
 			return false;
 
@@ -554,8 +567,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		}
 
 		@StringSetter(BOOST_WAIT_PERIOD)
-		public void setBoostWaitPeriod(int boostWaitPeriod) {
+		public VaccinationParams setBoostWaitPeriod(int boostWaitPeriod) {
 			this.boostWaitPeriod = boostWaitPeriod;
+			return this;
 		}
 
 		@StringGetter(BOOST_WAIT_PERIOD)

@@ -1,6 +1,7 @@
 package org.matsim.episim.model.progression;
 
 import org.matsim.episim.EpisimPerson;
+import org.matsim.episim.Immunizable;
 import org.matsim.episim.VaccinationConfigGroup;
 import org.matsim.episim.model.VaccinationType;
 
@@ -38,9 +39,9 @@ public interface DiseaseStatusTransitionModel {
 	/**
 	 * Factor for showing symptoms depending on vaccination or immunity.
 	 */
-	default double getSeriouslySickFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
+	default double getSeriouslySickFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = vaccinationConfig.getMinFactor(person, day, VaccinationConfigGroup.VaccinationParams::getFactorSeriouslySick);
+		double a = vaccinationConfig.getMinFactor((EpisimPerson) person, day, VaccinationConfigGroup.VaccinationParams::getFactorSeriouslySick);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorSeriouslySick(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))
@@ -52,9 +53,9 @@ public interface DiseaseStatusTransitionModel {
 	/**
 	 * Factor for showing symptoms depending on vaccination or immunity.
 	 */
-	default double getCriticalFactor(EpisimPerson person, VaccinationConfigGroup vaccinationConfig, int day) {
+	default double getCriticalFactor(Immunizable person, VaccinationConfigGroup vaccinationConfig, int day) {
 
-		double a = vaccinationConfig.getMinFactor(person, day, VaccinationConfigGroup.VaccinationParams::getFactorCritical);
+		double a = vaccinationConfig.getMinFactor((EpisimPerson) person, day, VaccinationConfigGroup.VaccinationParams::getFactorCritical);
 
 		double b = (person.getNumInfections() > 0 && person.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered) && vaccinationConfig.hasParams(VaccinationType.natural))
 				? vaccinationConfig.getParams(VaccinationType.natural).getFactorCritical(person.getVirusStrain(), person.daysSince(EpisimPerson.DiseaseStatus.recovered, day))

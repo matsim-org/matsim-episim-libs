@@ -76,13 +76,13 @@ class AnalyzeSnzData implements Callable<Integer> {
 	@Override
 	public Integer call() throws Exception {
 
-		AnalyseAreas selectedArea = AnalyseAreas.UpdateMobilityDashboardData;
+		AnalyseAreas selectedArea = AnalyseAreas.Koeln;
 		BaseDaysForComparison selectedBase = BaseDaysForComparison.March2020;
-		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise 
+		AnalyseOptions selectedOutputOption = AnalyseOptions.dailyResults; // only for the analysis of Bundeslaender or Landkreise
 		String startDateStillUsingBaseDays = ""; // set in this format YYYYMMDD, only for Bundeslaender and Landkreise
 		String anyArea = "Köln"; // you can select a certain Landkreis and the zip codes are collected automatically
 
-		boolean getPercentageResults = false; // false: duration output, true: results compared to base days
+		boolean getPercentageResults = true; // false: duration output, true: results compared to base days
 		boolean ignoreDates = true; // true for mobilityDashboard, false for simulation input
 
 		Set<String> datesToIgnore = Resources

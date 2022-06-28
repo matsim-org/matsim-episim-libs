@@ -48,13 +48,7 @@ public interface AntibodyModel {
 
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies;
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors;
-		private Map<EpisimPerson.ImmuneResponse, Double> immuneResponseMultiplier;
-
-
-		/**
-		 * Share of population that either has a high or low immune response to immunity events.
-		 */
-		private double immuneShare = 0.;
+		private double immuneReponseSigma = 0.;
 
 
 		public Config() {
@@ -162,42 +156,22 @@ public interface AntibodyModel {
 				}
 			}
 
-			// immune response multiplier
-			final Map<EpisimPerson.ImmuneResponse, Double> immuneResponseMultiplier = new HashMap<>();
-			for (EpisimPerson.ImmuneResponse response : EpisimPerson.ImmuneResponse.values()) {
-				immuneResponseMultiplier.put(response, 1.);
-			}
-
 			this.initialAntibodies = initialAntibodies;
 			this.antibodyRefreshFactors = antibodyRefreshFactors;
-			this.immuneResponseMultiplier = immuneResponseMultiplier;
 		}
 
 		public Config(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies, Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors) {
 			this.initialAntibodies = initialAntibodies;
 			this.antibodyRefreshFactors = antibodyRefreshFactors;
 
-			final Map<EpisimPerson.ImmuneResponse, Double> immuneResponseMultiplier = new HashMap<>();
-			for (EpisimPerson.ImmuneResponse response : EpisimPerson.ImmuneResponse.values()) {
-				immuneResponseMultiplier.put(response, 1.);
-			}
-			this.immuneResponseMultiplier = immuneResponseMultiplier;
 		}
 
-		public Map<EpisimPerson.ImmuneResponse, Double> getImmuneResponseMultiplier() {
-			return immuneResponseMultiplier;
+		public double getImmuneReponseSigma() {
+			return immuneReponseSigma;
 		}
 
-		public void setImmuneResponseMultiplier(Map<EpisimPerson.ImmuneResponse, Double> immuneResponseMultiplier) {
-			this.immuneResponseMultiplier = immuneResponseMultiplier;
-		}
-
-		public void setImmuneShare(double immuneShare) {
-			this.immuneShare = immuneShare;
-		}
-
-		public double getImmuneShare() {
-			return this.immuneShare;
+		public void setImmuneReponseSigma(double immuneReponseSigma) {
+			this.immuneReponseSigma = immuneReponseSigma;
 		}
 	}
 
