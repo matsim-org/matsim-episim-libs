@@ -12,6 +12,7 @@ import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzBerlinProductionScenario;
+import org.matsim.run.modules.SnzCologneProductionScenario;
 
 
 import javax.annotation.Nullable;
@@ -164,6 +165,15 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
+
+			//weather model
+//			try {
+//				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+//						SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 18.5, 18.5, 5., 1.0, 1.0);
+//				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
 
 
 			//mutations and vaccinations

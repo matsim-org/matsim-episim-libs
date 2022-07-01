@@ -91,9 +91,13 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double shedding = maskModel.getWornMask(infector, act2, restrictions.get(act2.getContainerName())).shedding;
 		double intake = maskModel.getWornMask(target, act1, restrictions.get(act1.getContainerName())).intake;
 
-		//reduced infectivity if infector has antibodies
+		//immunity factor for infectious agent (if antibodies are present)
 		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));
 		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));
+
+
+		// immunity factor for susceptible agent (if antibodies are present)
+		double immunityFactorTarget = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
 
 		{
 			double igaFactor = 0.0;
@@ -136,7 +140,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 
 
 		lastUnVac = calcInfectionProbabilityWoImmunity(target, infector, restrictions, act1, act2, contactIntensity, jointTimeInContainer, indoorOutdoorFactor, shedding, intake, infectivity, susceptibility);
-		double immunityFactor = 1.0 / (1.0 + Math.pow(relativeAntibodyLevelTarget, vaccinationConfig.getBeta()));
+
 
 		return 1 - Math.exp(-episimConfig.getCalibrationParameter() * susceptibility * infectivity * contactIntensity * jointTimeInContainer * ciCorrection
 				* target.getSusceptibility()
@@ -145,7 +149,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				* shedding
 				* intake
 				* indoorOutdoorFactor
-				* immunityFactor
+				* immunityFactorTarget
 		);
 	}
 
