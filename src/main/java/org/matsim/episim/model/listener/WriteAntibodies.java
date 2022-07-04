@@ -27,44 +27,41 @@ public class WriteAntibodies implements SimulationListener {
 	private Map<Id<Person>, EpisimPerson> persons;
 	@Inject
 	private EpisimReporting reporting;
-	private BufferedWriter writer;
-
 
 	@Override
 	public void init(SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 		this.persons = persons;
-		this.writer = reporting.registerWriter("antibodiesPerAge.tsv");
 	}
 
 	@Override
 	public void onIterationEnd(int iteration, LocalDate date) {
 
-		if (iteration == 100) {
+		String header = VirusStrain.class.getSimpleName() + "\t" + IntStream.range(0, 120).mapToObj(String::valueOf).collect(Collectors.joining("\t")) + "\n";
 
-			String header = VirusStrain.class.getSimpleName() + "\t" + IntStream.range(0, 120).mapToObj(String::valueOf).collect(Collectors.joining("\t")) + "\n";
+		BufferedWriter writer = reporting.registerWriter(String.format("antibodiesPerAge-%s.tsv", date.toString()));
 
-			reporting.writeAsync(writer, header);
+		reporting.writeAsync(writer, header);
 
-			for (VirusStrain strain : VirusStrain.values()) {
+		for (VirusStrain strain : VirusStrain.values()) {
 
-				// Rolling mean per age group
-				int[] n = new int[120];
-				double[] values = new double[120];
+			// Rolling mean per age group
+			int[] n = new int[120];
+			double[] values = new double[120];
 
-				for (EpisimPerson p : persons.values()) {
+			for (EpisimPerson p : persons.values()) {
 
-					int i = p.getAge();
-					n[i]++;
-					values[i] = values[i] + (p.getAntibodies(strain) - values[i]) / n[i];
+				int i = p.getAge();
+				n[i]++;
+				values[i] = values[i] + (p.getAntibodies(strain) - values[i]) / n[i];
 
-				}
-
-				String row = strain.name() + "\t" + Arrays.stream(values).mapToObj(String::valueOf).collect(Collectors.joining("\t")) + "\n";
-
-				reporting.writeAsync(writer, row);
 			}
 
-			reporting.closeAsync(writer);
+			String row = strain.name() + "\t" + Arrays.stream(values).mapToObj(String::valueOf).collect(Collectors.joining("\t")) + "\n";
+
+			reporting.writeAsync(writer, row);
 		}
+
+		reporting.closeAsync(writer);
 	}
+
 }

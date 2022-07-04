@@ -318,6 +318,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Close writer asynchronously.
 	 */
 	public void closeAsync(BufferedWriter writer) {
+		externalWriters.values().removeIf(next -> next == writer);
 		this.writer.close(writer);
 	}
 
