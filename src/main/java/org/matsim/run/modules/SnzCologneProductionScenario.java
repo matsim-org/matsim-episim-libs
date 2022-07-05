@@ -508,11 +508,15 @@
 		 //leisure & work factor
 		 if (this.restrictions != Restrictions.no) {
 
-			 if (leisureCorrection != 1)
-				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "leisure");
-			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
+			 if (leisureCorrection == 0.) {  // assume old factor of 1.9, only applied to leisure TODO: get rid of this artifact
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure");
+			 } else if (leisureCorrection != 1) {
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), 		"business", "errands", "leisure", "shop_daily", "shop_other", "visit", "work");
+			 }
 
-			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
+				 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
+
+				 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
 
 			 builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
 			 builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
