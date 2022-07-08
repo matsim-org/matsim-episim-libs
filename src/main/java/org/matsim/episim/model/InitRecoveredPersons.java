@@ -30,12 +30,13 @@ public class InitRecoveredPersons implements SimulationListener {
 	@Override
 	public void onSnapshotLoaded(int iteration, SplittableRandom rnd, Map<Id<Person>, EpisimPerson> persons, Map<Id<ActivityFacility>, InfectionEventHandler.EpisimFacility> facilities, Map<Id<Vehicle>, InfectionEventHandler.EpisimVehicle> vehicles) {
 
-		long recovered = persons.values().stream().filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.recovered).count();
+		long recovered = persons.values().stream().filter(p -> p.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered)).count();
 
 		log.info("Scaling {} recovered persons to {}", recovered, recovered * amount);
 
 		List<EpisimPerson> candidates = persons.values().stream()
 				.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
+				.filter(p -> !p.hadDiseaseStatus(EpisimPerson.DiseaseStatus.recovered))
 				.collect(Collectors.toList());
 
 		int numRecovered = (int) (recovered * amount);
@@ -47,8 +48,8 @@ public class InitRecoveredPersons implements SimulationListener {
 		while (numRecovered > 0 && candidates.size() > 0) {
 			EpisimPerson randomPerson = candidates.remove(rnd.nextInt(candidates.size()));
 
-			//randomPerson.setInitialInfection(0, VirusStrain.SARS_CoV_2);
-			randomPerson.setDiseaseStatus(0, EpisimPerson.DiseaseStatus.recovered);
+			randomPerson.setInitialInfection(0, VirusStrain.SARS_CoV_2);
+			randomPerson.setDiseaseStatus(iteration * 86400, EpisimPerson.DiseaseStatus.recovered);
 
 			numRecovered--;
 		}
