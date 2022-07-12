@@ -42,7 +42,7 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setSample(DEBUG_MODE ? 1 : 25)
-				.createSnzBerlinProductionScenario();
+				.build();
 	}
 
 	@Override
@@ -160,7 +160,7 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 			//weather model
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210905.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5., 1.0);
+						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0,18.5, 25.0, 5., 1.0,1.0);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -300,7 +300,7 @@ public class JRBatchContactIntensity implements BatchRun<JRBatchContactIntensity
 			TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 
 			if (testVac.equals("yes")) {
-				testingConfigGroup.setSelection(TestingConfigGroup.Selection.ALL_PERSONS);
+				testingConfigGroup.setTestAllPersonsAfter(LocalDate.EPOCH);
 			}
 
 			//		TestType testType = TestType.valueOf(params.testType);

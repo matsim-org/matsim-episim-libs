@@ -14,9 +14,7 @@ import org.matsim.run.modules.SnzBerlinProductionScenario;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static org.matsim.episim.EpisimConfigGroup.ActivityHandling;
@@ -29,13 +27,13 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
 		return new SnzBerlinProductionScenario.Builder()
-				.setSample(DEBUG ? 1 : 25)
 				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setEasterModel(SnzBerlinProductionScenario.EasterModel.no)
 				.setChristmasModel(SnzBerlinProductionScenario.ChristmasModel.no)
 				.setActivityHandling(ActivityHandling.startOfDay)
-				.createSnzBerlinProductionScenario();
+				.setSample(DEBUG ? 1 : 25)
+				.build();
 	}
 
 	@Override
@@ -105,7 +103,7 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 			// (TmidFall = 25.0)!!
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210905.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5., 1.0);
+						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0,18.5, 25.0, 5., 1.0,1.0);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -118,10 +116,10 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 			Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 			infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayB117.put(LocalDate.parse("2020-12-05"), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+			episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.7);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.0);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.7);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 			// VACCINATIONS
 			// Vaccination: mrna
@@ -132,19 +130,19 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 			int fullEffectMRNA = 7 * 7; //second shot after 6 weeks, full effect one week after second shot
 			vaccinationConfig.getOrAddParams(VaccinationType.mRNA)
 					.setDaysBeforeFullEffect(fullEffectMRNA)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 0.0)
 							.atDay(fullEffectMRNA - 7, effectivnessMRNA / 2.)
 							.atFullEffect(effectivnessMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 1.0)
 							.atDay(fullEffectMRNA - 7, 1.0 - ((1.0 - factorShowingSymptomsMRNA) / 2.))
 							.atFullEffect(factorShowingSymptomsMRNA)
 							.atDay(fullEffectMRNA + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 1.0)
 							.atDay(fullEffectMRNA - 7, 1.0 - ((1.0 - factorSeriouslySickMRNA) / 2.))
 							.atFullEffect(factorSeriouslySickMRNA)
@@ -161,19 +159,19 @@ public class JRBatchMasterA implements BatchRun<JRBatchMasterA.Params> {
 			// Vaccination: vector
 			vaccinationConfig.getOrAddParams(VaccinationType.vector)
 					.setDaysBeforeFullEffect(fullEffectVector)
-					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setEffectiveness(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 0.0)
 							.atDay(fullEffectVector - 7, effectivnessVector / 2.)
 							.atFullEffect(effectivnessVector)
 							.atDay(fullEffectVector + 5 * 365, 0.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setFactorShowingSymptoms(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 1.0)
 							.atDay(fullEffectVector - 7, 1.0 - ((1.0 - factorShowingSymptomsVector) / 2.))
 							.atFullEffect(factorShowingSymptomsVector)
 							.atDay(fullEffectVector + 5 * 365, 1.0) //10% reduction every 6 months (source: TC)
 					)
-					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.MUTB)
+					.setFactorSeriouslySick(VaccinationConfigGroup.forStrain(VirusStrain.DELTA)
 							.atDay(1, 1.0)
 							.atDay(fullEffectVector - 7, 1.0 - ((1.0 - factorSeriouslySickVector) / 2.))
 							.atFullEffect(factorSeriouslySickVector)

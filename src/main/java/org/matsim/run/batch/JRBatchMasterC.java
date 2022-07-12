@@ -4,7 +4,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.model.Transition;
-import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
 import org.matsim.episim.policy.AdaptivePolicy;
 import org.matsim.episim.policy.FixedPolicy;
@@ -28,15 +27,15 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 
 	@Override
 	public SnzBerlinProductionScenario getBindings(int id, @Nullable Params params) {
-		return new Builder()
+		return new SnzBerlinProductionScenario.Builder()
+				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
+				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : AdaptiveRestrictions.no)
 				.setSnapshot(Snapshot.no)
 				.setChristmasModel(ChristmasModel.no)
 				.setEasterModel(EasterModel.no)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
-				.setAdaptiveRestrictions(params != null ? params.adaptivePolicy : AdaptiveRestrictions.no)
 				.setSample(DEBUG ? 1 : 25)
-				.createSnzBerlinProductionScenario();
+				.build();
 
 	}
 
@@ -204,7 +203,7 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 			// (TmidFall = 25.0)!!
 			try {
 				Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzBerlinProductionScenario.INPUT.resolve("tempelhofWeatherUntil20210905.csv").toFile(),
-						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0, 5., 1.0);
+						SnzBerlinProductionScenario.INPUT.resolve("temeplhofWeatherDataAvg2000-2020.csv").toFile(), 0.5, 18.5, 25.0,18.5, 25.0, 5., 1.0,1.0);
 				episimConfig.setLeisureOutdoorFraction(outdoorFractions);
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -217,10 +216,10 @@ public class JRBatchMasterC implements BatchRun<JRBatchMasterC.Params> {
 			Map<LocalDate, Integer> infPerDayB117 = new HashMap<>();
 			infPerDayB117.put(LocalDate.parse("2020-01-01"), 0);
 			infPerDayB117.put(LocalDate.parse("2020-12-05"), 1);
-			episimConfig.setInfections_pers_per_day(VirusStrain.B117, infPerDayB117);
+			episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayB117);
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setInfectiousness(1.7);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.B117).setFactorSeriouslySick(1.0);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(1.7);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(1.0);
 
 
 			// VACCINATIONS (change vaccination compliance)

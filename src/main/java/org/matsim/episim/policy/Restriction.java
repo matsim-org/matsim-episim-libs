@@ -495,6 +495,36 @@ public final class Restriction {
 	}
 
 	/**
+	 * Updates everything except for location based rf
+	 */
+	void updateGlobalValuesOnly(Restriction r) {
+		// All values may be optional and are only set if present
+		if (r.getRemainingFraction() != null) {
+			remainingFraction = r.getRemainingFraction();
+		}
+
+		if (r.getCiCorrection() != null)
+			ciCorrection = r.getCiCorrection();
+
+		if (r.getMaxGroupSize() != null)
+			maxGroupSize = r.getMaxGroupSize();
+
+		if (r.getReducedGroupSize() != null)
+			reducedGroupSize = r.getReducedGroupSize();
+
+		if (r.closed != null)
+			closed = r.closed;
+
+		if (r.closingHours != null)
+			closingHours = r.closingHours;
+
+		if (!r.maskUsage.isEmpty()) {
+			maskUsage.clear();
+			maskUsage.putAll(r.maskUsage);
+		}
+	}
+
+	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
 	 *
 	 * localRf: if new restriction has a Rf, the localRf will NOT be included in merged result; reason: to aid users who

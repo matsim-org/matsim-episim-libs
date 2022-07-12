@@ -24,12 +24,12 @@ public class JRBatchRestrictionMitte implements BatchRun<JRBatchRestrictionMitte
 				// parameters often changed:
 				.setLocationBasedRestrictions(params != null ? params.locationBasedRestrictions : EpisimConfigGroup.DistrictLevelRestrictions.no)
 				//				.setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yesForHomeLocation)
-				.setSample(1)
+				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.no)
 				// not changed often:
 				.setSnapshot(SnzBerlinProductionScenario.Snapshot.no)
 				.setActivityHandling(ActivityHandling.startOfDay)
-				.setLocationBasedContactIntensity(SnzBerlinProductionScenario.LocationBasedContactIntensity.no)
-				.createSnzBerlinProductionScenario();
+				.setSample(1)
+				.build();
 	}
 
 	@Override
