@@ -102,7 +102,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public final Object2IntMap<VaccinationType> vaccinations = new Object2IntOpenHashMap<>();
 
 	/**
-	 *  Map of (VaccinationType, nth Vaccination) -> Number per day
+	 * Map of (VaccinationType, nth Vaccination) -> Number per day
 	 */
 	public final Object2IntMap<ObjectIntPair<VaccinationType>> vaccinationStats = new Object2IntOpenHashMap<>();
 
@@ -152,6 +152,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	String memorizedDate = null;
 
 	Set<String> geoAttributes;
+	private final Map<String, BufferedWriter> externalWriters = new HashMap<>();
 
 	/**
 	 * flag to ensure only one threads writes certain outputs.
@@ -210,7 +211,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		outdoorFraction = EpisimWriter.prepare(base + "outdoorFraction.tsv", "day", "date", "outdoorFraction");
 		virusStrains = EpisimWriter.prepare(base + "strains.tsv", "day", "date", (Object[]) VirusStrain.values());
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
-		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date",  (Object[]) VirusStrain.values());
+		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", (Object[]) VirusStrain.values());
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
 
@@ -290,7 +291,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		// Copy non prefixed files to base output
 		if (!base.equals(outDir))
 			for (String file : List.of("infections.txt", "infectionEvents.txt", "restrictions.txt", "timeUse.txt", "diseaseImport.tsv",
-					"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv",  "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar")) {
+					"outdoorFraction.tsv", "strains.tsv", "antibodies.tsv", "vaccinations.tsv", "vaccinationsDetailed.tsv", "events.tar")) {
 				Path path = Path.of(outDir, file);
 				if (Files.exists(path)) {
 					Files.move(path, Path.of(base + file), StandardCopyOption.REPLACE_EXISTING);
@@ -320,6 +321,35 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 		// Write config files again to overwrite these from snapshot
 		writeConfigFiles();
+	}
+
+	/**
+	 * Create and registered a new writer. Note that this writer should not be used directly, instead use {@link #writeAsync(BufferedWriter, String)}
+	 */
+	public BufferedWriter registerWriter(String filename) {
+
+		if (externalWriters.containsKey(filename))
+			throw new IllegalStateException("Writer already registered: " + filename);
+
+		BufferedWriter writer = EpisimWriter.prepare(base + filename);
+		externalWriters.put(filename, writer);
+
+		return writer;
+	}
+
+	/**
+	 * Appends some content asynchronously to a writer in thread-safe manner.
+	 */
+	public void writeAsync(BufferedWriter writer, String content) {
+		this.writer.append(writer, content);
+	}
+
+	/**
+	 * Close writer asynchronously.
+	 */
+	public void closeAsync(BufferedWriter writer) {
+		externalWriters.values().removeIf(next -> next == writer);
+		this.writer.close(writer);
 	}
 
 	/**
@@ -797,7 +827,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Write container statistic to file.
 	 */
 	void reportContainerUsage(Object2IntMap<EpisimContainer<?>> maxGroupSize, Object2IntMap<EpisimContainer<?>> totalUsers,
-	                                 Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
+	                          Map<EpisimContainer<?>, Object2IntMap<String>> activityUsage) {
 
 		BufferedWriter out = EpisimWriter.prepare(base + "containerUsage.txt.gz", "id", "types", "totalUsers", "maxGroupSize");
 
@@ -841,7 +871,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		out[1] = date;
 
 		for (int i = 0; i < VirusStrain.values().length; i++) {
-			out[i+2] = String.valueOf(antibodies.getDouble(VirusStrain.values()[i]) / n);
+			out[i + 2] = String.valueOf(antibodies.getDouble(VirusStrain.values()[i]) / n);
 		}
 
 		writer.append(antibodiesPerPerson, out);
@@ -902,6 +932,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(adaptiveRestrictions);
 		writer.close(vaccinationsPerType);
 		writer.close(vaccinationsPerTypeAndNumber);
+
+		for (BufferedWriter v : externalWriters.values()) {
+			writer.close(v);
+		}
 
 		if (singleEvents) {
 			try {
@@ -1054,7 +1088,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	enum InfectionsWriterFields {
 		time, day, date, nSusceptible, nSusceptibleVaccinated, nInfectedButNotContagious, nInfectedButNotContagiousVaccinated, nContagious, nContagiousVaccinated, nShowingSymptoms, nShowingSymptomsVaccinated, nSeriouslySick, nSeriouslySickVaccinated, nCritical, nCriticalVaccinated, nTotalInfected,
 		nTotalInfectedVaccinated, nInfectedCumulative, nInfectedCumulativeVaccinated, nContagiousCumulative, nContagiousCumulativeVaccinated, nShowingSymptomsCumulative, nShowingSymptomsCumulativeVaccinated, nSeriouslySickCumulative, nSeriouslySickCumulativeVaccinated, nCriticalCumulative,
-		nCriticalCumulativeVaccinated, nRecovered, nRecoveredVaccinated, nInQuarantineFull, nInQuarantineHome, nVaccinated, nReVaccinated, nTested, nDeceasedCumulative, nDeceasedCumulativeVaccinated,  district
+		nCriticalCumulativeVaccinated, nRecovered, nRecoveredVaccinated, nInQuarantineFull, nInQuarantineHome, nVaccinated, nReVaccinated, nTested, nDeceasedCumulative, nDeceasedCumulativeVaccinated, district
 	}
 
 	enum InfectionEventsWriterFields {time, infector, infected, infectionType, date, groupSize, facility, virusStrain, probability}

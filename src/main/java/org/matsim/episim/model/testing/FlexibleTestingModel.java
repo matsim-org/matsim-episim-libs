@@ -46,10 +46,10 @@ public class FlexibleTestingModel extends DefaultTestingModel {
 		// update is run at end of day, the test needs to be for the next day
 		DayOfWeek dow = EpisimUtils.getDayOfWeek(episimConfig, day + 1);
 
-		if (!policy.shouldTest(person, day, dow, date, vaccinationConfig))
+		if (!policy.shouldTest(person, day, dow, date, testingConfig, vaccinationConfig))
 			return;
 
-		boolean fullyVaccinated = rate.useFullyVaccinatedTestRate(person, day, dow, date, vaccinationConfig);
+		boolean fullyVaccinated = rate.useFullyVaccinatedTestRate(person, day, dow, date, testingConfig, vaccinationConfig);
 
 		for (TestingConfigGroup.TestingParams params : testingConfig.getTestingParams()) {
 
@@ -88,7 +88,7 @@ public class FlexibleTestingModel extends DefaultTestingModel {
 		/**
 		 * Decide whether this person is tested according to the fully vaccinated rate or the normal rate in the config.
 		 */
-		boolean useFullyVaccinatedTestRate(EpisimPerson person, int day,  DayOfWeek dow, LocalDate date, VaccinationConfigGroup vac);
+		boolean useFullyVaccinatedTestRate(EpisimPerson person, int day,  DayOfWeek dow, LocalDate date, TestingConfigGroup test, VaccinationConfigGroup vac);
 
 	}
 
@@ -100,7 +100,7 @@ public class FlexibleTestingModel extends DefaultTestingModel {
 		 *
 		 * @param dow day of week
 		 */
-		boolean shouldTest(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, VaccinationConfigGroup vac);
+		boolean shouldTest(EpisimPerson person, int day, DayOfWeek dow, LocalDate date, TestingConfigGroup test, VaccinationConfigGroup vac);
 
 	}
 
