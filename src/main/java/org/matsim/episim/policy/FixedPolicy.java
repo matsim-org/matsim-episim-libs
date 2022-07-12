@@ -292,9 +292,15 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict(date.toString(), Restriction.of(fraction), activities);
 		}
 
-		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double> districtSpecificValue, double fraction, String... activities) {
+		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecificValue, Double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
 			restriction.setLocationBasedRf(districtSpecificValue);
+
+			return restrictWithDistrict(date.toString(), restriction, activities);
+		}
+
+		public ConfigBuilder restrictWithDistrict(LocalDate date, Map<String, Double>  districtSpecificValue, String... activities) {
+			Restriction restriction = Restriction.ofLocationBasedRf(districtSpecificValue);
 
 			return restrictWithDistrict(date.toString(), restriction, activities);
 		}
@@ -325,7 +331,7 @@ public final class FixedPolicy extends ShutdownPolicy {
 			return restrict("day-" + day, restriction, activities);
 		}
 
-		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double> locationBasedRf, double fraction, String... activities) {
+		public ConfigBuilder restrictWithDistrict(long day, Map<String, Double>  locationBasedRf, Double fraction, String... activities) {
 			Restriction restriction = Restriction.of(fraction);
 			restriction.setLocationBasedRf(locationBasedRf);
 

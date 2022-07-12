@@ -40,10 +40,10 @@ import org.matsim.core.utils.collections.Tuple;
 import org.matsim.episim.events.EpisimInfectionEvent;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
+import org.matsim.episim.model.activity.LocationBasedParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
 import org.matsim.episim.model.vaccination.VaccinationModel;
-import org.matsim.episim.policy.Restriction;
-import org.matsim.episim.policy.ShutdownPolicy;
+import org.matsim.episim.policy.*;
 import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
@@ -399,7 +399,9 @@ public final class InfectionEventHandler implements Externalizable {
 				// person that didn't move will be put at home the whole day
 				if (!person.hasActivity(day)) {
 					person.setStartOfDay(day);
-					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent("home", this::createActivityType);
+					// if a person has a home event modified with living space (i.e. home_25 means 25m2 living space per person), then this home type should be used consistently.
+					String homeActWithSize = person.getTrajectory().stream().map(x -> x.params.getContainerName()).filter(x -> x.contains("home_")).findFirst().orElse("home");
+					EpisimConfigGroup.InfectionParams home = paramsMap.computeIfAbsent(homeActWithSize, this::createActivityType);
 					EpisimFacility facility = createHomeFacility(person);
 					person.setFirstFacilityId(facility.getContainerId(), day);
 					person.setLastFacilityId(facility.getContainerId(), day, true);
@@ -813,7 +815,30 @@ public final class InfectionEventHandler implements Externalizable {
 		reporting.reportDiseaseImport(infected, iteration, report.date);
 
 		ImmutableMap<String, Restriction> im = ImmutableMap.copyOf(this.restrictions);
-		policy.updateRestrictions(report, im);
+
+		String districtLevelAttribute = episimConfig.getDistrictLevelRestrictionsAttribute();
+		if (districtLevelAttribute != null && !districtLevelAttribute.equals("")) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			reporting.writeInfections(reportsLocal, districtLevelAttribute);
+		}
+
+		if (policy instanceof AdaptivePolicy && policy.getConfig().getEnum(AdaptivePolicy.RestrictionScope.class, "restriction-scope").equals(AdaptivePolicy.RestrictionScope.local)) {
+			Map<String, EpisimReporting.InfectionReport> reportsLocal = reporting.createReports(personMap.values(), iteration, districtLevelAttribute);
+			((AdaptivePolicy) policy).updateRestrictions(reportsLocal, im);
+		} else {
+			policy.updateRestrictions(report, im);
+		}
+
+
+		if (policy instanceof AdaptivePolicy) {
+			Map<String, Map<String, AdaptivePolicy.RestrictionStatus>> restrictionStatus = ((AdaptivePolicy) policy).getRestrictionStatus();
+			for (String location : restrictionStatus.keySet()) {
+				Map<String, AdaptivePolicy.RestrictionStatus> stringRestrictionStatusMap = restrictionStatus.get(location);
+				for (String activity : stringRestrictionStatusMap.keySet()) {
+					reporting.reportAdaptiveRestrictions(iteration, date.toString(), location, activity, stringRestrictionStatusMap.get(activity).toString());
+				}
+			}
+		}
 
 		reporting.reportCpuTime(iteration, "TestingModel", "start", -1);
 		DayOfWeek day = EpisimUtils.getDayOfWeek(episimConfig, iteration);

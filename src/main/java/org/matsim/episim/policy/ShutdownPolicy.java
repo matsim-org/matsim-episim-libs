@@ -47,6 +47,10 @@ public abstract class ShutdownPolicy {
 
 	protected final Config config;
 
+	public Config getConfig() {
+		return config;
+	}
+
 	/**
 	 * Constructor from config.
 	 */

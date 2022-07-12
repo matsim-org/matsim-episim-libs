@@ -311,7 +311,7 @@ def calc_r_reduction(base_case, base_variables, df, group_by=None):
     return result
 
 if __name__ == "__main__":
-    
+
     aggregate_batch_run("../../../../output/summaries.zip")
-    
-    
+
+

@@ -143,7 +143,7 @@ public final class CreateRestrictionsFromCSV implements RestrictionInput {
 	private void createPolicy(FixedPolicy.ConfigBuilder builder, String[] act, String column, double scale) throws IOException {
 
 		// If active, the remaining fraction is calculated and saved for each subdistrict
-		boolean locationBasedRfActive = episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.yes)
+		boolean locationBasedRfActive = !episimConfig.getDistrictLevelRestrictions().equals(EpisimConfigGroup.DistrictLevelRestrictions.no)
 				&& subdistrictInput != null && !subdistrictInput.isEmpty();
 
 		// ("except edu" since we set it separately.  yyyy but why "except leisure"??  kai, dec'20)

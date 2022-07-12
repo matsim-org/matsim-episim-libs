@@ -78,6 +78,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String CURFEW_COMPLIANCE = "curfewCompliance";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS = "districtLevelRestrictions";
 	private static final String DISTRICT_LEVEL_RESTRICTIONS_ATTRIBUTE = "districtLevelRestrictionsAttribute";
+	private static final String DISTRICTS = "districts";
 	private static final String CONTAGIOUS_CONTAINER_OPTIMIZATION = "contagiousContainerOptimization";
 	private static final String REPORT_TIME_USE = "reportTimeUse";
 	private static final String SINGLE_EVENT_FILE = "singleEventFile";
@@ -162,6 +163,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private int daysInfectious = 4;
 	private DistrictLevelRestrictions districtLevelRestrictions = DistrictLevelRestrictions.no;
 	private String districtLevelRestrictionsAttribute = "";
+	private List<String> districts = new ArrayList<>();
+
 	private ContagiousOptimization contagiousContainerOptimization = ContagiousOptimization.no;
 	private ReportTimeUse reportTimeUse = ReportTimeUse.no;
 	private SingleEventFile singleEventFile = SingleEventFile.yes;
@@ -734,6 +737,25 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		this.districtLevelRestrictionsAttribute = districtLevelRestrictionsAttribute;
 	}
 
+	public void setDistricts(List<String> districts) {
+		this.districts = districts;
+	}
+
+	public List<String> getDistricts() {
+		return this.districts;
+
+	}
+
+	@StringSetter(DISTRICTS)
+	void setDistricts(String districts) {
+		this.districts = Splitter.on(";").splitToList(districts);
+	}
+
+	@StringGetter(DISTRICTS)
+	String getDistrictsString() {
+		return Joiner.on(";").join(this.districts);
+	}
+
 	@StringGetter(CONTAGIOUS_CONTAINER_OPTIMIZATION)
 	public ContagiousOptimization getContagiousOptimization() {
 		return this.contagiousContainerOptimization;
@@ -810,6 +832,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 		}
 	}
 
+
+
 	/**
 	 * Adds given params to the parameter set, replacing existing ones.
 	 */
@@ -818,7 +842,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 
 		Optional<String> match = params.mappedNames.stream().filter(s -> paramsTrie.get(s, TrieMatch.STARTS_WITH) != null).findAny();
 		if (match.isPresent()) {
-			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params. Try to define the params in different order.");
+			// commented out, b/c i need to add params such as home_25 in batch  after home has already been defined -jr, TODO: whats the solution here
+//			throw new IllegalArgumentException("New param for " + match.get() + " matches one of the already present params. Try to define the params in different order.");
 		}
 
 		params.mappedNames.forEach(name -> paramsTrie.put(name, params));
@@ -1003,7 +1028,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	public enum ActivityHandling {
 
 		/**
-		 * Activity participation is randdom during each contact.
+		 * Activity participation is random during each contact.
 		 */
 		duringContact,
 
@@ -1019,7 +1044,8 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Decides whether location based restrictions should be implemented
 	 */
 	public enum DistrictLevelRestrictions {
-		yes,
+		yesForActivityLocation,
+		yesForHomeLocation,
 		no
 	}
 

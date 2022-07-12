@@ -24,59 +24,42 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
 import it.unimi.dsi.fastutil.ints.IntSet;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.geotools.data.FeatureReader;
-import org.geotools.data.FileDataStoreFinder;
-import org.geotools.data.shapefile.ShapefileDataStore;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Envelope;
-import org.locationtech.jts.geom.MultiPolygon;
-import org.locationtech.jts.index.strtree.STRtree;
-import org.matsim.api.core.v01.Coord;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.population.PopulationUtils;
 import org.matsim.core.scenario.ScenarioUtils;
 import org.matsim.core.utils.geometry.CoordinateTransformation;
-import org.matsim.core.utils.geometry.geotools.MGC;
 import org.matsim.core.utils.geometry.transformations.TransformationFactory;
 import org.matsim.facilities.*;
-import org.matsim.utils.objectattributes.attributable.Attributable;
-import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import picocli.CommandLine;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.concurrent.Callable;
 
 /**
- * Preprocessing step that takes the home ids of each person in a population and looks up their district from a shape file.
- * Writes a new population file with the additional "district" attribute as result.
+ * Preprocessing step that finds zipcode and subdistrict of every facility and writes this info as
+ * an attribute in the facilities file
  */
 @CommandLine.Command(
 		name = "zipcodeLookup",
 		description = "Calculate and attach zipcode information to a population.",
 		mixinStandardHelpOptions = true
 )
-public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
+public class DistrictLookupBerlinFacilities implements Callable<Integer> {
 
-	private static final Logger log = LogManager.getLogger(ZipcodeAndSubdistrictLookup.class);
+	private static final Logger log = LogManager.getLogger(DistrictLookupBerlinFacilities.class);
 
 	@CommandLine.Parameters(paramLabel = "file", arity = "1", description = "Population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
 	private Path input;
 
-	@CommandLine.Option(names = "--shp", description = "Shapefile containing plz information", defaultValue = "") // D:/Dropbox/Documents/VSP/plz/plz-gebiete.shp
+	@CommandLine.Option(names = "--shp", description = "Shapefile containing plz information", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/original-data/PLZ-in-germany/plz-gebiete.shp")
 	private Path shapeFile;
 
 	@CommandLine.Option(names = "--output", description = "Output population file", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_25pt_split.xml.gz")
@@ -94,7 +77,7 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 	private String shapeCRS;
 
 	public static void main(String[] args) {
-		System.exit(new CommandLine(new ZipcodeAndSubdistrictLookup()).execute(args));
+		System.exit(new CommandLine(new DistrictLookupBerlinFacilities()).execute(args));
 	}
 
 	@Override
@@ -124,87 +107,48 @@ public class ZipcodeAndSubdistrictLookup implements Callable<Integer> {
 
 		DistrictLookup.Index index = new DistrictLookup.Index(shapeFile.toFile(), ct, attr);
 
-
-		// Adds zipcode and subdistrict attributes to population (based on home location)
-		Map<String, String> personIdToNeighborhoodMap = new HashMap<>();
-		// Count errors
-		int unknown = 0;
-		for (Person p : population.getPersons().values()) {
-
-			try {
-				double x = (double) p.getAttributes().getAttribute("homeX");
-				double y = (double) p.getAttributes().getAttribute("homeY");
-
-				String plz = index.query(x, y);
-				p.getAttributes().putAttribute("zipcode", plz);
-
-				for (String neighborhoodName : subdistricts.keySet()) {
-					if (subdistricts.get(neighborhoodName).contains(Integer.parseInt(plz))) {
-						p.getAttributes().putAttribute("subdistrict", neighborhoodName);
-						personIdToNeighborhoodMap.put(p.getId().toString(), neighborhoodName);
-
-
-					}
-				}
-
-
-			} catch (RuntimeException e) {
-				unknown++;
-			}
-		}
-
-		// Simple check if the lookup might be wrong
-		if (unknown >= population.getPersons().size() * 0.5) {
-			log.error("zipcode lookup failed for {} out of {} persons.", unknown, population.getPersons().size());
-			return 1;
-		}
-
-		log.info("Finished with failed lookup for {} out of {} persons.", unknown, population.getPersons().size());
-
-		PopulationUtils.writePopulation(population, output.toString());
-
-		//		FileWriter writer = new FileWriter("PersonToDistrictMap.txt");
-		//		BufferedWriter writer1 = new BufferedWriter(writer);
-		//		for (Map.Entry<String, String> personIdToNeighbhorhood : personIdToNeighborhoodMap.entrySet()) {
-		//			writer1.write(personIdToNeighbhorhood.getKey() + ";" + personIdToNeighbhorhood.getValue());
-		//			writer1.newLine();
-		//		}
-		//		writer1.close();
-		//		writer.close();
-
-
-
-		// Adds zipcode and subdistrict attributes to facilities (based on facility location)
-
 		Config config = ConfigUtils.createConfig();
-		config.facilities().setInputFile("../public-svn/matsim/scenarios/countries/de/episim/openDataModel/input/be_2020-facilities_assigned_simplified_grid.xml.gz");
+		config.facilities().setInputFile("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_episim_facilities_mo_so_25pt_split.xml.gz");
 		Scenario scenario = ScenarioUtils.loadScenario(config);
 
 		// Count errors
 		int unknownFac = 0;
 		Map<String, String> facilityIdToNeighborhoodMap = new HashMap<>();
-		for (Facility f : scenario.getActivityFacilities().getFacilities().values()) {
+		for (ActivityFacility f : scenario.getActivityFacilities().getFacilities().values()) {
 
 			try {
 				double x = f.getCoord().getX();
 				double y = f.getCoord().getY();
 
 				String plz = index.query(x, y);
-				((Attributable) f).getAttributes().putAttribute("zipcode", plz);
+				f.getAttributes().putAttribute("zipcode", plz);
 
-
+				String districtToWrite = "NA";
 				for (String neighborhoodName : subdistricts.keySet()) {
 					if (subdistricts.get(neighborhoodName).contains(Integer.parseInt(plz))) {
-						((Attributable) f).getAttributes().putAttribute("subdistrict", neighborhoodName);
+						f.getAttributes().putAttribute("subdistrict", neighborhoodName);
+						districtToWrite = neighborhoodName;
+						break;
 					}
 				}
+				facilityIdToNeighborhoodMap.put(f.getId().toString(), districtToWrite);
 			} catch (RuntimeException e) {
 				unknownFac++;
 			}
 		}
 		log.info("Finished with failed lookup for {} out of {} facilities.", unknownFac, scenario.getActivityFacilities().getFacilities().values().size());
 
-		new FacilitiesWriter(scenario.getActivityFacilities()).write("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz");
+		new FacilitiesWriter(scenario.getActivityFacilities()).write("../shared-svn/projects/episim/matsim-files/snz/BerlinV2/episim-input/be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz");
+
+
+		FileWriter writer = new FileWriter("FacilityToDistrictMapCOMPLETE.txt");
+		BufferedWriter writer1 = new BufferedWriter(writer);
+		for (Map.Entry<String, String> facilityIdToNeighborhood : facilityIdToNeighborhoodMap.entrySet()) {
+			writer1.write(facilityIdToNeighborhood.getKey() + ";" + facilityIdToNeighborhood.getValue());
+			writer1.newLine();
+		}
+		writer1.close();
+		writer.close();
 
 		return 0;
 	}

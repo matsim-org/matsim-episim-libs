@@ -174,7 +174,7 @@ public final class Restriction {
 	 * Restriction that allows everything.
 	 */
 	public static Restriction none() {
-		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE,null,
+		return new Restriction(1d, 1d, Integer.MAX_VALUE, Integer.MAX_VALUE, null,
 				new ClosingHours(0, 0), Map.of(), new HashMap<>(), 1d, 1d);
 	}
 
@@ -457,8 +457,10 @@ public final class Restriction {
 	 */
 	void update(Restriction r) {
 		// All values may be optional and are only set if present
-		if (r.getRemainingFraction() != null)
+		if (r.getRemainingFraction() != null) {
 			remainingFraction = r.getRemainingFraction();
+			locationBasedRf = new HashMap<>();
+		}
 
 		if (r.getCiCorrection() != null)
 			ciCorrection = r.getCiCorrection();
@@ -493,6 +495,36 @@ public final class Restriction {
 	}
 
 	/**
+	 * Updates everything except for location based rf
+	 */
+	void updateGlobalValuesOnly(Restriction r) {
+		// All values may be optional and are only set if present
+		if (r.getRemainingFraction() != null) {
+			remainingFraction = r.getRemainingFraction();
+		}
+
+		if (r.getCiCorrection() != null)
+			ciCorrection = r.getCiCorrection();
+
+		if (r.getMaxGroupSize() != null)
+			maxGroupSize = r.getMaxGroupSize();
+
+		if (r.getReducedGroupSize() != null)
+			reducedGroupSize = r.getReducedGroupSize();
+
+		if (r.closed != null)
+			closed = r.closed;
+
+		if (r.closingHours != null)
+			closingHours = r.closingHours;
+
+		if (!r.maskUsage.isEmpty()) {
+			maskUsage.clear();
+			maskUsage.putAll(r.maskUsage);
+		}
+	}
+
+	/**
 	 * Merges another restrictions into this one. Will fail if any attribute would be overwritten.
 	 *
 	 * localRf: if new restriction has a Rf, the localRf will NOT be included in merged result; reason: to aid users who
@@ -500,7 +532,7 @@ public final class Restriction {
 	 *
 	 * @see #asMap()
 	 */
-	void merge(Map<String, Object> restriction) {
+	public void merge(Map<String, Object> restriction) {
 
 		Double otherRf = (Double) restriction.get("fraction");
 		Double otherE = (Double) restriction.get("ciCorrection");
@@ -517,18 +549,24 @@ public final class Restriction {
 		Map<String, Double> otherLocationBasedRf = new HashMap<>();
 		((Map<String, Double>) restriction.get("locationBasedRf")).forEach(((key, value) -> otherLocationBasedRf.put(key, value)));
 
-		// if new and old Restriction have equal Rfs: warn
-		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)){
-			log.warn("Duplicated remainingFraction " + remainingFraction + " and " + otherRf);
+		// if other and new restriction have Rf: warn & use new remaining fraction
+		if (remainingFraction != null && otherRf != null && !remainingFraction.equals(otherRf)) {
+			log.warn("Duplicated remainingFraction; other value(" + otherRf + ") replaced with new value(" + remainingFraction + ")");
 		}
 		// if new Restriction doesn't have value for Rf:
-		// 1) keep old value for Rf
-		// 2) check whether new Restriction has localRf, and if not, then use localRf from old Restriction
-		else if (remainingFraction == null){
+		// 1) keep other value for Rf
+		// 2) check whether new Restriction has localRf, and if not, then use localRf from other Restriction
+		else if (remainingFraction == null) {
 			remainingFraction = otherRf;
 
 			if (!locationBasedRf.isEmpty() && !otherLocationBasedRf.isEmpty() && !locationBasedRf.equals(otherLocationBasedRf)) {
-				log.warn("Duplicated locationBasedRf usage; existing value=" + locationBasedRf + "; new value=" + otherLocationBasedRf + "; keeping existing value.");
+
+				log.warn("Duplicated locationBasedRf; other value(" + otherLocationBasedRf + ") was merged with new value(" + locationBasedRf + ")");
+
+				mergeLocationBasedRf(otherLocationBasedRf);
+
+				log.warn("Result of merge: " + locationBasedRf);
+
 			} else if (locationBasedRf.isEmpty()) {
 				locationBasedRf.putAll(otherLocationBasedRf);
 			}
@@ -537,6 +575,8 @@ public final class Restriction {
 					&& (!otherLocationBasedRf.isEmpty() || otherLocationBasedRf != null)) {
 
 				log.warn("localRf removed during merge, as new remainingFraction was provided");
+			} else {
+				mergeLocationBasedRf(otherLocationBasedRf);
 			}
 		}
 
@@ -576,7 +616,14 @@ public final class Restriction {
 			log.warn("(full new restriction=" + restriction + ")");
 		} else if (maskUsage.isEmpty())
 			maskUsage.putAll(otherMasks);
+	}
 
+	private void mergeLocationBasedRf(Map<String, Double> otherLocationBasedRf) {
+		for (Map.Entry<String, Double> otherEntry : otherLocationBasedRf.entrySet()) {
+
+			locationBasedRf.putIfAbsent(otherEntry.getKey(), otherEntry.getValue());
+
+		}
 	}
 
 	boolean isExtrapolate() {

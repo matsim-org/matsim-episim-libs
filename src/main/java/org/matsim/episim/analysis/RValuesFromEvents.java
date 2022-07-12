@@ -287,7 +287,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 		else if (infectionType.endsWith("educ_kiga")) activityType = "day care";
 		else if (infectionType.endsWith("leisure")) activityType = "leisure";
 		else if (infectionType.endsWith("work") || infectionType.endsWith("business")) activityType = "work&business";
-		else if (infectionType.endsWith("home")) activityType = "home";
+		else if (infectionType.endsWith("home") || infectionType.startsWith("home")) activityType = "home";
 		else if (infectionType.startsWith("pt")) activityType = "pt";
 		else activityType = "other";
 

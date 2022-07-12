@@ -37,12 +37,10 @@ import org.matsim.episim.model.input.RestrictionInput;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
 import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
+import org.matsim.episim.policy.*;
+import org.matsim.vehicles.VehicleType;
 import org.matsim.episim.model.vaccination.VaccinationFromData;
 import org.matsim.episim.model.vaccination.VaccinationModel;
-import org.matsim.episim.policy.AdjustedPolicy;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
-import org.matsim.episim.policy.ShutdownPolicy;
 
 import javax.inject.Singleton;
 import java.nio.file.Path;
@@ -63,8 +61,25 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		private Snapshot snapshot = Snapshot.no;
 
+		private EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions = EpisimConfigGroup.DistrictLevelRestrictions.no;
+		private LocationBasedContactIntensity locationBasedContactIntensity = LocationBasedContactIntensity.no;
+		private AdaptiveRestrictions adaptiveRestrictions = AdaptiveRestrictions.no;
+
 		public Builder setSnapshot(Snapshot snapshot) {
 			this.snapshot = snapshot;
+			return this;
+		}
+
+		public Builder setLocationBasedRestrictions(EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions) {
+			this.locationBasedRestrictions = locationBasedRestrictions;
+			return this;
+		}
+		public Builder setLocationBasedContactIntensity(LocationBasedContactIntensity localCI) {
+			this.locationBasedContactIntensity = localCI;
+			return this;
+		}
+		public Builder setAdaptiveRestrictions(AdaptiveRestrictions adaptiveRestrictions) {
+			this.adaptiveRestrictions = adaptiveRestrictions;
 			return this;
 		}
 
@@ -76,6 +91,9 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 	public enum Snapshot {no, episim_snapshot_060_2020_04_24, episim_snapshot_120_2020_06_23, episim_snapshot_180_2020_08_22, episim_snapshot_240_2020_10_21}
 
+	public static enum LocationBasedContactIntensity {yes, no}
+
+	public static enum AdaptiveRestrictions {yesGlobal, yesLocal, no}
 	private final int sample;
 	private final int importOffset;
 	private final DiseaseImport diseaseImport;
@@ -95,7 +113,9 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	private final double imprtFctMult;
 	private final double importFactorBeforeJune;
 	private final double importFactorAfterJune;
-	private final LocationBasedRestrictions locationBasedRestrictions;
+	private final EpisimConfigGroup.DistrictLevelRestrictions locationBasedRestrictions;
+	private final LocationBasedContactIntensity locationBasedContactIntensity;
+	private final AdaptiveRestrictions adaptiveRestrictions;
 
 	/**
 	 * Path pointing to the input folder. Can be configured at runtime with EPISIM_INPUT variable.
@@ -106,7 +126,7 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 	 * Empty constructor is needed for running scenario from command line.
 	 */
 	@SuppressWarnings("unused")
-	private SnzBerlinProductionScenario() {
+	public SnzBerlinProductionScenario() {
 		this(new Builder());
 	}
 
@@ -130,6 +150,8 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		this.importFactorAfterJune = builder.importFactorAfterJune;
 		this.easterModel = builder.easterModel;
 		this.locationBasedRestrictions = builder.locationBasedRestrictions;
+		this.locationBasedContactIntensity = builder.locationBasedContactIntensity;
+		this.adaptiveRestrictions = builder.adaptiveRestrictions;
 	}
 
 	/**
@@ -148,17 +170,20 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		bind(VaccinationModel.class).to(vaccinationModel).in(Singleton.class);
 
 		//TODO: this is not in the cologne prod scenario, is it still needed?
-		if (adjustRestrictions == AdjustRestrictions.yes)
+		if (adjustRestrictions == AdjustRestrictions.yes) {
 			bind(ShutdownPolicy.class).to(AdjustedPolicy.class).in(Singleton.class);
-		else
-			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
-
-		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay) {
-			if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
-				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
-			} else {
-				bind(ActivityParticipationModel.class).to(DefaultParticipationModel.class);
+			if (adaptiveRestrictions != AdaptiveRestrictions.no) {
+				throw (new RuntimeException("adjust restrictions & adaptive restrictions cannot be turned on simultaneously"));
 			}
+		} else if (adaptiveRestrictions != AdaptiveRestrictions.no) {
+			bind(ShutdownPolicy.class).to(AdaptivePolicy.class).in(Singleton.class);
+		} else {
+			bind(ShutdownPolicy.class).to(FixedPolicy.class).in(Singleton.class);
+		}
+
+
+		if (activityHandling == EpisimConfigGroup.ActivityHandling.startOfDay){
+				bind(ActivityParticipationModel.class).to(LocationBasedParticipationModel.class);
 		}
 
 		bind(VaccinationFromData.Config.class).toInstance(
@@ -191,11 +216,13 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
+		// overwritten later, if location-based restrictions implemented
 		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
 
 		//episim config
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
+		if (locationBasedContactIntensity == LocationBasedContactIntensity.no) {
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
 
@@ -204,6 +231,17 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split.xml.gz", sample))
 				.addDays(DayOfWeek.SUNDAY);
+		} else {
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_wt_%dpt_split_withLivingSpace.xml.gz", sample))
+					.addDays(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY, DayOfWeek.THURSDAY, DayOfWeek.FRIDAY);
+
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_sa_%dpt_split_withLivingSpace.xml.gz", sample))
+					.addDays(DayOfWeek.SATURDAY);
+
+			episimConfig.addInputEventsFile(inputForSample("be_2020-week_snz_episim_events_so_%dpt_split_withLivingSpace.xml.gz", sample))
+					.addDays(DayOfWeek.SUNDAY);
+		}
+
 
 		episimConfig.setActivityHandling(activityHandling);
 
@@ -278,16 +316,16 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 		activityParticipation.setInput(INPUT.resolve("BerlinSnzData_daily_until20220204.csv"));
 
 		//location based restrictions
-		if (locationBasedRestrictions == LocationBasedRestrictions.yes) {
-			config.facilities().setInputFile(INPUT.resolve("be_2020-facilities_assigned_simplified_grid_WithNeighborhoodAndPLZ.xml.gz").toString());
-			episimConfig.setDistrictLevelRestrictions(EpisimConfigGroup.DistrictLevelRestrictions.yes);
-			episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+		episimConfig.setDistrictLevelRestrictions(locationBasedRestrictions);
+		config.facilities().setInputFile(INPUT.resolve("be_2020-week_snz_episim_facilities_mo_so_25pt_split_withDistrict.xml.gz").toString());
+		config.plans().setInputFile(inputForSample("be_2020-week_snz_entirePopulation_emptyPlans_withDistricts_andNeighborhood_%dpt_split.xml.gz", sample));
+		List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
+				"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
+				"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
 
+		episimConfig.setDistrictLevelRestrictionsAttribute("subdistrict");
+		if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
 			if (activityParticipation instanceof CreateRestrictionsFromCSV) {
-				List<String> subdistricts = Arrays.asList("Spandau", "Neukoelln", "Reinickendorf",
-						"Charlottenburg_Wilmersdorf", "Marzahn_Hellersdorf", "Mitte", "Pankow", "Friedrichshain_Kreuzberg",
-						"Tempelhof_Schoeneberg", "Treptow_Koepenick", "Lichtenberg", "Steglitz_Zehlendorf");
-
 
 				Map<String, Path> subdistrictInputs = new HashMap<>();
 				for (String subdistrict : subdistricts) {
@@ -399,6 +437,48 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 			builder.restrict(LocalDate.parse("2022-12-22"), 0.92, "work", "business");
 			builder.restrict(LocalDate.parse("2023-01-02"), 1.0, "work", "business");
 
+			if (locationBasedRestrictions != EpisimConfigGroup.DistrictLevelRestrictions.no) {
+				// applies same leisure adjustment from above to the localRf
+				builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "leisure");
+				builder.apply("2020-10-15", "2020-12-14", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = 1 - leisureFactor * (1 - v)), "leisure");
+
+				// following four blocks mimic the work/business adjustments
+				builder.apply("2020-04-03", "2020-04-17", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-04-03", "2020-04-17", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2020-06-26", "2020-08-07", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-06-26", "2020-08-07", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2020-10-09", "2020-10-23", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-10-09", "2020-10-23", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2020-12-18", "2021-01-01", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2020-12-18", "2021-01-01", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-01-29", "2021-02-05", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-01-29", "2021-02-05", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-03-26", "2021-04-09", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-03-26", "2021-04-09", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-06-25", "2021-08-06", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-06-25", "2021-08-06", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				builder.apply("2021-10-08", "2021-10-22", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-10-08", "2021-10-22", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				//Weihnachtsferien
+				builder.apply("2021-12-17", "2022-01-04", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2021-12-17", "2022-01-04", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				//Winterferien
+				builder.apply("2022-01-28", "2022-02-04", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2022-01-28", "2022-02-04", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+
+				//Osterferien
+				builder.apply("2022-04-08", "2022-04-23", (d, e) -> e.put("locationBasedRf", ((HashMap<String, Double>) e.get("locationBasedRf")).clone()), "work", "business");
+				builder.apply("2022-04-08", "2022-04-23", (d, e) -> ((HashMap<String, Double>) e.get("locationBasedRf")).replaceAll((k, v) -> v = workVacFactor * v), "work", "business");
+			}
 		}
 
 
@@ -417,4 +497,16 @@ public final class SnzBerlinProductionScenario extends SnzProductionScenario {
 
 		return config;
 	}
+
+	private Map<String, Double> makeUniformLocalRf(List<String> subdistricts, double fraction) {
+
+		Map<String, Double> localRf = new HashMap<>();
+		for (String subdistrict : subdistricts) {
+			localRf.put(subdistrict, fraction);
+		}
+
+		return localRf;
+	}
 }
+
+
