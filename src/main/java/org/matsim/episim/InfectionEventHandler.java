@@ -26,6 +26,8 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.*;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -52,6 +54,8 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectOutput;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -201,7 +205,7 @@ public final class InfectionEventHandler implements Externalizable {
 		this.policy = injector.getInstance(ShutdownPolicy.class);
 		this.restrictions = episimConfig.createInitialRestrictions();
 		this.reporting = injector.getInstance(EpisimReporting.class);
-		this.localRnd = new SplittableRandom( 65536); // fixed seed, because it should not change between snapshots
+		this.localRnd = new SplittableRandom(65536); // fixed seed, because it should not change between snapshots
 		this.progressionModel = injector.getInstance(ProgressionModel.class);
 		this.antibodyModel = injector.getInstance(AntibodyModel.class);
 		this.initialInfections = injector.getInstance(InitialInfectionHandler.class);
@@ -253,9 +257,9 @@ public final class InfectionEventHandler implements Externalizable {
 				.sorted(Comparator.comparingInt(p -> ((EpisimPerson) p).getAgeOrDefault(-1)).reversed()
 						.thenComparing(p -> ((EpisimPerson) p).getPersonId()))
 				.forEach(p -> {
-			Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
-			p.setVaccinable(localRnd.nextDouble() < compliance);
-		});
+					Double compliance = EpisimUtils.findValidEntry(vaccinationConfig.getCompliancePerAge(), 1.0, p.getAgeOrDefault(-1));
+					p.setVaccinable(localRnd.nextDouble() < compliance);
+				});
 
 		listener = (Set<SimulationListener>) injector.getInstance(Key.get(Types.setOf(SimulationListener.class)));
 		vaccinations = (Set<VaccinationModel>) injector.getInstance(Key.get(Types.setOf(VaccinationModel.class)));
@@ -577,16 +581,16 @@ public final class InfectionEventHandler implements Externalizable {
 	/**
 	 * Distribute the containers to the different ReplayEventTasks, by setting
 	 * the taskId attribute of the containers to values between 0 and episimConfig.getThreds() - 1,
-     * so that the sum of numUsers * maxGroupSize has an even distribution
+	 * so that the sum of numUsers * maxGroupSize has an even distribution
 	 */
 	private void balanceContainersByLoad(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		// We need the containers sorted by the load, with the highest load first.
 		// To get a deterministic distribution, we use the containerId for
 		// sorting the containers with the same estimatedLoad.
 		Comparator<Tuple<EpisimContainer<?>, Double>> loadComperator =
-			Comparator.<Tuple<EpisimContainer<?>, Double>,Double>comparing(
-						  t -> t.getSecond(), Comparator.reverseOrder()).
-			thenComparing(t -> t.getFirst().getContainerId().toString());
+				Comparator.<Tuple<EpisimContainer<?>, Double>, Double>comparing(
+								t -> t.getSecond(), Comparator.reverseOrder()).
+						thenComparing(t -> t.getFirst().getContainerId().toString());
 		Collections.sort(estimatedLoad, loadComperator);
 
 		final int numThreads = episimConfig.getThreads();
@@ -595,7 +599,7 @@ public final class InfectionEventHandler implements Externalizable {
 		for (int i = 0; i < numThreads; i++)
 			loadPerThread[i] = 0.0;
 
-		for(Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
+		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
 			// search for the thread/taskId with the minimal load
 			int useThread = 0;
 			Double minLoad = loadPerThread[0];
@@ -618,8 +622,9 @@ public final class InfectionEventHandler implements Externalizable {
 	 */
 	private void balanceContainersByHash(List<Tuple<EpisimContainer<?>, Double>> estimatedLoad) {
 		for (Tuple<EpisimContainer<?>, Double> tuple : estimatedLoad) {
-		    final EpisimContainer<?> container = tuple.getFirst();
-			final int useThread = Math.abs(container.getContainerId().hashCode()) % episimConfig.getThreads();		     container.setTaskId(useThread);
+			final EpisimContainer<?> container = tuple.getFirst();
+			final int useThread = Math.abs(container.getContainerId().hashCode()) % episimConfig.getThreads();
+			container.setTaskId(useThread);
 		}
 	}
 
@@ -772,6 +777,33 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
+
+//		if (date.getDayOfMonth() == 1) {
+//			try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(Path.of("antibodies_" + date + ".tsv")), CSVFormat.TDF)) {
+//
+//				csv.print("personId");
+//				csv.print("age");
+//
+//				for (VirusStrain strain : VirusStrain.values()) {
+//					csv.print(strain.toString());
+//				}
+//				csv.println();
+//
+//				for (EpisimPerson person : personMap.values()) {
+//					csv.print(person.getPersonId().toString());
+//					csv.print(person.getAge());
+//
+//					for (VirusStrain strain : VirusStrain.values()) {
+//						csv.print(person.getAntibodies(strain));
+//					}
+//					csv.println();
+//
+//				}
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		}
+
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "finished", -2);
@@ -789,7 +821,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 		// additional vaccinations:
 		for (VaccinationModel vaccination : vaccinations) {
-			vaccination.handleVaccination(personMap,  date, iteration, now);
+			vaccination.handleVaccination(personMap, date, iteration, now);
 		}
 
 		reporting.reportCpuTime(iteration, "VaccinationModel", "finished", -1);

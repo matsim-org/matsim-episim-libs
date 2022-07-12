@@ -422,6 +422,21 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		vaccinationConfig.setTimePeriodIgA(730.);
 
 
+		//modify contact intensity
+		EpisimConfigGroup.InfectionParams workParams = episimConfig.getOrAddContainerParams("work");
+		workParams.setContactIntensity(workParams.getContactIntensity() * params.workCi);
+
+		EpisimConfigGroup.InfectionParams leisureParams = episimConfig.getOrAddContainerParams("leisure");
+		leisureParams.setContactIntensity(leisureParams.getContactIntensity() * params.leisureCi);
+
+		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * params.schoolCi);
+		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * params.schoolCi);
+		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * params.schoolCi);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * params.schoolCi);
+		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * params.schoolCi);
+		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * params.schoolCi);
+
+
 		if(DEBUG_MODE) {
 //			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
 //			UtilsJR.produceMaskPlot(episimConfig.getPolicy());
@@ -500,8 +515,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		}
 
 
-		//
-
 
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
@@ -516,14 +529,30 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 	public static final class Params {
 
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(1)
 		public long seed;
 
-		@Parameter({0.0,1.0,1.3,1.6,1.9,2.2})
+//		@Parameter({0.0, 1.0, 1.5, 2.0, 2.5})
+		@Parameter({0.0})
 		public double actCorrection;
 
-		@Parameter({0.9, 0.95, 1.0,1.05,1.1})
+//		@Parameter({0.9, 0.95, 1.0,1.05,1.1})
+		@Parameter({1.0})
 		public double thFactor;
+
+		@Parameter({1.})
+//		@Parameter({0.5, 1., 2.})
+		public double schoolCi;
+
+//		@Parameter({1., 2.})
+		@Parameter({1.})
+		public double workCi;
+
+//		@Parameter({0.5, 1.})
+		@Parameter({ 1.})
+		public double leisureCi;
+
+
 
 
 		//TODO VARY
@@ -611,7 +640,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(70),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
 				RunParallel.OPTION_METADATA
 		};
 
