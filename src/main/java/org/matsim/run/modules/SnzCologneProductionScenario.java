@@ -30,6 +30,7 @@
  import org.matsim.episim.model.activity.LocationBasedParticipationModel;
  import org.matsim.episim.model.input.CreateRestrictionsFromCSV;
  import org.matsim.episim.model.listener.HouseholdSusceptibility;
+ import org.matsim.episim.model.listener.WriteAntibodies;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.episim.model.progression.DiseaseStatusTransitionModel;
  import org.matsim.episim.model.testing.TestType;
@@ -258,8 +259,13 @@
 					.withAgeGroup("60+", 151722)
 		 */
 
-		 Multibinder.newSetBinder(binder(), SimulationListener.class)
-				 .addBinding().to(HouseholdSusceptibility.class);
+		 Multibinder<SimulationListener> listener = Multibinder.newSetBinder(binder(), SimulationListener.class);
+
+		 listener.addBinding().to(HouseholdSusceptibility.class);
+
+		 // Write antibodies, iteration is hard-coded
+
+		 // listener.addBinding().to(WriteAntibodies.class);
 
 	 }
 
