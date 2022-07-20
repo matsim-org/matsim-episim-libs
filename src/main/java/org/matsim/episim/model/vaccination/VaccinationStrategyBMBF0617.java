@@ -3,10 +3,13 @@ package org.matsim.episim.model.vaccination;
 import com.google.inject.Inject;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.episim.InfectionEventHandler;
 import org.matsim.episim.model.VaccinationType;
 
 import java.time.LocalDate;
@@ -20,6 +23,8 @@ public class VaccinationStrategyBMBF0617 implements VaccinationModel {
 
 	private final SplittableRandom rnd;
 	private final Config config;
+
+	private static final Logger log = LogManager.getLogger(VaccinationStrategyBMBF0617.class);
 
 	@Inject
 	public VaccinationStrategyBMBF0617(SplittableRandom rnd, Config config) {
@@ -84,6 +89,13 @@ public class VaccinationStrategyBMBF0617 implements VaccinationModel {
 						Collections.shuffle(perAge[ageIndex], new Random(EpisimUtils.getSeed(rnd)));
 
 
+					// 100 candiates 60+
+					// 60 shots
+
+					// 40 candiates 60+
+					// 60 shots
+
+
 					int vaccinesForDayAndAgeGroup = Math.min(candidatesForAge.size(), vaccinationsLeft);
 					for (int i = 0; i < vaccinesForDayAndAgeGroup; i++) {
 						EpisimPerson person = candidatesForAge.get(i);
@@ -94,6 +106,11 @@ public class VaccinationStrategyBMBF0617 implements VaccinationModel {
 					ageIndex--;
 
 				}
+
+				if (ageIndex == -1) {
+					log.warn(vaccinationsLeft + " vaccinations thrown away on " + date);
+				}
+
 			}
 
 		}

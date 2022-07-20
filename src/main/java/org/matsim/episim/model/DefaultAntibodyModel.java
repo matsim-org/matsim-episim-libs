@@ -101,21 +101,21 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		// 1st immunization:
 		if (firstImmunization) {
 
-			for (VirusStrain strain2 : VirusStrain.values()) {
-				double antibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2);
+			for (VirusStrain strain : VirusStrain.values()) {
+				double antibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain);
 
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
-				person.setAntibodies(strain2, antibodies);
+				person.setAntibodies(strain, antibodies);
 			}
 
 
 		} else {
-			for (VirusStrain strain2 : VirusStrain.values()) {
-				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(immunityEventType).get(strain2);
+			for (VirusStrain strain : VirusStrain.values()) {
+				double refreshFactor = antibodyConfig.antibodyRefreshFactors.get(immunityEventType).get(strain);
 
 				// antibodies before refresh
-				double antibodies = person.getAntibodies(strain2);
+				double antibodies = person.getAntibodies(strain);
 
 				// refresh antibodies; ensure that antibody level does not decrease.
 				if (refreshFactor * person.getImmuneResponseMultiplier() >= 1) {
@@ -123,13 +123,23 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				}
 
 				// check that new antibody level at least as high as initial antibodies
-				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
+				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
 				// check that new antibody level is at most 150
 				antibodies = Math.min(150., antibodies);
 
-				person.setAntibodies(strain2, antibodies);
+				person.setAntibodies(strain, antibodies);
+			}
+
+			// overrides ab against omicron strains with antibodies against delta, if higher
+			//TODO: is this a sensible way to handle omicron update?
+			if (immunityEventType.equals(VaccinationType.omicronUpdate)) {
+				double deltaAb = person.getAntibodies(VirusStrain.DELTA);
+				person.setAntibodies(VirusStrain.OMICRON_BA1, Math.max(person.getAntibodies(VirusStrain.OMICRON_BA1), deltaAb));
+				person.setAntibodies(VirusStrain.OMICRON_BA2, Math.max(person.getAntibodies(VirusStrain.OMICRON_BA2), deltaAb));
+				person.setAntibodies(VirusStrain.OMICRON_BA5, Math.max(person.getAntibodies(VirusStrain.OMICRON_BA5), deltaAb));
+
 			}
 
 		}

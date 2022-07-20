@@ -50,6 +50,9 @@ public interface AntibodyModel {
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors;
 		private double immuneReponseSigma = 0.;
 
+		public Map<ImmunityEvent, Map<VirusStrain, Double>> getInitialAntibodies() {
+			return initialAntibodies;
+		}
 
 		public Config() {
 

@@ -189,16 +189,22 @@ public class DefaultAntibodyModelTest {
 			DoubleColumn values = DoubleColumn.create("antibodies");
 			StringColumn groupings = StringColumn.create("scenario");
 
+			List<VirusStrain> strainsToInclude = List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2);
 			for (int day : antibodyLevels.keySet()) {
 				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
 
 				for (Object strain : strainToAntibodyMap.keySet()) {
-					records.append(day);
 
-					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
+					if (strainsToInclude.contains(strain)) {
+						records.append(day);
 
-					values.append(nAb);
-					groupings.append(strain.toString());
+						double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
+
+						values.append(nAb);
+						groupings.append(strain.toString());
+					}
+
+
 
 				}
 			}
