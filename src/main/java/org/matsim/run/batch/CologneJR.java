@@ -262,8 +262,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //						System.out.print( "," + immunityFrom);
 //					}
 //				}
-
-
+//
+//
 //				for (ImmunityEvent immunityGiver : VaccinationType.values()) {
 //					System.out.print("\n" + immunityGiver);
 //					for (VirusStrain immunityFrom : VirusStrain.values()) {
@@ -276,7 +276,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //						System.out.print("," + String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
 //					}
 //				}
-
+//
 //				System.out.println();
 
 			}
@@ -529,27 +529,27 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 	public static final class Params {
 
 		// general
-		@GenerateSeeds(1)
+		@GenerateSeeds(5)
 		public long seed;
-
-//		@Parameter({0.0, 1.0, 1.5, 2.0, 2.5})
-		@Parameter({0.0})
+		@Parameter({0.0, 1.0, 1.5, 2.0, 2.5})
+//		@Parameter({0.0})
 		public double actCorrection;
 
-//		@Parameter({0.9, 0.95, 1.0,1.05,1.1})
-		@Parameter({1.0})
+
+		@Parameter({1.0, 1.1, 1.2})
+//		@Parameter({1.0})
 		public double thFactor;
 
-		@Parameter({1.})
-//		@Parameter({0.5, 1., 2.})
+//		@Parameter({1.})
+		@Parameter({0.5, 1.})
 		public double schoolCi;
 
-//		@Parameter({1., 2.})
-		@Parameter({1.})
+		@Parameter({1., 2.})
+//		@Parameter({1.})
 		public double workCi;
 
-//		@Parameter({0.5, 1.})
-		@Parameter({ 1.})
+		@Parameter({0.25,0.5, 1.})
+//		@Parameter({ 1.})
 		public double leisureCi;
 
 

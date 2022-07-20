@@ -783,6 +783,9 @@ public final class InfectionEventHandler implements Externalizable {
 //
 //				csv.print("personId");
 //				csv.print("age");
+//				csv.print("nVaccinations");
+//				csv.print("nInfections");
+//				csv.print("immuneResponseMultiplier");
 //
 //				for (VirusStrain strain : VirusStrain.values()) {
 //					csv.print(strain.toString());
@@ -792,6 +795,9 @@ public final class InfectionEventHandler implements Externalizable {
 //				for (EpisimPerson person : personMap.values()) {
 //					csv.print(person.getPersonId().toString());
 //					csv.print(person.getAge());
+//					csv.print(person.getNumVaccinations());
+//					csv.print(person.getNumInfections());
+//					csv.print(person.getImmuneResponseMultiplier());
 //
 //					for (VirusStrain strain : VirusStrain.values()) {
 //						csv.print(person.getAntibodies(strain));
