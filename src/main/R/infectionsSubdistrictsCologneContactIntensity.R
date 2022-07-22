@@ -48,7 +48,8 @@ episim_incidence_district <- convert_infections_into_incidence(gbl_directory, ep
 #load(paste0(gbl_directory, "episim_incidence_district"))
 
 start_date <- ymd("2020-02-15")
-end_date <- ymd("2021-02-19")
+# end_date <- ymd("2021-02-19")
+end_date <- ymd("2020-07-15")
 
 # filter:
 episim_incidence_district2 <- episim_incidence_district %>%
@@ -70,12 +71,20 @@ to_plot <- episim_incidence_district2 %>%
             Scenario == scenario_policyRich |
             Scenario == scenario_policyPoor) %>%
   mutate(Scenario = str_replace(Scenario, regex(scenario_policy), "policy")) %>%
-    mutate(Scenario = str_replace(Scenario, regex(scenario_policyRich), "policyRich")) %>%
-    mutate(Scenario = str_replace(Scenario, regex(scenario_policyPoor), "policyPoor")) %>%
+    mutate(Scenario = str_replace(Scenario, regex(scenario_policyPoor), "policyRich")) %>%
+    mutate(Scenario = str_replace(Scenario, regex(scenario_policyRich), "policyPoor")) %>%
     mutate(Scenario = str_replace(Scenario, regex(scenario_base), "base"),)
   #mutate(Scenario = factor(Scenario, levels = c("rki", "base", "policy")))
 
-plot <- ggplot(to_plot) +
+ggplot(to_plot %>% filter(Scenario == "base" | Scenario == "policy")) +
+  geom_line(aes(date, infections, col = Scenario)) +
+  theme_minimal(base_size = 11) +
+  theme(legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust=1)) +
+  labs(x = "Date", y = "Infections") +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b-%y") +
+  facet_wrap(~status, ncol = 2)
+
+ggplot(to_plot %>% filter(Scenario != "base")) +
   geom_line(aes(date, infections, col = Scenario)) +
   theme_minimal(base_size = 11) +
   theme(legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust=1)) +
@@ -91,6 +100,7 @@ lor <- st_read("/Users/jakob/git/shared-svn/projects/episim/matsim-files/snz/Col
 
 infections <- episim_incidence_district %>%
   select(date,district, ciModifier,vaxPoor, vaxRich,infections)%>%
+  filter(date >= start_date & date <= end_date) %>%
   pivot_wider(names_from = c("ciModifier","vaxRich","vaxPoor"), names_glue = "ciMod{ciModifier}-vaxRich{vaxRich}-vaxPoor{vaxPoor}", values_from = "infections") %>%
   group_by(district) %>%
   summarise(across(starts_with("ci"), ~ sum(.x, na.rm = TRUE))) %>%
@@ -111,7 +121,7 @@ shp_high <- lor %>% filter(str_detect(STT_NAME, '^[A-L]'))
 shp_low <- lor %>% filter(str_detect(STT_NAME, '^[M-Z]'))
 tmap_mode("plot")
 # plot_m2_lor <- #tm_basemap(leaflet::providers$OpenStreetMap) +
-plot_policy <- tm_shape(joined.fix %>% filter(scenario == "policy")%>% rename(c("Change in Infections" = "infections")) + #' )
+plot_policy <- tm_shape(joined.fix %>% filter(scenario == "policy")%>% rename(c("Change in Infections" = "infections"))) + #' )
   tm_facets(by = "scenario") +
   tm_polygons(col = "Change in Infections", id = "STT_NAME", palette = viridis(9), alpha = 0.9,breaks = c(0.1,0.3,0.5,0.7,0.9,1.1,1.3,1.5,1.7,1.9), legend.show = FALSE)+
   tm_shape(shp_high) +
