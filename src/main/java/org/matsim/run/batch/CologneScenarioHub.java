@@ -14,8 +14,6 @@ import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
@@ -27,7 +25,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneJR implements BatchRun<CologneJR.Params> {
+public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -44,10 +42,10 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
 
-				double mutEscBa5 = 1.;
-				double mutEscStrainA = 1.;
+				double mutEscBa5 = 3.0;
 
-				LocalDate start = null;
+				LocalDate start = LocalDate.of(2022, 9, 15);
+//				LocalDate start = LocalDate.of(2022, 12, 15);
 				VaccinationType vaccinationType = null;
 
 				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
@@ -56,25 +54,23 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				compliance.put(12, 0.0);
 				compliance.put(0, 0.0);
 
-
-
 				if (params != null) {
-					mutEscBa5 = 3.0;
-					mutEscStrainA = params.strAEsc;
-
-					start = LocalDate.parse(params.resDate);
 					vaccinationType = VaccinationType.valueOf(params.vacType);
 
 
-					if (params.vacCamp.equals("age")) {
-						compliance.put(60, 0.85); // 60+
-						compliance.put(18, 0.55); // 18-59
-						compliance.put(12, 0.20); // 12-17
-						compliance.put(0, 0.0); // 0 - 11
-					}
-					else if (params.vacCamp.equals("eu")) {
-						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
+					if (params.vacCamp.equals("60plus")) {
+						compliance.put(60, 0.94/2); // 0.94 is boost rate July 16, 2022
 						compliance.put(18, 0.);
+						compliance.put(12, 0.);
+						compliance.put(0, 0.);
+					}
+					// assumption: older age group 2boosted first, then younger, each age group
+					// will have rate of 50% 2boosted by end of campaign.
+					// motivation: if we give both age groups same rate, then the older people
+					// will not be boosted as much as younger people, which seems implausible...
+					else if (params.vacCamp.equals("18plus")) {
+						compliance.put(60, 0.94/2); // 0.94 is boost rate July 16, 2022
+						compliance.put(18, 0.77/2); // 0.77 is boost rate July 16, 2022
 						compliance.put(12, 0.);
 						compliance.put(0, 0.);
 					}
@@ -85,12 +81,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 					}
 				}
 
-				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
+				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 91, vaccinationType, compliance));
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
-				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5,mutEscStrainA);
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5);
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
@@ -105,7 +101,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 			private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
 											 Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors,
-											 double mutEscBa5, double mutEscStrainA) {
+											 double mutEscBa5) {
 				for (VaccinationType immunityType : VaccinationType.values()) {
 					initialAntibodies.put(immunityType, new EnumMap<>( VirusStrain.class ) );
 					for (VirusStrain virusStrain : VirusStrain.values()) {
@@ -181,7 +177,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4); //todo: is 1.4
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
-				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA1, mRNAAlpha);
+				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA1,  mRNADelta / mutEscBa5);
 
 				//BA.2
 				double mRNABA2 = mRNABA1;
@@ -194,7 +190,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
-				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA2, mRNAAlpha);
+				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA2, mRNADelta / mutEscBa5);
 
 
 				//BA.5
@@ -208,20 +204,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5); //todo ???
-				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA5, mRNAAlpha / mutEscBa5);
+				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA5, mRNADelta); // mRNAAlpha / mutEscBa5
 
-				//StrainA
-				double mRNAStrainA = mRNABa5 / mutEscStrainA;
-				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.STRAIN_A, mRNAStrainA);
-				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.STRAIN_A, mRNAStrainA * 4./20.);
-				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.STRAIN_A, mRNAStrainA * 6./20.);
-				initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.STRAIN_A, mRNAStrainA * 6./20.);
-				initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.STRAIN_A,  mRNAStrainA * 8./20.);
-				initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.STRAIN_A,  64.0 / 300. / mutEscBa5 /mutEscStrainA);
-				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.STRAIN_A, 64.0 / 300./ mutEscBa5 /mutEscStrainA);
-				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.STRAIN_A, 64.0 / 300. / mutEscBa5 / mutEscStrainA);
-				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.STRAIN_A, 64.0 / 300.);
-				initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscBa5 /mutEscStrainA);
 
 				for (VaccinationType immunityType : VaccinationType.values()) {
 					antibodyRefreshFactors.put(immunityType, new EnumMap<>( VirusStrain.class ) );
@@ -250,35 +234,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 					}
 				}
 
-
-
-//				System.out.print("immunityGiver");
-//				for (VirusStrain immunityFrom : VirusStrain.values()) {
-//					if (immunityFrom == VirusStrain.OMICRON_BA1) {
-//						System.out.print( "," + "BA.1");
-//					} else 		if (immunityFrom == VirusStrain.OMICRON_BA2) {
-//						System.out.print( "," + "BA.2");
-//					} else {
-//						System.out.print( "," + immunityFrom);
-//					}
-//				}
-//
-//
-//				for (ImmunityEvent immunityGiver : VaccinationType.values()) {
-//					System.out.print("\n" + immunityGiver);
-//					for (VirusStrain immunityFrom : VirusStrain.values()) {
-//						System.out.print("," +  String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
-//					}
-//				}
-//				for (ImmunityEvent immunityGiver : VirusStrain.values()) {
-//					System.out.print("\n" + immunityGiver);
-//					for (VirusStrain immunityFrom : VirusStrain.values()) {
-//						System.out.print("," + String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
-//					}
-//				}
-//
-//				System.out.println();
-
 			}
 		});
 
@@ -288,7 +243,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		return new SnzCologneProductionScenario.Builder()
 				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
 				.setSebastianUpdate(true)
-				.setLeisureCorrection(params == null ? 0.0 : params.actCorrection)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -332,62 +286,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thFactor);
-		//restrictions
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-
-		// Restrictions starting on December 1, 2022
-		LocalDate restrictionDate = LocalDate.parse(params.resDate);
-
-		//school
-		if(params.edu.equals("close")) {
-			if (params.resDate.equals("2022-12-01")) {
-				builder.restrict(restrictionDate, 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-			}
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-			//university
-			builder.restrict(restrictionDate, 0.2, "educ_higher");
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_higher");
-		} else if (params.edu.equals("maskVent")) {
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
-							FaceMask.CLOTH, 0.0,
-							FaceMask.N95, 0.25,
-							FaceMask.SURGICAL, 0.25)),
-					"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-		} else if (params.edu.equals("normal")) {
-
-		} else {
-			throw new RuntimeException("param value doesn't exist");
-		}
-
-		//pt: masks
-		if (Boolean.parseBoolean(params.maskPt)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "pt");
-
-		}
-
-		//shopping: masks
-		if (Boolean.parseBoolean(params.maskShop)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "shop_daily", "shop_other", "errands");
-		}
-
-		//work
-		builder.restrict(restrictionDate, 0.78 * params.work, "work");
-		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.work, "work");
-
-		//leisure
-		builder.restrict(restrictionDate, 0.88 * params.leis, "leisure");
-		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.leis, "leisure");
-
-
-		episimConfig.setPolicy(builder.build());
-
-
 		//mutations
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
@@ -401,16 +299,6 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(oHos);
 
 
-//		STRAIN_A
-		double strAInf = 1.0;
-		if (params.strAEsc != 0.) {
-
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * ba5Inf * strAInf);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(oHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(oHos);
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(oHos);
-		}
-
 		//Configure Disease Import
 
 		configureFutureDiseaseImport(params, episimConfig);
@@ -422,34 +310,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		vaccinationConfig.setTimePeriodIgA(730.);
 
 
-		//modify contact intensity
-		EpisimConfigGroup.InfectionParams workParams = episimConfig.getOrAddContainerParams("work");
-		workParams.setContactIntensity(workParams.getContactIntensity() * params.workCi);
-
-		EpisimConfigGroup.InfectionParams leisureParams = episimConfig.getOrAddContainerParams("leisure");
-		leisureParams.setContactIntensity(leisureParams.getContactIntensity() * params.leisureCi);
-
-		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * params.schoolCi);
-
-
-		if(DEBUG_MODE) {
-//			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
-//			UtilsJR.produceMaskPlot(episimConfig.getPolicy());
-		}
-
-			return config;
+		return config;
 	}
 
 	private void configureFutureDiseaseImport(Params params, EpisimConfigGroup episimConfig) {
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
-		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
-
 		// add initial impulses for strains
 		//BA.2
 		LocalDate ba2Date = LocalDate.parse("2021-12-18");
@@ -465,26 +331,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		}
 		infPerDayBa5.put(ba5Date.plusDays(7), 1);
 
-		//StrainA
-
-		if (params.strAEsc != 0.) {
-			infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
-			LocalDate strADate = LocalDate.parse(params.strADate);
-			for (int i = 0; i < 7; i++) {
-				infPerDayStrA.put(strADate.plusDays(i), 4);
-			}
-			infPerDayStrA.put(strADate.plusDays(7), 1);
-		}
-
 
 		// add projected disease import for vacation waves after initial disease import
 		int facBa2 = 4;
 		int facBa5 = 4;
-		int facStrA = 4;
 
 		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
 		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
-		LocalDate dateStrainA = LocalDate.parse("2022-11-18"); // after vaca import
 
 		NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
 		LocalDate date = null;
@@ -494,11 +347,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 //
 			double cases = factor * entry.getValue();
 
-			if (date.isAfter(dateStrainA) && params.strAEsc != 0) {
-				infPerDayStrA.put(date, ((int) cases * facStrA) == 0 ? 1 : (int) (cases * facStrA));
-				infPerDayBa5.put(date, 1);
-				infPerDayBa2.put(date, 1);
-			} else if (date.isAfter(dateBa5)) {
+			if (date.isAfter(dateBa5)) {
 				infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
 				infPerDayBa2.put(date, 1);
 			} else if (date.isAfter(dateBa2)) {
@@ -507,22 +356,12 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		}
 
-		if( params.strAEsc!=0.) {
-			infPerDayBa5.put(dateStrainA.plusDays(1), 1);
-			infPerDayStrA.put(date.plusDays(1), 1);
-		} else {
-			infPerDayBa5.put(date.plusDays(1), 1);
-		}
-
-
+		infPerDayBa5.put(date.plusDays(1), 1);
 
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
 
-		if (params.strAEsc != 0.) {
-			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
-		}
 	}
 
 
@@ -531,118 +370,26 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		// general
 		@GenerateSeeds(5)
 		public long seed;
-		@Parameter({1., 2., 3.})
-//		@Parameter({0.0})
-		public double actCorrection;
-
-
-
-		@Parameter({1.0, 1.2, 1.4})
-//		@Parameter({1.0})
-		public double thFactor;
-
-		//		@Parameter({1.})
-		@Parameter({0.25, 0.5, 0.75})
-		public double schoolCi;
-
-		@Parameter({0.5, 0.75, 1.0})
-//		@Parameter({1.})
-		public double workCi;
-
-
-		@Parameter({0.2, 0.3, 0.4})
-//		@Parameter({ 1.})
-		public double leisureCi;
-
-
-
-
-		//TODO VARY
-//		@Parameter({0.0,6.})  // 0.0 = strainA is off
-		@Parameter({0.0})  // 0.0 = strainA is off
-		public double strAEsc;
-
-
-		// General Restriction date
-//		@StringParameter({"2022-07-01","2022-12-01"})
-		@StringParameter({"2022-12-01"})
-		public String resDate;
-
-
-//		@StringParameter({"off", "age"})
-		@StringParameter({"off"})
-		String vacCamp;
-
-		// other restrictions
-		// schools & university // close: rf reduced // maskVent: ciCorrection reduced & surgical mask for most // normal: no changes made
-//		@StringParameter({"close", "maskVent", "normal"})
-		@StringParameter({ "normal"})
-		String edu;
-
-		// shopping: mask
-//		@StringParameter({"true", "false"})
-		@StringParameter({"false"})
-		String maskShop;
-
-		// pt: mask
-//		@StringParameter({"true", "false"})
-		@StringParameter({"false"})
-		String maskPt;
-
-		// work:
-//		@Parameter({0.5, 1.0})
-		@Parameter({1.0})
-		double work;
-
-		// leisure
-//		@Parameter({0.25, 0.5, 0.75, 1.0})
-		@Parameter({1.0})
-		double leis;
 
 
 		// vaccination campaign
-		@StringParameter({"omicronUpdate"})
+		@StringParameter({"off", "60plus", "18plus"})
+		String vacCamp;
+
+		@StringParameter({"mRNA","omicronUpdate"})
 		public String vacType;
 
-		@StringParameter({"2022-04-25"})
-		public String unResDate;
 
-		// StrainA
-		@StringParameter({"2022-11-01"})
-		public String strADate;
-
-//		@StringParameter({"true"})
-//		public String sebaUp;
-
-		// Antibody Model
-//		@Parameter({3.0})
-//		double immuneSigma;
-
-//		@Parameter({730.}) //120,
-//		public double igATime;
-
-		// BA5
-//		@StringParameter({"2022-04-10"})
-//		public String ba5Date;
-//
-//		@Parameter({0.9}) //,1.0,1.1,1.2,1.3})
-//		double ba5Inf;
-//
-//		@Parameter({3.})
-//		public double ba5Esc;
-
-		//		@Parameter({0.0, 1.0})
-//		public double strAInf;
 
 	}
 
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
+				RunParallel.OPTION_SETUP, CologneScenarioHub.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(70),
 				RunParallel.OPTION_METADATA
 		};
 

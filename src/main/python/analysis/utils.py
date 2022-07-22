@@ -312,6 +312,6 @@ def calc_r_reduction(base_case, base_variables, df, group_by=None):
 
 if __name__ == "__main__":
     
-    aggregate_batch_run("../../../../output/summaries.zip")
+    aggregate_batch_run("/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-20/3-eu/summaries.zip")
     
     

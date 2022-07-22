@@ -6,10 +6,13 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.SplittableRandom;
 
 public class DefaultAntibodyModel implements AntibodyModel {
 
+	public static final double HALF_LIFE_DAYS = 60; // todo: would 40 work better?
+	double abLevelAfterBooster;
 	private final AntibodyModel.Config antibodyConfig;
 	private final SplittableRandom localRnd;
 
@@ -18,6 +21,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig) {
 		this.antibodyConfig = antibodyConfig;
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
+
+		abLevelAfterBooster = antibodyConfig.initialAntibodies.get(VaccinationType.mRNA).get(VirusStrain.DELTA) * 15 * Math.pow(0.5, 180 / HALF_LIFE_DAYS);
 
 	}
 
@@ -88,9 +93,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
-			double halfLife_days = 60.;
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / halfLife_days));
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS));
 		}
 
 	}
@@ -126,12 +130,21 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
+				List<VirusStrain> omicronStrains = List.of(VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5);
+				if (immunityEventType.equals(VaccinationType.omicronUpdate)) {
+					if (omicronStrains.contains(strain2)){
+
+//						double abLevel;
+						antibodies = abLevelAfterBooster * person.getImmuneResponseMultiplier();
+
+					}
+				}
+
 				// check that new antibody level is at most 150
 				antibodies = Math.min(150., antibodies);
 
 				person.setAntibodies(strain2, antibodies);
 			}
-
 		}
 	}
 
