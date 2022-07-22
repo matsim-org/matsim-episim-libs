@@ -158,7 +158,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5); //todo ???
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA5, 2* mRNADelta); // mRNAAlpha / mutEscBa5
+			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA5, mRNADelta); // mRNAAlpha / mutEscBa5
 
             Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 			for (VaccinationType immunityType : VaccinationType.values()) {

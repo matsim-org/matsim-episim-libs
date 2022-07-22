@@ -133,8 +133,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				List<VirusStrain> omicronStrains = List.of(VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5);
 				if (immunityEventType.equals(VaccinationType.omicronUpdate)) {
 					if (omicronStrains.contains(strain2)){
-
-//						double abLevel;
 						antibodies = abLevelAfterBooster * person.getImmuneResponseMultiplier();
 
 					}
