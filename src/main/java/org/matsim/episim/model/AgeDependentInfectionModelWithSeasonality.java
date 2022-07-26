@@ -49,12 +49,17 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 
 		for (VirusStrain strain : VirusStrain.values()) {
 
+			if (!virusStrainConfig.hasParams(strain))
+				continue;
+
 			double[] susp = susceptibility.computeIfAbsent(strain, k -> new double[128]);
 			double[] inf = infectivity.computeIfAbsent(strain, k -> new double[susp.length]);
 
+			VirusStrainConfigGroup.StrainParams strainConfig = virusStrainConfig.getParams(strain);
+
 			for (int i = 0; i < susp.length; i++) {
-				susp[i] = EpisimUtils.interpolateEntry(virusStrainConfig.getParams(strain).getAgeSusceptibility(), i);
-				inf[i] = EpisimUtils.interpolateEntry(virusStrainConfig.getParams(strain).getAgeInfectivity(), i);
+				susp[i] = EpisimUtils.interpolateEntry(strainConfig.getAgeSusceptibility(), i);
+				inf[i] = EpisimUtils.interpolateEntry(strainConfig.getAgeInfectivity(), i);
 			}
 		}
 	}

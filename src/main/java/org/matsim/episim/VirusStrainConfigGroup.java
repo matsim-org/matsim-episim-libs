@@ -61,6 +61,13 @@ public class VirusStrainConfigGroup extends ReflectiveConfigGroup {
 		return strains.get(strain);
 	}
 
+	/**
+	 * Whether params for strain are present.
+	 */
+	public boolean hasParams(VirusStrain strain) {
+		return strains.containsKey(strain);
+	}
+
 	@Override
 	public ConfigGroup createParameterSet(String type) {
 		if (StrainParams.SET_TYPE.equals(type)) {
