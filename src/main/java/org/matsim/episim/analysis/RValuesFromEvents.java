@@ -209,6 +209,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 
 		/**
 		 * If a person is infected another time it will be removed from {@link #infectedPersons} and put here.
+		 * TODO: what happens if person is infected >2x?
 		 */
 		private final List<InfectedPerson> handledInfections = new ArrayList<>();
 
