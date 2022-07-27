@@ -423,11 +423,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 		//modify contact intensity
-		EpisimConfigGroup.InfectionParams workParams = episimConfig.getOrAddContainerParams("work");
-		workParams.setContactIntensity(workParams.getContactIntensity() * params.workCi);
+		episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * params.workCi);
+		episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * params.workCi);
 
-		EpisimConfigGroup.InfectionParams leisureParams = episimConfig.getOrAddContainerParams("leisure");
-		leisureParams.setContactIntensity(leisureParams.getContactIntensity() * params.leisureCi);
+
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * params.leisureCi);
+		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * params.leisureCi);
+
 
 		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * params.schoolCi);
 		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * params.schoolCi);

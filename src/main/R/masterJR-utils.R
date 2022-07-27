@@ -3,6 +3,8 @@
 # Created by: jakob
 # Created on: 7/22/2021
 
+library(data.table)
+
 
 # Functions:
 # read_and_process_episim_infections <- function(directory, facilities_to_district_map) {
@@ -210,6 +212,43 @@ read_combine_episim_output <- function(directory, file_root, allow_missing_files
 
   return(data.frame(episim_df_all_runs))
 }
+
+read_combine_episim_output_zipped <- function(directory, file_root) {
+
+  info_df <- read_delim(paste0(directory, "_info.txt"), delim = ";")
+
+  # gathers column names that should be included in final dataframe
+  col_names <- colnames(info_df)
+  relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
+
+  episim_df_all_runs <- data.frame()
+  for (row in seq_len(nrow(info_df))) {
+
+    runId <- info_df$RunId[row]
+
+    zipDir <- paste0(directory,"summaries/",runId,".zip")
+
+    file_name <- paste0(runId, ".", file_root)
+
+    df_for_run <- read_delim(unz(zipDir, file_name))
+
+    if (dim(df_for_run)[1] == 0) {
+      warning(paste0(file_name, " is empty"))
+      next
+    }
+
+    # adds important variables concerning run to df, so that individual runs can be filtered in later steps
+    for (var in relevant_cols) {
+      df_for_run[var] <- info_df[row, var]
+    }
+
+    episim_df_all_runs <- rbindlist(list(episim_df_all_runs, df_for_run))
+
+  }
+
+  return(data.frame(episim_df_all_runs))
+}
+
 
 
 read_and_process_new_rki_data_incidenz <- function(filename) {

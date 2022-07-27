@@ -259,10 +259,11 @@ public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new HospitalNumbersFromEvents().withArgs()
+//				new VaccinationEffectiveness().withArgs(),
+//				new RValuesFromEvents().withArgs(),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+//				new HospitalNumbersFromEvents().withArgs()
+				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
 
