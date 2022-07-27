@@ -6,6 +6,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
+import java.util.EnumMap;
 import java.util.Map;
 import java.util.SplittableRandom;
 
@@ -23,8 +24,8 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
-	private final double[] susceptibility = new double[128];
-	private final double[] infectivity = new double[susceptibility.length];
+	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
 
 	private double outdoorFactor;
 	private int iteration;
@@ -38,10 +39,28 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		this.reporting = reporting;
 		this.rnd = rnd;
 
-		// pre-compute interpolated age dependent entries
-		for (int i = 0; i < susceptibility.length; i++) {
-			susceptibility[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeSusceptibility(), i);
-			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
+		preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+	}
+
+	/**
+	 *  Pre-compute interpolated age dependent entries
+	 */
+	static void preComputeAgeDependency(Map<VirusStrain, double[]> susceptibility, Map<VirusStrain, double[]> infectivity, VirusStrainConfigGroup virusStrainConfig) {
+
+		for (VirusStrain strain : VirusStrain.values()) {
+
+			if (!virusStrainConfig.hasParams(strain))
+				continue;
+
+			double[] susp = susceptibility.computeIfAbsent(strain, k -> new double[128]);
+			double[] inf = infectivity.computeIfAbsent(strain, k -> new double[susp.length]);
+
+			VirusStrainConfigGroup.StrainParams strainConfig = virusStrainConfig.getParams(strain);
+
+			for (int i = 0; i < susp.length; i++) {
+				susp[i] = EpisimUtils.interpolateEntry(strainConfig.getAgeSusceptibility(), i);
+				inf[i] = EpisimUtils.interpolateEntry(strainConfig.getAgeInfectivity(), i);
+			}
 		}
 	}
 
@@ -61,8 +80,8 @@ public final class AgeDependentInfectionModelWithSeasonality implements Infectio
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
-		double susceptibility = this.susceptibility[target.getAge()];
-		double infectivity = this.infectivity[infector.getAge()];
+		double susceptibility = this.susceptibility.get(infector.getVirusStrain())[target.getAge()];
+		double infectivity = this.infectivity.get(infector.getVirusStrain())[infector.getAge()];
 
 		// apply reduced susceptibility of vaccinated persons
 		VirusStrainConfigGroup.StrainParams params = virusStrainConfig.getParams(infector.getVirusStrain());

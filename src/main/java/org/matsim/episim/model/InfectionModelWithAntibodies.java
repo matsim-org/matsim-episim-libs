@@ -8,6 +8,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.policy.Restriction;
 
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -25,8 +26,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 	private final VaccinationConfigGroup vaccinationConfig;
 	private final VirusStrainConfigGroup virusStrainConfig;
 
-	private final double[] susceptibility = new double[128];
-	private final double[] infectivity = new double[susceptibility.length];
+	private final Map<VirusStrain, double[]> susceptibility = new EnumMap<>(VirusStrain.class);
+	private final Map<VirusStrain, double[]> infectivity = new EnumMap<>(VirusStrain.class);
 	private final RealDistribution distribution;
 
 	/**
@@ -49,11 +50,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		this.reporting = reporting;
 		this.rnd = rnd;
 
-		// pre-compute interpolated age dependent entries
-		for (int i = 0; i < susceptibility.length; i++) {
-			susceptibility[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeSusceptibility(), i);
-			infectivity[i] = EpisimUtils.interpolateEntry(episimConfig.getAgeInfectivity(), i);
-		}
+		AgeDependentInfectionModelWithSeasonality.preComputeAgeDependency(susceptibility, infectivity, virusStrainConfig);
+
 		// based on https://arxiv.org/abs/2007.06602
 		distribution = new NormalDistribution(0.5, 2.6);
 		scale = 1 / distribution.density(distribution.getNumericalMean());
@@ -80,8 +78,8 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		//noinspection ConstantConditions 		// ci corr can not be null, because sim is initialized with non null value
 		double ciCorrection = Math.min(restrictions.get(act1.getContainerName()).getCiCorrection(), restrictions.get(act2.getContainerName()).getCiCorrection());
 
-		double susceptibility = this.susceptibility[target.getAge()];
-		double infectivity = this.infectivity[infector.getAge()];
+		double susceptibility = this.susceptibility.get(infector.getVirusStrain())[target.getAge()];
+		double infectivity = this.infectivity.get(infector.getVirusStrain())[infector.getAge()];
 
 		VirusStrainConfigGroup.StrainParams strain = virusStrainConfig.getParams(infector.getVirusStrain());
 
