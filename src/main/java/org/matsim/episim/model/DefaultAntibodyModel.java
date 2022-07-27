@@ -132,15 +132,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				person.setAntibodies(strain, antibodies);
 			}
 
-			// overrides ab against omicron strains with antibodies against delta, if higher
-			//TODO: is this a sensible way to handle omicron update?
-			if (immunityEventType.equals(VaccinationType.omicronUpdate)) {
-				double deltaAb = person.getAntibodies(VirusStrain.DELTA);
-				person.setAntibodies(VirusStrain.OMICRON_BA1, Math.max(person.getAntibodies(VirusStrain.OMICRON_BA1), deltaAb));
-				person.setAntibodies(VirusStrain.OMICRON_BA2, Math.max(person.getAntibodies(VirusStrain.OMICRON_BA2), deltaAb));
-				person.setAntibodies(VirusStrain.OMICRON_BA5, Math.max(person.getAntibodies(VirusStrain.OMICRON_BA5), deltaAb));
-
-			}
 
 		}
 	}
