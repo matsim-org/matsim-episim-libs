@@ -59,12 +59,12 @@
  )
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-//	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-06-16/2/analysis/policy_leis75/")
+//	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-20/3-eu/analysis/base/")
 	 private Path output;
 
-	 	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
-//	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
+//	 	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	 private String input;
 
 	 @CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
@@ -81,17 +81,12 @@
 
 	 private final String DATE = "date";
 	 private final String DAY = "day";
-	 private final String INTAKES_HOSP = "intakesHosp";
-	 private final String INTAKES_ICU = "intakesIcu";
-	 private final String OCCUPANCY_HOSP = "occupancyHosp";
-	 private final String OCCUPANCY_ICU = "occupancyIcu";
+
 
 	 @Inject
 	 private Scenario scenario;
 
 	 private Population population;
-
-	 private List<Id<Person>> filteredPopulationIds;
 
 	 // source: incidence wave vs. hospitalization wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
 	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
@@ -149,11 +144,8 @@
 
 
 	 private static final double beta = 1.2;
-	 private final int populationCntOfficialKoelln = 919_936;
-	 private final int populationCntOfficialNrw = 17_930_000;
 
-
-	 private static final double hospitalFactor = 0.4;
+	 private static final double hospitalFactor = 0.20;
 
 	 // base
 	 private static final double factorWild =  1.0;
@@ -161,18 +153,20 @@
 	 private static final double factorAlpha = 1.0 * factorWild;
 
 	 // delta: 2.3x more severe than alpha - Hospital admission and emergency care attendance risk for SARS-CoV-2 delta (B.1.617.2) compared with alpha (B.1.1.7) variants of concern: a cohort study
-	 private static final double factorDelta = 1.6 * factorWild;
+	 private static final double factorDelta = 1.0 * factorWild;//1.6 * factorWild;
 
 	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
-	 private static final double factorOmicron = 0.3  * factorDelta; // * reportedShareOmicron / reportedShareDelta
+	 private static final double factorOmicron = 0.5  * factorDelta; //  reportedShareOmicron / reportedShareDelta
+
+	 private static final double factorBA5 = 1.5 * factorOmicron;
 
 
-//	 private static final List<Double> strainFactors = List.of(factorOmicron, factorDelta);
 
 	 // ??
 	 private static final double factorWildAndAlphaICU = 1.;
 	 private static final double factorDeltaICU = 1.;
 	 private static final double factorOmicronICU = 1.;
+	 private static final double factorBA5ICU = 1.;
 
 	 private String outputAppendix = "";
 
@@ -200,10 +194,10 @@
 
 
 		 // Part 1: calculate hospitalizations for each seed and save as csv
-//		 List<Path> pathList = new ArrayList<>();
+		 List<Path> pathList = new ArrayList<>();
 		 AnalysisCommand.forEachScenario(output, pathToScenario -> {
 			 try {
-//				 pathList.add(pathToScenario);
+				 pathList.add(pathToScenario);
 				 // analyzeOutput is where the hospitalization post processing occurs
 				 analyzeOutput(pathToScenario);
 
@@ -216,6 +210,9 @@
 
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
+
+		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, outputAppendix, startDate, "Omicron");
+
 
 //		 }
 
@@ -312,13 +309,13 @@
 				 double occupancyIcu = handler.postProcessHospitalFilledBedsICU.getOrDefault(day, 0) * 100_000. / popSize;
 
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesHosp", handler.name , intakesHosp));
+				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_HOSP, handler.name , intakesHosp));
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "intakesICU", handler.name, intakesIcu));
+				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.INTAKES_ICU, handler.name, intakesIcu));
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyHosp ", handler.name, occupancyHosp));
+				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.OCCUPANCY_HOSP, handler.name, occupancyHosp));
 				 bw.newLine();
-				 bw.write(AnalysisCommand.TSV.join(day, date, "occupancyICU", handler.name, occupancyIcu));
+				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.OCCUPANCY_ICU, handler.name, occupancyIcu));
 
 			 }
 		 }
@@ -327,7 +324,7 @@
 	 }
 
 
-	 private int getWeeklyHospitalizations(Int2IntMap hospMap, Integer today) {
+	 static int getWeeklyHospitalizations(Int2IntMap hospMap, Integer today) {
 		 int weeklyHospitalizations = 0;
 		 for (int i = 0; i < 7; i++) {
 			 try {
@@ -724,8 +721,8 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA1).setFactorCritical(factorOmicronICU);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorSeriouslySick(factorOmicron);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(factorOmicronICU);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorOmicron);
-		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorOmicronICU);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorBA5);
+		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorBA5ICU);
 
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
 		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
