@@ -178,7 +178,7 @@ public class DefaultAntibodyModelTest {
 	@Test
 	public void testMixOfVaccinesAndInfections() {
 
-		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA, VaccinationType.omicronUpdate);
+		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA, VaccinationType.ba1Update);
 		IntList immunityEventDays = IntList.of(1, 181, 451);
 //		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 //		IntList immunityEventDays = IntList.of(1);

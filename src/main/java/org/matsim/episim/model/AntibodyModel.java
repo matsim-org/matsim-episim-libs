@@ -93,7 +93,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.SARS_CoV_2, 0.01);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.SARS_CoV_2, 0.01);
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.SARS_CoV_2, 0.01);
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.SARS_CoV_2, mRNAAlpha);
+			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha);
 
 			//Alpha
 			initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.ALPHA, mRNAAlpha);
@@ -105,7 +105,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.ALPHA, 0.01);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.ALPHA, 0.01);
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.ALPHA, 0.01);
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.ALPHA, mRNAAlpha);
+			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha);
 
 			//DELTA
 			double mRNADelta = 10.9;
@@ -118,7 +118,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 0.2 / 6.4);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.DELTA, 0.2 / 6.4);
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.DELTA, 0.2 / 6.4);
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.DELTA, mRNADelta);
+			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.DELTA, mRNADelta);
 
 			//BA.1
 			double mRNABA1 = 1.9;
@@ -131,7 +131,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4); //todo: is 1.4
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA1,  mRNADelta / mutEscBa5);
+			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA1,  mRNADelta / mutEscBa5);
 
 			//BA.2
 			double mRNABA2 = mRNABA1;
@@ -144,7 +144,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA2, mRNADelta / mutEscBa5);
+			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA2, mRNADelta / mutEscBa5);
 
 
 			//BA.5
@@ -158,7 +158,7 @@ public interface AntibodyModel {
 			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5);
 			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);
 			initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5); //todo ???
-			initialAntibodies.get(VaccinationType.omicronUpdate).put(VirusStrain.OMICRON_BA5, mRNADelta); // mRNAAlpha / mutEscBa5
+			initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA5, mRNADelta); // mRNAAlpha / mutEscBa5
 
             Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
 			for (VaccinationType immunityType : VaccinationType.values()) {
@@ -170,7 +170,7 @@ public interface AntibodyModel {
 					} else if (immunityType == VaccinationType.vector) {
 						antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
 						}
-						else if (immunityType == VaccinationType.omicronUpdate) {
+						else if (immunityType == VaccinationType.ba1Update) {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 						}
 						else {
