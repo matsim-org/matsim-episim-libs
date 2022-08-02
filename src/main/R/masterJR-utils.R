@@ -222,9 +222,18 @@ read_combine_episim_output_zipped <- function(directory, file_root) {
   relevant_cols <- col_names[!col_names %in% c("RunScript", "RunId", "Config", "Output")]
 
   episim_df_all_runs <- data.frame()
+
+  # runsToInclude <- c("calibration1824","calibration288","calibration1056", "calibration2208","calibration672","calibration1440")
   for (row in seq_len(nrow(info_df))) {
 
     runId <- info_df$RunId[row]
+
+    # if(runId %in% runsToInclude){
+    #
+    # } else{
+    #   next
+    # }
+
 
     zipDir <- paste0(directory,"summaries/",runId,".zip")
 

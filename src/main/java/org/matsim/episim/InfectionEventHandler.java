@@ -778,6 +778,7 @@ public final class InfectionEventHandler implements Externalizable {
 		}
 
 
+//		if (date.equals(LocalDate.parse("2022-07-23"))) {
 //		if (date.getDayOfMonth() == 1) {
 //			try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(Path.of("antibodies_" + date + ".tsv")), CSVFormat.TDF)) {
 //

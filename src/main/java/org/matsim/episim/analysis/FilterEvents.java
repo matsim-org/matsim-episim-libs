@@ -30,8 +30,8 @@ public class FilterEvents implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(FilterEvents.class);
 
-	//	@CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/cologne/2022-02-17/1/output-filtered")
-	@CommandLine.Option(names = "--output", defaultValue = "./output/")
+		@CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-27/4-eu/analysis")
+//	@CommandLine.Option(names = "--output", defaultValue = "./output/")
 	private Path output;
 
 	@CommandLine.Parameters(paramLabel = "TYPE", arity = "0..*", description = "Names of event types to keep")

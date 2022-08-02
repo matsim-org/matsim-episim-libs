@@ -60,10 +60,10 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-20/3-eu/analysis/base/")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-27/4-eu/analysis")
 	 private Path output;
 
-//	 	 	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+//	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
 	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	 private String input;
 
@@ -260,7 +260,7 @@
 		 );
 
 		 // feed the output events file to the handler, so that the hospitalizations may be calculated
-		 AnalysisCommand.forEachEvent(pathToScenario, s -> {
+		 List<String> eventFiles = AnalysisCommand.forEachEvent(pathToScenario, s -> {
 		 }, handlers.toArray(new Handler[0]));
 
 //		 for (Double facA : strainFactors) {
@@ -283,12 +283,6 @@
 
 		 for (Handler handler : handlers) {
 
-			 int maxIteration = Math.max(
-					 Math.max(handler.postProcessHospitalAdmissions.keySet().lastInt(),
-							 handler.postProcessICUAdmissions.keySet().lastInt()),
-					 Math.max(handler.postProcessHospitalFilledBeds.keySet().lastInt(),
-							 handler.postProcessHospitalFilledBedsICU.keySet().lastInt()));
-
 
 			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
 			 // this is used to normalize the hospitalization values
@@ -296,7 +290,7 @@
 					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
 
 
-			 for (int day = 0; day <= maxIteration; day++) {
+			 for (int day = 0; day < eventFiles.size(); day++) {
 				 LocalDate date = startDate.plusDays(day);
 
 				 // calculates Incidence - 7day hospitalizations per 100,000 residents

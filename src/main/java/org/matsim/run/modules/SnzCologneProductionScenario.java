@@ -356,7 +356,7 @@
 		 //restrictions and masks
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220610.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220723.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -637,13 +637,24 @@
 			 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setFactorCritical(oHos);
 		 }
 
-		 //testing
+		 //---------------------------------------
+		 //		T E S T I N G
+		 //---------------------------------------
+
+		 // this section is split into four nested sections:
+		 // A) RAPID test
+		 // 	i) unvaccinated
+		 //		ii) vaccinated
+		 // B) PCR Test
+		 //		i) unvaccinated
+		 //		ii) vaccinated
+
+		 // load testing config group and set general parameters
 		 TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 
 		 testingConfigGroup.setTestAllPersonsAfter(LocalDate.parse("2021-10-01"));
 
-		 TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
-		 TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+
 
 		 testingConfigGroup.setStrategy(TestingConfigGroup.Strategy.ACTIVITIES);
 
@@ -659,11 +670,13 @@
 		 actsList.add("educ_higher");
 		 testingConfigGroup.setActivities(actsList);
 
+
+		 // 1) Rapid test
+		 TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 		 rapidTest.setFalseNegativeRate(0.3);
 		 rapidTest.setFalsePositiveRate(0.03);
 
-		 pcrTest.setFalseNegativeRate(0.1);
-		 pcrTest.setFalsePositiveRate(0.01);
+		//		1i) unvaccianted
 
 		 testingConfigGroup.setHouseholdCompliance(1.0);
 
@@ -729,6 +742,7 @@
 				 "educ_other", eduTests
 		 )));
 
+		 //		1ii) vaccinated
 		 Map<LocalDate, Double> leisureTestsVaccinated = new HashMap<>();
 		 Map<LocalDate, Double> workTestsVaccinated = new HashMap<>();
 		 Map<LocalDate, Double> eduTestsVaccinated = new HashMap<>();
@@ -758,6 +772,13 @@
 				 "educ_other", eduTestsVaccinated
 		 )));
 
+
+		 // 2) PCR Test
+		 TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+		 pcrTest.setFalseNegativeRate(0.1);
+		 pcrTest.setFalsePositiveRate(0.01);
+
+		 // 	2i) unvaccinated
 
 		 Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
@@ -790,6 +811,8 @@
 				 "educ_higher", eduTestsPCR,
 				 "educ_other", eduTestsPCR
 		 )));
+
+		 // 	2ii) vaccinated
 
 		 Map<LocalDate, Double> leisureTestsPCRVaccinated = new HashMap<>();
 		 Map<LocalDate, Double> workTestsPCRVaccinated = new HashMap<>();

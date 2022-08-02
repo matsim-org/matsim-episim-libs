@@ -20,10 +20,12 @@
 
 package org.matsim.episim.analysis;
 
+import com.google.inject.Inject;
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
+import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.core.population.PopulationUtils;
@@ -59,24 +61,25 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 
 	private static final Logger log = LogManager.getLogger(SecondaryAttackRateFromEvents.class);
 
-//	@CommandLine.Option(names = "--output", defaultValue = "./output/")
-	@CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-22/1-calibration/output")
+	@CommandLine.Option(names = "--output", defaultValue = "./output/")
+//	@CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-22/1-calibration/output")
 	private Path output;
 
 	@CommandLine.Option(names = "--start-date", defaultValue = "2020-02-24")
 	private LocalDate startDate;
 
-//	@CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
-	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
+	@CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
+//	 @CommandLine.Option(names = "--input", defaultValue = "../shared-svn/projects/episim/matsim-files/snz/Cologne/episim-input")
 	private String input;
 
 	@CommandLine.Option(names = "--population-file", defaultValue = "/cologne_snz_entirePopulation_emptyPlans_withDistricts_25pt_split.xml.gz")
 	private String populationFile;
 
 
-	private Map<String, String> personToHousehold;
+	@Inject
+	private Scenario scenario;
 
-	private Map<String, Long> personCountPerHousehold;
+	private Population population;
 
 
 	public static void main(String[] args) {
@@ -95,19 +98,7 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 			return 2;
 		}
 
-		Population population = PopulationUtils.readPopulation(input + populationFile);
-
-		personToHousehold = new HashMap<>();
-		for (Person person : population.getPersons().values()) {
-			if(person.getAttributes().getAttribute("district").equals("Köln"))
-				personToHousehold.put(person.getId().toString(), person.getAttributes().getAttribute("homeId").toString());
-		}
-
-		personCountPerHousehold = personToHousehold.values().stream()
-				.collect(Collectors.groupingBy(Function.identity(),
-						Collectors.counting()));
-
-		OptionalDouble x = personCountPerHousehold.values().stream().mapToLong(Long::longValue).average();
+		population = PopulationUtils.readPopulation(input + populationFile);
 
 		AnalysisCommand.forEachScenario(output, scenario -> {
 			try {
@@ -126,6 +117,20 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 	public void analyzeOutput(Path output) throws IOException {
 
 		String id = AnalysisCommand.getScenarioPrefix(output);
+
+		if (scenario != null)
+			population = scenario.getPopulation();
+
+
+		Map<String, String> personToHousehold = new HashMap<>();
+		for (Person person : population.getPersons().values()) {
+			if(person.getAttributes().getAttribute("district").equals("Köln"))
+				personToHousehold.put(person.getId().toString(), person.getAttributes().getAttribute("homeId").toString());
+		}
+
+		Map<String, Long> personCountPerHousehold = personToHousehold.values().stream()
+				.collect(Collectors.groupingBy(Function.identity(),
+						Collectors.counting()));
 
 
 		SecondaryAttackRateHandler hhHandler = new SecondaryAttackRateHandler(personToHousehold);
@@ -204,6 +209,13 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 
 			int day = (int) (event.getTime() / 86400);
 			String personId = event.getPersonId().toString();
+
+			// if agent does not live in district being evaluated
+			if (!personToHousehold.containsKey(personId)) {
+				return;
+			}
+
+
 			String hhId = personToHousehold.get(personId);
 
 			if (event.getDiseaseStatus() == DiseaseStatus.contagious) {
@@ -211,7 +223,8 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 					throw new RuntimeException("person was already contagious, but was never removed from indexPersons when recovered");
 				}
 
-				if (householdToInfections.containsKey(hhId)) {
+				//todo: if they become contagious on the same day, don't count that case?
+				if (householdToInfections.containsKey(hhId) ) {
 					householdToInfections.merge(hhId, 1, Integer::sum);
 				} else {
 					indexPersons.put(personId, day);
