@@ -28,7 +28,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneJR implements BatchRun<CologneJR.Params> {
+public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -40,22 +40,22 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			@Override
 			protected void configure() {
 
-//				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
-//
-//				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
+				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
+
+				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
 
 				double mutEscBa5 = 3.0;
 				double mutEscStrainA = 0.;
 
-//				LocalDate start = null;
-//				VaccinationType vaccinationType = null;
+				LocalDate start = null;
+				VaccinationType vaccinationType = null;
 
-//				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
-//				compliance.put(60, 0.0);
-//				compliance.put(18, 0.0);
-//				compliance.put(12, 0.0);
-//				compliance.put(0, 0.0);
+				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
+				compliance.put(60, 0.0);
+				compliance.put(18, 0.0);
+				compliance.put(12, 0.0);
+				compliance.put(0, 0.0);
 
 
 
@@ -63,31 +63,31 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 					mutEscBa5 = params.ba5Esc;
 
 					mutEscStrainA = params.strAEsc;
-//
-//					start = LocalDate.parse(params.resDate);
-//					vaccinationType = VaccinationType.valueOf(params.vacType);
-//
-//
-//					if (params.vacCamp.equals("age")) {
-//						compliance.put(60, 0.85); // 60+
-//						compliance.put(18, 0.55); // 18-59
-//						compliance.put(12, 0.20); // 12-17
-//						compliance.put(0, 0.0); // 0 - 11
-//					}
-//					else if (params.vacCamp.equals("eu")) {
-//						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
-//						compliance.put(18, 0.);
-//						compliance.put(12, 0.);
-//						compliance.put(0, 0.);
-//					}
-//					else if (params.vacCamp.equals("off")) {
-//
-//					} else {
-//						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
-//					}
+
+					start = LocalDate.parse(params.resDate);
+					vaccinationType = VaccinationType.valueOf(params.vacType);
+
+
+					if (params.vacCamp.equals("age")) {
+						compliance.put(60, 0.85); // 60+
+						compliance.put(18, 0.55); // 18-59
+						compliance.put(12, 0.20); // 12-17
+						compliance.put(0, 0.0); // 0 - 11
+					}
+					else if (params.vacCamp.equals("eu")) {
+						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
+						compliance.put(18, 0.);
+						compliance.put(12, 0.);
+						compliance.put(0, 0.);
+					}
+					else if (params.vacCamp.equals("off")) {
+
+					} else {
+						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
+					}
 				}
 //
-//				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
+				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
@@ -482,6 +482,53 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			throw new RuntimeException("param value doesn't exist");
 		}
 
+		// Restrictions starting on December 1, 2022
+		LocalDate restrictionDate = LocalDate.parse(params.resDate);
+
+		//school
+		if(params.edu.equals("close")) {
+			if (params.resDate.equals("2022-12-01")) {
+				builder.restrict(restrictionDate, 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			}
+			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+			//university
+			builder.restrict(restrictionDate, 0.2, "educ_higher");
+			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_higher");
+		} else if (params.edu.equals("maskVent")) {
+			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
+							FaceMask.CLOTH, 0.0,
+							FaceMask.N95, 0.25,
+							FaceMask.SURGICAL, 0.25)),
+					"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+
+		} else if (params.edu.equals("normal")) {
+
+		} else {
+			throw new RuntimeException("param value doesn't exist");
+		}
+
+		//pt: masks
+		if (Boolean.parseBoolean(params.maskPt)) {
+			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "pt");
+
+		}
+
+		//shopping: masks
+		if (Boolean.parseBoolean(params.maskShop)) {
+			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "shop_daily", "shop_other", "errands");
+		}
+
+		//work
+		builder.restrict(restrictionDate, 0.78 * params.work, "work");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.work, "work");
+
+		//leisure
+		builder.restrict(restrictionDate, 0.88 * params.leis, "leisure");
+		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.leis, "leisure");
+
+
 		episimConfig.setPolicy(builder.build());
 
 
@@ -528,11 +575,11 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		// add initial impulses for strains
 		//BA.1
-		LocalDate ba1Date = LocalDate.parse(params.ba1Date);
-		for (int i = 0; i < 7; i++) {
-			infPerDayBa1.put(ba1Date.plusDays(i), 4);
-		}
-		infPerDayBa1.put(ba1Date.plusDays(7), 1);
+//		LocalDate ba1Date = LocalDate.parse(params.ba1Date);
+//		for (int i = 0; i < 7; i++) {
+//			infPerDayBa1.put(ba1Date.plusDays(i), 4);
+//		}
+//		infPerDayBa1.put(ba1Date.plusDays(7), 1);
 
 
 		//BA.2
@@ -618,13 +665,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({0.9})
 		public double deltaTheta;
 
-		@Parameter({1.7,1.9,2.1})
+		@Parameter({1.9})
 		public double ba1Inf;
 
-		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
-		public String ba1Date;
+//		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
+//		public String ba1Date;
 
-		@Parameter({2.8, 2.9, 3.0})
+		@Parameter({2.9,})
 		public double ba5Esc;
 
 		@Parameter({1.3})
@@ -672,85 +719,60 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@StringParameter({"2022-11-01"})
 		public String strADate;
 
-		@Parameter({0.0})
+		@Parameter({6.0})
 		public double strAEsc;
 
 
 		// General Restriction date
 //		@StringParameter({"2022-07-01","2022-12-01"})
-//		@StringParameter({"2022-12-01"})
-//		public String resDate;
+		@StringParameter({"2022-12-01"})
+		public String resDate;
 //
 //
-//		@StringParameter({"off", "age"})
+		@StringParameter({"off", "age"})
 //		@StringParameter({"off"})
-//		String vacCamp;
+		String vacCamp;
 //
 		// other restrictions
 		// schools & university // close: rf reduced // maskVent: ciCorrection reduced & surgical mask for most // normal: no changes made
-//		@StringParameter({"close", "maskVent", "normal"})
+		@StringParameter({"close", "maskVent", "normal"})
 //		@StringParameter({ "normal"})
-//		String edu;
+		String edu;
 
 		// shopping: mask
-//		@StringParameter({"true", "false"})
+		@StringParameter({"true", "false"})
 //		@StringParameter({"false"})
-//		String maskShop;
+		String maskShop;
 
 		// pt: mask
-//		@StringParameter({"true", "false"})
+		@StringParameter({"true", "false"})
 //		@StringParameter({"false"})
-//		String maskPt;
+		String maskPt;
 
 		// work:
-//		@Parameter({0.5, 1.0})
+		@Parameter({0.5, 1.0})
 //		@Parameter({1.0})
-//		double work;
+		double work;
 
 		// leisure
-//		@Parameter({0.25, 0.5, 0.75, 1.0})
+		@Parameter({0.5, 0.75, 1.0})
 //		@Parameter({1.0})
-//		double leis;
+		double leis;
 
 
 		// vaccination campaign
-//		@StringParameter({"omicronUpdate"})
-//		public String vacType;
+		@StringParameter({"omicronUpdate"})
+		public String vacType;
 
 //		@StringParameter({"2022-04-25"})
 //		public String unResDate;
-
-		// StrainA
-
-//		@StringParameter({"true"})
-//		public String sebaUp;
-
-		// Antibody Model
-//		@Parameter({3.0})
-//		double immuneSigma;
-
-//		@Parameter({730.}) //120,
-//		public double igATime;
-
-		// BA5
-//		@StringParameter({"2022-04-10"})
-//		public String ba5Date;
-//
-//		@Parameter({0.9}) //,1.0,1.1,1.2,1.3})
-//		double ba5Inf;
-//
-//		@Parameter({3.})
-//		public double ba5Esc;
-
-		//		@Parameter({0.0, 1.0})
-//		public double strAInf;
 
 	}
 
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneJR.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF20220805.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
