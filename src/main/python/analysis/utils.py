@@ -310,8 +310,16 @@ def calc_r_reduction(base_case, base_variables, df, group_by=None):
 
     return result
 
+
 if __name__ == "__main__":
-    
-    aggregate_batch_run("../../../../output/summaries.zip")
+
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Aggregate batch run over multiple seeds")
+    parser.add_argument("file", type=str, nargs=1, help="Path to summaries zip", default="../../../../output/summaries.zip")
+
+    args = parser.parse_args()
+
+    aggregate_batch_run(args.file[0])
     
     
