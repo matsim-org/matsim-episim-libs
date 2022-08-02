@@ -290,7 +290,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		return new SnzCologneProductionScenario.Builder()
 				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
 				.setSebastianUpdate(true)
-				.setLeisureCorrection(params == null ? 0.0 : params.actCorrection)
+				.setLeisureCorrection(1.3)//params == null ? 0.0 : params.actCorrection)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -336,7 +336,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thFactor);
+		double thFactor = 1.2;
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * thFactor);
 
 
 
@@ -370,7 +371,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		// remove age-based susceptibility of strains starting with DELTA
 
-		if (!Boolean.parseBoolean(params.ageSusc)) {
+		if (!Boolean.parseBoolean("false")) {
 			TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
 					19, 1d,
 					20, 1d
@@ -424,19 +425,21 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		//school
-		if(params.schoolUpdate.equals("yes")) {
+		String schoolUpdate = "yes";
+		if(schoolUpdate.equals("yes")) {
 			// school closed completely until 21.2.2022
 			builder.restrict(LocalDate.parse("2021-01-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict(LocalDate.parse("2021-02-21"), 0.5, "educ_primary");
 			builder.restrict(LocalDate.parse("2021-03-15"), 0.5, "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-		} else if (params.schoolUpdate.equals("no")) {
+		} else if (schoolUpdate.equals("no")) {
 
 		} else {
 			throw new RuntimeException("param value doesn't exist");
 		}
 
-		if (params.schoolTest.equals("later")) {
+		String schoolTest = "later";
+		if (schoolTest.equals("later")) {
 			TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 			TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 //			TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
@@ -462,7 +465,7 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			testingRateForActivitiesRapid.get("educ_tertiary").put(LocalDate.parse("2021-05-10"), 0.4);
 			testingRateForActivitiesRapid.get("educ_other").put(LocalDate.parse("2021-05-10"), 0.4);
 
-		} else if (params.schoolTest.equals("base")) {
+		} else if (schoolTest.equals("base")) {
 
 		}else {
 			throw new RuntimeException("param value doesn't exist");
@@ -471,12 +474,13 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 		// masks
 		//pt: masks
-		if (params.maskType.equals("45to45")) {
+		String maskType = "45to45";
+		if (maskType.equals("45to45")) {
 			for (LocalDate date = LocalDate.parse("2020-04-21"); date.isBefore(LocalDate.parse("2021-05-01")); date = date.plusDays(1)) {
 				builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.45, FaceMask.SURGICAL, 0.45)), "pt", "errands", "shop_daily", "shop_other");
 
 			}
-		} else if (params.maskType.equals("base")) {
+		} else if (maskType.equals("base")) {
 
 		} else {
 			throw new RuntimeException("param value doesn't exist");
@@ -496,20 +500,22 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 		//modify contact intensity
-		episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * params.workCi);
-		episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * params.workCi);
+		double workCi = 0.75;
+		episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCi);
+		episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCi);
+
+		double leisureCi = 0.4;
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCi);
+		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCi);
 
 
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * params.leisureCi);
-		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * params.leisureCi);
-
-
-		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * params.schoolCi);
+		double schoolCi = 0.75;
+		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi);
 
 
 		if (DEBUG_MODE) {
@@ -627,38 +633,38 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		@Parameter({2.8, 2.9, 3.0})
 		public double ba5Esc;
 
-		@Parameter({1.3})
+//		@Parameter({1.3})
 //		@Parameter({0.0})
-		public double actCorrection;
+//		public double actCorrection;
 
 
-		@Parameter({1.2})
+//		@Parameter({1.2})
 //		@Parameter({1.0})
-		public double thFactor;
+//		public double thFactor;
 
 		//		@Parameter({1.})
-		@Parameter({0.75})
-		public double schoolCi;
+//		@Parameter({0.75})
+//		public double schoolCi;
 
-		@Parameter({0.75})
+//		@Parameter({0.75})
 //		@Parameter({1.})
-		public double workCi;
+//		public double workCi;
 
-		@Parameter({0.4})
+//		@Parameter({0.4})
 //		@Parameter({ 1.})
-		public double leisureCi;
+//		public double leisureCi;
 
-		@StringParameter({"yes"})
-		public String schoolUpdate;
+//		@StringParameter({"yes"})
+//		public String schoolUpdate;
 
-		@StringParameter({"45to45"})
-		public String maskType;
+//		@StringParameter({"45to45"})
+//		public String maskType;
 
-		@StringParameter({"later"})
-		public String schoolTest;
+//		@StringParameter({"later"})
+//		public String schoolTest;
 
-		@StringParameter({"false"})
-		public String ageSusc;
+//		@StringParameter({"false"})
+//		public String ageSusc;
 
 //		@Parameter({0.90, .95, 1.})
 //		public double deltaTheta;

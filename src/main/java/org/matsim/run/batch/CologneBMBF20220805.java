@@ -45,7 +45,8 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
 
-				double mutEscBa5 = 3.0;
+				double mutEscBa5 = 2.9;
+
 				double mutEscStrainA = 0.;
 
 				LocalDate start = null;
@@ -60,7 +61,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 
 				if (params != null) {
-					mutEscBa5 = params.ba5Esc;
+//					mutEscBa5 = params.ba5Esc;
 
 					mutEscStrainA = params.strAEsc;
 
@@ -290,7 +291,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		return new SnzCologneProductionScenario.Builder()
 				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
 				.setSebastianUpdate(true)
-				.setLeisureCorrection(params == null ? 0.0 : params.actCorrection)
+				.setLeisureCorrection(1.3) //params == null ? 0.0 : params.actCorrection)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
@@ -336,7 +337,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thFactor);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2);
 
 
 
@@ -370,7 +371,8 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		// remove age-based susceptibility of strains starting with DELTA
 
-		if (!Boolean.parseBoolean(params.ageSusc)) {
+		String ageSusc = "false";
+		if (!Boolean.parseBoolean(ageSusc)) {
 			TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
 					19, 1d,
 					20, 1d
@@ -382,10 +384,11 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		}
 
 		// increase infectivity of alpha
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).getInfectiousness() * params.alphaTheta);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).getInfectiousness() * 1.4);
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * params.deltaTheta);
-		double ba1Inf = params.ba1Inf; // 2.0,2.1,2.2
+		double deltaTheta = 0.9;
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * deltaTheta);
+		double ba1Inf = 1.9; // 2.0,2.1,2.2
 		double ba2Inf = 1.7;
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * ba1Inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * ba1Inf * ba2Inf);
@@ -403,7 +406,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 
 		// reconfig disease import of alpha
-		LocalDate startDateAlpha = LocalDate.parse(params.alphaDate);
+		LocalDate startDateAlpha = LocalDate.parse("2021-01-15");
 
 		for (int i = 0; i < 7; i++) {
 			infPerDayAlpha.put(startDateAlpha.plusDays(i), 4);
@@ -424,19 +427,21 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
 		//school
-		if(params.schoolUpdate.equals("yes")) {
+		String schoolUpdate = "yes";
+		if(schoolUpdate.equals("yes")) {
 			// school closed completely until 21.2.2022
 			builder.restrict(LocalDate.parse("2021-01-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 			builder.restrict(LocalDate.parse("2021-02-21"), 0.5, "educ_primary");
 			builder.restrict(LocalDate.parse("2021-03-15"), 0.5, "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-		} else if (params.schoolUpdate.equals("no")) {
+		} else if (schoolUpdate.equals("no")) {
 
 		} else {
 			throw new RuntimeException("param value doesn't exist");
 		}
 
-		if (params.schoolTest.equals("later")) {
+		String schoolTest = "later";
+		if (schoolTest.equals("later")) {
 			TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
 			TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
 //			TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
@@ -462,7 +467,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 			testingRateForActivitiesRapid.get("educ_tertiary").put(LocalDate.parse("2021-05-10"), 0.4);
 			testingRateForActivitiesRapid.get("educ_other").put(LocalDate.parse("2021-05-10"), 0.4);
 
-		} else if (params.schoolTest.equals("base")) {
+		} else if (schoolTest.equals("base")) {
 
 		}else {
 			throw new RuntimeException("param value doesn't exist");
@@ -471,12 +476,13 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		// masks
 		//pt: masks
-		if (params.maskType.equals("45to45")) {
+		String maskType = "45to45";
+		if (maskType.equals("45to45")) {
 			for (LocalDate date = LocalDate.parse("2020-04-21"); date.isBefore(LocalDate.parse("2021-05-01")); date = date.plusDays(1)) {
 				builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.45, FaceMask.SURGICAL, 0.45)), "pt", "errands", "shop_daily", "shop_other");
 
 			}
-		} else if (params.maskType.equals("base")) {
+		} else if (maskType.equals("base")) {
 
 		} else {
 			throw new RuntimeException("param value doesn't exist");
@@ -543,20 +549,23 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 
 		//modify contact intensity
-		episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * params.workCi);
-		episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * params.workCi);
+		double workCi = 0.75;
+		episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCi);
+		episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCi);
 
 
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * params.leisureCi);
-		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * params.leisureCi);
+		double leisureCi = 0.4;
+		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCi);
+		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCi);
 
 
-		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * params.schoolCi);
-		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * params.schoolCi);
+		double schoolCi = 0.75;
+		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi);
 
 
 		if (DEBUG_MODE) {
@@ -600,7 +609,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		if (params.strAEsc != 0.) {
 			infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
-			LocalDate strADate = LocalDate.parse(params.strADate);
+			LocalDate strADate = LocalDate.parse("2022-11-01");
 			for (int i = 0; i < 7; i++) {
 				infPerDayStrA.put(strADate.plusDays(i), 4);
 			}
@@ -662,62 +671,62 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({0.9})
-		public double deltaTheta;
-
-		@Parameter({1.9})
-		public double ba1Inf;
+//		@Parameter({0.9})
+//		public double deltaTheta;
+//
+//		@Parameter({1.9})
+//		public double ba1Inf;
 
 //		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
 //		public String ba1Date;
 
-		@Parameter({2.9,})
-		public double ba5Esc;
+//		@Parameter({2.9,})
+//		public double ba5Esc;
 
-		@Parameter({1.3})
-//		@Parameter({0.0})
-		public double actCorrection;
+//		@Parameter({1.3})
+////		@Parameter({0.0})
+//		public double actCorrection;
 
 
-		@Parameter({1.2})
+//		@Parameter({1.2})
 //		@Parameter({1.0})
-		public double thFactor;
+//		public double thFactor;
 
 		//		@Parameter({1.})
-		@Parameter({0.75})
-		public double schoolCi;
+//		@Parameter({0.75})
+//		public double schoolCi;
+//
+//		@Parameter({0.75})
+////		@Parameter({1.})
+//		public double workCi;
+//
+//		@Parameter({0.4})
+////		@Parameter({ 1.})
+//		public double leisureCi;
 
-		@Parameter({0.75})
-//		@Parameter({1.})
-		public double workCi;
+//		@StringParameter({"yes"})
+//		public String schoolUpdate;
+//
+//		@StringParameter({"45to45"})
+//		public String maskType;
+//
+//		@StringParameter({"later"})
+//		public String schoolTest;
 
-		@Parameter({0.4})
-//		@Parameter({ 1.})
-		public double leisureCi;
-
-		@StringParameter({"yes"})
-		public String schoolUpdate;
-
-		@StringParameter({"45to45"})
-		public String maskType;
-
-		@StringParameter({"later"})
-		public String schoolTest;
-
-		@StringParameter({"false"})
-		public String ageSusc;
+//		@StringParameter({"false"})
+//		public String ageSusc;
 
 //		@Parameter({0.90, .95, 1.})
 //		public double deltaTheta;
 
-		@StringParameter({"2021-01-15"})
-		public String alphaDate;
+//		@StringParameter({"2021-01-15"})
+//		public String alphaDate;
 
-		@Parameter({1.4})
-		public double alphaTheta;
+//		@Parameter({1.4})
+//		public double alphaTheta;
 
-		@StringParameter({"2022-11-01"})
-		public String strADate;
+//		@StringParameter({"2022-11-01"})
+//		public String strADate;
 
 		@Parameter({6.0})
 		public double strAEsc;

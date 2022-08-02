@@ -27,7 +27,7 @@ import java.util.*;
  */
 public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 	int runCount = 0;
 
 	@Nullable
@@ -241,6 +241,7 @@ public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 
 	private SnzCologneProductionScenario getBindings(double pHousehold, Params params) {
 		return new SnzCologneProductionScenario.Builder()
+				.setLeisureCorrection(0.0)
 				.setCarnivalModel(SnzCologneProductionScenario.CarnivalModel.yes)
 				.setSebastianUpdate(true)
 				.setScaleForActivityLevels(1.3)
@@ -259,10 +260,10 @@ public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-//				new VaccinationEffectiveness().withArgs(),
-//				new RValuesFromEvents().withArgs(),
-//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-//				new HospitalNumbersFromEvents().withArgs()
+				new VaccinationEffectiveness().withArgs(),
+				new RValuesFromEvents().withArgs(),
+				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+				new HospitalNumbersFromEvents().withArgs(),
 				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
@@ -369,7 +370,7 @@ public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 	public static final class Params {
 
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(10)
 		public long seed;
 
 
