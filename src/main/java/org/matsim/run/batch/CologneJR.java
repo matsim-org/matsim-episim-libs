@@ -12,6 +12,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
 import org.matsim.episim.policy.FixedPolicy;
@@ -39,53 +40,54 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			@Override
 			protected void configure() {
 
-				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
+//				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
+//
+//				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
-				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
+				double mutEscBa5 = 3.0;
+				double mutEscStrainA = 0.;
 
-				double mutEscBa5 = 1.;
-				double mutEscStrainA = 1.;
+//				LocalDate start = null;
+//				VaccinationType vaccinationType = null;
 
-				LocalDate start = null;
-				VaccinationType vaccinationType = null;
-
-				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
-				compliance.put(60, 0.0);
-				compliance.put(18, 0.0);
-				compliance.put(12, 0.0);
-				compliance.put(0, 0.0);
+//				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
+//				compliance.put(60, 0.0);
+//				compliance.put(18, 0.0);
+//				compliance.put(12, 0.0);
+//				compliance.put(0, 0.0);
 
 
 
 				if (params != null) {
-					mutEscBa5 = 3.0;
+					mutEscBa5 = params.ba5Esc;
+
 					mutEscStrainA = params.strAEsc;
-
-					start = LocalDate.parse(params.resDate);
-					vaccinationType = VaccinationType.valueOf(params.vacType);
-
-
-					if (params.vacCamp.equals("age")) {
-						compliance.put(60, 0.85); // 60+
-						compliance.put(18, 0.55); // 18-59
-						compliance.put(12, 0.20); // 12-17
-						compliance.put(0, 0.0); // 0 - 11
-					}
-					else if (params.vacCamp.equals("eu")) {
-						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
-						compliance.put(18, 0.);
-						compliance.put(12, 0.);
-						compliance.put(0, 0.);
-					}
-					else if (params.vacCamp.equals("off")) {
-
-					} else {
-						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
-					}
+//
+//					start = LocalDate.parse(params.resDate);
+//					vaccinationType = VaccinationType.valueOf(params.vacType);
+//
+//
+//					if (params.vacCamp.equals("age")) {
+//						compliance.put(60, 0.85); // 60+
+//						compliance.put(18, 0.55); // 18-59
+//						compliance.put(12, 0.20); // 12-17
+//						compliance.put(0, 0.0); // 0 - 11
+//					}
+//					else if (params.vacCamp.equals("eu")) {
+//						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
+//						compliance.put(18, 0.);
+//						compliance.put(12, 0.);
+//						compliance.put(0, 0.);
+//					}
+//					else if (params.vacCamp.equals("off")) {
+//
+//					} else {
+//						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
+//					}
 				}
-
-				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
+//
+//				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
@@ -308,7 +310,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 				new VaccinationEffectiveness().withArgs(),
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new HospitalNumbersFromEvents().withArgs()
+				new HospitalNumbersFromEvents().withArgs(),
+				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
 
@@ -334,66 +337,20 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * params.thFactor);
-		//restrictions
-
-		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-
-		// Restrictions starting on December 1, 2022
-		LocalDate restrictionDate = LocalDate.parse(params.resDate);
-
-		//school
-		if(params.edu.equals("close")) {
-			if (params.resDate.equals("2022-12-01")) {
-				builder.restrict(restrictionDate, 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-			}
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-			//university
-			builder.restrict(restrictionDate, 0.2, "educ_higher");
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_higher");
-		} else if (params.edu.equals("maskVent")) {
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
-							FaceMask.CLOTH, 0.0,
-							FaceMask.N95, 0.25,
-							FaceMask.SURGICAL, 0.25)),
-					"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-		} else if (params.edu.equals("normal")) {
-
-		} else {
-			throw new RuntimeException("param value doesn't exist");
-		}
-
-		//pt: masks
-		if (Boolean.parseBoolean(params.maskPt)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "pt");
-
-		}
-
-		//shopping: masks
-		if (Boolean.parseBoolean(params.maskShop)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "shop_daily", "shop_other", "errands");
-		}
-
-		//work
-		builder.restrict(restrictionDate, 0.78 * params.work, "work");
-		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.work, "work");
-
-		//leisure
-		builder.restrict(restrictionDate, 0.88 * params.leis, "leisure");
-		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.leis, "leisure");
 
 
-		episimConfig.setPolicy(builder.build());
 
+		//---------------------------------------
+		//		S T R A I N S
+		//---------------------------------------
 
-		//mutations
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
-		//configure new strains
+
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * params.deltaTheta);
+
 		//BA5
-		double ba5Inf = 0.9;
+		double ba5Inf = 1.0;
 		double oHos = virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getFactorSeriouslySick();
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * ba5Inf);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(oHos);
@@ -411,12 +368,128 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(oHos);
 		}
 
-		//Configure Disease Import
+		// remove age-based susceptibility of strains starting with DELTA
+
+		if (!Boolean.parseBoolean(params.ageSusc)) {
+			TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
+					19, 1d,
+					20, 1d
+			));
+
+			for (VirusStrain strain : List.of(VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5, VirusStrain.STRAIN_A)) {
+				virusStrainConfigGroup.getOrAddParams(strain).setAgeSusceptibility(nonSteppedAgeSusceptibility);
+			}
+		}
+
+		// increase infectivity of alpha
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).getInfectiousness() * params.alphaTheta);
+
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * params.deltaTheta);
+		double ba1Inf = params.ba1Inf; // 2.0,2.1,2.2
+		double ba2Inf = 1.7;
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA1).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * ba1Inf);
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA2).setInfectiousness(virusStrainConfigGroup.getOrAddParams(VirusStrain.DELTA).getInfectiousness() * ba1Inf * ba2Inf);
+
+
+
+
+
+
+		//---------------------------------------
+		//		I M P O R T
+		//---------------------------------------
+
+		Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.ALPHA, new TreeMap<>()));
+
+
+		// reconfig disease import of alpha
+		LocalDate startDateAlpha = LocalDate.parse(params.alphaDate);
+
+		for (int i = 0; i < 7; i++) {
+			infPerDayAlpha.put(startDateAlpha.plusDays(i), 4);
+		}
+
+
+		infPerDayAlpha.put(startDateAlpha.plusDays(7), 1);
+
+		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
+
 
 		configureFutureDiseaseImport(params, episimConfig);
 
+		//---------------------------------------
+		//		R E S T R I C T I O N S
+		//---------------------------------------
 
-		//vaccinations
+		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
+
+		//school
+		if(params.schoolUpdate.equals("yes")) {
+			// school closed completely until 21.2.2022
+			builder.restrict(LocalDate.parse("2021-01-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse("2021-02-21"), 0.5, "educ_primary");
+			builder.restrict(LocalDate.parse("2021-03-15"), 0.5, "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+		} else if (params.schoolUpdate.equals("no")) {
+
+		} else {
+			throw new RuntimeException("param value doesn't exist");
+		}
+
+		if (params.schoolTest.equals("later")) {
+			TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
+			TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
+//			TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
+			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesRapid = rapidTest.getTestingRateForActivities();
+//			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPCR = pcrTest.getTestingRateForActivities();
+
+
+			for (LocalDate date = LocalDate.parse("2021-03-19"); date.isBefore(LocalDate.parse("2021-04-25")); date = date.plusDays(1)) {
+
+				testingRateForActivitiesRapid.get("educ_kiga").put(date, 0.);
+				testingRateForActivitiesRapid.get("educ_primary").put(date, 0.);
+				testingRateForActivitiesRapid.get("educ_secondary").put(date, 0.);
+				testingRateForActivitiesRapid.get("educ_tertiary").put(date, 0.);
+				testingRateForActivitiesRapid.get("educ_other").put(date, 0.);
+
+			}
+
+			testingRateForActivitiesRapid.get("educ_kiga").put(LocalDate.parse("2021-09-20"), 0.);
+			testingRateForActivitiesRapid.get("educ_primary").put(LocalDate.parse("2021-09-20"), 0.);
+
+//			testingRateForActivitiesPCR.get("educ_primary").put(LocalDate.parse("2021-05-10"), 0.4);
+			testingRateForActivitiesRapid.get("educ_secondary").put(LocalDate.parse("2021-05-10"), 0.4);
+			testingRateForActivitiesRapid.get("educ_tertiary").put(LocalDate.parse("2021-05-10"), 0.4);
+			testingRateForActivitiesRapid.get("educ_other").put(LocalDate.parse("2021-05-10"), 0.4);
+
+		} else if (params.schoolTest.equals("base")) {
+
+		}else {
+			throw new RuntimeException("param value doesn't exist");
+		}
+
+
+		// masks
+		//pt: masks
+		if (params.maskType.equals("45to45")) {
+			for (LocalDate date = LocalDate.parse("2020-04-21"); date.isBefore(LocalDate.parse("2021-05-01")); date = date.plusDays(1)) {
+				builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.45, FaceMask.SURGICAL, 0.45)), "pt", "errands", "shop_daily", "shop_other");
+
+			}
+		} else if (params.maskType.equals("base")) {
+
+		} else {
+			throw new RuntimeException("param value doesn't exist");
+		}
+
+		episimConfig.setPolicy(builder.build());
+
+
+		//---------------------------------------
+		//		M I S C
+		//---------------------------------------
+
+		// vaccination
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setUseIgA(true);
 		vaccinationConfig.setTimePeriodIgA(730.);
@@ -439,20 +512,29 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * params.schoolCi);
 
 
-		if(DEBUG_MODE) {
-//			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
-//			UtilsJR.produceMaskPlot(episimConfig.getPolicy());
+		if (DEBUG_MODE) {
+			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
+
 		}
 
-			return config;
+		return config;
 	}
 
 	private void configureFutureDiseaseImport(Params params, EpisimConfigGroup episimConfig) {
+		Map<LocalDate, Integer> infPerDayBa1 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA1, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
 
 		// add initial impulses for strains
+		//BA.1
+		LocalDate ba1Date = LocalDate.parse(params.ba1Date);
+		for (int i = 0; i < 7; i++) {
+			infPerDayBa1.put(ba1Date.plusDays(i), 4);
+		}
+		infPerDayBa2.put(ba1Date.plusDays(7), 1);
+
+
 		//BA.2
 		LocalDate ba2Date = LocalDate.parse("2021-12-18");
 		for (int i = 0; i < 7; i++) {
@@ -516,9 +598,8 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 			infPerDayBa5.put(date.plusDays(1), 1);
 		}
 
-
-
 		// save disease import
+		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
 
@@ -527,91 +608,119 @@ public class CologneJR implements BatchRun<CologneJR.Params> {
 		}
 	}
 
-
 	public static final class Params {
+
 
 		// general
 		@GenerateSeeds(5)
 		public long seed;
-		@Parameter({1., 2., 3.})
+
+		@Parameter({0.9})
+		public double deltaTheta;
+
+		@Parameter({1.7,1.9,2.1})
+		public double ba1Inf;
+
+		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
+		public String ba1Date;
+
+		@Parameter({2.8, 2.9, 3.0})
+		public double ba5Esc;
+
+		@Parameter({1.3})
 //		@Parameter({0.0})
 		public double actCorrection;
 
 
-
-		@Parameter({1.0, 1.2, 1.4})
+		@Parameter({1.2})
 //		@Parameter({1.0})
 		public double thFactor;
 
 		//		@Parameter({1.})
-		@Parameter({0.25, 0.5, 0.75})
+		@Parameter({0.75})
 		public double schoolCi;
 
-		@Parameter({0.5, 0.75, 1.0})
+		@Parameter({0.75})
 //		@Parameter({1.})
 		public double workCi;
 
-
-		@Parameter({0.2, 0.3, 0.4})
+		@Parameter({0.4})
 //		@Parameter({ 1.})
 		public double leisureCi;
 
+		@StringParameter({"yes"})
+		public String schoolUpdate;
 
+		@StringParameter({"45to45"})
+		public String maskType;
 
+		@StringParameter({"later"})
+		public String schoolTest;
 
-		//TODO VARY
-//		@Parameter({0.0,6.})  // 0.0 = strainA is off
-		@Parameter({0.0})  // 0.0 = strainA is off
+		@StringParameter({"false"})
+		public String ageSusc;
+
+//		@Parameter({0.90, .95, 1.})
+//		public double deltaTheta;
+
+		@StringParameter({"2021-01-15"})
+		public String alphaDate;
+
+		@Parameter({1.4})
+		public double alphaTheta;
+
+		@StringParameter({"2022-11-01"})
+		public String strADate;
+
+		@Parameter({0.0})
 		public double strAEsc;
 
 
 		// General Restriction date
 //		@StringParameter({"2022-07-01","2022-12-01"})
-		@StringParameter({"2022-12-01"})
-		public String resDate;
-
-
+//		@StringParameter({"2022-12-01"})
+//		public String resDate;
+//
+//
 //		@StringParameter({"off", "age"})
-		@StringParameter({"off"})
-		String vacCamp;
-
+//		@StringParameter({"off"})
+//		String vacCamp;
+//
 		// other restrictions
 		// schools & university // close: rf reduced // maskVent: ciCorrection reduced & surgical mask for most // normal: no changes made
 //		@StringParameter({"close", "maskVent", "normal"})
-		@StringParameter({ "normal"})
-		String edu;
+//		@StringParameter({ "normal"})
+//		String edu;
 
 		// shopping: mask
 //		@StringParameter({"true", "false"})
-		@StringParameter({"false"})
-		String maskShop;
+//		@StringParameter({"false"})
+//		String maskShop;
 
 		// pt: mask
 //		@StringParameter({"true", "false"})
-		@StringParameter({"false"})
-		String maskPt;
+//		@StringParameter({"false"})
+//		String maskPt;
 
 		// work:
 //		@Parameter({0.5, 1.0})
-		@Parameter({1.0})
-		double work;
+//		@Parameter({1.0})
+//		double work;
 
 		// leisure
 //		@Parameter({0.25, 0.5, 0.75, 1.0})
-		@Parameter({1.0})
-		double leis;
+//		@Parameter({1.0})
+//		double leis;
 
 
 		// vaccination campaign
-		@StringParameter({"omicronUpdate"})
-		public String vacType;
+//		@StringParameter({"omicronUpdate"})
+//		public String vacType;
 
-		@StringParameter({"2022-04-25"})
-		public String unResDate;
+//		@StringParameter({"2022-04-25"})
+//		public String unResDate;
 
 		// StrainA
-		@StringParameter({"2022-11-01"})
-		public String strADate;
 
 //		@StringParameter({"true"})
 //		public String sebaUp;
