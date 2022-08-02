@@ -988,7 +988,7 @@
 				 .setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 		 ;
 
-		 vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate)
+		 vaccinationConfig.getOrAddParams(VaccinationType.ba1Update)
 				 .setBoostWaitPeriod(boostAfter * 30 + 6 * 7);
 		 ;
 

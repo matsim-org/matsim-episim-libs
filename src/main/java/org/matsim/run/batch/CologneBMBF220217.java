@@ -613,7 +613,7 @@ public class CologneBMBF220217 implements BatchRun<CologneBMBF220217.Params> {
 		vaccinationConfig.setReVaccinationCapacity_pers_per_day(boosterVaccinations);
 
 		vaccinationConfig.getOrAddParams(VaccinationType.mRNA).setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
-		vaccinationConfig.getOrAddParams(VaccinationType.omicronUpdate).setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
+		vaccinationConfig.getOrAddParams(VaccinationType.ba1Update).setBoostWaitPeriod(boostAfter_months * 30 + 6 * 7);
 		vaccinationConfig.getOrAddParams(VaccinationType.vector).setBoostWaitPeriod(boostAfter_months * 30 + 9 * 7);
 		;
 	}
