@@ -60,10 +60,10 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				compliance.put(0, 0.0);
 
 				String vacCamp = "off";
-				
+
 				if (params != null) {
 //					mutEscBa5 = params.ba5Esc;
-					
+
 					if (!params.vacType.equals("off")) {
 						vacCamp = "age";
 					}
@@ -168,7 +168,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);
-				
+
 				//DELTA
 				double mRNADelta = mRNAAlpha / mutEscDelta;
 				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, mRNADelta);
@@ -244,8 +244,8 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.STRAIN_A, 64.0 / 300.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscBa5 / mutEscStrainA);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscStrainA);
-				
-				//StrainB 
+
+				//StrainB
 				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.STRAIN_B, mRNADelta);
 				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.STRAIN_B, mRNADelta * 150./300.);
 				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.STRAIN_B, mRNADelta * 64./300.);
@@ -404,7 +404,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(oHos);
 		}
-		
+
 //		STRAIN_B
 		if (params.strBInf != 0.) {
 
@@ -532,54 +532,6 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		} else {
 			throw new RuntimeException("param value doesn't exist");
 		}
-/*
-		// Restrictions starting on December 1, 2022
-		LocalDate restrictionDate = LocalDate.parse(params.resDate);
-
-		
-		//school
-		if(params.edu.equals("close")) {
-			if (params.resDate.equals("2022-12-01")) {
-				builder.restrict(restrictionDate, 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-			}
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-			//university
-			builder.restrict(restrictionDate, 0.2, "educ_higher");
-			builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.2, rf), "educ_higher");
-		} else if (params.edu.equals("maskVent")) {
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
-							FaceMask.CLOTH, 0.0,
-							FaceMask.N95, 0.25,
-							FaceMask.SURGICAL, 0.25)),
-					"educ_primary", "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
-
-		} else if (params.edu.equals("normal")) {
-
-		} else {
-			throw new RuntimeException("param value doesn't exist");
-		}
-
-		//pt: masks
-		if (Boolean.parseBoolean(params.maskPt)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "pt");
-
-		}
-
-		//shopping: masks
-		if (Boolean.parseBoolean(params.maskShop)) {
-			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45, FaceMask.SURGICAL, 0.45)), "shop_daily", "shop_other", "errands");
-		}
-
-		//work
-		builder.restrict(restrictionDate, 0.78 * params.work, "work");
-		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.work, "work");
-
-		//leisure
-		builder.restrict(restrictionDate, 0.88 * params.leis, "leisure");
-		builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * params.leis, "leisure");
-*/
 
 		episimConfig.setPolicy(builder.build());
 
@@ -590,7 +542,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		// vaccination
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setUseIgA(true);
+		vaccinationConfig.setUseIgA(Boolean.parseBoolean(params.igA));
 		vaccinationConfig.setTimePeriodIgA(730.);
 
 
@@ -662,7 +614,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 			}
 			infPerDayStrA.put(strADate.plusDays(7), 1);
 		}
-		
+
 		//StrainB
 		if (params.strBInf != 0.) {
 			infPerDayStrB.put(LocalDate.parse("2020-01-01"), 0);
@@ -731,123 +683,27 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 	}
 
 	public static final class Params {
-
-
 		// general
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@Parameter({0.9})
-//		public double deltaTheta;
-//
-//		@Parameter({1.9})
-//		public double ba1Inf;
-
-//		@StringParameter({"2021-11-20", "2021-11-27", "2021-12-04"})
-//		public String ba1Date;
-
-//		@Parameter({2.9,})
-//		public double ba5Esc;
-
-//		@Parameter({1.3})
-////		@Parameter({0.0})
-//		public double actCorrection;
-
-
-//		@Parameter({1.2})
-//		@Parameter({1.0})
-//		public double thFactor;
-
-		//		@Parameter({1.})
-//		@Parameter({0.75})
-//		public double schoolCi;
-//
-//		@Parameter({0.75})
-////		@Parameter({1.})
-//		public double workCi;
-//
-//		@Parameter({0.4})
-////		@Parameter({ 1.})
-//		public double leisureCi;
-
-//		@StringParameter({"yes"})
-//		public String schoolUpdate;
-//
-//		@StringParameter({"45to45"})
-//		public String maskType;
-//
-//		@StringParameter({"later"})
-//		public String schoolTest;
-
-//		@StringParameter({"false"})
-//		public String ageSusc;
-
-//		@Parameter({0.90, .95, 1.})
-//		public double deltaTheta;
-
-//		@StringParameter({"2021-01-15"})
-//		public String alphaDate;
-
-//		@Parameter({1.4})
-//		public double alphaTheta;
-
-//		@StringParameter({"2022-11-01"})
-//		public String strADate;
-
 		@Parameter({3.0, 6.0})
 		public double strAEsc;
-		
+
 		@Parameter({0.0, 1.0})
 		public double strAInf;
-		
+
 		@Parameter({0.0, 1.0})
 		public double strBInf;
 
-
-		// General Restriction date
-//		@StringParameter({"2022-07-01","2022-12-01"})
 		@StringParameter({"2022-12-01"})
 		public String resDate;
-//
-//
-//		@StringParameter({"off", "age"})
-//		@StringParameter({"off"})
-//		String vacCamp;
-//
-		// other restrictions
-		// schools & university // close: rf reduced // maskVent: ciCorrection reduced & surgical mask for most // normal: no changes made
-//		@StringParameter({"close", "maskVent", "normal"})
-//		@StringParameter({ "normal"})
-//		String edu;
 
-		// shopping: mask
-//		@StringParameter({"true", "false"})
-//		@StringParameter({"false"})
-//		String maskShop;
-
-		// pt: mask
-//		@StringParameter({"true", "false"})
-//		@StringParameter({"false"})
-//		String maskPt;
-
-		// work:
-//		@Parameter({0.5, 1.0})
-//		@Parameter({1.0})
-//		double work;
-
-		// leisure
-//		@Parameter({0.5, 0.75, 1.0})
-//		@Parameter({1.0})
-//		double leis;
-
-
+		@StringParameter({"false", "true"})
+		public String igA;
 		// vaccination campaign
 		@StringParameter({"ba1Update", "ba5Update", "mRNA", "off"})
 		public String vacType;
-
-//		@StringParameter({"2022-04-25"})
-//		public String unResDate;
-
 	}
 
 
