@@ -44,6 +44,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
+				double mutEscDelta = 29.2 / 10.9;
 				double mutEscBa1 = 10.9 / 1.9;
 				double mutEscBa5 = 2.9;
 
@@ -97,7 +98,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
-				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa1, mutEscBa5, mutEscStrainA);
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscDelta, mutEscBa1, mutEscBa5, mutEscStrainA);
 
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 
@@ -112,7 +113,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 			private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
 											 Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors,
-											 double mutEscBa1, double mutEscBa5, double mutEscStrainA) {
+											 double mutEscDelta, double mutEscBa1, double mutEscBa5, double mutEscStrainA) {
 				for (VaccinationType immunityType : VaccinationType.values()) {
 					initialAntibodies.put(immunityType, new EnumMap<>( VirusStrain.class ) );
 					for (VirusStrain virusStrain : VirusStrain.values()) {
@@ -150,8 +151,9 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.SARS_CoV_2, 0.01);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.SARS_CoV_2, 0.01);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.SARS_CoV_2, 0.01);
-				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscBa1);
-				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscBa1 / mutEscBa5);
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);
+				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscDelta / mutEscBa1);
+				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.SARS_CoV_2, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);
 
 				//Alpha
 				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.ALPHA, mRNAAlpha);
@@ -163,11 +165,12 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.ALPHA, 0.01);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.ALPHA, 0.01);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.ALPHA, 0.01);
-				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscBa1);
-				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscBa1 / mutEscBa5);
-
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);
+				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1);
+				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.ALPHA, mRNAAlpha / mutEscDelta / mutEscBa1 / mutEscBa5);
+				
 				//DELTA
-				double mRNADelta = 10.9;
+				double mRNADelta = mRNAAlpha / mutEscDelta;
 				initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, mRNADelta);
 				initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, mRNADelta * 150./300.);
 				initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, mRNADelta * 64./300.);
@@ -177,6 +180,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 0.2 / 6.4);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.DELTA, 0.2 / 6.4);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.DELTA, 0.2 / 6.4);
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.DELTA, mRNADelta * 450./300.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.DELTA, mRNADelta / mutEscBa1 / mutEscBa5);
 
@@ -191,6 +195,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4); //todo: is 1.4
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.OMICRON_BA1, mRNABA1 * 8./20.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA1, mRNAAlpha / mutEscBa5);
 
@@ -205,6 +210,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.OMICRON_BA2, mRNABA2 * 8./20.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA2, mRNAAlpha / mutEscBa5);
 
@@ -220,6 +226,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.OMICRON_BA5, 64.0 / 300./ mutEscBa5); //todo ???
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.OMICRON_BA5,  mRNABa5 * 8./20.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha / mutEscBa5);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.OMICRON_BA5, mRNAAlpha);
 
@@ -234,6 +241,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.STRAIN_A, 64.0 / 300./ mutEscBa5 /mutEscStrainA);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.STRAIN_A, 64.0 / 300. / mutEscBa5 / mutEscStrainA);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.STRAIN_A, 64.0 / 300.);
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.STRAIN_A, 64.0 / 300.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscBa5 / mutEscStrainA);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.STRAIN_A, mRNAAlpha / mutEscStrainA);
 				
@@ -247,6 +255,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.STRAIN_B, 0.2 / 6.4);
 				initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.STRAIN_B, 0.2 / 6.4);
 				initialAntibodies.get(VirusStrain.STRAIN_A).put(VirusStrain.STRAIN_B, 0.2 / 6.4);
+				initialAntibodies.get(VirusStrain.STRAIN_B).put(VirusStrain.STRAIN_B, mRNADelta * 450./300.);
 				initialAntibodies.get(VaccinationType.ba1Update).put(VirusStrain.STRAIN_B, mRNADelta / mutEscBa1);
 				initialAntibodies.get(VaccinationType.ba5Update).put(VirusStrain.STRAIN_B, mRNADelta / mutEscBa1 / mutEscBa5);
 
@@ -262,6 +271,9 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
 						}
 						else if (immunityType == VaccinationType.ba1Update) {
+							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+						}
+						else if (immunityType == VaccinationType.ba5Update) {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 						}
 						else {
@@ -387,7 +399,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 //		STRAIN_A
 		if (params.strAInf != 0.) {
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * ba5Inf * params.strAInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA5).getInfectiousness() * ba5Inf * params.strAInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(oHos);
@@ -396,7 +408,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 //		STRAIN_B
 		if (params.strBInf != 0.) {
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA2).getInfectiousness() * ba5Inf * params.strBInf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA5).getInfectiousness() * ba5Inf * params.strBInf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySickVaccinated(oHos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(oHos);
@@ -665,12 +677,11 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		// add projected disease import for vacation waves after initial disease import
 		int facBa2 = 4;
 		int facBa5 = 4;
-		int facStrA = 4;
+		int facStrAB = 4;
 
 		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
 		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
-		LocalDate dateStrainA = LocalDate.parse("2022-11-18"); // after vaca import
-		LocalDate dateStrainB = LocalDate.parse("2022-11-18"); // after vaca import
+		LocalDate dateStrainAB = LocalDate.parse("2022-11-18"); // after vaca import
 
 
 		NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
@@ -681,8 +692,20 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 //
 			double cases = factor * entry.getValue();
 
-			if (date.isAfter(dateStrainA) && params.strAInf != 0) {
-				infPerDayStrA.put(date, ((int) cases * facStrA) == 0 ? 1 : (int) (cases * facStrA));
+			if (date.isAfter(dateStrainAB) && (params.strAInf != 0 || params.strBInf != 0)) {
+				if (params.strAInf != 0 && params.strBInf != 0) {
+					infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
+					infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
+				}
+				else if (params.strAInf != 0) {
+					infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
+				}
+				else if (params.strBInf != 0) {
+					infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
+				}
+				else {
+					throw new RuntimeException();
+				}
 				infPerDayBa5.put(date, 1);
 				infPerDayBa2.put(date, 1);
 			} else if (date.isAfter(dateBa5)) {
@@ -694,13 +717,6 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		}
 
-		if( params.strAInf!=0.) {
-			infPerDayBa5.put(dateStrainA.plusDays(1), 1);
-			infPerDayStrA.put(date.plusDays(1), 1);
-		} else {
-			infPerDayBa5.put(date.plusDays(1), 1);
-		}
-
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA2, infPerDayBa2);
@@ -708,6 +724,9 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		if (params.strAInf != 0.) {
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_A, infPerDayStrA);
+		}
+		if (params.strBInf != 0.) {
+			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_B, infPerDayStrB);
 		}
 	}
 
