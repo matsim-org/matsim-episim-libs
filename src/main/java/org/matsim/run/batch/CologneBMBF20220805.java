@@ -51,7 +51,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				double mutEscStrainA = 0.;
 
 				LocalDate start = null;
-				VaccinationType vaccinationType = null;
+				VaccinationType vaccinationType = VaccinationType.mRNA;
 
 				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
 				compliance.put(60, 0.0);
@@ -66,12 +66,13 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 					if (!params.vacType.equals("off")) {
 						vacCamp = "age";
+						vaccinationType = VaccinationType.valueOf(params.vacType);
 					}
 
 					mutEscStrainA = params.strAEsc;
 
 					start = LocalDate.parse(params.resDate);
-					vaccinationType = VaccinationType.valueOf(params.vacType);
+
 
 
 					if (vacCamp.equals("age")) {
@@ -348,7 +349,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				new VaccinationEffectiveness().withArgs(),
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new HospitalNumbersFromEvents().withArgs(),
+				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input"),
 				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
