@@ -39,7 +39,7 @@ public class DataUtilsTest {
 
 		assertThat(result.get(LocalDate.of(2022,5,29)))
 				.containsEntry(VirusStrain.OMICRON_BA1, 0.002)
-				.containsEntry(VirusStrain.OMICRON_BA2, 0.825);
+				.containsEntry(VirusStrain.OMICRON_BA2, 0.823);
 
 	}
 }
