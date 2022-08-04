@@ -356,8 +356,8 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
 				new FilterEvents().withArgs("--output","./output/"),
-				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input"),
-				new SecondaryAttackRateFromEvents().withArgs()
+				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
+//				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
 
@@ -694,10 +694,10 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		// general
 		@GenerateSeeds(5)
 		public long seed;
-		
+
 		@StringParameter({"off", "3.0", "6.0"})
 		public String StrainA;
-		
+
 		@StringParameter({"off", "3.0", "6.0"})
 		public String StrainB;
 

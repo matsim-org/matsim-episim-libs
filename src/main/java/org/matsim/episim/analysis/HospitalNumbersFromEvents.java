@@ -60,7 +60,7 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-08-02/3-vax/analysis")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-08-02/3-vax/analysis/strainA")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -216,7 +216,8 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, outputAppendix, startDate, "Omicron");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
 
 
 //		 }
@@ -256,8 +257,8 @@
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
 		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
-		 ConfigHolder holderOmicron = configure(factorOmicron,factorOmicronICU) ;
-		 ConfigHolder holderDelta = configure(factorDelta,factorDeltaICU) ;
+		 ConfigHolder holderOmicron = configure(factorBA5, factorBA5ICU);
+		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
 
 		 List<Handler> handlers = List.of(
 				  new Handler("Omicron", population, holderOmicron ),
