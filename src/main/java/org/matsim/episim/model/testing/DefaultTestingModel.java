@@ -206,7 +206,8 @@ public class DefaultTestingModel implements TestingModel {
 			if (params.getType().equals(TestType.RAPID_TEST) && (person.getVirusStrain() == VirusStrain.OMICRON_BA1 ||
 					person.getVirusStrain() == VirusStrain.OMICRON_BA2 ||
 					person.getVirusStrain() == VirusStrain.OMICRON_BA5 ||
-					person.getVirusStrain() == VirusStrain.STRAIN_A)) {
+					person.getVirusStrain() == VirusStrain.STRAIN_A ||
+					person.getVirusStrain() == VirusStrain.STRAIN_B)) {
 				rate = 0.5;
 			}
 
