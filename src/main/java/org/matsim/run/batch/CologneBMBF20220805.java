@@ -349,6 +349,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 				new VaccinationEffectiveness().withArgs(),
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input"),
 				new SecondaryAttackRateFromEvents().withArgs()
 		);
@@ -543,7 +544,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 
 		// vaccination
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setUseIgA(Boolean.parseBoolean(params.igA));
+		vaccinationConfig.setUseIgA(Boolean.parseBoolean("true"));
 		vaccinationConfig.setTimePeriodIgA(730.);
 
 
@@ -580,7 +581,7 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
-		Map<LocalDate, Integer> infPerDayStrB = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
+		Map<LocalDate, Integer> infPerDayStrB = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_B, new TreeMap<>()));
 
 
 		// add initial impulses for strains
@@ -700,8 +701,8 @@ public class CologneBMBF20220805 implements BatchRun<CologneBMBF20220805.Params>
 		@StringParameter({"2022-12-01"})
 		public String resDate;
 
-		@StringParameter({"false", "true"})
-		public String igA;
+//		@StringParameter({"false", "true"})
+//		public String igA;
 		// vaccination campaign
 		@StringParameter({"ba1Update", "ba5Update", "mRNA", "off"})
 		public String vacType;

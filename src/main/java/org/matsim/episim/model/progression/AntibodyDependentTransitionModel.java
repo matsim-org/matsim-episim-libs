@@ -155,7 +155,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 			antibodiesAfterLastImmunityEvent *= 4;
 		}
 		// b) if strain is omicron, an additional factor of 3.7 is applied
-		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) || strain.equals(VirusStrain.OMICRON_BA5) || strain.equals(VirusStrain.STRAIN_A)) {
+		if (strain.equals(VirusStrain.OMICRON_BA1) || strain.equals(VirusStrain.OMICRON_BA2) || strain.equals(VirusStrain.OMICRON_BA5) || strain.equals(VirusStrain.STRAIN_A) || strain.equals(VirusStrain.STRAIN_B)) {
 			antibodiesAfterLastImmunityEvent *= 3.7;
 		}
 
