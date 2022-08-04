@@ -173,8 +173,6 @@
 	 private static final double factorOmicronICU = 1.;
 	 private static final double factorBA5ICU = 1.;
 
-	 private String outputAppendix = "";
-
 	 public static void main(String[] args) {
 		 System.exit(new CommandLine(new HospitalNumbersFromEvents()).execute(args));
 	 }
@@ -216,8 +214,8 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
 
 
 //		 }
@@ -235,7 +233,7 @@
 		 String id = AnalysisCommand.getScenarioPrefix(pathToScenario);
 
 		 // builds the path to the output file that is produced by this analysis
-		 final Path tsvPath = pathToScenario.resolve(id + "post.hospital" + outputAppendix + ".tsv");
+		 final Path tsvPath = pathToScenario.resolve(id + "post.hospital.tsv");
 
 		 // calculates hospitalizations
 		 calculateHospitalizationsAndWriteOutput(pathToScenario, tsvPath);

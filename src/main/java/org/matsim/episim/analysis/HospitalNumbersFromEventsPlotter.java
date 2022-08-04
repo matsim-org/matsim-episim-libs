@@ -63,7 +63,7 @@ public class HospitalNumbersFromEventsPlotter {
 
 			String id = AnalysisCommand.getScenarioPrefix(path);
 
-			final Path tsvPath = path.resolve(id + "post.hospital" + outputAppendix + ".tsv");
+			final Path tsvPath = path.resolve(id + "post.hospital.tsv");
 
 			try (CSVParser parser = new CSVParser(Files.newBufferedReader(tsvPath), CSVFormat.DEFAULT.withDelimiter('\t').withFirstRecordAsHeader())) {
 
@@ -340,7 +340,7 @@ public class HospitalNumbersFromEventsPlotter {
 
 
 		// Produce TSV w/ aggregated data as well as all rki numbers
-		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.resolve("post.hospital.agg" + outputAppendix + ".tsv")), CSVFormat.DEFAULT.withDelimiter('\t'))) {
+		try (CSVPrinter printer = new CSVPrinter(Files.newBufferedWriter(output.resolve("post.hospital.agg.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'))) {
 
 			printer.printRecord(DAY, DATE, INTAKES_HOSP, INTAKES_ICU, OCCUPANCY_HOSP, OCCUPANCY_ICU, "rkiIncidence", "rkiHospRate", "rkiCriticalRate"); //"hospNoImmunity", "hospBaseImmunity", "hospBoosted", "incNoImmunity", "incBaseImmunity", "incBoosted");
 
