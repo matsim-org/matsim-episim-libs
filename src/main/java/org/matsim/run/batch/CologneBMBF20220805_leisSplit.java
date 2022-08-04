@@ -12,6 +12,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.FlexibleTestingModel;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
@@ -450,7 +451,7 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-//				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
+				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
 	}
@@ -476,7 +477,7 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.leisSplit.equals("private")){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
@@ -694,8 +695,8 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 
 		// leisure:
 		{
-			testingRateForActivitiesRapid.get("leisure").put(restrictionDate, 0.45);
-			testingRateForActivitiesRapidVac.get("leisure").put(restrictionDate, gpTestRate);
+			testingRateForActivitiesRapid.get("leisPublic").put(restrictionDate, 0.9);
+			testingRateForActivitiesRapidVac.get("leisPublic").put(restrictionDate, gpTestRate);
 		}
 
 		//WORK
@@ -730,9 +731,9 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 				// handled in getBindings
 				break;
 			case "mask":
-				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45)), "leisure", "leisPublic", "leisPrivate");
+				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)),  "leisPublic");
 			case "all":
-				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.45)), "leisure", "leisPublic", "leisPrivate");
+				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)),  "leisPublic");
 				break;
 			default:
 				throw new RuntimeException("invalid parameter");
@@ -780,15 +781,15 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 
 
 		// LEISURE SPLIT
-		Double leisureFactor = 0.0;
-		if (params.leisSplit.equals("private") || params.leisSplit.equals("both")) {
-			builder.applyToRf(LocalDate.of(2020,3,1).plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * leisureFactor, "leisPrivate");
-		}
-
-		if (params.leisSplit.equals("public")|| params.leisSplit.equals("both")) {
-			builder.applyToRf(LocalDate.of(2020,3,1).plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * leisureFactor, "leisPublic");
-
-		}
+//		Double leisureFactor = 0.0;
+//		if (params.leisSplit.equals("private") || params.leisSplit.equals("both")) {
+//			builder.applyToRf(LocalDate.of(2020,3,1).plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * leisureFactor, "leisPrivate");
+//		}
+//
+//		if (params.leisSplit.equals("public")|| params.leisSplit.equals("both")) {
+//			builder.applyToRf(LocalDate.of(2020,3,1).plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * leisureFactor, "leisPublic");
+//
+//		}
 
 
 		episimConfig.setPolicy(builder.build());
@@ -812,8 +813,8 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 
 		double leisureCi = 0.4;
 		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCi);
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisPublic").getContactIntensity() * leisureCi);
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisPrivate").getContactIntensity() * leisureCi);
+		episimConfig.getOrAddContainerParams("leisPublic").setContactIntensity(episimConfig.getOrAddContainerParams("leisPublic").getContactIntensity() * leisureCi);
+		episimConfig.getOrAddContainerParams("leisPrivate").setContactIntensity(episimConfig.getOrAddContainerParams("leisPrivate").getContactIntensity() * leisureCi);
 		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCi);
 
 
@@ -948,8 +949,8 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 		public long seed;
 
 		// LEISURE SPLIT
-		@StringParameter({"none", "private", "public", "both"})
-		public String leisSplit;
+//		@StringParameter({"none", "private", "public", "both"})
+//		public String leisSplit;
 
 
 		@StringParameter({"6.0"})
@@ -974,7 +975,7 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 		@StringParameter({"none"})
 		public String work;
 
-		@StringParameter({"none"})
+		@StringParameter({"none", "mask", "test", "all"})
 		public String leis;
 
 		// mask restrictions for "shop_daily", "shop_other", "errands"
