@@ -12,6 +12,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.FlexibleTestingModel;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
@@ -450,7 +451,7 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-//				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
+				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
 	}
@@ -475,8 +476,8 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		if (DEBUG_MODE) {
-			if (runCount == 0){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+		if (DEBUG_MODE ) {
+			if (runCount == 0 && params.edu.equals("maskVentTest")){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
