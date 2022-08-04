@@ -60,7 +60,7 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-07-27/4-eu/analysis")
+	 @CommandLine.Option(names = "--output", defaultValue = "../public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-08-02/3-vax/analysis")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -150,7 +150,7 @@
 
 	 private static final double beta = 1.2;
 
-	 private static final double hospitalFactor = 0.20;
+	 private static final double hospitalFactor = 0.3;
 
 	 // base
 	 private static final double factorWild =  1.0;
@@ -158,10 +158,10 @@
 	 private static final double factorAlpha = 1.0 * factorWild;
 
 	 // delta: 2.3x more severe than alpha - Hospital admission and emergency care attendance risk for SARS-CoV-2 delta (B.1.617.2) compared with alpha (B.1.1.7) variants of concern: a cohort study
-	 private static final double factorDelta = 1.0 * factorWild;//1.6 * factorWild;
+	 private static final double factorDelta = 1.2 * factorWild;//1.6 * factorWild;
 
 	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
-	 private static final double factorOmicron = 0.5  * factorDelta; //  reportedShareOmicron / reportedShareDelta
+	 private static final double factorOmicron = 0.3  * factorDelta; //  reportedShareOmicron / reportedShareDelta
 
 	 private static final double factorBA5 = 1.5 * factorOmicron;
 
