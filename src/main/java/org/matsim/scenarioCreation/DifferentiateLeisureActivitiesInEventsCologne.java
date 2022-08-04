@@ -76,7 +76,7 @@ public class DifferentiateLeisureActivitiesInEventsCologne {
 			EventsUtils.readEvents(manager, events);
 
 
-			String outputName =events.replace(".xml.gz", "") + "_withLeisureSplit.xml.gz";
+			String outputName = events.replace(".xml.gz", "") + "_withLeisureSplit.xml.gz";
 
 			EventWriterXML writer = new EventWriterXML(
 					IOUtils.getOutputStream(IOUtils.getFileUrl(outputName), false)
@@ -95,7 +95,7 @@ public class DifferentiateLeisureActivitiesInEventsCologne {
 
 		@Override
 		public void handleEvent(ActivityEndEvent activityEndEvent) {
-			if (activityEndEvent.getActType().equals("lesiure")) {
+			if (activityEndEvent.getActType().equals("leisure")) {
 				leisureFacilities.add(activityEndEvent.getFacilityId().toString());
 			}
 
@@ -103,7 +103,7 @@ public class DifferentiateLeisureActivitiesInEventsCologne {
 
 		@Override
 		public void handleEvent(ActivityStartEvent activityStartEvent) {
-			if (activityStartEvent.getActType().equals("lesiure")) {
+			if (activityStartEvent.getActType().equals("leisure")) {
 				leisureFacilities.add(activityStartEvent.getFacilityId().toString());
 			}
 		}
