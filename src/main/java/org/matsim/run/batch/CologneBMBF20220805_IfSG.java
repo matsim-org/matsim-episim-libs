@@ -464,10 +464,10 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-//				new VaccinationEffectiveness().withArgs(),
-//				new RValuesFromEvents().withArgs(),
-//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-//				new FilterEvents().withArgs("--output","./output/"),
+				new VaccinationEffectiveness().withArgs(),
+				new RValuesFromEvents().withArgs(),
+				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
@@ -477,7 +477,7 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE ) {
-			if (runCount == 0 && params.edu.equals("maskVentTest")){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
@@ -754,8 +754,8 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 		//SCHOOL
 		// todo check mask rate
 		if (params.edu.equals("maskVentTest")) {
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
+			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(
 							FaceMask.CLOTH, 0.0,
 							FaceMask.N95, 0.25,
 							FaceMask.SURGICAL, 0.25)),
