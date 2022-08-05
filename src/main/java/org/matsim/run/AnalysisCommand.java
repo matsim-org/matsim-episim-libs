@@ -216,15 +216,23 @@ public class AnalysisCommand implements Runnable {
 		}
 
 		try {
+			Optional<Path> o;
+			if (preferReducedEvents) {
+				 o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events_reduced.tar")).findFirst();
 
+				if (o.isEmpty()) {
+					o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
+				}
+			} else {
+				o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
 
-			Optional<Path> o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
-
-			if (o.isEmpty() || preferReducedEvents) {
-				o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events_reduced.tar")).findFirst();
+				if (o.isEmpty()) {
+					o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events_reduced.tar")).findFirst();
+				}
 			}
 
 			return o.orElse(null);
+
 		} catch (IOException e) {
 			log.error("Error finding event files for {}", scenario);
 			return null;

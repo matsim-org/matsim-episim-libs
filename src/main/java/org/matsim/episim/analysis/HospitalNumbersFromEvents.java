@@ -214,10 +214,10 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
 
 
 //		 }
