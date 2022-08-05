@@ -948,11 +948,6 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 		@GenerateSeeds(5)
 		public long seed;
 
-		// LEISURE SPLIT
-//		@StringParameter({"none", "private", "public", "both"})
-//		public String leisSplit;
-
-
 		@StringParameter({"6.0"})
 		public String StrainA;
 
@@ -965,24 +960,24 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 		//		@StringParameter({"false", "true"})
 //		public String igA;
 		// vaccination campaign
-		@StringParameter({"off"})
+		@StringParameter({"ba5Update", "mRNA", "off"})
 		public String vacType;
 
 
 		//measures in the work context:
 		// homeOff = 50% home office = work Rf cut in half
 		//
-		@StringParameter({"none"})
+		@StringParameter({"none", "homeOff", "test", "mask", "all"})
 		public String work;
 
 		@StringParameter({"none", "mask", "test", "all"})
 		public String leis;
 
 		// mask restrictions for "shop_daily", "shop_other", "errands"
-		@StringParameter({"none"})
+		@StringParameter({"none", "mask"})
 		public String errands;
 
-		@StringParameter({"none"})
+		@StringParameter({"none", "maskVentTest"})
 		public String edu;
 
 		@StringParameter({"mask"})
