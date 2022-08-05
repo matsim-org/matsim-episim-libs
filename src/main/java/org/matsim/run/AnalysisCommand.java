@@ -109,14 +109,15 @@ public class AnalysisCommand implements Runnable {
 	/**
 	 * Reads in all event file from a scenario.
 	 *
-	 * @param scenario path of the scenario, which contains the event folder
-	 * @param callback will be executed before reading an event file and pass the path
-	 * @param handler  handler for the events
+	 * @param scenario            path of the scenario, which contains the event folder
+	 * @param callback            will be executed before reading an event file and pass the path
+	 * @param preferReducedEvents
+	 * @param handler             handler for the events
 	 * @return list of read event files
 	 */
-	public static List<String> forEachEvent(Path scenario, Consumer<String> callback, EventHandler... handler) {
+	public static List<String> forEachEvent(Path scenario, Consumer<String> callback, boolean preferReducedEvents, EventHandler... handler) {
 
-		Path events = getEvents(scenario);
+		Path events = getEvents(scenario, preferReducedEvents);
 		if (events == null) {
 			log.warn("No events found at {}", scenario);
 			return List.of();
@@ -208,17 +209,20 @@ public class AnalysisCommand implements Runnable {
 	 * Check if events are present for the scenario. This method fallbacks to reduced events, if original are not present.
 	 */
 	@Nullable
-	public static Path getEvents(Path scenario) {
+	public static Path getEvents(Path scenario, boolean preferReducedEvents) {
 
 		if (Files.isDirectory(scenario.resolve("events")) && !isEmpty(scenario.resolve("events"))) {
 			return scenario.resolve("events");
 		}
 
 		try {
+
+
 			Optional<Path> o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events.tar")).findFirst();
 
-			if (o.isEmpty())
+			if (o.isEmpty() || preferReducedEvents) {
 				o = Files.list(scenario).filter(p -> p.getFileName().toString().endsWith("events_reduced.tar")).findFirst();
+			}
 
 			return o.orElse(null);
 		} catch (IOException e) {

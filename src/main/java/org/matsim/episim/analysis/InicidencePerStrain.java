@@ -25,26 +25,15 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.config.Configurator;
-import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.Scenario;
-import org.matsim.api.core.v01.events.ActivityStartEvent;
-import org.matsim.api.core.v01.events.handler.ActivityStartEventHandler;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
-import org.matsim.core.api.experimental.events.EventsManager;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.core.events.EventsUtils;
-import org.matsim.core.events.MatsimEventsReader;
 import org.matsim.core.scenario.ScenarioUtils;
-import org.matsim.core.utils.io.UncheckedIOException;
-import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.EpisimPerson.DiseaseStatus;
 import org.matsim.episim.events.*;
-import org.matsim.episim.model.VaccinationType;
-import org.matsim.episim.model.VirusStrain;
 import org.matsim.run.AnalysisCommand;
-import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 
 import picocli.CommandLine;
@@ -54,11 +43,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.Map.Entry;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 
 /**
@@ -140,7 +126,7 @@ public class InicidencePerStrain implements Callable<Integer> {
 
 		Handler handler = new Handler(population, startDate, symptoms, seriouslySick);
 
-		AnalysisCommand.forEachEvent(scenario, s -> {}, handler);
+		AnalysisCommand.forEachEvent(scenario, s -> {}, false, handler);
 
 		int persons = 0;
 		for (Person p : population.getPersons().values()) {

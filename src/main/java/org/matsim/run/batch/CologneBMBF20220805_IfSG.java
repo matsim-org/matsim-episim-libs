@@ -464,10 +464,10 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
-				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new FilterEvents().withArgs("--output","./output/"),
+//				new VaccinationEffectiveness().withArgs(),
+//				new RValuesFromEvents().withArgs(),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+//				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);

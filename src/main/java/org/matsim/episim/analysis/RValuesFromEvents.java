@@ -45,7 +45,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.Map.Entry;
-import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 
@@ -115,7 +114,7 @@ public class RValuesFromEvents implements OutputAnalysis {
 		RHandler rHandler = new RHandler();
 
 		List<String> eventFiles = AnalysisCommand.forEachEvent(output, s -> {
-		}, infHandler, rHandler);
+		}, false, infHandler, rHandler);
 
 		BufferedWriter bw = Files.newBufferedWriter(output.resolve(id + "infectionsPerActivity.txt"));
 		bw.write("day\tdate\tactivity\tinfections\tinfectionsShare\tscenario");

@@ -136,7 +136,7 @@ public class SecondaryAttackRateFromEvents implements OutputAnalysis {
 		SecondaryAttackRateHandler hhHandler = new SecondaryAttackRateHandler(personToHousehold);
 
 		List<String> eventFiles = AnalysisCommand.forEachEvent(output, s -> {
-		}, hhHandler);
+		}, false, hhHandler);
 
 		Map<Integer, Map<String, Integer>> itToHouseholdToInfections = hhHandler.getItToHouseholdToInfections();
 
