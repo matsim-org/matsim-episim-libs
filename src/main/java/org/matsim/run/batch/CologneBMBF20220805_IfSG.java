@@ -934,10 +934,10 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 		@GenerateSeeds(5)
 		public long seed;
 
-		@StringParameter({"6.0"})
+		@StringParameter({"off","3.0","6.0"})
 		public String StrainA;
 
-		@StringParameter({"off"})
+		@StringParameter({"off", "3.0", "6.0"})
 		public String StrainB;
 
 		@StringParameter({"2022-10-01"})
@@ -946,27 +946,32 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 		//		@StringParameter({"false", "true"})
 //		public String igA;
 		// vaccination campaign
-		@StringParameter({"ba5Update", "mRNA", "off"})
+		@StringParameter({"ba1Update","ba5Update", "mRNA", "off"})
 		public String vacType;
 
 
 		//measures in the work context:
 		// homeOff = 50% home office = work Rf cut in half
 		//
-		@StringParameter({"none", "homeOff", "test", "mask", "all"})
+//		@StringParameter({"none", "homeOff", "test", "mask", "all"})
+		@StringParameter({"none"})
 		public String work;
 
-		@StringParameter({"none", "mask", "test", "all"})
+//		@StringParameter({"none", "mask", "test", "all"})
+		@StringParameter({"none"})
 		public String leis;
 
 		// mask restrictions for "shop_daily", "shop_other", "errands"
-		@StringParameter({"none", "mask"})
+//		@StringParameter({"none", "mask"})
+		@StringParameter({"none"})
 		public String errands;
 
-		@StringParameter({"none", "maskVentTest"})
+//		@StringParameter({"none", "maskVentTest"})
+		@StringParameter({"none"})
 		public String edu;
 
-		@StringParameter({"mask"})
+//		@StringParameter({"mask"})
+		@StringParameter({"none"})
 		public String pt;
 	}
 
