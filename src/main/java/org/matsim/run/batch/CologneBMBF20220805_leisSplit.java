@@ -752,14 +752,17 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 		}
 
 		//SCHOOL
-		// todo check mask rate
 		if (params.edu.equals("maskVentTest")) {
 			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
 			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
 							FaceMask.CLOTH, 0.0,
-							FaceMask.N95, 0.25,
-							FaceMask.SURGICAL, 0.25)),
-					 "educ_secondary", "educ_higher", "educ_tertiary", "educ_other");
+							FaceMask.N95, 0.45,
+							FaceMask.SURGICAL, 0.45)),
+					 "educ_secondary", "educ_tertiary", "educ_other");
+			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
+							FaceMask.CLOTH, 0.0,
+							FaceMask.N95, 0.90)),
+					"educ_higher");
 
 		} else if (params.edu.equals("none")) {
 
@@ -954,7 +957,7 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 		@StringParameter({"off"})
 		public String StrainB;
 
-		@StringParameter({"2022-10-01"})
+		@StringParameter({"2022-12-01"})
 		public String resDate;
 
 		//		@StringParameter({"false", "true"})
