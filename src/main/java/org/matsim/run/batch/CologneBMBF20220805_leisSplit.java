@@ -695,6 +695,9 @@ public class CologneBMBF20220805_leisSplit implements BatchRun<CologneBMBF202208
 
 		// leisure:
 		{
+//			testingRateForActivitiesRapid.get("leisPrivate").put(restrictionDate, 0.0); // was 0.1
+//			testingRateForActivitiesRapidVac.get("leisPrivate").put(restrictionDate, gpTestRate);
+
 			testingRateForActivitiesRapid.get("leisPublic").put(restrictionDate, 0.9);
 			testingRateForActivitiesRapidVac.get("leisPublic").put(restrictionDate, gpTestRate);
 		}
