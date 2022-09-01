@@ -25,9 +25,9 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
+public class CologneScenarioHubRound2 implements BatchRun<CologneScenarioHubRound2.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
 	@Nullable
@@ -388,7 +388,7 @@ public class CologneScenarioHub implements BatchRun<CologneScenarioHub.Params> {
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneScenarioHub.class.getName(),
+				RunParallel.OPTION_SETUP, CologneScenarioHubRound2.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(70),

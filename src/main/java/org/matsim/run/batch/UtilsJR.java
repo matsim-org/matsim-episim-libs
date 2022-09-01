@@ -2,7 +2,11 @@ package org.matsim.run.batch;
 
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigValue;
+import org.matsim.core.utils.io.IOUtils;
+import org.matsim.episim.model.ImmunityEvent;
+import org.matsim.episim.model.VaccinationType;
 import org.matsim.episim.model.VirusStrain;
+import org.matsim.episim.reporting.EpisimWriter;
 import tech.tablesaw.api.DateColumn;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.StringColumn;
@@ -56,6 +60,51 @@ public class UtilsJR {
 		}
 
 		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain.html");
+
+
+
+	}
+
+	static void produceAntibodiesCsv(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies) {
+
+		try (BufferedWriter abReport = IOUtils.getBufferedWriter(IOUtils.getFileUrl("antibodies.csv"), IOUtils.CHARSET_UTF8, false)) {
+			abReport.write("protectionFrom");
+			for (VirusStrain strain : VirusStrain.values()) {
+				abReport.write("," + strain.toString());
+			}
+			abReport.write("\n");
+
+			for (VirusStrain protectionFrom : VirusStrain.values()) {
+				abReport.write(protectionFrom.toString());
+				for (VirusStrain  protectionAgainst: VirusStrain.values()) {
+
+					abReport.write("," + initialAntibodies.get(protectionFrom).get(protectionAgainst));
+
+				}
+				abReport.write("\n");
+
+			}
+
+			for (VaccinationType protectionFrom : VaccinationType.values()) {
+				abReport.write(protectionFrom.toString());
+				for (VirusStrain  protectionAgainst: VirusStrain.values()) {
+
+					abReport.write("," + initialAntibodies.get(protectionFrom).get(protectionAgainst));
+
+				}
+				abReport.write("\n");
+
+			}
+
+		} catch (Exception e) {
+
+		}
+
+
+
+		// ROWS: IMMUNITY FROM (top: infection, bottom: vaccinations)
+		// COLUMNS : IMMUNITY AGAINST
+
 
 
 

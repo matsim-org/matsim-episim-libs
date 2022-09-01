@@ -40,6 +40,7 @@ public enum VirusStrain implements ImmunityEvent {
 
 	STRAIN_A,
 
-	STRAIN_B
+	STRAIN_B,
 
+	STRAIN_C
 }

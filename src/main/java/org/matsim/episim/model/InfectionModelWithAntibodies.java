@@ -97,7 +97,9 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			double igaFactor = 0.0;
 
 			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
-			if (target.hadStrain(infector.getVirusStrain())) {
+
+
+			if (target.hadStrain(infector.getVirusStrain()) && !List.of(VirusStrain.STRAIN_A, VirusStrain.STRAIN_B, VirusStrain.STRAIN_C).contains(infector.getVirusStrain())) {
 
 				int lastInfectionWithStrain = 0;
 				for (int ii = 0; ii < target.getNumInfections();  ii++) {
@@ -109,7 +111,7 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 				igaFactor = 1.0 / (1.0 + Math.exp(-2.0 * (1.0 - target.daysSinceInfection(lastInfectionWithStrain, iteration) / igaTimePeriod)));
 
 			} else if (vaccinationConfig.getUseIgA()) {
-				List<VirusStrain> crossImmunityStrainsOmicron = List.of(VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5, VirusStrain.STRAIN_A, VirusStrain.STRAIN_B);
+				List<VirusStrain> crossImmunityStrainsOmicron = List.of(VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5);
 
 				if(crossImmunityStrainsOmicron.contains(infector.getVirusStrain())){
 					int lastInfectionWithStrain = 0;

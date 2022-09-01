@@ -14,6 +14,16 @@ public enum VaccinationType implements ImmunityEvent {
 	/**
 	 * Not a real vaccination, but used to describe the profile for persons that have been infected and gained a natural immunity.
 	 */
-	natural
+	natural,
+
+	fall22,
+
+	spring23,
+
+	fall23,
+
+	spring24,
+
+
 
 }

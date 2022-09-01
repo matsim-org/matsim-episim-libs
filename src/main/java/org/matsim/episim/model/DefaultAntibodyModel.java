@@ -129,7 +129,6 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
-
 				// check that new antibody level is at most 150
 				antibodies = Math.min(150., antibodies);
 
