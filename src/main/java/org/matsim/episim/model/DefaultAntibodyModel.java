@@ -2,9 +2,24 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+import it.unimi.dsi.fastutil.doubles.DoubleList;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
+import org.matsim.run.batch.UtilsJR;
+import tech.tablesaw.api.DoubleColumn;
+import tech.tablesaw.api.Table;
+import tech.tablesaw.plotly.api.Histogram;
+import tech.tablesaw.plotly.components.Axis;
+import tech.tablesaw.plotly.components.Figure;
+import tech.tablesaw.plotly.components.Layout;
+import tech.tablesaw.plotly.components.Page;
+import tech.tablesaw.plotly.traces.ScatterTrace;
+import tech.tablesaw.table.TableSliceGroup;
 
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.SplittableRandom;
@@ -28,6 +43,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	@Override
 	public void init(Collection<EpisimPerson> persons, int iteration) {
 
+		DoubleList values = new DoubleArrayList();
+
 		for (EpisimPerson person : persons) {
 
 			// mu = log(median); log(1)=0
@@ -39,6 +56,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
+			values.add(immuneResponseMultiplier);
+
 
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
@@ -52,6 +71,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 		}
 
+		Figure fig = Histogram.create("Distribution of Immune Response Multipliers", values.toDoubleArray());
+
+		try (Writer writer = new OutputStreamWriter(new FileOutputStream("immuneResponseMultiplierDistribution.html"), StandardCharsets.UTF_8)) {
+			writer.write(Page.pageBuilder(fig, "target").build().asJavascript());
+		} catch (IOException e) {
+			throw new UncheckedIOException(e);
+		}
 
 	}
 

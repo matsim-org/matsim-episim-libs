@@ -24,6 +24,38 @@ public enum VaccinationType implements ImmunityEvent {
 
 	spring24,
 
+	fall24,
+
+	spring25,
+
+	fall25,
+
+	spring26,
+
+	fall26,
+
+	spring27,
+
+	fall27,
+
+	spring28,
+
+	fall28,
+
+	spring29,
+
+	fall29,
+
+	spring30,
+
+	fall30,
+
+	spring31,
+
+	fall31,
+
+	spring32
+
 
 
 }

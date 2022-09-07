@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
- * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependen additions.
+ * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
  */
 public final class InfectionModelWithAntibodies implements InfectionModel {
 
@@ -93,16 +93,17 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 		double immunityFactorInfector = 1.0 / (1.0 + Math.pow(infector.getAntibodyLevelAtInfection(), vaccinationConfig.getBeta()));
 		infectivity *= (1.0 - (0.25 * (1.0 - immunityFactorInfector)));
 
+
 		{
 			double igaFactor = 0.0;
 
 			double igaTimePeriod = vaccinationConfig.getTimePeriodIgA();
 
 
-			if (target.hadStrain(infector.getVirusStrain()) && !List.of(VirusStrain.STRAIN_A, VirusStrain.STRAIN_B, VirusStrain.STRAIN_C).contains(infector.getVirusStrain())) {
+			if (target.hadStrain(infector.getVirusStrain()) && !List.of(VirusStrain.STRAIN_A, VirusStrain.STRAIN_B, VirusStrain.STRAIN_C, VirusStrain.STRAIN_D, VirusStrain.STRAIN_E, VirusStrain.STRAIN_F, VirusStrain.STRAIN_G, VirusStrain.STRAIN_H, VirusStrain.STRAIN_I, VirusStrain.STRAIN_J, VirusStrain.STRAIN_K, VirusStrain.STRAIN_L, VirusStrain.STRAIN_M, VirusStrain.STRAIN_N).contains(infector.getVirusStrain())) {
 
 				int lastInfectionWithStrain = 0;
-				for (int ii = 0; ii < target.getNumInfections();  ii++) {
+				for (int ii = 0; ii < target.getNumInfections(); ii++) {
 					if (target.getVirusStrain(ii) == infector.getVirusStrain()) {
 						lastInfectionWithStrain = ii;
 					}
@@ -113,11 +114,11 @@ public final class InfectionModelWithAntibodies implements InfectionModel {
 			} else if (vaccinationConfig.getUseIgA()) {
 				List<VirusStrain> crossImmunityStrainsOmicron = List.of(VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5);
 
-				if(crossImmunityStrainsOmicron.contains(infector.getVirusStrain())){
+				if (crossImmunityStrainsOmicron.contains(infector.getVirusStrain())) {
 					int lastInfectionWithStrain = 0;
 					boolean targetHadStrain = false;
-					for (int ii = 0; ii < target.getNumInfections();  ii++) {
-						if (crossImmunityStrainsOmicron.contains(target.getVirusStrain(ii))){
+					for (int ii = 0; ii < target.getNumInfections(); ii++) {
+						if (crossImmunityStrainsOmicron.contains(target.getVirusStrain(ii))) {
 							targetHadStrain = true;
 							lastInfectionWithStrain = ii;
 						}

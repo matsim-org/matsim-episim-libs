@@ -419,6 +419,34 @@
 		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
 
 
+		 // repeat one year worth of school closures 10 years into the future
+		 // exact dates won't be correct
+		 for (int addedYear = 1; addedYear <= 10; addedYear++) {
+			 //Osterferien
+			 builder.restrict(LocalDate.parse("2022-04-11").plusYears(addedYear), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2022-04-23").plusYears(addedYear), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 //Sommerferien
+			 builder.restrict(LocalDate.parse("2022-06-27").plusYears(addedYear), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2022-08-09").plusYears(addedYear), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+			 builder.restrict(LocalDate.parse("2022-07-23").plusYears(addedYear), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-10-17").plusYears(addedYear), 1.0, "educ_higher");
+
+			 //Herbstferien
+			 builder.restrict(LocalDate.parse("2022-10-04").plusYears(addedYear), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2022-10-15").plusYears(addedYear), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 //Weihnachtsferien
+			 builder.restrict(LocalDate.parse("2022-12-23").plusYears(addedYear), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+			 builder.restrict(LocalDate.parse("2023-01-06").plusYears(addedYear), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+			 builder.restrict(LocalDate.parse("2022-12-19").plusYears(addedYear), 0.2, "educ_higher");
+			 builder.restrict(LocalDate.parse("2022-12-31").plusYears(addedYear), 1.0, "educ_higher");
+
+		 }
+
+
+
+
 		 {
 			 LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			 for (int ii = 0; ii <= 14; ii++) {

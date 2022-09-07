@@ -11,6 +11,7 @@ import tech.tablesaw.api.DateColumn;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.StringColumn;
 import tech.tablesaw.api.Table;
+import tech.tablesaw.plotly.api.Histogram;
 import tech.tablesaw.plotly.components.Axis;
 import tech.tablesaw.plotly.components.Figure;
 import tech.tablesaw.plotly.components.Layout;
@@ -21,6 +22,7 @@ import tech.tablesaw.table.TableSliceGroup;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -30,7 +32,7 @@ public class UtilsJR {
 	static void produceDiseaseImportPlot(Map<VirusStrain, NavigableMap<LocalDate, Integer>> infections_pers_per_day) {
 
 		LocalDate startDate = LocalDate.of(2020, 2, 1);
-		LocalDate endDate = LocalDate.of(2023, 2, 25);
+		LocalDate endDate = LocalDate.of(2032, 12, 31);
 
 		DateColumn recordsDate = DateColumn.create("date");
 		DoubleColumn values = DoubleColumn.create("import");
@@ -59,24 +61,31 @@ public class UtilsJR {
 //			}
 		}
 
-		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain.html");
-
+		producePlot(recordsDate, values, groupings, "import by strain", "import", "importByStrain.html");
 
 
 	}
 
 	static void produceAntibodiesCsv(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies) {
 
+		List<VirusStrain> relevantStrains = new ArrayList<>(List.of(VirusStrain.values()));
+		relevantStrains.remove(VirusStrain.B1351);
+
+		List<VaccinationType> relevantVaccinations = new ArrayList<>(List.of(VaccinationType.values()));
+		relevantVaccinations.removeAll(List.of(VaccinationType.ba1Update, VaccinationType.ba5Update, VaccinationType.natural, VaccinationType.generic));
+
 		try (BufferedWriter abReport = IOUtils.getBufferedWriter(IOUtils.getFileUrl("antibodies.csv"), IOUtils.CHARSET_UTF8, false)) {
 			abReport.write("protectionFrom");
-			for (VirusStrain strain : VirusStrain.values()) {
+
+
+			for (VirusStrain strain : relevantStrains) {
 				abReport.write("," + strain.toString());
 			}
 			abReport.write("\n");
 
-			for (VirusStrain protectionFrom : VirusStrain.values()) {
+			for (VirusStrain protectionFrom : relevantStrains) {
 				abReport.write(protectionFrom.toString());
-				for (VirusStrain  protectionAgainst: VirusStrain.values()) {
+				for (VirusStrain protectionAgainst : relevantStrains) {
 
 					abReport.write("," + initialAntibodies.get(protectionFrom).get(protectionAgainst));
 
@@ -85,9 +94,10 @@ public class UtilsJR {
 
 			}
 
-			for (VaccinationType protectionFrom : VaccinationType.values()) {
+
+			for (VaccinationType protectionFrom : relevantVaccinations) {
 				abReport.write(protectionFrom.toString());
-				for (VirusStrain  protectionAgainst: VirusStrain.values()) {
+				for (VirusStrain protectionAgainst : relevantStrains) {
 
 					abReport.write("," + initialAntibodies.get(protectionFrom).get(protectionAgainst));
 
@@ -101,11 +111,8 @@ public class UtilsJR {
 		}
 
 
-
 		// ROWS: IMMUNITY FROM (top: infection, bottom: vaccinations)
 		// COLUMNS : IMMUNITY AGAINST
-
-
 
 
 	}
@@ -151,16 +158,15 @@ public class UtilsJR {
 //				values.append(entry.getValue());
 //				groupings.append(strain.toString());
 //			}
-		}
+	}
 
 //		producePlot(recordsDate,values,groupings,"import by strain", "import", "importByStrain.html");
-
 
 
 //	}
 
 
-	private static void producePlot(DateColumn records, DoubleColumn values, StringColumn groupings, String title, String yAxisTitle, String filename) {
+	public static void producePlot(DateColumn records, DoubleColumn values, StringColumn groupings, String title, String yAxisTitle, String filename) {
 		// Make plot
 		Table table = Table.create(title);
 		table.addColumns(records);

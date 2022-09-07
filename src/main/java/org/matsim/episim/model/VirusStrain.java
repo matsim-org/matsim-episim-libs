@@ -42,5 +42,27 @@ public enum VirusStrain implements ImmunityEvent {
 
 	STRAIN_B,
 
-	STRAIN_C
+	STRAIN_C,
+
+	STRAIN_D,
+
+	STRAIN_E,
+
+	STRAIN_F,
+
+	STRAIN_G,
+
+	STRAIN_H,
+
+	STRAIN_I,
+
+	STRAIN_J,
+
+	STRAIN_K,
+
+	STRAIN_L,
+
+	STRAIN_M,
+
+	STRAIN_N
 }
