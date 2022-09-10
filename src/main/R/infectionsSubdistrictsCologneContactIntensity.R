@@ -30,6 +30,11 @@ if (TRUE) {
 
 rm(list = setdiff(ls(), union(ls(pattern = "^gbl_"), lsf.str())))
 
+district <- c("Porz","Raderthal","Flittard","Zollstock","Klettenberg","Merheim","Rath/Heumar","Ostheim","Lövenich","Langel","Immendorf","Bickendorf","Niehl","Vingst","Deutz","Vogelsang","Nippes","Ossendorf","Urbach","Libur","Esch/Auweiler","Stammheim","Wahnheide","Bayenthal","Neustadt/Nord","Holweide","Eil","Weiß","Westhoven","Brück","Volkhoven/Weiler","Buchforst","Mauenheim","Lindenthal","Lind","Bilderstöckchen","Blumenberg","Sürth","Mülheim","Höhenhaus","Worringen","Humboldt/Gremberg","Merkenich","Weiden","Riehl","Rodenkirchen","Weidenpesch","Altstadt/Süd","Braunsfeld","Longerich","Lindweiler","Neustadt/Süd","Neuehrenfeld","Marienburg","Roggendorf/Thenhoven","Bocklemünd/Mengenich","Rondorf","Dünnwald","Kalk","Elsdorf","Seeberg","Wahn","Widdersdorf","Buchheim","Heimersdorf","Altstadt/Nord","Dellbrück","Gremberghoven","Raderberg","Neubrück","Meschenich","Höhenberg","Ehrenfeld","Müngersdorf","Junkersdorf","Hahnwald","Ensen","Godorf","Pesch","Zündorf","Poll","Chorweiler","Finkenberg","Fühlingen","Sülz","Grengel")
+cnt <- c(2922,1186,1782,4652,2363,2008,3082,2343,2329,691,526,3831,4081,2658,3292,1754,7800,1990,2850,225,1851,1657,1820,2046,6249,4616,1939,1450,1186,2468,1105,1611,1298,6491,802,3164,928,2276,9358,3161,2348,3152,1257,3988,2776,3639,2870,5811,2688,3067,678,8341,5132,1548,875,2265,2246,2320,4995,332,2195,1164,1799,2709,1305,3883,4782,677,1211,1894,1258,2847,8133,1731,2970,407,1701,588,1718,2573,2661,2868,1209,401,7810,1173)
+distict_to_population <- data.frame(district,cnt)
+
+
 #directory <- "2022-07-15/1/output/"
 #run_params <- get_run_parameters(gbl_directory)
 episim_infections_district <- read_combine_episim_output(gbl_directory, "infections_subdistrict.txt", TRUE)
@@ -107,11 +112,16 @@ infections <- episim_incidence_district %>%
   # NOTE/TODO: rich and poor are switchen in the following line because of bug in code!
   rename(c("base" = scenario_base, "policy" = scenario_policy, "policyPoor" = scenario_policyRich, "policyRich" = scenario_policyPoor)) %>%
   select(!starts_with("ci")) %>%
-  mutate(policyRich = policyRich / policy, policyPoor = policyPoor / policy) %>%
-  mutate(policy = policy / base)
+  # NEW
+  left_join(distict_to_population,by="district") %>%
+  mutate(base = base / cnt * 100000, policy = policy / cnt * 100000, policyRich = policyRich / cnt * 100000, policyPoor = policyPoor / cnt * 100000)
+
+  # OLD
+ # mutate(policyRich = policyRich / policy, policyPoor = policyPoor / policy) %>%
+ # mutate(policy = policy / base)
 
   joined <- lor %>% left_join(infections, by = c("STT_NAME" = "district")) %>%
-  pivot_longer(cols = starts_with("policy"), names_to = "scenario", values_to = "infections")
+  pivot_longer(cols = (starts_with("policy") | starts_with("base")),names_to = "scenario", values_to = "infections")
 
 
 joined.fix <- st_make_valid(joined)
@@ -121,13 +131,17 @@ shp_high <- lor %>% filter(str_detect(STT_NAME, '^[A-L]'))
 shp_low <- lor %>% filter(str_detect(STT_NAME, '^[M-Z]'))
 tmap_mode("plot")
 # plot_m2_lor <- #tm_basemap(leaflet::providers$OpenStreetMap) +
-plot_policy <- tm_shape(joined.fix %>% filter(scenario == "policy")%>% rename(c("Change in Infections" = "infections"))) + #' )
+plot_policy <- tm_shape(joined.fix %>% filter(scenario == "base" | scenario == "policy")%>% rename(c("Change in Infections" = "infections"))) + #' )
   tm_facets(by = "scenario") +
-  tm_polygons(col = "Change in Infections", id = "STT_NAME", palette = viridis(9), alpha = 0.9,breaks = c(0.1,0.3,0.5,0.7,0.9,1.1,1.3,1.5,1.7,1.9), legend.show = FALSE)+
+  tm_polygons(col = "Change in Infections", id = "STT_NAME", palette = viridis(10, direction = -1),alpha = 0.9, breaks = c(0,2000,4000,6000,8000,10000))+#, palette = viridis(9), alpha = 0.9,breaks = c(0.1,0.3,0.5,0.7,0.9,1.1,1.3,1.5,1.7,1.9))+
   tm_shape(shp_high) +
   tm_borders(col = "red", lwd = 2, lty = "dashed") +
   tm_shape(shp_low) +
-  tm_borders(col = "blue", lwd = 2, lty = "dashed")
+  tm_borders(col = "blue", lwd = 2, lty = "dashed")+
+  tm_add_legend(title = "Neighborhood Status", type = "line", lwd = 2, lty = "dashed", col = c("blue", "red"), labels = c("rich","poor"))
+
+
+plot_policy
 
 plot_policyRichPoor <- tm_shape(joined.fix %>% filter(scenario != "policy") %>% mutate(scenario = str_replace(scenario, "policyPoor", "Vaccinate Poor Neighborhoods"), scenario = str_replace(scenario, "policyRich", "Vaccinate Rich Neighborhoods"))) + #' %>% rename(c("policy vs. base" = "change"))
   tm_facets(by = "scenario", nrow = 2) +
@@ -138,9 +152,9 @@ plot_policyRichPoor <- tm_shape(joined.fix %>% filter(scenario != "policy") %>% 
   tm_borders(col = "blue", lwd = 2, lty = "dashed") +
   tm_add_legend(title = "Neighborhood Status", type = "line", lwd = 2, lty = "dashed", col = c("blue", "red"), labels = c("rich","poor"))
 
+plot_policyRichPoor
 
-
-tmap_arrange(plot_policy,plot_policyRichPoor)
+# tmap_arrange(plot_policy,plot_policyRichPoor)
 
 
 # blue border = [R-Z] = large home size (75m2 per person) =  low contact intensity (0.1) = less infections

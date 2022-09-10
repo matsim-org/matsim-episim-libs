@@ -62,13 +62,30 @@ public class DifferentiateHomeSizeInEventsCologne {
 		Population population = PopulationUtils.readPopulation( ROOT + inputPopulation);
 
 		Map<String, String> homeIdToDistrict = new HashMap<>();
+		Map<String, Integer> subdistrictToPopulation = new HashMap<>();
 		for (Person person : population.getPersons().values()) {
 			try {
 				String district = index.query(Double.parseDouble(person.getAttributes().getAttribute("homeX").toString()), Double.parseDouble(person.getAttributes().getAttribute("homeY").toString()));
 				homeIdToDistrict.put(person.getAttributes().getAttribute("homeId").toString(), district);
 				person.getAttributes().putAttribute("subdistrict", district);
+
+				Integer cnt = subdistrictToPopulation.getOrDefault(district, 0) + 1;
+				subdistrictToPopulation.put(district, cnt);
 			} catch (NoSuchElementException e) {
 			}
+		}
+
+//		for (Map.Entry<String, Integer> entry : subdistrictToPopulation.entrySet()) {
+//			System.out.println(entry.getKey() + "," + entry.getValue());
+//		}
+
+		for (String district : subdistrictToPopulation.keySet()) {
+			System.out.print("\""+district+"\",");
+		}
+
+		System.out.println();
+		for (Integer integer : subdistrictToPopulation.values()) {
+			System.out.print(integer + ",");
 		}
 
 		PopulationUtils.writePopulation(population, ROOT + outputPopulation);
