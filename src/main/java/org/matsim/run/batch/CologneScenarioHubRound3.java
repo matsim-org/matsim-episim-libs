@@ -34,46 +34,70 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 
 
-	Map<LocalDate,VirusStrain> newVirusStrains = new HashMap<>();
-	Map<LocalDate, VaccinationType> newVaccinations = new HashMap<>();
+	public static Map<LocalDate,VirusStrain> newVirusStrains = renderNewVirusStrains();
+	public static Map<LocalDate, VaccinationType> newVaccinations = renderNewVaccinations();
 
-	public CologneScenarioHubRound3() {
+	private static Map<LocalDate, VaccinationType> renderNewVaccinations() {
 
-		newVirusStrains.put(LocalDate.of(2022,10,15),VirusStrain.STRAIN_A);
-		newVirusStrains.put(LocalDate.of(2023,7,15),VirusStrain.STRAIN_B);
-		newVirusStrains.put(LocalDate.of(2024,4,15),VirusStrain.STRAIN_C);
-		newVirusStrains.put(LocalDate.of(2025,1,15),VirusStrain.STRAIN_D);
-		newVirusStrains.put(LocalDate.of(2025,10,15),VirusStrain.STRAIN_E);
-		newVirusStrains.put(LocalDate.of(2026,7,15),VirusStrain.STRAIN_F);
-		newVirusStrains.put(LocalDate.of(2027,4,15),VirusStrain.STRAIN_G);
-		newVirusStrains.put(LocalDate.of(2028,1,15),VirusStrain.STRAIN_H);
-		newVirusStrains.put(LocalDate.of(2028,10,15),VirusStrain.STRAIN_I);
-		newVirusStrains.put(LocalDate.of(2029,7,15),VirusStrain.STRAIN_J);
-		newVirusStrains.put(LocalDate.of(2030,4,15),VirusStrain.STRAIN_K);
-		newVirusStrains.put(LocalDate.of(2031,1,15),VirusStrain.STRAIN_L);
-		newVirusStrains.put(LocalDate.of(2031,10,15),VirusStrain.STRAIN_M);
-		newVirusStrains.put(LocalDate.of(2032,7,15),VirusStrain.STRAIN_N);
+		Map<LocalDate, VaccinationType> xxx = new HashMap<>();
+		xxx.put(LocalDate.of(2022,9,1),VaccinationType.fall22);
+		xxx.put(LocalDate.of(2023,3,1),VaccinationType.spring23);
+		xxx.put(LocalDate.of(2023,9,1),VaccinationType.fall23);
+		xxx.put(LocalDate.of(2024,3,1),VaccinationType.spring24);
+		xxx.put(LocalDate.of(2024,9,1),VaccinationType.fall24);
+		xxx.put(LocalDate.of(2025,3,1),VaccinationType.spring25);
+		xxx.put(LocalDate.of(2025,9,1),VaccinationType.fall25);
+		xxx.put(LocalDate.of(2026,3,1),VaccinationType.spring26);
+		xxx.put(LocalDate.of(2026,9,1),VaccinationType.fall26);
+		xxx.put(LocalDate.of(2027,3,1),VaccinationType.spring27);
+		xxx.put(LocalDate.of(2027,9,1),VaccinationType.fall27);
+		xxx.put(LocalDate.of(2028,3,1),VaccinationType.spring28);
+		xxx.put(LocalDate.of(2028,9,1),VaccinationType.fall28);
+		xxx.put(LocalDate.of(2029,3,1),VaccinationType.spring29);
+		xxx.put(LocalDate.of(2029,9,1),VaccinationType.fall29);
+		xxx.put(LocalDate.of(2030,3,1),VaccinationType.spring30);
+		xxx.put(LocalDate.of(2030,9,1),VaccinationType.fall30);
+		xxx.put(LocalDate.of(2031,3,1),VaccinationType.spring31);
+		xxx.put(LocalDate.of(2031,9,1),VaccinationType.fall31);
+		xxx.put(LocalDate.of(2032,3,1),	VaccinationType.spring32);
 
-		newVaccinations.put(LocalDate.of(2022,9,1),VaccinationType.fall22);
-		newVaccinations.put(LocalDate.of(2023,3,1),VaccinationType.spring23);
-		newVaccinations.put(LocalDate.of(2023,9,1),VaccinationType.fall23);
-		newVaccinations.put(LocalDate.of(2024,3,1),VaccinationType.spring24);
-		newVaccinations.put(LocalDate.of(2024,9,1),VaccinationType.fall24);
-		newVaccinations.put(LocalDate.of(2025,3,1),VaccinationType.spring25);
-		newVaccinations.put(LocalDate.of(2025,9,1),VaccinationType.fall25);
-		newVaccinations.put(LocalDate.of(2026,3,1),VaccinationType.spring26);
-		newVaccinations.put(LocalDate.of(2026,9,1),VaccinationType.fall26);
-		newVaccinations.put(LocalDate.of(2027,3,1),VaccinationType.spring27);
-		newVaccinations.put(LocalDate.of(2027,9,1),VaccinationType.fall27);
-		newVaccinations.put(LocalDate.of(2028,3,1),VaccinationType.spring28);
-		newVaccinations.put(LocalDate.of(2028,9,1),VaccinationType.fall28);
-		newVaccinations.put(LocalDate.of(2029,3,1),VaccinationType.spring29);
-		newVaccinations.put(LocalDate.of(2029,9,1),VaccinationType.fall29);
-		newVaccinations.put(LocalDate.of(2030,3,1),VaccinationType.spring30);
-		newVaccinations.put(LocalDate.of(2030,9,1),VaccinationType.fall30);
-		newVaccinations.put(LocalDate.of(2031,3,1),VaccinationType.spring31);
-		newVaccinations.put(LocalDate.of(2031,9,1),VaccinationType.fall31);
-		newVaccinations.put(LocalDate.of(2032,3,1),	VaccinationType.spring32);
+		xxx.put(LocalDate.of(2022,10,15),	VaccinationType.vax_STRAIN_A);
+		xxx.put(LocalDate.of(2023,7,15),	VaccinationType.vax_STRAIN_B);
+		xxx.put(LocalDate.of(2024,4,15),	VaccinationType.vax_STRAIN_C);
+		xxx.put(LocalDate.of(2025,1,15),	VaccinationType.vax_STRAIN_D);
+		xxx.put(LocalDate.of(2025,10,15),	VaccinationType.vax_STRAIN_E);
+		xxx.put(LocalDate.of(2026,7,15),	VaccinationType.vax_STRAIN_F);
+		xxx.put(LocalDate.of(2027,4,15),	VaccinationType.vax_STRAIN_G);
+		xxx.put(LocalDate.of(2028,1,15),	VaccinationType.vax_STRAIN_H);
+		xxx.put(LocalDate.of(2028,10,15),	VaccinationType.vax_STRAIN_I);
+		xxx.put(LocalDate.of(2029,7,15),	VaccinationType.vax_STRAIN_J);
+		xxx.put(LocalDate.of(2030,4,15),	VaccinationType.vax_STRAIN_K);
+		xxx.put(LocalDate.of(2031,1,15),	VaccinationType.vax_STRAIN_L);
+		xxx.put(LocalDate.of(2031,10,15),	VaccinationType.vax_STRAIN_M);
+		xxx.put(LocalDate.of(2032,7,15),	VaccinationType.vax_STRAIN_N);
+
+
+		return xxx;
+	}
+
+	private static Map<LocalDate, VirusStrain> renderNewVirusStrains() {
+		Map<LocalDate, VirusStrain> xxx = new HashMap<>();
+		xxx.put(LocalDate.of(2022,10,15),VirusStrain.STRAIN_A);
+		xxx.put(LocalDate.of(2023,7,15),VirusStrain.STRAIN_B);
+		xxx.put(LocalDate.of(2024,4,15),VirusStrain.STRAIN_C);
+		xxx.put(LocalDate.of(2025,1,15),VirusStrain.STRAIN_D);
+		xxx.put(LocalDate.of(2025,10,15),VirusStrain.STRAIN_E);
+		xxx.put(LocalDate.of(2026,7,15),VirusStrain.STRAIN_F);
+		xxx.put(LocalDate.of(2027,4,15),VirusStrain.STRAIN_G);
+		xxx.put(LocalDate.of(2028,1,15),VirusStrain.STRAIN_H);
+		xxx.put(LocalDate.of(2028,10,15),VirusStrain.STRAIN_I);
+		xxx.put(LocalDate.of(2029,7,15),VirusStrain.STRAIN_J);
+		xxx.put(LocalDate.of(2030,4,15),VirusStrain.STRAIN_K);
+		xxx.put(LocalDate.of(2031,1,15),VirusStrain.STRAIN_L);
+		xxx.put(LocalDate.of(2031,10,15),VirusStrain.STRAIN_M);
+		xxx.put(LocalDate.of(2032,7,15),VirusStrain.STRAIN_N);
+
+		return xxx;
 	}
 
 	@Nullable
@@ -104,11 +128,13 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 					mutEscStrainX = params.mutEsc;
 
 					if (params.vacFreq.equals("none")) {
-						startDateToVaccination.put(LocalDate.of(2022, 9, 15), newVaccinations.get(LocalDate.of(2022, 9, 15)));
+						startDateToVaccination.put(LocalDate.of(2022, 9, 1), newVaccinations.get(LocalDate.of(2022, 9, 1)));
 					} else if (params.vacFreq.equals("annual")) {
-						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> entry.getKey().getMonthValue() == 9).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> entry.getValue().toString().startsWith("fall")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 					} else if (params.vacFreq.equals("biannual")) {
-						startDateToVaccination.putAll(newVaccinations);
+						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> (entry.getValue().toString().startsWith("fall")||entry.getValue().toString().startsWith("spring"))).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+					} else if (params.vacFreq.equals("withStrain")) {
+						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> entry.getValue().toString().startsWith("vax")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 					} else {
 						throw new RuntimeException();
 					}
@@ -591,7 +617,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 		// vaccination campaign
 		//vaccination frequency
-		@StringParameter({"none", "annual", "biannual"})
+		@StringParameter({"none", "annual", "biannual","withStrain"})
 		String vacFreq;
 
 		@StringParameter({"18plus"})

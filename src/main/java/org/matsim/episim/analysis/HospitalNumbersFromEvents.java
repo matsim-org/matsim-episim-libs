@@ -41,6 +41,7 @@
  import org.matsim.episim.model.VirusStrain;
  import org.matsim.episim.model.progression.AgeDependentDiseaseStatusTransitionModel;
  import org.matsim.run.AnalysisCommand;
+ import org.matsim.run.batch.CologneScenarioHubRound3;
  import picocli.CommandLine;
 
  import java.io.*;
@@ -89,63 +90,114 @@
 	 private Population population;
 
 	 // source: incidence wave vs. hospitalization wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
-	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 14,
-					 VirusStrain.ALPHA, 14,
-					 VirusStrain.DELTA, 14,
-					 VirusStrain.OMICRON_BA1, 14,
-					 VirusStrain.OMICRON_BA2, 14,
-					 VirusStrain.OMICRON_BA5, 14,
-					 VirusStrain.STRAIN_A, 14,
-					 VirusStrain.STRAIN_B, 14
-			 ));
+	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = renderLagBetweenInfectionAndHospitalisation();
+	 private static Object2IntMap<VirusStrain> renderLagBetweenInfectionAndHospitalisation() {
+		 Object2IntMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+				 Map.of(VirusStrain.SARS_CoV_2, 14,
+						 VirusStrain.ALPHA, 14,
+						 VirusStrain.DELTA, 14,
+						 VirusStrain.OMICRON_BA1, 14,
+						 VirusStrain.OMICRON_BA2, 14,
+						 VirusStrain.OMICRON_BA5, 14
+//					 VirusStrain.STRAIN_A, 14,
+//					 VirusStrain.STRAIN_B, 14
+				 ));
+
+		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			 xxx.put(virusStrain, 14);
+		 }
+
+		 return xxx;
+	 }
+
 
 	  // source: hospitalization wave vs. ICU wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
-	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 6,
-					 VirusStrain.ALPHA, 6,
-					 VirusStrain.DELTA, 6,
-					 VirusStrain.OMICRON_BA1, 6,
-					 VirusStrain.OMICRON_BA2, 6,
-					 VirusStrain.OMICRON_BA5, 6,
-					 VirusStrain.STRAIN_A, 6,
-					 VirusStrain.STRAIN_B, 6
-			 ));
+	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = renderLagBetweenHospitalizationAndICU();
+
+	 private static Object2IntAVLTreeMap<VirusStrain> renderLagBetweenHospitalizationAndICU() {
+		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+				 Map.of(VirusStrain.SARS_CoV_2, 6,
+						 VirusStrain.ALPHA, 6,
+						 VirusStrain.DELTA, 6,
+						 VirusStrain.OMICRON_BA1, 6,
+						 VirusStrain.OMICRON_BA2, 6,
+						 VirusStrain.OMICRON_BA5, 6
+//					 VirusStrain.STRAIN_A, 6,
+//					 VirusStrain.STRAIN_B, 6
+				 ));
+		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			 xxx.put(virusStrain, 6);
+		 }
+
+
+		 return xxx;
+	 }
 
 	 // Austria study in https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=0
-	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 12,
-					 VirusStrain.ALPHA, 12,
-					 VirusStrain.DELTA, 12,
-					 VirusStrain.OMICRON_BA1, 7,
-					 VirusStrain.OMICRON_BA2, 7,
-					 VirusStrain.OMICRON_BA5,7,
-					 VirusStrain.STRAIN_A, 7,
-					 VirusStrain.STRAIN_B, 7
-			 ));
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = renderDaysInHospitalGivenNoICU();
 
-	 private static final Object2IntMap<VirusStrain> daysInICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 15, // Debeka & Ireland studies
-					 VirusStrain.ALPHA, 15, // Debeka & Ireland studies
-					 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
-					 VirusStrain.OMICRON_BA1, 10,
-					 VirusStrain.OMICRON_BA2, 10,
-					 VirusStrain.OMICRON_BA5,10,
-					 VirusStrain.STRAIN_A, 10,
-					 VirusStrain.STRAIN_B, 10
-			 ));
+	 private static Object2IntAVLTreeMap<VirusStrain> renderDaysInHospitalGivenNoICU() {
+		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+				 Map.of(VirusStrain.SARS_CoV_2, 12,
+						 VirusStrain.ALPHA, 12,
+						 VirusStrain.DELTA, 12,
+						 VirusStrain.OMICRON_BA1, 7,
+						 VirusStrain.OMICRON_BA2, 7,
+						 VirusStrain.OMICRON_BA5, 7
+//					 VirusStrain.STRAIN_A, 7,
+//					 VirusStrain.STRAIN_B, 7
+				 ));
+
+		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			 xxx.put(virusStrain, 7);
+		 }
+
+
+		 return xxx;
+	 }
+
+	 private static final Object2IntMap<VirusStrain> daysInICU = renderDaysInICU();
+
+	 private static Object2IntAVLTreeMap<VirusStrain> renderDaysInICU() {
+		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+				 Map.of(VirusStrain.SARS_CoV_2, 15, // Debeka & Ireland studies
+						 VirusStrain.ALPHA, 15, // Debeka & Ireland studies
+						 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
+						 VirusStrain.OMICRON_BA1, 10,
+						 VirusStrain.OMICRON_BA2, 10,
+						 VirusStrain.OMICRON_BA5, 10
+//					 VirusStrain.STRAIN_A, 10,
+//					 VirusStrain.STRAIN_B, 10
+				 ));
+
+		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			 xxx.put(virusStrain, 10);
+		 }
+
+		 return xxx;
+	 }
 
 	 // ??
-	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 60,
-					 VirusStrain.ALPHA, 60,
-					 VirusStrain.DELTA, 60,
-					 VirusStrain.OMICRON_BA1, 60,
-					 VirusStrain.OMICRON_BA2, 60,
-					 VirusStrain.OMICRON_BA5,60,
-					 VirusStrain.STRAIN_A, 60,
-					 VirusStrain.STRAIN_B, 60
-			 ));
+	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = renderDaysInHospitalGivenICU();
+
+	 private static Object2IntAVLTreeMap<VirusStrain> renderDaysInHospitalGivenICU() {
+		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+				 Map.of(VirusStrain.SARS_CoV_2, 60,
+						 VirusStrain.ALPHA, 60,
+						 VirusStrain.DELTA, 60,
+						 VirusStrain.OMICRON_BA1, 60,
+						 VirusStrain.OMICRON_BA2, 60,
+						 VirusStrain.OMICRON_BA5, 60
+//					 VirusStrain.STRAIN_A, 60,
+//					 VirusStrain.STRAIN_B, 60
+				 ));
+
+		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			 xxx.put(virusStrain, 60);
+		 }
+
+		 return xxx;
+	 }
 
 
 	 private static final double beta = 1.2;
@@ -508,6 +560,7 @@
 		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
 
 
+
 			 if (!lagBetweenInfectionAndHospitalisation.containsKey(strain)
 					 || !lagBetweenHospitalizationAndICU.containsKey(strain)
 					 || !daysInHospitalGivenNoICU.containsKey(strain)
@@ -756,11 +809,17 @@
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySick(factorBA5);
 		 strainConfig.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(factorBA5ICU);
 
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
+//		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(facA);
+//		 strainConfig.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(facAICU);
+//
+//		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(facA);
+//		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(facAICU);
 
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorSeriouslySick(facA);
-		 strainConfig.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(facAICU);
+		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			 strainConfig.getOrAddParams(virusStrain).setFactorSeriouslySick(facA);
+			 strainConfig.getOrAddParams(virusStrain).setFactorCritical(facAICU);
+		 }
+
 
 
 

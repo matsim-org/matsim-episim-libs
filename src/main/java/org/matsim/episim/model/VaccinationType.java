@@ -54,7 +54,35 @@ public enum VaccinationType implements ImmunityEvent {
 
 	fall31,
 
-	spring32
+	spring32,
+
+	vax_STRAIN_A,
+
+	vax_STRAIN_B,
+
+	vax_STRAIN_C,
+
+	vax_STRAIN_D,
+
+	vax_STRAIN_E,
+
+	vax_STRAIN_F,
+
+	vax_STRAIN_G,
+
+	vax_STRAIN_H,
+
+	vax_STRAIN_I,
+
+	vax_STRAIN_J,
+
+	vax_STRAIN_K,
+
+	vax_STRAIN_L,
+
+	vax_STRAIN_M,
+
+	vax_STRAIN_N
 
 
 
