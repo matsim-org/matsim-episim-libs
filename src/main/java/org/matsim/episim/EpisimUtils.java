@@ -565,14 +565,14 @@ public final class EpisimUtils {
 
 			double tMax = Double.parseDouble(record.get("tmax"));
 			double prcp = Double.parseDouble(record.get("prcp"));
-			
+
 			if (date.isBefore(LocalDate.parse("2021-01-01"))) {
 				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring2020, TmidFall2020, Trange, tMax, prcp, rainThreshold, alpha));
 			}
 			else {
 				outdoorFractions.put(date, maxOutdoorFraction * getOutDoorFractionFromDateAndTemp(date, TmidSpring, TmidFall, Trange, tMax, prcp, rainThreshold, alpha));
 			}
-			
+
 			lastDate = date;
 		}
 
@@ -589,7 +589,8 @@ public final class EpisimUtils {
 			prcpPerDay.put(monthDay, prcp);
 		}
 
-		for (int i = 1; i < 365*3; i++) {
+		// project weather 11 years into the future
+		for (int i = 1; i < 365*11; i++) {
 			LocalDate date = lastDate.plusDays(i);
 			int month = date.getMonth().getValue();
 			int day = date.getDayOfMonth();
