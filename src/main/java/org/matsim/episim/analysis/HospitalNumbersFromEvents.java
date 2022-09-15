@@ -92,22 +92,20 @@
 	 // source: incidence wave vs. hospitalization wave in cologne/nrw (see https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit?usp=sharing)
 	 private static final Object2IntMap<VirusStrain> lagBetweenInfectionAndHospitalisation = renderLagBetweenInfectionAndHospitalisation();
 	 private static Object2IntMap<VirusStrain> renderLagBetweenInfectionAndHospitalisation() {
-		 Object2IntMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+		 Object2IntMap<VirusStrain> days = new Object2IntAVLTreeMap<>(
 				 Map.of(VirusStrain.SARS_CoV_2, 14,
 						 VirusStrain.ALPHA, 14,
 						 VirusStrain.DELTA, 14,
 						 VirusStrain.OMICRON_BA1, 14,
 						 VirusStrain.OMICRON_BA2, 14,
 						 VirusStrain.OMICRON_BA5, 14
-//					 VirusStrain.STRAIN_A, 14,
-//					 VirusStrain.STRAIN_B, 14
 				 ));
 
 		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
-			 xxx.put(virusStrain, 14);
+			 days.put(virusStrain, 14);
 		 }
 
-		 return xxx;
+		 return days;
 	 }
 
 
@@ -115,88 +113,77 @@
 	 private static final Object2IntMap<VirusStrain> lagBetweenHospitalizationAndICU = renderLagBetweenHospitalizationAndICU();
 
 	 private static Object2IntAVLTreeMap<VirusStrain> renderLagBetweenHospitalizationAndICU() {
-		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+		 Object2IntAVLTreeMap<VirusStrain> days = new Object2IntAVLTreeMap<>(
 				 Map.of(VirusStrain.SARS_CoV_2, 6,
 						 VirusStrain.ALPHA, 6,
 						 VirusStrain.DELTA, 6,
 						 VirusStrain.OMICRON_BA1, 6,
 						 VirusStrain.OMICRON_BA2, 6,
 						 VirusStrain.OMICRON_BA5, 6
-//					 VirusStrain.STRAIN_A, 6,
-//					 VirusStrain.STRAIN_B, 6
 				 ));
 		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
-			 xxx.put(virusStrain, 6);
+			 days.put(virusStrain, 6);
 		 }
-
-
-		 return xxx;
+		 return days;
 	 }
 
 	 // Austria study in https://docs.google.com/spreadsheets/d/1jmaerl27LKidD1uk3azdIL1LmvHuxazNQlhVo9xO1z8/edit#gid=0
 	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenNoICU = renderDaysInHospitalGivenNoICU();
 
 	 private static Object2IntAVLTreeMap<VirusStrain> renderDaysInHospitalGivenNoICU() {
-		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+		 Object2IntAVLTreeMap<VirusStrain> days = new Object2IntAVLTreeMap<>(
 				 Map.of(VirusStrain.SARS_CoV_2, 12,
 						 VirusStrain.ALPHA, 12,
 						 VirusStrain.DELTA, 12,
 						 VirusStrain.OMICRON_BA1, 7,
 						 VirusStrain.OMICRON_BA2, 7,
 						 VirusStrain.OMICRON_BA5, 7
-//					 VirusStrain.STRAIN_A, 7,
-//					 VirusStrain.STRAIN_B, 7
 				 ));
 
 		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
-			 xxx.put(virusStrain, 7);
+			 days.put(virusStrain, 7);
 		 }
 
-
-		 return xxx;
+		 return days;
 	 }
 
 	 private static final Object2IntMap<VirusStrain> daysInICU = renderDaysInICU();
 
 	 private static Object2IntAVLTreeMap<VirusStrain> renderDaysInICU() {
-		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+		 Object2IntAVLTreeMap<VirusStrain> days = new Object2IntAVLTreeMap<>(
 				 Map.of(VirusStrain.SARS_CoV_2, 15, // Debeka & Ireland studies
 						 VirusStrain.ALPHA, 15, // Debeka & Ireland studies
 						 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
 						 VirusStrain.OMICRON_BA1, 10,
 						 VirusStrain.OMICRON_BA2, 10,
 						 VirusStrain.OMICRON_BA5, 10
-//					 VirusStrain.STRAIN_A, 10,
-//					 VirusStrain.STRAIN_B, 10
 				 ));
 
 		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
-			 xxx.put(virusStrain, 10);
+			 days.put(virusStrain, 10);
 		 }
 
-		 return xxx;
+		 return days;
 	 }
 
 	 // ??
 	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = renderDaysInHospitalGivenICU();
 
 	 private static Object2IntAVLTreeMap<VirusStrain> renderDaysInHospitalGivenICU() {
-		 Object2IntAVLTreeMap<VirusStrain> xxx = new Object2IntAVLTreeMap<>(
+		 Object2IntAVLTreeMap<VirusStrain> days = new Object2IntAVLTreeMap<>(
 				 Map.of(VirusStrain.SARS_CoV_2, 60,
 						 VirusStrain.ALPHA, 60,
 						 VirusStrain.DELTA, 60,
 						 VirusStrain.OMICRON_BA1, 60,
 						 VirusStrain.OMICRON_BA2, 60,
 						 VirusStrain.OMICRON_BA5, 60
-//					 VirusStrain.STRAIN_A, 60,
-//					 VirusStrain.STRAIN_B, 60
 				 ));
 
 		 for (VirusStrain virusStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
-			 xxx.put(virusStrain, 60);
+			 days.put(virusStrain, 60);
 		 }
 
-		 return xxx;
+		 return days;
 	 }
 
 
@@ -245,8 +232,6 @@
 		 population = PopulationUtils.readPopulation(input + populationFile);
 
 
-		 // Here we define values factorSeriouslySickStrainA should have
-
 
 		 // Part 1: calculate hospitalizations for each seed and save as csv
 		 List<Path> pathList = new ArrayList<>();
@@ -262,18 +247,6 @@
 		 });
 
 		 log.info("done");
-
-			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
-//			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
-
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
-
-
-//		 }
-
 
 		 return 0;
 	 }
@@ -307,46 +280,26 @@
 	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath) throws IOException {
 		 // open new buffered writer for hospitalization output and write the header row.
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
-		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
+		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n"));
 
 		 ConfigHolder holderOmicron = configure(factorBA5, factorBA5ICU);
 		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
 
 		 List<Handler> handlers = List.of(
-				  new Handler("Omicron", population, holderOmicron, 0.0),
-				 new Handler("Delta", population, holderDelta, 0.0),
-				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
-				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
-				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
-				 new Handler("Delta-Paxlovid-0.50", population, holderDelta, 0.5),
-				 new Handler("Omicron-Paxlovid-0.75", population, holderOmicron, 0.75),
-				 new Handler("Delta-Paxlovid-0.75", population, holderDelta, 0.75)
+				 new Handler("Omicron", population, holderOmicron, 0.0, false),
+				 new Handler("Delta", population, holderDelta, 0.0, false),
+				 new Handler("Omicron-pessimistic", population, holderOmicron, 0.0, true),
+				 new Handler("Delta-pessimistic", population, holderDelta, 0.0, true)
+//				 new Handler("Omicron-Paxlovid-0.75", population, holderOmicron, 0.75),
+//				 new Handler("Delta-Paxlovid-0.75", population, holderDelta, 0.75)
 		 );
 
 		 // feed the output events file to the handler, so that the hospitalizations may be calculated
 		 List<String> eventFiles = AnalysisCommand.forEachEvent(pathToScenario, s -> {
 		 }, true, handlers.toArray(new Handler[0]));
 
-//		 for (Double facA : strainFactors) {
-
-			 // configure post processing run
-//			 double facAICU = 0.;
-//			 String diseaseSevName = "";
-//			 if (facA == factorWild) {
-//				 diseaseSevName = "Alpha";
-//				 facAICU = factorWildAndAlphaICU;
-//			 } else if (facA == factorDelta) {
-//				 diseaseSevName = "Delta";
-//				 facAICU = factorDeltaICU;
-//			 } else if (facA == factorOmicron) {
-//				 diseaseSevName = "Omicron";
-//				 facAICU = factorOmicronICU;
-//			 } else {
-//				 throw new RuntimeException("not clear what to do");
-//			 }
 
 		 for (Handler handler : handlers) {
-
 
 			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
 			 // this is used to normalize the hospitalization values
@@ -376,9 +329,11 @@
 				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.OCCUPANCY_ICU, handler.name, occupancyIcu));
 
 			 }
+
 		 }
 
 		 bw.close();
+
 	 }
 
 
@@ -413,26 +368,11 @@
 		 final Int2IntSortedMap postProcessICUAdmissions;
 		 final Int2IntSortedMap postProcessHospitalFilledBeds;
 		 final Int2IntSortedMap postProcessHospitalFilledBedsICU;
-
-		 private final Int2IntSortedMap changeBaseImmunity;
-		 private final Int2IntMap changeNoImmunity;
-		 private final Int2IntMap changeBoostered;
-		 private final Int2IntMap hospNoImmunity;
-		 private final Int2IntMap hospBoostered;
-		 private final Int2IntMap hospBaseImmunity;
-		 private final Int2IntMap incNoImmunity;
-		 private final Int2IntMap incBaseImmunity;
-		 private final Int2IntMap incBoostered;
-
-//		 private final EpisimWriter episimWriter;
-		  BufferedWriter hospCalibration;
-
-//		 private CSVPrinter printer;
-
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
+		 private final boolean pessimisticScenario;
 
 
-		 Handler(String name, Population population, ConfigHolder holder, double paxlovidCompliance) {
+		 Handler(String name, Population population, ConfigHolder holder, double paxlovidCompliance, boolean pessimisticScenario) {
 
 			 // instantiate the custom event handler that calculates hospitalizations based on events
 			 this.name = name;
@@ -443,29 +383,15 @@
 			 this.paxlovidCompliance = paxlovidCompliance;
 			 this.paxlovidDay = (int) LocalDate.of(2020, 2, 25).datesUntil(LocalDate.of(2022, 11, 1)).count();
 
+			 this.pessimisticScenario = pessimisticScenario;
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
+//			 this.postProcessHospitalAdmissionsPerAgeGroup = new Int2ObjectAVLTreeMap<>();
+
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBedsICU = new Int2IntAVLTreeMap();
-
-			 this.changeNoImmunity = new Int2IntAVLTreeMap();
-			 this.changeBaseImmunity = new Int2IntAVLTreeMap();
-			 this.changeBoostered = new Int2IntAVLTreeMap();
-			 this.hospNoImmunity = new Int2IntAVLTreeMap();
-			 this.hospBoostered = new Int2IntAVLTreeMap();
-			 this.hospBaseImmunity = new Int2IntAVLTreeMap();
-			 this.incNoImmunity = new Int2IntAVLTreeMap();
-			 this.incBaseImmunity = new Int2IntAVLTreeMap();
-			 this.incBoostered = new Int2IntAVLTreeMap();
-
 			 this.transitionModel = new AgeDependentDiseaseStatusTransitionModel(new SplittableRandom(1234), holder.episimConfig, holder.vaccinationConfig, holder.strainConfig);
 
-//			 try {
-//				 this.printer = new CSVPrinter(Files.newBufferedWriter(Path.of("hospCalibration.tsv")), CSVFormat.DEFAULT.withDelimiter('\t'));
-//				 printer.printRecord("day", "date", "personId", "age", "strain", "numInfections","numVaccinations");
-//			 } catch (IOException ex) {
-//				 ex.printStackTrace();
-//			 }
 		 }
 
 		 @Override
@@ -488,31 +414,6 @@
 
 			 updateHospitalizationsPost(person, event.getVirusStrain(), day);
 
-			 if (person.getNumVaccinations()==0) {
-				 incNoImmunity.mergeInt(day, 1, Integer::sum);
-			 } else if (person.getNumVaccinations()==1) {
-				 incBaseImmunity.mergeInt(day, 1, Integer::sum);
-			 } else {
-				 incBoostered.mergeInt(day, 1, Integer::sum);
-			 }
-
-			 // print to csv
-
-//			 System.out.println(event.getVirusStrain().toString());
-
-//			 try {
-//				 this.printer.printRecord(String.valueOf(day)
-//						 , LocalDate.of(2020, 2, 25).plusDays(day).toString()
-//						 , person.getPersonId().toString()
-//						 , String.valueOf(person.getAge())
-//						 , event.getVirusStrain().toString()
-//						 , String.valueOf(person.getNumInfections() - 1)
-//						 , String.valueOf(person.getNumVaccinations()));
-//
-//			 } catch (IOException e) {
-//				 e.printStackTrace();
-//			 }
-
 		 }
 
 
@@ -529,15 +430,6 @@
 
 			 int day = (int) (event.getTime() / 86_400);
 
-			 if (person.getNumVaccinations()==0) {
-				 changeBaseImmunity.mergeInt(day, 1, Integer::sum);
-				 changeNoImmunity.mergeInt(day, -1, Integer::sum);
-			 } else if (person.getNumVaccinations() == 1) {
-				 changeBoostered.mergeInt(day, 1, Integer::sum);
-				 changeBaseImmunity.mergeInt(day, -1, Integer::sum);
-			 }
-
-
 			 person.addVaccination(day);
 		 }
 
@@ -546,17 +438,6 @@
 		 }
 
 
-		 /*
-		 % infected who get paxlovid (for a certain age group):
-
-		 75% of people over 60 get paxlovid
-		 +
-		 75% of people with antibodyResponse below 0.3
-
-		 effectivity: 66% reduction, chance of hospitalization * 0.33
-
-
-		  */
 		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
 
 
@@ -576,14 +457,6 @@
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
 
-
-				 if (person.getNumVaccinations() == 0) {
-					 hospNoImmunity.mergeInt(inHospital, 1, Integer::sum);
-				 } else if (person.getNumVaccinations() == 1) {
-					 hospBaseImmunity.mergeInt(inHospital, 1, Integer::sum);
-				 } else {
-					 hospBoostered.mergeInt(inHospital, 1, Integer::sum);
-				 }
 
 
 				 if (goToICU(person, inHospital)) {
@@ -640,11 +513,12 @@
 				 }
 			 }
 
-			 // 0.36 (old) * 1.2 (delta) * ... (immunisation) =
-			 return rnd.nextDouble() < ageFactor
+			 double chanceOfHospitalisation = ageFactor
 					 * strainFactor
-					 * immunityFactor
+					 * Math.min((immunityFactor + (this.pessimisticScenario ? 0.2 : 0.0)), 1.0)
 					 * paxlovidFactor;
+
+			 return rnd.nextDouble() < chanceOfHospitalisation;
 		 }
 
 		 /**
