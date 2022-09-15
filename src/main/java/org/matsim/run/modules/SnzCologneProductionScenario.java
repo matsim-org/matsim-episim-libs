@@ -414,12 +414,11 @@
 		 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 //Weihnachtsferien
-		 //todo revert
-//		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-//		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-//
-//		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
-//		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
+		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
 
 
 		 {

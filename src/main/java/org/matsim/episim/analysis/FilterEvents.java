@@ -77,7 +77,7 @@ public class FilterEvents implements OutputAnalysis {
 
 		AnalysisCommand.forEachEvent(output, s -> {
 			handler.reset(-1);
-		}, handler);
+		}, false, handler);
 
 		handler.closeEntry();
 		zipOut.close();

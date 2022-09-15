@@ -12,6 +12,7 @@ import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
+import org.matsim.episim.model.testing.DefaultTestingModel;
 import org.matsim.episim.model.testing.FlexibleTestingModel;
 import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
@@ -450,7 +451,7 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(pHousehold)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
-//				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
+				.setTestingModel(params != null ? FlexibleTestingModel.class : DefaultTestingModel.class)
 				.setInfectionModel(InfectionModelWithAntibodies.class)
 				.build();
 	}
@@ -475,7 +476,7 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 	@Override
 	public Config prepareConfig(int id, Params params) {
 
-		if (DEBUG_MODE) {
+		if (DEBUG_MODE ) {
 			if (runCount == 0){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
@@ -753,8 +754,8 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 		//SCHOOL
 		// todo check mask rate
 		if (params.edu.equals("maskVentTest")) {
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(LocalDate.parse(params.resDate), Restriction.ofMask(Map.of(
+			builder.restrict(restrictionDate, Restriction.ofCiCorrection(0.5), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
+			builder.restrict(restrictionDate, Restriction.ofMask(Map.of(
 							FaceMask.CLOTH, 0.0,
 							FaceMask.N95, 0.25,
 							FaceMask.SURGICAL, 0.25)),
@@ -933,10 +934,10 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 		@GenerateSeeds(5)
 		public long seed;
 
-		@StringParameter({"6.0"})
+		@StringParameter({"off","3.0","6.0"})
 		public String StrainA;
 
-		@StringParameter({"off"})
+		@StringParameter({"off", "3.0", "6.0"})
 		public String StrainB;
 
 		@StringParameter({"2022-10-01"})
@@ -945,27 +946,32 @@ public class CologneBMBF20220805_IfSG implements BatchRun<CologneBMBF20220805_If
 		//		@StringParameter({"false", "true"})
 //		public String igA;
 		// vaccination campaign
-		@StringParameter({"ba5Update", "mRNA", "off"})
+		@StringParameter({"ba1Update","ba5Update", "mRNA", "off"})
 		public String vacType;
 
 
 		//measures in the work context:
 		// homeOff = 50% home office = work Rf cut in half
 		//
-		@StringParameter({"none", "homeOff", "test", "mask", "all"})
+//		@StringParameter({"none", "homeOff", "test", "mask", "all"})
+		@StringParameter({"none"})
 		public String work;
 
-		@StringParameter({"none", "mask", "test", "all"})
+//		@StringParameter({"none", "mask", "test", "all"})
+		@StringParameter({"none"})
 		public String leis;
 
 		// mask restrictions for "shop_daily", "shop_other", "errands"
-		@StringParameter({"none", "mask"})
+//		@StringParameter({"none", "mask"})
+		@StringParameter({"none"})
 		public String errands;
 
-		@StringParameter({"none", "maskVentTest"})
+//		@StringParameter({"none", "maskVentTest"})
+		@StringParameter({"none"})
 		public String edu;
 
-		@StringParameter({"mask"})
+//		@StringParameter({"mask"})
+		@StringParameter({"none"})
 		public String pt;
 	}
 

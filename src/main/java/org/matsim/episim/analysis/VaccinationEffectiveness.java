@@ -47,7 +47,6 @@
  import java.nio.file.Path;
  import java.time.LocalDate;
  import java.util.*;
- import java.util.concurrent.Callable;
 
 
  /**
@@ -159,7 +158,7 @@
 		 Handler handler = new Handler(data, startDate);
 
 		 AnalysisCommand.forEachEvent(output, s -> {
-		 }, handler);
+		 }, false, handler);
 
 		 int days4aggregation = 14;
 
@@ -399,7 +398,7 @@
 
 			 if (vacOmicronPerPeriod.containsKey(i))
 				 omicronInfected = vacOmicronPerPeriod.get(i);
-			 
+
 			 int omicronBA2Infected = 0;
 
 			 if (vacOmicronBA2PerPeriod.containsKey(i))
@@ -429,7 +428,7 @@
 
 			 if (cgOmicronPerPeriod.containsKey(i))
 				 cgOmicronInfected = cgOmicronPerPeriod.get(i);
-			 
+
 			 int cgOmicronBA2Infected = 0;
 
 			 if (cgOmicronBA2PerPeriod.containsKey(i))

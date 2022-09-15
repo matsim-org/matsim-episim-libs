@@ -214,8 +214,10 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
 
 
 //		 }
@@ -259,13 +261,19 @@
 		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
 
 		 List<Handler> handlers = List.of(
-				  new Handler("Omicron", population, holderOmicron ),
-				 new Handler("Delta", population, holderDelta)
+				  new Handler("Omicron", population, holderOmicron, 0.0),
+				 new Handler("Delta", population, holderDelta, 0.0),
+				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
+				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
+				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
+				 new Handler("Delta-Paxlovid-0.50", population, holderDelta, 0.5),
+				 new Handler("Omicron-Paxlovid-0.75", population, holderOmicron, 0.75),
+				 new Handler("Delta-Paxlovid-0.75", population, holderDelta, 0.75)
 		 );
 
 		 // feed the output events file to the handler, so that the hospitalizations may be calculated
 		 List<String> eventFiles = AnalysisCommand.forEachEvent(pathToScenario, s -> {
-		 }, handlers.toArray(new Handler[0]));
+		 }, true, handlers.toArray(new Handler[0]));
 
 //		 for (Double facA : strainFactors) {
 
@@ -345,6 +353,10 @@
 		 private final Random rnd;
 		 private final ConfigHolder holder;
 
+		 private final double paxlovidCompliance;
+
+		 private final int paxlovidDay;
+
 		 final Int2IntSortedMap postProcessHospitalAdmissions;
 		 final Int2IntSortedMap postProcessICUAdmissions;
 		 final Int2IntSortedMap postProcessHospitalFilledBeds;
@@ -368,7 +380,7 @@
 		 private final AgeDependentDiseaseStatusTransitionModel transitionModel;
 
 
-		 Handler(String name, Population population, ConfigHolder holder) {
+		 Handler(String name, Population population, ConfigHolder holder, double paxlovidCompliance) {
 
 			 // instantiate the custom event handler that calculates hospitalizations based on events
 			 this.name = name;
@@ -376,6 +388,8 @@
 			 this.population = population;
 			 this.rnd = new Random(1234);
 			 this.holder = holder;
+			 this.paxlovidCompliance = paxlovidCompliance;
+			 this.paxlovidDay = (int) LocalDate.of(2020, 2, 25).datesUntil(LocalDate.of(2022, 11, 1)).count();
 
 			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
@@ -479,6 +493,18 @@
 			 return (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
 		 }
 
+
+		 /*
+		 % infected who get paxlovid (for a certain age group):
+
+		 75% of people over 60 get paxlovid
+		 +
+		 75% of people with antibodyResponse below 0.3
+
+		 effectivity: 66% reduction, chance of hospitalization * 0.33
+
+
+		  */
 		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
 
 
@@ -498,9 +524,9 @@
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
 
 
-				 if (person.getNumVaccinations()==0) {
+				 if (person.getNumVaccinations() == 0) {
 					 hospNoImmunity.mergeInt(inHospital, 1, Integer::sum);
-				 } else if (person.getNumVaccinations()==1) {
+				 } else if (person.getNumVaccinations() == 1) {
 					 hospBaseImmunity.mergeInt(inHospital, 1, Integer::sum);
 				 } else {
 					 hospBoostered.mergeInt(inHospital, 1, Integer::sum);
@@ -554,9 +580,18 @@
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
 			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
 
+			 double paxlovidFactor = 1.0;
+			 if (person.getAge() > 60 && day >= this.paxlovidDay) {
+				 if (rnd.nextDouble() < this.paxlovidCompliance) {
+					 paxlovidFactor = 0.33; // todo
+				 }
+			 }
+
+			 // 0.36 (old) * 1.2 (delta) * ... (immunisation) =
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
-					 * immunityFactor;
+					 * immunityFactor
+					 * paxlovidFactor;
 		 }
 
 		 /**
@@ -607,7 +642,6 @@
 			  */
 			 private double antibodyLevelAtInfection = 0;
 			 private int age;
-
 
 			 ImmunizablePerson(Id<Person> personId, int age) {
 				 this.personId = personId;
