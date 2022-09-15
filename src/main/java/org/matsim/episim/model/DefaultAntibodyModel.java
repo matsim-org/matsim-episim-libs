@@ -71,14 +71,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			}
 		}
 
-		Figure fig = Histogram.create("Distribution of Immune Response Multipliers", values.toDoubleArray());
-
-		try (Writer writer = new OutputStreamWriter(new FileOutputStream("immuneResponseMultiplierDistribution.html"), StandardCharsets.UTF_8)) {
-			writer.write(Page.pageBuilder(fig, "target").build().asJavascript());
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-
+//		Figure fig = Histogram.create("Distribution of Immune Response Multipliers", values.toDoubleArray());
+//
+//		try (Writer writer = new OutputStreamWriter(new FileOutputStream("immuneResponseMultiplierDistribution.html"), StandardCharsets.UTF_8)) {
+//			writer.write(Page.pageBuilder(fig, "target").build().asJavascript());
+//		} catch (IOException e) {
+//			throw new UncheckedIOException(e);
+//		}
+//
 	}
 
 	/**
