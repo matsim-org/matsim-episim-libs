@@ -48,7 +48,9 @@ aggregate_run() {
     copy_output *.strains.tsv $tmp/$run
     copy_output *.vaccinations.tsv $tmp/$run
     copy_output *.vaccinationsDetailed.tsv $tmp/$run
-    copy_output *.secondaryAttackRate.txt $tmp/$run
+    copy_output *.vaccinationsPerAgeGroup.tsv $tmp/$run
+#    copy_output *.secondaryAttackRate.txt $tmp/$run
+
     copy_output *.config.xml $tmp/$run
 
     for OUTPUT in *.post.*.*; do

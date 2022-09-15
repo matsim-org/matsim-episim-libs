@@ -49,6 +49,7 @@
  import java.nio.file.Path;
  import java.time.LocalDate;
  import java.util.*;
+ import java.util.stream.Collectors;
 
 
  /**
@@ -261,9 +262,10 @@
 
 		 // builds the path to the output file that is produced by this analysis
 		 final Path tsvPath = pathToScenario.resolve(id + "post.hospital.tsv");
+		 final Path tsvPathAge = pathToScenario.resolve(id + "post.hospitalAgeBased.tsv");
 
 		 // calculates hospitalizations
-		 calculateHospitalizationsAndWriteOutput(pathToScenario, tsvPath);
+		 calculateHospitalizationsAndWriteOutput(pathToScenario, tsvPath,tsvPathAge);
 
 		 log.info("Calculated results for output {}", pathToScenario);
 
@@ -277,10 +279,14 @@
 	  * @param tsvPath filename for the hospitalization output produced by this method
 	  * @throws IOException
 	  */
-	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath) throws IOException {
+	 private void calculateHospitalizationsAndWriteOutput(Path pathToScenario, Path tsvPath, Path tsvPathAge) throws IOException {
 		 // open new buffered writer for hospitalization output and write the header row.
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
 		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n"));
+
+		 // open new bw for age-based hospital admission
+		 BufferedWriter bwAge = Files.newBufferedWriter(tsvPathAge);
+		 bwAge.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "ages","n"));
 
 		 ConfigHolder holderOmicron = configure(factorBA5, factorBA5ICU);
 		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
@@ -303,8 +309,19 @@
 
 			 // calculates the number of agents in the scenario's population (25% sample) who live in Cologne
 			 // this is used to normalize the hospitalization values
-			 double popSize = (int) population.getPersons().values().stream()
-					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).count();
+			 Set<Person> filteredPopulation = population.getPersons().values().stream()
+					 .filter(x -> x.getAttributes().getAttribute("district").equals(district)).collect(Collectors.toSet());
+
+			 double popSize = filteredPopulation.size();
+
+			 Object2IntMap<EpisimReporting.AgeGroup> popSizePerAgeGroup = new Object2IntAVLTreeMap<>();
+			 int sizeOfPreviousAgeGroup = 0;
+			 for (EpisimReporting.AgeGroup ageGroup : EpisimReporting.AgeGroup.values()) {
+				 int popAboveLowerBound = (int) filteredPopulation.stream().filter(person -> ((int) person.getAttributes().getAttribute("microm:modeled:age")) >= ageGroup.lowerBoundAge).count();
+				 int popForAgeGroup = popAboveLowerBound - sizeOfPreviousAgeGroup;
+				 popSizePerAgeGroup.put(ageGroup, popForAgeGroup);
+				 sizeOfPreviousAgeGroup = popAboveLowerBound;
+			 }
 
 
 			 for (int day = 0; day < eventFiles.size(); day++) {
@@ -328,11 +345,17 @@
 				 bw.newLine();
 				 bw.write(AnalysisCommand.TSV.join(day, date, HospitalNumbersFromEventsPlotter.OCCUPANCY_ICU, handler.name, occupancyIcu));
 
+				 for (EpisimReporting.AgeGroup ageGroup : EpisimReporting.AgeGroup.values()) {
+					 bwAge.newLine();
+					 double intakesHospAge = getWeeklyHospitalizations(handler.postProcessHospitalAdmissions, day, ageGroup) * 100_000. / popSizePerAgeGroup.getInt(ageGroup);
+					 bwAge.write(AnalysisCommand.TSV.join(day, date.toString(), HospitalNumbersFromEventsPlotter.INTAKES_HOSP, handler.name , ageGroup.name(), intakesHospAge));
+				 }
 			 }
 
 		 }
 
 		 bw.close();
+		 bwAge.close();
 
 	 }
 
@@ -343,6 +366,35 @@
 			 try {
 				 weeklyHospitalizations += hospMap.getOrDefault(today - i, 0);
 			 } catch (Exception ignored) {
+
+			 }
+		 }
+		 return weeklyHospitalizations;
+	 }
+
+	 static int getWeeklyHospitalizations(Int2ObjectMap<Object2IntMap<EpisimReporting.AgeGroup>> hospMap, Integer today) {
+		 int weeklyHospitalizations = 0;
+		 for (int i = 0; i < 7; i++) {
+			 try {
+				 Object2IntMap<EpisimReporting.AgeGroup> map = hospMap.getOrDefault(today - i, new Object2IntAVLTreeMap<>());
+				 weeklyHospitalizations += map.values().intStream().sum();
+
+			 } catch (Exception ignored) {
+
+			 }
+		 }
+		 return weeklyHospitalizations;
+	 }
+
+	 static int getWeeklyHospitalizations(Int2ObjectMap<Object2IntMap<EpisimReporting.AgeGroup>> hospMap, Integer today, EpisimReporting.AgeGroup ageGroup) {
+		 int weeklyHospitalizations = 0;
+		 for (int i = 0; i < 7; i++) {
+			 try {
+				 Object2IntMap<EpisimReporting.AgeGroup> map = hospMap.getOrDefault(today - i, new Object2IntAVLTreeMap<>());
+				 weeklyHospitalizations += map.getOrDefault(ageGroup, 0);
+
+			 } catch (Exception e) {
+				 e.printStackTrace();
 
 			 }
 		 }
@@ -364,7 +416,8 @@
 
 		 private final int paxlovidDay;
 
-		 final Int2IntSortedMap postProcessHospitalAdmissions;
+//		 final Int2IntSortedMap postProcessHospitalAdmissions;
+		 Int2ObjectMap<Object2IntMap<EpisimReporting.AgeGroup>> postProcessHospitalAdmissions;
 		 final Int2IntSortedMap postProcessICUAdmissions;
 		 final Int2IntSortedMap postProcessHospitalFilledBeds;
 		 final Int2IntSortedMap postProcessHospitalFilledBedsICU;
@@ -384,8 +437,8 @@
 			 this.paxlovidDay = (int) LocalDate.of(2020, 2, 25).datesUntil(LocalDate.of(2022, 11, 1)).count();
 
 			 this.pessimisticScenario = pessimisticScenario;
-			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
-//			 this.postProcessHospitalAdmissionsPerAgeGroup = new Int2ObjectAVLTreeMap<>();
+//			 this.postProcessHospitalAdmissions = new Int2IntAVLTreeMap();
+			 this.postProcessHospitalAdmissions = new Int2ObjectAVLTreeMap<>();
 
 			 this.postProcessICUAdmissions = new Int2IntAVLTreeMap();
 			 this.postProcessHospitalFilledBeds = new Int2IntAVLTreeMap();
@@ -455,7 +508,22 @@
 
 				 // newly admitted to hospital
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
-				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
+				 boolean personAssignedToSingleAgeGroup = false;
+				 for (EpisimReporting.AgeGroup ageGroup : EpisimReporting.AgeGroup.values()) {
+					 if (person.getAge() >= ageGroup.lowerBoundAge) {
+						 Object2IntMap<EpisimReporting.AgeGroup> admissionsPerAgeGroup = postProcessHospitalAdmissions.getOrDefault(inHospital, new Object2IntOpenHashMap<>());
+						 admissionsPerAgeGroup.mergeInt(ageGroup, 1, Integer::sum);
+						 postProcessHospitalAdmissions.put(inHospital, admissionsPerAgeGroup);
+						 personAssignedToSingleAgeGroup = true;
+						 break;
+
+					 }
+				 }
+
+				 if (!personAssignedToSingleAgeGroup) {
+					 throw new RuntimeException("Person needs to be assigned to at least one age group");
+				 }
+
 
 
 
