@@ -53,7 +53,7 @@ public class ExtractInfectionsByAge implements Callable<Integer> {
 	private boolean detailed = false;
 
 	@CommandLine.Option(names = "--age-groups", description = "Age groups as list of bin edges")
-	private List<Integer> ageGroups = List.of(0, 5, 10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90);
+	private List<Integer> ageGroups = List.of(0, 5, 10, 15, 18, 20, 25, 30, 40, 50, 60, 70, 80, 90);
 
 	@CommandLine.Option(names = "--attr", defaultValue = "microm:modeled:age", description = "Name of the age attribute")
 	private String ageAttr;
