@@ -23,10 +23,9 @@ package org.matsim.episim;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.typesafe.config.ConfigRenderOptions;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
-import it.unimi.dsi.fastutil.objects.ObjectIntPair;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.objects.*;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.logging.log4j.LogManager;
@@ -63,6 +62,23 @@ import static org.matsim.episim.EpisimUtils.writeChars;
  * Reporting and persisting of metrics, like number of infected people etc.
  */
 public final class EpisimReporting implements BasicEventHandler, Closeable, Externalizable {
+
+	/**
+	 * Age groups used for various outputs. AgeGroup -> minimum age of age group.
+	 * Important: age groups must be in descending order
+	 */
+	public enum AgeGroup {
+		age_60_plus(60),
+		age_18_59(18),
+		age_12_17(12),
+		age_0_11(0);
+
+		public final int lowerBoundAge;
+
+		AgeGroup(int lowerBoundAge) {
+			this.lowerBoundAge = lowerBoundAge;
+		}
+	}
 
 	private static final Logger log = LogManager.getLogger(EpisimReporting.class);
 	private static final AtomicInteger specificInfectionsCnt = new AtomicInteger(300);
@@ -103,6 +119,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	 * Map of (VaccinationType, nth Vaccination) -> Number per day
 	 */
 	public final Object2IntMap<ObjectIntPair<VaccinationType>> vaccinationStats = new Object2IntOpenHashMap<>();
+	/**
+	 * Map of Age group -> Number of Vaccinations administered per day
+	 */
+	public final Object2IntMap<AgeGroup> vaccinationPerAgeGroupStats = new Object2IntOpenHashMap<>();
 
 	/**
 	 * Number format for logging output. Not static because not thread-safe.
@@ -145,6 +165,8 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	private BufferedWriter antibodiesPerPerson;
 	private BufferedWriter vaccinationsPerType;
 	private BufferedWriter vaccinationsPerTypeAndNumber;
+
+	private BufferedWriter vaccinationsPerAgeGroup;
 
 	private final Map<String, BufferedWriter> externalWriters = new HashMap<>();
 
@@ -209,6 +231,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv", "day", "date", (Object[]) VirusStrain.values());
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv", "day", "date", (Object[]) VaccinationType.values());
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv", "day", "date", "type", "number", "amount");
+		vaccinationsPerAgeGroup = EpisimWriter.prepare(base + "vaccinationsPerAgeGroup.tsv", "day", "date", "age_group","amount");
 
 		sampleSize = episimConfig.getSampleSize();
 		writeEvents = episimConfig.getWriteEvents();
@@ -281,6 +304,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		antibodiesPerPerson = EpisimWriter.prepare(base + "antibodies.tsv");
 		vaccinationsPerType = EpisimWriter.prepare(base + "vaccinations.tsv");
 		vaccinationsPerTypeAndNumber = EpisimWriter.prepare(base + "vaccinationsDetailed.tsv");
+		vaccinationsPerAgeGroup = EpisimWriter.prepare(base + "vaccinationsPerAgeGroup.tsv");
 		// cpu time is overwritten
 		cpuTime = EpisimWriter.prepare(base + "cputime.tsv", "iteration", "where", "what", "when", "thread");
 		memorizedDate = date;
@@ -585,8 +609,21 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 
 			writer.append(vaccinationsPerTypeAndNumber, vacOut);
 		}
-
 		vaccinationStats.clear();
+
+		// vaccinations per age group
+		String[] vacPerAgeGroupOut = new String[4];
+		vacPerAgeGroupOut[0] = String.valueOf(iteration);
+		vacPerAgeGroupOut[1] = date;
+		for (AgeGroup ageGroup : AgeGroup.values()) {
+			vacPerAgeGroupOut[2] = ageGroup.name();
+			vacPerAgeGroupOut[3] = Integer.toString(vaccinationPerAgeGroupStats.getInt(ageGroup));
+
+			writer.append(vaccinationsPerAgeGroup, vacPerAgeGroupOut);
+
+		}
+
+		vaccinationPerAgeGroupStats.clear();
 
 		// Write all reports for each district
 		for (InfectionReport r : reports.values()) {
@@ -771,10 +808,25 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	/**
 	 * Report the vaccination of a person.
 	 */
-	void reportVaccination(Id<Person> personId, int iteration, VaccinationType type, int n) {
+	void reportVaccination(Id<Person> personId, int iteration, VaccinationType type, int n, int age) {
 
 		vaccinations.merge(type, 1, Integer::sum);
 		vaccinationStats.merge(ObjectIntPair.of(type, n), 1, Integer::sum);
+
+		int previousMinAge = 1000;
+
+		for (AgeGroup ageGroup : AgeGroup.values()) {
+
+			int minAge = ageGroup.lowerBoundAge;
+			if (minAge >= previousMinAge) {
+				throw new RuntimeException("AGE_GROUP Map not sorted in descending order");
+			} else if (age >= minAge) {
+				vaccinationPerAgeGroupStats.merge(ageGroup, 1, Integer::sum);
+				break;
+			}
+
+			previousMinAge = minAge;
+		}
 
 		manager.processEvent(new EpisimVaccinationEvent(EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration), personId, type, n));
 	}
@@ -879,6 +931,7 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		writer.close(cpuTime);
 		writer.close(vaccinationsPerType);
 		writer.close(vaccinationsPerTypeAndNumber);
+		writer.close(vaccinationsPerAgeGroup);
 
 		for (BufferedWriter v : externalWriters.values()) {
 			writer.close(v);

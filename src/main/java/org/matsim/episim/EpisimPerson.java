@@ -549,7 +549,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		vaccinations.add(type);
 		vaccinationDates.add(iteration);
 
-		reporting.reportVaccination(personId, iteration, type, vaccinations.size());
+		reporting.reportVaccination(personId, iteration, type, vaccinations.size(), age);
 	}
 
 	public TestStatus getTestStatus() {
