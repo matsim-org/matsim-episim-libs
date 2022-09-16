@@ -98,7 +98,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 				List<EpisimPerson> candidates = persons.values().stream()
 					.filter(EpisimPerson::isVaccinable) // todo: what determines who is vaccinable?
 					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-					.filter(p -> p.getNumVaccinations() > config.vaccinationPool.vaxCnt) // only boostered people are reboostered
+					.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt) // only boostered people are reboostered
 					.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90) // only people who've had their last vaccination more than 90 days ago
 					.collect(Collectors.toList());
 

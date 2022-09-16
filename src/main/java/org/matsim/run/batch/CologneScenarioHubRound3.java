@@ -5,8 +5,12 @@ import com.google.inject.Module;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
+import it.unimi.dsi.fastutil.ints.Int2ObjectAVLTreeMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleOpenHashMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
@@ -16,8 +20,20 @@ import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
+import tech.tablesaw.api.DoubleColumn;
+import tech.tablesaw.api.IntColumn;
+import tech.tablesaw.api.StringColumn;
+import tech.tablesaw.api.Table;
+import tech.tablesaw.plotly.components.Axis;
+import tech.tablesaw.plotly.components.Figure;
+import tech.tablesaw.plotly.components.Layout;
+import tech.tablesaw.plotly.components.Page;
+import tech.tablesaw.plotly.traces.ScatterTrace;
+import tech.tablesaw.table.TableSliceGroup;
 
 import javax.annotation.Nullable;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,70 +48,81 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 	int runCount = 0;
 
+	/**
+	 * Novel VOCs
+	 * Key: Spawn Date
+	 * Value: Virus Type
+	 */
 	public static Map<LocalDate,VirusStrain> newVirusStrains = renderNewVirusStrains();
+
+	/**
+	 * Updated Vaccinations
+	 * Shows all possible vaccinations, the selection of vaccinations for a given scenario will be done in getBindings()
+	 * Key: First day of vaccination campaign
+	 * Value: Vaccination Type
+	 */
 	public static Map<LocalDate, VaccinationType> newVaccinations = renderNewVaccinations();
+
+	private static Map<LocalDate, VirusStrain> renderNewVirusStrains() {
+		Map<LocalDate, VirusStrain> newVirusStrains = new TreeMap<>();
+		newVirusStrains.put(LocalDate.of(2022,10,1),VirusStrain.STRAIN_A);
+		newVirusStrains.put(LocalDate.of(2023,7,1),VirusStrain.STRAIN_B);
+		newVirusStrains.put(LocalDate.of(2024,4,1),VirusStrain.STRAIN_C);
+		newVirusStrains.put(LocalDate.of(2025,1,1),VirusStrain.STRAIN_D);
+		newVirusStrains.put(LocalDate.of(2025,10,1),VirusStrain.STRAIN_E);
+		newVirusStrains.put(LocalDate.of(2026,7,1),VirusStrain.STRAIN_F);
+		newVirusStrains.put(LocalDate.of(2027,4,1),VirusStrain.STRAIN_G);
+		newVirusStrains.put(LocalDate.of(2028,1,1),VirusStrain.STRAIN_H);
+		newVirusStrains.put(LocalDate.of(2028,10,1),VirusStrain.STRAIN_I);
+		newVirusStrains.put(LocalDate.of(2029,7,1),VirusStrain.STRAIN_J);
+		newVirusStrains.put(LocalDate.of(2030,4,1),VirusStrain.STRAIN_K);
+		newVirusStrains.put(LocalDate.of(2031,1,1),VirusStrain.STRAIN_L);
+		newVirusStrains.put(LocalDate.of(2031,10,1),VirusStrain.STRAIN_M);
+		newVirusStrains.put(LocalDate.of(2032,7,1),VirusStrain.STRAIN_N);
+
+		return newVirusStrains;
+	}
 
 	private static Map<LocalDate, VaccinationType> renderNewVaccinations() {
 
 		Map<LocalDate, VaccinationType> newVaccinations = new TreeMap<>();
-		newVaccinations.put(LocalDate.of(2022,9,1),VaccinationType.fall22);
-		newVaccinations.put(LocalDate.of(2023,3,1),VaccinationType.spring23);
-		newVaccinations.put(LocalDate.of(2023,9,1),VaccinationType.fall23);
-		newVaccinations.put(LocalDate.of(2024,3,1),VaccinationType.spring24);
-		newVaccinations.put(LocalDate.of(2024,9,1),VaccinationType.fall24);
-		newVaccinations.put(LocalDate.of(2025,3,1),VaccinationType.spring25);
-		newVaccinations.put(LocalDate.of(2025,9,1),VaccinationType.fall25);
-		newVaccinations.put(LocalDate.of(2026,3,1),VaccinationType.spring26);
-		newVaccinations.put(LocalDate.of(2026,9,1),VaccinationType.fall26);
-		newVaccinations.put(LocalDate.of(2027,3,1),VaccinationType.spring27);
-		newVaccinations.put(LocalDate.of(2027,9,1),VaccinationType.fall27);
-		newVaccinations.put(LocalDate.of(2028,3,1),VaccinationType.spring28);
-		newVaccinations.put(LocalDate.of(2028,9,1),VaccinationType.fall28);
-		newVaccinations.put(LocalDate.of(2029,3,1),VaccinationType.spring29);
-		newVaccinations.put(LocalDate.of(2029,9,1),VaccinationType.fall29);
-		newVaccinations.put(LocalDate.of(2030,3,1),VaccinationType.spring30);
-		newVaccinations.put(LocalDate.of(2030,9,1),VaccinationType.fall30);
-		newVaccinations.put(LocalDate.of(2031,3,1),VaccinationType.spring31);
-		newVaccinations.put(LocalDate.of(2031,9,1),VaccinationType.fall31);
-		newVaccinations.put(LocalDate.of(2032,3,1),	VaccinationType.spring32);
+		newVaccinations.put(LocalDate.of(2022,9,15),VaccinationType.fall22);
+		newVaccinations.put(LocalDate.of(2023,3,15),VaccinationType.spring23);
+		newVaccinations.put(LocalDate.of(2023,9,15),VaccinationType.fall23);
+		newVaccinations.put(LocalDate.of(2024,3,15),VaccinationType.spring24);
+		newVaccinations.put(LocalDate.of(2024,9,15),VaccinationType.fall24);
+		newVaccinations.put(LocalDate.of(2025,3,15),VaccinationType.spring25);
+		newVaccinations.put(LocalDate.of(2025,9,15),VaccinationType.fall25);
+		newVaccinations.put(LocalDate.of(2026,3,15),VaccinationType.spring26);
+		newVaccinations.put(LocalDate.of(2026,9,15),VaccinationType.fall26);
+		newVaccinations.put(LocalDate.of(2027,3,15),VaccinationType.spring27);
+		newVaccinations.put(LocalDate.of(2027,9,15),VaccinationType.fall27);
+		newVaccinations.put(LocalDate.of(2028,3,15),VaccinationType.spring28);
+		newVaccinations.put(LocalDate.of(2028,9,15),VaccinationType.fall28);
+		newVaccinations.put(LocalDate.of(2029,3,15),VaccinationType.spring29);
+		newVaccinations.put(LocalDate.of(2029,9,15),VaccinationType.fall29);
+		newVaccinations.put(LocalDate.of(2030,3,15),VaccinationType.spring30);
+		newVaccinations.put(LocalDate.of(2030,9,15),VaccinationType.fall30);
+		newVaccinations.put(LocalDate.of(2031,3,15),VaccinationType.spring31);
+		newVaccinations.put(LocalDate.of(2031,9,15),VaccinationType.fall31);
+		newVaccinations.put(LocalDate.of(2032,3,15),VaccinationType.spring32);
 
-		newVaccinations.put(LocalDate.of(2022,10,15),	VaccinationType.vax_STRAIN_A);
-		newVaccinations.put(LocalDate.of(2023,7,15),	VaccinationType.vax_STRAIN_B);
-		newVaccinations.put(LocalDate.of(2024,4,15),	VaccinationType.vax_STRAIN_C);
-		newVaccinations.put(LocalDate.of(2025,1,15),	VaccinationType.vax_STRAIN_D);
-		newVaccinations.put(LocalDate.of(2025,10,15),	VaccinationType.vax_STRAIN_E);
-		newVaccinations.put(LocalDate.of(2026,7,15),	VaccinationType.vax_STRAIN_F);
-		newVaccinations.put(LocalDate.of(2027,4,15),	VaccinationType.vax_STRAIN_G);
-		newVaccinations.put(LocalDate.of(2028,1,15),	VaccinationType.vax_STRAIN_H);
-		newVaccinations.put(LocalDate.of(2028,10,15),	VaccinationType.vax_STRAIN_I);
-		newVaccinations.put(LocalDate.of(2029,7,15),	VaccinationType.vax_STRAIN_J);
-		newVaccinations.put(LocalDate.of(2030,4,15),	VaccinationType.vax_STRAIN_K);
-		newVaccinations.put(LocalDate.of(2031,1,15),	VaccinationType.vax_STRAIN_L);
-		newVaccinations.put(LocalDate.of(2031,10,15),	VaccinationType.vax_STRAIN_M);
-		newVaccinations.put(LocalDate.of(2032,7,15),	VaccinationType.vax_STRAIN_N);
-
+		newVaccinations.put(LocalDate.of(2022,10,1),	VaccinationType.vax_STRAIN_A);
+		newVaccinations.put(LocalDate.of(2023,7,1),	VaccinationType.vax_STRAIN_B);
+		newVaccinations.put(LocalDate.of(2024,4,1),	VaccinationType.vax_STRAIN_C);
+		newVaccinations.put(LocalDate.of(2025,1,1),	VaccinationType.vax_STRAIN_D);
+		newVaccinations.put(LocalDate.of(2025,10,1),	VaccinationType.vax_STRAIN_E);
+		newVaccinations.put(LocalDate.of(2026,7,1),	VaccinationType.vax_STRAIN_F);
+		newVaccinations.put(LocalDate.of(2027,4,1),	VaccinationType.vax_STRAIN_G);
+		newVaccinations.put(LocalDate.of(2028,1,1),	VaccinationType.vax_STRAIN_H);
+		newVaccinations.put(LocalDate.of(2028,10,1),	VaccinationType.vax_STRAIN_I);
+		newVaccinations.put(LocalDate.of(2029,7,1),	VaccinationType.vax_STRAIN_J);
+		newVaccinations.put(LocalDate.of(2030,4,1),	VaccinationType.vax_STRAIN_K);
+		newVaccinations.put(LocalDate.of(2031,1,1),	VaccinationType.vax_STRAIN_L);
+		newVaccinations.put(LocalDate.of(2031,10,1),	VaccinationType.vax_STRAIN_M);
+		newVaccinations.put(LocalDate.of(2032,7,1),	VaccinationType.vax_STRAIN_N);
 
 		return newVaccinations;
-	}
-
-	private static Map<LocalDate, VirusStrain> renderNewVirusStrains() {
-		Map<LocalDate, VirusStrain> newVirusStrains = new TreeMap<>();
-		newVirusStrains.put(LocalDate.of(2022,10,15),VirusStrain.STRAIN_A);
-		newVirusStrains.put(LocalDate.of(2023,7,15),VirusStrain.STRAIN_B);
-		newVirusStrains.put(LocalDate.of(2024,4,15),VirusStrain.STRAIN_C);
-		newVirusStrains.put(LocalDate.of(2025,1,15),VirusStrain.STRAIN_D);
-		newVirusStrains.put(LocalDate.of(2025,10,15),VirusStrain.STRAIN_E);
-		newVirusStrains.put(LocalDate.of(2026,7,15),VirusStrain.STRAIN_F);
-		newVirusStrains.put(LocalDate.of(2027,4,15),VirusStrain.STRAIN_G);
-		newVirusStrains.put(LocalDate.of(2028,1,15),VirusStrain.STRAIN_H);
-		newVirusStrains.put(LocalDate.of(2028,10,15),VirusStrain.STRAIN_I);
-		newVirusStrains.put(LocalDate.of(2029,7,15),VirusStrain.STRAIN_J);
-		newVirusStrains.put(LocalDate.of(2030,4,15),VirusStrain.STRAIN_K);
-		newVirusStrains.put(LocalDate.of(2031,1,15),VirusStrain.STRAIN_L);
-		newVirusStrains.put(LocalDate.of(2031,10,15),VirusStrain.STRAIN_M);
-		newVirusStrains.put(LocalDate.of(2032,7,15),VirusStrain.STRAIN_N);
-
-		return newVirusStrains;
 	}
 
 	@Nullable
@@ -105,14 +132,11 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 			@Override
 			protected void configure() {
 
+				// VACCINATION MODEL
 				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
-
 				set.addBinding().to(VaccinationStrategyReoccurringCampaigns.class).in(Singleton.class);
 
-				double mutEscBa5 = 3.0;
-				double mutEscStrainX = 3.0;
-
-
+				// default values (if params==null)
 				Map<LocalDate,VaccinationType> startDateToVaccination = new HashMap<>();
 
 				Object2DoubleMap<EpisimReporting.AgeGroup> compliance = new Object2DoubleAVLTreeMap();
@@ -123,13 +147,11 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 				VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.vaccinated;
 
-				int campaignDuration = 91;
+				int campaignDuration = 90;
 
 				if (params != null) {
 
 					campaignDuration = (int) params.campDuration;
-
-					mutEscStrainX = params.mutEsc;
 
 					vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.valueOf(params.vacPool);
 
@@ -140,11 +162,13 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 
 					if (params.vacFreq.equals("none")) {
+
+					} else if (params.vacFreq.equals("fall22")) {
 						startDateToVaccination.put(LocalDate.of(2022, 9, 1), newVaccinations.get(LocalDate.of(2022, 9, 1)));
 					} else if (params.vacFreq.equals("annual")) {
 						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> entry.getValue().toString().startsWith("fall")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 					} else if (params.vacFreq.equals("biannual")) {
-						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> (entry.getValue().toString().startsWith("fall")||entry.getValue().toString().startsWith("spring"))).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> (entry.getValue().toString().startsWith("fall") || entry.getValue().toString().startsWith("spring"))).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 					} else if (params.vacFreq.equals("withStrain")) {
 						startDateToVaccination.putAll(newVaccinations.entrySet().stream().filter(entry -> entry.getValue().toString().startsWith("vax")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
 					} else {
@@ -181,17 +205,22 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool));
 
+				// ANTIBODY MODEL
+				// default values
+				double mutEscBa5 = 3.0;
+				double mutEscStrainX = 3.0;
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
 				Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
-				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5, mutEscStrainX);
 
-				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
-
-				double immuneSigma = 3.0;
 				if (params != null) {
-					antibodyConfig.setImmuneReponseSigma(immuneSigma);
+					mutEscStrainX = params.mutEsc;
 				}
+
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5, mutEscStrainX);
+				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
+				double immuneSigma = 3.0;
+				antibodyConfig.setImmuneReponseSigma(immuneSigma);
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
@@ -441,8 +470,9 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 				new VaccinationEffectiveness().withArgs(),
 				new RValuesFromEvents().withArgs(),
 				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-				new HospitalNumbersFromEvents().withArgs(),
-				new SecondaryAttackRateFromEvents().withArgs()
+				new FilterEvents().withArgs("--output","./output/"),
+				new HospitalNumbersFromEvents().withArgs()
+//				new SecondaryAttackRateFromEvents().withArgs()
 		);
 	}
 
@@ -467,14 +497,13 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		// create snapshot
-		episimConfig.setSnapshotInterval(927);
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-20220218/" + params.seed + "-600-2021-10-16.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		// create / read snapshot
+//		episimConfig.setSnapshotInterval(927);
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-09-16/" + params.seed + "-927-2022-09-08.zip");
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
-		//mutations
+		// S T R A I N S
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-
 		//configure new strains
 		//BA5
 		double ba5Inf = 0.9;
@@ -484,8 +513,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySickVaccinated(oHos);
 		virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(oHos);
 
-		//StrainA/B/C
-
+		//StrainX
 		for (VirusStrain strain : newVirusStrains.values()) {
 			virusStrainConfigGroup.getOrAddParams(strain).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA5).getInfectiousness());
 			virusStrainConfigGroup.getOrAddParams(strain).setFactorSeriouslySick(oHos);
@@ -494,12 +522,11 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 		}
 
 
-		//Configure Disease Import
-
+		// D I S E A S E    I M P O R T
 		configureFutureDiseaseImport(params, episimConfig);
 
 
-		//vaccinations
+		// V A C C I N A T I O N S
 		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
 		vaccinationConfig.setUseIgA(true);
 		vaccinationConfig.setTimePeriodIgA(730.);
@@ -545,7 +572,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA5, infPerDayBa5);
 
 
-		//StrainA/B/C
+		//StrainX
 		for (Map.Entry<LocalDate,VirusStrain> entry : newVirusStrains.entrySet()) {
 			LocalDate date = entry.getKey();
 			VirusStrain strain = entry.getValue();
@@ -562,54 +589,56 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 		// add projected disease import for vacation waves after initial disease import
 //		int facBa2 = 4;
 //		int facBa5 = 4;
-		int facStrainX = 4;
-
-		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
-		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
-
-		NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected_2032.csv"));
-		LocalDate date = null;
-		for (Map.Entry<LocalDate, Double> entry : data.entrySet()) {
-			date = entry.getKey();
-			double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
+//		int facStrainX = 4;
 //
-			double cases = factor * entry.getValue();
-
-			//from most recent to furthest back.
-			Map<LocalDate, VirusStrain> reverseSortedVirusStrainMap = new TreeMap<LocalDate, VirusStrain>(Collections.reverseOrder());
-			reverseSortedVirusStrainMap.putAll(newVirusStrains);
-			reverseSortedVirusStrainMap.put(dateBa5, VirusStrain.OMICRON_BA5);
-			reverseSortedVirusStrainMap.put(dateBa2, VirusStrain.OMICRON_BA2);
-
-
-			// strain map sorted from newest to oldest
-			// if current date is after LATEST virus's spawn date + 2 months  -> give the corresponding virusStrain all the import
-			// if currents datae is after virusStrainDate -> give the corresponding virusStrain an import of 1.
-			// else: current date is before spwan of virus strain -> don't give any import
-
-
-			boolean firstTimeAfterDate = true;
-			for (LocalDate dateStrainX : reverseSortedVirusStrainMap.keySet()) {
-
-				if (date.isAfter(dateStrainX.plusMonths(2)) && firstTimeAfterDate) {
-					episimConfig.getInfections_pers_per_day().get(reverseSortedVirusStrainMap.get(dateStrainX)).put(date, ((int) cases * facStrainX) == 0 ? 1 : (int) (cases * facStrainX));
-					firstTimeAfterDate = false;
-				} else if (date.isAfter(dateStrainX.plusMonths(2))) {
-					episimConfig.getInfections_pers_per_day().get(reverseSortedVirusStrainMap.get(dateStrainX)).put(date, 1);
-				} else {
-					episimConfig.getInfections_pers_per_day().get(reverseSortedVirusStrainMap.get(dateStrainX)).put(date, 0);
-				}
-
-			}
-
-//			if (date.isAfter(dateBa5)) {
-//				infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
-//				infPerDayBa2.put(date, 1);
-//			} else if (date.isAfter(dateBa2)) {
-//				infPerDayBa2.put(date, ((int) cases * facBa2) == 0 ? 1 : (int) (cases * facBa2));
+//		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
+//		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
+//
+//		NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected_2032.csv"));
+//		LocalDate date = null;
+//
+//		// TODO this overwrites the original import!!!
+//		for (Map.Entry<LocalDate, Double> entry : data.entrySet()) {
+//			date = entry.getKey();
+//			double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
+////
+//			double cases = factor * entry.getValue();
+//
+//			//from most recent to furthest back.
+//			Map<LocalDate, VirusStrain> reverseSortedVirusStrainMap = new TreeMap<LocalDate, VirusStrain>(Collections.reverseOrder());
+//			reverseSortedVirusStrainMap.putAll(newVirusStrains);
+//			reverseSortedVirusStrainMap.put(dateBa5, VirusStrain.OMICRON_BA5);
+//			reverseSortedVirusStrainMap.put(dateBa2, VirusStrain.OMICRON_BA2);
+//
+//
+//			// strain map sorted from newest to oldest
+//			// if current date is after LATEST virus's spawn date + 2 months  -> give the corresponding virusStrain all the import
+//			// if currents datae is after virusStrainDate -> give the corresponding virusStrain an import of 1.
+//			// else: current date is before spwan of virus strain -> don't give any import
+//
+//
+//			boolean firstTimeAfterDate = true;
+//			for (LocalDate dateStrainX : reverseSortedVirusStrainMap.keySet()) {
+//
+//				if (date.isAfter(dateStrainX.plusMonths(2)) && firstTimeAfterDate) {
+//					episimConfig.getInfections_pers_per_day().get(reverseSortedVirusStrainMap.get(dateStrainX)).put(date, ((int) cases * facStrainX) == 0 ? 1 : (int) (cases * facStrainX));
+//					firstTimeAfterDate = false;
+//				} else if (date.isAfter(dateStrainX.plusMonths(2))) {
+//					episimConfig.getInfections_pers_per_day().get(reverseSortedVirusStrainMap.get(dateStrainX)).put(date, 1);
+//				} else {
+//					episimConfig.getInfections_pers_per_day().get(reverseSortedVirusStrainMap.get(dateStrainX)).put(date, 0);
+//				}
+//
 //			}
-
-		}
+//
+////			if (date.isAfter(dateBa5)) {
+////				infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
+////				infPerDayBa2.put(date, 1);
+////			} else if (date.isAfter(dateBa2)) {
+////				infPerDayBa2.put(date, ((int) cases * facBa2) == 0 ? 1 : (int) (cases * facBa2));
+////			}
+//
+//		}
 
 //		infPerDayBa5.put(date.plusDays(1), 1);
 
@@ -628,7 +657,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 		// vaccination campaign
 		//vaccination frequency
-		@StringParameter({"none", "annual", "biannual","withStrain"})
+		@StringParameter({"none", "fall22", "annual", "biannual","withStrain"})
 		String vacFreq;
 
 		@StringParameter({"18plus","18plus50pct"})
@@ -638,12 +667,12 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 		@StringParameter({"vaccinated","boostered"})
 		String vacPool;
 
-		@Parameter({31., 91.})
+		@Parameter({30., 90.})
 		double campDuration;
 
 
 		//new mutations
-		@Parameter({3.7, 44.7})
+		@Parameter({8.5, 103})
 		public double mutEsc;
 	}
 

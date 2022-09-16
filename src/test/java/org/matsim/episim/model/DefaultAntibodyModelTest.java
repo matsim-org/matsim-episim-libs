@@ -12,6 +12,7 @@ import org.assertj.core.data.Offset;
 import org.junit.*;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimTestUtils;
+import org.matsim.run.batch.CologneScenarioHubRound3;
 import org.matsim.testcases.MatsimTestUtils;
 import tech.tablesaw.api.DoubleColumn;
 import tech.tablesaw.api.IntColumn;
@@ -28,6 +29,7 @@ import tech.tablesaw.table.TableSliceGroup;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.*;
 
 import static com.google.common.math.Quantiles.*;
@@ -238,6 +240,300 @@ public class DefaultAntibodyModelTest {
 		}
 
 
+	}
+
+	@Test
+	public void testEuScenarioHub() {
+
+
+		double mutEscBa5 = 3.0;
+		double mutEscStrainX = 8;//103;
+
+		Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
+		Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors = new HashMap<>();
+		configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5, mutEscStrainX);
+
+		antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
+
+		model = new DefaultAntibodyModel(antibodyConfig);
+
+		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA, VirusStrain.OMICRON_BA5, VaccinationType.fall22);
+		// 2021-06-01 - mRNA
+		// 2021-12-01 - mRNA
+		// 2022-06-01 - BA5
+		// 2022-10-01 - StrainA
+		IntList immunityEventDays = IntList.of(1, 182, 365, 480);
+//		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
+//		IntList immunityEventDays = IntList.of(1);
+
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 1000, EpisimTestUtils.createPerson());
+
+		// Plot 1: nAb
+		{
+			IntColumn records = IntColumn.create("day");
+			DoubleColumn values = DoubleColumn.create("antibodies");
+			StringColumn groupings = StringColumn.create("scenario");
+
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
+
+				for (Object strain : strainToAntibodyMap.keySet()) {
+					records.append(day);
+
+					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
+
+					values.append(nAb);
+					groupings.append(strain.toString());
+
+				}
+			}
+			producePlot(records, values, groupings, "nAb", "nAb: " + immunityEvents, "euScenarioHub3-nAb.html");
+
+		}
+
+		// Plot 2: ve
+		{
+			IntColumn records = IntColumn.create("day");
+			DoubleColumn values = DoubleColumn.create("antibodies");
+			StringColumn groupings = StringColumn.create("scenario");
+
+			for (int day : antibodyLevels.keySet()) {
+				Object2DoubleMap<VirusStrain> strainToAntibodyMap = antibodyLevels.get(day);
+
+				for (Object strain : strainToAntibodyMap.keySet()) {
+					records.append(day);
+
+					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
+
+					var beta = 1.;
+					var fact = 0.001;
+					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
+					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);
+					final double probaWoVacc = 1 - Math.exp(-fact);
+					final double ve = 1. - probaWVacc / probaWoVacc;
+
+					values.append(ve);
+					groupings.append(strain.toString());
+
+				}
+			}
+			producePlot(records, values, groupings, "ve", "ve: " + immunityEvents, "euScenarioHub3-ve.html");
+		}
+
+
+	}
+
+
+	private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
+									 Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors,
+									 double mutEscBa5, double mutEscStrainX) {
+
+		for (VaccinationType immunityType : VaccinationType.values()) {
+			initialAntibodies.put(immunityType, new EnumMap<>(VirusStrain.class));
+			for (VirusStrain virusStrain : VirusStrain.values()) {
+
+				if (immunityType == VaccinationType.mRNA) {
+					initialAntibodies.get(immunityType).put(virusStrain, 29.2); //10.0
+				} else if (immunityType == VaccinationType.vector) {
+					initialAntibodies.get(immunityType).put(virusStrain, 6.8);  //2.5
+				} else {
+					initialAntibodies.get(immunityType).put(virusStrain, 5.0);
+				}
+			}
+		}
+
+		for (VirusStrain immunityType : VirusStrain.values()) {
+			initialAntibodies.put(immunityType, new EnumMap<>(VirusStrain.class));
+			for (VirusStrain virusStrain : VirusStrain.values()) {
+				initialAntibodies.get(immunityType).put(virusStrain, 5.0);
+			}
+		}
+
+
+		//mRNAAlpha, mRNADelta, mRNABA1 comes from Sydney's calibration.
+		//The other values come from Rössler et al.
+		//Wildtype
+		double mRNAAlpha = 29.2;
+
+		// initialAntibodies.get(IMMUNITY GIVER).put(IMMUNITY AGAINST, ab level);
+		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.SARS_CoV_2, mRNAAlpha);
+		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);
+		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);
+		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 300. / 700.);
+		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.SARS_CoV_2, mRNAAlpha * 210. / 700.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.SARS_CoV_2, 0.01);
+		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.SARS_CoV_2, 0.01);
+		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.SARS_CoV_2, 0.01);
+
+
+		//Alpha
+		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.ALPHA, mRNAAlpha);
+		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);
+		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);
+		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.ALPHA, mRNAAlpha * 300. / 700.);
+		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.ALPHA, mRNAAlpha * 210. / 700.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.ALPHA, 0.01);
+		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.ALPHA, 0.01);
+		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.ALPHA, 0.01);
+
+		//DELTA
+		double mRNADelta = 10.9;
+		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.DELTA, mRNADelta);
+		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.DELTA, mRNADelta * 150. / 300.);
+		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.DELTA, mRNADelta * 64. / 300.);
+		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.DELTA, mRNADelta * 64. / 300.);
+		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.DELTA, mRNADelta * 450. / 300.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.DELTA, 0.2 / 6.4);
+		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.DELTA, 0.2 / 6.4);
+		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.DELTA, 0.2 / 6.4);
+
+
+		//BA.1
+		double mRNABA1 = 1.9;
+		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA1, mRNABA1);
+		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA1, mRNABA1 * 4. / 20.); //???
+		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6. / 20.);
+		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 6. / 20.);
+		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA1, mRNABA1 * 8. / 20.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA1, 64.0 / 300.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4);
+		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA1, 64.0 / 300. / 1.4); //todo: is 1.4
+
+		//BA.2
+		double mRNABA2 = mRNABA1;
+		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA2, mRNABA2);
+		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA2, mRNABA2 * 4. / 20.);
+		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6. / 20.);
+		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 6. / 20.);
+		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA2, mRNABA2 * 8. / 20.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);
+		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA2, 64.0 / 300.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA2, 64.0 / 300. / 1.4);
+
+
+		//BA.5
+		double mRNABa5 = mRNABA2 / mutEscBa5;
+		initialAntibodies.get(VaccinationType.mRNA).put(VirusStrain.OMICRON_BA5, mRNABa5);
+		initialAntibodies.get(VaccinationType.vector).put(VirusStrain.OMICRON_BA5, mRNABa5 * 4. / 20.);
+		initialAntibodies.get(VirusStrain.SARS_CoV_2).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6. / 20.);
+		initialAntibodies.get(VirusStrain.ALPHA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 6. / 20.);
+		initialAntibodies.get(VirusStrain.DELTA).put(VirusStrain.OMICRON_BA5, mRNABa5 * 8. / 20.);
+		initialAntibodies.get(VirusStrain.OMICRON_BA1).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / 1.4 / mutEscBa5);// todo: do we need 1.4?
+		initialAntibodies.get(VirusStrain.OMICRON_BA2).put(VirusStrain.OMICRON_BA5, 64.0 / 300. / mutEscBa5);
+		initialAntibodies.get(VirusStrain.OMICRON_BA5).put(VirusStrain.OMICRON_BA5, 64.0 / 300.);
+
+		// NEW STRAINS
+
+		// A) all "new/updated/novel" vaccinations and infections give only 0.01 protection against "old" strains
+
+		for (VirusStrain protectionAgainst : List.of(VirusStrain.SARS_CoV_2, VirusStrain.ALPHA, VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5)) {
+			for (ImmunityEvent vax : CologneScenarioHubRound3.newVaccinations.values()) {
+				initialAntibodies.get(vax).put(protectionAgainst, 0.01);
+			}
+
+			for (ImmunityEvent strain : CologneScenarioHubRound3.newVirusStrains.values()) {
+				initialAntibodies.get(strain).put(protectionAgainst, 0.01);
+			}
+		}
+
+		// B) "old" vaccinations and infections give the same protection to StrainX as to BA5 PLUS an escape
+		double mRNAStrainX = mRNABa5 / mutEscStrainX;
+
+		for (VirusStrain newStrain : CologneScenarioHubRound3.newVirusStrains.values()) {
+			initialAntibodies.get(VaccinationType.mRNA).put(newStrain, mRNAStrainX);
+			initialAntibodies.get(VaccinationType.vector).put(newStrain, mRNAStrainX * 4. / 20.);
+			initialAntibodies.get(VirusStrain.SARS_CoV_2).put(newStrain, mRNAStrainX * 6. / 20.);
+			initialAntibodies.get(VirusStrain.ALPHA).put(newStrain, mRNAStrainX * 6. / 20.);
+			initialAntibodies.get(VirusStrain.DELTA).put(newStrain, mRNAStrainX * 8. / 20.);
+
+			initialAntibodies.get(VirusStrain.OMICRON_BA1).put(newStrain, 64.0 / 300. / mutEscBa5 / mutEscStrainX);
+			initialAntibodies.get(VirusStrain.OMICRON_BA2).put(newStrain, 64.0 / 300. / mutEscBa5 / mutEscStrainX);
+			initialAntibodies.get(VirusStrain.OMICRON_BA5).put(newStrain, 64.0 / 300. / mutEscStrainX);
+
+		}
+
+		// C) Immunity between the novel StrainsX:
+		// Newer Strains give full (non-escaped) protection against themselves AND previous strains
+		// New Strains give escaped protection against future strainA
+
+		// initialAntibodies.get(IMMUNITY GIVER).put(IMMUNITY AGAINST, ab level);
+
+		for (LocalDate dateProtectionGiver : CologneScenarioHubRound3.newVirusStrains.keySet()) {
+
+			for (LocalDate dateProtectionAgainst : CologneScenarioHubRound3.newVirusStrains.keySet()) {
+
+				if (dateProtectionGiver.equals(dateProtectionAgainst) || dateProtectionGiver.isAfter(dateProtectionAgainst)) {
+					// Newer Strains give full (non-escaped) protection against themselves AND previous strains
+					initialAntibodies.get(CologneScenarioHubRound3.newVirusStrains.get(dateProtectionGiver)).put(CologneScenarioHubRound3.newVirusStrains.get(dateProtectionAgainst), mRNAAlpha);
+
+				} else {
+					// New Strains give escaped protection against future strainA
+					initialAntibodies.get(CologneScenarioHubRound3.newVirusStrains.get(dateProtectionGiver)).put(CologneScenarioHubRound3.newVirusStrains.get(dateProtectionAgainst), mRNAAlpha/ mutEscStrainX);
+
+				}
+
+			}
+		}
+
+		// D) Immunity provided by new vaccines against novel StrainsX:
+		// Provides baseline immunity if StrainX was spawned more than 6 months before vaccination campaign begins
+		// provides reduced immunity otherwise
+
+		for (LocalDate dateProtectionGiver : CologneScenarioHubRound3.newVaccinations.keySet()) {
+
+			for (LocalDate dateProtectionAgainst : CologneScenarioHubRound3.newVirusStrains.keySet()) {
+
+				if (dateProtectionGiver.isAfter(dateProtectionAgainst.plusMonths(6))) {
+					// Provides baseline immunity if StrainX was spawned more than 6 months before vaccination campaign begins
+
+					initialAntibodies.get(CologneScenarioHubRound3.newVaccinations.get(dateProtectionGiver)).put(CologneScenarioHubRound3.newVirusStrains.get(dateProtectionAgainst), mRNAAlpha);
+
+				}
+				else {
+					// provides reduced immunity otherwise
+					initialAntibodies.get(CologneScenarioHubRound3.newVaccinations.get(dateProtectionGiver)).put(CologneScenarioHubRound3.newVirusStrains.get(dateProtectionAgainst), mRNAAlpha/ mutEscStrainX);
+
+				}
+
+
+			}
+		}
+
+		// R E F R E S H    F A C T O R S
+		for (VaccinationType immunityType : VaccinationType.values()) {
+			antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
+			for (VirusStrain virusStrain : VirusStrain.values()) {
+
+				if (immunityType == VaccinationType.mRNA) {
+					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+				} else if (immunityType == VaccinationType.vector) {
+					antibodyRefreshFactors.get(immunityType).put(virusStrain, 5.0);
+				} else if (immunityType == VaccinationType.ba1Update) {
+					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+				} else if (CologneScenarioHubRound3.newVaccinations.containsValue(immunityType)) {
+					if (CologneScenarioHubRound3.newVirusStrains.containsValue(virusStrain)) {
+						antibodyRefreshFactors.get(immunityType).put(virusStrain, 1.0);
+					} else {
+						antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+					}
+
+				} else {
+					antibodyRefreshFactors.get(immunityType).put(virusStrain, Double.NaN);
+				}
+
+			}
+		}
+
+		for (VirusStrain immunityType : VirusStrain.values()) {
+			antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
+			for (VirusStrain virusStrain : VirusStrain.values()) {
+				if (CologneScenarioHubRound3.newVirusStrains.containsValue(immunityType) && CologneScenarioHubRound3.newVirusStrains.containsValue(virusStrain)) {
+					antibodyRefreshFactors.get(immunityType).put(virusStrain, 1.0);
+				} else {
+					antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
+				}
+			}
+		}
 	}
 
 	/**
