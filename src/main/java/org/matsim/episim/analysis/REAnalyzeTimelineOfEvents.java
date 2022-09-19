@@ -82,7 +82,7 @@ public class REAnalyzeTimelineOfEvents {
 	}
 
 	private enum Types {
-		educ_kiga, business, errands, home, leisure, shop_daily, shop_other, visit, work, educ_higher, educ_tertiary,
+		educ_kiga, business, errands, home, leisure, leisPrivate, leisPublic, shop_daily, shop_other, visit, work, educ_higher, educ_tertiary,
 		educ_other, educ_primary, educ_secondary
 	}
 }
