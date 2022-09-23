@@ -776,40 +776,11 @@ public final class InfectionEventHandler implements Externalizable {
 				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);
 			}
 		}
-
-
-//		if (date.equals(LocalDate.parse("2022-07-23"))) {
-//		if (date.getDayOfMonth() == 1) {
-//			try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(Path.of("antibodies_" + date + ".tsv")), CSVFormat.TDF)) {
-//
-//				csv.print("personId");
-//				csv.print("age");
-//				csv.print("nVaccinations");
-//				csv.print("nInfections");
-//				csv.print("immuneResponseMultiplier");
-//
-//				for (VirusStrain strain : VirusStrain.values()) {
-//					csv.print(strain.toString());
-//				}
-//				csv.println();
-//
-//				for (EpisimPerson person : personMap.values()) {
-//					csv.print(person.getPersonId().toString());
-//					csv.print(person.getAge());
-//					csv.print(person.getNumVaccinations());
-//					csv.print(person.getNumInfections());
-//					csv.print(person.getImmuneResponseMultiplier());
-//
-//					for (VirusStrain strain : VirusStrain.values()) {
-//						csv.print(person.getAntibodies(strain));
-//					}
-//					csv.println();
-//
-//				}
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-//		}
+		
+		if (date.getDayOfMonth() == 1) {
+ 			reporting.reportDetailedPersonStats(date, personMap.values());
+ 		}
+ 		 
 
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);
