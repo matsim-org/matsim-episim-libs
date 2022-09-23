@@ -705,7 +705,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6})
+		@Parameter({1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 2.0, 2.2})
 		public double thetaFactor;
 
 		@Parameter({0.0, 0.1, 0.25, 0.5})
