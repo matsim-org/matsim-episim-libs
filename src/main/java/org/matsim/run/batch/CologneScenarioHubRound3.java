@@ -148,13 +148,17 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 				VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.vaccinated;
 
 				int campaignDuration = 90;
+				double refresh = 0;
+				int delay = 0;
 
 				if (params != null) {
 
 					campaignDuration = (int) params.campDuration;
 
 					vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.valueOf(params.vacPool);
-
+					
+					refresh = params.refresh;
+					delay = params.delay;
 
 					if (DEBUG_MODE) {
 						startDateToVaccination.put(LocalDate.of(2020, 2, 27), VaccinationType.fall23);
@@ -217,7 +221,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 					mutEscStrainX = params.mutEsc;
 				}
 
-				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5, mutEscStrainX);
+				configureAntibodies(initialAntibodies, antibodyRefreshFactors, mutEscBa5, mutEscStrainX, refresh, delay);
 				AntibodyModel.Config antibodyConfig = new AntibodyModel.Config(initialAntibodies, antibodyRefreshFactors);
 				double immuneSigma = 3.0;
 				antibodyConfig.setImmuneReponseSigma(immuneSigma);
@@ -233,7 +237,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 			private void configureAntibodies(Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies,
 											 Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors,
-											 double mutEscBa5, double mutEscStrainX) {
+											 double mutEscBa5, double mutEscStrainX, double refresh, int delay) {
 
 				for (VaccinationType immunityType : VaccinationType.values()) {
 					initialAntibodies.put(immunityType, new EnumMap<>(VirusStrain.class));
@@ -390,7 +394,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 					for (LocalDate dateProtectionAgainst : newVirusStrains.keySet()) {
 
-						if (dateProtectionGiver.isAfter(dateProtectionAgainst.plusMonths(6))) {
+						if (dateProtectionGiver.isAfter(dateProtectionAgainst.plusMonths(delay))) {
 							// Provides baseline immunity if StrainX was spawned more than 6 months before vaccination campaign begins
 
 							initialAntibodies.get(newVaccinations.get(dateProtectionGiver)).put(newVirusStrains.get(dateProtectionAgainst), mRNAAlpha);
@@ -419,7 +423,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 						} else if (newVaccinations.containsValue(immunityType)) {
 							if (newVirusStrains.containsValue(virusStrain)) {
-								antibodyRefreshFactors.get(immunityType).put(virusStrain, 1.0);
+								antibodyRefreshFactors.get(immunityType).put(virusStrain, refresh);
 							} else {
 								antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 							}
@@ -435,7 +439,7 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 					antibodyRefreshFactors.put(immunityType, new EnumMap<>(VirusStrain.class));
 					for (VirusStrain virusStrain : VirusStrain.values()) {
 						if (newVirusStrains.containsValue(immunityType) && newVirusStrains.containsValue(virusStrain)) {
-							antibodyRefreshFactors.get(immunityType).put(virusStrain, 1.0);
+							antibodyRefreshFactors.get(immunityType).put(virusStrain, refresh);
 						} else {
 							antibodyRefreshFactors.get(immunityType).put(virusStrain, 15.0);
 						}
@@ -657,22 +661,29 @@ public class CologneScenarioHubRound3 implements BatchRun<CologneScenarioHubRoun
 
 		// vaccination campaign
 		//vaccination frequency
-		@StringParameter({"none", "fall22", "annual", "biannual","withStrain"})
+//		@StringParameter({"none", "fall22", "annual", "biannual","withStrain"})
+		@StringParameter({"none", "withStrain", "annual"})
 		String vacFreq;
 
-		@StringParameter({"18plus","18plus50pct"})
+		@StringParameter({"18plus50pct"})
 //		@StringParameter({"off", "60plus", "18plus"})
 		String vacCamp;
 
-		@StringParameter({"vaccinated","boostered"})
+		@StringParameter({"vaccinated"})
 		String vacPool;
 
 		@Parameter({30., 90.})
 		double campDuration;
+		
+		@IntParameter({6, -1})
+		int delay;
 
+		@Parameter({15., 1.})
+		double refresh;
 
 		//new mutations
-		@Parameter({8.5, 103})
+//		@Parameter({8.5, 103})
+		@Parameter({3.0, 8.5, 103.})
 		public double mutEsc;
 	}
 
