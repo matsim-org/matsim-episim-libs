@@ -32,7 +32,7 @@ import java.util.*;
  */
 public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSusceptibility.Params> {
 
-	boolean DEBUG_MODE = true;
+	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
 	@Nullable
@@ -123,7 +123,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
-								.withSusceptibleHouseholds(params.pctHh, params.hhSusc)
+								.withSusceptibleHouseholds(0.35, 0.01)
 //								.withNonVaccinableHouseholds(params.nonVaccinableHh)
 //								.withShape(SnzCologneProductionScenario.INPUT.resolve("CologneDistricts.zip"))
 //								.withFeature("STT_NAME", vingst, altstadtNord, bickendorf, weiden)
@@ -364,12 +364,11 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 
 		Config config = module.config();
 
-
 		config.global().setRandomSeed(params.seed);
 
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
-		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * params.thetaFactor);
+		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 
 		//snapshot
@@ -432,20 +431,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		//---------------------------------------
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
-
-		// masks
-		//pt: masks
-		String maskType = "45to45";
-		if (maskType.equals("45to45")) {
-			for (LocalDate date = LocalDate.parse("2020-04-21"); date.isBefore(LocalDate.parse("2021-05-01")); date = date.plusDays(1)) {
-				builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.45, FaceMask.SURGICAL, 0.45)), "pt", "errands", "shop_daily", "shop_other");
-			}
-		} else if (maskType.equals("base")) {
-
-		} else {
-			throw new RuntimeException("param value doesn't exist");
-		}
-
 
 		// Ci Correction after summer vacation 2022 (more air flow?)
 		builder.restrict(LocalDate.parse("2022-08-09"), Restriction.ofCiCorrection(params.ciCorr), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -587,16 +572,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		@Parameter({0.2, 0.4, 0.6, 0.8, 1.0})
 		public double eduRfVacation;
 
-//		@Parameter({1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2})
-		@Parameter({1.7})
-		public double thetaFactor;
-
-//		@Parameter({0.3, 0.35, 0.4, 0.45, 0.5})
-		@Parameter({0.35})
-		public double pctHh;
-
-		@Parameter({0.01})
-		public double hhSusc;
 
 
 //		@StringParameter({"off", "3.0", "6.0"})
