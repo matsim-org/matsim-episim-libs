@@ -405,7 +405,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(ba5Hos);
 		}
 
-		// remove age-based susceptibility of strains starting with DELTA
+		// remove age-based susceptibility of strains starting with DELTA TODO: how to integrate into the prod scenario?
 
 		String ageSusc = "false";
 		if (!Boolean.parseBoolean(ageSusc)) {
@@ -433,61 +433,12 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
-		//school
-		String schoolUpdate = "yes";
-		if(schoolUpdate.equals("yes")) {
-			// school closed completely until 21.2.2022
-			builder.restrict(LocalDate.parse("2021-01-11"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-			builder.restrict(LocalDate.parse("2021-02-21"), 0.5, "educ_primary");
-			builder.restrict(LocalDate.parse("2021-03-15"), 0.5, "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-
-		} else if (schoolUpdate.equals("no")) {
-
-		} else {
-			throw new RuntimeException("param value doesn't exist");
-		}
-
-		String schoolTest = "later";
-		if (schoolTest.equals("later")) {
-			TestingConfigGroup testingConfigGroup = ConfigUtils.addOrGetModule(config, TestingConfigGroup.class);
-			TestingConfigGroup.TestingParams rapidTest = testingConfigGroup.getOrAddParams(TestType.RAPID_TEST);
-//			TestingConfigGroup.TestingParams pcrTest = testingConfigGroup.getOrAddParams(TestType.PCR);
-			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesRapid = rapidTest.getTestingRateForActivities();
-//			Map<String, NavigableMap<LocalDate, Double>> testingRateForActivitiesPCR = pcrTest.getTestingRateForActivities();
-
-
-			for (LocalDate date = LocalDate.parse("2021-03-19"); date.isBefore(LocalDate.parse("2021-04-25")); date = date.plusDays(1)) {
-
-				testingRateForActivitiesRapid.get("educ_kiga").put(date, 0.);
-				testingRateForActivitiesRapid.get("educ_primary").put(date, 0.);
-				testingRateForActivitiesRapid.get("educ_secondary").put(date, 0.);
-				testingRateForActivitiesRapid.get("educ_tertiary").put(date, 0.);
-				testingRateForActivitiesRapid.get("educ_other").put(date, 0.);
-
-			}
-
-			testingRateForActivitiesRapid.get("educ_kiga").put(LocalDate.parse("2021-09-20"), 0.);
-			testingRateForActivitiesRapid.get("educ_primary").put(LocalDate.parse("2021-09-20"), 0.);
-
-//			testingRateForActivitiesPCR.get("educ_primary").put(LocalDate.parse("2021-05-10"), 0.4);
-			testingRateForActivitiesRapid.get("educ_secondary").put(LocalDate.parse("2021-05-10"), 0.4);
-			testingRateForActivitiesRapid.get("educ_tertiary").put(LocalDate.parse("2021-05-10"), 0.4);
-			testingRateForActivitiesRapid.get("educ_other").put(LocalDate.parse("2021-05-10"), 0.4);
-
-		} else if (schoolTest.equals("base")) {
-
-		}else {
-			throw new RuntimeException("param value doesn't exist");
-		}
-
-
 		// masks
 		//pt: masks
 		String maskType = "45to45";
 		if (maskType.equals("45to45")) {
 			for (LocalDate date = LocalDate.parse("2020-04-21"); date.isBefore(LocalDate.parse("2021-05-01")); date = date.plusDays(1)) {
 				builder.restrict(date, Restriction.ofMask(Map.of(FaceMask.CLOTH, 0.45, FaceMask.SURGICAL, 0.45)), "pt", "errands", "shop_daily", "shop_other");
-
 			}
 		} else if (maskType.equals("base")) {
 

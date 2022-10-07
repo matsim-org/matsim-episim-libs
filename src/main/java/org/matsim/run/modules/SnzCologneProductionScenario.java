@@ -392,9 +392,10 @@
 		 //Herbstferien
 		 builder.restrict(LocalDate.parse("2020-10-12"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2020-10-23"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 //Weihnachtsferien TODO: check end date; shouldn't it be 2021-01-06
+		 //Weihnachtsferien
 		 builder.restrict(LocalDate.parse("2020-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 builder.restrict(LocalDate.parse("2021-01-11"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		 builder.restrict(LocalDate.parse("2021-02-21"), 0.5, "educ_primary");
+		 builder.restrict(LocalDate.parse("2021-03-15"), 0.5, "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 //Osterferien
 		 builder.restrict(LocalDate.parse("2021-03-29"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2021-04-10"), 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
@@ -429,6 +430,8 @@
 
 		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
 		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+
+
 
 
 		 {
@@ -694,29 +697,33 @@
 
 		 testingConfigGroup.setHouseholdCompliance(1.0);
 
-		 LocalDate testingStartDate = LocalDate.parse("2021-03-19");
-
 		 Map<LocalDate, Double> leisureTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> workTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> eduTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> kigaPrimaryTests = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> uniTests = new HashMap<LocalDate, Double>();
+
 		 leisureTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 workTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 eduTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 kigaPrimaryTests.put(LocalDate.parse("2020-01-01"), 0.);
 		 uniTests.put(LocalDate.parse("2020-01-01"), 0.);
 
+
+		 LocalDate testingStartDate = LocalDate.parse("2021-03-19");
+
 		 for (int i = 1; i <= 31; i++) {
 			 leisureTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
 			 workTests.put(testingStartDate.plusDays(i), 0.1 * i / 31.);
-			 eduTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
-			 kigaPrimaryTests.put(testingStartDate.plusDays(i), 0.4 * i / 31.);
 			 uniTests.put(testingStartDate.plusDays(i), 0.8 * i / 31.);
+//			 eduTests.put(testingStartDateEdu.plusDays(i), 0.4 * i / 31.);
+//			 kigaPrimaryTests.put(testingStartDateEdu.plusDays(i), 0.4 * i / 31.);
 
 		 }
 
-		 kigaPrimaryTests.put(LocalDate.parse("2021-05-10"), 0.0);
+		 eduTests.put(LocalDate.parse("2021-04-25"), 0.4);
+
+//		 kigaPrimaryTests.put(LocalDate.parse("2021-05-10"), 0.0);
 
 		 workTests.put(LocalDate.parse("2021-06-04"), 0.05);
 
@@ -733,23 +740,19 @@
 		 // 3g removed for work
 		 workTests.put(LocalDate.of(2022, 3, 20), 0.);
 
-//		 if (testing.equals("no")) {
 		 // turn of school tests after easter break
-		 kigaPrimaryTests.put(LocalDate.of(2022, 4, 25), 0.0);
+//		 kigaPrimaryTests.put(LocalDate.of(2022, 4, 25), 0.0);
 		 eduTests.put(LocalDate.of(2022, 4, 25), 0.0);
 		 uniTests.put(LocalDate.of(2022, 4, 25), 0.0);
-//		 }
-
-		 // no more regulation regarding test, we assume once every 2 weeks
-		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);
+		 leisureTests.put(LocalDate.of(2022, 4, 25), 0.1);  // no more regulation regarding test, we assume once every 2 weeks
 
 
 		 rapidTest.setTestingRatePerActivityAndDate((Map.of(
 				 "leisure", leisureTests,
 				 "work", workTests,
 				 "business", workTests,
-				 "educ_kiga", eduTests,
-				 "educ_primary", eduTests,
+				 "educ_kiga", kigaPrimaryTests,
+				 "educ_primary", kigaPrimaryTests,
 				 "educ_secondary", eduTests,
 				 "educ_tertiary", eduTests,
 				 "educ_higher", uniTests,
@@ -796,30 +799,24 @@
 
 		 Map<LocalDate, Double> leisureTestsPCR = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> workTestsPCR = new HashMap<LocalDate, Double>();
-		 Map<LocalDate, Double> kigaPramaryTestsPCR = new HashMap<LocalDate, Double>();
+		 Map<LocalDate, Double> kigaPrimaryTestsPCR = new HashMap<LocalDate, Double>();
 		 Map<LocalDate, Double> eduTestsPCR = new HashMap<LocalDate, Double>();
 
 		 leisureTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		 workTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
-		 kigaPramaryTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
+		 kigaPrimaryTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 		 eduTestsPCR.put(LocalDate.parse("2020-01-01"), 0.);
 
-		 kigaPramaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
-
-//		 if (testing.equals("no")) {
-		 leisureTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-		 workTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-		 kigaPramaryTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-		 eduTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
-//		 }
+		 kigaPrimaryTestsPCR.put(LocalDate.parse("2021-05-10"), 0.4);
+		 kigaPrimaryTestsPCR.put(LocalDate.of(2022, 4, 25), 0.0);
 
 
 		 pcrTest.setTestingRatePerActivityAndDate((Map.of(
 				 "leisure", leisureTestsPCR,
 				 "work", workTestsPCR,
 				 "business", workTestsPCR,
-				 "educ_kiga", kigaPramaryTestsPCR,
-				 "educ_primary", kigaPramaryTestsPCR,
+				 "educ_kiga", kigaPrimaryTestsPCR,
+				 "educ_primary", kigaPrimaryTestsPCR,
 				 "educ_secondary", eduTestsPCR,
 				 "educ_tertiary", eduTestsPCR,
 				 "educ_higher", eduTestsPCR,
