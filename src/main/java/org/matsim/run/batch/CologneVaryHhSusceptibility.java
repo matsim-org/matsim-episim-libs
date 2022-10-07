@@ -7,7 +7,6 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
-import jdk.jshell.execution.Util;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
@@ -556,13 +555,13 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 			throw new RuntimeException("param value doesn't exist");
 		}
 
-		if (params.skipSchool.equals("yes")) {
-			builder.restrict(LocalDate.parse("2022-08-09"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
-		} else if (params.skipSchool.equals("no")) {
 
-		} else {
-			throw new RuntimeException();
-		}
+		// Ci Correction after summer vacation 2022 (more air flow?)
+		builder.restrict(LocalDate.parse("2022-08-09"), Restriction.ofCiCorrection(params.ciCorr), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+
+
+		// vary amount of "school" activity that takes place during vacation
+		builder.restrict(LocalDate.parse("2022-06-27"), params.eduRfVacation, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 		episimConfig.setPolicy(builder.build());
 
@@ -589,12 +588,12 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 
 
 		double schoolCi = 0.75;
-		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi);
-		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi);
-		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi);
-		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi);
-		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi);
+		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
 
 
 		if (DEBUG_MODE) {
@@ -725,15 +724,19 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		@GenerateSeeds(5)
 		public long seed;
 
-//		@StringParameter({"on", "off"})
-		@StringParameter({"on"})
+		@StringParameter({"on", "off"})
 		public String importSummer2022;
 
-//		@StringParameter({"yes", "no"})
-		@StringParameter({"no"})
-		public String skipSchool;
+		@Parameter({0.5, 0.75, 1.0})
+		public double eduSeasonality;
 
+		// ci correction of schools starting on Aug 9 (when school begins again), relates to air flow
+		@Parameter({0.25, 0.5, 0.75})
+		public double ciCorr;
 
+		//how much "school" activity takes places during vacation summmer 2022
+		@Parameter({0.2, 0.4, 0.6, 0.8, 1.0})
+		public double eduRfVacation;
 
 //		@Parameter({1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2})
 		@Parameter({1.7})
