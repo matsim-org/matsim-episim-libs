@@ -29,6 +29,8 @@ import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIntPair;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -50,6 +52,7 @@ import java.io.*;
 import java.nio.file.*;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -832,6 +835,42 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 		}
 
 		writer.append(antibodiesPerPerson, out);
+	}
+
+	/**
+	 * Write detailed person information. Huge files and for debugging only.
+	 */
+	void reportDetailedPersonStats(LocalDate date, Collection<EpisimPerson> persons) {
+
+		try (CSVPrinter csv = new CSVPrinter(Files.newBufferedWriter(Path.of(base + "antibodies_" + date + ".tsv")), CSVFormat.TDF)) {
+
+			csv.print("personId");
+			csv.print("age");
+			csv.print("nVaccinations");
+			csv.print("nInfections");
+			csv.print("immuneResponseMultiplier");
+
+			for (VirusStrain strain : VirusStrain.values()) {
+				csv.print(strain.toString());
+			}
+			csv.println();
+
+			for (EpisimPerson person : persons) {
+				csv.print(person.getPersonId().toString());
+				csv.print(person.getAge());
+				csv.print(person.getNumVaccinations());
+				csv.print(person.getNumInfections());
+				csv.print(person.getImmuneResponseMultiplier());
+
+				for (VirusStrain strain : VirusStrain.values()) {
+					csv.print(person.getAntibodies(strain));
+				}
+				csv.println();
+
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
