@@ -397,7 +397,9 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 
 
 		//snapshot
-		episimConfig.setSnapshotInterval(766);
+//		episimConfig.setSnapshotInterval(766);
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-07/" + params.seed + "-766-2022-03-31.zip");
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 
 		//---------------------------------------
