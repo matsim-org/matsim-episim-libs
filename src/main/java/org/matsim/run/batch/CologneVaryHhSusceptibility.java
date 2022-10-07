@@ -7,6 +7,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import jdk.jshell.execution.Util;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
@@ -31,7 +32,7 @@ import java.util.*;
  */
 public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSusceptibility.Params> {
 
-	boolean DEBUG_MODE = false;
+	boolean DEBUG_MODE = true;
 	int runCount = 0;
 
 	@Nullable
@@ -119,6 +120,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 				if (params == null) return;
 
 //				double pHousehold = 1.0;
+				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
 								.withSusceptibleHouseholds(params.pctHh, params.hhSusc)
@@ -310,33 +312,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 				}
 
 
-
-//				System.out.print("immunityGiver");
-//				for (VirusStrain immunityFrom : VirusStrain.values()) {
-//					if (immunityFrom == VirusStrain.OMICRON_BA1) {
-//						System.out.print( "," + "BA.1");
-//					} else 		if (immunityFrom == VirusStrain.OMICRON_BA2) {
-//						System.out.print( "," + "BA.2");
-//					} else {
-//						System.out.print( "," + immunityFrom);
-//					}
-//				}
-//
-//
-//				for (ImmunityEvent immunityGiver : VaccinationType.values()) {
-//					System.out.print("\n" + immunityGiver);
-//					for (VirusStrain immunityFrom : VirusStrain.values()) {
-//						System.out.print("," +  String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
-//					}
-//				}
-//				for (ImmunityEvent immunityGiver : VirusStrain.values()) {
-//					System.out.print("\n" + immunityGiver);
-//					for (VirusStrain immunityFrom : VirusStrain.values()) {
-//						System.out.print("," + String.format("%.3g", initialAntibodies.get(immunityGiver).get(immunityFrom)));
-//					}
-//				}
-//
-//				System.out.println();
+//				UtilsJR.printInitialAntibodiesToConsole(initialAntibodies);
 
 			}
 		});
@@ -471,22 +447,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		//		I M P O R T
 		//---------------------------------------
 
-		Map<LocalDate, Integer> infPerDayAlpha = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.ALPHA, new TreeMap<>()));
-
-
-		// reconfig disease import of alpha
-		LocalDate startDateAlpha = LocalDate.parse("2021-01-15");
-
-		for (int i = 0; i < 7; i++) {
-			infPerDayAlpha.put(startDateAlpha.plusDays(i), 4);
-		}
-
-
-		infPerDayAlpha.put(startDateAlpha.plusDays(7), 1);
-
-		episimConfig.setInfections_pers_per_day(VirusStrain.ALPHA, infPerDayAlpha);
-
-
 		configureFutureDiseaseImport(params, episimConfig);
 
 		//---------------------------------------
@@ -572,30 +532,14 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		//		M I S C
 		//---------------------------------------
 
-		// vaccination
-		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
-		vaccinationConfig.setUseIgA(Boolean.parseBoolean("true"));
-		vaccinationConfig.setTimePeriodIgA(730.);
 
-
-		//modify contact intensity
-		double workCi = 0.75;
-		episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCi);
-		episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCi);
-
-
-		double leisureCi = 0.4;
-		episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCi);
-		episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCi);
-
-
-		double schoolCi = 0.75;
-		episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi).setSeasonality(params.eduSeasonality);
+		// modify seasonality
+		episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(params.eduSeasonality);
+		episimConfig.getOrAddContainerParams("educ_other").setSeasonality(params.eduSeasonality);
 
 
 		if (DEBUG_MODE) {
@@ -611,30 +555,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrB = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_B, new TreeMap<>()));
-
-
-		// add initial impulses for strains
-		//BA.1
-//		LocalDate ba1Date = LocalDate.parse(params.ba1Date);
-//		for (int i = 0; i < 7; i++) {
-//			infPerDayBa1.put(ba1Date.plusDays(i), 4);
-//		}
-//		infPerDayBa1.put(ba1Date.plusDays(7), 1);
-
-
-		//BA.2
-		LocalDate ba2Date = LocalDate.parse("2021-12-18");
-		for (int i = 0; i < 7; i++) {
-			infPerDayBa2.put(ba2Date.plusDays(i), 4);
-		}
-		infPerDayBa2.put(ba2Date.plusDays(7), 1);
-
-		//BA.5
-		LocalDate ba5Date = LocalDate.parse("2022-04-10");
-		for (int i = 0; i < 7; i++) {
-			infPerDayBa5.put(ba5Date.plusDays(i), 4);
-		}
-		infPerDayBa5.put(ba5Date.plusDays(7), 1);
 
 		//StrainA
 		if (!params.StrainA.equals("off")) {
@@ -704,8 +624,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		} else {
 			throw new RuntimeException();
 		}
-
-
 
 
 		// save disease import

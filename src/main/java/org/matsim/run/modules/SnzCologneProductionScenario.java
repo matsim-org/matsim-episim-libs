@@ -314,12 +314,45 @@
 		 episimConfig.setThreads(8);
 		 episimConfig.setDaysInfectious(Integer.MAX_VALUE);
 
+		 //progression model
+		 //episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
+		 episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());// TODO: why does this immediately override?
+
+
+		 //DISEASE IMPORT
+		 episimConfig.setInitialInfections(Integer.MAX_VALUE);
+		 if (this.diseaseImport != DiseaseImport.no) {
+
+			 configureDiseaseImport(cologneFactor, episimConfig);
+
+		 }
+
+
+		 //CONTACT INTENSITY
+		 SnzProductionScenario.configureContactIntensities(episimConfig);
+		 //work
+		 double workCi = 0.75;
+		 episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCi);
+		 episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCi);
+
+		 //leisure & visit
+		 double leisureCi = 0.4;
+		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * 0.6 * leisureCi);
+		 episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCi);
+
+
+		 //school
+		 double schoolCi = 0.75;
+		 episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi);
+		 episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi);
+		 episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi);
+		 episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi);
+		 episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi);
+		 episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi);
+
+
+		 //SEASONALITY
 		 episimConfig.getOrAddContainerParams("work").setSeasonality(0.5);
-
-		 double leisCi = 0.6;
-
-		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
-
 		 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(0.5);
@@ -331,27 +364,6 @@
 		 episimConfig.getOrAddContainerParams("visit").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("home").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonality(0.5);
-
-
-		 //progression model
-		 //episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
-		 episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());// TODO: why does this immediately override?
-
-
-		 //inital infections and import
-		 episimConfig.setInitialInfections(Integer.MAX_VALUE);
-		 if (this.diseaseImport != DiseaseImport.no) {
-
-			 //			SnzProductionScenario.configureDiseaseImport(episimConfig, diseaseImport, importOffset,
-			 //					cologneFactor * imprtFctMult, importFactorBeforeJune, importFactorAfterJune);
-			 //disease import 2020
-			 configureDiseaseImport(cologneFactor, episimConfig);
-
-		 }
-
-
-		 //contact intensities
-		 SnzProductionScenario.configureContactIntensities(episimConfig);
 
 		 //restrictions and masks
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
@@ -909,6 +921,7 @@
 			 }
 		 }
 
+
 		 double facWild = 4.0;
 		 double facAlpha = 4.0;
 		 double facDelta = 4.0;
@@ -962,6 +975,34 @@
 		 LocalDate dateAfterCsvEnds = date.plusDays(1);
 		 infPerDayBa2.put(dateAfterCsvEnds, 1);
 
+		 // initial import alpha
+		 LocalDate startDateAlpha = LocalDate.parse("2021-01-15");
+		 for (int i = 0; i < 7; i++) {
+			 infPerDayAlpha.put(startDateAlpha.plusDays(i), 4);
+		 }
+		 infPerDayAlpha.put(startDateAlpha.plusDays(7), 1);
+
+		 // initial import BA.1 // TODO: Why did we comment this out
+//		LocalDate ba1Date = LocalDate.parse(params.ba1Date);
+//		for (int i = 0; i < 7; i++) {
+//			infPerDayBa1.put(ba1Date.plusDays(i), 4);
+//		}
+//		infPerDayBa1.put(ba1Date.plusDays(7), 1);
+
+
+		 // initial import BA.2
+		 LocalDate ba2Date = LocalDate.parse("2021-12-18");
+		 for (int i = 0; i < 7; i++) {
+			 infPerDayBa2.put(ba2Date.plusDays(i), 4);
+		 }
+		 infPerDayBa2.put(ba2Date.plusDays(7), 1);
+
+		 // initial import BA.5
+		 LocalDate ba5Date = LocalDate.parse("2022-04-10");
+		 for (int i = 0; i < 7; i++) {
+			 infPerDayBa5.put(ba5Date.plusDays(i), 4);
+		 }
+		 infPerDayBa5.put(ba5Date.plusDays(7), 1);
 
 		 // set all initial infections
 		 episimConfig.setInfections_pers_per_day(VirusStrain.SARS_CoV_2, infPerDayWild);
