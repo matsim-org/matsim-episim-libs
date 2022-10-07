@@ -227,7 +227,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 									sums.mergeDouble("notAtHome", duration, Double::sum);
 
-									if (!actType.equals("education") && !actType.equals("leisure")) {
+									if (!actType.equals("education") && !actType.startsWith("leis")) {
 										sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
 									}
 									if (!actType.equals("education")) {
@@ -267,7 +267,7 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 
 							sums.mergeDouble("notAtHome", duration, Double::sum);
 
-							if (!actType.equals("education") && !actType.equals("leisure")) {
+							if (!actType.equals("education") && !actType.startsWith("leis")) {
 								sums.mergeDouble("notAtHomeExceptLeisureAndEdu", duration, Double::sum);
 							}
 							if (!actType.equals("education")) {
@@ -896,8 +896,8 @@ public class CreateRestrictionsFromSnz implements RestrictionInput {
 								+ possibleAreas.toString() + " Choose one and start again.");
 		return zipCodes;
 	}
-	
-	
+
+
 	/** Finds the date after the last day in the given output file.
 	 * @param startDateStillUsingBaseDays
 	 * @param filesWithData

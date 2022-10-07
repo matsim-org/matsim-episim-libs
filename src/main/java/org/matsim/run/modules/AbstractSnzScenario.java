@@ -29,6 +29,10 @@ public abstract class AbstractSnzScenario extends AbstractModule {
 
 		episimConfig.getOrAddContainerParams("leisure")
 				.setContactIntensity(5.0);
+		episimConfig.getOrAddContainerParams("leisPublic")
+				.setContactIntensity(5.0);
+		episimConfig.getOrAddContainerParams("leisPrivate")
+				.setContactIntensity(5.0);
 		episimConfig.getOrAddContainerParams("educ_kiga")
 				.setContactIntensity(10.0);
 		episimConfig.getOrAddContainerParams("educ_primary")
