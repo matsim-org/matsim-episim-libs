@@ -417,6 +417,83 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 		FixedPolicy.ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 
+		LocalDate restrictionDate = LocalDate.parse(params.resDate);
+
+		//work
+		double homeOfficeFactor = 0.5;
+		switch (params.work) {
+			case "base":
+				break;
+			case "half":
+				builder.restrict(restrictionDate, 0.78 * homeOfficeFactor, "work"); // dont include business bc harder to do from home office
+				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * homeOfficeFactor, "work");
+				break;
+			case "mask":
+				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "work", "business");
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
+		// leisure public
+		switch (params.leisPublic) {
+			case "base":
+				break;
+			case "mask":
+				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)),  "leisPublic");
+			case "zero":
+				builder.restrict(restrictionDate, 0.0, "leisPublic"); // dont include business bc harder to do from home office
+				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> 0.0, "leisPublic");
+				break;
+			case "half":
+				builder.restrict(restrictionDate, 0.76 * 0.5, "leisPublic"); // dont include business bc harder to do from home office
+				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * 0.5, "leisPublic");
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
+		// leisure private
+		switch (params.leisPrivate) {
+			case "base":
+				break;
+			case "half":
+				builder.restrict(restrictionDate, 0.76 * 0.5, "leisPrivate"); // dont include business bc harder to do from home office
+				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> rf * 0.5, "leisPrivate");
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
+		// shop, errands
+		switch (params.errands) {
+			case "base":
+				break;
+			case "mask":
+				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "shop_daily", "shop_other", "errands");
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
+		//school
+		switch (params.edu) {
+			case "base":
+				break;
+			case "mask":
+				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(
+								FaceMask.CLOTH, 0.0,
+								FaceMask.N95, 0.90)),
+						"educ_secondary", "educ_tertiary", "educ_other");
+				break;
+			case "half":
+				builder.restrict(restrictionDate, 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> Math.min(0.5, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+				break;
+			default:
+				throw new RuntimeException("invalid parameter");
+		}
+
 		// Ci Correction after summer vacation 2022 (more air flow?)
 		builder.restrict(LocalDate.parse("2022-08-09"), Restriction.ofCiCorrection(params.ciCorr), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
@@ -543,18 +620,45 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 		@GenerateSeeds(5)
 		public long seed;
 
-		@StringParameter({"on", "off"})
+
+		// NEW RESTRICTIONS
+		@StringParameter({"2022-11-15","2022-12-01","2022-12-15"})
+		public String resDate;
+
+		//measures in the work context:
+		// homeOff = 50% home office = work Rf cut in half
+		//
+		@StringParameter({"base", "half", "mask"})
+		public String work;
+
+		// leisure Public
+		@StringParameter({"base", "mask", "zero", "half"})
+		public String leisPublic;
+
+		// leisure Private
+		@StringParameter({"base", "half"})
+		public String leisPrivate;
+
+		// mask restrictions for "shop_daily", "shop_other", "errands"
+		@StringParameter({"base", "mask"})
+		public String errands;
+
+		//edu
+		@StringParameter({"none", "mask", "half"})
+		public String edu;
+
+		@StringParameter({"off"})
 		public String importSummer2022;
 
-		@Parameter({0.5, 0.75, 1.0})
+		@Parameter({0.5})
 		public double eduSeasonality;
 
 		// ci correction of schools starting on Aug 9 (when school begins again), relates to air flow
-		@Parameter({0.25, 0.5, 0.75})
+		@Parameter({0.75})
 		public double ciCorr;
 
 		//how much "school" activity takes places during vacation summmer 2022
-		@Parameter({0.2, 0.4, 0.6, 0.8, 1.0})
+		@Parameter({ 0.8})
 		public double eduRfVacation;
 
 
@@ -567,8 +671,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 		@StringParameter({"off"})
 		public String StrainB;
 
-		@StringParameter({"2022-11-15","2022-12-01","2022-12-15"})
-		public String resDate;
+
 
 
 		// vaccination campaign
