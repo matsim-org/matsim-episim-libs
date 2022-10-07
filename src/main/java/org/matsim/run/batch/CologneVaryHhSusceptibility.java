@@ -404,22 +404,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(ba5Hos);
 		}
 
-		// remove age-based susceptibility of strains starting with DELTA TODO: how to integrate into the prod scenario?
-
-		String ageSusc = "false";
-		if (!Boolean.parseBoolean(ageSusc)) {
-			TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
-					19, 1d,
-					20, 1d
-			));
-
-			for (VirusStrain strain : List.of(VirusStrain.DELTA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5, VirusStrain.STRAIN_A)) {
-				virusStrainConfigGroup.getOrAddParams(strain).setAgeSusceptibility(nonSteppedAgeSusceptibility);
-			}
-		}
-
-
-
 		//---------------------------------------
 		//		I M P O R T
 		//---------------------------------------

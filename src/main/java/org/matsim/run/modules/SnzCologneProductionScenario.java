@@ -273,7 +273,6 @@
 	 @Singleton
 	 public Config config() {
 
-		 LocalDate restrictionDate = LocalDate.parse("2022-03-01");
 		 double cologneFactor = 0.5; // Cologne model has about half as many agents as Berlin model, -> 2_352_480
 
 		 if (this.sample != 25 && this.sample != 100)
@@ -288,6 +287,8 @@
 		 config.vehicles().setVehiclesFile(INPUT.resolve("de_2020-vehicles.xml").toString());
 
 		 config.plans().setInputFile(inputForSample("cologne_snz_entirePopulation_emptyPlans_withDistricts_%dpt_split.xml.gz", sample));
+
+		 config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
 
 		 //episim config
 		 EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
@@ -316,10 +317,12 @@
 
 		 //progression model
 		 //episimConfig.setProgressionConfig(AbstractSnzScenario2020.baseProgressionConfig(Transition.config()).build());
-		 episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());// TODO: why does this immediately override?
+		 episimConfig.setProgressionConfig(SnzProductionScenario.progressionConfig(Transition.config()).build());
 
 
-		 //DISEASE IMPORT
+		 //---------------------------------------
+		 //		I M P O R T
+		 //---------------------------------------
 		 episimConfig.setInitialInfections(Integer.MAX_VALUE);
 		 if (this.diseaseImport != DiseaseImport.no) {
 
@@ -328,7 +331,10 @@
 		 }
 
 
-		 //CONTACT INTENSITY
+		 //----------------------------------------------------------------------------
+		 //		C O N T A C T     I N T E N S I T Y    /    S E A S O N A L I T Y
+		 //----------------------------------------------------------------------------
+
 		 SnzProductionScenario.configureContactIntensities(episimConfig);
 		 //work
 		 double workCi = 0.75;
@@ -374,7 +380,10 @@
 		 episimConfig.getOrAddContainerParams("home").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("quarantine_home").setSeasonality(0.5);
 
-		 //restrictions and masks
+		 //---------------------------------------
+		 //		R E S T R I C T I O N S
+		 //---------------------------------------
+
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
 		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220723.csv"));
@@ -504,33 +513,22 @@
 				 "pt");
 
 
-		 //tracing
-		 if (this.tracing == Tracing.yes) {
-
-			 SnzProductionScenario.configureTracing(config, cologneFactor);
-
-		 }
-
-
 		 Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
 		 inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
 		 episimConfig.setInputDays(inputDays);
 
-		 //outdoorFractions
-		 if (this.weatherModel != WeatherModel.no) {
+		 if (carnivalModel.equals(CarnivalModel.yes)) {
+			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
+			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business");
+			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
+			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
 
-			 double outdoorAlpha = 0.8;
-			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
-					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
-					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), outdoorAlpha
-			 );
+			 builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure","leisPublic","leisPrivate");
+			 builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure","leisPublic","leisPrivate");
 
-
-		 } else {
-			 episimConfig.setLeisureOutdoorFraction(Map.of(
-					 LocalDate.of(2020, 1, 1), 0.)
-			 );
+			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
 		 }
+
 
 		 //leisure & work factor
 		 if (this.restrictions != Restrictions.no) {
@@ -567,7 +565,9 @@
 
 
 		 }
-
+		 //---------------------------------------
+		 //		V A C C I N A T I O N S
+		 //---------------------------------------
 		 if (this.vaccinations.equals(Vaccinations.yes)) {
 
 			 VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
@@ -607,26 +607,33 @@
 
 		 }
 
-		 if (carnivalModel.equals(CarnivalModel.yes)) {
-			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
-			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business");
-			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
-			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
-
-			 builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure","leisPublic","leisPrivate");
-			 builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure","leisPublic","leisPrivate");
-
-			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
-		 }
-
 		 builder.setHospitalScale(this.scale);
 
 		 episimConfig.setPolicy(builder.build());
 
-		 //configure strains
+		 //---------------------------------------
+		 //		S T R A I N S
+		 //---------------------------------------
+
+		 VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+
+
+		 // remove age-differentiation in susceptibility for all strains expect WILD & ALPHA
+		 TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
+				 19, 1d,
+				 20, 1d
+		 ));
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 if (strain.equals(VirusStrain.SARS_CoV_2) || strain.equals(VirusStrain.ALPHA)) {
+				 continue;
+			 }
+			 virusStrainConfigGroup.getOrAddParams(strain).setAgeSusceptibility(nonSteppedAgeSusceptibility);
+		 }
+
+
 		 //alpha
 		 double aInf = 1.9 * 1.4;
-		 VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(aInf);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySick(0.5);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setFactorSeriouslySickVaccinated(0.5);
@@ -881,7 +888,18 @@
 				 LocalDate.of(1970, 1, 1), 0,
 				 testingStartDate, Integer.MAX_VALUE));
 
-		 //tracing
+
+		 //---------------------------------------
+		 //		T R A C I N G
+		 //---------------------------------------
+
+
+		 if (this.tracing == Tracing.yes) {
+
+			 SnzProductionScenario.configureTracing(config, cologneFactor);
+
+		 }
+
 		 TracingConfigGroup tracingConfig = ConfigUtils.addOrGetModule(config, TracingConfigGroup.class);
 		 boolean qv = false;
 		 //		if (params.qV.equals("yes")) {
@@ -910,7 +928,24 @@
 				 //					restrictionDate, qs
 		 ));
 
-		 config.controler().setOutputDirectory("output-snzWeekScenario-" + sample + "%");
+		 //---------------------------------------
+		 //		W E A T H E R
+		 //---------------------------------------
+		 if (this.weatherModel != WeatherModel.no) {
+
+			 double outdoorAlpha = 0.8;
+			 SnzProductionScenario.configureWeather(episimConfig, weatherModel,
+					 SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+					 SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), outdoorAlpha
+			 );
+
+
+		 } else {
+			 episimConfig.setLeisureOutdoorFraction(Map.of(
+					 LocalDate.of(2020, 1, 1), 0.)
+			 );
+		 }
+
 
 		 return config;
 	 }
