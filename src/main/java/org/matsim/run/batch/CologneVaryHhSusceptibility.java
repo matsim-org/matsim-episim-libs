@@ -7,6 +7,7 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import jdk.jshell.execution.Util;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
@@ -377,7 +378,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0){ //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0 && params.importSummer2022.equals("on")) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
@@ -394,6 +395,10 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * params.thetaFactor);
+
+
+		//snapshot
+		episimConfig.setSnapshotInterval(766);
 
 
 		//---------------------------------------
@@ -551,6 +556,14 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 			throw new RuntimeException("param value doesn't exist");
 		}
 
+		if (params.skipSchool.equals("yes")) {
+			builder.restrict(LocalDate.parse("2022-08-09"), 0.2, "educ_kiga", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other");
+		} else if (params.skipSchool.equals("no")) {
+
+		} else {
+			throw new RuntimeException();
+		}
+
 		episimConfig.setPolicy(builder.build());
 
 
@@ -586,7 +599,6 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 
 		if (DEBUG_MODE) {
 			UtilsJR.produceDiseaseImportPlot(episimConfig.getInfections_pers_per_day());
-
 		}
 
 		return config;
@@ -654,38 +666,46 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		LocalDate dateStrainAB = LocalDate.parse("2022-11-18"); // after vaca import
 
 
-		NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
-		LocalDate date = null;
-		for (Map.Entry<LocalDate, Double> entry : data.entrySet()) {
-			date = entry.getKey();
-			double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
+		if (params.importSummer2022.equals("on")) {
+			NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
+			LocalDate date = null;
+			for (Map.Entry<LocalDate, Double> entry : data.entrySet()) {
+				date = entry.getKey();
+				double factor = 0.25 * 2352476. / 919936.; //25% sample, data is given for Cologne City so we have to scale it to the whole model
 //
-			double cases = factor * entry.getValue();
+				double cases = factor * entry.getValue();
 
-			if (date.isAfter(dateStrainAB) && (!params.StrainA.equals("off") || !params.StrainB.equals("off"))) {
-				if (!params.StrainA.equals("off") && !params.StrainB.equals("off")) {
-					infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
-					infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
+				if (date.isAfter(dateStrainAB) && (!params.StrainA.equals("off") || !params.StrainB.equals("off"))) {
+					if (!params.StrainA.equals("off") && !params.StrainB.equals("off")) {
+						infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
+						infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (0.5 * cases * facStrAB));
+					}
+					else if (!params.StrainA.equals("off")) {
+						infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
+					}
+					else if (!params.StrainB.equals("off")) {
+						infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
+					}
+					else {
+						throw new RuntimeException();
+					}
+					infPerDayBa5.put(date, 1);
+					infPerDayBa2.put(date, 1);
+				} else if (date.isAfter(dateBa5)) {
+					infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
+					infPerDayBa2.put(date, 1);
+				} else if (date.isAfter(dateBa2)) {
+					infPerDayBa2.put(date, ((int) cases * facBa2) == 0 ? 1 : (int) (cases * facBa2));
 				}
-				else if (!params.StrainA.equals("off")) {
-					infPerDayStrA.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
-				}
-				else if (!params.StrainB.equals("off")) {
-					infPerDayStrB.put(date, ((int) cases * facStrAB) == 0 ? 1 : (int) (cases * facStrAB));
-				}
-				else {
-					throw new RuntimeException();
-				}
-				infPerDayBa5.put(date, 1);
-				infPerDayBa2.put(date, 1);
-			} else if (date.isAfter(dateBa5)) {
-				infPerDayBa5.put(date, ((int) cases * facBa5) == 0 ? 1 : (int) (cases * facBa5));
-				infPerDayBa2.put(date, 1);
-			} else if (date.isAfter(dateBa2)) {
-				infPerDayBa2.put(date, ((int) cases * facBa2) == 0 ? 1 : (int) (cases * facBa2));
+
 			}
-
+		} else if (params.importSummer2022.equals("off")) {
+		} else {
+			throw new RuntimeException();
 		}
+
+
+
 
 		// save disease import
 		episimConfig.setInfections_pers_per_day(VirusStrain.OMICRON_BA1, infPerDayBa1);
@@ -705,11 +725,22 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 		@GenerateSeeds(5)
 		public long seed;
 
-		@Parameter({1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2})
+//		@StringParameter({"on", "off"})
+		@StringParameter({"on"})
+		public String importSummer2022;
+
+//		@StringParameter({"yes", "no"})
+		@StringParameter({"no"})
+		public String skipSchool;
+
+
+
+//		@Parameter({1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2})
+		@Parameter({1.7})
 		public double thetaFactor;
 
-		@Parameter({0.3, 0.35, 0.4, 0.45, 0.5})
-//		@Parameter({0.5})
+//		@Parameter({0.3, 0.35, 0.4, 0.45, 0.5})
+		@Parameter({0.35})
 		public double pctHh;
 
 		@Parameter({0.01})

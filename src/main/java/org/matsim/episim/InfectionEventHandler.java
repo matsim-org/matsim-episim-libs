@@ -776,11 +776,14 @@ public final class InfectionEventHandler implements Externalizable {
 				antibodies.mergeDouble(kv.getKey(), kv.getDoubleValue(), Double::sum);
 			}
 		}
-		
-		if (date.getDayOfMonth() == 1) {
- 			reporting.reportDetailedPersonStats(date, personMap.values());
- 		}
- 		 
+
+		// uncomment if you want immunisation stats to be printed on a certain
+		// date or e.g. every month. This produces a lot of large files so use
+		// sparingly.
+//		if (date.getDayOfMonth() == 1) {
+// 			reporting.reportDetailedPersonStats(date, personMap.values());
+// 		}
+
 
 		reporting.reportCpuTime(iteration, "ProgressionModelParallel", "start", -2);
 		progressionModel.afterStateUpdates(personMap, iteration);
