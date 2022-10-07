@@ -7,14 +7,15 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
-import jdk.jshell.execution.Util;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.*;
+import org.matsim.episim.BatchRun;
+import org.matsim.episim.DataUtils;
+import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
-import org.matsim.episim.model.testing.TestType;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
 import org.matsim.episim.policy.FixedPolicy;
@@ -30,7 +31,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSusceptibility.Params> {
+public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -579,7 +580,7 @@ public class CologneVaryHhSusceptibility implements BatchRun<CologneVaryHhSuscep
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneVaryHhSusceptibility.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202210XX.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
