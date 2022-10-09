@@ -31,7 +31,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params> {
+public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210XX_SNAPSHOT.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -373,9 +373,9 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 
 		//snapshot
-//		episimConfig.setSnapshotInterval(766);
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-07/" + params.seed + "-766-2022-03-31.zip");
-		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		episimConfig.setSnapshotInterval(766);
+//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-07/" + params.seed + "-766-2022-03-31.zip");
+//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 
 		//---------------------------------------
@@ -622,29 +622,29 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 
 		// NEW RESTRICTIONS
-		@StringParameter({"2022-11-15","2022-12-01","2022-12-15"})
+		@StringParameter({"2022-11-15"})
 		public String resDate;
 
 		//measures in the work context:
 		// homeOff = 50% home office = work Rf cut in half
 		//
-		@StringParameter({"base", "half", "mask"})
+		@StringParameter({"base"})
 		public String work;
 
 		// leisure Public
-		@StringParameter({"base", "mask", "zero", "half"})
+		@StringParameter({"base"})
 		public String leisPublic;
 
 		// leisure Private
-		@StringParameter({"base", "half"})
+		@StringParameter({"base"})
 		public String leisPrivate;
 
 		// mask restrictions for "shop_daily", "shop_other", "errands"
-		@StringParameter({"base", "mask"})
+		@StringParameter({"base"})
 		public String errands;
 
 		//edu
-		@StringParameter({"base", "mask", "half"})
+		@StringParameter({"base"})
 		public String edu;
 
 		@StringParameter({"off"})
@@ -660,8 +660,6 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 		//how much "school" activity takes places during vacation summmer 2022
 		@Parameter({ 0.8})
 		public double eduRfVacation;
-
-
 
 //		@StringParameter({"off", "3.0", "6.0"})
 		@StringParameter({"3.0"})
@@ -683,7 +681,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202210XX.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202210XX_SNAPSHOT.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),

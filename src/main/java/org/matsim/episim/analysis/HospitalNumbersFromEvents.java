@@ -262,13 +262,13 @@
 
 		 List<Handler> handlers = List.of(
 				  new Handler("Omicron", population, holderOmicron, 0.0),
-				 new Handler("Delta", population, holderDelta, 0.0),
-				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
-				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
-				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
-				 new Handler("Delta-Paxlovid-0.50", population, holderDelta, 0.5),
-				 new Handler("Omicron-Paxlovid-0.75", population, holderOmicron, 0.75),
-				 new Handler("Delta-Paxlovid-0.75", population, holderDelta, 0.75)
+				 new Handler("Delta", population, holderDelta, 0.0)
+//				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
+//				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
+//				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
+//				 new Handler("Delta-Paxlovid-0.50", population, holderDelta, 0.5),
+//				 new Handler("Omicron-Paxlovid-0.75", population, holderOmicron, 0.75),
+//				 new Handler("Delta-Paxlovid-0.75", population, holderDelta, 0.75)
 		 );
 
 		 // feed the output events file to the handler, so that the hospitalizations may be calculated

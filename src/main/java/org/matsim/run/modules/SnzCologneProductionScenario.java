@@ -384,6 +384,9 @@
 		 //		R E S T R I C T I O N S
 		 //---------------------------------------
 
+		 Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
+		 inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
+
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
 		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220723.csv"));
@@ -449,7 +452,53 @@
 		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
 		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
 
+		 if (carnivalModel.equals(CarnivalModel.yes)) {
+			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
+			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business");
+			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
+			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
 
+			 builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure","leisPublic","leisPrivate");
+			 builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure","leisPublic","leisPrivate");
+			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
+		 }
+		 episimConfig.setInputDays(inputDays);
+
+
+		 //leisure & work factor
+		 if (this.restrictions != Restrictions.no) {
+
+			 if (leisureCorrection == 0.) {  // assume old factor of 1.9, only applied to leisure TODO: get rid of this artifact
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure","leisPublic","leisPrivate");
+			 } else if (leisureCorrection != 1) {
+				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "business", "errands", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "work");
+			 }
+
+			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
+			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
+
+			 builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
+			 builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
+			 builder.applyToRf("2020-10-09", "2020-10-23", workVacFactor, "work", "business");
+			 builder.applyToRf("2020-12-18", "2021-01-01", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-01-29", "2021-02-05", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
+			 builder.applyToRf("2021-12-22", "2022-01-05", workVacFactor, "work", "business");
+
+
+			 builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-06-27"), 0.78 * 0.92, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-08-09"), 0.78, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-10-04"), 0.78 * 0.92, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-10-15"), 0.78, "work", "business");
+			 builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
+			 builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
+		 }
+
+		 //MASKS
 		 {
 			 LocalDate masksCenterDate = LocalDate.of(2020, 4, 27);
 			 for (int ii = 0; ii <= 14; ii++) {
@@ -513,58 +562,9 @@
 				 "pt");
 
 
-		 Map<LocalDate, DayOfWeek> inputDays = new HashMap<>();
-		 inputDays.put(LocalDate.parse("2021-11-01"), DayOfWeek.SUNDAY);
-		 episimConfig.setInputDays(inputDays);
-
-		 if (carnivalModel.equals(CarnivalModel.yes)) {
-			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
-			 builder.restrict(LocalDate.parse("2022-02-25"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business");
-			 builder.restrict(LocalDate.parse("2022-02-27"), 1., "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // sunday, to overwrite the setting on sundays
-			 builder.restrict(LocalDate.parse("2022-03-01"), 0.7, "work", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "errands", "business"); // tuesday, back to normal after carnival
-
-			 builder.restrict(LocalDate.parse("2022-02-25"), Restriction.ofCiCorrection(2.0), "leisure","leisPublic","leisPrivate");
-			 builder.restrict(LocalDate.parse("2022-03-01"), Restriction.ofCiCorrection(1.0), "leisure","leisPublic","leisPrivate");
-
-			 inputDays.put(LocalDate.parse("2022-02-28"), DayOfWeek.SUNDAY); // set monday to be a sunday
-		 }
 
 
-		 //leisure & work factor
-		 if (this.restrictions != Restrictions.no) {
 
-			 if (leisureCorrection == 0.) {  // assume old factor of 1.9, only applied to leisure TODO: get rid of this artifact
-				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - 1.9 * (1 - (double) e.get("fraction"))), "leisure","leisPublic","leisPrivate");
-			 } else if (leisureCorrection != 1) {
-				 builder.apply("2020-10-15", "2020-12-14", (d, e) -> e.put("fraction", 1 - leisureCorrection * (1 - (double) e.get("fraction"))), "business", "errands", "leisure","leisPublic","leisPrivate", "shop_daily", "shop_other", "visit", "work");
-			 }
-
-			 //			builder.applyToRf("2020-10-15", "2020-12-14", (d, rf) -> rf - leisureOffset, "leisure");
-
-			 BiFunction<LocalDate, Double, Double> workVacFactor = (d, rf) -> rf * 0.92;
-
-			 builder.applyToRf("2020-04-03", "2020-04-17", workVacFactor, "work", "business");
-			 builder.applyToRf("2020-06-26", "2020-08-07", workVacFactor, "work", "business");
-			 builder.applyToRf("2020-10-09", "2020-10-23", workVacFactor, "work", "business");
-			 builder.applyToRf("2020-12-18", "2021-01-01", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-01-29", "2021-02-05", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-03-26", "2021-04-09", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
-			 builder.applyToRf("2021-12-22", "2022-01-05", workVacFactor, "work", "business");
-
-
-			 builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-06-27"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-08-09"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-10-04"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-10-15"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
-
-
-		 }
 		 //---------------------------------------
 		 //		V A C C I N A T I O N S
 		 //---------------------------------------
