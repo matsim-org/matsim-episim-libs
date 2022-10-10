@@ -49,7 +49,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 				double mutEscDelta = 29.2 / 10.9;
 				double mutEscBa1 = 10.9 / 1.9;
-				double mutEscBa5 = 2.9;
+				double mutEscBa5 = 2.9; // 0.1 -> 3.8
 
 				double mutEscStrainA = 0.;
 				double mutEscStrainB = 0.;
@@ -374,7 +374,8 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 		//snapshot
 //		episimConfig.setSnapshotInterval(766);
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-07/" + params.seed + "-766-2022-03-31.zip");
+//		episimConfig.setSnapshotPrefix(params.seed +"-");
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-09/" + params.seed + "--766-2022-03-31.zip");
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 
@@ -390,7 +391,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 //		STRAIN_A
 		if (!params.StrainA.equals("off")) {
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA5).getInfectiousness() * ba5Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(ba5Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(ba5Hos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(ba5Hos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(ba5Hos);

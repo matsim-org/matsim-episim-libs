@@ -337,37 +337,30 @@
 
 		 SnzProductionScenario.configureContactIntensities(episimConfig);
 		 //work
-		 double workCi = 0.75;
-		 episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCi);
-		 episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCi);
+		 double workCiMod = 0.75;
+		 episimConfig.getOrAddContainerParams("work").setContactIntensity(episimConfig.getOrAddContainerParams("work").getContactIntensity() * workCiMod);
+		 episimConfig.getOrAddContainerParams("business").setContactIntensity(episimConfig.getOrAddContainerParams("business").getContactIntensity() * workCiMod);
 
 		 //leisure & visit
-		 double leisureCi = 0.4;
-		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * 0.6 * leisureCi);
-		 episimConfig.getOrAddContainerParams("leisPublic").setContactIntensity(episimConfig.getOrAddContainerParams("leisPublic").getContactIntensity() * 0.6 * leisureCi);
-		 episimConfig.getOrAddContainerParams("leisPrivate").setContactIntensity(episimConfig.getOrAddContainerParams("leisPrivate").getContactIntensity() * 0.6 * leisureCi);
-		 episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCi);
+		 double leisureCiMod = 0.4;
+		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(episimConfig.getOrAddContainerParams("leisure").getContactIntensity() * leisureCiMod);
+		 episimConfig.getOrAddContainerParams("leisPublic").setContactIntensity(episimConfig.getOrAddContainerParams("leisPublic").getContactIntensity() * leisureCiMod);
+		 episimConfig.getOrAddContainerParams("leisPrivate").setContactIntensity(episimConfig.getOrAddContainerParams("leisPrivate").getContactIntensity() * leisureCiMod);
+		 episimConfig.getOrAddContainerParams("visit").setContactIntensity(episimConfig.getOrAddContainerParams("visit").getContactIntensity() * leisureCiMod);
 
 
 		 //school
-		 double schoolCi = 0.75;
-		 episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCi);
-		 episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCi);
-		 episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCi);
-		 episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCi);
-		 episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCi);
-		 episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCi);
+		 double schoolCiMod = 0.75;
+		 episimConfig.getOrAddContainerParams("educ_kiga").setContactIntensity(episimConfig.getOrAddContainerParams("educ_kiga").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_primary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_primary").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_secondary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_secondary").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_tertiary").setContactIntensity(episimConfig.getOrAddContainerParams("educ_tertiary").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_higher").setContactIntensity(episimConfig.getOrAddContainerParams("educ_higher").getContactIntensity() * schoolCiMod);
+		 episimConfig.getOrAddContainerParams("educ_other").setContactIntensity(episimConfig.getOrAddContainerParams("educ_other").getContactIntensity() * schoolCiMod);
 
 
 		 //SEASONALITY
 		 episimConfig.getOrAddContainerParams("work").setSeasonality(0.5);
-
-		 double leisCi = 0.6;
-
-		 episimConfig.getOrAddContainerParams("leisure").setContactIntensity(9.24 * leisCi);
-		 episimConfig.getOrAddContainerParams("leisPrivate").setContactIntensity(9.24 * leisCi);
-		 episimConfig.getOrAddContainerParams("leisPublic").setContactIntensity(9.24 * leisCi);
-
 		 episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(0.5);
 		 episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(0.5);
@@ -618,20 +611,6 @@
 		 VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
 
 
-		 // remove age-differentiation in susceptibility for all strains expect WILD & ALPHA
-		 TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
-				 19, 1d,
-				 20, 1d
-		 ));
-
-		 for (VirusStrain strain : VirusStrain.values()) {
-			 if (strain.equals(VirusStrain.SARS_CoV_2) || strain.equals(VirusStrain.ALPHA)) {
-				 continue;
-			 }
-			 virusStrainConfigGroup.getOrAddParams(strain).setAgeSusceptibility(nonSteppedAgeSusceptibility);
-		 }
-
-
 		 //alpha
 		 double aInf = 1.9 * 1.4;
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(aInf);
@@ -670,6 +649,18 @@
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorSeriouslySickVaccinated(oHos);
 		 virusStrainConfigGroup.getOrAddParams(VirusStrain.OMICRON_BA5).setFactorCritical(oHos);
 
+		 // remove age-differentiation in susceptibility for all strains expect WILD & ALPHA
+		 TreeMap<Integer, Double> nonSteppedAgeSusceptibility = new TreeMap<>(Map.of(
+				 19, 1d,
+				 20, 1d
+		 ));
+
+		 for (VirusStrain strain : VirusStrain.values()) {
+			 if (strain.equals(VirusStrain.SARS_CoV_2) || strain.equals(VirusStrain.ALPHA) || strain.equals(VirusStrain.B1351)) {
+				 continue;
+			 }
+			 virusStrainConfigGroup.getOrAddParams(strain).setAgeSusceptibility(nonSteppedAgeSusceptibility);
+		 }
 
 		 //---------------------------------------
 		 //		T E S T I N G

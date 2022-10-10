@@ -31,7 +31,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210XX_SNAPSHOT.Params> {
+public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202210XX_SNAPSHOT_old.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -681,7 +681,7 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202210XX_SNAPSHOT.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202210XX_SNAPSHOT_old.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
