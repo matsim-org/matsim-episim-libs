@@ -49,7 +49,8 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 				double mutEscDelta = 29.2 / 10.9;
 				double mutEscBa1 = 10.9 / 1.9;
-				double mutEscBa5 = 2.9; // 0.1 -> 3.8
+//				double mutEscBa5 = 2.9; // 0.1 -> 3.8
+				double mutEscBa5 = 5.0;
 
 				double mutEscStrainA = 0.;
 				double mutEscStrainB = 0.;
@@ -375,7 +376,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 		//snapshot
 //		episimConfig.setSnapshotInterval(766);
 //		episimConfig.setSnapshotPrefix(params.seed +"-");
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-09/" + params.seed + "--766-2022-03-31.zip");
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-10/" + params.seed + "--766-2022-03-31.zip");
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 
@@ -442,6 +443,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 				break;
 			case "mask":
 				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)),  "leisPublic");
+				break;
 			case "zero":
 				builder.restrict(restrictionDate, 0.0, "leisPublic"); // dont include business bc harder to do from home office
 				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> 0.0, "leisPublic");
@@ -665,7 +667,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 
 //		@StringParameter({"off", "3.0", "6.0"})
-		@StringParameter({"3.0"})
+		@StringParameter({"6.0"})
 		public String StrainA;
 
 //		@StringParameter({"off", "3.0", "6.0"})

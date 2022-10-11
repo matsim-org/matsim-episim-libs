@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.SplittableRandom;
 
 /**
- * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependen additions.
+ * Extension of the {@link DefaultInfectionModel}, with age, time and seasonality-dependent additions.
  */
 public final class InfectionModelWithAntibodies implements InfectionModel {
 
