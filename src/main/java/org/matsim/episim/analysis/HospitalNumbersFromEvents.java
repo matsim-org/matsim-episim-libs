@@ -60,7 +60,7 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/xxx/")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/yyy/")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -276,24 +276,6 @@
 		 // feed the output events file to the handler, so that the hospitalizations may be calculated
 		 List<String> eventFiles = AnalysisCommand.forEachEvent(pathToScenario, s -> {
 		 }, true, handlers.toArray(new Handler[0]));
-
-//		 for (Double facA : strainFactors) {
-
-			 // configure post processing run
-//			 double facAICU = 0.;
-//			 String diseaseSevName = "";
-//			 if (facA == factorWild) {
-//				 diseaseSevName = "Alpha";
-//				 facAICU = factorWildAndAlphaICU;
-//			 } else if (facA == factorDelta) {
-//				 diseaseSevName = "Delta";
-//				 facAICU = factorDeltaICU;
-//			 } else if (facA == factorOmicron) {
-//				 diseaseSevName = "Omicron";
-//				 facAICU = factorOmicronICU;
-//			 } else {
-//				 throw new RuntimeException("not clear what to do");
-//			 }
 
 		 for (Handler handler : handlers) {
 
@@ -590,6 +572,12 @@
 			 }
 
 			 // 0.36 (old) * 1.2 (delta) * ... (immunisation) =
+			 // if returned values (ageFactor, strainFactor, immunityFactor) are high: chance of going to hosp is high / protection is low
+			 System.out.println("Remaining Risk: " + (ageFactor
+					 * strainFactor
+					 * immunityFactor
+					 * paxlovidFactor));
+
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
 					 * immunityFactor

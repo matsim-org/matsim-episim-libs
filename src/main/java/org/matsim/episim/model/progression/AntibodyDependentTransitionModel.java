@@ -159,7 +159,8 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 			antibodiesAfterLastImmunityEvent *= 3.7;
 		}
 
-		return 1. / (1. + Math.pow( antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
+		// returns remaining risk of infection (1 is full risk, 0 is no risk), opposite of vaccine effectiveness
+		return 1- 1. / (1. + Math.pow( antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
 
 
 		// --
