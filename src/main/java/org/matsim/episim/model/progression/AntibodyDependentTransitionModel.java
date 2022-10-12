@@ -148,6 +148,10 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 
 		double antibodiesAfterLastImmunityEvent = person.getAntibodyLevelAtInfection() * Math.pow(2., daysSinceLastImmunityEvent / 60.);
+		
+		System.out.println("antibodiesAfterLastImmunityEvent: " + antibodiesAfterLastImmunityEvent);
+		System.out.println("person.getAntibodyLevelAtInfection(): " + person.getAntibodyLevelAtInfection());
+
 
 		// Two modifications to antibody level below:
 		// a) we multiply the antibody level by 4 if the agent is boostered
