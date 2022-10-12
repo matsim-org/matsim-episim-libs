@@ -263,8 +263,8 @@
 		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
 
 		 List<Handler> handlers = List.of(
-				  new Handler("Omicron", population, holderOmicron, 0.0),
-				 new Handler("Delta", population, holderDelta, 0.0)
+				  new Handler("Omicron", population, holderOmicron, 0.0)
+//				 new Handler("Delta", population, holderDelta, 0.0)
 //				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
 //				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
 //				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
@@ -420,6 +420,11 @@
 
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
+			 
+			 if (!event.getPersonId().toString().equals("12102f5"))
+				 return;
+			 System.out.println(event.getTime() / 86400. + " " + event.getVirusStrain());
+			 
 
 			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(),
 					 personId -> new ImmunizablePerson(personId, getAge(personId)));
@@ -469,6 +474,10 @@
 
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
+			 
+			 if (!event.getPersonId().toString().equals("12102f5"))
+				 return;
+			 
 			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
 
 			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
@@ -581,6 +590,14 @@
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
 			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
+			 
+			 System.out.println("+++ day: " + day);
+			 System.out.println(person.getPersonId().toString());
+			 System.out.println(ageFactor);
+			 System.out.println(strainFactor);
+			 System.out.println(immunityFactor);
+			 System.out.println();
+
 
 			 double paxlovidFactor = 1.0;
 			 if (person.getAge() > 60 && day >= this.paxlovidDay) {
