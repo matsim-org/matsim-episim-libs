@@ -59,7 +59,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 				EpisimReporting.AgeGroup.age_60_plus, vaxCnt_60_plus
 		));
 
-		// create a age-group vaccinations remaining counter for each vaccination campaign (will count down to 0)
+		// create an age-group vaccinations remaining counter for each vaccination campaign (will count down to 0)
 		// each map is a copy of map created above
 		this.vaccinationsLeftPerAgePerCampaign = new HashMap<>();
 		for (LocalDate startDate : config.startDateToVaccinationCampaign.keySet()) {
@@ -99,7 +99,8 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 					.filter(EpisimPerson::isVaccinable) // todo: what determines who is vaccinable?
 					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
 					.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt) // only boostered people are reboostered
-					.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 90) // only people who've had their last vaccination more than 90 days ago
+					.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 180) // only people who've had their last vaccination more than 90 days ago
+					.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > 180) // only people who've had their last vaccination more than 90 days ago
 					.collect(Collectors.toList());
 
 

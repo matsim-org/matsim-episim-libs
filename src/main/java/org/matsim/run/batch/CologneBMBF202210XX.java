@@ -7,17 +7,17 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.DataUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
+import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
@@ -26,6 +26,7 @@ import org.matsim.run.modules.SnzCologneProductionScenario;
 import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 /**
@@ -43,10 +44,55 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 			@Override
 			protected void configure() {
 
+				// VACCINATION MODEL
 				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
+				set.addBinding().to(VaccinationStrategyReoccurringCampaigns.class).in(Singleton.class);
 
-				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
+				// default values (if params==null)
+				Map<LocalDate,VaccinationType> startDateToVaccination = new HashMap<>();
+				startDateToVaccination.put(LocalDate.parse("2022-10-01"), VaccinationType.ba5Update);
 
+				Object2DoubleMap<EpisimReporting.AgeGroup> compliance = new Object2DoubleAVLTreeMap();
+				compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.0);
+				compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.0);
+				compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.0);
+				compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
+
+				VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered;
+
+				int campaignDuration = 60;
+
+				if (params != null) {
+
+
+					if (params.vacCamp.equals("60plus")) {
+						compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.94/2); // 0.94 is boost rate July 16, 2022
+						compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.);
+						compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.);
+						compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.);
+					}
+					// assumption: older age group 2boosted first, then younger, each age group
+					// will have rate of 50% 2boosted by end of campaign.
+					// motivation: if we give both age groups same rate, then the older people
+					// will not be boosted as much as younger people, which seems implausible...
+					else if (params.vacCamp.equals("18plus")) {
+						compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.95/2); // boost rates as of oct 11 2022
+						compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.77/2);
+						compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.36/2);
+						compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
+					}  else if (params.vacCamp.equals("off")) {
+
+					} else {
+						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
+					}
+				}
+
+
+				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool));
+
+
+				// ANTIBODY MODEL
+				// default values
 				double mutEscDelta = 29.2 / 10.9;
 				double mutEscBa1 = 10.9 / 1.9;
 //				double mutEscBa5 = 2.9; // 0.1 -> 3.8
@@ -55,55 +101,16 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 				double mutEscStrainA = 0.;
 				double mutEscStrainB = 0.;
 
-				LocalDate start = null;
-				VaccinationType vaccinationType = VaccinationType.mRNA;
-
-				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
-				compliance.put(60, 0.0);
-				compliance.put(18, 0.0);
-				compliance.put(12, 0.0);
-				compliance.put(0, 0.0);
-
-				String vacCamp = "off";
-
 				if (params != null) {
 //					mutEscBa5 = params.ba5Esc;
 
-					if (!params.vacType.equals("off")) {
-						vacCamp = "age";
-						vaccinationType = VaccinationType.valueOf(params.vacType);
-					}
 					if (!params.StrainA.equals("off")) {
 						mutEscStrainA = Double.parseDouble(params.StrainA);
 					}
 					if (!params.StrainB.equals("off")) {
 						mutEscStrainB = Double.parseDouble(params.StrainB);
 					}
-
-					start = LocalDate.parse(params.resDate);
-
-
-
-					if (vacCamp.equals("age")) {
-						compliance.put(60, 0.85); // 60+
-						compliance.put(18, 0.55); // 18-59
-						compliance.put(12, 0.20); // 12-17
-						compliance.put(0, 0.0); // 0 - 11
-					}
-					else if (vacCamp.equals("eu")) {
-						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
-						compliance.put(18, 0.);
-						compliance.put(12, 0.);
-						compliance.put(0, 0.);
-					}
-					else if (vacCamp.equals("off")) {
-
-					} else {
-						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
-					}
 				}
-//
-				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
@@ -121,7 +128,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 				if (params == null) return;
 
-//				double pHousehold = 1.0;
+				// HOUSEHOLD SUSCEPTIBILITY
 				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
@@ -413,6 +420,26 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 		configureFutureDiseaseImport(params, episimConfig);
 
+		// modify import:
+		LocalDate impModDate = LocalDate.parse("2022-01-31");
+		if (params.impRedBa1 != 1.0) {
+			NavigableMap<LocalDate, Integer> impBa1 = episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA1);
+			for (Map.Entry<LocalDate, Integer> entry : impBa1.entrySet()) {
+				if (entry.getKey().isAfter(impModDate)) {
+					impBa1.put(entry.getKey(), (int) (entry.getValue() * params.impRedBa1));
+				}
+			}
+		}
+
+		if (params.impRedBa2 != 1.0) {
+			NavigableMap<LocalDate, Integer> impBa2 = episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA2);
+			for (Map.Entry<LocalDate, Integer> entry : impBa2.entrySet()) {
+				if (entry.getKey().isAfter(impModDate)) {
+					impBa2.put(entry.getKey(), (int) (entry.getValue() * params.impRedBa2));
+				}
+			}
+		}
+
 		//---------------------------------------
 		//		R E S T R I C T I O N S
 		//---------------------------------------
@@ -623,6 +650,12 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 		@GenerateSeeds(5)
 		public long seed;
 
+		@Parameter({0.0})
+		public double impRedBa1;
+
+		@Parameter({0.0})
+		public double impRedBa2;
+
 
 		// NEW RESTRICTIONS
 		@StringParameter({"2022-11-15","2022-12-01","2022-12-15"})
@@ -679,8 +712,13 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 
 		// vaccination campaign
 //		@StringParameter({"ba1Update", "ba5Update", "mRNA", "off"})
-		@StringParameter({"off"})
-		public String vacType;
+//		@StringParameter({"off"})
+//		public String vacType;
+
+		@StringParameter({"18plus"})
+//		@StringParameter({"off", "60plus", "18plus"})
+		String vacCamp;
+
 	}
 
 

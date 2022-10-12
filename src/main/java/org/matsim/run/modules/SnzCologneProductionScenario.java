@@ -382,7 +382,7 @@
 
 		 CreateRestrictionsFromCSV activityParticipation = new CreateRestrictionsFromCSV(episimConfig);
 
-		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20220723.csv"));
+		 activityParticipation.setInput(INPUT.resolve("CologneSnzData_daily_until20221003.csv"));
 
 		 activityParticipation.setScale(this.scale);
 		 activityParticipation.setLeisureAsNightly(this.leisureNightly);
@@ -438,12 +438,12 @@
 		 //Herbstferien
 		 builder.restrict(LocalDate.parse("2022-10-04"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 		 builder.restrict(LocalDate.parse("2022-10-15"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 //Weihnachtsferien
-		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
-		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+		 //Weihnachtsferien todo: reinstate xmas
+//		 builder.restrict(LocalDate.parse("2022-12-23"), 0.2, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		 builder.restrict(LocalDate.parse("2023-01-06"), 1.0, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
-		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
-		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
+//		 builder.restrict(LocalDate.parse("2022-12-19"), 0.2, "educ_higher");
+//		 builder.restrict(LocalDate.parse("2022-12-31"), 1.0, "educ_higher");
 
 		 if (carnivalModel.equals(CarnivalModel.yes)) {
 			 // Friday 25.2 to Monday 28.2 (Rosenmontag)
@@ -479,16 +479,14 @@
 			 builder.applyToRf("2021-07-01", "2021-08-13", workVacFactor, "work", "business");
 			 builder.applyToRf("2021-10-08", "2021-10-22", workVacFactor, "work", "business");
 			 builder.applyToRf("2021-12-22", "2022-01-05", workVacFactor, "work", "business");
+			 builder.applyToRf("2022-04-11", "2022-04-23", workVacFactor, "work", "business");
+			 builder.applyToRf("2022-06-27", "2022-08-09", workVacFactor, "work", "business");
 
-
-			 builder.restrict(LocalDate.parse("2022-04-11"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-04-23"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-06-27"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-08-09"), 0.78, "work", "business");
 			 builder.restrict(LocalDate.parse("2022-10-04"), 0.78 * 0.92, "work", "business");
 			 builder.restrict(LocalDate.parse("2022-10-15"), 0.78, "work", "business");
-			 builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
-			 builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
+			 //todo: revert xmas factor
+//			 builder.restrict(LocalDate.parse("2022-12-23"), 0.78 * 0.92, "work", "business");
+//			 builder.restrict(LocalDate.parse("2023-01-06"), 0.78, "work", "business");
 		 }
 
 		 //MASKS
