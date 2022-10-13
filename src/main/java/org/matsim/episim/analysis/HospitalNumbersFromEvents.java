@@ -420,10 +420,12 @@
 			 VirusStrain virusStrain = event.getVirusStrain();
 			 person.addInfection(event.getTime());
 			 person.setAntibodyLevelAtInfection(event.getAntibodies());
-			 person.getMaxAntibodies().put(virusStrain, event.getMaxAntibodies());
 			 person.setVirusStrain(virusStrain);
 
+			 person.setMaxAntibodies(virusStrain, event.getMaxAntibodies());
+
 			 int day = (int) (event.getTime() / 86_400);
+
 
 			 updateHospitalizationsPost(person, virusStrain, day);
 
@@ -659,7 +661,7 @@
 			 /**
 			  * Maximal antibody level reached by agent w/ respect to each strain
 			  */
-			 private final Object2DoubleMap<VirusStrain> maximalAntibodyLevel = new Object2DoubleOpenHashMap<>();
+			 private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 
 			 private int age;
 
@@ -724,7 +726,16 @@
 
 			 @Override
 			 public Object2DoubleMap<VirusStrain> getMaxAntibodies() {
-				 return maximalAntibodyLevel;
+				 return maxAntibodies;
+			 }
+
+			 @Override
+			 public double getMaxAntibodies(VirusStrain strain) {
+				 return maxAntibodies.getDouble(strain);
+			 }
+
+			 public void setMaxAntibodies(VirusStrain strain, double maxAb){
+				 this.maxAntibodies.put(strain, maxAb);
 			 }
 
 			 @Override

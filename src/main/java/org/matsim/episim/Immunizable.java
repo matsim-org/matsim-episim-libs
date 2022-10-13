@@ -59,6 +59,10 @@ public interface Immunizable extends HasPersonId {
 	double getMaxAntibodies(VirusStrain strain);
 
 	/**
+	 * sets max antibody level that agent has had in their past for a specific strain.
+	 */
+	void setMaxAntibodies(VirusStrain strain, double maxAb);
+	/**
 	 * Returns whether agent has experienced given disease status at any time in the course of the simulation
 	 */
 	boolean hadDiseaseStatus(EpisimPerson.DiseaseStatus status);
