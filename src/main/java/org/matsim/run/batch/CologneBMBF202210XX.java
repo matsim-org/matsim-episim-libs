@@ -362,7 +362,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.importSummer2022.equals("on")) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
@@ -644,6 +644,8 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 			episimConfig.setInfections_pers_per_day(VirusStrain.STRAIN_B, infPerDayStrB);
 		}
 	}
+
+
 
 	public static final class Params {
 		// general

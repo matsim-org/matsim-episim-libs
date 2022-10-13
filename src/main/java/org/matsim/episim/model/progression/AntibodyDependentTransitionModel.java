@@ -148,9 +148,9 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 
 		double antibodiesAfterLastImmunityEvent = person.getAntibodyLevelAtInfection() * Math.pow(2., daysSinceLastImmunityEvent / 60.);
-		
-		System.out.println("antibodiesAfterLastImmunityEvent: " + antibodiesAfterLastImmunityEvent);
-		System.out.println("person.getAntibodyLevelAtInfection(): " + person.getAntibodyLevelAtInfection());
+
+//		System.out.println("antibodiesAfterLastImmunityEvent: " + antibodiesAfterLastImmunityEvent);
+//		System.out.println("antibodies now : " + person.getAntibodyLevelAtInfection());
 
 
 		// Two modifications to antibody level below:
@@ -164,7 +164,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		}
 
 		// returns remaining risk of infection (1 is full risk, 0 is no risk), opposite of vaccine effectiveness
-		return 1- 1. / (1. + Math.pow( antibodiesAfterLastImmunityEvent, vaccinationConfig.getBeta()));
+		return 1. / (1. + Math.pow(antibodiesAfterLastImmunityEvent,vaccinationConfig.getBeta()));
 
 
 		// --

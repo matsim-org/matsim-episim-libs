@@ -178,12 +178,15 @@ public class DefaultAntibodyModelTest {
 	@Test
 	public void testMixOfVaccinesAndInfections() {
 
-		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA, VaccinationType.mRNA, VaccinationType.ba1Update);
-		IntList immunityEventDays = IntList.of(1, 181, 451);
+		List<ImmunityEvent> immunityEvents = List.of(VirusStrain.DELTA, VaccinationType.mRNA, VirusStrain.OMICRON_BA1, VirusStrain.OMICRON_BA2, VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5,VirusStrain.OMICRON_BA5);
+		IntList immunityEventDays = IntList.of(538, 644,720,736,845,958,979);
 //		List<ImmunityEvent> immunityEvents = List.of(VaccinationType.mRNA);
 //		IntList immunityEventDays = IntList.of(1);
 
-		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 750, EpisimTestUtils.createPerson());
+		EpisimPerson person = EpisimTestUtils.createPerson();
+		person.setImmuneResponseMultiplier(10);
+
+		Int2ObjectMap<Object2DoubleMap<VirusStrain>> antibodyLevels = simulateAntibodyLevels(immunityEvents, immunityEventDays, 1000, person);
 
 		// Plot 1: nAb
 		{
@@ -222,7 +225,7 @@ public class DefaultAntibodyModelTest {
 
 					double nAb = strainToAntibodyMap.getOrDefault(strain, 0.);
 
-					var beta = 1.;
+					var beta = 1.2;
 					var fact = 0.001;
 					double immunityFactor = 1.0 / (1.0 + Math.pow(nAb, beta));
 					final double probaWVacc = 1 - Math.exp(-fact * immunityFactor);

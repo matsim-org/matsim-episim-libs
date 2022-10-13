@@ -216,8 +216,8 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
 
@@ -402,11 +402,11 @@
 
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
-			 
+
 			 if (!event.getPersonId().toString().equals("12102f5"))
 				 return;
-			 System.out.println(event.getTime() / 86400. + " " + event.getVirusStrain());
-			 
+			 //System.out.println(event.getTime() / 86400. + " " + event.getVirusStrain());
+
 
 			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(),
 					 personId -> new ImmunizablePerson(personId, getAge(personId)));
@@ -424,6 +424,7 @@
 			 int day = (int) (event.getTime() / 86_400);
 
 			 updateHospitalizationsPost(person, event.getVirusStrain(), day);
+
 
 			 if (person.getNumVaccinations()==0) {
 				 incNoImmunity.mergeInt(day, 1, Integer::sum);
@@ -456,10 +457,10 @@
 
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
-			 
+
 			 if (!event.getPersonId().toString().equals("12102f5"))
 				 return;
-			 
+
 			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
 
 			 String district = (String) population.getPersons().get(person.personId).getAttributes().getAttribute("district");
@@ -569,16 +570,18 @@
 		  */
 		 private boolean goToHospital(ImmunizablePerson person, int day) {
 
+
+
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
+			 //System.out.println("+++ day: " + day);
+//			 //System.out.println("id: "  + person.getPersonId().toString());
+			 //System.out.println("age factor : " + ageFactor);
+			 //System.out.println("strain factor : " + strainFactor);
 			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
-			 
-			 System.out.println("+++ day: " + day);
-			 System.out.println(person.getPersonId().toString());
-			 System.out.println(ageFactor);
-			 System.out.println(strainFactor);
-			 System.out.println(immunityFactor);
-			 System.out.println();
+			 //System.out.println("immunity factor : " + immunityFactor);
+
+
 
 
 			 double paxlovidFactor = 1.0;
@@ -590,10 +593,12 @@
 
 			 // 0.36 (old) * 1.2 (delta) * ... (immunisation) =
 			 // if returned values (ageFactor, strainFactor, immunityFactor) are high: chance of going to hosp is high / protection is low
-			 System.out.println("Remaining Risk: " + (ageFactor
-					 * strainFactor
-					 * immunityFactor
-					 * paxlovidFactor));
+//			 System.out.println("Remaining Risk: " + (ageFactor
+//					 * strainFactor
+//					 * immunityFactor
+//					 * paxlovidFactor));
+
+//			 System.out.println();
 
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
