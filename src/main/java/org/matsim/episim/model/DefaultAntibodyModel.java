@@ -6,7 +6,6 @@ import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
 import java.util.Collection;
-import java.util.List;
 import java.util.SplittableRandom;
 
 public class DefaultAntibodyModel implements AntibodyModel {
@@ -41,7 +40,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
 			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
+				person.setAntibodies(strain, 0.0, false);
+				person.getMaximalAntibodyLevel().put(strain, 0.0);
 			}
 
 			if (iteration > 1) {
@@ -69,7 +69,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		// todo: is this needed, now that we have an init
 		if (day == 0) {
 			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
+				person.setAntibodies(strain, 0.0, false);
 			}
 		}
 
@@ -93,7 +93,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS));
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS), false);
 		}
 
 	}
@@ -109,7 +109,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
-				person.setAntibodies(strain2, antibodies);
+				person.setAntibodies(strain2, antibodies, true);
 			}
 
 
@@ -129,16 +129,14 @@ public class DefaultAntibodyModel implements AntibodyModel {
 					antibodies = antibodies * refreshFactor;
 				}
 
-
 				// check that new antibody level at least as high as initial antibodies
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();
 				antibodies = Math.max(antibodies, initialAntibodies);
 
-
 				// check that new antibody level is at most 150
 				antibodies = Math.min(150., antibodies);
 
-				person.setAntibodies(strain2, antibodies);
+				person.setAntibodies(strain2, antibodies, true);
 			}
 		}
 	}

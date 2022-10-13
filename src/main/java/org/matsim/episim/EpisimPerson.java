@@ -209,9 +209,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	private final Object2DoubleMap<VirusStrain> antibodies = new Object2DoubleOpenHashMap<>();
 
 	/**
+	 * Maximal antibody level reached by agent w/ respect to each strain
+	 */
+	private final Object2DoubleMap<VirusStrain> maximalAntibodyLevel = new Object2DoubleOpenHashMap<>();
+
+	/**
 	 * Antibody level at last infection.
 	 */
-	private double antibodyLevelAtInfection = 0;
+	private double antibodyLevelAtInfection = 0.;
 
 	/**
 	 * Immune response multiplier, which is used to scale the antibody increase due to an immunity event
@@ -304,6 +309,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 			antibodies.put(strain, in.readDouble());
 		}
 
+		n = in.readInt();
+		for (int i = 0; i < n; i++) {
+			VirusStrain strain = VirusStrain.values()[in.readInt()];
+			maximalAntibodyLevel.put(strain, in.readDouble());
+		}
+
 		status = DiseaseStatus.values()[in.readInt()];
 		quarantineStatus = QuarantineStatus.values()[in.readInt()];
 		quarantineDate = in.readInt();
@@ -367,6 +378,12 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		out.writeInt(antibodies.size());
 		for (Object2DoubleMap.Entry<VirusStrain> kv : antibodies.object2DoubleEntrySet()) {
+			out.writeInt(kv.getKey().ordinal());
+			out.writeDouble(kv.getDoubleValue());
+		}
+
+		out.writeInt(maximalAntibodyLevel.size());
+		for (Object2DoubleMap.Entry<VirusStrain> kv : maximalAntibodyLevel.object2DoubleEntrySet()) {
 			out.writeInt(kv.getKey().ordinal());
 			out.writeDouble(kv.getDoubleValue());
 		}
@@ -576,6 +593,11 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return antibodyLevelAtInfection;
 	}
 
+	public Object2DoubleMap<VirusStrain> getMaximalAntibodyLevel() {
+		return maximalAntibodyLevel;
+	}
+
+
 	public double getAntibodies(VirusStrain strain) {
 		return antibodies.getDouble(strain);
 	}
@@ -584,8 +606,16 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return antibodies;
 	}
 
-	public double setAntibodies(VirusStrain strain, double value) {
+	public double setAntibodies(VirusStrain strain, double value, boolean increaseAb) {
+
+		if(increaseAb) {
+			if (value > maximalAntibodyLevel.getDouble(strain)) {
+				maximalAntibodyLevel.put(strain, value);
+			}
+		}
+
 		return antibodies.put(strain, value);
+
 	}
 
 	/**

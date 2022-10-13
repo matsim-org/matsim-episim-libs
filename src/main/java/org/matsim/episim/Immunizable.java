@@ -2,6 +2,7 @@ package org.matsim.episim;
 
 import it.unimi.dsi.fastutil.doubles.DoubleList;
 import it.unimi.dsi.fastutil.ints.IntList;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.episim.model.VirusStrain;
 
@@ -47,6 +48,10 @@ public interface Immunizable extends HasPersonId {
 	 */
 	double getAntibodyLevelAtInfection();
 
+	/**
+	 * Returns highest antibody level that agent has had in their past.
+	 */
+	Object2DoubleMap<VirusStrain> getMaximalAntibodyLevel();
 
 	/**
 	 * Returns whether agent has experienced given disease status at any time in the course of the simulation
