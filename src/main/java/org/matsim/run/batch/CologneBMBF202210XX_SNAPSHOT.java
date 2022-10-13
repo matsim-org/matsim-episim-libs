@@ -7,17 +7,17 @@ import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
 import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
+import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
-import org.matsim.episim.BatchRun;
-import org.matsim.episim.DataUtils;
-import org.matsim.episim.EpisimConfigGroup;
-import org.matsim.episim.VirusStrainConfigGroup;
+import org.matsim.episim.*;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
+import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
@@ -31,7 +31,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202210XX_SNAPSHOT_old.Params> {
+public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210XX_SNAPSHOT.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -43,35 +43,86 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 			@Override
 			protected void configure() {
 
+				// VACCINATION MODEL
 				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
 
-				set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
 
+				LocalDate start = LocalDate.parse("2022-12-01");
+				VaccinationType vaccinationType = VaccinationType.ba5Update;
+				int campaignDuration = 30;
+
+				// this is the vaccination campaign from the previous report
+				if (params != null && params.vacCamp.equals("old")) {
+					set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
+					Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
+					compliance.put(60, 0.85); // 60+
+					compliance.put(18, 0.55); // 18-59
+					compliance.put(12, 0.20); // 12-17
+					compliance.put(0, 0.0); // 0 - 11
+					bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, campaignDuration, vaccinationType, compliance));
+				// this is the updated vaccination campaign
+				} else {
+					set.addBinding().to(VaccinationStrategyReoccurringCampaigns.class).in(Singleton.class);
+					Map<LocalDate,VaccinationType> startDateToVaccination = new HashMap<>();
+
+					Object2DoubleMap<EpisimReporting.AgeGroup> compliance = new Object2DoubleAVLTreeMap();
+					compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.0);
+					compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.0);
+					compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.0);
+					compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
+
+					VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered;
+
+
+					if (params != null) {
+						if (params.vacCamp.equals("new")) {
+
+							compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.85);
+							compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.55);
+							compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.20);
+							compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
+
+							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
+
+						} else if (params.vacCamp.equals("newHalf")) {
+
+							compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.95 / 2);
+							compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.77 / 2);
+							compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.36 / 2);
+							compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
+
+							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
+
+						} else if (params.vacCamp.equals("off")) {
+
+						} else {
+
+							throw new RuntimeException("Not a valid option for vaccinationCampaignType");
+
+						}
+					}
+
+					bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool));
+
+				}
+
+
+
+				// ANTIBODY MODEL
+				// default values
 				double mutEscDelta = 29.2 / 10.9;
 				double mutEscBa1 = 10.9 / 1.9;
-				double mutEscBa5 = 2.9;
+//				double mutEscBa5 = 2.9; // 0.1 -> 3.8
+				double mutEscBa5 = 5.0;
 
 				double mutEscStrainA = 0.;
 				double mutEscStrainB = 0.;
 
-				LocalDate start = null;
-				VaccinationType vaccinationType = VaccinationType.mRNA;
-
-				Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
-				compliance.put(60, 0.0);
-				compliance.put(18, 0.0);
-				compliance.put(12, 0.0);
-				compliance.put(0, 0.0);
-
-				String vacCamp = "off";
 
 				if (params != null) {
-//					mutEscBa5 = params.ba5Esc;
+//					mutEscBa1 = params.ba1Esc;
+					mutEscBa5 = params.ba5Esc;
 
-					if (!params.vacType.equals("off")) {
-						vacCamp = "age";
-						vaccinationType = VaccinationType.valueOf(params.vacType);
-					}
 					if (!params.StrainA.equals("off")) {
 						mutEscStrainA = Double.parseDouble(params.StrainA);
 					}
@@ -79,30 +130,7 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 						mutEscStrainB = Double.parseDouble(params.StrainB);
 					}
 
-					start = LocalDate.parse(params.resDate);
-
-
-
-					if (vacCamp.equals("age")) {
-						compliance.put(60, 0.85); // 60+
-						compliance.put(18, 0.55); // 18-59
-						compliance.put(12, 0.20); // 12-17
-						compliance.put(0, 0.0); // 0 - 11
-					}
-					else if (vacCamp.equals("eu")) {
-						compliance.put(60, 0.40); // half of 80% (which reflects the current percentage of people in Dland who are boostered)
-						compliance.put(18, 0.);
-						compliance.put(12, 0.);
-						compliance.put(0, 0.);
-					}
-					else if (vacCamp.equals("off")) {
-
-					} else {
-						throw new RuntimeException("Not a valid option for vaccinationCampaignType");
-					}
 				}
-//
-				bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, 30, vaccinationType, compliance));
 
 				//initial antibodies
 				Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies = new HashMap<>();
@@ -114,13 +142,14 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 				double immuneSigma = 3.0;
 				if (params != null) {
 					antibodyConfig.setImmuneReponseSigma(immuneSigma);
+					antibodyConfig.setUseImmuneResponseForMultiplier(Boolean.parseBoolean(params.immResp));
 				}
 
 				bind(AntibodyModel.Config.class).toInstance(antibodyConfig);
 
 				if (params == null) return;
 
-//				double pHousehold = 1.0;
+				// HOUSEHOLD SUSCEPTIBILITY
 				// designates a 35% of households  as super safe; the susceptibility of that subpopulation is reduced to 1% wrt to general population.
 				bind(HouseholdSusceptibility.Config.class).toInstance(
 						HouseholdSusceptibility.newConfig()
@@ -341,9 +370,9 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 	@Override
 	public Collection<OutputAnalysis> postProcessing() {
 		return List.of(
-				new VaccinationEffectiveness().withArgs(),
+//				new VaccinationEffectiveness().withArgs(),
 				new RValuesFromEvents().withArgs(),
-				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
+//				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
 				new FilterEvents().withArgs("--output","./output/"),
 				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
@@ -354,7 +383,7 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 	public Config prepareConfig(int id, Params params) {
 
 		if (DEBUG_MODE) {
-			if (runCount == 0 && params.importSummer2022.equals("on")) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
+			if (runCount == 0) { //&& params.strAEsc != 0.0 && params.ba5Inf == 0. && params.eduTest.equals("true")) {
 				runCount++;
 			} else {
 				return null;
@@ -371,11 +400,14 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
-
 		//snapshot
-		episimConfig.setSnapshotInterval(766);
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-07/" + params.seed + "-766-2022-03-31.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+//		episimConfig.setSnapshotInterval(766);
+//		episimConfig.setSnapshotPrefix(params.seed +"-");
+		if (params.snp.equals("on")) {
+			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-10/" + params.seed + "--766-2022-03-31.zip");
+			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		}
+
 
 
 		//---------------------------------------
@@ -390,7 +422,7 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 //		STRAIN_A
 		if (!params.StrainA.equals("off")) {
 
-			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.OMICRON_BA5).getInfectiousness() * ba5Inf);
+			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setInfectiousness(ba5Inf);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySick(ba5Hos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorSeriouslySickVaccinated(ba5Hos);
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_A).setFactorCritical(ba5Hos);
@@ -405,11 +437,40 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 			virusStrainConfigGroup.getOrAddParams(VirusStrain.STRAIN_B).setFactorCritical(ba5Hos);
 		}
 
+		// VAX
+		VaccinationConfigGroup vaccinationConfig = ConfigUtils.addOrGetModule(config, VaccinationConfigGroup.class);
+		vaccinationConfig.setUseIgA(Boolean.parseBoolean("true"));
+		vaccinationConfig.setUseMaxAntibodiesForHospitalisation(Boolean.parseBoolean(params.maxAb));
+
 		//---------------------------------------
 		//		I M P O R T
 		//---------------------------------------
 
 		configureFutureDiseaseImport(params, episimConfig);
+
+		// modify import:
+		LocalDate impModDate = LocalDate.parse("2022-01-31");
+		double impRedBa1 = 0.0;
+		double impRedBa2 = 0.0;
+		if (impRedBa1 != 1.0) {
+			NavigableMap<LocalDate, Integer> impBa1 = episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA1);
+			for (Map.Entry<LocalDate, Integer> entry : impBa1.entrySet()) {
+				if (entry.getKey().isAfter(impModDate)) {
+					impBa1.put(entry.getKey(), (int) (entry.getValue() * impRedBa1));
+				}
+			}
+		}
+
+		if (impRedBa2 != 1.0) {
+			NavigableMap<LocalDate, Integer> impBa2 = episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA2);
+			for (Map.Entry<LocalDate, Integer> entry : impBa2.entrySet()) {
+				if (entry.getKey().isAfter(impModDate)) {
+					impBa2.put(entry.getKey(), (int) (entry.getValue() * impRedBa2));
+				}
+			}
+		}
+
+
 
 		//---------------------------------------
 		//		R E S T R I C T I O N S
@@ -441,6 +502,7 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 				break;
 			case "mask":
 				builder.restrict(restrictionDate, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)),  "leisPublic");
+				break;
 			case "zero":
 				builder.restrict(restrictionDate, 0.0, "leisPublic"); // dont include business bc harder to do from home office
 				builder.applyToRf(restrictionDate.plusDays(1).toString(), restrictionDate.plusDays(1000).toString(), (d, rf) -> 0.0, "leisPublic");
@@ -495,7 +557,7 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 		}
 
 		// Ci Correction after summer vacation 2022 (more air flow?)
-		builder.restrict(LocalDate.parse("2022-08-09"), Restriction.ofCiCorrection(params.ciCorr), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
+//		builder.restrict(LocalDate.parse("2022-08-09"), Restriction.ofCiCorrection(params.ciCorr), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other");
 
 
 		// vary amount of "school" activity that takes place during vacation
@@ -510,12 +572,12 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 
 
 		// modify seasonality
-		episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(params.eduSeasonality);
-		episimConfig.getOrAddContainerParams("educ_other").setSeasonality(params.eduSeasonality);
+//		episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(params.eduSeasonality);
+//		episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(params.eduSeasonality);
+//		episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(params.eduSeasonality);
+//		episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(params.eduSeasonality);
+//		episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(params.eduSeasonality);
+//		episimConfig.getOrAddContainerParams("educ_other").setSeasonality(params.eduSeasonality);
 
 
 		if (DEBUG_MODE) {
@@ -562,8 +624,8 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
 		LocalDate dateStrainAB = LocalDate.parse("2022-11-18"); // after vaca import
 
-
-		if (params.importSummer2022.equals("on")) {
+		String importSummer2022 = "off";
+		if (importSummer2022.equals("on")) {
 			NavigableMap<LocalDate, Double> data = DataUtils.readDiseaseImport(SnzCologneProductionScenario.INPUT.resolve("cologneDiseaseImport_Projected.csv"));
 			LocalDate date = null;
 			for (Map.Entry<LocalDate, Double> entry : data.entrySet()) {
@@ -596,7 +658,7 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 				}
 
 			}
-		} else if (params.importSummer2022.equals("off")) {
+		} else if (importSummer2022.equals("off")) {
 		} else {
 			throw new RuntimeException();
 		}
@@ -617,12 +679,41 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(4)
 		public long seed;
+
+//		@StringParameter({"true", "false"})
+//		public String useIgA;
+
+		@StringParameter({"off"})
+		public String snp;
+
+		@StringParameter({"true", "false"})
+		public String immResp;
+
+		@StringParameter({"true", "false"})
+		public String maxAb;
+
+		@StringParameter({"old", "new", "newHalf","off"})
+		String vacCamp;
+
+
+//		@Parameter({4., 5., 6., 7., 8., 9., 10.})
+//		public double ba1Esc;
+
+		@Parameter({4., 4.5, 5., 5.5, 6.})
+		public double ba5Esc;
+
+//		@Parameter({0.0})
+//		public double impRedBa1;
+
+//		@Parameter({0.0})
+//		public double impRedBa2;
+
 
 
 		// NEW RESTRICTIONS
-		@StringParameter({"2022-11-15"})
+		@StringParameter({"2022-12-15"})
 		public String resDate;
 
 		//measures in the work context:
@@ -647,22 +738,25 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 		@StringParameter({"base"})
 		public String edu;
 
-		@StringParameter({"off"})
-		public String importSummer2022;
+//		@StringParameter({"off"})
+//		public String importSummer2022;
 
-		@Parameter({0.5})
-		public double eduSeasonality;
+//		@Parameter({0.5})
+//		public double eduSeasonality;
 
 		// ci correction of schools starting on Aug 9 (when school begins again), relates to air flow
-		@Parameter({0.75})
-		public double ciCorr;
+//		@Parameter({0.75})
+//		public double ciCorr;
 
 		//how much "school" activity takes places during vacation summmer 2022
+
 		@Parameter({ 0.8})
 		public double eduRfVacation;
 
+
+
 //		@StringParameter({"off", "3.0", "6.0"})
-		@StringParameter({"3.0"})
+		@StringParameter({"6.0"})
 		public String StrainA;
 
 //		@StringParameter({"off", "3.0", "6.0"})
@@ -674,14 +768,16 @@ public class CologneBMBF202210XX_SNAPSHOT_old implements BatchRun<CologneBMBF202
 
 		// vaccination campaign
 //		@StringParameter({"ba1Update", "ba5Update", "mRNA", "off"})
-		@StringParameter({"off"})
-		public String vacType;
+//		@StringParameter({"off"})
+//		public String vacType;
+
+
 	}
 
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202210XX_SNAPSHOT_old.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202210XX_SNAPSHOT.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),

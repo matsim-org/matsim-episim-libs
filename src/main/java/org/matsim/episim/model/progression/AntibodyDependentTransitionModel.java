@@ -121,7 +121,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 		VirusStrain strain = person.getVirusStrain();
 
 		double abNoWaning;
-		if (false) {
+		if (vaccinationConfig.getUseMaxAntibodiesForHospitalisation()) {
 			abNoWaning = person.getMaxAntibodies(strain);
 		} else {
 			int lastVaccination = 0;
