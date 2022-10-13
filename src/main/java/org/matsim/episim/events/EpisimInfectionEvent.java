@@ -25,6 +25,7 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	static final String PROBABILITY = "probability";
 	static final String GROUP_SIZE = "groupSize";
 	static final String ANTIBODIES = "antibodies";
+	static final String MAX_ANTIBODIES = "maxAntibodies";
 
 	private final Id<Person> personId;
 	private final Id<Person> infectorId;
@@ -34,13 +35,14 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	private final VirusStrain virusStrain;
 	private final double probability;
 	private final double antibodies;
+	private final double maxAntibodies;
 
 
 	/**
 	 * Constructor.
 	 */
 	public EpisimInfectionEvent(double time, Id<Person> personId, Id<Person> infectorId, Id<?> containerId, String infectionType,
-								int groupSize, VirusStrain strain, double probability, double antibodies) {
+								int groupSize, VirusStrain strain, double probability, double antibodies, double maxAntibodies) {
 		super(time);
 
 		this.personId = personId;
@@ -51,6 +53,7 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		this.virusStrain = strain;
 		this.probability = probability;
 		this.antibodies = antibodies;
+		this.maxAntibodies = maxAntibodies;
 	}
 
 	@Override
@@ -101,6 +104,13 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 	 */
 	public double getAntibodies() {
 		return antibodies;
+	}
+
+	/**
+	 * Maximum antibodies ever reached by agent with respect to infecting strain
+	 */
+	public double getMaxAntibodies() {
+		return maxAntibodies;
 	}
 
 	@Override

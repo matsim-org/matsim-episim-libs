@@ -40,8 +40,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
 			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0, false);
-				person.getMaximalAntibodyLevel().put(strain, 0.0);
+				person.setAntibodies(strain, 0.0);
+				person.setMaxAntibodies(strain, 0.0);
 			}
 
 			if (iteration > 1) {
@@ -69,7 +69,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		// todo: is this needed, now that we have an init
 		if (day == 0) {
 			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0, false);
+				person.setAntibodies(strain, 0.0);
 			}
 		}
 
@@ -93,7 +93,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 		// if no immunity event: exponential decay, day by day:
 		for (VirusStrain strain : VirusStrain.values()) {
 			double oldAntibodyLevel = person.getAntibodies(strain);
-			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS), false);
+			person.setAntibodies(strain, oldAntibodyLevel * Math.pow(0.5, 1 / HALF_LIFE_DAYS));
 		}
 
 	}
@@ -109,7 +109,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 				antibodies = Math.min(150., antibodies * person.getImmuneResponseMultiplier());
 
-				person.setAntibodies(strain2, antibodies, true);
+				person.setAntibodies(strain2, antibodies);
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				// should always be the case for initial immunization
+				if (antibodies > person.getMaxAntibodies(strain2)) {
+					person.setMaxAntibodies(strain2, antibodies);
+				}
 			}
 
 
@@ -136,7 +142,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				// check that new antibody level is at most 150
 				antibodies = Math.min(150., antibodies);
 
-				person.setAntibodies(strain2, antibodies, true);
+				person.setAntibodies(strain2, antibodies);
+
+				// if antibodies against a strain2 are higher than previous maximum, replace maximum
+				if (antibodies > person.getMaxAntibodies(strain2)) {
+					person.setMaxAntibodies(strain2, antibodies);
+				}
 			}
 		}
 	}

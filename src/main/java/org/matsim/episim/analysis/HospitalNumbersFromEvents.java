@@ -263,8 +263,8 @@
 		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
 
 		 List<Handler> handlers = List.of(
-				  new Handler("Omicron", population, holderOmicron, 0.0)
-//				 new Handler("Delta", population, holderDelta, 0.0)
+				  new Handler("Omicron", population, holderOmicron, 0.0),
+				 new Handler("Delta", population, holderDelta, 0.0)
 //				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
 //				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
 //				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
@@ -403,8 +403,8 @@
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
-			 if (!event.getPersonId().toString().equals("12102f5"))
-				 return;
+//			 if (!event.getPersonId().toString().equals("12102f5"))
+//				 return;
 			 //System.out.println(event.getTime() / 86400. + " " + event.getVirusStrain());
 
 
@@ -417,13 +417,15 @@
 				 return;
 			 }
 
+			 VirusStrain virusStrain = event.getVirusStrain();
 			 person.addInfection(event.getTime());
 			 person.setAntibodyLevelAtInfection(event.getAntibodies());
-			 person.setVirusStrain(event.getVirusStrain());
+			 person.getMaxAntibodies().put(virusStrain, event.getMaxAntibodies());
+			 person.setVirusStrain(virusStrain);
 
 			 int day = (int) (event.getTime() / 86_400);
 
-			 updateHospitalizationsPost(person, event.getVirusStrain(), day);
+			 updateHospitalizationsPost(person, virusStrain, day);
 
 
 			 if (person.getNumVaccinations()==0) {
@@ -458,8 +460,8 @@
 		 @Override
 		 public void handleEvent(EpisimVaccinationEvent event) {
 
-			 if (!event.getPersonId().toString().equals("12102f5"))
-				 return;
+//			 if (!event.getPersonId().toString().equals("12102f5"))
+//				 return;
 
 			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(), personId -> new ImmunizablePerson(personId, getAge(personId)));
 
@@ -653,6 +655,12 @@
 			  * Antibody level at last infection.
 			  */
 			 private double antibodyLevelAtInfection = 0;
+
+			 /**
+			  * Maximal antibody level reached by agent w/ respect to each strain
+			  */
+			 private final Object2DoubleMap<VirusStrain> maximalAntibodyLevel = new Object2DoubleOpenHashMap<>();
+
 			 private int age;
 
 			 ImmunizablePerson(Id<Person> personId, int age) {
@@ -712,6 +720,11 @@
 			 @Override
 			 public double getAntibodyLevelAtInfection() {
 				 return antibodyLevelAtInfection;
+			 }
+
+			 @Override
+			 public Object2DoubleMap<VirusStrain> getMaxAntibodies() {
+				 return maximalAntibodyLevel;
 			 }
 
 			 @Override

@@ -593,10 +593,14 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return antibodyLevelAtInfection;
 	}
 
-	public Object2DoubleMap<VirusStrain> getMaximalAntibodyLevel() {
+	public Object2DoubleMap<VirusStrain> getMaxAntibodies() {
 		return maximalAntibodyLevel;
 	}
 
+
+	public double getMaxAntibodies(VirusStrain virusStrain) {
+		return maximalAntibodyLevel.getDouble(virusStrain);
+	}
 
 	public double getAntibodies(VirusStrain strain) {
 		return antibodies.getDouble(strain);
@@ -606,15 +610,19 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		return antibodies;
 	}
 
-	public double setAntibodies(VirusStrain strain, double value, boolean increaseAb) {
-
-		if(increaseAb) {
-			if (value > maximalAntibodyLevel.getDouble(strain)) {
-				maximalAntibodyLevel.put(strain, value);
-			}
-		}
+	public double setAntibodies(VirusStrain strain, double value) {
 
 		return antibodies.put(strain, value);
+
+	}
+
+	/**
+	 * Sets the maximum antibodies agent has had versus a particular strain.
+	 * todo: Does not check if new max value is in fact greater than previous max.
+	 */
+	public void setMaxAntibodies(VirusStrain strain, double maxAb) {
+
+		this.maximalAntibodyLevel.put(strain, maxAb);
 
 	}
 
@@ -1075,6 +1083,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		return null;
 	}
+
 
 	/**
 	 * Disease status of a person.

@@ -49,9 +49,14 @@ public interface Immunizable extends HasPersonId {
 	double getAntibodyLevelAtInfection();
 
 	/**
-	 * Returns highest antibody level that agent has had in their past.
+	 * Returns highest antibody level that agent has had in their past for all strains
 	 */
-	Object2DoubleMap<VirusStrain> getMaximalAntibodyLevel();
+	Object2DoubleMap<VirusStrain> getMaxAntibodies();
+
+	/**
+	 * Returns highest antibody level that agent has had in their past for a specific strain.
+	 */
+	double getMaxAntibodies(VirusStrain strain);
 
 	/**
 	 * Returns whether agent has experienced given disease status at any time in the course of the simulation
