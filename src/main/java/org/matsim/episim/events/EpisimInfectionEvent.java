@@ -124,6 +124,7 @@ public class EpisimInfectionEvent extends Event implements HasPersonId, Comparab
 		attr.put(PROBABILITY, Double.toString(probability));
 		attr.put(VIRUS_STRAIN, virusStrain.toString());
 		attr.put(ANTIBODIES, Double.toString(antibodies));
+		attr.put(MAX_ANTIBODIES, Double.toString(maxAntibodies));
 
 		return attr;
 	}

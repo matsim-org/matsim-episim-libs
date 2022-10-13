@@ -125,6 +125,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 			}
 
 			return new EpisimPotentialInfectionEvent(time, person, infector, container, type, groupSize, virusStrain, probability, unVacProb, antibodies, rnd);
+
 		};
 	}
 
