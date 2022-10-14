@@ -45,85 +45,51 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 				// VACCINATION MODEL
 				Multibinder<VaccinationModel> set = Multibinder.newSetBinder(binder(), VaccinationModel.class);
-
-
-				LocalDate start = LocalDate.parse("2022-12-01");
+				set.addBinding().to(VaccinationStrategyReoccurringCampaigns.class).in(Singleton.class);
+				// fixed values
+				LocalDate start = LocalDate.parse("2022-10-15");
 				VaccinationType vaccinationType = VaccinationType.ba5Update;
-				int campaignDuration = 30;
+				int campaignDuration = 300000;
 
+				// default values, to be changed if params != null
 				int minDaysAfterInfection = 180;
 				int minDaysAfterVaccination = 180;
+				VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered;
+				LocalDate emergencyDate = LocalDate.MAX;
+				Map<LocalDate,VaccinationType> startDateToVaccination = new HashMap<>();
 
-				// this is the vaccination campaign from the previous report
-				if (params != null && params.vacCamp.equals("old")) {
-					set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
-					Int2DoubleMap compliance = new Int2DoubleAVLTreeMap();
-					compliance.put(60, 0.85); // 60+
-					compliance.put(18, 0.55); // 18-59
-					compliance.put(12, 0.20); // 12-17
-					compliance.put(0, 0.0); // 0 - 11
-					bind(VaccinationStrategyBMBF0617.Config.class).toInstance(new VaccinationStrategyBMBF0617.Config(start, campaignDuration, vaccinationType, compliance));
-				// this is the updated vaccination campaign
-				} else {
-					set.addBinding().to(VaccinationStrategyReoccurringCampaigns.class).in(Singleton.class);
-					Map<LocalDate,VaccinationType> startDateToVaccination = new HashMap<>();
+				if (params != null) {
+					minDaysAfterInfection = (int) params.minDaysAfterImm;
+					minDaysAfterVaccination = (int)  params.minDaysAfterImm;
+					vaccinationPool = params.vacPool;
 
-					Object2DoubleMap<EpisimReporting.AgeGroup> compliance = new Object2DoubleAVLTreeMap();
-					compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.0);
-					compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.0);
-					compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.0);
-					compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
+					switch (params.vacCamp) {
+						case "off":
 
-					VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered;
+							startDateToVaccination.put(LocalDate.MAX, vaccinationType);
 
-					if (params != null) {
-						vaccinationPool = params.vacPool;
-						minDaysAfterInfection = (int) params.minDaysAfterImm;
-						minDaysAfterVaccination = (int)  params.minDaysAfterImm;
+							break;
+						case "on":
 
-						if (params.vacCamp.equals("off")) {
-						} else if(params.vacCamp.equals("new")) {
+							startDateToVaccination.put(start, vaccinationType);
 
-							compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.85);
-							compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.55);
-							compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.20);
-							compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
-
-							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
-
-						} else {
-
-							double comp = Double.parseDouble(params.vacCamp) / 100.;
-							//these are new rates of boostered people
-							if (params.vacPool.equals(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered)) {
-								compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.85 * comp);
-								compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.66 * comp);
-								compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.31 * comp);
-								compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0 * comp);
-							} else if (params.vacPool.equals(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.vaccinated)) {
-								compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.90 * comp);
-								compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.83 * comp);
-								compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.69 * comp);
-								compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.20 * comp);
-							} else {
-								throw new RuntimeException();
-							}
-							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
-						}
-
+							break;
+						case "emergency":
+							startDateToVaccination.put(start, vaccinationType);
+							emergencyDate = LocalDate.parse("2022-12-01");
+							break;
+						default:
+							throw new RuntimeException();
 					}
-
-					bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination));
-
 				}
 
+				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination, emergencyDate));
 
 
 				// ANTIBODY MODEL
 				// default values
 				double mutEscDelta = 29.2 / 10.9;
 				double mutEscBa1 = 10.9 / 1.9;
-//				double mutEscBa5 = 2.9; // 0.1 -> 3.8
 				double mutEscBa5 = 5.0;
 
 				double mutEscStrainA = 0.;
@@ -132,7 +98,7 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 				if (params != null) {
 //					mutEscBa1 = params.ba1Esc;
-					mutEscBa5 = params.ba5Esc;
+//					mutEscBa5 = params.ba5Esc;
 
 					if (!params.StrainA.equals("off")) {
 						mutEscStrainA = Double.parseDouble(params.StrainA);
@@ -705,12 +671,12 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 		@StringParameter({"true", "false"})
 		public String maxAb;
 
-		@StringParameter({"off", "old", "new", "50","60","70","80", "90","100"}) // 9
+
+		@StringParameter({"off", "on", "emergency"})
 		String vacCamp;
 
 		@EnumParameter(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.class)
 		VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vacPool;
-
 
 		@Parameter({0., 90., 180.})
 		public double minDaysAfterImm;
@@ -718,8 +684,8 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 //		@Parameter({4., 5., 6., 7., 8., 9., 10.})
 //		public double ba1Esc;
 
-		@Parameter({5.})
-		public double ba5Esc;
+//		@Parameter({5.})
+//		public double ba5Esc;
 
 //		@Parameter({0.0})
 //		public double impRedBa1;

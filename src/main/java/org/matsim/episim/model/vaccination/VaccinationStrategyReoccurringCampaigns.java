@@ -5,6 +5,7 @@ import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2IntMap;
 import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.matsim.api.core.v01.Id;
+import org.matsim.api.core.v01.IdSet;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
@@ -27,8 +28,9 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 	private final SplittableRandom rnd;
 	private final Config config;
 
-	// LocalDate of beginning of vaccination campaign -> age-group -> number of vaccinations left
-	private final Map<LocalDate, Map<EpisimReporting.AgeGroup, Integer>> vaccinationsLeftPerAgePerCampaign;
+	private final IdSet<Person> boostBa5Yes = new IdSet<>(Person.class);
+
+	private final IdSet<Person> boostBa5Emergency = new IdSet<>(Person.class);
 
 
 	@Inject
@@ -38,49 +40,29 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 
 		Population population = scenario.getPopulation();
 
+		for (Person person : population.getPersons().values()) {
 
-		// number of agents in each age group
-		int agentCnt_0_11 = (int) population.getPersons().values().stream().filter(p -> ((int) p.getAttributes().getAttribute("microm:modeled:age") >= 0 && (int) p.getAttributes().getAttribute("microm:modeled:age") < 12)).count();
-		int agentCnt_12_17 = (int) population.getPersons().values().stream().filter(p -> ((int) p.getAttributes().getAttribute("microm:modeled:age") >= 12 && (int) p.getAttributes().getAttribute("microm:modeled:age") < 18)).count();
-		int agentCnt_18_59 = (int) population.getPersons().values().stream().filter(p -> ((int) p.getAttributes().getAttribute("microm:modeled:age") >= 18 && (int) p.getAttributes().getAttribute("microm:modeled:age") < 60)).count();
-		int agentCnt_60_plus = (int) population.getPersons().values().stream().filter(p -> (int) p.getAttributes().getAttribute("microm:modeled:age") >= 60).count();
-
-		//multiply compliance by these numbers -> total number of vaccines to be applied to age group
-		int vaxCnt_0_11 = (int) (agentCnt_0_11 * config.complianceByAge.getDouble(EpisimReporting.AgeGroup.age_0_11));
-		int vaxCnt_12_17 = (int) (agentCnt_12_17 * config.complianceByAge.getDouble(EpisimReporting.AgeGroup.age_12_17));
-		int vaxCnt_18_59 = (int) (agentCnt_18_59 * config.complianceByAge.getDouble(EpisimReporting.AgeGroup.age_18_59));
-		int vaxCnt_60_plus = (int) (agentCnt_60_plus * config.complianceByAge.getDouble(EpisimReporting.AgeGroup.age_60_plus));
-
-		// put these vaccination counts in map form
-		Object2IntMap<EpisimReporting.AgeGroup> vaccinationsLeftPerAge = new Object2IntOpenHashMap(Map.of(
-				EpisimReporting.AgeGroup.age_0_11, vaxCnt_0_11,
-				EpisimReporting.AgeGroup.age_12_17, vaxCnt_12_17,
-				EpisimReporting.AgeGroup.age_18_59, vaxCnt_18_59,
-				EpisimReporting.AgeGroup.age_60_plus, vaxCnt_60_plus
-		));
-
-		// create an age-group vaccinations remaining counter for each vaccination campaign (will count down to 0)
-		// each map is a copy of map created above
-		this.vaccinationsLeftPerAgePerCampaign = new HashMap<>();
-		for (LocalDate startDate : config.startDateToVaccinationCampaign.keySet()) {
-			this.vaccinationsLeftPerAgePerCampaign.put(startDate, new HashMap<>(vaccinationsLeftPerAge));
+			double randomNum = rnd.nextDouble();
+			if (randomNum < 0.5) {
+				boostBa5Yes.add(person.getId());
+			}
+			if (randomNum < 0.75) {
+				boostBa5Emergency.add(person.getId());
+			}
 		}
 
 		// calculate total number of vaccinations:
-		int totalVaccinationsDistributedPerCampaign = vaccinationsLeftPerAge.values().intStream().sum();
-		dailyVaccinationsToBeDistributed = totalVaccinationsDistributedPerCampaign / config.campaignDuration;
+		dailyVaccinationsToBeDistributed = 10_000 / 4 ;
 
 	}
 
 	@Override
 	public void handleVaccination(Map<Id<Person>, EpisimPerson> persons, LocalDate date, int iteration, double now) {
 
-
 		// we check that the compliance of at least one age group is greater than 0.0. If not, there will be no vaccinations anyway
 		if (dailyVaccinationsToBeDistributed <= 0) {
 			return;
 		}
-
 
 		// Loop through all vaccination campaigns (via the start date of said campaign)
 		for (LocalDate vaccinationCampaignStartDate : config.startDateToVaccinationCampaign.keySet()) {
@@ -96,63 +78,31 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 				// 		b) is either already vaccinated or boostered, depending on the configuration
 				// 		c) hasn't been vaccinated in the previous 90 days
 				List<EpisimPerson> candidates = persons.values().stream()
-						.filter(EpisimPerson::isVaccinable) // todo: what determines who is vaccinable?
+						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-						.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt) // only boostered people are reboostered
+						.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt)
 						.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > config.minDaysAfterVaccination) // only people who've had their last vaccination more than 90 days ago
 						.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > config.minDaysAfterInfection) // only people who've had their last vaccination more than 90 days ago
+						.filter(p -> date.isAfter(config.emergencyDate.minusDays(1)) ? boostBa5Emergency.contains(p.getPersonId()) : boostBa5Yes.contains(p.getPersonId()))
 						.collect(Collectors.toList());
+
 
 
 				// create vaccinations-remaining counter for current day
 				int vaccinationsLeft = this.dailyVaccinationsToBeDistributed;
-
-				// group candidates into age groups
-				Map<EpisimReporting.AgeGroup, List<EpisimPerson>> candidatesPerAgeGroup = new HashMap<>();
-				for (EpisimReporting.AgeGroup ageGroup : EpisimReporting.AgeGroup.values()) {
-					candidatesPerAgeGroup.put(ageGroup, new ArrayList<>());
-				}
-				for (EpisimPerson person : candidates) {
-					for (EpisimReporting.AgeGroup ageGroup : EpisimReporting.AgeGroup.values()) {
-						if (person.getAge() >= ageGroup.lowerBoundAge) {
-							candidatesPerAgeGroup.get(ageGroup).add(person);
-							break;
-						}
-					}
+				if (date.isAfter(config.emergencyDate.minusDays(1))) {
+					vaccinationsLeft *= 2;
 				}
 
-				// Apply vaccinations, oldest age-group first. Stop vaccinations for day if:
-				//		a) no vaccines left for the day
-				//		b) no age-group has any more candidates
-				//		c) no age-group has any more vaccines left (for entire campaign)
+				// list is shuffled to avoid eventual bias
+				if (candidates.size() != 0)
+					Collections.shuffle(candidates, new Random(EpisimUtils.getSeed(rnd)));
 
-				Iterator<EpisimReporting.AgeGroup> ageGroupIterator = Arrays.stream(EpisimReporting.AgeGroup.values()).iterator();
-//			int ageIndex = AgeGroup.values().length - 1;
-				while (ageGroupIterator.hasNext() && vaccinationsLeft > 0) {
-					EpisimReporting.AgeGroup ageGroup = ageGroupIterator.next();
-
-					int vaccinationsLeftForAgeGroup = vaccinationsLeftPerAgePerCampaign.get(vaccinationCampaignStartDate).get(ageGroup);
-
-					// list is shuffled to avoid eventual bias
-					List<EpisimPerson> candidatesForAge = candidatesPerAgeGroup.get(ageGroup);
-					Collections.shuffle(candidatesForAge, new Random(EpisimUtils.getSeed(rnd)));
-
-//
-//					int vaccinesForDayAndAgeGroup = Math.min(candidatesForAge.size(), vaccinationsLeft);
-					Iterator<EpisimPerson> candidateIterator = candidatesForAge.stream().iterator();
-					EpisimPerson person;
-					while(candidateIterator.hasNext() && vaccinationsLeft > 0 && vaccinationsLeftForAgeGroup > 0){
-						person = candidateIterator.next();
-
-						vaccinate(person, iteration, vaccinationType);
-						vaccinationsLeft--;
-						vaccinationsLeftForAgeGroup--;
-					}
-					vaccinationsLeftPerAgePerCampaign.get(vaccinationCampaignStartDate).put(ageGroup, vaccinationsLeftForAgeGroup);
-				}
-
-				if (vaccinationsLeft > 0) {
-					System.out.println(vaccinationsLeft + " vaccinations were left over at end of day ");
+				int n = Math.min(candidates.size(), vaccinationsLeft);
+				for (int i = 0; i < n; i++) {
+					EpisimPerson person = candidates.get(i);
+					vaccinate(person, iteration, vaccinationType);
+					vaccinationsLeft--;
 				}
 			}
 		}
@@ -170,13 +120,13 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		 */
 		private final int campaignDuration;
 
-		private final Object2DoubleMap<EpisimReporting.AgeGroup> complianceByAge;
-
 		private final VaccinationPool vaccinationPool;
 
 		private final int minDaysAfterVaccination;
 
 		private final int minDaysAfterInfection;
+
+		private final LocalDate emergencyDate;
 
 		public enum VaccinationPool {
 
@@ -193,14 +143,14 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		}
 
 
-		public Config(Map<LocalDate, VaccinationType> startDateToVaccinationCampaign, int campaignDuration, Object2DoubleMap<EpisimReporting.AgeGroup> complianceByAge, VaccinationPool vaccinationPool, int minDaysAfterInfection, int minDaysAfterVaccination) {
+		public Config(Map<LocalDate, VaccinationType> startDateToVaccinationCampaign, int campaignDuration, VaccinationPool vaccinationPool, int minDaysAfterInfection, int minDaysAfterVaccination, LocalDate emergencyDate) {
 
 			this.startDateToVaccinationCampaign = startDateToVaccinationCampaign;
 			this.campaignDuration = campaignDuration;
-			this.complianceByAge = complianceByAge;
 			this.vaccinationPool = vaccinationPool;
 			this.minDaysAfterInfection = minDaysAfterInfection;
 			this.minDaysAfterVaccination = minDaysAfterVaccination;
+			this.emergencyDate = emergencyDate;
 
 		}
 	}
