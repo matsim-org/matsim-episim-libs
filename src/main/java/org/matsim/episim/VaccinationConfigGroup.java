@@ -36,8 +36,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	private static final String GROUPNAME = "episimVaccination";
 
-	private static final String USE_MAX_ANTIBODIES_FOR_HOSPITALISATION = "useMaxAntibodiesForHospitalisation";
-
 
 	/**
 	 * Amount of vaccinations available per day.
@@ -73,14 +71,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 	 */
 	private boolean useIgA = false;
 	private double timePeriodIgA = 120.;
-
-	/**
-	 * if false, the antibody level after previous immunisation is used,
-	 * which may or may not be the absolute maximum
-	 */
-	private boolean useMaxAntibodiesForHospitalisation = false;
-
-
 
 	/**
 	 * Deadline after which days valid is in effect.
@@ -286,16 +276,6 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 		return validDeadline;
 	}
 
-	@StringSetter(USE_MAX_ANTIBODIES_FOR_HOSPITALISATION)
-	public void setUseMaxAntibodiesForHospitalisation(boolean useMaxAntibodiesForHospitalisation) {
-		this.useMaxAntibodiesForHospitalisation = useMaxAntibodiesForHospitalisation;
-	}
-
-	@StringGetter(USE_MAX_ANTIBODIES_FOR_HOSPITALISATION)
-	public boolean getUseMaxAntibodiesForHospitalisation() {
-		return this.useMaxAntibodiesForHospitalisation;
-	}
-
 	/**
 	 * Check if person is recently recovered or vaccinated.
 	 */
@@ -358,10 +338,9 @@ public class VaccinationConfigGroup extends ReflectiveConfigGroup {
 
 	/**
 	 * Computes the minimum factor over all vaccinations.
-	 *
 	 * @param person person
-	 * @param day    current iteration
-	 * @param f      function of VaccinationParams to retrieve the desired factor
+	 * @param day current iteration
+	 * @param f function of VaccinationParams to retrieve the desired factor
 	 * @return minimum factor or 1 if not vaccinated
 	 */
 	public double getMinFactor(EpisimPerson person, int day, VaccinationFactorFunction f) {

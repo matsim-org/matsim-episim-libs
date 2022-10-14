@@ -60,7 +60,7 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/yyy/")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/qqq")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -328,9 +328,6 @@
 
 
 	 public static final class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
-
-
-
 		 final Map<Id<Person>, ImmunizablePerson> data;
 		 private final String name;
 		 private final Population population;

@@ -5,18 +5,16 @@ import com.google.inject.Module;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
-import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.*;
-import org.matsim.episim.analysis.*;
+import org.matsim.episim.analysis.FilterEvents;
+import org.matsim.episim.analysis.HospitalNumbersFromEvents;
+import org.matsim.episim.analysis.OutputAnalysis;
+import org.matsim.episim.analysis.RValuesFromEvents;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.vaccination.VaccinationModel;
-import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
 import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
@@ -31,7 +29,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210XX_SNAPSHOT.Params> {
+public class CologneBMBF202210XX_vaccination implements BatchRun<CologneBMBF202210XX_vaccination.Params> {
 
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
@@ -61,7 +59,7 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 				if (params != null) {
 					minDaysAfterInfection = (int) params.minDaysAfterImm;
 					minDaysAfterVaccination = (int)  params.minDaysAfterImm;
-//					vaccinationPool = params.vacPool;
+					vaccinationPool = params.vacPool;
 
 					switch (params.vacCamp) {
 						case "off":
@@ -378,8 +376,8 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 		//snapshot
-		episimConfig.setSnapshotInterval(30);
-		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+//		episimConfig.setSnapshotInterval(766);
+//		episimConfig.setSnapshotPrefix(params.seed +"-");
 		if (params.snp.equals("on")) {
 			episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-10/" + params.seed + "--766-2022-03-31.zip");
 			episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
@@ -651,7 +649,7 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 	public static final class Params {
 		// general
-		@GenerateSeeds(5)
+		@GenerateSeeds(4)
 		public long seed;
 
 //		@StringParameter({"true", "false"})
@@ -660,16 +658,20 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 		@StringParameter({"off"})
 		public String snp;
 
-		@StringParameter({"false"})
+		@StringParameter({"true", "false"})
 		public String immResp;
 
-		@StringParameter({"off"})
+		@StringParameter({"true", "false"})
+		public String maxAb;
+
+
+		@StringParameter({"off", "on", "emergency"})
 		String vacCamp;
 
-//		@EnumParameter(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.class)
-//		VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vacPool;
+		@EnumParameter(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.class)
+		VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vacPool;
 
-		@Parameter({180.})
+		@Parameter({0., 90., 180.})
 		public double minDaysAfterImm;
 
 //		@Parameter({4., 5., 6., 7., 8., 9., 10.})
@@ -751,7 +753,7 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, CologneBMBF202210XX_SNAPSHOT.class.getName(),
+				RunParallel.OPTION_SETUP, CologneBMBF202210XX_vaccination.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
 				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),

@@ -120,29 +120,7 @@ public class AntibodyDependentTransitionModel implements DiseaseStatusTransition
 
 		VirusStrain strain = person.getVirusStrain();
 
-		double abNoWaning;
-		if (vaccinationConfig.getUseMaxAntibodiesForHospitalisation()) {
-			abNoWaning = person.getMaxAntibodies(strain);
-		} else {
-			int lastVaccination = 0;
-
-			if (numVaccinations > 0)
-				lastVaccination = person.getVaccinationDates().getInt(numVaccinations - 1);
-
-			int lastInfection = 0;
-
-			if (numInfections > 0)
-				lastInfection = (int) (person.getInfectionDates().getDouble(numInfections - 1) / 86400.);
-
-			int lastImmunityEvent = Math.max(lastVaccination, lastInfection);
-			int daysSinceLastImmunityEvent = day - lastImmunityEvent;
-
-
-			abNoWaning = person.getAntibodyLevelAtInfection() * Math.pow(2., daysSinceLastImmunityEvent / 60.);
-		}
-//		System.out.println("antibodiesAfterLastImmunityEvent: " + antibodiesAfterLastImmunityEvent);
-//		System.out.println("antibodies now : " + person.getAntibodyLevelAtInfection());
-
+		double abNoWaning = person.getMaxAntibodies(strain);
 
 		// Two modifications to antibody level below:
 		// a) we multiply the antibody level by 4 if the agent is boostered
