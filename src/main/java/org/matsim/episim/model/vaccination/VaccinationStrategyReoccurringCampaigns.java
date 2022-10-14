@@ -96,12 +96,12 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 				// 		b) is either already vaccinated or boostered, depending on the configuration
 				// 		c) hasn't been vaccinated in the previous 90 days
 				List<EpisimPerson> candidates = persons.values().stream()
-					.filter(EpisimPerson::isVaccinable) // todo: what determines who is vaccinable?
-					.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
-					.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt) // only boostered people are reboostered
-					.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > 180) // only people who've had their last vaccination more than 90 days ago
-					.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > 180) // only people who've had their last vaccination more than 90 days ago
-					.collect(Collectors.toList());
+						.filter(EpisimPerson::isVaccinable) // todo: what determines who is vaccinable?
+						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
+						.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt) // only boostered people are reboostered
+						.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > config.minDaysAfterVaccination) // only people who've had their last vaccination more than 90 days ago
+						.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > config.minDaysAfterInfection) // only people who've had their last vaccination more than 90 days ago
+						.collect(Collectors.toList());
 
 
 				// create vaccinations-remaining counter for current day
@@ -174,6 +174,10 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 
 		private final VaccinationPool vaccinationPool;
 
+		private final int minDaysAfterVaccination;
+
+		private final int minDaysAfterInfection;
+
 		public enum VaccinationPool {
 
 			vaccinated(1),
@@ -189,11 +193,15 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		}
 
 
-		public Config(Map<LocalDate, VaccinationType> startDateToVaccinationCampaign, int campaignDuration, Object2DoubleMap<EpisimReporting.AgeGroup> complianceByAge, VaccinationPool vaccinationPool) {
+		public Config(Map<LocalDate, VaccinationType> startDateToVaccinationCampaign, int campaignDuration, Object2DoubleMap<EpisimReporting.AgeGroup> complianceByAge, VaccinationPool vaccinationPool, int minDaysAfterInfection, int minDaysAfterVaccination) {
+
 			this.startDateToVaccinationCampaign = startDateToVaccinationCampaign;
 			this.campaignDuration = campaignDuration;
 			this.complianceByAge = complianceByAge;
 			this.vaccinationPool = vaccinationPool;
+			this.minDaysAfterInfection = minDaysAfterInfection;
+			this.minDaysAfterVaccination = minDaysAfterVaccination;
+
 		}
 	}
 

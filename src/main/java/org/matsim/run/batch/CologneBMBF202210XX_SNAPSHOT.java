@@ -51,6 +51,9 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 				VaccinationType vaccinationType = VaccinationType.ba5Update;
 				int campaignDuration = 30;
 
+				int minDaysAfterInfection = 180;
+				int minDaysAfterVaccination = 180;
+
 				// this is the vaccination campaign from the previous report
 				if (params != null && params.vacCamp.equals("old")) {
 					set.addBinding().to(VaccinationStrategyBMBF0617.class).in(Singleton.class);
@@ -73,9 +76,13 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 					VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered;
 
-
 					if (params != null) {
-						if (params.vacCamp.equals("new")) {
+						vaccinationPool = params.vacPool;
+						minDaysAfterInfection = (int) params.minDaysAfterImm;
+						minDaysAfterVaccination = (int)  params.minDaysAfterImm;
+
+						if (params.vacCamp.equals("off")) {
+						} else if(params.vacCamp.equals("new")) {
 
 							compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.85);
 							compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.55);
@@ -84,25 +91,29 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 
 							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
 
-						} else if (params.vacCamp.equals("newHalf")) {
-
-							compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.95 / 2);
-							compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.77 / 2);
-							compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.36 / 2);
-							compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0);
-
-							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
-
-						} else if (params.vacCamp.equals("off")) {
-
 						} else {
 
-							throw new RuntimeException("Not a valid option for vaccinationCampaignType");
-
+							double comp = Double.parseDouble(params.vacCamp) / 100.;
+							//these are new rates of boostered people
+							if (params.vacPool.equals(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.boostered)) {
+								compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.85 * comp);
+								compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.66 * comp);
+								compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.31 * comp);
+								compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.0 * comp);
+							} else if (params.vacPool.equals(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.vaccinated)) {
+								compliance.put(EpisimReporting.AgeGroup.age_60_plus, 0.90 * comp);
+								compliance.put(EpisimReporting.AgeGroup.age_18_59, 0.83 * comp);
+								compliance.put(EpisimReporting.AgeGroup.age_12_17, 0.69 * comp);
+								compliance.put(EpisimReporting.AgeGroup.age_0_11, 0.20 * comp);
+							} else {
+								throw new RuntimeException();
+							}
+							startDateToVaccination.put(LocalDate.parse("2022-12-01"), vaccinationType);
 						}
+
 					}
 
-					bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool));
+					bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination));
 
 				}
 
@@ -694,14 +705,20 @@ public class CologneBMBF202210XX_SNAPSHOT implements BatchRun<CologneBMBF202210X
 		@StringParameter({"true", "false"})
 		public String maxAb;
 
-		@StringParameter({"old", "new", "newHalf","off"})
+		@StringParameter({"off", "old", "new", "50","60","70","80", "90","100"}) // 9
 		String vacCamp;
 
+		@EnumParameter(VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.class)
+		VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vacPool;
+
+
+		@Parameter({0., 90., 180.})
+		public double minDaysAfterImm;
 
 //		@Parameter({4., 5., 6., 7., 8., 9., 10.})
 //		public double ba1Esc;
 
-		@Parameter({4., 4.5, 5., 5.5, 6.})
+		@Parameter({5.})
 		public double ba5Esc;
 
 //		@Parameter({0.0})

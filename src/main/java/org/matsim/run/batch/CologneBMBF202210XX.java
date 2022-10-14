@@ -88,7 +88,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 				}
 
 
-				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool));
+				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, compliance, vaccinationPool, 180, 180));
 
 
 				// ANTIBODY MODEL
