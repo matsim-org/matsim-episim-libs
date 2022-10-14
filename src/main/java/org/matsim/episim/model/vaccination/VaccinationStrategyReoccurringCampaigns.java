@@ -52,7 +52,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		}
 
 		// calculate total number of vaccinations:
-		dailyVaccinationsToBeDistributed = 10_000 / 4 ;
+		dailyVaccinationsToBeDistributed = 1_500 / 4;
 
 	}
 
@@ -84,6 +84,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 						.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > config.minDaysAfterVaccination) // only people who've had their last vaccination more than 90 days ago
 						.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > config.minDaysAfterInfection) // only people who've had their last vaccination more than 90 days ago
 						.filter(p -> date.isAfter(config.emergencyDate.minusDays(1)) ? boostBa5Emergency.contains(p.getPersonId()) : boostBa5Yes.contains(p.getPersonId()))
+						.filter(p -> !p.hadVaccinationType(vaccinationType)) // todo remove in future
 						.collect(Collectors.toList());
 
 
@@ -91,7 +92,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 				// create vaccinations-remaining counter for current day
 				int vaccinationsLeft = this.dailyVaccinationsToBeDistributed;
 				if (date.isAfter(config.emergencyDate.minusDays(1))) {
-					vaccinationsLeft *= 2;
+					vaccinationsLeft *= 10;
 				}
 
 				// list is shuffled to avoid eventual bias

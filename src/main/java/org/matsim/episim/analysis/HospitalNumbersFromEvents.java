@@ -60,7 +60,7 @@
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
 //	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/qqq")
+	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-10-14/1-vac/analysis")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -161,11 +161,16 @@
 	 private static final double factorDelta = 1.2 * factorWild;//1.6 * factorWild;
 
 	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
-	 private static final double factorOmicron = 0.3  * factorDelta; //  reportedShareOmicron / reportedShareDelta
-//	 private static final double factorOmicron = 0.6  * factorDelta; //  reportedShareOmicron / reportedShareDelta
+//	 private static final double factorOmicron = 0.3  * factorDelta; //  reportedShareOmicron / reportedShareDelta
+	 private static final double factorOmicron = 0.6  * factorDelta;//  reportedShareOmicron / reportedShareDelta
+
+	 private static final double factorBA5 = 1.5 * factorOmicron;
+
+	 private static final double factorScen2 = factorBA5;//  reportedShareOmicron / reportedShareDelta
+	 private static final double factorScen3 = factorBA5 * 3;//  reportedShareOmicron / reportedShareDelta
+
 
 //	 private static final double factorBA5 = 1.0 * factorOmicron;
-	 private static final double factorBA5 = 1.5 * factorOmicron;
 
 
 
@@ -216,8 +221,8 @@
 			 // Part 2: aggregate over multiple seeds & produce tsv output & plot
 //			 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList);
 
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
-//		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
+		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Omicron", startDate, "Omicron");
+		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_Delta", startDate, "Delta");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_OmicronPaxlovid", startDate, "Omicron-Paxlovid");
 //		 HospitalNumbersFromEventsPlotter.aggregateAndProducePlots(output, pathList, "_DeltaPaxlovid", startDate, "Delta-Paxlovid");
 
@@ -259,13 +264,13 @@
 		 BufferedWriter bw = Files.newBufferedWriter(tsvPath);
 		 bw.write(AnalysisCommand.TSV.join(DAY, DATE,"measurement", "severity", "n")); // + "\thospNoImmunity\thospBaseImmunity\thospBoosted\tincNoImmunity\tincBaseImmunity\tincBoosted"));
 
-		 ConfigHolder holderOmicron = configure(factorBA5, factorBA5ICU);
-		 ConfigHolder holderDelta = configure(factorDelta, factorDeltaICU);
+		 ConfigHolder holderOmicron = configure(factorScen2, 1.0); // scenario 2
+		 ConfigHolder holderDelta = configure(factorScen3, 1.0); //scenario 3
 
 		 List<Handler> handlers = List.of(
 				  new Handler("Omicron", population, holderOmicron, 0.0),
 				 new Handler("Delta", population, holderDelta, 0.0)
-//				 new Handler("Omicron-Paxlovid-0.25", population, holderOmicron, 0.25),
+//				 new Handler("Omicron-Paxlovid-0.25	", population, holderOmicron, 0.25),
 //				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
 //				 new Handler("Omicron-Paxlovid-0.50", population, holderOmicron, 0.5),
 //				 new Handler("Delta-Paxlovid-0.50", population, holderDelta, 0.5),
