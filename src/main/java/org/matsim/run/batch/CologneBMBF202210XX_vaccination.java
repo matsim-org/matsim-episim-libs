@@ -8,7 +8,6 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
-import org.matsim.episim.DataUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.*;
@@ -87,7 +86,7 @@ public class CologneBMBF202210XX_vaccination implements BatchRun<CologneBMBF2022
 					}
 				}
 
-				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination, emergencyDate));
+				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination, emergencyDate, LocalDate.MAX));
 
 
 				// ANTIBODY MODEL
@@ -388,8 +387,8 @@ public class CologneBMBF202210XX_vaccination implements BatchRun<CologneBMBF2022
 		//snapshot
 //		episimConfig.setSnapshotInterval(30);
 //		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-//		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-930-2022-09-11.zip");
-//		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
+		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
 		//---------------------------------------
 		//		S T R A I N S

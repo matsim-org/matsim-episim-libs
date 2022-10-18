@@ -8,7 +8,6 @@ import com.google.inject.util.Modules;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
-import org.matsim.episim.DataUtils;
 import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.*;
@@ -34,8 +33,9 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 	boolean DEBUG_MODE = false;
 	int runCount = 0;
 
-	LocalDate restrictionDateIfsg = LocalDate.parse("2022-11-15");
-	LocalDate restrictionDateEmergency = restrictionDateIfsg.plusWeeks(3);
+	LocalDate restrictionDatePhase1 = LocalDate.parse("2022-12-01");
+	LocalDate restrictionDatePhase2 = restrictionDatePhase1.plusDays(10);
+
 
 	@Nullable
 	@Override
@@ -57,37 +57,42 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 				int minDaysAfterVaccination = 180;
 				VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool vaccinationPool = VaccinationStrategyReoccurringCampaigns.Config.VaccinationPool.vaccinated;
 				LocalDate emergencyDate = LocalDate.MAX;
+				LocalDate dateToTurnDownMinDaysAfterInfection = LocalDate.MAX;
 				Map<LocalDate,VaccinationType> startDateToVaccination = new HashMap<>();
 				startDateToVaccination.put(start, vaccinationType);
 
 				if (params != null) {
-					if (params.vacCamp.equals("base")) {
+					if (params.vacCamp.equals("base")) { // +
 
-					} else if(params.vacCamp.equals("ifsg90")){
+					} else if(params.vacCamp.equals("ph1_90")){
 						minDaysAfterInfection = 90;
 						minDaysAfterVaccination = 90;
 
-						emergencyDate = restrictionDateIfsg;
-					} else if(params.vacCamp.equals("ifsg90vax180")){
+						emergencyDate = restrictionDatePhase1;
+					} else if(params.vacCamp.equals("ph1_90vax180")){
 						minDaysAfterInfection = 90;
-						emergencyDate = restrictionDateIfsg;
-					} else if(params.vacCamp.equals("ifsg180")){
-						emergencyDate = restrictionDateIfsg;
-					} else if(params.vacCamp.equals("emergency90")){
+						emergencyDate = restrictionDatePhase1;
+					} else if(params.vacCamp.equals("ph1_180")){ // +
+						emergencyDate = restrictionDatePhase1;
+					} else if (params.vacCamp.equals("ph1_180_ph2_inf90vax180")) {
+						emergencyDate = restrictionDatePhase1;
+						dateToTurnDownMinDaysAfterInfection = restrictionDatePhase2;
+						// same as ifsg180 but after phase 2 date, minDaysAfterInfection = 90;
+					}else if(params.vacCamp.equals("ph2_90")){
 						minDaysAfterInfection = 90;
 						minDaysAfterVaccination = 90;
-						emergencyDate = restrictionDateEmergency;
-					} else if(params.vacCamp.equals("emergency90vax180")){
+						emergencyDate = restrictionDatePhase2;
+					} else if(params.vacCamp.equals("ph2_inf90vax180")){
 						minDaysAfterInfection = 90;
-						emergencyDate = restrictionDateEmergency;
-					} else if(params.vacCamp.equals("emergency180")) {
-						emergencyDate = restrictionDateEmergency;
+						emergencyDate = restrictionDatePhase2;
+					} else if(params.vacCamp.equals("ph2_180")) {
+						emergencyDate = restrictionDatePhase2;
 					}else {
 						throw new RuntimeException();
 					}
 				}
 
-				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination, emergencyDate));
+				bind(VaccinationStrategyReoccurringCampaigns.Config.class).toInstance(new VaccinationStrategyReoccurringCampaigns.Config(startDateToVaccination, campaignDuration, vaccinationPool, minDaysAfterInfection, minDaysAfterVaccination, emergencyDate, dateToTurnDownMinDaysAfterInfection));
 
 
 				// ANTIBODY MODEL
@@ -388,9 +393,8 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 		//snapshot
 //		episimConfig.setSnapshotInterval(30);
 //		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-930-2022-09-11.zip");
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
-
 		//---------------------------------------
 		//		S T R A I N S
 		//---------------------------------------
@@ -461,13 +465,13 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 
 		} else if ("45".equals(params.ifsg) || "90".equals(params.ifsg)) {
 			double compliance = Double.parseDouble(params.ifsg) / 100.;
-			builder.restrict(restrictionDateIfsg, Restriction.ofMask(Map.of(
+			builder.restrict(restrictionDatePhase1, Restriction.ofMask(Map.of(
 							FaceMask.CLOTH, 0.0,
 							FaceMask.SURGICAL, compliance)),
 					"educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
-			builder.restrict(restrictionDateIfsg, Restriction.ofMask(Map.of(FaceMask.N95, compliance)), "leisPublic");
-			builder.restrict(restrictionDateIfsg, Restriction.ofMask(Map.of(FaceMask.N95, compliance)), "shop_daily", "shop_other", "errands");
-			builder.restrict(restrictionDateIfsg, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "pt"); // pt has 90 compliance either way
+			builder.restrict(restrictionDatePhase1, Restriction.ofMask(Map.of(FaceMask.N95, compliance)), "leisPublic");
+			builder.restrict(restrictionDatePhase1, Restriction.ofMask(Map.of(FaceMask.N95, compliance)), "shop_daily", "shop_other", "errands");
+			builder.restrict(restrictionDatePhase1, Restriction.ofMask(Map.of(FaceMask.N95, 0.9)), "pt"); // pt has 90 compliance either way
 		} else {
 			throw new RuntimeException();
 		}
@@ -480,14 +484,14 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 			case "base":
 				break;
 			case "half":
-				builder.restrict(restrictionDateEmergency, 0.88 * homeOfficeFactor, "work"); // dont include business bc harder to do from home office
-				builder.applyToRf(restrictionDateEmergency.plusDays(1).toString(), restrictionDateEmergency.plusDays(1000).toString(), (d, rf) -> rf * homeOfficeFactor, "work");
+				builder.restrict(restrictionDatePhase2, 0.88 * homeOfficeFactor, "work"); // dont include business bc harder to do from home office
+				builder.applyToRf(restrictionDatePhase2.plusDays(1).toString(), restrictionDatePhase2.plusDays(1000).toString(), (d, rf) -> rf * homeOfficeFactor, "work");
 				break;
 			case "half&mask":
-				builder.restrict(restrictionDateEmergency, 0.88 * homeOfficeFactor, "work"); // dont include business bc harder to do from home office
-				builder.applyToRf(restrictionDateEmergency.plusDays(1).toString(), restrictionDateEmergency.plusDays(1000).toString(), (d, rf) -> rf * homeOfficeFactor, "work");
+				builder.restrict(restrictionDatePhase2, 0.88 * homeOfficeFactor, "work"); // dont include business bc harder to do from home office
+				builder.applyToRf(restrictionDatePhase2.plusDays(1).toString(), restrictionDatePhase2.plusDays(1000).toString(), (d, rf) -> rf * homeOfficeFactor, "work");
 
-				builder.restrict(restrictionDateEmergency, Restriction.ofMask(Map.of(FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.9)), "work", "business");
+				builder.restrict(restrictionDatePhase2, Restriction.ofMask(Map.of(FaceMask.SURGICAL, 0.0, FaceMask.N95, 0.9)), "work", "business");
 				break;
 			default:
 				throw new RuntimeException("invalid parameter");
@@ -498,10 +502,10 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 			case "base":
 				break;
 			case "pub50":
-				builder.restrict(restrictionDateEmergency, 0.88 * 0.5, "leisPublic");
+				builder.restrict(restrictionDatePhase2, 0.88 * 0.5, "leisPublic");
 				break;
 			case "pubPriv50":
-				builder.restrict(restrictionDateEmergency, 0.88 * 0.5, "leisPublic", "leisPrivate");
+				builder.restrict(restrictionDatePhase2, 0.88 * 0.5, "leisPublic", "leisPrivate");
 				break;
 			default:
 				throw new RuntimeException("invalid parameter");
@@ -512,21 +516,21 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 			case "base":
 				break;
 			case "mask":
-				builder.restrict(restrictionDateEmergency, Restriction.ofMask(Map.of(
+				builder.restrict(restrictionDatePhase2, Restriction.ofMask(Map.of(
 								FaceMask.CLOTH, 0.0,
 								FaceMask.SURGICAL, 0.0,
 								FaceMask.N95, 0.90)),
 						"educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
 				break;
 			case "half&mask":
-				builder.restrict(restrictionDateEmergency, Restriction.ofMask(Map.of(
+				builder.restrict(restrictionDatePhase2, Restriction.ofMask(Map.of(
 								FaceMask.CLOTH, 0.0,
 								FaceMask.SURGICAL, 0.0,
 								FaceMask.N95, 0.90)),
 						"educ_secondary", "educ_tertiary", "educ_other", "educ_higher");
 
-				builder.restrict(restrictionDateEmergency, 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other",  "educ_higher");
-				builder.applyToRf(restrictionDateEmergency.plusDays(1).toString(), restrictionDateEmergency.plusDays(1000).toString(), (d, rf) -> Math.min(0.5, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other",  "educ_higher");
+				builder.restrict(restrictionDatePhase2, 0.5, "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other",  "educ_higher");
+				builder.applyToRf(restrictionDatePhase2.plusDays(1).toString(), restrictionDatePhase2.plusDays(1000).toString(), (d, rf) -> Math.min(0.5, rf), "educ_primary", "educ_kiga", "educ_secondary", "educ_tertiary", "educ_other",  "educ_higher");
 				break;
 			default:
 				throw new RuntimeException("invalid parameter");
@@ -650,7 +654,7 @@ public class CologneBMBF202210XX_measures implements BatchRun<CologneBMBF202210X
 		public String ifsg;
 
 		// Vacciantion Campaign
-		@StringParameter({"base", "ifsg90vax180", "ifsg180", "emergency180", "emergency90vax180"})
+		@StringParameter({"base",  "ph1_180", "ph1_180_ph2_inf90vax180"})
 		String vacCamp;
 
 		// NEW RESTRICTIONS

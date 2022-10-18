@@ -5,8 +5,6 @@ import com.google.inject.Module;
 import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.google.inject.util.Modules;
-import it.unimi.dsi.fastutil.ints.Int2DoubleAVLTreeMap;
-import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleAVLTreeMap;
 import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
 import org.matsim.core.config.Config;
@@ -16,7 +14,6 @@ import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.vaccination.VaccinationModel;
-import org.matsim.episim.model.vaccination.VaccinationStrategyBMBF0617;
 import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
 import org.matsim.episim.policy.FixedPolicy;
 import org.matsim.episim.policy.Restriction;
@@ -26,7 +23,6 @@ import org.matsim.run.modules.SnzCologneProductionScenario;
 import javax.annotation.Nullable;
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 
 /**
@@ -92,7 +88,7 @@ public class CologneBMBF202210XX implements BatchRun<CologneBMBF202210XX.Params>
 						campaignDuration,
 						vaccinationPool,
 						180,
-						180, LocalDate.MAX));
+						180, LocalDate.MAX, LocalDate.MAX));
 
 
 				// ANTIBODY MODEL

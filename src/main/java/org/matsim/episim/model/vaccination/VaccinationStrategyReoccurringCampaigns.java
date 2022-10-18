@@ -1,16 +1,12 @@
 package org.matsim.episim.model.vaccination;
 
 import com.google.inject.Inject;
-import it.unimi.dsi.fastutil.objects.Object2DoubleMap;
-import it.unimi.dsi.fastutil.objects.Object2IntMap;
-import it.unimi.dsi.fastutil.objects.Object2IntOpenHashMap;
 import org.matsim.api.core.v01.Id;
 import org.matsim.api.core.v01.IdSet;
 import org.matsim.api.core.v01.Scenario;
 import org.matsim.api.core.v01.population.Person;
 import org.matsim.api.core.v01.population.Population;
 import org.matsim.episim.EpisimPerson;
-import org.matsim.episim.EpisimReporting;
 import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.model.VaccinationType;
 
@@ -77,12 +73,19 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 				// 		a) not infected at the moment
 				// 		b) is either already vaccinated or boostered, depending on the configuration
 				// 		c) hasn't been vaccinated in the previous 90 days
+				final int minDaysAfterInfection;
+				if (date.isBefore(config.dateToTurnDownMinDaysAfterInfectionTo90)) {
+					minDaysAfterInfection = config.minDaysAfterInfection;
+				} else {
+					minDaysAfterInfection = 90;
+				}
+
 				List<EpisimPerson> candidates = persons.values().stream()
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
 						.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt)
 						.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > config.minDaysAfterVaccination) // only people who've had their last vaccination more than 90 days ago
-						.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > config.minDaysAfterInfection) // only people who've had their last vaccination more than 90 days ago
+						.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > minDaysAfterInfection) // only people who've had their last vaccination more than 90 days ago
 						.filter(p -> date.isAfter(config.emergencyDate.minusDays(1)) ? boostBa5Emergency.contains(p.getPersonId()) : boostBa5Yes.contains(p.getPersonId()))
 						.filter(p -> !p.hadVaccinationType(vaccinationType)) // todo remove in future
 						.collect(Collectors.toList());
@@ -128,6 +131,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		private final int minDaysAfterInfection;
 
 		private final LocalDate emergencyDate;
+		private final LocalDate dateToTurnDownMinDaysAfterInfectionTo90;
 
 		public enum VaccinationPool {
 
@@ -144,7 +148,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		}
 
 
-		public Config(Map<LocalDate, VaccinationType> startDateToVaccinationCampaign, int campaignDuration, VaccinationPool vaccinationPool, int minDaysAfterInfection, int minDaysAfterVaccination, LocalDate emergencyDate) {
+		public Config(Map<LocalDate, VaccinationType> startDateToVaccinationCampaign, int campaignDuration, VaccinationPool vaccinationPool, int minDaysAfterInfection, int minDaysAfterVaccination, LocalDate emergencyDate, LocalDate dateToTurnDownMinDaysAfterInfectionTo90) {
 
 			this.startDateToVaccinationCampaign = startDateToVaccinationCampaign;
 			this.campaignDuration = campaignDuration;
@@ -152,6 +156,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 			this.minDaysAfterInfection = minDaysAfterInfection;
 			this.minDaysAfterVaccination = minDaysAfterVaccination;
 			this.emergencyDate = emergencyDate;
+			this.dateToTurnDownMinDaysAfterInfectionTo90 = dateToTurnDownMinDaysAfterInfectionTo90;
 
 		}
 	}
