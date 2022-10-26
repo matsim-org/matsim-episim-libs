@@ -84,7 +84,7 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 						.filter(EpisimPerson::isVaccinable)
 						.filter(p -> p.getDiseaseStatus() == EpisimPerson.DiseaseStatus.susceptible)
 						.filter(p -> p.getNumVaccinations() >= config.vaccinationPool.vaxCnt)
-						.filter(p -> p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > config.minDaysAfterVaccination) // only people who've had their last vaccination more than 90 days ago
+						.filter(p -> p.getNumVaccinations() == 0 || p.daysSinceVaccination(p.getNumVaccinations() - 1, iteration) > config.minDaysAfterVaccination) // only people who've had their last vaccination more than 90 days ago
 						.filter(p -> p.getNumInfections() == 0 || p.daysSinceInfection(p.getNumInfections() - 1, iteration) > minDaysAfterInfection) // only people who've had their last vaccination more than 90 days ago
 						.filter(p -> date.isAfter(config.emergencyDate.minusDays(1)) ? boostBa5Emergency.contains(p.getPersonId()) : boostBa5Yes.contains(p.getPersonId()))
 						.filter(p -> !p.hadVaccinationType(vaccinationType)) // todo remove in future
@@ -134,6 +134,8 @@ public class VaccinationStrategyReoccurringCampaigns implements VaccinationModel
 		private final LocalDate dateToTurnDownMinDaysAfterInfectionTo90;
 
 		public enum VaccinationPool {
+
+			unvaccinated(0),
 
 			vaccinated(1),
 

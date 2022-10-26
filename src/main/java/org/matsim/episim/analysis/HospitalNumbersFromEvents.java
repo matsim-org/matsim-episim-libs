@@ -268,7 +268,7 @@
 		 ConfigHolder holderDelta = configure(factorScen3, 1.0); //scenario 3
 
 		 List<Handler> handlers = List.of(
-				  new Handler("Omicron", population, holderOmicron, 0.0),
+				 new Handler("Omicron", population, holderOmicron, 0.0),
 				 new Handler("Delta", population, holderDelta, 0.0)
 //				 new Handler("Omicron-Paxlovid-0.25	", population, holderOmicron, 0.25),
 //				 new Handler("Delta-Paxlovid-0.25", population, holderDelta, 0.25),
