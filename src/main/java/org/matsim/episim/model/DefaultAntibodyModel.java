@@ -126,14 +126,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				// antibodies before refresh
 				double antibodies = person.getAntibodies(strain2);
 
-				// refresh antibodies; ensure that antibody level does not decrease.
-				if (antibodyConfig.getUseImmuneResponseForMultiplier()) {
-					if (refreshFactor * person.getImmuneResponseMultiplier() >= 1) {
-						antibodies = antibodies * refreshFactor * person.getImmuneResponseMultiplier();
-					}
-				}else {
-					antibodies = antibodies * refreshFactor;
-				}
+				// refresh antibodies
+				antibodies = antibodies * refreshFactor;
 
 				// check that new antibody level at least as high as initial antibodies
 				double initialAntibodies = antibodyConfig.initialAntibodies.get(immunityEventType).get(strain2) * person.getImmuneResponseMultiplier();

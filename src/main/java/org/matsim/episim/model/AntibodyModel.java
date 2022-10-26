@@ -49,8 +49,6 @@ public interface AntibodyModel {
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> initialAntibodies;
 		final Map<ImmunityEvent, Map<VirusStrain, Double>> antibodyRefreshFactors;
 		private double immuneReponseSigma = 0.;
-		private boolean useImmuneResponseForMultiplier = true;
-
 
 		public Config() {
 
@@ -211,12 +209,6 @@ public interface AntibodyModel {
 			this.immuneReponseSigma = immuneReponseSigma;
 		}
 
-		public boolean getUseImmuneResponseForMultiplier() {
-			return this.useImmuneResponseForMultiplier;
-		}
-		public void setUseImmuneResponseForMultiplier(boolean useImmuneResponseForMultiplier) {
-			this.useImmuneResponseForMultiplier = useImmuneResponseForMultiplier;
-		}
 	}
 
 }

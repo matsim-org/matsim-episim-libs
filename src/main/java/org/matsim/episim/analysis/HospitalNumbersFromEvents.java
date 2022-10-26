@@ -59,8 +59,7 @@
  )
  public class HospitalNumbersFromEvents implements OutputAnalysis {
 
-//	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
-	 @CommandLine.Option(names = "--output", defaultValue = "/Users/jakob/git/public-svn/matsim/scenarios/countries/de/episim/battery/jakob/2022-10-14/1-vac/analysis")
+	 @CommandLine.Option(names = "--output", defaultValue = "./output/")
 	 private Path output;
 
 //	 @CommandLine.Option(names = "--input", defaultValue = "/scratch/projects/bzz0020/episim-input")
@@ -405,11 +404,6 @@
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 
-//			 if (!event.getPersonId().toString().equals("12102f5"))
-//				 return;
-			 //System.out.println(event.getTime() / 86400. + " " + event.getVirusStrain());
-
-
 			 ImmunizablePerson person = data.computeIfAbsent(event.getPersonId(),
 					 personId -> new ImmunizablePerson(personId, getAge(personId)));
 
@@ -580,12 +574,7 @@
 
 			 double ageFactor = transitionModel.getProbaOfTransitioningToSeriouslySick(person);
 			 double strainFactor = holder.strainConfig.getParams(person.getVirusStrain()).getFactorSeriouslySick();
-			 //System.out.println("+++ day: " + day);
-//			 //System.out.println("id: "  + person.getPersonId().toString());
-			 //System.out.println("age factor : " + ageFactor);
-			 //System.out.println("strain factor : " + strainFactor);
 			 double immunityFactor = transitionModel.getSeriouslySickFactor(person, holder.vaccinationConfig, day);
-			 //System.out.println("immunity factor : " + immunityFactor);
 
 
 
@@ -596,15 +585,6 @@
 					 paxlovidFactor = 0.33; // todo
 				 }
 			 }
-
-			 // 0.36 (old) * 1.2 (delta) * ... (immunisation) =
-			 // if returned values (ageFactor, strainFactor, immunityFactor) are high: chance of going to hosp is high / protection is low
-//			 System.out.println("Remaining Risk: " + (ageFactor
-//					 * strainFactor
-//					 * immunityFactor
-//					 * paxlovidFactor));
-
-//			 System.out.println();
 
 			 return rnd.nextDouble() < ageFactor
 					 * strainFactor
