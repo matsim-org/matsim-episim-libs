@@ -24,6 +24,9 @@ import com.google.inject.Inject;
 import com.google.inject.Provider;
 import org.apache.commons.compress.archivers.*;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.events.Event;
@@ -35,10 +38,7 @@ import org.matsim.core.gbl.Gbl;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -131,8 +131,10 @@ public final class EpisimRunner {
 
 		for (; iteration <= maxIterations; iteration++) {
 
-			if (episimConfig.getSnapshotInterval() > 0 && iteration % episimConfig.getSnapshotInterval() == 0)
+			if (episimConfig.getSnapshotInterval() > 0 && iteration % episimConfig.getSnapshotInterval() == 0) {
 				writeSnapshot(output, iteration);
+				writeImmunization(output, iteration);
+			}
 
 			if (iteration % 10 == 0)
 				Gbl.printMemoryUsage();
@@ -149,6 +151,7 @@ public final class EpisimRunner {
 
 	/**
 	 * Update events data and internal person data structure.
+	 *
 	 * @param events
 	 */
 	public void updateEvents(Map<DayOfWeek, List<Event>> events) {
@@ -245,6 +248,43 @@ public final class EpisimRunner {
 
 		log.info("Snapshot for day {} written successfully", iteration);
 
+	}
+
+	/**
+	 * Write immunization history.
+	 *
+	 * @param output    output path
+	 * @param iteration current iteration
+	 */
+	private void writeImmunization(Path output, int iteration) {
+
+		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
+
+		String date = episimConfig.getStartDate().plusDays(iteration - 1).toString();
+
+		Path path = output.resolve(episimConfig.getImmunizationPrefix() + String.format("-%03d-%s.tsv.gz", iteration, date));
+
+		log.info("Writing immunization history to {}", path);
+
+		InfectionEventHandler handler = handlerProvider.get();
+
+		try (CSVPrinter out = new CSVPrinter(new OutputStreamWriter(new GzipCompressorOutputStream(Files.newOutputStream(path))), CSVFormat.TDF)) {
+
+			out.printRecord("personId", "date", "virus_or_vaccine", "type");
+
+			for (EpisimPerson person : handler.getPersons()) {
+				for (int i = 0; i < person.getNumInfections(); i++) {
+					out.printRecord(person.getPersonId(), person.getInfectionDates().getDouble(i), "virus", person.getVirusStrain(i));
+				}
+
+				for (int i = 0; i < person.getNumVaccinations(); i++) {
+					out.printRecord(person.getPersonId(), person.getVaccinationDates().getInt(i), "vaccine", person.getVaccinationType(i));
+				}
+			}
+
+		} catch (IOException e) {
+			throw new UncheckedIOException("Could not write immunization history", e);
+		}
 	}
 
 	/**
