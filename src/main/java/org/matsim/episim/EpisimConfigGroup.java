@@ -66,6 +66,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	private static final String START_DATE = "startDate";
 	private static final String SNAPSHOT_INTERVAL = "snapshotInterval";
 	private static final String START_FROM_SNAPSHOT = "startFromSnapshot";
+	private static final String START_FROM_IMMUNIZATION = "startFromImmunization";
 	private static final String SNAPSHOT_PREFIX = "snapshotPrefix";
 	private static final String IMMUNIZATION_PREFIX = "immunizationPrefix";
 	private static final String SNAPSHOT_SEED = "snapshotSeed";
@@ -142,6 +143,7 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	 * Path to snapshot file.
 	 */
 	private String startFromSnapshot = null;
+	private String startFromImmunization = null;
 
 	/**
 	 * Filename prefix for snapshot.
@@ -375,6 +377,16 @@ public final class EpisimConfigGroup extends ReflectiveConfigGroup {
 	@StringSetter(START_FROM_SNAPSHOT)
 	public void setStartFromSnapshot(String startFromSnapshot) {
 		this.startFromSnapshot = startFromSnapshot;
+	}
+
+	@StringGetter(START_FROM_IMMUNIZATION)
+	public String getStartFromImmunization() {
+		return startFromImmunization;
+	}
+
+	@StringSetter(START_FROM_IMMUNIZATION)
+	public void setStartFromImmunization(String startFromImmunization) {
+		this.startFromImmunization = startFromImmunization;
 	}
 
 	@StringGetter(SNAPSHOT_PREFIX)
