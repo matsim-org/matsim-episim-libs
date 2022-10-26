@@ -117,6 +117,10 @@ public final class EpisimRunner {
 			handler.onSnapshotLoaded(iteration);
 		}
 
+		if (episimConfig.getStartFromImmunization() != null) {
+			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));
+		}
+
 		// recalculate antibodies for every agent if starting from snapshot.
 		// The antibodies profile is generated using the immunity event history in the
 		// snapshot; the antibody model config of the snapshot simulation will

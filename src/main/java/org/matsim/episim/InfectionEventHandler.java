@@ -26,8 +26,10 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.*;
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -50,14 +52,12 @@ import org.matsim.facilities.ActivityFacility;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectOutput;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -286,6 +286,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 	/**
 	 * Update events data and internal person data structure.
+	 *
 	 * @param events
 	 */
 	void updateEvents(Map<DayOfWeek, List<Event>> events) {
@@ -993,6 +994,28 @@ public final class InfectionEventHandler implements Externalizable {
 
 		for (SimulationListener l : listener) {
 			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
+		}
+
+	}
+
+	/**
+	 * Read immunization history and init persons.
+	 */
+	void initImmunization(Path history) {
+
+		log.info("Reading immunization from {}", history);
+		try (CSVParser parser = new CSVParser(new InputStreamReader(new GzipCompressorInputStream(Files.newInputStream(history))), CSVFormat.TDF.withSkipHeaderRecord())) {
+
+			for (CSVRecord record : parser) {
+				EpisimPerson person = personMap.get(Id.createPersonId(record.get(0)));
+				LocalDate occurrence = LocalDate.parse(record.get(1));
+
+				long time = ChronoUnit.DAYS.between(episimConfig.getStartDate(), occurrence);
+				person.addImmunizationRecord(time, record.get(2).equals("virus"), record.get(3));
+			}
+
+		} catch (IOException e) {
+			throw new UncheckedIOException("Could not read immunization history", e);
 		}
 
 	}
