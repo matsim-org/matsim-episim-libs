@@ -41,7 +41,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			for (VirusStrain strain : VirusStrain.values()) {
 				person.setAntibodies(strain, 0.0);
-				person.setMaxAntibodies(strain, 0.0);
+				person.updateMaxAntibodies(strain, 0.0);
 			}
 
 			if (iteration > 1) {
@@ -113,9 +113,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 				// if antibodies against a strain2 are higher than previous maximum, replace maximum
 				// should always be the case for initial immunization
-				if (antibodies > person.getMaxAntibodies(strain2)) {
-					person.setMaxAntibodies(strain2, antibodies);
-				}
+				person.updateMaxAntibodies(strain2, antibodies);
 			}
 
 
@@ -139,9 +137,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				person.setAntibodies(strain2, antibodies);
 
 				// if antibodies against a strain2 are higher than previous maximum, replace maximum
-				if (antibodies > person.getMaxAntibodies(strain2)) {
-					person.setMaxAntibodies(strain2, antibodies);
-				}
+				person.updateMaxAntibodies(strain2, antibodies);
 			}
 		}
 	}

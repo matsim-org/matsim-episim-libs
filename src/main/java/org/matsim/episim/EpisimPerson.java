@@ -211,7 +211,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	/**
 	 * Maximal antibody level reached by agent w/ respect to each strain
 	 */
-	private final Object2DoubleMap<VirusStrain> maximalAntibodyLevel = new Object2DoubleOpenHashMap<>();
+	private final Object2DoubleMap<VirusStrain> maxAntibodies = new Object2DoubleOpenHashMap<>();
 
 	/**
 	 * Antibody level at last infection.
@@ -312,7 +312,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 		n = in.readInt();
 		for (int i = 0; i < n; i++) {
 			VirusStrain strain = VirusStrain.values()[in.readInt()];
-			maximalAntibodyLevel.put(strain, in.readDouble());
+			maxAntibodies.put(strain, in.readDouble());
 		}
 
 		status = DiseaseStatus.values()[in.readInt()];
@@ -382,8 +382,8 @@ public final class EpisimPerson implements Immunizable, Attributable {
 			out.writeDouble(kv.getDoubleValue());
 		}
 
-		out.writeInt(maximalAntibodyLevel.size());
-		for (Object2DoubleMap.Entry<VirusStrain> kv : maximalAntibodyLevel.object2DoubleEntrySet()) {
+		out.writeInt(maxAntibodies.size());
+		for (Object2DoubleMap.Entry<VirusStrain> kv : maxAntibodies.object2DoubleEntrySet()) {
 			out.writeInt(kv.getKey().ordinal());
 			out.writeDouble(kv.getDoubleValue());
 		}
@@ -597,23 +597,25 @@ public final class EpisimPerson implements Immunizable, Attributable {
 	 * get map with max antibodies reached per strain (before current infection)
 	 */
 	public Object2DoubleMap<VirusStrain> getMaxAntibodies() {
-		return maximalAntibodyLevel;
+		return maxAntibodies;
 	}
 
 	/**
 	 * Get max antibodies reached for a particular strain (before current infection)
 	 */
 	public double getMaxAntibodies(VirusStrain virusStrain) {
-		return maximalAntibodyLevel.getDouble(virusStrain);
+		return maxAntibodies.getDouble(virusStrain);
 	}
 
 	/**
-	 * Sets the maximum antibodies agent has had versus a particular strain.
-	 * todo: Does not check if new max value is in fact greater than previous max.
+	 * Updates maximum antibodies agent has had versus a particular strain (only if maxAb is in fact higher
+	 * than previous maximum)
 	 */
-	public void setMaxAntibodies(VirusStrain strain, double maxAb) {
+	public void updateMaxAntibodies(VirusStrain strain, double maxAb) {
 
-		this.maximalAntibodyLevel.put(strain, maxAb);
+		if (!this.maxAntibodies.containsKey(strain) || maxAb > this.maxAntibodies.getDouble(strain)) {
+			this.maxAntibodies.put(strain, maxAb);
+		}
 
 	}
 

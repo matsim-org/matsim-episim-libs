@@ -418,7 +418,7 @@
 			 person.setAntibodyLevelAtInfection(event.getAntibodies());
 			 person.setVirusStrain(virusStrain);
 
-			 person.setMaxAntibodies(virusStrain, event.getMaxAntibodies());
+			 person.updateMaxAntibodies(virusStrain, event.getMaxAntibodies());
 
 			 int day = (int) (event.getTime() / 86_400);
 
@@ -716,7 +716,7 @@
 				 return maxAntibodies.getDouble(strain);
 			 }
 
-			 public void setMaxAntibodies(VirusStrain strain, double maxAb){
+			 public void updateMaxAntibodies(VirusStrain strain, double maxAb){
 				 this.maxAntibodies.put(strain, maxAb);
 			 }
 
