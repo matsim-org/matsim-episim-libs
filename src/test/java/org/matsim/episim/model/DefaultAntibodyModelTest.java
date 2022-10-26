@@ -304,42 +304,6 @@ public class DefaultAntibodyModelTest {
 	}
 
 	@Test
-	public void testyTest(){
-
-		List<String> people = new ArrayList<>();
-
-		for (int i = 0; i < 90_000; i++) {
-			people.add("boostered");
-		}
-
-		for (int i = 0; i < 10_000; i++) {
-			people.add("vaccinated");
-		}
-
-		Collections.shuffle(people);
-
-		double cntVaccinated = 0;
-		double cntBoostered = 0;
-		for (int i = 0; i < 50_000; i++) {
-			if (people.get(i).equals("vaccinated")) {
-				cntVaccinated++;
-			}else {
-				cntBoostered++;
-			}
-		}
-
-		System.out.println(cntVaccinated / 10_000);
-		System.out.println(cntBoostered / 90_000);
-
-
-
-
-		return;
-
-	}
-
-
-	@Test
 	public void immunizationByBa1() {
 
 		final String days = "day";
