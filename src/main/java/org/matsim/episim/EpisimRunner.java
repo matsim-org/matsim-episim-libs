@@ -274,11 +274,13 @@ public final class EpisimRunner {
 
 			for (EpisimPerson person : handler.getPersons()) {
 				for (int i = 0; i < person.getNumInfections(); i++) {
-					out.printRecord(person.getPersonId(), person.getInfectionDates().getDouble(i), "virus", person.getVirusStrain(i));
+					String occurrence = episimConfig.getStartDate().plusDays((long) ((person.getInfectionDates().getDouble(i) / EpisimUtils.DAY) - 1)).toString();
+					out.printRecord(person.getPersonId(), occurrence, "virus", person.getVirusStrain(i));
 				}
 
 				for (int i = 0; i < person.getNumVaccinations(); i++) {
-					out.printRecord(person.getPersonId(), person.getVaccinationDates().getInt(i), "vaccine", person.getVaccinationType(i));
+					String occurrence = episimConfig.getStartDate().plusDays(person.getVaccinationDates().getInt(i) - 1).toString();
+					out.printRecord(person.getPersonId(), occurrence, "vaccine", person.getVaccinationType(i));
 				}
 			}
 
