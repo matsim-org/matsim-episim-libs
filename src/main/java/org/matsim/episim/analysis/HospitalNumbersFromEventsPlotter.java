@@ -134,23 +134,30 @@ public class HospitalNumbersFromEventsPlotter {
 				rkiHospIncidence.put(day, incidence);
 
 				double incidenceAdj;
-				if (date.isBefore(LocalDate.of(2020, 12, 10))) {
-					incidenceAdj = incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 1, 11))) {
-					incidenceAdj = 23. / 16. * incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 3, 22))) {
-					incidenceAdj = 8. / 6. * incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 5, 3))) {
-					incidenceAdj = 15./11. * incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 11, 8))) {
-					incidenceAdj = incidence;
-				} else if (date.isBefore(LocalDate.of(2021, 12, 6))) {
-					incidenceAdj = 16. / 13. * incidence;
-				} else if (date.isBefore(LocalDate.of(2022, 1, 24))) {
-					incidenceAdj = incidence;
-				} else {
-					incidenceAdj = 11./14 * incidence;
+				if (date.isBefore(LocalDate.of(2022, 11, 1))) {
+					incidenceAdj = incidence * 2 / 3;
+				} else{
+					incidenceAdj = incidence / 3;
 				}
+
+
+//				if (date.isBefore(LocalDate.of(2020, 12, 10))) {
+//					incidenceAdj = incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 1, 11))) {
+//					incidenceAdj = 23. / 16. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 3, 22))) {
+//					incidenceAdj = 8. / 6. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 5, 3))) {
+//					incidenceAdj = 15./11. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 11, 8))) {
+//					incidenceAdj = incidence;
+//				} else if (date.isBefore(LocalDate.of(2021, 12, 6))) {
+//					incidenceAdj = 16. / 13. * incidence;
+//				} else if (date.isBefore(LocalDate.of(2022, 1, 24))) {
+//					incidenceAdj = incidence;
+//				} else {
+//					incidenceAdj = 11./14 * incidence;
+//				}
 				rkiHospIncidenceAdj.put(day, incidenceAdj);
 			}
 		}
@@ -404,7 +411,7 @@ public class HospitalNumbersFromEventsPlotter {
 				} else {
 					values.append(value);
 				}
-				groupings.append("reported: intakeHosp (rki, nrw adjusted)");
+				groupings.append("reported: intakeHosp (rki, nrw adjusted) WITH Covid");
 			}
 
 			for (Int2DoubleMap.Entry entry : rkiHospIncidenceAdj.int2DoubleEntrySet()) {
@@ -417,7 +424,7 @@ public class HospitalNumbersFromEventsPlotter {
 				} else {
 					values.append(value);
 				}
-				groupings.append("reported: intakeHosp (rki, nrw adjusted, SARI)");
+				groupings.append("reported: intakeHosp (rki, nrw adjusted) FROM Covid");
 			}
 
 			for (Int2DoubleMap.Entry entry : hospIncidenceKoeln.int2DoubleEntrySet()) {
