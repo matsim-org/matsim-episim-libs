@@ -49,8 +49,7 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
-import static org.matsim.episim.EpisimUtils.readChars;
-import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.*;
 
 /**
  * Persons current state in the simulation.
@@ -436,6 +435,20 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		antibodyLevelAtInfection = antibodies.getDouble(strain);
 
+	}
+
+	/**
+	 * Add an infection or vaccination from immunization history.
+	 */
+	void addImmunizationRecord(double time, boolean virus, String type) {
+
+		if (virus) {
+			virusStrains.add(VirusStrain.valueOf(type));
+			infectionDates.add(time * DAY);
+		} else {
+			vaccinations.add(VaccinationType.valueOf(type));
+			vaccinationDates.add((int) time);
+		}
 	}
 
 	/**
