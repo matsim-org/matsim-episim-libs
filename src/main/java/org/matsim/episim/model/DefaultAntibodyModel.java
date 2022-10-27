@@ -44,11 +44,12 @@ public class DefaultAntibodyModel implements AntibodyModel {
 				person.updateMaxAntibodies(strain, 0.0);
 			}
 
-			if (iteration > 1) {
+
+			// start from snapshot
+			if (iteration > 1 ) {
 				for (int it = 1; it < iteration; it++) {
 					updateAntibodies(person, it);
 				}
-
 			}
 		}
 

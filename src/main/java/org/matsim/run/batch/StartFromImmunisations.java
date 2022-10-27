@@ -105,8 +105,11 @@ public class StartFromImmunisations implements BatchRun<StartFromImmunisations.P
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 		//snapshot
-//		episimConfig.setSnapshotInterval(30);
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+		episimConfig.setSnapshotInterval(5);
+
+		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+
+
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		//---------------------------------------
