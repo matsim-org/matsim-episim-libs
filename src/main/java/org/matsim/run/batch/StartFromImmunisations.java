@@ -105,20 +105,29 @@ public class StartFromImmunisations implements BatchRun<StartFromImmunisations.P
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 		//snapshot
-		episimConfig.setSnapshotInterval(5);
+//		episimConfig.setSnapshotInterval(10);
 
-		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+		LocalDate startDate = LocalDate.parse("2022-11-01");
+		episimConfig.setStartDate(startDate);
 
+//		episimConfig.setImmunizationPrefix("imm-" + String.valueOf(params.seed));
 
+//		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/imm-" + String.valueOf(params.seed)+"-960-2022-10-11.tsv.gz");
+		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/imm-4711-210-2020-09-21.tsv.gz");
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
+
+		episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA5).put(startDate, 144_380 / 4);
+
+
 		//---------------------------------------
 		//		S T R A I N S
 		//---------------------------------------
 
-		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.SARS_CoV_2).getInfectiousness() * 10);
+//		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+//
+//		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.SARS_CoV_2).getInfectiousness() * 10);
 
 
 		return config;

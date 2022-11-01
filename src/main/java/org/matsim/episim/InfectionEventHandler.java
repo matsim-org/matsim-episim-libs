@@ -1006,7 +1006,11 @@ public final class InfectionEventHandler implements Externalizable {
 		log.info("Reading immunization from {}", history);
 		try (CSVParser parser = new CSVParser(new InputStreamReader(new GzipCompressorInputStream(Files.newInputStream(history))), CSVFormat.TDF.withSkipHeaderRecord())) {
 
-			for (CSVRecord record : parser) {
+			// initialize parser and skip header row TODO: this should be done automatically but fails
+			Iterator<CSVRecord> iterator = parser.iterator();
+			iterator.next();
+			while (iterator.hasNext()) {
+				CSVRecord record = iterator.next();
 				EpisimPerson person = personMap.get(Id.createPersonId(record.get(0)));
 				LocalDate occurrence = LocalDate.parse(record.get(1));
 

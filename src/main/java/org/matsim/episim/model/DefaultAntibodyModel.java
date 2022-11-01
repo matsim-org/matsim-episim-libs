@@ -2,6 +2,7 @@ package org.matsim.episim.model;
 
 
 import com.google.inject.Inject;
+import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.EpisimPerson;
 import org.matsim.episim.EpisimUtils;
 
@@ -15,10 +16,13 @@ public class DefaultAntibodyModel implements AntibodyModel {
 	private final AntibodyModel.Config antibodyConfig;
 	private final SplittableRandom localRnd;
 
+	private final EpisimConfigGroup episimConfig;
+
 
 	@Inject
-	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig) {
+	DefaultAntibodyModel(AntibodyModel.Config antibodyConfig, EpisimConfigGroup episimConfigGroup) {
 		this.antibodyConfig = antibodyConfig;
+		this.episimConfig = episimConfigGroup;
 		localRnd = new SplittableRandom(2938); // todo: should it be a fixed seed, i.e not change btwn snapshots
 
 
@@ -46,7 +50,7 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 
 			// start from snapshot
-			if (iteration > 1 ) {
+			if (iteration > 1 || episimConfig.getStartFromImmunization() != null) {
 				for (int it = 1; it < iteration; it++) {
 					updateAntibodies(person, it);
 				}
