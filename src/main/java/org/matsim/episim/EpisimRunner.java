@@ -35,6 +35,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.gbl.Gbl;
+import org.matsim.episim.events.EpisimStartEvent;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
 
@@ -67,7 +68,7 @@ public final class EpisimRunner {
 
 	@Inject
 	public EpisimRunner(Config config, EventsManager manager, Provider<InfectionEventHandler> handlerProvider, Provider<ReplayHandler> replay,
-	                    Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider) {
+						Provider<EpisimReporting> reportingProvider, Provider<ProgressionModel> progressionProvider, Provider<AntibodyModel> antibodyModelProvider) {
 		this.config = config;
 		this.handlerProvider = handlerProvider;
 		this.manager = manager;
@@ -115,6 +116,9 @@ public final class EpisimRunner {
 			}
 
 			handler.onSnapshotLoaded(iteration);
+		} else if (episimConfig.getStartFromImmunization() != null) {
+
+			handler.initImmunization2(Path.of(episimConfig.getStartFromImmunization()));
 		}
 
 		// recalculate antibodies for every agent if starting from snapshot.

@@ -20,6 +20,8 @@ public class EpisimInitialInfectionEvent extends Event implements HasPersonId, C
 	private final VirusStrain virusStrain;
 	private final double antibodies;
 
+	private final double maxAntibodies;
+
 
 	/**
 	 * Constructor.
@@ -31,6 +33,13 @@ public class EpisimInitialInfectionEvent extends Event implements HasPersonId, C
 		this.virusStrain = strain;
 		this.antibodies = antibodies;
 		this.maxAntibodies = maxAntibodies;
+	}
+
+	/**
+	 * Return initial infection as "normal" infection event.
+	 */
+	public EpisimInfectionEvent asInfectionEvent() {
+		return new EpisimInfectionEvent(getTime(), personId, null, null, null, -1, virusStrain, 0, antibodies, maxAntibodies);
 	}
 
 	@Override
@@ -52,6 +61,7 @@ public class EpisimInitialInfectionEvent extends Event implements HasPersonId, C
 		Map<String, String> attr = super.getAttributes();
 		attr.put(EpisimInfectionEvent.VIRUS_STRAIN, virusStrain.toString());
 		attr.put(EpisimInfectionEvent.ANTIBODIES, Double.toString(antibodies));
+		attr.put(EpisimInfectionEvent.MAX_ANTIBODIES, Double.toString(maxAntibodies));
 
 		return attr;
 	}

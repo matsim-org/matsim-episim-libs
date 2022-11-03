@@ -759,6 +759,9 @@ public final class InfectionEventHandler implements Externalizable {
 		if (paramsMap.size() > 1000)
 			log.warn("Params map contains many entries. Activity types may not be .intern() Strings");
 
+		if (iteration == 1)
+			reporting.reportStart(episimConfig.getStartDate(), episimConfig.getStartFromImmunization());
+
 		double now = EpisimUtils.getCorrectedTime(episimConfig.getStartOffset(), 0, iteration);
 		LocalDate date = episimConfig.getStartDate().plusDays(iteration - 1);
 
@@ -1005,15 +1008,18 @@ public final class InfectionEventHandler implements Externalizable {
 	void initImmunization(Path history) {
 
 		log.info("Reading immunization from {}", history);
-		try (CSVParser parser = new CSVParser(new InputStreamReader(new GzipCompressorInputStream(Files.newInputStream(history))), CSVFormat.TDF.withSkipHeaderRecord())) {
 
+		LocalDate first = null;
+
+		try (CSVParser parser = new CSVParser(new InputStreamReader(new GzipCompressorInputStream(Files.newInputStream(history))), CSVFormat.TDF.withFirstRecordAsHeader())) {
 			// initialize parser and skip header row TODO: this should be done automatically but fails
-			Iterator<CSVRecord> iterator = parser.iterator();
-			iterator.next();
-			while (iterator.hasNext()) {
-				CSVRecord record = iterator.next();
+
+			for (CSVRecord record : parser) {
 				EpisimPerson person = personMap.get(Id.createPersonId(record.get(0)));
 				LocalDate occurrence = LocalDate.parse(record.get(1));
+
+				if (first == null || occurrence.isBefore(first))
+					first = occurrence;
 
 				long time = ChronoUnit.DAYS.between(episimConfig.getStartDate(), occurrence);
 				person.addImmunizationRecord(time, record.get(2).equals("virus"), record.get(3));
@@ -1023,6 +1029,7 @@ public final class InfectionEventHandler implements Externalizable {
 			throw new UncheckedIOException("Could not read immunization history", e);
 		}
 
+		restoreDiseaseState(first);
 	}
 
 	void initImmunization2(Path history) {

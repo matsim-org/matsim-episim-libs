@@ -920,6 +920,10 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 				String.valueOf(taskId)});
 	}
 
+	void reportStart(LocalDate startDate, String startFromImmunization) {
+		manager.processEvent(new EpisimStartEvent(startDate, startFromImmunization));
+	}
+
 	@Override
 	public void close() {
 
@@ -956,11 +960,11 @@ public final class EpisimReporting implements BasicEventHandler, Closeable, Exte
 	public void handleEvent(Event event) {
 
 		// Events on 0th day are not needed
-		if (iteration == 0) return;
+		if (iteration == 0 && !(event instanceof EpisimStartEvent)) return;
 
 		// Crucial episim events are always written, others only if enabled
-		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent ||
-				event instanceof EpisimInitialInfectionEvent
+		if (event instanceof EpisimPersonStatusEvent || event instanceof EpisimInfectionEvent || event instanceof EpisimVaccinationEvent || event instanceof EpisimPotentialInfectionEvent
+				|| event instanceof EpisimInitialInfectionEvent || event instanceof EpisimStartEvent
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimTracingEvent)
 				|| (writeEvents == EpisimConfigGroup.WriteEvents.tracing && event instanceof EpisimContactEvent)) {
 

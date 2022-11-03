@@ -435,6 +435,7 @@ public final class EpisimPerson implements Immunizable, Attributable {
 
 		antibodyLevelAtInfection = antibodies.getDouble(strain);
 
+		// TODO: add max antibodies
 	}
 
 	/**
