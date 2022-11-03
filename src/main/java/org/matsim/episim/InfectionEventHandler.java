@@ -41,7 +41,7 @@ import org.matsim.core.api.internal.HasPersonId;
 import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.utils.collections.Tuple;
-import org.matsim.episim.events.EpisimInfectionEvent;
+import org.matsim.episim.events.*;
 import org.matsim.episim.model.*;
 import org.matsim.episim.model.activity.ActivityParticipationModel;
 import org.matsim.episim.model.testing.TestingModel;
@@ -49,6 +49,7 @@ import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.policy.Restriction;
 import org.matsim.episim.policy.ShutdownPolicy;
 import org.matsim.facilities.ActivityFacility;
+import org.matsim.run.AnalysisCommand;
 import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
@@ -63,8 +64,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 
-import static org.matsim.episim.EpisimUtils.readChars;
-import static org.matsim.episim.EpisimUtils.writeChars;
+import static org.matsim.episim.EpisimUtils.*;
 
 /**
  * Main event handler of episim.
@@ -778,7 +778,7 @@ public final class InfectionEventHandler implements Externalizable {
 			}
 		}
 
-		// uncomment if you want immunisation stats to be printed on a certain
+		// uncomment if you want immunization stats to be printed on a certain
 		// date or e.g. every month. This produces a lot of large files so use
 		// sparingly.
 //		if (date.getDayOfMonth() == 1) {
@@ -998,6 +998,7 @@ public final class InfectionEventHandler implements Externalizable {
 
 	}
 
+
 	/**
 	 * Read immunization history and init persons.
 	 */
@@ -1022,6 +1023,31 @@ public final class InfectionEventHandler implements Externalizable {
 			throw new UncheckedIOException("Could not read immunization history", e);
 		}
 
+	}
+
+	void initImmunization2(Path history) {
+
+		InitialImmunizationHandler handler = new InitialImmunizationHandler(personMap,episimConfig, antibodyModel,progressionModel);
+		AnalysisCommand.forEachEvent(history, s -> {}, true, handler);
+
+	}
+
+	void restoreDiseaseState(LocalDate first) {
+
+		for (LocalDate date = first; date.isBefore(episimConfig.getStartDate()); date =  date.plusDays(1)) {
+
+			//progressionModel.beforeStateUpdates(personMap, i, this.report);
+
+			for (EpisimPerson person : personMap.values()) {
+
+
+				//progressionModel.updateState(person, i);
+				//antibodyModel.updateAntibodies(person, i);
+			}
+
+			//progressionModel.afterStateUpdates(personMap, i);
+
+		}
 	}
 
 	/**

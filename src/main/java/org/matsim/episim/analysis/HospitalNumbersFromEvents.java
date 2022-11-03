@@ -402,6 +402,8 @@
 //			 }
 		 }
 
+
+		 //TODO: add INITIAL INFECTION EVENT
 		 @Override
 		 public void handleEvent(EpisimInfectionEvent event) {
 

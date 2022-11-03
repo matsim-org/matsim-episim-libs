@@ -35,6 +35,7 @@ import org.matsim.facilities.ActivityFacility;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+import java.time.LocalDate;
 import java.util.Map;
 import java.util.Stack;
 
@@ -54,6 +55,7 @@ public class EpisimEventsReader extends MatsimXmlParser {
 		delegate.addCustomEventMapper(EpisimPersonStatusEvent.EVENT_TYPE, getEpisimPersonStatusEventMapper());
 		delegate.addCustomEventMapper(EpisimContactEvent.EVENT_TYPE, getEpisimContactEventMapper());
 		delegate.addCustomEventMapper(EpisimVaccinationEvent.EVENT_TYPE, getEpisimVaccinationEventMapper());
+		delegate.addCustomEventMapper(EpisimStartEvent.EVENT_TYPE, getEpisimStartEventMapper());
 	}
 
 	public void characters(char[] ch, int start, int length) throws SAXException {
@@ -142,7 +144,12 @@ public class EpisimEventsReader extends MatsimXmlParser {
 				antibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.ANTIBODIES));
 			}
 
-			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies);
+			double maxAntibodies = -1;
+			if (attributes.containsKey(EpisimInfectionEvent.MAX_ANTIBODIES)) {
+				maxAntibodies = Double.parseDouble(attributes.get(EpisimInfectionEvent.MAX_ANTIBODIES));
+			}
+
+			return new EpisimInitialInfectionEvent(time, person,virusStrain, antibodies, maxAntibodies);
 		};
 	}
 
@@ -183,6 +190,17 @@ public class EpisimEventsReader extends MatsimXmlParser {
 					Id.createPersonId(attr.get(EpisimVaccinationEvent.ATTRIBUTE_PERSON)),
 					VaccinationType.valueOf(attr.get(EpisimVaccinationEvent.TYPE)),
 					Integer.parseInt(attr.get(EpisimVaccinationEvent.N))
+			);
+		};
+	}
+
+	private MatsimEventsReader.CustomEventMapper getEpisimStartEventMapper() {
+		return event -> {
+
+			Map<String, String> attr = event.getAttributes();
+			return new EpisimStartEvent(
+					LocalDate.parse(attr.get(EpisimStartEvent.START_DATE)),
+					attr.get(EpisimStartEvent.IMMUNIZATION)
 			);
 		};
 	}

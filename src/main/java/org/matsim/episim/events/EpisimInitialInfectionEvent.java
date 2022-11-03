@@ -14,7 +14,7 @@ import java.util.Map;
  */
 public class EpisimInitialInfectionEvent extends Event implements HasPersonId, Comparable<Event> {
 
-	static final String EVENT_TYPE = "episimInitialInfection";
+	public static final String EVENT_TYPE = "episimInitialInfection";
 
 	private final Id<Person> personId;
 	private final VirusStrain virusStrain;
@@ -24,12 +24,13 @@ public class EpisimInitialInfectionEvent extends Event implements HasPersonId, C
 	/**
 	 * Constructor.
 	 */
-	public EpisimInitialInfectionEvent(double time, Id<Person> personId, VirusStrain strain, double antibodies) {
+	public EpisimInitialInfectionEvent(double time, Id<Person> personId, VirusStrain strain, double antibodies, double maxAntibodies) {
 		super(time);
 
 		this.personId = personId;
 		this.virusStrain = strain;
 		this.antibodies = antibodies;
+		this.maxAntibodies = maxAntibodies;
 	}
 
 	@Override

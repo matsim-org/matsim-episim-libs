@@ -43,14 +43,8 @@ public class DefaultAntibodyModel implements AntibodyModel {
 
 			person.setImmuneResponseMultiplier(immuneResponseMultiplier);
 
-			for (VirusStrain strain : VirusStrain.values()) {
-				person.setAntibodies(strain, 0.0);
-				person.updateMaxAntibodies(strain, 0.0);
-			}
-
-
 			// start from snapshot
-			if (iteration > 1 || episimConfig.getStartFromImmunization() != null) {
+			if (iteration > 1 && episimConfig.getStartFromSnapshot() != null) {
 				for (int it = 1; it < iteration; it++) {
 					updateAntibodies(person, it);
 				}

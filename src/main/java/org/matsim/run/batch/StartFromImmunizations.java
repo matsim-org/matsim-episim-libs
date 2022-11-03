@@ -12,11 +12,8 @@ import org.matsim.episim.EpisimConfigGroup;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.analysis.*;
 import org.matsim.episim.model.*;
-import org.matsim.episim.model.listener.HouseholdSusceptibility;
 import org.matsim.episim.model.vaccination.VaccinationModel;
 import org.matsim.episim.model.vaccination.VaccinationStrategyReoccurringCampaigns;
-import org.matsim.episim.policy.FixedPolicy;
-import org.matsim.episim.policy.Restriction;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.SnzCologneProductionScenario;
 
@@ -28,7 +25,7 @@ import java.util.*;
 /**
  * Batch for Bmbf runs
  */
-public class StartFromImmunisations implements BatchRun<StartFromImmunisations.Params> {
+public class StartFromImmunizations implements BatchRun<StartFromImmunizations.Params> {
 
 
 	@Nullable
@@ -84,7 +81,7 @@ public class StartFromImmunisations implements BatchRun<StartFromImmunisations.P
 //				new VaccinationEffectiveness().withArgs(),
 //				new RValuesFromEvents().withArgs(),
 //				new VaccinationEffectivenessFromPotentialInfections().withArgs("--remove-infected"),
-//				new FilterEvents().withArgs("--output","./output/"),
+				new FilterEvents().withArgs("--output","./output/")
 //				new HospitalNumbersFromEvents().withArgs("--output","./output/","--input","/scratch/projects/bzz0020/episim-input")
 //				new SecondaryAttackRateFromEvents().withArgs()
 		);
@@ -105,29 +102,29 @@ public class StartFromImmunisations implements BatchRun<StartFromImmunisations.P
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
 		//snapshot
-//		episimConfig.setSnapshotInterval(10);
 
-//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-		LocalDate startDate = LocalDate.parse("2022-11-01");
-		episimConfig.setStartDate(startDate);
+		episimConfig.setStartDate(LocalDate.parse("2020-03-20"));
+		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/2022-11-03");
 
 //		episimConfig.setImmunizationPrefix("imm-" + String.valueOf(params.seed));
 
 //		episimConfig.setStartFromImmunization("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/imm-" + String.valueOf(params.seed)+"-960-2022-10-11.tsv.gz");
-		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/imm-4711-210-2020-09-21.tsv.gz");
+//		episimConfig.setStartFromImmunization("/Users/jakob/git/matsim-episim/output/seed_4711/imm-4711-210-2020-09-21.tsv.gz");
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 
-		episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA5).put(startDate, 144_380 / 4);
+//		episimConfig.getInfections_pers_per_day().get(VirusStrain.OMICRON_BA5).put(startDate, 144_380 / 4);
+//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+//		episimConfig.setSnapshotInterval(10);
 
 
 		//---------------------------------------
 		//		S T R A I N S
 		//---------------------------------------
 
-//		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
-//
-//		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.SARS_CoV_2).getInfectiousness() * 10);
+		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.SARS_CoV_2).setInfectiousness(virusStrainConfigGroup.getParams(VirusStrain.SARS_CoV_2).getInfectiousness() * 10);
 
 
 		return config;
@@ -144,10 +141,10 @@ public class StartFromImmunisations implements BatchRun<StartFromImmunisations.P
 
 	public static void main(String[] args) {
 		String[] args2 = {
-				RunParallel.OPTION_SETUP, StartFromImmunisations.class.getName(),
+				RunParallel.OPTION_SETUP, StartFromImmunizations.class.getName(),
 				RunParallel.OPTION_PARAMS, Params.class.getName(),
 				RunParallel.OPTION_TASKS, Integer.toString(1),
-				RunParallel.OPTION_ITERATIONS, Integer.toString(1000),
+				RunParallel.OPTION_ITERATIONS, Integer.toString(30),
 				RunParallel.OPTION_METADATA
 		};
 

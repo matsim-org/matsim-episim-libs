@@ -392,7 +392,7 @@ public class CologneBMBF202212XX implements BatchRun<CologneBMBF202212XX.Params>
 		//snapshot
 //		episimConfig.setSnapshotInterval(30);
 //		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
-		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip ");
+		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-27/" + params.seed + "-900-2022-08-12.zip");
 		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		//---------------------------------------
 		//		S T R A I N S
