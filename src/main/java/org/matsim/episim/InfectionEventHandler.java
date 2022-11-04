@@ -990,6 +990,11 @@ public final class InfectionEventHandler implements Externalizable {
 		infections.stream().sorted()
 				.forEach(reporting::reportInfection);
 
+
+		int totalContacts = handlers.stream().mapToInt(TrajectoryHandler::getNumContacts).sum();
+
+		reporting.reportTotalContacts(totalContacts);
+
 		for (SimulationListener l : listener) {
 			l.onIterationEnd(iteration, episimConfig.getStartDate().plusDays(iteration - 1));
 		}

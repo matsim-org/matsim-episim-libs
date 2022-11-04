@@ -131,6 +131,9 @@ public final class SymmetricContactModel extends AbstractContactModel {
 				continue;
 			}
 
+			// counted as contact
+			numContacts++;
+
 			// we have thrown the random numbers, so we can bail out in some cases if we are not tracking:
 			if (!trackingEnabled) {
 				if (personLeavingContainer.getDiseaseStatus() == DiseaseStatus.infectedButNotContagious) {
