@@ -69,7 +69,6 @@ public final class InitialImmunizationHandler implements EpisimVaccinationEventH
 	public void handleEvent(EpisimVaccinationEvent event) {
 		int currentIteration = (int) (event.getTime() / EpisimUtils.DAY);
 		if (currentIteration >= iterationOffset + 1) {
-
 			return;
 		} else if (maxIterationReachedSoFar < currentIteration) {
 			newDay(currentIteration);

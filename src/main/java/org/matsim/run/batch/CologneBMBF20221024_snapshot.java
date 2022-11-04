@@ -389,9 +389,15 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 		episimConfig.setCalibrationParameter(episimConfig.getCalibrationParameter() * 1.2 * 1.7);
 
+		if (!params.startDate.equals("fromTheStart")) {
+			episimConfig.setStartDate(LocalDate.parse(params.startDate));
+			episimConfig.setStartFromImmunization("");//TODO!!!
+			episimConfig.setImmunizationPrefix(String.valueOf(params.seed)); //TODO
+		}
+
 		//snapshot
-		episimConfig.setSnapshotInterval(30);
-		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
+//		episimConfig.setSnapshotInterval(30);
+//		episimConfig.setSnapshotPrefix(String.valueOf(params.seed));
 //		episimConfig.setStartFromSnapshot("/scratch/projects/bzz0020/episim-input/snapshots-cologne-2022-10-18/" + params.seed + "-960-2022-10-11.zip");
 //		episimConfig.setSnapshotSeed(EpisimConfigGroup.SnapshotSeed.restore);
 		//---------------------------------------
@@ -558,12 +564,14 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 		Map<LocalDate, Integer> infPerDayBa2 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA2, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayBa5 = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.OMICRON_BA5, new TreeMap<>()));
 		Map<LocalDate, Integer> infPerDayStrA = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_A, new TreeMap<>()));
-		Map<LocalDate, Integer> infPerDayStrB = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_B, new TreeMap<>()));
+//		Map<LocalDate, Integer> infPerDayStrB = new HashMap<>(episimConfig.getInfections_pers_per_day().getOrDefault(VirusStrain.STRAIN_B, new TreeMap<>()));
 
 		//StrainA
 		if (!params.StrainA.equals("off")) {
 			infPerDayStrA.put(LocalDate.parse("2020-01-01"), 0);
-			LocalDate strADate = LocalDate.parse("2022-11-01");
+//			LocalDate strADate = LocalDate.parse("2022-11-01");
+			LocalDate strADate = LocalDate.parse(params.strainADate);
+
 			for (int i = 0; i < 7; i++) {
 				infPerDayStrA.put(strADate.plusDays(i), 4);
 			}
@@ -582,13 +590,13 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 
 
 		// add projected disease import for vacation waves after initial disease import
-		int facBa2 = 4;
-		int facBa5 = 4;
-		int facStrAB = 4;
-
-		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
-		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
-		LocalDate dateStrainAB = LocalDate.parse("2022-11-18"); // after vaca import
+//		int facBa2 = 4;
+//		int facBa5 = 4;
+//		int facStrAB = 4;
+//
+//		LocalDate dateBa2 = LocalDate.parse("2022-01-27"); // local min of disease import
+//		LocalDate dateBa5 = LocalDate.parse("2022-05-01"); // after vaca import
+//		LocalDate dateStrainAB = LocalDate.parse("2022-11-18"); // after vaca import
 
 //		String importSummer2022 = "off";
 //		if (importSummer2022.equals("on")) {
@@ -648,11 +656,14 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 		@GenerateSeeds(5)
 		public long seed;
 
+		@StringParameter({"fromTheStart","2020-06-01", "2020-12-01", "2021-06-01", "2021-12-01", "2022-06-01", "2022-09-15"})
+		public String startDate;
+
 		//IFSG
 		@StringParameter({"base"})
 		public String ifsg;
 
-		// Vacciantion Campaign
+		// Vaccination Campaign
 		@StringParameter({"base"})
 		String vacCamp;
 
@@ -668,8 +679,11 @@ public class CologneBMBF20221024_snapshot implements BatchRun<CologneBMBF2022102
 		@StringParameter({"base"})
 		public String edu;
 
-		@StringParameter({"6.0"})
+		@StringParameter({"3.0"})
 		public String StrainA;
+
+		@StringParameter({"2022-09-19"})
+		public String strainADate;
 
 
 	}

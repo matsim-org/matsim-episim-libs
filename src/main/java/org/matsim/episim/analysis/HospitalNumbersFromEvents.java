@@ -332,7 +332,7 @@
 	 }
 
 
-	 public static final class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler {
+	 public static final class Handler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler{
 		 final Map<Id<Person>, ImmunizablePerson> data;
 		 private final String name;
 		 private final Population population;
@@ -486,10 +486,14 @@
 			 person.addVaccination(day);
 		 }
 
+		 @Override
+		 public void handleEvent(EpisimInitialInfectionEvent event) {
+			 handleEvent(event.asInfectionEvent());
+		 }
+
 		 private int getAge(Id<Person> personId) {
 			 return (int) population.getPersons().get(personId).getAttributes().getAttribute("microm:modeled:age");
 		 }
-
 
 		 /*
 		 % infected who get paxlovid (for a certain age group):
@@ -502,6 +506,7 @@
 
 
 		  */
+
 		 private void updateHospitalizationsPost(ImmunizablePerson person, VirusStrain strain, int infectionIteration) {
 
 
@@ -609,7 +614,6 @@
 					 * strainFactor
 					 * immunityFactor;
 		 }
-
 
 
 		 /**

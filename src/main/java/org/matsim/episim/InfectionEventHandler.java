@@ -26,10 +26,6 @@ import com.google.inject.name.Names;
 import com.google.inject.util.Types;
 import com.typesafe.config.ConfigFactory;
 import it.unimi.dsi.fastutil.objects.*;
-import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.matsim.api.core.v01.Id;
@@ -54,11 +50,9 @@ import org.matsim.utils.objectattributes.attributable.Attributes;
 import org.matsim.vehicles.Vehicle;
 
 import java.io.*;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
@@ -1009,52 +1003,9 @@ public final class InfectionEventHandler implements Externalizable {
 
 		log.info("Reading immunization from {}", history);
 
-		LocalDate first = null;
-
-		try (CSVParser parser = new CSVParser(new InputStreamReader(new GzipCompressorInputStream(Files.newInputStream(history))), CSVFormat.TDF.withFirstRecordAsHeader())) {
-			// initialize parser and skip header row TODO: this should be done automatically but fails
-
-			for (CSVRecord record : parser) {
-				EpisimPerson person = personMap.get(Id.createPersonId(record.get(0)));
-				LocalDate occurrence = LocalDate.parse(record.get(1));
-
-				if (first == null || occurrence.isBefore(first))
-					first = occurrence;
-
-				long time = ChronoUnit.DAYS.between(episimConfig.getStartDate(), occurrence);
-				person.addImmunizationRecord(time, record.get(2).equals("virus"), record.get(3));
-			}
-
-		} catch (IOException e) {
-			throw new UncheckedIOException("Could not read immunization history", e);
-		}
-
-		restoreDiseaseState(first);
-	}
-
-	void initImmunization2(Path history) {
-
 		InitialImmunizationHandler handler = new InitialImmunizationHandler(personMap,episimConfig, antibodyModel,progressionModel);
 		AnalysisCommand.forEachEvent(history, s -> {}, true, handler);
 
-	}
-
-	void restoreDiseaseState(LocalDate first) {
-
-		for (LocalDate date = first; date.isBefore(episimConfig.getStartDate()); date =  date.plusDays(1)) {
-
-			//progressionModel.beforeStateUpdates(personMap, i, this.report);
-
-			for (EpisimPerson person : personMap.values()) {
-
-
-				//progressionModel.updateState(person, i);
-				//antibodyModel.updateAntibodies(person, i);
-			}
-
-			//progressionModel.afterStateUpdates(personMap, i);
-
-		}
 	}
 
 	/**

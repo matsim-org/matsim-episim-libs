@@ -35,7 +35,6 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.core.controler.ControlerUtils;
 import org.matsim.core.gbl.Gbl;
-import org.matsim.episim.events.EpisimStartEvent;
 import org.matsim.episim.model.AntibodyModel;
 import org.matsim.episim.model.ProgressionModel;
 
@@ -46,7 +45,6 @@ import java.nio.file.StandardCopyOption;
 import java.time.DayOfWeek;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Main entry point and runner of one epidemic simulation.
@@ -105,7 +103,9 @@ public final class EpisimRunner {
 		Path output = Path.of(config.controler().getOutputDirectory());
 
 		int iteration = 1;
-		if (episimConfig.getStartFromSnapshot() != null) {
+		if (episimConfig.getStartFromSnapshot() != null && episimConfig.getStartFromImmunization() != null) {
+			throw new RuntimeException("Cannot start from snapshot and immunization history simultaneously. Choose one.");
+		} else if (episimConfig.getStartFromSnapshot() != null) {
 			reporting.close();
 			iteration = readSnapshot(output, Path.of(episimConfig.getStartFromSnapshot()));
 			try {
@@ -118,7 +118,7 @@ public final class EpisimRunner {
 			handler.onSnapshotLoaded(iteration);
 		} else if (episimConfig.getStartFromImmunization() != null) {
 
-			handler.initImmunization2(Path.of(episimConfig.getStartFromImmunization()));
+			handler.initImmunization(Path.of(episimConfig.getStartFromImmunization()));
 		}
 
 		// recalculate antibodies for every agent if starting from snapshot.
