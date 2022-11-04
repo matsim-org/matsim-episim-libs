@@ -11,10 +11,13 @@ import org.matsim.episim.model.VirusStrain;
 
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.DAY;
 
-public final class InitialImmunizationHandler implements EpisimVaccinationEventHandler, EpisimInfectionEventHandler, EpisimInitialInfectionEventHandler, EpisimStartEventHandler {
+public final class InitialImmunizationHandler implements Function<String, Boolean>,
+		EpisimVaccinationEventHandler, EpisimInfectionEventHandler,
+		EpisimInitialInfectionEventHandler, EpisimStartEventHandler {
 
 	private final Map<Id<Person>, EpisimPerson> personMap;
 	private final EpisimConfigGroup episimConfig;
@@ -24,6 +27,7 @@ public final class InitialImmunizationHandler implements EpisimVaccinationEventH
 	private Double startTimeOffset = null;
 
 	private int iterationOffset;
+	private boolean continueProcessingEvents = true;
 
 	int maxIterationReachedSoFar = 0;
 
@@ -74,6 +78,7 @@ public final class InitialImmunizationHandler implements EpisimVaccinationEventH
 	public void handleEvent(EpisimVaccinationEvent event) {
 		int currentIteration = (int) (event.getTime() / EpisimUtils.DAY);
 		if (currentIteration >= iterationOffset + 1) {
+			continueProcessingEvents = false;
 			return;
 		} else if (maxIterationReachedSoFar < currentIteration) {
 			newDay(currentIteration);

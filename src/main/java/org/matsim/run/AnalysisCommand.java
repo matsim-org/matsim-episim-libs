@@ -121,7 +121,7 @@ public class AnalysisCommand implements Runnable {
 	 * Reads in all event file from a scenario.
 	 *
 	 * @param scenario            path of the scenario, which contains the event folder
-	 * @param callback            will be executed before reading an event file and pass the path
+	 * @param callback            will be executed before reading an event file and pass the path. If false is returned, no more events will be read.
 	 * @param preferReducedEvents
 	 * @param handler             handler for the events
 	 * @return list of read event files

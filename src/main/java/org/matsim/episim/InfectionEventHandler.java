@@ -57,6 +57,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
+import java.util.function.Function;
 
 import static org.matsim.episim.EpisimUtils.*;
 
