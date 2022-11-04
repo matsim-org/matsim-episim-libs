@@ -4,6 +4,7 @@ import org.matsim.core.config.Config;
 import org.matsim.core.config.ConfigUtils;
 import org.matsim.episim.BatchRun;
 import org.matsim.episim.EpisimConfigGroup;
+import org.matsim.episim.EpisimUtils;
 import org.matsim.episim.EpisimConfigGroup.SnapshotSeed;
 import org.matsim.episim.VirusStrainConfigGroup;
 import org.matsim.episim.model.VirusStrain;
@@ -13,9 +14,12 @@ import org.matsim.episim.policy.FixedPolicy.ConfigBuilder;
 import org.matsim.run.RunParallel;
 import org.matsim.run.modules.AbstractSnzScenario2020;
 import org.matsim.run.modules.CologneStrainScenario;
+import org.matsim.run.modules.SnzCologneProductionScenario;
 import org.matsim.run.modules.SnzProductionScenario.Vaccinations;
 
 import javax.annotation.Nullable;
+
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
@@ -31,7 +35,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 	@Override
 	public CologneStrainScenario getBindings(int id, @Nullable Params params) {
 
-		return new CologneStrainScenario( 1.95, Vaccinations.no, NoVaccination.class, false, 1);
+		return new CologneStrainScenario( 1.95, 7, Vaccinations.no, NoVaccination.class, true, 1);
 	}
 
 	@Override
@@ -56,7 +60,7 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		EpisimConfigGroup episimConfig = ConfigUtils.addOrGetModule(config, EpisimConfigGroup.class);
 
 		if (Boolean.valueOf(params.snapshot)) {
-			episimConfig.setStartFromSnapshot("./snapshots/strain_base_" + params.seed + "-310-2020-12-30.zip");
+			episimConfig.setStartFromSnapshot("../snapshots/strain_base_" + params.seed + ".zip");
 			episimConfig.setSnapshotSeed(SnapshotSeed.restore);
 		}
 
@@ -64,44 +68,59 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 
 		ConfigBuilder builder = FixedPolicy.parse(episimConfig.getPolicy());
 				
-//		builder.clearAfter(params.date);
-
-//		for (String act : AbstractSnzScenario2020.DEFAULT_ACTIVITIES) {
-////			if (act.contains("educ_higher")) continue;
-//			builder.restrict(params.date, params.activityLevel / 1.3, act);
-//		}
-
-		//schools
-		if (params.schools.equals("50%open")) {
-			builder.clearAfter( "2020-12-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-			builder.restrict("2020-12-15", .5, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-		}
-
-		if (params.schools.equals("open")) {
-			builder.clearAfter( "2020-12-14", "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-			builder.restrict("2020-12-15", 1.0, "educ_primary", "educ_secondary", "educ_tertiary", "educ_other", "educ_kiga");
-		}
 
 		episimConfig.setPolicy(builder.build());
 
-		{
-			Map<LocalDate, Double> outdoorFractionOld = episimConfig.getLeisureOutdoorFraction();
-			Map<LocalDate, Double> outdoorFractionNew = new HashMap<LocalDate, Double>();
-
-			for (Entry<LocalDate, Double> entry : outdoorFractionOld.entrySet()) {
-				if (entry.getKey().isBefore(LocalDate.parse("2021-01-01")))
-						outdoorFractionNew.put(entry.getKey(), entry.getValue());
-			}
-
-			episimConfig.setLeisureOutdoorFraction(outdoorFractionNew);
-
+		try {
+			Map<LocalDate, Double> outdoorFractions = EpisimUtils.getOutDoorFractionFromDateAndTemp2(SnzCologneProductionScenario.INPUT.resolve("cologneWeather.csv").toFile(),
+					SnzCologneProductionScenario.INPUT.resolve("weatherDataAvgCologne2000-2020.csv").toFile(), 0.5, 18.5, 25.0, params.temp, 18.5, 5., 1.0);
+			episimConfig.setLeisureOutdoorFraction(outdoorFractions);
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
 
 		VirusStrainConfigGroup virusStrainConfigGroup = ConfigUtils.addOrGetModule(config, VirusStrainConfigGroup.class);
+		
+		double alpha = 0.0;
+		
+		if (params.calibr.equals("2022-01-31")) {
+			alpha = 1.98867;
+		}
+		else if (params.calibr.equals("2022-02-07")) {
+			alpha = 1.57724;
+		}
+		else if (params.calibr.equals("2022-02-14")) {
+			alpha = 1.98978;
+		}
+		else if (params.calibr.equals("2022-02-21")) {
+			alpha = 2.15176;
+		}
+		else if (params.calibr.equals("2022-02-28")) {
+			alpha = 2.14461;
+		}
+		else {
+			throw new RuntimeException();
+		}
 
-		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(params.alphaInf);
-
+		virusStrainConfigGroup.getOrAddParams(VirusStrain.ALPHA).setInfectiousness(alpha);
+		
+		episimConfig.getOrAddContainerParams("pt", "tr").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("work").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("educ_kiga").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("educ_primary").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("educ_secondary").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("educ_tertiary").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("educ_higher").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("educ_other").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("shop_daily").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("shop_other").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("errands").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("business").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("visit").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("home").setSeasonality(params.nonLeis);
+		episimConfig.getOrAddContainerParams("quarantine_home").setSeasonality(params.nonLeis);
+		
 		return config;
 	}
 
@@ -111,20 +130,29 @@ public class StrainPaper implements BatchRun<StrainPaper.Params> {
 		public long seed;
 
 //		@StringParameter({"50%open", "open", "activityLevel"})
-		@StringParameter({"activityLevel"})
-		public String schools;
+//		@StringParameter({"activityLevel"})
+//		public String schools;
 		
 		@StringParameter({"true"})
 		public String snapshot;
 		
 //		@StringParameter({"2021-03-12"})
 //		public String date;
-
-		@Parameter({0.1})
-		double alphaInf;
 		
-		@Parameter({0.92, 0.88, 0.84, 0.8, 0.76, 0.72})
+		@Parameter({0.82})
 		double tf;
+		
+		@StringParameter({"7-r1"})
+		public String scen;
+		
+		@StringParameter({"2022-01-31", "2022-02-07", "2022-02-14", "2022-02-21", "2022-02-28"})
+		public String calibr;
+		
+		@Parameter({16.5, 18.5, 20.5})
+		double temp;
+		
+		@Parameter({0.0, 0.5, 1.0})
+		double nonLeis;
 
 //		@Parameter({0.4, 0.6, 0.8, 1.0})
 //		double activityLevel;

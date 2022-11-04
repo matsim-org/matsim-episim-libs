@@ -16,13 +16,13 @@ public class CologneStrainScenario extends SnzCologneProductionScenario {
 
 	private final double scaleRecovered;
 
-	public CologneStrainScenario(double leisureCorrection, Vaccinations vaccinations, Class<? extends VaccinationModel> vacModel, boolean testing, double scaleRecovered) {
+	public CologneStrainScenario(double leisureCorrection, int alphaOffsetDays, Vaccinations vaccinations, Class<? extends VaccinationModel> vacModel, boolean testing, double scaleRecovered) {
 		super((Builder) new Builder()
 				.setTesting(testing)
 				.setScaleForActivityLevels(1.3)
 				.setSuscHouseholds_pct(0.0)
 				.setLeisureCorrection(RunTrial.parseParam("leisureCorrection", leisureCorrection))
-				.setAlphaOffsetDays((int) RunTrial.parseParam("alphaOffsetDays", 0))
+				.setAlphaOffsetDays((int) RunTrial.parseParam("alphaOffsetDays", alphaOffsetDays))
 				.setVaccinations(vaccinations)
 				.setActivityHandling(EpisimConfigGroup.ActivityHandling.startOfDay)
 				.setVaccinationModel(vacModel)
@@ -32,7 +32,7 @@ public class CologneStrainScenario extends SnzCologneProductionScenario {
 	}
 
 	public CologneStrainScenario() {
-		this(1.95, Vaccinations.yes, VaccinationFromData.class, true, 1);
+		this(1.95, 0, Vaccinations.yes, VaccinationFromData.class, true, 1);
 	}
 
 	@Override
