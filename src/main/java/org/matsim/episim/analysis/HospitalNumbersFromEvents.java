@@ -128,7 +128,7 @@
 			 Map.of(VirusStrain.SARS_CoV_2, 15, // Debeka & Ireland studies
 					 VirusStrain.ALPHA, 15, // Debeka & Ireland studies
 					 VirusStrain.DELTA, 15, // this and following values come from nrw analysis on Tabellenblatt 5
-					 VirusStrain.OMICRON_BA1, 10,
+					 VirusStrain.OMICRON_BA1, 10, // TODO: Where does this number come from?
 					 VirusStrain.OMICRON_BA2, 10,
 					 VirusStrain.OMICRON_BA5,10,
 					 VirusStrain.STRAIN_A, 10,
@@ -137,7 +137,7 @@
 
 	 // ??
 	 private static final Object2IntMap<VirusStrain> daysInHospitalGivenICU = new Object2IntAVLTreeMap<>(
-			 Map.of(VirusStrain.SARS_CoV_2, 60,
+			 Map.of(VirusStrain.SARS_CoV_2, 60, // TODO: Where does this number come from?
 					 VirusStrain.ALPHA, 60,
 					 VirusStrain.DELTA, 60,
 					 VirusStrain.OMICRON_BA1, 60,
@@ -150,7 +150,7 @@
 
 	 private static final double beta = 1.2;
 
-	 private static final double hospitalFactor = 0.3;
+	 private static final double hospitalFactor = 0.3; // Based on "guess & check", accounts for unreported cases TODO: Potential follow-up
 
 	 // base
 	 private static final double factorWild =  1.0;
@@ -158,7 +158,7 @@
 	 private static final double factorAlpha = 1.0 * factorWild;
 
 	 // delta: 2.3x more severe than alpha - Hospital admission and emergency care attendance risk for SARS-CoV-2 delta (B.1.617.2) compared with alpha (B.1.1.7) variants of concern: a cohort study
-	 private static final double factorDelta = 1.2 * factorWild;//1.6 * factorWild;
+	 private static final double factorDelta = 1.2 * factorWild; //1.6 * factorWild;
 
 	 // omicron: approx 0.3x (intrinsic) severity of delta - Comparative analysis of the risks of hospitalisation and death associated with SARS-CoV-2 omicron (B.1.1.529) and delta (B.1.617.2) variants in England: a cohort study
 	 private static final double factorOmicron = 0.45  * factorDelta; //  reportedShareOmicron / reportedShareDelta
@@ -175,7 +175,7 @@
 
 
 	 // ??
-	 private static final double factorWildAndAlphaICU = 1.;
+	 private static final double factorWildAndAlphaICU = 1.; // TODO : Check literature for reasonable values
 	 private static final double factorDeltaICU = 1.;
 	 private static final double factorOmicronICU = 1.;
 	 private static final double factorBA5ICU = 1.;
@@ -520,7 +520,7 @@
 				 int inHospital = infectionIteration + lagBetweenInfectionAndHospitalisation.getInt(strain);
 				 postProcessHospitalAdmissions.mergeInt(inHospital, 1, Integer::sum);
 
-
+				// Currently not used TODO : Integrate into Covid-sim plots (i.e. hospitalizations unvaccinated vs vaccinated/boostered)
 				 if (person.getNumVaccinations() == 0) {
 					 hospNoImmunity.mergeInt(inHospital, 1, Integer::sum);
 				 } else if (person.getNumVaccinations() == 1) {
